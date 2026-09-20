@@ -15,11 +15,14 @@ import {
 } from "@/constants/dbProviderConstants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import { isModelEnabledForType } from "@/controllers/API/helpers/enabled-model-policy";
 import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
 import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import {
   type MetadataPair,
   metadataPairsToFormValue,
@@ -93,20 +96,56 @@ export function useKnowledgeBaseForm({
 
   // Fetch embedding model data from API. Include deprecated entries so the
   // picker can surface them with a "Deprecated" badge instead of dropping them.
-  const { data: modelProviders = [] } = useGetModelProviders({
+  const modelProvidersQuery = useGetModelProviders({
     includeDeprecated: true,
+    purpose: "use",
   });
-  const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
-    useGetGlobalVariables();
+  const enabledModelsQuery = useGetEnabledModels({ purpose: "use" });
+  const globalVariablesQuery = useGetGlobalVariables({
+    refetchOnWindowFocus: true,
+  });
+  const globalVariables = globalVariablesQuery.data ?? [];
+  const modelCatalogReady = Boolean(
+    modelProvidersQuery.isSuccess &&
+      enabledModelsQuery.isSuccess &&
+      modelProvidersQuery.fetchStatus === "idle" &&
+      enabledModelsQuery.fetchStatus === "idle" &&
+      !modelProvidersQuery.isFetching &&
+      !enabledModelsQuery.isFetching &&
+      !modelProvidersQuery.isError &&
+      !enabledModelsQuery.isError,
+  );
+  const globalVariablesReady = Boolean(
+    globalVariablesQuery.isSuccess &&
+      globalVariablesQuery.fetchStatus === "idle" &&
+      !globalVariablesQuery.isFetching &&
+      !globalVariablesQuery.isError,
+  );
+  const localVectorStoreAvailable = useUtilityStore(
+    (state) => state.localVectorStoreAvailable,
+  );
   const hasAppliedBackendDefaults = useRef(false);
 
   // Transform provider data into ModelOption[] for embedding models only
   const embeddingModelOptions = useMemo<ModelOption[]>(() => {
+    if (!modelCatalogReady) return [];
     const options: ModelOption[] = [];
-    for (const provider of modelProviders) {
+    const enabledModelsData = enabledModelsQuery.data;
+    if (!enabledModelsData) return [];
+    for (const provider of modelProvidersQuery.data ?? []) {
       if (!provider.is_enabled) continue;
       for (const model of provider.models) {
         if (model.metadata?.model_type !== "embeddings") continue;
+        if (
+          !isModelEnabledForType(
+            enabledModelsData,
+            provider.provider,
+            model.model_name,
+            "embeddings",
+          )
+        ) {
+          continue;
+        }
         options.push({
           id: model.model_name,
           name: model.model_name,
@@ -117,7 +156,7 @@ export function useKnowledgeBaseForm({
       }
     }
     return options;
-  }, [modelProviders]);
+  }, [enabledModelsQuery.data, modelCatalogReady, modelProvidersQuery.data]);
 
   // Form state - Step 1
   const [sourceName, setSourceName] = useState("");
@@ -142,6 +181,18 @@ export function useKnowledgeBaseForm({
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
     ModelOption[]
   >([]);
+  const selectedEmbeddingModelAuthorized = useMemo(() => {
+    const selected = selectedEmbeddingModel[0];
+    return (
+      modelCatalogReady &&
+      selected !== undefined &&
+      embeddingModelOptions.some(
+        (option) =>
+          option.provider === selected.provider &&
+          option.name === selected.name,
+      )
+    );
+  }, [embeddingModelOptions, modelCatalogReady, selectedEmbeddingModel]);
   // Defaults keep existing KBs on the local Chroma store. Backend is immutable
   // after create, so add-sources mode displays the existing backend read-only.
   const [backendType, setBackendType] =
@@ -160,8 +211,9 @@ export function useKnowledgeBaseForm({
   const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
 
   const defaultBackendSelection = useMemo(
-    () => getDefaultDBProviderConfig(globalVariables),
-    [globalVariables],
+    () =>
+      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
+    [globalVariables, localVectorStoreAvailable],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -185,6 +237,9 @@ export function useKnowledgeBaseForm({
   // Preview state
   const [chunkPreviews, setChunkPreviews] = useState<ChunkPreview[]>([]);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  // True when the last chunk-preview request errored (e.g. overlap > size). Gates
+  // the create button so a config the backend already rejected can't be submitted.
+  const [chunkPreviewFailed, setChunkPreviewFailed] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [selectedPreviewFileIndex, setSelectedPreviewFileIndex] = useState(0);
 
@@ -221,12 +276,18 @@ export function useKnowledgeBaseForm({
     if (existingKnowledgeBase && open) {
       setSourceName(existingKnowledgeBase.name);
       if (existingKnowledgeBase.embeddingModel) {
-        const matchingModel = embeddingModelOptions.find(
-          (opt) => opt.id === existingKnowledgeBase.embeddingModel,
+        const matchingModels = embeddingModelOptions.filter(
+          (option) => option.id === existingKnowledgeBase.embeddingModel,
         );
-        if (matchingModel) {
-          setSelectedEmbeddingModel([matchingModel]);
-        }
+        const savedProvider = existingKnowledgeBase.embeddingProvider?.trim();
+        const providerIsUnknown =
+          !savedProvider || savedProvider.toLowerCase() === "unknown";
+        const matchingModel = providerIsUnknown
+          ? matchingModels.length === 1
+            ? matchingModels[0]
+            : undefined
+          : matchingModels.find((option) => option.provider === savedProvider);
+        setSelectedEmbeddingModel(matchingModel ? [matchingModel] : []);
       }
       if (existingKnowledgeBase.chunkSize != null) {
         setChunkSize(existingKnowledgeBase.chunkSize);
@@ -285,7 +346,7 @@ export function useKnowledgeBaseForm({
     if (
       existingKnowledgeBase ||
       hasAppliedBackendDefaults.current ||
-      !areGlobalVariablesFetched
+      !globalVariablesReady
     ) {
       return;
     }
@@ -294,9 +355,9 @@ export function useKnowledgeBaseForm({
     setBackendConfig(defaultBackendSelection.backendConfig);
     hasAppliedBackendDefaults.current = true;
   }, [
-    areGlobalVariablesFetched,
     defaultBackendSelection,
     existingKnowledgeBase,
+    globalVariablesReady,
     open,
   ]);
 
@@ -316,6 +377,7 @@ export function useKnowledgeBaseForm({
     setMetadataPairs([]);
     setPerFileMetadata({});
     setChunkPreviews([]);
+    setChunkPreviewFailed(false);
     setCurrentChunkIndex(0);
     setSelectedPreviewFileIndex(0);
     setCurrentStep(1);
@@ -330,10 +392,12 @@ export function useKnowledgeBaseForm({
   const generateChunkPreviews = useCallback(async () => {
     if (files.length === 0) {
       setChunkPreviews([]);
+      setChunkPreviewFailed(false);
       return;
     }
 
     setIsGeneratingPreview(true);
+    setChunkPreviewFailed(false);
     try {
       const selectedFile = files[selectedPreviewFileIndex] || files[0];
       const formData = new FormData();
@@ -377,6 +441,7 @@ export function useKnowledgeBaseForm({
         list: [err?.response?.data?.detail || err?.message || "Unknown error"],
       });
       setChunkPreviews([]);
+      setChunkPreviewFailed(true);
     } finally {
       setIsGeneratingPreview(false);
     }
@@ -406,12 +471,22 @@ export function useKnowledgeBaseForm({
     ) {
       errors.sourceName = t("knowledge.validationNameDuplicate");
     }
-    if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
+    if (!modelCatalogReady) {
+      errors.embeddingModel = t("errors.failedToLoadModels");
+    } else if (!selectedEmbeddingModelAuthorized) {
       errors.embeddingModel = t("knowledge.validationEmbeddingRequired");
     }
-    if (!isAddSourcesMode) {
+    if (!globalVariablesReady) {
+      errors.backend = t("modelProviders.errorUnexpected");
+    } else if (!isAddSourcesMode) {
       const selectedProvider = getDBProviderOption(backendType);
-      if (!isDBProviderConfigured(backendType, globalVariables)) {
+      if (
+        !isDBProviderConfigured(
+          backendType,
+          globalVariables,
+          localVectorStoreAvailable,
+        )
+      ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
       } else {
         const backendErrors = validateBackendConfig(backendType, backendConfig);
@@ -442,9 +517,13 @@ export function useKnowledgeBaseForm({
     sourceName,
     isAddSourcesMode,
     selectedEmbeddingModel,
+    selectedEmbeddingModelAuthorized,
+    modelCatalogReady,
     backendType,
     backendConfig,
     globalVariables,
+    globalVariablesReady,
+    localVectorStoreAvailable,
     files,
     existingKnowledgeBaseNames,
     metadataPairs,
@@ -690,6 +769,9 @@ export function useKnowledgeBaseForm({
     selectedEmbeddingModel,
     setSelectedEmbeddingModel,
     embeddingModelOptions,
+    selectedEmbeddingModelAuthorized,
+    modelCatalogReady,
+    globalVariablesReady,
     backendType,
     setBackendType,
     backendConfig,
@@ -719,6 +801,7 @@ export function useKnowledgeBaseForm({
     // Preview
     chunkPreviews,
     isGeneratingPreview,
+    chunkPreviewFailed,
     currentChunkIndex,
     setCurrentChunkIndex,
     selectedPreviewFileIndex,

@@ -51,16 +51,73 @@ class TestFileComponentDynamicOutputs:
         assert "message" in output_names  # Raw content
         assert "path" in output_names  # File path
 
-    def test_update_outputs_multiple_files(self):
-        """Test multiple files show only Files output."""
+    async def test_update_outputs_multiple_files_preserves_raw_content(self):
+        """Test multiple files keep the Message output alongside Files."""
         component = FileComponent()
         frontend_node = {"outputs": [], "template": {"path": {"file_path": ["file1.txt", "file2.txt"]}}}
 
-        result = component.update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
+        result = await component.run_and_validate_update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
 
-        assert len(result["outputs"]) == 1
-        assert result["outputs"][0].name == "dataframe"
-        assert result["outputs"][0].display_name == "Files"
+        assert [
+            (output["name"], output["display_name"], output["method"], output["types"]) for output in result["outputs"]
+        ] == [
+            ("dataframe", "Files", "load_files", ["Table"]),
+            ("message", "Raw Content", "load_files_message", ["Message"]),
+        ]
+
+    @pytest.mark.parametrize(
+        ("paths", "advanced_mode", "expected_outputs"),
+        [
+            (
+                ["test.csv"],
+                False,
+                [
+                    ("dataframe", ["Table"], "Table"),
+                    ("message", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["data.json"],
+                False,
+                [
+                    ("json", ["JSON"], "JSON"),
+                    ("message", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["document.txt"],
+                False,
+                [("message", ["Message"], "Message"), ("path", ["Message"], "Message")],
+            ),
+            (
+                ["document.pdf"],
+                True,
+                [
+                    ("advanced_dataframe", ["Table"], "Table"),
+                    ("advanced_markdown", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["file1.txt", "file2.txt"],
+                False,
+                [("dataframe", ["Table"], "Table"), ("message", ["Message"], "Message")],
+            ),
+        ],
+    )
+    def test_update_outputs_are_immediately_connectable(self, paths, advanced_mode, expected_outputs):
+        """Dynamic outputs must include their types before frontend validation runs."""
+        component = FileComponent()
+        frontend_node = {
+            "outputs": [],
+            "template": {"path": {"file_path": paths}, "advanced_mode": {"value": advanced_mode}},
+        }
+
+        result = component.update_outputs(frontend_node, "path", paths)
+
+        assert [(output.name, output.types, output.selected) for output in result["outputs"]] == expected_outputs
 
     def test_update_outputs_empty_path(self):
         """Test empty path results in no outputs."""
@@ -805,10 +862,14 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
 
     @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
     @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
-    def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client):  # noqa: ARG002
+    def test_s3_temp_file_cleanup_on_download_failure(
+        self,
+        mock_validate,  # noqa: ARG002
+        mock_create_client,
+        monkeypatch,
+        tmp_path,
+    ):
         """Test that temp file is cleaned up when S3 download fails."""
-        from pathlib import Path
-
         component = FileComponent()
         component.set_attributes(
             {
@@ -825,19 +886,18 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         mock_s3_client.download_fileobj.side_effect = Exception("S3 download failed")
         mock_create_client.return_value = mock_s3_client
 
-        # Track temp files created
-        temp_dir = Path(tempfile.gettempdir())
-        temp_files_before = set(temp_dir.glob("tmp*.txt")) if temp_dir.exists() else set()
+        # Route the component's temp file into the directory we actually assert on.
+        temp_dir = tmp_path / "component-tmp"
+        temp_dir.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(temp_dir))
 
         # Attempt to read from S3 - should fail and clean up temp file
         with pytest.raises(RuntimeError, match="Failed to download file from S3"):
             component._read_from_aws_s3()
 
-        # Verify no new temp files are left behind
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_files_after = set(Path(temp_dir).glob("tmp*.txt"))
-        new_temp_files = temp_files_after - temp_files_before
-        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+        # Verify no temp files are left behind
+        leftovers = list(temp_dir.iterdir())
+        assert leftovers == [], f"Temp files not cleaned up: {leftovers}"
 
     @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
     @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
@@ -866,10 +926,8 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
 
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
     @pytest.mark.usefixtures("fake_googleapiclient")
-    def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
+    def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service, monkeypatch, tmp_path):
         """Test that temp file is cleaned up when Google Drive download fails."""
-        from pathlib import Path
-
         component = FileComponent()
         component.set_attributes(
             {
@@ -887,21 +945,232 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         mock_drive_service.files().get_media.side_effect = Exception("Drive download failed")
         mock_create_service.return_value = mock_drive_service
 
-        # Track temp files created
-        temp_files_before = (
-            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
-        )
+        # Route the component's temp file into the directory we actually assert on, so the
+        # check cannot race other tests writing into the shared system temp directory.
+        temp_dir = tmp_path / "component-tmp"
+        temp_dir.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(temp_dir))
 
         # Attempt to read from Google Drive - should fail and clean up temp file
         with pytest.raises(RuntimeError, match="Failed to download file from Google Drive"):
             component._read_from_google_drive()
 
-        # Verify no new temp files are left behind
-        temp_files_after = (
-            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
+        # Verify no temp files are left behind
+        leftovers = list(temp_dir.iterdir())
+        assert leftovers == [], f"Temp files not cleaned up: {leftovers}"
+
+    @staticmethod
+    def _apply_windows_unlink_semantics(monkeypatch):
+        """Emulate Windows deletion semantics for `Path.unlink`.
+
+        On Windows, deleting a file whose handle is still open raises PermissionError.
+
+        POSIX allows that deletion, so without this the cleanup assertions pass on Linux/macOS
+        CI regardless of whether cleanup happens before or after the file handle is closed.
+
+        Only `Path.unlink` is patched: if the component ever switches to `os.unlink` or
+        `os.remove`, these tests go vacuous and must be updated to patch that instead.
+        `monkeypatch` undoes both patches at teardown, so there is nothing to unwind here.
+        """
+        from pathlib import Path
+
+        handles = []
+        real_ntf = tempfile.NamedTemporaryFile
+        real_unlink = Path.unlink
+
+        def tracking_ntf(*args, **kwargs):
+            handle = real_ntf(*args, **kwargs)
+            handles.append(handle)
+            return handle
+
+        def windows_unlink(self, *args, **kwargs):
+            if any(handle.name == str(self) and not handle.closed for handle in handles):
+                msg = "The process cannot access the file because it is being used by another process"
+                raise PermissionError(32, msg)
+            return real_unlink(self, *args, **kwargs)
+
+        monkeypatch.setattr(tempfile, "NamedTemporaryFile", tracking_ntf)
+        monkeypatch.setattr(Path, "unlink", windows_unlink)
+
+    @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
+    @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
+    def test_s3_failed_download_closes_handle_before_cleanup(
+        self,
+        mock_validate,  # noqa: ARG002
+        mock_create_client,
+        monkeypatch,
+        tmp_path,
+    ):
+        """A failed S3 download must close its temp file before deleting it.
+
+        Fails if the cleanup moves back inside the `NamedTemporaryFile` context.
+        """
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test_key",
+                "aws_secret_access_key": "test_secret",
+                "bucket_name": "test-bucket",
+                "s3_file_key": "test-file.txt",
+            }
         )
-        new_temp_files = temp_files_after - temp_files_before
-        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+        mock_s3_client = MagicMock()
+        mock_s3_client.download_fileobj.side_effect = Exception("S3 download failed")
+        mock_create_client.return_value = mock_s3_client
+        temp_dir = tmp_path / "component-tmp"
+        temp_dir.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(temp_dir))
+
+        self._apply_windows_unlink_semantics(monkeypatch)
+
+        with pytest.raises(RuntimeError, match="Failed to download file from S3"):
+            component._read_from_aws_s3()
+
+        leftovers = list(temp_dir.iterdir())
+        assert leftovers == [], f"Partial download left behind under Windows delete semantics: {leftovers}"
+
+    @patch("googleapiclient.http.MediaIoBaseDownload")
+    @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    def test_google_drive_failed_download_closes_handle_before_cleanup(
+        self, mock_create_service, mock_downloader_class, monkeypatch, tmp_path
+    ):
+        """A failed Google Drive download must close its temp file before deleting it.
+
+        The download fails mid-stream, after a chunk has been written, so the temp file holds
+        partial content. Fails if the cleanup moves back inside the `NamedTemporaryFile` context.
+        """
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": '{"type": "service_account", "project_id": "test"}',
+                "file_id": "test-file-id",
+            }
+        )
+        mock_drive_service = MagicMock()
+        mock_drive_service.files().get().execute.return_value = {"name": "test-file.txt"}
+        mock_create_service.return_value = mock_drive_service
+
+        def make_downloader(fd, _request):
+            downloader = MagicMock()
+
+            def next_chunk():
+                fd.write(b"partial chunk")
+                msg = "Drive download failed"
+                raise OSError(msg)
+
+            downloader.next_chunk.side_effect = next_chunk
+            return downloader
+
+        mock_downloader_class.side_effect = make_downloader
+        temp_dir = tmp_path / "component-tmp"
+        temp_dir.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(temp_dir))
+
+        self._apply_windows_unlink_semantics(monkeypatch)
+
+        with pytest.raises(RuntimeError, match="Failed to download file from Google Drive"):
+            component._read_from_google_drive()
+
+        leftovers = list(temp_dir.iterdir())
+        assert leftovers == [], f"Partial download left behind under Windows delete semantics: {leftovers}"
+
+    @pytest.fixture
+    def temp_file_close_failure(self, monkeypatch, tmp_path):
+        """Record real temp files and emulate a closing flush failure after releasing the handle."""
+        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+        self._apply_windows_unlink_semantics(monkeypatch)
+        real_ntf = tempfile.NamedTemporaryFile
+        handles = []
+        close_error = OSError("Temporary file flush failed during close")
+
+        def failing_close_ntf(*args, **kwargs):
+            """Make the real context manager encounter an error when it closes its file."""
+            handle = real_ntf(*args, **kwargs)
+            handles.append(handle)
+            real_close = handle.file.close
+
+            def close_with_error():
+                """Release the handle before raising, as a buffered-file flush failure does."""
+                if not handle.file.closed:
+                    real_close()
+                    raise close_error
+
+            monkeypatch.setattr(handle.file, "close", close_with_error)
+            return handle
+
+        monkeypatch.setattr(tempfile, "NamedTemporaryFile", failing_close_ntf)
+        return handles, close_error
+
+    @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
+    @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
+    def test_s3_temp_file_cleanup_on_close_failure(
+        self,
+        mock_validate,  # noqa: ARG002
+        mock_create_client,
+        temp_file_close_failure,
+        tmp_path,
+    ):
+        """A closing flush failure must remove the S3 download and preserve its cause."""
+        from pathlib import Path
+
+        component = FileComponent()
+        component.set_attributes({"bucket_name": "test-bucket", "s3_file_key": "test-file.txt"})
+        mock_create_client.return_value.download_fileobj.side_effect = lambda _bucket, _key, fd: fd.write(b"download")
+        handles, close_error = temp_file_close_failure
+
+        with pytest.raises(RuntimeError, match="Failed to download file from S3") as exc_info:
+            component._read_from_aws_s3()
+
+        assert exc_info.value.__cause__ is close_error
+        assert len(handles) == 1
+        assert handles[0].closed
+        assert not Path(handles[0].name).exists()
+        assert list(tmp_path.iterdir()) == []
+        mock_create_client.return_value.download_fileobj.assert_called_once()
+
+    @patch("googleapiclient.http.MediaIoBaseDownload")
+    @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    def test_google_drive_temp_file_cleanup_on_close_failure(
+        self, mock_create_service, mock_downloader_class, temp_file_close_failure, tmp_path
+    ):
+        """A closing flush failure must remove the Drive download and preserve its cause."""
+        from pathlib import Path
+
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "service_account_key": '{"type": "service_account", "project_id": "test"}',
+                "file_id": "test-file-id",
+            }
+        )
+        mock_create_service.return_value.files().get().execute.return_value = {"name": "test-file.txt"}
+
+        def make_downloader(fd, _request):
+            """Write a successful download so only the closing flush fails."""
+            downloader = MagicMock()
+
+            def next_chunk():
+                """Write content and report the download as complete."""
+                fd.write(b"download")
+                return None, True
+
+            downloader.next_chunk.side_effect = next_chunk
+            return downloader
+
+        mock_downloader_class.side_effect = make_downloader
+        handles, close_error = temp_file_close_failure
+
+        with pytest.raises(RuntimeError, match="Failed to download file from Google Drive") as exc_info:
+            component._read_from_google_drive()
+
+        assert exc_info.value.__cause__ is close_error
+        assert len(handles) == 1
+        assert handles[0].closed
+        assert not Path(handles[0].name).exists()
+        assert list(tmp_path.iterdir()) == []
+        mock_downloader_class.assert_called_once()
 
     @patch("googleapiclient.http.MediaIoBaseDownload")
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")

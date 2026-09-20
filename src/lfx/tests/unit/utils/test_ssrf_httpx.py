@@ -297,3 +297,106 @@ class TestSSRFSafeHTTPX:
         assert response.status_code == 200
         assert resolved_hosts == ["first.example", "second.example"]
         assert connections == [("8.8.8.8", 8080), ("1.1.1.1", 8081)]
+
+
+class TestBoundedGet:
+    """``ssrf_safe_httpx_get_bounded`` must refuse an oversized body without buffering it."""
+
+    @staticmethod
+    def _fake_streaming_client(chunk: bytes, chunks_served: list[int], *, status_code: int = 200):
+        """A client whose stream yields ``chunk`` forever, recording how many were consumed."""
+        import contextlib
+
+        class _FakeResponse:
+            status_code = 200
+            headers: httpx.Headers = httpx.Headers({})
+
+            def raise_for_status(self):
+                return None
+
+            def iter_bytes(self):
+                while True:
+                    chunks_served[0] += 1
+                    yield chunk
+
+        class _FakeClient:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                return False
+
+            @contextlib.contextmanager
+            def stream(self, *_args, **_kwargs):
+                yield _FakeResponse()
+
+        _FakeResponse.status_code = status_code
+        return _FakeClient()
+
+    def test_oversized_body_is_refused_before_it_is_fully_read(self):
+        """The transfer stops as soon as the cap is passed, rather than buffering everything.
+
+        An endpoint can pass SSRF validation and still answer with an unbounded body, so
+        measuring the size after a buffered read has already paid the memory cost.
+        """
+        from lfx.utils import ssrf_httpx
+
+        chunk = b"x" * 1024
+        chunks_served = [0]
+        max_bytes = 4096
+
+        with (
+            patch.object(
+                ssrf_httpx,
+                "_sync_client_for_url",
+                return_value=self._fake_streaming_client(chunk, chunks_served),
+            ),
+            patch.object(
+                ssrf_httpx, "validate_and_resolve_connector_url", return_value=("http://ok.test/", ["1.2.3.4"])
+            ),
+            pytest.raises(ValueError, match="exceeds the maximum size"),
+        ):
+            ssrf_httpx.ssrf_safe_httpx_get_bounded("http://ok.test/", max_bytes=max_bytes)
+
+        # One chunk past the cap is enough to detect it; an unbounded generator would keep
+        # going forever if the reader did not stop.
+        assert chunks_served[0] == (max_bytes // len(chunk)) + 1
+
+    def test_body_within_the_cap_is_returned_intact(self):
+        from lfx.utils import ssrf_httpx
+
+        chunk = b"y" * 512
+
+        class _BoundedResponse:
+            status_code = 200
+            headers = httpx.Headers({})
+
+            def raise_for_status(self):
+                return None
+
+            def iter_bytes(self):
+                yield chunk
+                yield chunk
+
+        import contextlib
+
+        class _Client:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                return False
+
+            @contextlib.contextmanager
+            def stream(self, *_args, **_kwargs):
+                yield _BoundedResponse()
+
+        with (
+            patch.object(ssrf_httpx, "_sync_client_for_url", return_value=_Client()),
+            patch.object(
+                ssrf_httpx, "validate_and_resolve_connector_url", return_value=("http://ok.test/", ["1.2.3.4"])
+            ),
+        ):
+            body = ssrf_httpx.ssrf_safe_httpx_get_bounded("http://ok.test/", max_bytes=4096)
+
+        assert body == chunk * 2

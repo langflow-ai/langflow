@@ -606,7 +606,6 @@ class A2AAgentComponent(Component):
     async def _run_internal_agent(self) -> Message:
         # An in-project A2A agent is just a flow with chat I/O, so run it in-process (no HTTP, no
         # SSRF, no api key) and read its chat reply. Same three primitives Run Flow uses.
-        from lfx.graph.graph.base import Graph
         from lfx.helpers import get_flow_by_id_or_name
 
         agent_name = self.agent_name_selected or None
@@ -633,11 +632,7 @@ class A2AAgentComponent(Component):
             msg = f"Agent flow '{agent_name}' could not be found."
             raise ValueError(msg)
 
-        graph = Graph.from_payload(
-            flow.data.get("data", {}),
-            flow_id=str(flow.data.get("id", "")),
-            flow_name=flow.data.get("name"),
-        )
+        graph = await self.load_flow(flow_id)
         run_outputs = await self._run_target_isolated(graph, flow_id)
         answer = self._reply_from_run(run_outputs)
         message = Message(text=answer or "No response received from the agent.")

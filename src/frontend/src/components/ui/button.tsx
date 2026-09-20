@@ -13,11 +13,11 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input hover:bg-input hover:text-accent-foreground ",
+          "border border-control hover:bg-muted hover:text-accent-foreground ",
         outlineAmber:
           "border border-accent-amber-foreground hover:bg-accent-amber",
         primary:
-          "border bg-background text-secondary-foreground hover:bg-muted hover:shadow-sm",
+          "border border-control bg-background text-secondary-foreground hover:bg-muted hover:shadow-sm",
         warning:
           "bg-warning-foreground text-warning-text hover:bg-warning-foreground/90 hover:shadow-sm",
         secondary:
@@ -26,7 +26,7 @@ const buttonVariants = cva(
           "text-foreground hover:bg-accent hover:text-accent-foreground disabled:!bg-transparent",
         ghostActive:
           "bg-muted text-foreground hover:bg-secondary-hover hover:text-accent-foreground",
-        menu: "hover:bg-muted hover:text-accent-foreground focus:!ring-0 focus-visible:!ring-0",
+        menu: "hover:bg-muted hover:text-accent-foreground",
         "menu-active":
           "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
         link: "underline-offset-4 hover:underline text-primary",

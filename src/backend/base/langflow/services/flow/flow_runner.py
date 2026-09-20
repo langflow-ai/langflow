@@ -147,7 +147,9 @@ class LangflowRunnerExperimental:
                     tweaks[vertex.id][db_field] = field_params[db_field]
         if tweaks is not None:
             tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=tweaks_values)
-            flow_dict = process_tweaks(flow_dict, tweaks)
+            # Built here from resolved load_from_db values, not sent by a caller,
+            # so the deployment policy does not judge them. The floor still does.
+            flow_dict = process_tweaks(flow_dict, tweaks, caller_supplied=False)
 
         # Recursively update load_from_db fields
         def update_load_from_db(obj):

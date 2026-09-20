@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +24,13 @@ import {
   isDBProviderConfigured,
   resolveUIBackendType,
 } from "@/constants/dbProviderConstants";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { isSettledSuccessfulQuery } from "@/controllers/API/helpers/query-cache";
+import {
+  getGlobalVariablesQueryKey,
+  useGetGlobalVariables,
+} from "@/controllers/API/queries/variables";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import {
@@ -50,6 +57,10 @@ interface DBProviderInputProps {
    * visible label rather than a generic string.
    */
   ariaLabelledBy?: string;
+  /** Id of the error text describing this field (aria-describedby, WCAG 3.3.1). */
+  ariaDescribedBy?: string;
+  /** Marks the combobox trigger invalid when the field failed validation. */
+  ariaInvalid?: boolean;
   onValueChange: (
     backendType: AvailableDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
@@ -62,17 +73,38 @@ export default function DBProviderInputComponent({
   disabled,
   handleOnNewValue,
   ariaLabelledBy,
-}: BaseInputProps<DBProviderSelection | AvailableDBProviderId>) {
+}: BaseInputProps<
+  DBProviderSelection | AvailableDBProviderId | null | undefined
+>) {
+  const queryClient = useQueryClient();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const globalVariablesQueryKey = useMemo(
+    () => getGlobalVariablesQueryKey({ flowId: currentFlowId || undefined }),
+    [currentFlowId],
+  );
   const {
     data: globalVariables = [],
-    isFetched,
+    isSuccess,
     isFetching,
-  } = useGetGlobalVariables();
+    isError,
+    fetchStatus,
+  } = useGetGlobalVariables({
+    flowId: currentFlowId || undefined,
+    enabled: Boolean(currentFlowId),
+  });
+  const localVectorStoreAvailable = useUtilityStore(
+    (state) => state.localVectorStoreAvailable,
+  );
   const hasInitializedDefaultRef = useRef(false);
 
   const currentValue = useMemo(
-    () => normalizeDBProviderValue(value, globalVariables),
-    [value, globalVariables],
+    () =>
+      normalizeDBProviderValue(
+        value,
+        globalVariables,
+        localVectorStoreAvailable,
+      ),
+    [value, globalVariables, localVectorStoreAvailable],
   );
   const hasProviderValue =
     typeof value === "string" ||
@@ -80,10 +112,29 @@ export default function DBProviderInputComponent({
 
   useEffect(() => {
     if (hasProviderValue || hasInitializedDefaultRef.current) return;
-    if (!isFetched && isFetching) return;
+    if (
+      !currentFlowId ||
+      !isSuccess ||
+      isFetching ||
+      isError ||
+      fetchStatus !== "idle" ||
+      !isSettledSuccessfulQuery(queryClient, globalVariablesQueryKey)
+    )
+      return;
     hasInitializedDefaultRef.current = true;
     handleOnNewValue({ value: currentValue });
-  }, [currentValue, handleOnNewValue, hasProviderValue, isFetched, isFetching]);
+  }, [
+    currentFlowId,
+    currentValue,
+    fetchStatus,
+    globalVariablesQueryKey,
+    handleOnNewValue,
+    hasProviderValue,
+    isError,
+    isFetching,
+    isSuccess,
+    queryClient,
+  ]);
 
   return (
     <DBProviderInput
@@ -111,6 +162,8 @@ export function DBProviderInput({
   disabled,
   "aria-label": ariaLabel,
   ariaLabelledBy,
+  ariaDescribedBy,
+  ariaInvalid,
   onValueChange,
 }: DBProviderInputProps) {
   const { t } = useTranslation();
@@ -118,29 +171,50 @@ export function DBProviderInput({
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
+  const localVectorStoreAvailable = useUtilityStore(
+    (state) => state.localVectorStoreAvailable,
+  );
+
   const selectedProvider = getDBProviderOption(value);
-  const selectedIsConfigured = isDBProviderConfigured(value, globalVariables);
+  const selectedIsConfigured = isDBProviderConfigured(
+    value,
+    globalVariables,
+    localVectorStoreAvailable,
+  );
 
   const selectableOptions = useMemo(
     () =>
-      DB_PROVIDER_OPTIONS.map((provider) => ({
+      DB_PROVIDER_OPTIONS.filter(
+        // Local Chroma stores vectors on the serving box's own disk, which the
+        // production profile refuses. Hide it there rather than offering a
+        // choice the create endpoint always rejects with 422.
+        (provider) => localVectorStoreAvailable || provider.id !== "chroma",
+      ).map((provider) => ({
         provider,
         configured:
           provider.status === "available"
             ? isDBProviderConfigured(
                 provider.id as AvailableDBProviderId,
                 globalVariables,
+                localVectorStoreAvailable,
               )
             : false,
       })),
-    [globalVariables],
+    [globalVariables, localVectorStoreAvailable],
   );
 
   const handleSelect = (provider: DBProviderOption) => {
     if (provider.status !== "available") return;
 
     const backendType = provider.id as AvailableDBProviderId;
-    if (!isDBProviderConfigured(backendType, globalVariables)) return;
+    if (
+      !isDBProviderConfigured(
+        backendType,
+        globalVariables,
+        localVectorStoreAvailable,
+      )
+    )
+      return;
 
     onValueChange(
       backendType,
@@ -169,6 +243,8 @@ export function DBProviderInput({
           // one is ever emitted — otherwise the aria-label is dead weight.
           aria-label={!ariaLabelledBy ? ariaLabel : undefined}
           aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid || undefined}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
@@ -319,6 +395,7 @@ function DBProviderOptionItem({
 function normalizeDBProviderValue(
   value: DBProviderSelection | AvailableDBProviderId | null | undefined,
   globalVariables: GlobalVariable[],
+  localVectorStoreAvailable = true,
 ): DBProviderSelection {
   if (typeof value === "string") {
     const backendType: AvailableDBProviderId =
@@ -348,7 +425,10 @@ function normalizeDBProviderValue(
     };
   }
 
-  const defaults = getDefaultDBProviderConfig(globalVariables);
+  const defaults = getDefaultDBProviderConfig(
+    globalVariables,
+    localVectorStoreAvailable,
+  );
   return {
     backend_type: defaults.backendType,
     backend_config: defaults.backendConfig,

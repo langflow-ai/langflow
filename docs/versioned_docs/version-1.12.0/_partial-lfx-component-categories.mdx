@@ -1,0 +1,34 @@
+## Control which components load
+
+LFX loads all component categories by default. Use environment variables to restrict which categories are available when loading flows.
+
+| Variable | Description |
+|---|---|
+| `LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST` | Comma-separated list of category names to **include**. If empty, all categories are included. |
+| `LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST` | Comma-separated list of category names to **exclude**. Applied after the allowlist. |
+
+Category names are case-insensitive. The virtual keyword `core` in the allowlist or blocklist expands to all core component categories.
+
+Component category names don't always match the labels displayed in the Langflow visual editor.
+To view the component categories, see [Bundle list](./extensions-bundle-list).
+
+To restrict components to specific categories:
+
+```bash
+export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="openai,anthropic,processing,input_output"
+uv run lfx serve my_flow.json
+```
+
+To exclude specific categories:
+
+```bash
+export LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST="prototypes,langchain_utilities"
+uv run lfx run my_flow.json "Hello"
+```
+
+To allow only core categories:
+
+```bash
+export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="core"
+uv run lfx serve my_flow.json
+```

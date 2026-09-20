@@ -248,3 +248,23 @@ class TestGunicornEnvArgs:
         )
 
         assert app.cfg.settings["worker_class"].get() == "langflow.server.LangflowUvicornWorker"
+
+
+def test_worker_starts_each_request_task_from_a_clean_context():
+    """The gunicorn worker must opt into uvicorn's per-request context reset.
+
+    A request that arrives while another is still in flight on the same connection is queued
+    as a pipelined request, and uvicorn starts it from inside the finishing request's task.
+    ``create_task`` copies the context, so without this the new request begins with the
+    previous request's already-ended server span still current, and OpenTelemetry emits it as
+    an INTERNAL child of an unrelated finished request rather than as a SERVER root.
+
+    Asserted through a real ``uvicorn.Config`` rather than against the dict, so the test fails
+    if the option is renamed or stops being accepted, not merely if the key is deleted.
+    """
+    import uvicorn
+    from langflow.server import LangflowUvicornWorker
+
+    config = uvicorn.Config("langflow.main:create_app", **LangflowUvicornWorker.CONFIG_KWARGS)
+
+    assert config.reset_contextvars is True

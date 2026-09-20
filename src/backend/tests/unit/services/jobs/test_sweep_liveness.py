@@ -9,6 +9,7 @@ owner is running it and the sweep must leave it alone.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -62,3 +63,23 @@ async def test_sweep_still_fails_heartbeatless_in_progress():
     events = await service.read_events(orphan)
     assert len(events) == 1
     assert events[0].event_type == "run_failed"
+
+
+@pytest.mark.usefixtures("client")
+async def test_concurrent_sweeps_reconcile_an_orphan_once():
+    """Two replicas racing the same stale row emit one terminal transition."""
+    service = JobService()
+    orphan = uuid4()
+    await service.create_job(job_id=orphan, flow_id=uuid4(), user_id=uuid4())
+    await service.update_job_status(orphan, JobStatus.IN_PROGRESS)
+    old = (datetime.now(timezone.utc) - timedelta(seconds=300)).isoformat()
+    await service.update_job_metadata(orphan, {"owner": "dead-worker", "heartbeat_at": old})
+
+    results = await asyncio.gather(
+        service.sweep_orphans(lease_ttl_s=30.0),
+        service.sweep_orphans(lease_ttl_s=30.0),
+    )
+
+    assert sum(result.count(orphan) for result in results) == 1
+    events = await service.read_events(orphan)
+    assert [event.event_type for event in events] == ["run_failed"]

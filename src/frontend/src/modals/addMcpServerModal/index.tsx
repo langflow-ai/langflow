@@ -108,6 +108,23 @@ export default function AddMcpServerModal({
   );
   const [jsonValue, setJsonValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Input ids the current error concerns, so the banner is programmatically
+  // associated with the offending fields (WCAG 3.3.1) — empty for form-level
+  // errors that have no single field (duplicate keys, server failures).
+  const [errorFields, setErrorFields] = useState<string[]>([]);
+
+  const raiseError = (message: string, fields: string[] = []) => {
+    setError(message);
+    setErrorFields(fields);
+  };
+  const clearError = () => {
+    setError(null);
+    setErrorFields([]);
+  };
+  const fieldErrorProps = (id: string) =>
+    errorFields.includes(id)
+      ? { "aria-invalid": true, "aria-describedby": "mcp-server-form-error" }
+      : {};
   const { mutateAsync: addMCPServer, isPending: isAddPending } =
     useAddMCPServer();
   const { mutateAsync: patchMCPServer, isPending: isPatchPending } =
@@ -120,12 +137,13 @@ export default function AddMcpServerModal({
 
   const changeType = (type: string) => {
     setType(type);
-    setError(null);
+    clearError();
     setJsonValue("");
     setStdioName("");
     setStdioCommand("");
     setStdioArgs([""]);
     setStdioEnv([{ key: "", value: "", id: nanoid(), error: false }]);
+    setStdioHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
     setHttpName("");
     setHttpUrl("");
     setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
@@ -141,6 +159,9 @@ export default function AddMcpServerModal({
   const [stdioEnv, setStdioEnv] = useState<KeyPairRow[]>(
     objectToKeyPairRow(initialData?.env) || [],
   );
+  const [stdioHeaders, setStdioHeaders] = useState<KeyPairRow[]>(
+    objectToKeyPairRow(initialData?.headers) || [],
+  );
 
   // HTTP state
   const [httpName, setHttpName] = useState(initialData?.name || "");
@@ -155,12 +176,13 @@ export default function AddMcpServerModal({
   useEffect(() => {
     if (open) {
       setType(initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON");
-      setError(null);
+      clearError();
       setJsonValue("");
       setStdioName(initialData?.name || "");
       setStdioCommand(initialData?.command || "");
       setStdioArgs(initialData?.args || [""]);
       setStdioEnv(objectToKeyPairRow(initialData?.env) || []);
+      setStdioHeaders(objectToKeyPairRow(initialData?.headers) || []);
       setHttpName(initialData?.name || "");
       setHttpUrl(initialData?.url || "");
       setHttpEnv(objectToKeyPairRow(initialData?.env) || []);
@@ -169,14 +191,24 @@ export default function AddMcpServerModal({
   }, [open]);
 
   async function submitForm() {
-    setError(null);
+    clearError();
     if (type === "STDIO") {
       if (!stdioName.trim() || !stdioCommand.trim()) {
-        setError(t("mcp.modal.errorNameCommandRequired"));
+        raiseError(
+          t("mcp.modal.errorNameCommandRequired"),
+          [
+            !stdioName.trim() && "mcp-stdio-name",
+            !stdioCommand.trim() && "mcp-stdio-command",
+          ].filter((id): id is string => Boolean(id)),
+        );
         return;
       }
       if (stdioEnv.some((item) => item.error)) {
         setError(t("mcp.modal.errorDuplicateEnvKeys"));
+        return;
+      }
+      if (stdioHeaders.some((item) => item.error)) {
+        setError(t("mcp.modal.errorDuplicateHeaders"));
         return;
       }
       // The server name is the immutable identifier: it is the storage key and
@@ -193,12 +225,17 @@ export default function AddMcpServerModal({
           ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       const argsPayload = buildArgsPayload(stdioArgs, initialData?.args);
       const envPayload = buildKeyPairPayload(stdioEnv, initialData?.env);
+      const headersPayload = buildKeyPairPayload(
+        stdioHeaders,
+        initialData?.headers,
+      );
       try {
         await modifyMCPServer({
           name,
           command: stdioCommand,
           ...(argsPayload !== undefined ? { args: argsPayload } : {}),
           ...(envPayload !== undefined ? { env: envPayload } : {}),
+          ...(headersPayload !== undefined ? { headers: headersPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -217,7 +254,8 @@ export default function AddMcpServerModal({
         setStdioCommand("");
         setStdioArgs([""]);
         setStdioEnv([{ key: "", value: "", id: nanoid(), error: false }]);
-        setError(null);
+        setStdioHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
+        clearError();
       } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : t("mcp.modal.errorFailedAdd"),
@@ -227,7 +265,13 @@ export default function AddMcpServerModal({
     }
     if (type === "HTTP") {
       if (!httpName.trim() || !httpUrl.trim()) {
-        setError(t("mcp.modal.errorNameUrlRequired"));
+        raiseError(
+          t("mcp.modal.errorNameUrlRequired"),
+          [
+            !httpName.trim() && "mcp-http-name",
+            !httpUrl.trim() && "mcp-http-url",
+          ].filter((id): id is string => Boolean(id)),
+        );
         return;
       }
       if (httpEnv.some((item) => item.error)) {
@@ -279,7 +323,7 @@ export default function AddMcpServerModal({
         setHttpUrl("");
         setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
         setHttpHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
-        setError(null);
+        clearError();
       } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : t("mcp.modal.errorFailedAdd"),
@@ -299,13 +343,14 @@ export default function AddMcpServerModal({
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
     } catch (e: unknown) {
-      setError(
+      raiseError(
         e instanceof Error ? e.message : t("mcp.modal.errorNoServerFound"),
+        ["mcp-json-input"],
       );
       return;
     }
     if (servers.length === 0) {
-      setError(t("mcp.modal.errorNoServerFound"));
+      raiseError(t("mcp.modal.errorNoServerFound"), ["mcp-json-input"]);
       return;
     }
     try {
@@ -324,7 +369,7 @@ export default function AddMcpServerModal({
       onSuccess?.(servers.map((server) => server.name)[0]);
       setOpen(false);
       setJsonValue("");
-      setError(null);
+      clearError();
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -421,6 +466,7 @@ export default function AddMcpServerModal({
             >
               {error && (
                 <div
+                  id="mcp-server-form-error"
                   role="alert"
                   className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive"
                 >
@@ -442,6 +488,7 @@ export default function AddMcpServerModal({
                 </Label>
                 <Textarea
                   id="mcp-json-input"
+                  {...fieldErrorProps("mcp-json-input")}
                   value={jsonValue}
                   data-testid="json-input"
                   onChange={(e) => setJsonValue(e.target.value)}
@@ -466,6 +513,7 @@ export default function AddMcpServerModal({
                     </Label>
                     <Input
                       id="mcp-stdio-name"
+                      {...fieldErrorProps("mcp-stdio-name")}
                       value={stdioName}
                       onChange={(e) => setStdioName(e.target.value)}
                       placeholder={t("mcp.modal.placeholderServerName")}
@@ -483,6 +531,7 @@ export default function AddMcpServerModal({
                     </Label>
                     <Input
                       id="mcp-stdio-command"
+                      {...fieldErrorProps("mcp-stdio-command")}
                       value={stdioCommand}
                       onChange={(e) => setStdioCommand(e.target.value)}
                       placeholder={t("mcp.modal.placeholderCommand")}
@@ -512,6 +561,24 @@ export default function AddMcpServerModal({
                       editNode={false}
                       id="stdio-args"
                       data-testid="stdio-args-input"
+                    />
+                  </div>
+                  <div
+                    role="group"
+                    aria-labelledby="mcp-stdio-headers-label"
+                    className="flex flex-col gap-2"
+                  >
+                    <Label id="mcp-stdio-headers-label" className="!text-mmd">
+                      {t("mcp.modal.fieldHeaders")}
+                    </Label>
+                    <IOKeyPairInputWithVariables
+                      value={stdioHeaders}
+                      onChange={setStdioHeaders}
+                      duplicateKey={false}
+                      isList={true}
+                      isInputField={true}
+                      testId="stdio-headers"
+                      enableGlobalVariables={true}
                     />
                   </div>
                   <div
@@ -549,6 +616,7 @@ export default function AddMcpServerModal({
                     </Label>
                     <Input
                       id="mcp-http-name"
+                      {...fieldErrorProps("mcp-http-name")}
                       value={httpName}
                       onChange={(e) => setHttpName(e.target.value)}
                       placeholder={t("mcp.modal.placeholderHttpName")}
@@ -566,6 +634,7 @@ export default function AddMcpServerModal({
                     </Label>
                     <Input
                       id="mcp-http-url"
+                      {...fieldErrorProps("mcp-http-url")}
                       value={httpUrl}
                       onChange={(e) => setHttpUrl(e.target.value)}
                       placeholder={t("mcp.modal.placeholderHttpUrl")}

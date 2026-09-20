@@ -1,0 +1,110 @@
+---
+title: Downstream bundle profiles
+slug: /deployment/downstream-bundle-profiles
+---
+
+Downstream Langflow application images must select their provider inventory at
+image-build time. A bundle profile records that selection separately from the
+Dockerfile so the same reviewed source can be used by local builds, CI, release
+workflows, and downstream repositories. Runtime package installation or
+registry mutation is not supported.
+
+The release branch stores the profile source in
+`scripts/ci/bundle_profiles.json` and its deterministic resolved manifests in
+`scripts/ci/bundle_profile_locks/`. The `enterprise-hardened` profile is the
+reviewed profile for the supported Enterprise UBI/hardened application image
+family. The contract maps the `enterprise-ubi-hardened` image family to that
+profile with `install_phase: build`; CI rejects unknown profiles, runtime
+installation phases, and profiles that no supported image family selects. It
+includes:
+
+- a bounded Langflow application range;
+- a bounded LFX bundle API range;
+- every bundle distribution, its selected extras, its bounded compatible
+  range, and the providers it owns;
+- the approved package index; and
+- ownership and update cadence.
+
+## Select a profile during an image build
+
+Name the profile explicitly in the downstream Dockerfile and install the exact
+requirements from its checked-in lock. For example:
+
+```dockerfile
+ARG LANGFLOW_BUNDLE_PROFILE=enterprise-hardened
+
+COPY --from=oss-source /langflow-oss/scripts/ci/manage_bundle_profiles.py /tmp/bundle-profile/
+COPY --from=oss-source /langflow-oss/scripts/ci/bundle_profile_locks/ /tmp/bundle-profile/locks/
+
+RUN test "$LANGFLOW_BUNDLE_PROFILE" = "enterprise-hardened" \
+    && python /tmp/bundle-profile/manage_bundle_profiles.py requirements \
+        --lock "/tmp/bundle-profile/locks/${LANGFLOW_BUNDLE_PROFILE}.lock.json" \
+        --bundles-only \
+        > /tmp/bundle-profile/requirements.txt \
+    && uv pip install --requirement /tmp/bundle-profile/requirements.txt
+```
+
+This example uses the `oss-source` stage from the Enterprise image build so the
+profile and application source always come from the same immutable OSS commit.
+The build stage must have the Python `packaging` distribution available to run
+the profile utility. `--bundles-only` is appropriate when the application is
+already installed from that pinned source; omit it when the lock should also
+install the exact Langflow application distribution. Keep the profile argument
+fixed in the Dockerfile or the release build configuration so a moving
+environment variable cannot change an already-built image.
+
+After installation, verify the environment and write the reviewable component
+inventory into the image:
+
+```dockerfile
+RUN python /tmp/bundle-profile/manage_bundle_profiles.py verify-installed \
+      --lock "/tmp/bundle-profile/locks/${LANGFLOW_BUNDLE_PROFILE}.lock.json" \
+      --output /usr/share/langflow/bundle-profile-inventory.json
+```
+
+The verifier fails on missing or undeclared bundle distributions, version
+drift, missing or undeclared providers, duplicate providers, and incompatible
+Langflow or LFX versions. Verification only inspects the build environment; it
+does not install packages or mutate a registry.
+
+## Update a profile
+
+Profile ownership is shared by the Langflow Enterprise and Langflow release
+maintainers. Review every profile on each Langflow minor release and whenever a
+provider is added, removed, or graduated.
+
+1. Edit `scripts/ci/bundle_profiles.json`. Adding or removing a provider must
+   change the explicit distribution and provider inventory.
+2. Regenerate the resolved manifests:
+
+   ```bash
+   python scripts/ci/manage_bundle_profiles.py compile \
+     --output-dir scripts/ci/bundle_profile_locks
+   ```
+
+3. Validate the source and locks:
+
+   ```bash
+   python scripts/ci/manage_bundle_profiles.py check
+   python -m pytest scripts/ci/test_bundle_profiles.py -q
+   ```
+
+4. Review the profile and lock diffs together. CI rejects unknown bundles,
+   invalid extras, unbounded or incompatible ranges, duplicate providers,
+   application dependency drift, and stale locks.
+5. Build the downstream image, run `verify-installed`, and retain the emitted
+   inventory JSON with the image release artifacts.
+
+## Emergency pin or rollback
+
+For a bundle-only incident, narrow the affected bundle's bounded source range,
+regenerate the lock, rebuild the image, and keep both changes in the emergency
+PR. Do not patch a package into a running pod. To roll back an image, restore
+the previously reviewed profile and lock together and rebuild from the same
+source revision and indexes. Retain the old image digest and inventory artifact
+until the replacement passes the release gate.
+
+If a provider must be removed, delete its explicit profile entry, regenerate
+the lock, and verify that the inventory artifact removes the same distribution
+and provider. A lock-only edit is rejected because it would bypass profile
+review.

@@ -185,6 +185,7 @@ const CanvasControls = ({
                 onClick={handleAssistantClick}
                 disabled={locked}
                 title={locked ? t("version.readOnly") : undefined}
+                aria-label={t("assistant.title")}
               >
                 {/* Idle state — uses the design-tuned
                     ``langflow_assistant_idle.svg`` (noise filter + brand tint
@@ -239,7 +240,7 @@ const CanvasControls = ({
               <button
                 type="button"
                 data-testid="assistant-onboarding-dismiss"
-                aria-label="Dismiss assistant onboarding tooltip"
+                aria-label={t("assistant.dismissOnboardingTooltip")}
                 className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground"
                 onClick={handleDismissTooltip}
               >
@@ -249,7 +250,7 @@ const CanvasControls = ({
               <button
                 type="button"
                 data-testid="assistant-onboarding-open"
-                aria-label="Open Langflow Assistant"
+                aria-label={t("assistant.openAssistant")}
                 className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-foreground transition-colors hover:bg-muted-foreground/10"
                 onClick={handleAssistantClick}
               >
@@ -265,6 +266,7 @@ const CanvasControls = ({
           data-testid="canvas-add-note-button"
           className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           title={locked ? t("version.readOnly") : t("canvas.addStickyNote")}
+          aria-label={t("canvas.addStickyNote")}
           onClick={handleAddNote}
           disabled={locked}
         >
@@ -292,6 +294,11 @@ const CanvasControls = ({
               : allMinimized
                 ? t("canvasControls.expandAll")
                 : t("canvasControls.minimizeAll")
+          }
+          aria-label={
+            allMinimized
+              ? t("canvasControls.expandAll")
+              : t("canvasControls.minimizeAll")
           }
           onClick={toggleMinimizeAllAndAlign}
         >

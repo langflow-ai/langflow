@@ -49,6 +49,7 @@ from lfx.base.knowledge_bases.backends.postgres import PostgresBackend
 from lfx.base.knowledge_bases.backends.registry import (
     create_backend,
     get_backend_class,
+    is_local_chroma,
     register_backend,
     registered_backends,
 )
@@ -82,6 +83,7 @@ __all__ = [
     "TestConnectionResult",
     "create_backend",
     "get_backend_class",
+    "is_local_chroma",
     "register_backend",
     "registered_backends",
 ]

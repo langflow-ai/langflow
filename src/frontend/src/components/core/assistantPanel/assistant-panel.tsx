@@ -88,7 +88,8 @@ function AssistantInputWithScroll({
 }
 
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
-  const { hasEnabledModels } = useEnabledModels();
+  const { hasEnabledModels, isCatalogReady, isModelEnabled } =
+    useEnabledModels();
   const agenticExperienceEnabled = useUtilityStore(
     (state) => state.agenticExperienceEnabled,
   );
@@ -136,6 +137,10 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     return () =>
       document.removeEventListener("pointerdown", handleClickOutside, true);
   }, [isOpen, onClose]);
+  const canSendWithModel = useCallback(
+    (model: AssistantModel | null) => isCatalogReady && isModelEnabled(model),
+    [isCatalogReady, isModelEnabled],
+  );
   const {
     messages,
     sessionId,
@@ -158,7 +163,21 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleStopGeneration,
     handleClearHistory,
     loadSession,
-  } = useAssistantChat();
+  } = useAssistantChat({ canUseModel: canSendWithModel });
+  const handleAuthorizedSend = useCallback(
+    (content: string, model: AssistantModel | null) => {
+      if (!canSendWithModel(model)) return;
+      void handleSend(content, model);
+    },
+    [canSendWithModel, handleSend],
+  );
+  const handleAuthorizedRetry = useCallback(
+    (messageId: string) => {
+      if (!isCatalogReady) return;
+      handleRetry(messageId, canSendWithModel);
+    },
+    [canSendWithModel, handleRetry, isCatalogReady],
+  );
 
   // v1 scope: only the LATEST assistant message with a restore point offers
   // Revert — restoring an older point mid-chain would confuse the timeline.
@@ -203,15 +222,16 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       // localStorage may be unavailable (private browsing) — the pending
       // welcome message stays around for a manual retry.
     }
-    if (!saved) return;
-    void handleSend(pendingMessage, saved);
+    if (!saved || !canSendWithModel(saved)) return;
+    handleAuthorizedSend(pendingMessage, saved);
     clearPendingMessage();
   }, [
     isOpen,
     pendingMessage,
     isReadOnly,
     agenticExperienceEnabled,
-    handleSend,
+    canSendWithModel,
+    handleAuthorizedSend,
     clearPendingMessage,
   ]);
 
@@ -405,7 +425,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
         />
         {!agenticExperienceEnabled ? (
           <AssistantDisabledState />
-        ) : !hasEnabledModels && !hasMessages ? (
+        ) : isCatalogReady && !hasEnabledModels && !hasMessages ? (
           <AssistantNoModelsState />
         ) : hasMessages ? (
           <StickToBottom
@@ -426,7 +446,11 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onApprovePlan={handleApprovePlan}
                   onDismissPlan={handleDismissPlan}
                   onResetPlan={handleResetPlan}
-                  onRetry={hasEnabledModels ? handleRetry : undefined}
+                  onRetry={
+                    isCatalogReady && hasEnabledModels
+                      ? handleAuthorizedRetry
+                      : undefined
+                  }
                   skipApprovalGate={skipAll}
                   onAcknowledgeValidation={handleAcknowledgeValidation}
                   isLatestRestorePoint={msg.id === latestRestorePointId}
@@ -435,12 +459,12 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               ))}
             </StickToBottom.Content>
             <AssistantInputWithScroll
-              onSend={handleSend}
+              onSend={handleAuthorizedSend}
               onStop={handleStopGeneration}
-              disabled={!hasEnabledModels || isProcessing}
+              disabled={!isCatalogReady || !hasEnabledModels || isProcessing}
               isProcessing={isProcessing}
               currentStep={currentStep}
-              autoFocus={isOpen && hasEnabledModels}
+              autoFocus={isOpen && isCatalogReady && hasEnabledModels}
               draftMessage={draftMessageCache}
               onDraftChange={(draft) => {
                 draftMessageCache = draft;
@@ -452,13 +476,13 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           <>
             {(useExpandedSize || isMentionOpen) && <div className="flex-1" />}
             <AssistantInput
-              onSend={handleSend}
+              onSend={handleAuthorizedSend}
               onStop={handleStopGeneration}
-              disabled={false}
+              disabled={!isCatalogReady || !hasEnabledModels}
               isProcessing={isProcessing}
               currentStep={currentStep}
               compact={hasExpandedOnce}
-              autoFocus={isOpen}
+              autoFocus={isOpen && isCatalogReady && hasEnabledModels}
               draftMessage={draftMessageCache}
               onDraftChange={(draft) => {
                 draftMessageCache = draft;

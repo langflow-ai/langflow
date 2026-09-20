@@ -12,13 +12,14 @@ const setNodes = jest.fn();
 const setEdges = jest.fn();
 const setCurrentFlowInManager = jest.fn();
 const saveFlow = jest.fn().mockResolvedValue(undefined);
+const requestFitView = jest.fn();
 
 let currentFlow: unknown;
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: jest.fn((selector?: (state: unknown) => unknown) => {
-    const state = { setNodes, setEdges, currentFlow };
+    const state = { setNodes, setEdges, currentFlow, requestFitView };
     return selector ? selector(state) : state;
   }),
 }));
@@ -86,6 +87,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     setEdges.mockClear();
     setCurrentFlowInManager.mockClear();
     saveFlow.mockClear();
+    requestFitView.mockClear();
     currentFlow = {
       id: "flow-1",
       name: "New Flow",
@@ -163,6 +165,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     // ...and the rename is persisted via saveFlow.
     expect(saveFlow).toHaveBeenCalledWith(
       expect.objectContaining({ id: "flow-1", name: "Simple Agent" }),
+      expect.anything(),
     );
   });
 
@@ -184,9 +187,10 @@ describe("useApplyTemplateToCurrentFlow", () => {
     );
   });
 
-  it("should_not_dedupe_against_a_same_named_flow_in_a_different_folder", () => {
-    // Dedupe must be folder-scoped, mirroring ``useAddFlow``. A "Simple Agent"
-    // sitting in another folder must not bump this folder's flow to "(1)".
+  it("should_dedupe_against_a_same_named_flow_in_a_different_folder", () => {
+    // Flow names are unique per USER in the database (``unique_flow_name`` on
+    // (user_id, name)), not per folder. A folder-scoped rename lets the clash
+    // through and the PATCH comes back 400 "Name must be unique" (LE-2232).
     setStores(fullExamples, [
       { id: "other", name: "Simple Agent", folder_id: "folder-B" },
     ]);
@@ -197,8 +201,96 @@ describe("useApplyTemplateToCurrentFlow", () => {
     });
 
     expect(setCurrentFlowInManager).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+    );
+    expect(saveFlow).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+      expect.anything(),
+    );
+  });
+
+  it("should_issue_the_save_before_the_optimistic_store_swap", () => {
+    // useSaveFlow skips the request when the payload already equals the
+    // manager store's flow, so swapping first turns the save into a no-op and
+    // leaves persistence to the debounced autosave — where nothing can react
+    // to a rejected rename.
+    let swapsWhenSaveWasCalled = -1;
+    saveFlow.mockImplementationOnce(() => {
+      swapsWhenSaveWasCalled = setCurrentFlowInManager.mock.calls.length;
+      return Promise.resolve(undefined);
+    });
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent");
+    });
+
+    expect(swapsWhenSaveWasCalled).toBe(0);
+    expect(setCurrentFlowInManager).toHaveBeenCalledTimes(1);
+  });
+
+  it("should_not_dedupe_against_ownerless_example_flows", () => {
+    // Under AUTO_LOGIN the flows list also carries the ownerless starter
+    // examples. They hold no user_id, so they never collide — suffixing
+    // because of them would rename a flow whose name is actually free.
+    setStores(fullExamples, [
+      { id: "ex-1", name: "Simple Agent", folder_id: "starter-folder" },
+    ]);
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent");
+    });
+
+    expect(setCurrentFlowInManager).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Simple Agent" }),
     );
+  });
+
+  it("should_retry_with_the_next_version_when_the_save_hits_a_name_conflict", async () => {
+    // Safety net for what no client-side list can see: another tab/session
+    // taking the name between the read and the PATCH. Retry with the next
+    // free version instead of dropping the template on the floor.
+    saveFlow.mockRejectedValueOnce({
+      response: { status: 400, data: { detail: "Name must be unique" } },
+    });
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    await act(async () => {
+      result.current("simple_agent");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(saveFlow).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ name: "Simple Agent" }),
+      expect.anything(),
+    );
+    expect(saveFlow).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+      expect.anything(),
+    );
+    expect(setCurrentFlowInManager).toHaveBeenLastCalledWith(
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+    );
+  });
+
+  it("should_stop_retrying_and_roll_back_when_every_version_conflicts", async () => {
+    saveFlow.mockRejectedValue({
+      response: { status: 400, data: { detail: "Name must be unique" } },
+    });
+    const original = currentFlow;
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    await act(async () => {
+      result.current("simple_agent");
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+    });
+
+    expect(saveFlow.mock.calls.length).toBeLessThanOrEqual(5);
+    expect(setCurrentFlowInManager).toHaveBeenLastCalledWith(original);
   });
 
   it("should_revert_the_optimistic_rename_when_the_persist_fails", async () => {
@@ -219,6 +311,30 @@ describe("useApplyTemplateToCurrentFlow", () => {
       expect.objectContaining({ name: "Simple Agent" }),
     );
     expect(setCurrentFlowInManager).toHaveBeenLastCalledWith(original);
+  });
+
+  // A template's nodes measure over several frames; fitting before they all
+  // have dimensions frames the flow around a subset, which is what the welcome
+  // overlay would then uncover.
+  it("should_defer_the_fit_until_the_canvas_reports_the_graph_measured", () => {
+    const onFitted = jest.fn();
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent", onFitted);
+    });
+
+    expect(requestFitView).toHaveBeenCalledTimes(1);
+    expect(onFitted).not.toHaveBeenCalled();
+
+    act(() => {
+      requestFitView.mock.calls[0][0]();
+    });
+
+    expect(onFitted).toHaveBeenCalledTimes(1);
+    // The canvas corrects the framing itself when uncovering narrows it, so
+    // uncovering must not queue a second fit that races that resize.
+    expect(requestFitView).toHaveBeenCalledTimes(1);
   });
 
   it("should_not_rename_or_persist_when_there_is_no_current_flow", () => {

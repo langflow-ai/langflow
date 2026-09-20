@@ -18,6 +18,7 @@ RELEASE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
 GATE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release-inventory-gate.yml"
 OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-arxiv",
+    "lfx-confluent",
     "lfx-duckduckgo",
     "lfx-empiriolabs",
     "lfx-exa",

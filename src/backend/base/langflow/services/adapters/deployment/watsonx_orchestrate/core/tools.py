@@ -25,6 +25,7 @@ from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
+from langflow.services.adapters.deployment.watsonx_orchestrate.eligibility import get_wxo_flow_eligibility_error
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxFlowArtifactProviderData,
     WatsonxToolRefBinding,
@@ -285,6 +286,10 @@ def create_wxo_flow_tool(
     technical_tool_name = flow_provider_data.tool_name
     flow_id = flow_definition["id"]
     flow_name = flow_definition["name"]
+    eligibility_error = get_wxo_flow_eligibility_error(flow_definition.get("data"))
+    if eligibility_error:
+        msg = f"Flow '{flow_name}' cannot be deployed as a Watsonx Orchestrate tool. {eligibility_error}"
+        raise InvalidContentError(message=msg)
     logger.debug(
         "create_wxo_flow_tool",
         langflow_flow_name=flow_name,

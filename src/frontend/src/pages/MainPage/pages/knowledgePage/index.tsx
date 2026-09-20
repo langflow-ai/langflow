@@ -5,6 +5,7 @@ import { RadixAriaControlsFix } from "@/components/common/radixAriaControlsFix";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import KnowledgeBaseDrawer from "./components/KnowledgeBaseDrawer";
 import KnowledgeBasesTab from "./components/KnowledgeBasesTab";
 
@@ -20,6 +21,7 @@ export const KnowledgePage = () => {
     useState<KnowledgeBaseInfo | null>(null);
 
   const { t } = useTranslation();
+  useDocumentTitle(t("knowledge.pageTitle"));
   const navigate = useCustomNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
   const drawerTriggerRef = useRef<HTMLElement | null>(null);

@@ -36,6 +36,15 @@ interface FilesTabProps {
   isShiftPressed: boolean;
 }
 
+const getFileExtension = (path: string) => {
+  const fileName = path.split("/").pop() ?? "";
+  const extensionStart = fileName.lastIndexOf(".");
+  if (extensionStart <= 0 || extensionStart === fileName.length - 1) {
+    return undefined;
+  }
+  return fileName.slice(extensionStart + 1).toLowerCase();
+};
+
 const FilesTab = ({
   quickFilterText,
   setQuickFilterText,
@@ -167,7 +176,7 @@ const FilesTab = ({
       cellClass:
         "cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
       cellRenderer: (params) => {
-        const type = params.data.path.split(".")[1]?.toLowerCase();
+        const type = getFileExtension(params.data.path);
         return (
           <div className="flex items-center gap-4 font-medium">
             {params.data.progress !== undefined &&
@@ -229,7 +238,7 @@ const FilesTab = ({
       filter: "agTextColumnFilter",
       editable: false,
       valueFormatter: (params) => {
-        return params.value.split(".")[1]?.toUpperCase();
+        return getFileExtension(params.value)?.toUpperCase();
       },
       cellClass:
         "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",

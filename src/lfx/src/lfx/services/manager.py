@@ -294,9 +294,17 @@ class ServiceManager:
         for service in list(self.services.values()):
             if service is None:
                 continue
+            # Registered services are duck-typed: the in-memory caches and the Noop
+            # database/transaction services implement plain protocols, not Service, so
+            # they have no teardown at all. Nothing to dispose is not a teardown failure —
+            # calling through would raise AttributeError and, under raise_on_error, abort
+            # a fork-safety teardown over a service that holds nothing.
+            teardown_callable = getattr(service, "teardown", None)
+            if teardown_callable is None:
+                continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                teardown_result = service.teardown()
+                teardown_result = teardown_callable()
                 if asyncio.iscoroutine(teardown_result):
                     await teardown_result
             except Exception as exc:  # noqa: BLE001

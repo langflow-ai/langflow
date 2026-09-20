@@ -628,12 +628,21 @@ class FileComponent(BaseFileComponent):
                         display_name="Structured Content",
                         name="dataframe",
                         method="load_files_structured",
+                        types=["Table"],
+                        selected="Table",
                         tool_mode=True,
                     ),
                 )
             elif file_path.endswith(".json"):
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="json", method="load_files_json", tool_mode=True),
+                    Output(
+                        display_name="Structured Content",
+                        name="json",
+                        method="load_files_json",
+                        types=["JSON"],
+                        selected="JSON",
+                        tool_mode=True,
+                    ),
                 )
 
             advanced_mode = frontend_node.get("template", {}).get("advanced_mode", {}).get("value", False)
@@ -643,28 +652,73 @@ class FileComponent(BaseFileComponent):
                         display_name="Structured Output",
                         name="advanced_dataframe",
                         method="load_files_dataframe",
+                        types=["Table"],
+                        selected="Table",
                         tool_mode=True,
                     ),
                 )
                 frontend_node["outputs"].append(
                     Output(
-                        display_name="Markdown", name="advanced_markdown", method="load_files_markdown", tool_mode=True
+                        display_name="Markdown",
+                        name="advanced_markdown",
+                        method="load_files_markdown",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
                     ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
+                    Output(
+                        display_name="File Path",
+                        name="path",
+                        method="load_files_path",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
             else:
                 frontend_node["outputs"].append(
-                    Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
+                    Output(
+                        display_name="Raw Content",
+                        name="message",
+                        method="load_files_message",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
+                    Output(
+                        display_name="File Path",
+                        name="path",
+                        method="load_files_path",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
         else:
-            # Multiple files => DataFrame output; advanced parser disabled
+            # Multiple files => DataFrame and Message outputs; advanced parser disabled
             frontend_node["outputs"].append(
-                Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True)
+                Output(
+                    display_name="Files",
+                    name="dataframe",
+                    method="load_files",
+                    types=["Table"],
+                    selected="Table",
+                    tool_mode=True,
+                )
+            )
+            frontend_node["outputs"].append(
+                Output(
+                    display_name="Raw Content",
+                    name="message",
+                    method="load_files_message",
+                    types=["Message"],
+                    selected="Message",
+                    tool_mode=True,
+                )
             )
 
         return frontend_node
@@ -706,12 +760,21 @@ class FileComponent(BaseFileComponent):
             from pathlib import Path
 
             from lfx.schema.data import Data
+            from lfx.utils.file_path_security import (
+                StorageNamespaceError,
+                component_file_access_scopes,
+                enforce_local_file_access,
+            )
 
             # Use same resolution logic as BaseFileComponent (support storage paths)
             path_str = str(file_path_str)
             if parse_storage_path(path_str):
                 try:
                     resolved_path = Path(self.get_full_path(path_str))
+                except StorageNamespaceError:
+                    # A storage namespace outside this graph's scope is an access denial,
+                    # not a resolution failure: never retry it as a plain local path.
+                    raise
                 except (ValueError, AttributeError):
                     resolved_path = Path(self.resolve_path(path_str))
             else:
@@ -719,8 +782,6 @@ class FileComponent(BaseFileComponent):
 
             # Security: confine tool-mode reads to the storage dir in restricted (multi-tenant)
             # mode so a tenant cannot read arbitrary server files via file_path_str.
-            from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
-
             resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
 
             if not resolved_path.exists():
@@ -755,16 +816,20 @@ class FileComponent(BaseFileComponent):
         # Get file extension from S3 key
         file_extension = Path(self.s3_file_key).suffix or ""
 
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            try:
+        temp_file_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+                temp_file_path = temp_file.name
                 s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
-            except Exception as e:
-                # Clean up temp file on failure
+        except Exception as e:
+            # The context manager has already closed the handle by the time this runs, which is
+            # what Windows requires before the partial download can be deleted. Keeping the
+            # cleanup here also covers a failure raised by the closing flush itself.
+            if temp_file_path is not None:
                 with contextlib.suppress(OSError):
                     Path(temp_file_path).unlink()
-                msg = f"Failed to download file from S3: {e}"
-                raise RuntimeError(msg) from e
+            msg = f"Failed to download file from S3: {e}"
+            raise RuntimeError(msg) from e
 
         # Create BaseFile object
         from lfx.schema.data import Data
@@ -816,20 +881,24 @@ class FileComponent(BaseFileComponent):
 
         # Download file to temp location
         file_extension = Path(file_name).suffix or ""
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            try:
+        temp_file_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+                temp_file_path = temp_file.name
                 request = drive_service.files().get_media(fileId=self.file_id)
                 downloader = MediaIoBaseDownload(temp_file, request)
                 done = False
                 while not done:
                     _status, done = downloader.next_chunk()
-            except Exception as e:
-                # Clean up temp file on failure
+        except Exception as e:
+            # The context manager has already closed the handle by the time this runs, which is
+            # what Windows requires before the partial download can be deleted. Keeping the
+            # cleanup here also covers a failure raised by the closing flush itself.
+            if temp_file_path is not None:
                 with contextlib.suppress(OSError):
                     Path(temp_file_path).unlink()
-                msg = f"Failed to download file from Google Drive: {e}"
-                raise RuntimeError(msg) from e
+            msg = f"Failed to download file from Google Drive: {e}"
+            raise RuntimeError(msg) from e
 
         # Create BaseFile object
         from lfx.schema.data import Data

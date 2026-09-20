@@ -15,6 +15,7 @@ export default function DictComponent({
   id = "",
   name = "",
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<
   object | object[] | string,
   { name: string }
@@ -54,6 +55,7 @@ export default function DictComponent({
                 editNode ? "h-fit px-3 py-0.5" : "",
               )}
               data-testid={editNode ? `edit_${id}` : `${id}`}
+              aria-labelledby={ariaLabelledBy}
             >
               <ForwardedIconComponent
                 strokeWidth={ICON_STROKE_WIDTH}

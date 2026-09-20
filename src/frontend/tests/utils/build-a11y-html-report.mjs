@@ -143,6 +143,10 @@ function readReports() {
           bounds: issue.bounds ?? null,
         }));
 
+      const suppressedViolationCount = (report.results ?? []).filter(
+        (issue) => issue.ignored && issue.level === "violation",
+      ).length;
+
       const rules = new Map();
       for (const issue of issues) {
         rules.set(issue.ruleId, (rules.get(issue.ruleId) ?? 0) + 1);
@@ -160,6 +164,7 @@ function readReports() {
         issues,
         violationCount: issues.filter((issue) => issue.level === "violation")
           .length,
+        suppressedViolationCount,
         potentialCount: issues.filter(
           (issue) => issue.level === "potentialviolation",
         ).length,
@@ -609,6 +614,17 @@ const summary = {
   scansWithIssues: scans.filter((scan) => scan.issues.length > 0).length,
   issueCount: scans.reduce((sum, scan) => sum + scan.issues.length, 0),
   violationCount: scans.reduce((sum, scan) => sum + scan.violationCount, 0),
+  // Raw = actionable + baseline-suppressed. Publish these three numbers together,
+  // straight from this file; never hand-compute the split from baseline *files*
+  // (one baseline file can suppress several results).
+  baselineSuppressedCount: scans.reduce(
+    (sum, scan) => sum + scan.suppressedViolationCount,
+    0,
+  ),
+  rawViolationCount: scans.reduce(
+    (sum, scan) => sum + scan.violationCount + scan.suppressedViolationCount,
+    0,
+  ),
   potentialViolationCount: scans.reduce(
     (sum, scan) => sum + scan.potentialCount,
     0,
@@ -622,6 +638,7 @@ const summary = {
     label: scan.label,
     issueCount: scan.issues.length,
     violationCount: scan.violationCount,
+    suppressedViolationCount: scan.suppressedViolationCount,
     potentialViolationCount: scan.potentialCount,
     rules: scan.rules,
     htmlFile: scan.htmlFile,

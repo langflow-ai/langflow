@@ -64,6 +64,34 @@ describe("useAutoSelectModel", () => {
     expect(renderAutoSelect({ value: [OPENAI] })).not.toHaveBeenCalled();
   });
 
+  it("keeps a canonical WatsonX selection when the component option uses the legacy provider name", () => {
+    const canonicalSaved = {
+      name: "ibm/granite-3",
+      provider: "IBM WatsonX",
+      icon: "IBMWatsonx",
+      metadata: {},
+    };
+    const legacyOption = {
+      ...canonicalSaved,
+      provider: "IBM watsonx.ai",
+    };
+
+    const handleOnNewValue = renderAutoSelect({
+      flatOptions: [legacyOption, ANTHROPIC],
+      value: [canonicalSaved],
+      providers: [
+        {
+          provider: "IBM WatsonX",
+          is_configured: true,
+          is_enabled: true,
+        },
+      ] as never,
+      enabledModels: { "IBM WatsonX": { "ibm/granite-3": true } },
+    });
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
   it("should_replace_a_selection_whose_provider_no_longer_offers_it", () => {
     const handleOnNewValue = renderAutoSelect({
       value: [{ ...ANTHROPIC, name: "claude-retired" }],
@@ -82,5 +110,53 @@ describe("useAutoSelectModel", () => {
     });
 
     expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+});
+
+describe("useAutoSelectModel — restricted saved model (LE-1960)", () => {
+  const GRANITE = {
+    name: "granite-4-h-small",
+    provider: "IBM WatsonX",
+    icon: "IBMWatsonx",
+    metadata: {},
+  };
+  const RESTRICTED_PROVIDERS = [
+    { provider: "Anthropic", is_configured: true, is_enabled: true },
+    // Configured, but the saved model is neither listed nor known to the
+    // user's enabled-models map: an administrator hid it.
+    {
+      provider: "IBM WatsonX",
+      is_configured: true,
+      is_enabled: true,
+      models: [],
+    },
+  ] as never;
+
+  it("keeps a saved model that is no longer offered instead of swapping it silently", () => {
+    const handleOnNewValue = renderAutoSelect({
+      flatOptions: [ANTHROPIC, OPENAI],
+      value: [GRANITE],
+      providers: RESTRICTED_PROVIDERS,
+      enabledModels: { Anthropic: { "claude-opus-5": true } },
+    });
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
+  it("still replaces a model the user merely deactivated", () => {
+    const handleOnNewValue = renderAutoSelect({
+      flatOptions: [ANTHROPIC, OPENAI],
+      value: [GRANITE],
+      providers: RESTRICTED_PROVIDERS,
+      enabledModels: {
+        Anthropic: { "claude-opus-5": true },
+        "IBM WatsonX": { "granite-4-h-small": false },
+      },
+    });
+
+    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
+    expect(handleOnNewValue.mock.calls[0][0].value[0].name).toBe(
+      "claude-opus-5",
+    );
   });
 });

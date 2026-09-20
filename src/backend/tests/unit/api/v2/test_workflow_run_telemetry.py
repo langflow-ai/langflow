@@ -71,6 +71,46 @@ async def _execute_sync(wf_exec):
     )
 
 
+async def test_live_stream_uses_one_run_id_for_adapter_graph_and_telemetry(monkeypatch):
+    """A live stream's SSE run id must also identify its job row and RunPayload."""
+    from langflow.api.v2 import workflow as workflow_api
+    from langflow.api.v2 import workflow_execution as wf_exec
+    from langflow.services import deps
+
+    captured: dict[str, object] = {}
+    telemetry = SimpleNamespace(log_package_run=AsyncMock())
+    original_get_stream_adapter = workflow_api.get_stream_adapter
+
+    def capture_adapter(name, context):
+        captured["adapter_run_id"] = context.run_id
+        return original_get_stream_adapter(name, context)
+
+    async def fake_generate_flow_events(**kwargs):
+        captured["graph_run_id"] = kwargs["run_id"]
+        captured["log_builds"] = kwargs["log_builds"]
+        await kwargs["event_manager"].queue.put((None, None, time.time()))
+
+    monkeypatch.setattr(workflow_api, "_apply_execution_gates", lambda parsed, *_args: parsed)
+    monkeypatch.setattr(workflow_api, "get_stream_adapter", capture_adapter)
+    monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+    monkeypatch.setattr(deps, "get_telemetry_service", lambda: telemetry)
+
+    flow_id = uuid4()
+    response = workflow_api.build_stream_response(
+        ParsedWorkflowRun(flow_id=str(flow_id), input_value="", mode="stream"),
+        SimpleNamespace(id=flow_id, name="flow", user_id=uuid4()),
+        SimpleNamespace(id=uuid4()),
+        stream_protocol="langflow",
+        background_tasks=BackgroundTasks(),
+    )
+    async for _frame in response.body_iterator:
+        pass
+
+    payload = telemetry.log_package_run.await_args.args[0]
+    assert captured["adapter_run_id"] == captured["graph_run_id"] == payload.run_id
+    assert captured["log_builds"] is False
+
+
 async def test_stream_pause_does_not_emit_terminal_run_telemetry(monkeypatch):
     from langflow.api.v2 import workflow_execution as wf_exec
     from langflow.services import deps

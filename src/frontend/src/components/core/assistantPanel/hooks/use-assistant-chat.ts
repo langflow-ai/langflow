@@ -70,13 +70,23 @@ async function fireSessionReset(sessionId: string): Promise<void> {
 
 // Known size debt: `handleSend` (~390 lines, the SSE pump) keeps this hook over
 // the ceiling; splitting it needs a dedicated state-machine refactor.
-export function useAssistantChat(): UseAssistantChatReturn {
+interface UseAssistantChatOptions {
+  canUseModel?: (model: AssistantModel) => boolean;
+}
+
+export function useAssistantChat(
+  options: UseAssistantChatOptions = {},
+): UseAssistantChatReturn {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastModelRef = useRef<AssistantModel | null>(null);
+  const canUseModelRef = useRef<(model: AssistantModel) => boolean>(
+    options.canUseModel ?? (() => true),
+  );
+  canUseModelRef.current = options.canUseModel ?? (() => true);
   // After a set_flow, buffer subsequent events (mixed-run defense); reset per send.
   const proposalPendingRef = useRef<boolean>(false);
   // Last dismissed-not-reset plan markdown, re-injected as context by next send.
@@ -196,7 +206,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
         return;
       }
 
-      if (!model?.provider || !model?.name) {
+      if (!model?.provider || !model?.name || !canUseModelRef.current(model)) {
         return;
       }
 
@@ -544,7 +554,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
           frontend_node: {} as APIClassType,
         });
 
-        if (response.data) {
+        if (response?.data) {
           addComponent(response.data, response.type || "CustomComponent");
         }
       } catch (error) {
@@ -566,7 +576,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
   );
 
   const handleRetry = useCallback(
-    (messageId: string) => {
+    (messageId: string, isModelEnabled: (model: AssistantModel) => boolean) => {
       // Find the failed assistant message and the user message before it
       const msgIndex = messages.findIndex((m) => m.id === messageId);
       if (msgIndex < 1) return;
@@ -575,11 +585,14 @@ export function useAssistantChat(): UseAssistantChatReturn {
         .slice(0, msgIndex)
         .reverse()
         .find((m) => m.role === "user");
-      if (!userMessage?.content || !lastModelRef.current) return;
+      const lastModel = lastModelRef.current;
+      if (!userMessage?.content || !lastModel || !isModelEnabled(lastModel)) {
+        return;
+      }
 
       // Remove the failed assistant message so a fresh one is created by handleSend
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
-      handleSend(userMessage.content, lastModelRef.current);
+      void handleSend(userMessage.content, lastModel);
     },
     [messages, handleSend],
   );
@@ -609,7 +622,11 @@ export function useAssistantChat(): UseAssistantChatReturn {
       // second assistant message — the backend computes this flag.
       if (!msg?.continuationExpected) return;
       if (continuedEditMsgIds.current.has(messageId)) return;
-      if (!lastModelRef.current) return;
+      if (
+        !lastModelRef.current ||
+        !canUseModelRef.current(lastModelRef.current)
+      )
+        return;
       continuedEditMsgIds.current.add(messageId);
 
       await saveFlow();
@@ -692,7 +709,11 @@ export function useAssistantChat(): UseAssistantChatReturn {
     async (messageId: string) => {
       // Manual click marks the card approved + fresh turn; skip-all reuses
       // the SAME message slot so the auto-approve bridge is invisible.
-      if (!lastModelRef.current) return;
+      if (
+        !lastModelRef.current ||
+        !canUseModelRef.current(lastModelRef.current)
+      )
+        return;
       if (skipAllRef.current) {
         await handleSend(SKIP_ALL_APPROVAL_TEXT, lastModelRef.current, {
           silent: true,

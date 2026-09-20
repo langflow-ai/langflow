@@ -207,22 +207,20 @@ def test_load_flow_calls_ensure_flow_permission(helpers_funcs):
     Without this guard, a caller can pass an arbitrary flow_id and pull
     another user's flow definition (prompts, tools, embedded credentials).
     """
-    func = helpers_funcs["load_flow"]
-    calls = _calls(func, "ensure_flow_permission")
-    if calls:
-        saw_execute = False
-        for call in calls:
-            if len(call.args) >= 2:
-                arg = call.args[1]
-                if isinstance(arg, ast.Attribute) and arg.attr == "EXECUTE":
-                    saw_execute = True
-        assert saw_execute, "load_flow must authorize FlowAction.EXECUTE"
-        return
+    load_flow = helpers_funcs["load_flow"]
+    assert _calls(load_flow, "scoped_model_provider_policy_for_target_flow"), (
+        "load_flow must enter the target-flow authorization and provider-policy scope"
+    )
 
-    requires_calls = _calls(func, "requires_flow_permission")
-    assert requires_calls, "load_flow must use requires_flow_permission or ensure_flow_permission"
-    saw_execute = False
-    for call in requires_calls:
-        if call.args and isinstance(call.args[0], ast.Attribute) and call.args[0].attr == "EXECUTE":
-            saw_execute = True
-    assert saw_execute, "load_flow must authorize FlowAction.EXECUTE via decorator"
+    target_scope = helpers_funcs["scoped_model_provider_policy_for_target_flow"]
+    assert _calls(target_scope, "_resolve_authorized_target_flow"), (
+        "the target-flow scope must resolve and authorize the requested flow"
+    )
+
+    resolver = helpers_funcs["_resolve_authorized_target_flow"]
+    ensure_calls = _calls(resolver, "ensure_flow_permission")
+    assert ensure_calls, "the target-flow resolver must call ensure_flow_permission"
+    assert any(
+        len(call.args) >= 2 and isinstance(call.args[1], ast.Attribute) and call.args[1].attr == "EXECUTE"
+        for call in ensure_calls
+    ), "the target-flow resolver must authorize FlowAction.EXECUTE"

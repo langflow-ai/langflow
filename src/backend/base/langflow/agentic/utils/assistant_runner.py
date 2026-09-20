@@ -30,6 +30,7 @@ from langflow.services.database.models.flow.guards import ensure_flow_unlocked, 
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -212,33 +213,43 @@ async def run_assistant_and_persist(
         session_id=session_id,
         max_retries=None,
     )
-    ctx = await _resolve_assistant_context(request, user_id, session)
     # raw_cause on SSE error details is superuser-only; headless MCP callers
-    # authenticate as a real user, so read the flag from the DB row.
+    # authenticate as a real user, so read the flag from the DB row before the
+    # long-running stream releases this transaction.
     acting_user = await session.get(User, user_id)
+    is_superuser = bool(getattr(acting_user, "is_superuser", False))
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=user_id,
+        is_superuser=is_superuser,
+    ):
+        # Resolve provider authorization before credential reads, then retain
+        # the same trusted scope while the Assistant builds and verifies the
+        # working graph.
+        ctx = await _resolve_assistant_context(request, user_id, session)
 
-    # The agent loop below can run for minutes; end the read transaction now
-    # so it doesn't pin a pooled connection (Postgres: idle-in-transaction)
-    # for the whole run (#14445). Persistence re-reads under a fresh short
-    # transaction (the FOR UPDATE below), so the lock ordering is preserved.
-    await release_db_transaction(session)
+        # The agent loop below can run for minutes; end the read transaction now
+        # so it doesn't pin a pooled connection (Postgres: idle-in-transaction)
+        # for the whole run (#14445). Persistence re-reads under a fresh short
+        # transaction (the FOR UPDATE below), so the lock ordering is preserved.
+        await release_db_transaction(session)
 
-    stream = execute_flow_with_validation_streaming(
-        flow_filename=LANGFLOW_ASSISTANT_FLOW,
-        input_value=instruction,
-        global_variables=ctx.global_vars,
-        max_retries=ctx.max_retries,
-        user_id=str(user_id),
-        session_id=ctx.session_id,
-        provider=ctx.provider,
-        model_name=ctx.model_name,
-        api_key_var=ctx.api_key_name,
-        apply_edits_immediately=True,
-        is_superuser=bool(getattr(acting_user, "is_superuser", False)),
-    )
-    canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(
-        stream, flow.data, on_progress
-    )
+        stream = execute_flow_with_validation_streaming(
+            flow_filename=LANGFLOW_ASSISTANT_FLOW,
+            input_value=instruction,
+            global_variables=ctx.global_vars,
+            max_retries=ctx.max_retries,
+            user_id=str(user_id),
+            session_id=ctx.session_id,
+            provider=ctx.provider,
+            model_name=ctx.model_name,
+            api_key_var=ctx.api_key_name,
+            apply_edits_immediately=True,
+            is_superuser=is_superuser,
+        )
+        canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(
+            stream, flow.data, on_progress
+        )
 
     if canvas.changed:
         if not created_new:

@@ -1,0 +1,109 @@
+---
+title: New Relic
+slug: /observability-new-relic
+---
+
+New Relic accepts OpenTelemetry data over OTLP, so Langflow exports to it with configuration only and no vendor code.
+
+This page covers the New Relic specifics. For what Langflow exports, what it withholds, and how to control span volume, see [OpenTelemetry](./observability-opentelemetry.mdx) first.
+
+## Prerequisites
+
+- A New Relic account. The free tier is sufficient.
+- A New Relic **ingest license key**. In New Relic, go to **Administration** > **API keys** and copy a key of type `INGEST - LICENSE`.
+
+  Use an ingest license key, not a user API key. A license key writes data in and cannot query anything back. To run the verification queries at the end of this page, you also need access to the New Relic console for the same account.
+
+## Configure environment variables
+
+Add the following to your Langflow environment. Replace the placeholder with your license key:
+
+```text
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.nr-data.net
+OTEL_EXPORTER_OTLP_HEADERS=api-key=YOUR_LICENSE_KEY
+OTEL_SERVICE_NAME=langflow
+OTEL_EXPORTER_OTLP_COMPRESSION=gzip
+OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta
+```
+
+If your account is in the EU region, use `https://otlp.eu01.nr-data.net` instead.
+
+Two of these are not optional in practice:
+
+- **`OTEL_EXPORTER_OTLP_COMPRESSION=gzip`.** New Relic rejects payloads over 1 MB. A busy Langflow instance exports large span batches, and gzip keeps them under the cap.
+- **`OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta`.** New Relic renders counters from delta values, and the OpenTelemetry SDK sends cumulative by default. Without this, request-rate charts read as ever-climbing totals instead of a rate, which looks like a broken integration when it is only the temporality.
+
+If you export through an OpenTelemetry Collector rather than directly, apply the [`cumulativetodelta`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/cumulativetodeltaprocessor) processor on the pipeline that feeds New Relic instead of setting the temporality variable, and leave any local pipelines on cumulative.
+
+Restart Langflow and run a flow to generate traffic.
+
+## Verify the data landed
+
+A `2xx` response on export is not evidence. New Relic acknowledges the payload and then validates asynchronously, discarding anything invalid. Confirm by querying.
+
+In New Relic, go to **Query your data** to open the query builder, then run the following NRQL.
+
+1. Confirm spans are arriving and `flow.execute` is among them:
+
+   ```sql
+   SELECT count(*) FROM Span WHERE service.name = 'langflow'
+   SINCE 30 minutes ago UNTIL 5 minutes ago FACET name
+   ```
+
+2. Confirm nothing was accepted and then dropped. This should return zero:
+
+   ```sql
+   SELECT count(*) FROM NrIntegrationError SINCE 1 day ago FACET message
+   ```
+
+3. Retrieve a single run by its trace ID. Take a value from the first query's results, or from the `trace_id` field on any Langflow log line:
+
+   ```sql
+   SELECT * FROM Span WHERE trace.id = 'YOUR_TRACE_ID' SINCE 1 hour ago
+   ```
+
+4. Confirm metrics are arriving:
+
+   ```sql
+   SELECT count(*) FROM Metric WHERE service.name = 'langflow'
+   SINCE 30 minutes ago UNTIL 5 minutes ago FACET metricName
+   ```
+
+A failed run's `flow.execute` span arrives with `error.type` set to the exception class and `Otel.status Description` set to the same value. The exception message is not exported. For the full list of what Langflow withholds, see [OpenTelemetry](./observability-opentelemetry.mdx).
+
+## Troubleshooting
+
+### "Required metrics are missing" on the service page
+
+New Relic's OpenTelemetry APM view matches incoming data against specific semantic conventions to populate its prebuilt charts. Langflow emits current-convention metric names, which do not all match what that view expects, so the banner can appear even when ingest is healthy.
+
+This is a display issue, not an ingest failure. Confirm with query 4 above, and use the query builder or your own dashboards rather than the curated view.
+
+### Span counts look lower than expected
+
+Use a closed time window. A query ending at `NOW` includes a period that data has not finished arriving for, and with steady traffic that shortfall can look like 30% data loss.
+
+Add an explicit `UNTIL`, as in the queries above, or use absolute timestamps:
+
+```sql
+SELECT count(*) FROM Span WHERE service.name = 'langflow'
+SINCE '2026-08-14 13:28:00+0000' UNTIL '2026-08-14 13:33:00+0000' FACET name
+```
+
+### No data at all
+
+Run `lfx observability doctor` to confirm the endpoint accepts data with your configuration. A `401` or `403` means the key is wrong or is not an ingest license key.
+
+### Charts show ever-climbing totals instead of a rate
+
+The temporality preference is missing. See [Configure environment variables](#configure-environment-variables).
+
+### Your bill is higher than expected
+
+Database spans are roughly 80% of Langflow's exported spans. Set `LANGFLOW_OTEL_DB_SPANS=false` to drop them, after reading the trade-off in [Control span volume](./observability-opentelemetry.mdx#control-span-volume).
+
+## See also
+
+- [OpenTelemetry](./observability-opentelemetry.mdx)
+- [Logs](/logging)
+- [Traces](/traces)

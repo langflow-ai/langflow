@@ -492,6 +492,41 @@ async def test_create_flows(client: AsyncClient, json_flow: str, logged_in_heade
 
 
 @pytest.mark.usefixtures("session")
+async def test_create_flows_duplicate_name_returns_clean_409(client: AsyncClient, json_flow: str, logged_in_headers):
+    """A (user_id, name) collision in the batch endpoint must surface as a clean 409.
+
+    Regression: the duplicate INSERT used to reach ``session.flush()`` unhandled, leaking the raw
+    SQL statement and bound parameters and — un-rolled-back on SQLite — pinning the write lock so
+    the next writer busy-waited ``busy_timeout`` before "database is locked". The endpoint now rolls
+    back and maps the violation, so the error is fast and the session stays usable.
+    """
+    flow = orjson.loads(json_flow)
+    data = flow["data"]
+    taken_name = str(uuid4())
+
+    # Seed the name once.
+    seed = FlowListCreate(flows=[FlowCreate(name=taken_name, description="seed", data=data)])
+    seed_response = await client.post("api/v1/flows/batch/", json=seed.dict(), headers=logged_in_headers)
+    assert seed_response.status_code == 201
+
+    # Re-inserting the same name collides on UNIQUE(user_id, name).
+    dup = FlowListCreate(flows=[FlowCreate(name=taken_name, description="dup", data=data)])
+    dup_response = await client.post("api/v1/flows/batch/", json=dup.dict(), headers=logged_in_headers)
+    assert dup_response.status_code == 409
+    assert dup_response.json()["detail"] == "Name must be unique"
+    # No SQLAlchemy statement / bound parameters / driver hint may leak to the client.
+    body = dup_response.text.lower()
+    assert "insert into" not in body
+    assert "sqlalche.me" not in body
+    assert "user_id" not in body
+
+    # The session was rolled back (lock released), so a fresh write still succeeds immediately.
+    follow_up = FlowListCreate(flows=[FlowCreate(name=str(uuid4()), description="after", data=data)])
+    follow_up_response = await client.post("api/v1/flows/batch/", json=follow_up.dict(), headers=logged_in_headers)
+    assert follow_up_response.status_code == 201
+
+
+@pytest.mark.usefixtures("session")
 async def test_upload_file(client: AsyncClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]

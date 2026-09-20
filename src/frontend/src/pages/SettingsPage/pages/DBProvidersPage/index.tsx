@@ -8,6 +8,7 @@ import {
   getActiveDBProvider,
   isDBProviderConfigured,
 } from "@/constants/dbProviderConstants";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { ProviderConfigurationPanel } from "./components/ProviderConfigurationPanel";
 import { ProviderListItem } from "./components/ProviderListItem";
@@ -19,8 +20,22 @@ export default function DBProvidersPage() {
   const { t } = useTranslation();
   const { globalVariables, isPending, setVariable, activateProvider } =
     useDBProviderVariables();
+  const localVectorStoreAvailable = useUtilityStore(
+    (state) => state.localVectorStoreAvailable,
+  );
+  // Local Chroma writes to the serving box's disk, which the production profile
+  // refuses. Hide it here too — this page sets the global default, so leaving it
+  // selectable would let an operator re-enable the exact backend the create
+  // endpoint rejects.
+  const visibleProviders = useMemo(
+    () =>
+      DB_PROVIDER_OPTIONS.filter(
+        (provider) => localVectorStoreAvailable || provider.id !== "chroma",
+      ),
+    [localVectorStoreAvailable],
+  );
   const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
-    getActiveDBProvider(globalVariables),
+    getActiveDBProvider(globalVariables, localVectorStoreAvailable),
   );
   const [hasManuallySelectedProvider, setHasManuallySelectedProvider] =
     useState(false);
@@ -32,8 +47,8 @@ export default function DBProvidersPage() {
   );
 
   const activeProviderId = useMemo(
-    () => getActiveDBProvider(globalVariables),
-    [globalVariables],
+    () => getActiveDBProvider(globalVariables, localVectorStoreAvailable),
+    [globalVariables, localVectorStoreAvailable],
   );
 
   useEffect(() => {
@@ -43,9 +58,8 @@ export default function DBProvidersPage() {
   }, [activeProviderId, hasManuallySelectedProvider]);
 
   const selectedProvider =
-    DB_PROVIDER_OPTIONS.find(
-      (provider) => provider.id === selectedProviderId,
-    ) ?? DB_PROVIDER_OPTIONS[0];
+    visibleProviders.find((provider) => provider.id === selectedProviderId) ??
+    visibleProviders[0];
 
   const { getFieldValue, isHydrated, canSave } = useDBProviderFields({
     selectedProvider,
@@ -101,7 +115,7 @@ export default function DBProvidersPage() {
             selectedProvider ? "w-1/3 border-r" : "w-full",
           )}
         >
-          {DB_PROVIDER_OPTIONS.map((provider) => (
+          {visibleProviders.map((provider) => (
             <ProviderListItem
               key={provider.id}
               provider={provider}
@@ -112,6 +126,7 @@ export default function DBProvidersPage() {
                 isDBProviderConfigured(
                   provider.id as AvailableDBProviderId,
                   globalVariables,
+                  localVectorStoreAvailable,
                 )
               }
               onSelect={() => {

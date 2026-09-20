@@ -64,6 +64,18 @@ i18n.use(initReactI18next).init({
 });
 console.info = _consoleInfo;
 
+/**
+ * Keeps `<html lang>` in sync with the active locale so assistive technology
+ * applies the right pronunciation rules (WCAG 3.1.1 Language of Page).
+ * `index.html` only ever ships the hard-coded default.
+ */
+const syncDocumentLanguage = (lang: string) => {
+  document.documentElement.lang = lang;
+};
+
+syncDocumentLanguage(detectedLang);
+i18n.on("languageChanged", syncDocumentLanguage);
+
 export async function loadLanguage(lang: string): Promise<void> {
   if (lang === "en") return;
   if (i18n.hasResourceBundle(lang, "translation")) return;

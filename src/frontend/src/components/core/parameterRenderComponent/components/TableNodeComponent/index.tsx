@@ -28,6 +28,7 @@ export default function TableNodeComponent({
   trigger_text,
   table_icon,
   showParameter = true,
+  ariaLabelledBy,
   // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[], TableComponentType>): JSX.Element | null {
   const { t } = useTranslation();
@@ -312,6 +313,7 @@ export default function TableNodeComponent({
               "w-full " +
               (disabled ? "pointer-events-none cursor-not-allowed" : "")
             }
+            aria-labelledby={ariaLabelledBy}
           >
             <ForwardedIconComponent
               name={trigger_icon}

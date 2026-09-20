@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import type { AssistantModel } from "../assistant-panel.types";
 import { classifyModelStrength } from "../helpers/model-strength";
@@ -29,7 +30,12 @@ export function ModelSelector({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
-  const { filteredProviders: enabledProviders, isLoading } = useEnabledModels();
+  const {
+    filteredProviders: enabledProviders,
+    isLoading,
+    isError,
+  } = useEnabledModels();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const { refresh: refreshAllModelInputs } = useRefreshModelInputs();
 
   const handleRefreshList = async () => {
@@ -121,6 +127,21 @@ export function ModelSelector({
       >
         <span className="text-accent-emerald-foreground">•</span>
         <span>{t("assistant.loading")}</span>
+      </Button>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        data-testid="assistant-model-catalog-error"
+        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+        disabled
+      >
+        <span className="text-destructive">•</span>
+        <span>{t("errors.failedToLoadModels")}</span>
       </Button>
     );
   }
@@ -271,6 +292,7 @@ export function ModelSelector({
           open={isManageProvidersOpen}
           onClose={() => setIsManageProvidersOpen(false)}
           modelType="llm"
+          flowId={currentFlowId}
         />
       )}
     </div>

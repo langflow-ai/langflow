@@ -47,6 +47,7 @@ function suppressRowActionKeys(params: SuppressKeyboardEventParams) {
 type FocusedCell = { rowIndex: number; colId: string };
 
 export default function GlobalVariablesPage() {
+  // Global Settings intentionally manages only global/unscoped variables.
   const { data: globalVariables } = useGetGlobalVariables();
   const resourceIds = useMemo(
     () => globalVariables?.map((variable) => variable.id) ?? [],

@@ -66,7 +66,7 @@ async function addMcpNodeFromSidebar(page: Page, name: string): Promise<void> {
     timeout: 30_000,
   });
   await expect(
-    page.getByRole("group", { name: "MCP Tools node" }).last(),
+    page.getByRole("application", { name: "MCP Tools node" }).last(),
   ).toBeVisible({
     timeout: 30_000,
   });
@@ -185,7 +185,7 @@ test(
       return document.body.classList.contains("dark");
     });
     for (const icon of await page
-      .getByRole("group", { name: "MCP Tools node" })
+      .getByRole("application", { name: "MCP Tools node" })
       .last()
       .getByTestId("icon-Mcp")
       .locator("path")

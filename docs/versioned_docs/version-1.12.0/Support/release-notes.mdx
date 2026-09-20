@@ -1,0 +1,156 @@
+---
+title: Langflow release notes
+slug: /release-notes
+---
+
+import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
+This page summarizes significant changes to Langflow in each release.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
+Due to strict SemVer requirements, Langflow Desktop can have different patch versions than the core Langflow OSS Python package, but the major and minor versions are aligned.
+
+## Prepare to upgrade
+
+:::warning
+Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
+This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
+:::
+
+To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following upgrade process:
+
+1. Recommended: [Export your projects](/api-projects#export-a-project) to create backups of your flows:
+
+    ```bash
+    curl -X GET \
+    "$LANGFLOW_SERVER_URL/api/v1/projects/download/$PROJECT_ID" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+   To export flows from the visual editor, see [Import and export flows](/concepts-flows-import).
+
+2. Install the new version:
+
+   * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+   * **Langflow Docker image**: Run the new image in a separate container, or upgrade your existing image. For more information, see [Upgrade the Langflow Docker image](/deployment-docker#upgrade-the-langflow-docker-image).
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the Langflow header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
+
+3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
+
+    When upgrading components, you can use the **Create backup flow before updating** option if you didn't previously export your flows.
+
+4. If you installed the new version in isolation, upgrade your primary installation after testing the new version.
+
+    If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
+
+## 1.12.x
+
+Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
+### Breaking changes
+
+- `langflow-base` is now the minimal install
+
+    Langflow 1.12 makes `langflow-base` a complete, version-aligned installation of the Langflow application.
+    Replace any `langflow-base~=0.x` pins with `langflow-base~=1.12.0` pins.
+
+- Ongoing breaking change: bundle separation
+
+    Bundle separation concludes in 1.12.
+    `uv pip install langflow` no longer installs all provider bundles, and includes only a curated list of providers.
+
+    Saved flows continue to operate as expected, and existing component class names remain compatible.
+    If a required provider package is not installed, the component is visible in the visual editor, but the flow won't build or run until you install the package.
+
+    Langflow displays an error that names the missing package, so you can install it.
+    To install a package, such as Exa, run `uv pip install lfx-exa` in your virtual environment.
+
+    For more information, see [Additional bundles](extensions-bundle-list#additional-bundles).
+
+- Admin Page removed
+
+    Langflow OSS no longer includes an **Admin Page**.
+    The `/admin` route, the account-menu **Admin Page** link, and the user-management page are gone.
+    Superusers can no longer manage users or passwords in the visual editor.
+
+    To manage users, use the [Users API](/api-users).
+    `/login/admin` is still the admin sign-in endpoint and page.
+
+    For more information, see [Manage users as an administrator](/api-keys-and-authentication#manage-users-as-an-administrator).
+
+### New features
+
+- OpenTelemetry export
+
+    Langflow can export health traces, metrics, and logs over OTLP to your own backend.
+
+    For more information, see [OpenTelemetry](./observability-opentelemetry), [New Relic](./observability-new-relic), and [Instana](./observability-instana).
+
+- Python Interpreter microVM sandbox
+
+    Set `LANGFLOW_SANDBOX_BACKEND=exec-sandbox` to run the [**Python Interpreter** component](/python-interpreter) in a dedicated [QEMU microVM](https://www.qemu.org/docs/master/system/i386/microvm.html) instead of in the Langflow server process.
+    The microVM is not included in a default `uv pip install langflow` installation.
+    To install it, run `uv pip install 'langflow[sandbox]'`.
+
+    For more information, see [Isolate executions in a microVM](/python-interpreter#sandbox).
+
+- Production preflight checks
+
+    Set `LANGFLOW_DEPLOYMENT_PROFILE=prod` to probe your Langflow deployment before any workers start.
+    The default remains `dev`, which skips prod checks.
+
+    For more information, see [Production preflight checks](/deployment-prod-best-practices#production-preflight).
+
+- Disable the legacy MCP SSE transport
+
+    Set `LANGFLOW_MCP_SSE_ENABLED=false` to return a `404` from the legacy SSE transport endpoint.
+    Streamable HTTP is not affected.
+
+    For more information, see [Disable the legacy MCP SSE transport](/mcp-server#disable-legacy-sse).
+
+- OrcaRouter bundle
+
+    The **OrcaRouter** bundle adds an OrcaRouter language model component.
+
+    For more information, see [OrcaRouter](./bundles-orcarouter).
+
+- IBM Confluent bundle
+
+    The **IBM Confluent** bundle adds Kafka, Tableflow, and Real-Time Context Engine components.
+
+    For more information, see [IBM Confluent](./bundles-confluent).
+
+- Deployment tweak policy
+
+    Set `LANGFLOW_TWEAKS_POLICY` to control which component fields an API caller can override at run time.
+
+    For more information, see [Restrict API tweaks](./deployment-tweaks-policy).
+
+- Catalog and model policy APIs
+
+    Superusers can block or allow components, starter templates, model providers, and specific models.
+
+    For more information, see [Catalog and model policy](./api-governance-policy).
+
+## 1.11.x
+
+For 1.11.x release notes, see the [1.11.x documentation](https://docs.langflow.org/1.11.0/release-notes).
+
+## 1.10.x
+
+For 1.10.x release notes, see the [1.10.x documentation](https://docs.langflow.org/1.10.0/release-notes).
+
+## 1.9.x
+
+For 1.9.x release notes, see the [1.9.x documentation](https://docs.langflow.org/1.9.0/release-notes).
+
+## 1.8.x
+
+For 1.8.x release notes, see the [1.8.x documentation](https://docs.langflow.org/1.8.0/release-notes).
+
+## Earlier releases
+
+See the [Changelog](https://github.com/langflow-ai/langflow/releases).

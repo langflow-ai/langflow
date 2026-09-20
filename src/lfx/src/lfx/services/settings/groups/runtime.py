@@ -49,6 +49,18 @@ class RuntimeSettings(BaseModel):
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    dangerously_allow_multi_worker_without_shared_queue: bool = False
+    """Opt out of the startup guard that refuses ``workers > 1`` with the default
+    in-memory job queue.
+
+    Off by default. Enabling it lets headless deployments take multi-worker
+    throughput without standing up Redis, at the cost of every behavior that
+    needs process-shared state: the v1 ``/build`` editor and playground flows and
+    MCP over SSE stop working, and rate limiting, webhook UI feedback, and the
+    orphan sweep degrade to per-worker or per-node. ``LANGFLOW_JOB_QUEUE_TYPE=redis``
+    remains the supported way to run multiple workers; see
+    ``langflow.__main__.ensure_multi_worker_safe`` for the full list of caveats
+    logged when the bypass is active."""
     redis_queue_host: str | None = None
     """Redis host for the job queue. Falls back to redis_host if not set."""
     redis_queue_port: int | None = None
@@ -133,9 +145,9 @@ class RuntimeSettings(BaseModel):
     """Timeout for the API calls in seconds."""
 
     workflow_execution_timeout: int = 300
-    """Wall-clock ceiling in seconds for a single v2 workflow run, applied to every
-    execution mode. Sync runs raise a 408; stream, background, and public runs emit
-    the protocol's terminal-error event and (for background) mark the job failed."""
+    """Wall-clock ceiling in seconds for a client-attached v2 workflow run.
+    Sync runs raise a 408; stream and public runs emit the protocol's terminal-error
+    event. Background runs use ``background_job_timeout`` instead."""
 
     model_provider_policy_refresh_interval_s: float = Field(default=10.0, gt=0)
     """How often each backend worker refreshes the install-wide model-provider policy.

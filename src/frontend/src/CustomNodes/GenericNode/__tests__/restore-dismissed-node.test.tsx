@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { OutputFieldType } from "@/types/api";
 import GenericNode from "../index";
 
 const mockUpdateNodeInternals = jest.fn();
@@ -337,6 +338,54 @@ describe("GenericNode dismissed update recovery", () => {
       );
       expect(mockRemoveDismissedNodes).toHaveBeenCalledWith(["node-1"]);
       expect(mockCompleteNodeUpdate).toHaveBeenCalledWith("node-1");
+    });
+  });
+
+  it("selects the first visible output when no output is selected", async () => {
+    const outputs: OutputFieldType[] = [
+      {
+        name: "response",
+        display_name: "Response",
+        types: ["Message"],
+      },
+      {
+        name: "agent",
+        display_name: "Agent",
+        types: ["Agent"],
+      },
+    ];
+    const nodeData = {
+      id: "node-1",
+      type: "Prompt",
+      selected_output: undefined as string | undefined,
+      node: {
+        display_name: "Prompt",
+        description: "Prompt node",
+        documentation: "",
+        template: {},
+        outputs,
+      },
+    };
+    const existingNode = { data: nodeData };
+    let updatedNode = existingNode;
+
+    mockSetEdges.mockImplementation(
+      (updater: (edges: unknown[]) => unknown[]) => updater([]),
+    );
+    mockSetNode.mockImplementation(
+      (
+        _nodeId: string,
+        updater: (node: typeof existingNode) => typeof existingNode,
+      ) => {
+        updatedNode = updater(existingNode);
+      },
+    );
+
+    render(<GenericNode selected={false} data={nodeData} />);
+
+    await waitFor(() => {
+      expect(updatedNode.data.selected_output).toBe("response");
+      expect(updatedNode.data.node.outputs[0].selected).toBe("Message");
     });
   });
 });

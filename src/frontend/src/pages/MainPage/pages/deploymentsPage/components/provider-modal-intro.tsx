@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { decorateWxoUrl } from "@/utils/decorate-wxo-url";
@@ -10,6 +11,7 @@ interface ProviderModalIntroProps {
 export default function ProviderModalIntro({
   provider,
 }: ProviderModalIntroProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
@@ -24,10 +26,10 @@ export default function ProviderModalIntro({
       </div>
       <p className="text-sm text-muted-foreground">
         {provider ? (
-          "Update environment name or rotate API key. Service instance URL is fixed after creation."
+          t("deployments.updateEnvironmentDescription")
         ) : (
           <>
-            Configure your watsonx Orchestrate credentials below. New to wxO?{" "}
+            {t("deployments.wxoConfigureCredentials")}{" "}
             <a
               href={decorateWxoUrl(
                 "https://www.ibm.com/products/watsonx-orchestrate#pricing",
@@ -37,9 +39,9 @@ export default function ProviderModalIntro({
               rel="noopener noreferrer"
               className="font-medium text-primary hover:underline"
             >
-              Sign up for watsonx Orchestrate
+              {t("deployments.wxoSignUp")}
             </a>
-            . Already have an account?{" "}
+            . {t("deployments.wxoAlreadyHaveAccount")}{" "}
             <a
               href={decorateWxoUrl(
                 "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
@@ -49,7 +51,7 @@ export default function ProviderModalIntro({
               rel="noopener noreferrer"
               className="font-medium text-primary hover:underline"
             >
-              Find your credentials
+              {t("deployments.wxoFindCredentials")}
             </a>
             .
           </>

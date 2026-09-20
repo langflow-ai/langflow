@@ -34,7 +34,7 @@ from astrapy.info import (
     VectorServiceOptions,
 )
 
-from lfx_datastax.base.astradb_base import AstraDBBaseComponent
+from lfx_datastax.base.astradb_base import AstraDBBaseComponent, validate_api_endpoint
 from lfx.io import (
     BoolInput,
     DropdownInput,
@@ -317,6 +317,9 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         if not new_collection_name:
             msg = "Collection name is required to create a new collection."
             raise ValueError(msg)
+
+        # Fed a build_config value; validate before the endpoint is dialed with the token.
+        validate_api_endpoint(api_endpoint)
 
         env = cls.get_environment(environment)
         client = DataAPIClient(environment=env)

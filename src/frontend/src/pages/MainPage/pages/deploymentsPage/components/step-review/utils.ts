@@ -2,6 +2,7 @@ import {
   getFlowVersionCount,
   getScopedValueForUniqueFlowVersion,
 } from "../../helpers/version-scope";
+import { getWatsonxFlowEligibilityIssue } from "../../helpers/watsonx-flow-eligibility";
 import type { ConnectionItem } from "../../types";
 import { getDefaultDeploymentToolName, UNKNOWN_FLOW_NAME } from "../../types";
 import type { ReviewFlowItem } from "./types";
@@ -21,7 +22,7 @@ function getToolNameForReview(
 }
 
 interface BuildReviewFlowsParams {
-  allFlows: Array<{ id: string; name: string }>;
+  allFlows: Array<{ id: string; name: string; data?: unknown }>;
   attachedConnectionByFlow: Map<string, string[]>;
   connections: ConnectionItem[];
   removedFlowIds: Set<string>;
@@ -33,9 +34,11 @@ interface BuildReviewFlowsParams {
       flowName?: string;
       versionId: string;
       versionTag: string;
+      wxoEligibilityIssue?: ReviewFlowItem["wxoEligibilityIssue"] | null;
     }
   >;
   toolNameByFlow: Map<string, string>;
+  includeWatsonxEligibility?: boolean;
 }
 
 export function buildReviewFlows({
@@ -45,6 +48,7 @@ export function buildReviewFlows({
   removedFlowIds,
   selectedVersionByFlow,
   toolNameByFlow,
+  includeWatsonxEligibility = false,
 }: BuildReviewFlowsParams): ReviewFlowItem[] {
   const selectedItems = Array.from(selectedVersionByFlow.entries()).map(
     ([attachmentKey, entry]) => ({
@@ -106,6 +110,11 @@ export function buildReviewFlows({
         defaultToolName,
         versionLabel: entry.versionTag || entry.versionId,
         connectionDetails,
+        wxoEligibilityIssue: includeWatsonxEligibility
+          ? entry.wxoEligibilityIssue === undefined
+            ? (getWatsonxFlowEligibilityIssue(flow?.data) ?? undefined)
+            : (entry.wxoEligibilityIssue ?? undefined)
+          : undefined,
       };
     })
     .filter((item): item is ReviewFlowItem => item !== null);

@@ -133,9 +133,11 @@ def _ollama_cache_clear() -> None:
     _ollama_capability_cache.clear()
 
 
-# Extract model names from metadata for fallback defaults
-WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA]
-WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_METADATA]
+# Extract model names from metadata for fallback defaults. Deprecated seed
+# entries are withdrawn from IBM's catalog, so the API-failure fallback must
+# not offer them.
+WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA if not m.get("deprecated")]
+WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_METADATA if not m.get("deprecated")]
 
 
 def _to_str(value: Any) -> str | None:
@@ -425,8 +427,38 @@ def get_watsonx_embedding_models(
         return default_models
 
 
+def _environment_variable_value(variable_key: str) -> str | None:
+    """Process-environment value for a provider's REQUIRED variable, when allowed.
+
+    Scoped to required variables so the fallback matches provider enablement
+    exactly. An optional variable is an opt-in switch: ``OPENAI_BASE_URL`` in the
+    environment would otherwise flip discovery to a compatible endpoint and
+    replace OpenAI's curated chat catalog with that endpoint's raw ``/models``
+    listing (whisper, tts, embeddings). The request-scoped no-env-fallback flag
+    still wins, so a served flow stays isolated from process-wide environment.
+
+    Name shapes come from ``provider_variable_from_env``, the same reader
+    ``get_all_variables_for_provider`` uses, so enablement and discovery cannot
+    disagree about which environment spellings configure a provider.
+    """
+    from lfx.base.models.unified_models import is_required_provider_variable, provider_variable_from_env
+    from lfx.services.variable.request_scope import is_env_fallback_disabled
+
+    if is_env_fallback_disabled() or not is_required_provider_variable(variable_key):
+        return None
+    return provider_variable_from_env(variable_key)
+
+
 def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Get a variable value from global variables for a provider.
+
+    Resolution order matches provider enablement: the user's stored variable
+    first, then the process environment for the provider's REQUIRED variables.
+    Discovery used to read the database alone, so a provider configured purely
+    through the environment (``OLLAMA_BASE_URL`` in a container) reported itself
+    connected while its live fetch returned nothing — callers then fell back to
+    the static catalog and offered models the server does not actually have.
+    Optional variables stay database-only; see :func:`_environment_variable_value`.
 
     Args:
         user_id: The user ID to look up global variables for
@@ -443,7 +475,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
         non-Ollama user crashed retrieval (Knowledge component BUG-01).
     """
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        return None
+        return _environment_variable_value(variable_key)
 
     async def _get_variable():
         async with session_scope() as session:
@@ -462,7 +494,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                 # treat absence as "no value" rather than propagating.
                 return None
 
-    return _to_str(run_until_complete(_get_variable()))
+    return _to_str(run_until_complete(_get_variable())) or _environment_variable_value(variable_key)
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -1042,8 +1074,12 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
         # Look up capability flags from the static catalog when known; otherwise
         # fall back to defaults. Without this, the live API path blanket-marks
         # every LLM as tool_calling=True, surfacing models like
-        # ibm/granite-3b-code-instruct and ibm/granite-guardian-3-8b in the
-        # Agent dropdown even though they don't support tool calling.
+        # ibm/granite-guardian-3-8b in the Agent dropdown even though they
+        # don't support tool calling. ``deprecated`` is intentionally NOT
+        # copied from the static seed: the live query already excludes
+        # withdrawn models (``!lifecycle_withdrawn``), and re-stamping the
+        # static flag once hid live, current models whenever the seed data
+        # went stale (the "IBM WatsonX shows 0 models" bug).
         static_metadata = WATSONX_LLM_METADATA if model_type == "llm" else WATSONX_EMBEDDING_METADATA
         known_by_name = {m["name"]: m for m in static_metadata}
         default_tool_calling = model_type == "llm"
@@ -1058,7 +1094,6 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
                     icon="IBM",
                     model_type=model_type if model_type == "llm" else "embeddings",
                     tool_calling=known.get("tool_calling", default_tool_calling) if known else default_tool_calling,
-                    deprecated=bool(known.get("deprecated", False)) if known else False,
                     default=i < MIN_DEFAULT_MODELS,  # Mark first 5 as default
                 )
             )

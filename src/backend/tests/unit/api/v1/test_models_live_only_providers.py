@@ -139,6 +139,40 @@ async def test_live_only_provider_absent_from_model_queries(client: AsyncClient,
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_live_discovery_flag_marks_discovery_providers(
+    client: AsyncClient, logged_in_headers, fake_live_provider
+):
+    """``live_discovery`` tells the UI an empty catalog means "configure me".
+
+    It must be True for both bundle-registered live-only providers and the
+    core live-fetch providers, and False for static-catalog providers.
+    """
+    providers = {p["provider"]: p for p in await _get_models(client, logged_in_headers)}
+
+    assert providers[fake_live_provider]["live_discovery"] is True
+    assert providers["IBM WatsonX"]["live_discovery"] is True
+    assert providers["OpenAI"]["live_discovery"] is False
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_watsonx_seed_catalog_visible_before_configuration(client: AsyncClient, logged_in_headers):
+    """The WatsonX seed catalog must survive the default deprecated filter.
+
+    Regression: every static WatsonX model was once flagged ``deprecated=True``,
+    so the default listing rendered the provider with 0 models ("IBM Langflow
+    ships no IBM models") until credentials were configured.
+    """
+    providers = await _get_models(client, logged_in_headers)
+    entry = next((p for p in providers if p["provider"] == "IBM WatsonX"), None)
+
+    assert entry is not None, "IBM WatsonX missing from the default listing"
+    assert entry["num_models"] > 0, "WatsonX seed catalog fully filtered out (all models deprecated?)"
+    model_types = {m["metadata"].get("model_type") for m in entry["models"]}
+    assert "llm" in model_types
+    assert "embeddings" in model_types
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_non_live_metadata_providers_stay_hidden(client: AsyncClient, logged_in_headers):
     # Azure OpenAI / Groq have provider metadata but neither a static catalog
     # nor live discovery: the union must not resurrect them.

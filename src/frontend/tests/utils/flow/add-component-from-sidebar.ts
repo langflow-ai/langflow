@@ -2,6 +2,9 @@ import { expect, type Page } from "@playwright/test";
 import { SELECTORS, TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
 
+/** How many times a swallowed drag is re-attempted before failing. */
+const DRAG_ATTEMPTS = 3;
+
 export type AddComponentOpts = {
   /** Search query typed into the sidebar input. */
   search: string;
@@ -86,12 +89,29 @@ export async function addComponentFromSidebar(
 
   const nodes = page.locator(".react-flow__node");
   const previousNodeCount = await nodes.count();
-  await page
-    .getByTestId(testId)
-    .dragTo(page.locator(SELECTORS.reactFlowCanvasXPath), {
+  const canvas = page.locator(SELECTORS.reactFlowCanvasXPath);
+
+  // A drag can be swallowed whole: the HTML5 drag sequence starts on a sidebar
+  // row React is still re-rendering after the search (or a legacy-toggle), the
+  // drop never reaches the canvas, and no node appears — with no error, so the
+  // spec only fails much later on a handle that does not exist. Reproduced on a
+  // CPU-starved renderer; it is what cost Windows CI the Text Input node in
+  // stop-building.spec.ts. Retry, but only when nothing landed at all, so a
+  // slow-but-successful drop is never duplicated into a second node.
+  for (let attempt = 1; attempt <= DRAG_ATTEMPTS; attempt++) {
+    await page.getByTestId(testId).dragTo(canvas, {
       targetPosition: position ?? { x: 200, y: 200 },
     });
-  await expect(nodes).toHaveCount(previousNodeCount + 1, {
-    timeout: TIMEOUTS.standard,
-  });
+    try {
+      await expect(nodes).toHaveCount(previousNodeCount + 1, {
+        timeout: TIMEOUTS.standard,
+      });
+      return;
+    } catch (error) {
+      const landed = (await nodes.count()) !== previousNodeCount;
+      if (attempt === DRAG_ATTEMPTS || landed) {
+        throw error;
+      }
+    }
+  }
 }

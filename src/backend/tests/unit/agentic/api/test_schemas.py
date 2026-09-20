@@ -4,7 +4,13 @@ Tests the Pydantic models used for request/response validation.
 """
 
 import pytest
-from langflow.agentic.api.schemas import AssistantRequest, StepType, ValidationResult
+from langflow.agentic.api.schemas import (
+    AssistantRequest,
+    HeadlessAssistantRequest,
+    StepType,
+    ValidationResult,
+)
+from lfx.services.deps import get_settings_service
 from pydantic import ValidationError
 
 
@@ -221,3 +227,52 @@ class TestSchemaIntegration:
         assert restored.is_valid == original.is_valid
         assert restored.code == original.code
         assert restored.class_name == original.class_name
+
+
+class TestAssistantMessageLengthLimit:
+    """Tests for the operator-tunable prompt length cap."""
+
+    def test_should_accept_a_prompt_at_the_default_limit(self):
+        """A prompt of exactly the default limit is valid."""
+        limit = get_settings_service().settings.assistant_max_message_length
+        assert limit == 2000
+
+        request = AssistantRequest(flow_id="flow-1", input_value="a" * limit)
+
+        assert request.input_value is not None
+        assert len(request.input_value) == limit
+
+    def test_should_reject_a_prompt_over_the_limit(self):
+        """A prompt past the limit is rejected with the limit in the message."""
+        limit = get_settings_service().settings.assistant_max_message_length
+
+        with pytest.raises(ValidationError) as exc_info:
+            AssistantRequest(flow_id="flow-1", input_value="a" * (limit + 1))
+
+        assert str(limit) in str(exc_info.value)
+
+    def test_should_reject_an_overlong_headless_instruction(self):
+        """The headless route shares the same cap."""
+        limit = get_settings_service().settings.assistant_max_message_length
+
+        with pytest.raises(ValidationError):
+            HeadlessAssistantRequest(instruction="a" * (limit + 1))
+
+    def test_should_honor_a_raised_limit(self, monkeypatch):
+        """Raising LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH widens both entry points."""
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "assistant_max_message_length", 6000)
+
+        assert AssistantRequest(flow_id="flow-1", input_value="a" * 6000).input_value is not None
+        assert HeadlessAssistantRequest(instruction="a" * 6000).instruction is not None
+
+        with pytest.raises(ValidationError):
+            AssistantRequest(flow_id="flow-1", input_value="a" * 6001)
+
+    def test_should_honor_a_lowered_limit(self, monkeypatch):
+        """Lowering the limit rejects prompts that the default would accept."""
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "assistant_max_message_length", 100)
+
+        with pytest.raises(ValidationError):
+            AssistantRequest(flow_id="flow-1", input_value="a" * 101)

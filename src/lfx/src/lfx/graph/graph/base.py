@@ -39,7 +39,13 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
+from lfx.observability import (
+    APPLICATION_TRACER_NAME,
+    _root_error_type,
+    get_execution_client,
+    get_execution_protocol,
+    get_queued_trace_link,
+)
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -99,6 +105,24 @@ if TYPE_CHECKING:
     from lfx.services.tracing.service import TracingService
 
 
+def _serving_trace_end_user_enabled() -> bool:
+    """Whether the operator opted into forwarding the end-user id to the tracing provider (I4).
+
+    Default False (fail-closed): the end-user id is PII and tracing providers are third-party. Reads
+    the serving setting lazily; any resolution failure (lfx-standalone / no settings) is treated as
+    off so telemetry never leaks the identity by accident.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+    except (ImportError, AttributeError, RuntimeError):
+        return False
+    if settings_service is None:
+        return False
+    return bool(getattr(settings_service.settings, "serving_trace_end_user", False))
+
+
 class Graph:
     """A class representing a graph of vertices and edges."""
 
@@ -151,6 +175,13 @@ class Graph:
         # surfaced in external traces (e.g. Langfuse trace metadata) without
         # leaking into authn/authz paths.
         self.tracing_user_id: str | None = None
+        # Serving-plane end-user id (the gateway-injected identity for this run).
+        # In-memory only, never persisted: the single carrier every service reads to
+        # scope memory (and, later, telemetry and agent file writes) to the end user
+        # while execution still runs as ``self.user_id`` (the service account). ``None``
+        # on the editor plane and for anonymous/feature-off runs, so those paths are
+        # byte-for-byte unchanged.
+        self.end_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -164,6 +195,11 @@ class Graph:
         self.persist_messages: bool = True
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
+        # Branch stops are transient and must be released by the vertex that
+        # created them. The graph can execute sibling vertices concurrently, so
+        # a graph-wide reset when one sibling finishes would otherwise revive a
+        # branch stopped by another sibling that is still running.
+        self.branch_inactivation_sources: dict[str, set[str]] = {}
         self.activated_vertices: list[str] = []
         self.vertices_layers: list[list[str]] = []
         self.vertices_to_run: set[str] = set()
@@ -898,6 +934,14 @@ class Graph:
         if not self._run_id:
             self.set_run_id()
         if self.tracing_service:
+            # Serving-plane telemetry attribution: surface the end user as the SEPARATE tracing label
+            # (never the primary trace user_id, which stays the SID). Gated OFF by default: the
+            # end-user id is PII and tracing providers are third-party SaaS, so it is forwarded only
+            # when the operator opts in via ``serving_trace_end_user``, matching the fail-closed
+            # posture of outbound MCP forwarding. Only fills when an identified serving run set
+            # end_user_id and no explicit caller label was already provided.
+            if self.end_user_id and not self.tracing_user_id and _serving_trace_end_user_enabled():
+                self.tracing_user_id = self.end_user_id
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
@@ -956,7 +1000,24 @@ class Graph:
         # start_span would pick the dead span up as parent anyway.
         parent = otel_trace.get_current_span()
         parent_context = parent.get_span_context()
-        if parent_context.is_valid and not parent.is_recording():
+        queued_link = get_queued_trace_link()
+        if queued_link is not None and not parent.is_recording():
+            # A run picked off a queue, carrying the context of the request that queued it on
+            # the job row.
+            #
+            # Checked before the ended-parent branch, and gated on the parent not recording
+            # rather than on no span being current. Whatever ended span the worker happens to
+            # be holding is not necessarily this run's originator: a worker task started from
+            # a request inherits that request's context permanently, so every later run it
+            # serves would link back to that first request. The carrier was written for this
+            # specific job and is the authoritative answer; an ambient ended span is only a
+            # good guess. A live parent still wins over both, below.
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[queued_link],
+            )
+        elif parent_context.is_valid and not parent.is_recording():
             span = tracer.start_span(
                 FLOW_EXECUTION_SPAN_NAME,
                 context=OtelContext(),
@@ -997,8 +1058,9 @@ class Graph:
             raise
         except Exception as exc:
             status = "error"
-            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
-            span.set_attribute("error.type", type(exc).__name__)
+            error_type = _root_error_type(exc)
+            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, error_type))
+            span.set_attribute("error.type", error_type)
             raise
         finally:
             if self.flow_id:
@@ -1321,15 +1383,30 @@ class Graph:
         self.in_degree_map = self.build_in_degree(edges)
         self.parent_child_map = self.build_parent_child_map(vertices)
 
-    def reset_inactivated_vertices(self) -> None:
-        """Resets the inactivated vertices in the graph."""
-        for vertex_id in self.inactivated_vertices.copy():
+    def _held_branch_inactivations(self) -> set[str]:
+        """Vertices a source vertex stopped and has not released yet."""
+        return set().union(*self.branch_inactivation_sources.values())
+
+    def reset_inactivated_vertices(self, source_vertex_id: str | None = None) -> None:
+        """Reactivate inactivated vertices.
+
+        With ``source_vertex_id``, release only the branch stops that completed
+        vertex made; a vertex another source still holds stays inactive.
+        Inactivations with no recorded source (graphs cached or checkpointed
+        before ownership was tracked) keep the legacy behavior and are released
+        by any completion. Without a source, every inactivation is reset.
+        """
+        if source_vertex_id is None:
+            self.branch_inactivation_sources.clear()
+        else:
+            self.branch_inactivation_sources.pop(source_vertex_id, None)
+        for vertex_id in self.inactivated_vertices - self._held_branch_inactivations():
             self.mark_vertex(vertex_id, "ACTIVE")
-        self.inactivated_vertices = set()
-        self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str) -> None:
         """Marks all vertices in the graph."""
+        # Every vertex now shares one state, so no earlier branch stop is held.
+        self.branch_inactivation_sources.clear()
         for vertex in self.vertices:
             vertex.set_state(state)
 
@@ -1413,6 +1490,7 @@ class Graph:
             output_name=output_name,
             protected_vertices=protected_vertices,
         )
+        self._track_branch_inactivation(vertex_id, state, visited - {vertex_id})
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1425,6 +1503,22 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+
+    def _track_branch_inactivation(self, source_vertex_id: str, state: str, branch_vertices: set[str]) -> None:
+        """Record which source holds each stopped vertex so a completion releases only its own stops."""
+        if state == VertexStates.INACTIVE:
+            stopped = branch_vertices & self.inactivated_vertices
+            if stopped:
+                held = self.branch_inactivation_sources.get(source_vertex_id, set())
+                self.branch_inactivation_sources[source_vertex_id] = held | stopped
+        elif state == VertexStates.ACTIVE:
+            remaining = self.branch_inactivation_sources.pop(source_vertex_id, set()) - branch_vertices
+            if remaining:
+                self.branch_inactivation_sources[source_vertex_id] = remaining
+            # start() releases only this source's stops; one another still-running
+            # vertex holds on a shared descendant stays in effect.
+            for held_vertex_id in branch_vertices & self._held_branch_inactivations():
+                self.mark_vertex(held_vertex_id, VertexStates.INACTIVE)
 
     def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
         """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
@@ -1525,6 +1619,7 @@ class Graph:
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
             "inactivated_vertices": self.inactivated_vertices,
+            "branch_inactivation_sources": self.branch_inactivation_sources,
             "run_manager": self.run_manager.to_dict(),
             "_run_id": self._run_id,
             "in_degree_map": self.in_degree_map,
@@ -1667,6 +1762,7 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("branch_inactivation_sources", {})
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -1834,7 +1930,7 @@ class Graph:
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
-            logger.exception(exc)
+            logger.exception("Extension migration replay failed while reading the payload")
             if "nodes" not in payload and "edges" not in payload:
                 msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 raise ValueError(msg) from exc
@@ -2134,7 +2230,7 @@ class Graph:
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
         self.extend_run_queue(next_runnable_vertices)
-        self.reset_inactivated_vertices()
+        self.reset_inactivated_vertices(vertex_id)
         self.reset_activated_vertices()
 
         if chat_service is not None:
@@ -2220,6 +2316,10 @@ class Graph:
             if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
+                # Frozen results can outlive a role or provider-policy change.
+                # Reauthorize before even consulting the result cache so a
+                # revoked provider cannot reuse output from an earlier run.
+                await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 # Check the cache for the vertex
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)
@@ -3104,6 +3204,9 @@ class Graph:
         # A subgraph extends the parent's run, so it inherits the ephemeral
         # (no-persist) decision too.
         subgraph.persist_messages = self.persist_messages
+        # Sub-flows and loop iterations run under the same end user as the parent, so
+        # the identity carrier propagates down (memory scopes to the same end user).
+        subgraph.end_user_id = self.end_user_id
         subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 

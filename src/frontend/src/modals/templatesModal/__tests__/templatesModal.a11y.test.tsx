@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { axe } from "@/utils/a11y-test";
 import TemplatesModal from "../index";
 
@@ -40,9 +41,34 @@ jest.mock("@/stores/utilityStore", () => ({
     selector(mockUtilityState),
 }));
 
+const example = (overrides: Record<string, unknown>) =>
+  ({ id: String(overrides.name), ...overrides }) as never;
+
+/** A populated catalog: the nav disables tabs a policy has emptied. */
+const FULL_CATALOG = [
+  example({
+    name: "Basic Prompting",
+    name_key: "basic_prompting",
+    tags: ["chatbots"],
+  }),
+  example({
+    name: "Vector Store RAG",
+    name_key: "vector_store_rag",
+    tags: ["rag"],
+  }),
+  example({ name: "Simple Agent", name_key: "simple_agent", tags: ["agents"] }),
+  example({ name: "Assistant", tags: ["assistants"] }),
+];
+
 const renderModal = () => render(<TemplatesModal open setOpen={jest.fn()} />);
 
 describe("TemplatesModal accessibility", () => {
+  beforeEach(() => {
+    act(() => {
+      useFlowsManagerStore.setState({ examples: FULL_CATALOG });
+    });
+  });
+
   it("should_have_no_axe_violations_when_open", async () => {
     renderModal();
 
@@ -87,6 +113,23 @@ describe("TemplatesModal accessibility", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("should_omit_an_emptied_category_from_the_navigation", async () => {
+    // A tab a policy emptied is removed rather than left inert, so the rail
+    // never offers a control that leads nowhere (WCAG 2.4.3 / 4.1.2).
+    act(() => {
+      useFlowsManagerStore.setState({
+        examples: [example({ name: "Vector Store RAG", tags: ["rag"] })],
+      });
+    });
+
+    renderModal();
+
+    expect(screen.getByRole("button", { name: /rag/i })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /coding/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /get started/i })).toBeNull();
+    expect(await axe(document.body)).toHaveNoViolations();
+  });
+
   it("should_expose_the_blank_flow_action_as_a_named_button", () => {
     renderModal();
 
@@ -97,10 +140,12 @@ describe("TemplatesModal accessibility", () => {
     );
   });
 
-  it("should_place_the_template_panes_inside_a_main_landmark", () => {
+  it("should_not_nest_a_main_landmark_inside_the_dialog", () => {
     renderModal();
 
-    const main = screen.getByRole("main");
-    expect(main).toContainElement(screen.getByTestId("get-started-component"));
+    // The page behind the modal already owns the single main landmark, so a
+    // second one here would break landmark navigation (WCAG 2.4.1).
+    expect(screen.queryByRole("main")).not.toBeInTheDocument();
+    expect(screen.getByTestId("get-started-component")).toBeInTheDocument();
   });
 });

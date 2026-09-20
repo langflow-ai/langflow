@@ -1,0 +1,106 @@
+---
+title: Traceloop
+slug: /integrations-instana-traceloop
+description: Instrument Langflow with the Traceloop SDK, and export traces and metrics to Instana using OpenTelemetry.
+---
+
+Traceloop SDK is a lightweight instrumentation toolkit designed for LLM applications.
+It enables developers to automatically capture and export traces, metrics, and key observability signals from their LLM-powered workflows.
+
+When combined with Instana, the exported telemetry data from Traceloop provides end-to-end visibility, allowing users to visualize traces, analyze performance bottlenecks, and ensure reliable operation of LLM-driven applications.
+
+This guide demonstrates how to integrate the Instana observability platform with your Langflow application using the Traceloop SDK so you can monitor and analyze LLM performance.
+
+## Prerequisites
+
+- Create a [Traceloop API key](https://app.traceloop.com/settings/api-key)
+- Create an [Instana endpoint and Instana key](https://www.ibm.com/docs/en/instana-observability/1.0.302)
+- [Install Langflow](/get-started-installation)
+
+## Configure environment variables
+
+1. In the root folder of your Langflow application, edit your existing Langflow `.env` file or create a new one.
+
+2. Enter the following environment variables, and then replace the placeholders with the values for your deployment or requirements:
+
+   ```text
+   TRACELOOP_API_KEY=tl_dummy_1234567890abcdef1234567890abcdef
+   TRACELOOP_BASE_URL=https://otlp-magenta-saas.instana.rocks:4318
+   TRACELOOP_HEADERS="x-instana-key=INSTANA_KEY"
+   OTEL_EXPORTER_OTLP_INSECURE=false
+   TRACELOOP_METRICS_ENDPOINT=HOST:8000
+   TRACELOOP_METRICS_ENABLED=true
+   OTEL_METRIC_EXPORT_INTERVAL=10000
+   ```
+
+   Set the necessary values for each environment variable:
+
+   - **`TRACELOOP_API_KEY`**: A Traceloop API key to authenticate your application with Traceloop's monitoring service.
+   You can get this from your Traceloop account dashboard.
+
+      This integration uses the Traceloop SDK for instrumentation, which requires a Traceloop API key to initialize properly.
+      If you don't have a Traceloop API key, you can proceed with the placeholder API key in the preceding example.
+
+   - **`TRACELOOP_BASE_URL`**: The Instana endpoint URL for telemetry data collection, which is your Instana backend endpoint, such as `https://otlp-magenta-saas.instana.rocks:4318`.
+   You can get this from your Instana configuration or by contacting your Instana administrator.
+
+   - **`TRACELOOP_HEADERS`**: Authentication headers for Instana data collection. Set this to `"x-instana-key=INSTANA_KEY"`, replacing `INSTANA_KEY` with the Instana key from your Instana setup.
+
+   - **`OTEL_EXPORTER_OTLP_INSECURE`**: Security setting for OpenTelemetry Protocol connections. Set to `false` for secure HTTPS/TLS connections. This is recommended for production Instana SaaS endpoints. Set to `true` for insecure HTTP connections during local development.
+
+   - **`TRACELOOP_METRICS_ENDPOINT`**: Separate metrics endpoint configuration, in the form of `OTEL_DC_LLM_HOST:8000`. Typically set to `host.docker.internal:8000` for Docker environments. Adjust the host and port based on your deployment setup.
+
+   - **`TRACELOOP_METRICS_ENABLED`**: Boolean to enable metrics collection. Set to `true` to activate metrics gathering.
+
+   - **`OTEL_METRIC_EXPORT_INTERVAL`**: Interval in milliseconds for metrics export. Set to `10000` for 10-second export intervals, or adjust based on your monitoring requirements.
+
+3. Make sure the OpenTelemetry Data Collector (OTel DC) is running and correctly configured.
+Open your Collector's `config.yaml` file, enter the following configuration, and then replace the placeholder values with the values from your data collector setup or requirements:
+
+   ```yaml
+   llm.application: "LLM_DC"
+   instances:
+      -  otel.agentless.mode: true
+         # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
+         otel.backend.url: "INSTANA_ENDPOINT"
+         otel.backend.using.http: false
+         callback.interval: 10
+         otel.service.name: "DC1"
+         otel.service.port: 8000
+         currency: "USD"
+   ```
+
+   This configuration enables the OTel Collector to operate in agentless mode and route telemetry data to your Instana backend with proper service identification and collection intervals for effective monitoring integration.
+
+## Start Langflow with Traceloop environment variables
+
+Launch your Langflow application with your `.env` file:
+
+```bash
+uv run langflow run --env-file .env
+```
+
+Traceloop automatically begins monitoring and collecting telemetry data from your LLM applications.
+
+## Verify the integration
+
+To verify that observability is working correctly:
+
+1. Run a flow in Langflow to generate traffic.
+2. To view traces in Instana, open Instana and click **Applications**.
+3. In **Services**, search for `Langflow`.
+4. Click **Langflow** to view and analyze the associated calls.
+
+   ![Instana Traces dashboard](/img/instana-traces-dashboard.png)
+
+5. To view metrics in Instana, open Instana and click **Infrastructure**.
+6. In **Analyze Infrastructure**, click **Otel LLMonitor**.
+7. To view your Metrics dashboard, click `LLM:DC1@your_machine_name.local`.
+
+   ![Instana Metrics dashboard](/img/instana-metrics-dashboard.png)
+
+## See also
+
+* [Traceloop documentation](https://www.traceloop.com/docs/introduction)
+* [Instana setup documentation](https://www.ibm.com/docs/en/instana-observability/1.0.300?topic=started-instana-setup)
+* [Otel DC setup documentation](https://www.ibm.com/docs/en/instana-observability/1.0.300?topic=started-install-otel-data-collector-llm-odcl)

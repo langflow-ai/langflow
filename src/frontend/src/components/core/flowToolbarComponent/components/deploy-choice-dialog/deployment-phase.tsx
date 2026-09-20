@@ -13,6 +13,7 @@ import type {
   ProviderAccount,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
 import { getDeploymentDisplayName } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { getDeploymentTypeLabel } from "./get-deployment-type-label";
 
 const NEW_DEPLOYMENT_VALUE = "__new__";
 
@@ -58,11 +59,12 @@ export default function DeploymentPhaseContent({
       </DialogHeader>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
+        <div className="flex items-center justify-center py-8" role="status">
           <ForwardedIconComponent
             name="Loader2"
             className="h-5 w-5 animate-spin text-muted-foreground"
           />
+          <span className="sr-only">{t("deployments.loadingDeployments")}</span>
         </div>
       ) : (
         <RadioGroup
@@ -86,7 +88,7 @@ export default function DeploymentPhaseContent({
                 >
                   <span className="text-sm font-medium">{displayName}</span>
                   <span className="text-xs text-muted-foreground">
-                    {deployment.type} deployment
+                    {getDeploymentTypeLabel(deployment.type, t)}
                   </span>
                 </Label>
               </div>

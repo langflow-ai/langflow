@@ -2,9 +2,9 @@
 
 Bug: Desktop Global Variable OPENAI_API_KEY not injected at runtime.
 When api_key parameter is None (Agent component default), get_api_key_for_provider
-only attempts DB lookup but has no os.getenv() fallback and no error handling
-for ValueError from get_variable(). This causes failures in Desktop where the
-env var is not set and the DB lookup is the only path.
+attempts a DB lookup before falling back to os.getenv(). A missing DB variable
+must use that fallback, while unexpected lookup failures must propagate instead
+of silently downgrading to an environment credential.
 """
 
 from unittest.mock import patch
@@ -18,8 +18,8 @@ class TestGetApiKeyForProviderDbFallback:
 
     @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
     @patch("lfx.base.models.unified_models.credentials.run_until_complete")
-    def test_should_fallback_to_env_when_db_lookup_raises_value_error(self, mock_run, mock_mapping, monkeypatch):
-        """When variable_service.get_variable raises ValueError (variable not found in DB).
+    def test_should_fallback_to_env_when_db_lookup_finds_no_variable(self, mock_run, mock_mapping, monkeypatch):
+        """When the async database lookup finds no variable.
 
         get_api_key_for_provider should fall back to os.getenv() instead of returning None.
         """
@@ -27,7 +27,7 @@ class TestGetApiKeyForProviderDbFallback:
 
         user_id = str(uuid4())
         mock_mapping.return_value = {"OpenAI": "OPENAI_API_KEY"}
-        mock_run.side_effect = ValueError("OPENAI_API_KEY variable not found.")
+        mock_run.return_value = None
 
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test-env-key")
 

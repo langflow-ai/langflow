@@ -118,7 +118,7 @@ describe("Rendering", () => {
     renderModal();
     expect(screen.getByPlaceholderText("e.g. Production")).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText("Enter your API key"),
+      screen.getByLabelText(/API Key/, { selector: "input" }),
     ).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText("https://api.example.com"),
@@ -168,7 +168,7 @@ describe("Form validation", () => {
     renderModal();
     await user.type(screen.getByPlaceholderText("e.g. Production"), "My Env");
     await user.type(
-      screen.getByPlaceholderText("Enter your API key"),
+      screen.getByLabelText(/API Key/, { selector: "input" }),
       "sk-test-123", // pragma: allowlist secret
     );
     await user.type(
@@ -182,7 +182,10 @@ describe("Form validation", () => {
     const user = userEvent.setup();
     renderModal();
     await user.type(screen.getByPlaceholderText("e.g. Production"), "   ");
-    await user.type(screen.getByPlaceholderText("Enter your API key"), "   ");
+    await user.type(
+      screen.getByLabelText(/API Key/, { selector: "input" }),
+      "   ",
+    );
     await user.type(
       screen.getByPlaceholderText("https://api.example.com"),
       "   ",
@@ -200,7 +203,7 @@ describe("Submit behavior", () => {
     const user = userEvent.setup();
     await user.type(screen.getByPlaceholderText("e.g. Production"), " My Env ");
     await user.type(
-      screen.getByPlaceholderText("Enter your API key"),
+      screen.getByLabelText(/API Key/, { selector: "input" }),
       " sk-test-123 ", // pragma: allowlist secret
     );
     await user.type(
@@ -308,7 +311,7 @@ describe("Edit mode", () => {
     renderModal(true, makeProvider());
 
     await user.type(
-      screen.getByPlaceholderText("Enter a new API key"),
+      screen.getByLabelText(/API Key/, { selector: "input" }),
       " sk-next ", // pragma: allowlist secret
     );
     await user.click(screen.getByTestId("add-provider-save"));

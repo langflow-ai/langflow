@@ -33,7 +33,8 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router
+from langflow.api import log_router
+from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.warm_graph import is_warm_registry_enabled
@@ -195,7 +196,12 @@ def get_lifespan(*, fix_migration=False, version=None):
     async def lifespan(_app: FastAPI):
         from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
-        from langflow.preload import PreloadStep, get_owned_temp_dirs, is_step_complete
+        from langflow.preload import (
+            PreloadStep,
+            get_owned_temp_dirs,
+            initialize_environment_variables,
+            is_step_complete,
+        )
 
         configure()
 
@@ -258,6 +264,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Even when preload state is inherited via fork, initialize_services() must run
             # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
+            await initialize_environment_variables()
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             # Surface env-driven pgVector so operators can confirm the deployment
@@ -321,23 +328,36 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await copy_profile_pictures()
                 await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Reconciling knowledge base rows from disk")
-            try:
-                from langflow.api.utils import knowledge_base_service
+            # Disk reconciliation is opt-in. The ``knowledge_base`` row is the sole
+            # authority for KB metadata, so this scan exists only to adopt directories
+            # left behind by a version that still wrote the on-disk sidecar. Operators
+            # who need it can flip LANGFLOW_KB_DISK_RECONCILE_ENABLED or run
+            # ``langflow reconcile-kb-from-disk`` once, instead of paying a filesystem
+            # walk on every boot forever.
+            if get_settings_service().settings.kb_disk_reconcile_enabled:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Reconciling knowledge base rows from disk")
+                try:
+                    from langflow.api.utils import knowledge_base_service
 
-                inserted = await knowledge_base_service.backfill_all_users_from_disk()
-                elapsed = asyncio.get_event_loop().time() - current_time
-                await logger.adebug(
-                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
-                )
-            except Exception as exc:  # noqa: BLE001
-                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
+                    inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                    elapsed = asyncio.get_event_loop().time() - current_time
+                    await logger.adebug(
+                        f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
             # Memory Bases resolve their backend + embedding purely from the
             # knowledge_base row (no on-disk sidecar), so ensure every Memory Base
             # has one. Sourced from the memory_base table, not disk, so it's
             # replica-safe; only Memory Bases missing a row are touched.
+            #
+            # Deliberately NOT gated behind kb_disk_reconcile_enabled: this is a
+            # DB->DB reconcile that reads no filesystem. Skipping it would leave a
+            # legacy Memory Base with no knowledge_base row, which makes backend and
+            # embedding resolution raise and makes ``check_mismatch`` report a false
+            # mismatch — prompting a regenerate that resets every session cursor.
             try:
                 from langflow.api.utils import knowledge_base_service
 
@@ -1024,6 +1044,27 @@ def create_app():
             content={"detail": exc.detail},
         )
 
+    from lfx.exceptions.tweaks import TweakRefusedError
+
+    @app.exception_handler(TweakRefusedError)
+    async def tweak_refused_exception_handler(_request: Request, exc: TweakRefusedError):
+        """Refused tweaks are a 422 naming the keys, not a silent drop.
+
+        Mirrors the detail shape of the existing output-selection validator so a
+        caller parses one error format across the run API.
+        """
+        return JSONResponse(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            content={
+                "detail": {
+                    "error": "Refused tweaks",
+                    "code": "TWEAKS_REFUSED",
+                    "message": exc.reason,
+                    "fields": exc.refused,
+                }
+            },
+        )
+
     # Add rate limit exception handler
     from slowapi.errors import RateLimitExceeded
 
@@ -1052,6 +1093,33 @@ def create_app():
             headers={
                 "Retry-After": retry_after_seconds,
             },
+        )
+
+    from fastapi.exceptions import ResponseValidationError
+
+    @app.exception_handler(ResponseValidationError)
+    async def response_validation_exception_handler(_request: Request, exc: ResponseValidationError):
+        """A route returned what its response_model rejects: log it in full, answer generically.
+
+        str(exc) lists each pydantic error with its ``input`` -- the server-side value
+        that failed to serialize, or for a missing field the whole object -- then the
+        endpoint's file, line and function. The catch-all below sent all of it to the
+        client and to telemetry.
+        """
+        # exc_info renders the full errors to the console and log file; the message is the
+        # field OTel log export can carry, so it names the failure without the values.
+        await logger.aerror("Response validation failed", exc_info=exc)
+        # Telemetry leaves the server. Send a copy that keeps the type, the traceback and
+        # the route template, and reduces each error to its type and location. A location
+        # is field names, list indexes and dict keys, never the value.
+        located = ResponseValidationError(
+            [{"type": error.get("type"), "loc": error.get("loc")} for error in exc.errors()],
+            endpoint_ctx={"path": exc.endpoint_path} if exc.endpoint_path else None,
+        )
+        await log_exception_to_telemetry(located.with_traceback(exc.__traceback__), "handler")
+        return JSONResponse(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            content={"message": "Internal server error: the response failed validation"},
         )
 
     @app.exception_handler(Exception)

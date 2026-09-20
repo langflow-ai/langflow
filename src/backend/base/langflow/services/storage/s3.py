@@ -108,7 +108,16 @@ class S3StorageService(StorageService):
 
         Returns:
             str: The full S3 key (e.g., 'files/flow_123/myfile.txt')
+
+        Raises:
+            ValueError: If either identifier carries separators or traversal sequences.
         """
+        # Defense in depth: every file operation validates its own identifiers, but this is a
+        # public key builder whose result is also handed to callers directly (component path
+        # resolution). Path shape must never be treated as authorization, so reject anything
+        # that could compose a key outside the ``flow_id`` namespace. ``file_name`` is empty
+        # when building a listing prefix (see ``list_files``), which stays allowed.
+        self._validate_identifiers(flow_id, file_name or None)
         # note: prefix already contains the / at the end
         return f"{self.prefix}{flow_id}/{file_name}"
 

@@ -1124,7 +1124,10 @@ def test_require_model_raises_generic_reason_coded_error():
     assert exc_info.value.code == "policy_blocked"
     assert exc_info.value.provider_id == "anthropic"
     assert exc_info.value.model_name == "claude-blocked"
-    assert str(exc_info.value) == "The requested model is not available"
+    assert str(exc_info.value) == (
+        "The requested model is not available: 'claude-blocked' (anthropic) is blocked by the "
+        "current model provider policy. Ask an administrator to enable it."
+    )
 
 
 def test_require_model_still_reports_denied_provider_without_model_detail():

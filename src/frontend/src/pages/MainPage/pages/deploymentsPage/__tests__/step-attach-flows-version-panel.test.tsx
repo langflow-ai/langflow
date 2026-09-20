@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type React from "react";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
+import { axe } from "@/utils/a11y-test";
 import type { SelectedFlowVersion } from "../types";
 
 jest.mock(
@@ -67,7 +69,9 @@ const defaultProps = {
   onDetach: jest.fn(),
 };
 
-function renderPanel(overrides: Partial<typeof defaultProps> = {}) {
+function renderPanel(
+  overrides: Partial<React.ComponentProps<typeof VersionPanel>> = {},
+) {
   const props = { ...defaultProps, ...overrides };
   return render(<VersionPanel {...props} />);
 }
@@ -188,7 +192,62 @@ describe("Click triggers onAttach", () => {
     const onAttach = jest.fn();
     renderPanel({ onAttach });
 
-    await user.click(screen.getByTestId("version-item-v2"));
+    await user.click(screen.getByTestId("version-item-v2-select"));
     expect(onAttach).toHaveBeenCalledWith("v2");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+describe("Accessibility", () => {
+  it("should_have_no_axe_violations with an attached version (shows Edit/Detach)", async () => {
+    const selectedVersionByFlow = new Map([
+      [
+        "f1:v1",
+        { key: "f1:v1", flowId: "f1", versionId: "v1", versionTag: "v1.0" },
+      ],
+    ]);
+    const { container } = renderPanel({ selectedVersionByFlow });
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("should_have_no_axe_violations with a removed version (shows Undo)", async () => {
+    const selectedVersionByFlow = new Map([
+      [
+        "f1:v1",
+        { key: "f1:v1", flowId: "f1", versionId: "v1", versionTag: "v1.0" },
+      ],
+    ]);
+    const { container } = renderPanel({
+      selectedVersionByFlow,
+      removedFlowIds: new Set(["f1:v1"]),
+      onUndoRemove: jest.fn(),
+    });
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("names the Undo and Detach icon-only buttons", () => {
+    const selectedVersionByFlow = new Map([
+      [
+        "f1:v1",
+        { key: "f1:v1", flowId: "f1", versionId: "v1", versionTag: "v1.0" },
+      ],
+      [
+        "f1:v2",
+        { key: "f1:v2", flowId: "f1", versionId: "v2", versionTag: "v2.0" },
+      ],
+    ]);
+    renderPanel({
+      selectedVersionByFlow,
+      removedFlowIds: new Set(["f1:v1"]),
+      onUndoRemove: jest.fn(),
+    });
+
+    expect(screen.getByTestId("undo-version-v1")).toHaveAccessibleName();
+    expect(screen.getByTestId("detach-version-v2")).toHaveAccessibleName();
   });
 });

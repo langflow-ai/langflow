@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FlowType } from "@/types/flow";
+import type { WatsonxFlowEligibilityIssue } from "../helpers/watsonx-flow-eligibility";
 import type { ConnectionItem } from "../types";
 
 jest.mock(
@@ -17,12 +18,14 @@ function selectedVersion(
   flowId: string,
   versionId: string,
   versionTag: string,
+  wxoEligibilityIssue?: WatsonxFlowEligibilityIssue | null,
 ) {
   return {
     key: `${flowId}:${versionId}`,
     flowId,
     versionId,
     versionTag,
+    wxoEligibilityIssue,
   };
 }
 
@@ -70,6 +73,7 @@ const defaultProps = {
   selectedVersionByFlow: new Map<string, ReturnType<typeof selectedVersion>>(),
   attachedConnectionByFlow: new Map<string, string[]>(),
   connections,
+  wxoDraftEligibilityByFlow: new Map(),
   removedFlowIds: new Set<string>(),
   onSelectFlow: jest.fn(),
 };
@@ -93,6 +97,74 @@ describe("Rendering flow items", () => {
     expect(screen.getByText("Alpha Flow")).toBeInTheDocument();
     expect(screen.getByText("Beta Flow")).toBeInTheDocument();
     expect(screen.getByText("Gamma Flow")).toBeInTheDocument();
+  });
+
+  it("shows an actionable Watsonx eligibility warning", () => {
+    renderPanel({
+      wxoDraftEligibilityByFlow: new Map([["f1", "missingChatInput"]]),
+    });
+
+    expect(
+      screen.getByText(
+        "Add one Chat Input node. Watsonx Orchestrate requires exactly one.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows eligibility for the attached version instead of the current draft", () => {
+    const selectedVersionByFlow = new Map([
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0", "missingChatOutput")],
+    ]);
+
+    renderPanel({
+      selectedVersionByFlow,
+      wxoDraftEligibilityByFlow: new Map([["f1", "missingChatInput"]]),
+    });
+
+    expect(
+      screen.getByText(
+        "Add at least one Chat Output node for Watsonx Orchestrate.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Add one Chat Input node. Watsonx Orchestrate requires exactly one.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not show a draft warning for an eligible attached version", () => {
+    const selectedVersionByFlow = new Map([
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0", null)],
+    ]);
+
+    renderPanel({
+      selectedVersionByFlow,
+      wxoDraftEligibilityByFlow: new Map([["f1", "missingChatInput"]]),
+    });
+
+    expect(
+      screen.queryByText(
+        "Add one Chat Input node. Watsonx Orchestrate requires exactly one.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not show attached Watsonx warnings for another provider", () => {
+    const selectedVersionByFlow = new Map([
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0", "missingChatOutput")],
+    ]);
+
+    renderPanel({
+      selectedVersionByFlow,
+      wxoDraftEligibilityByFlow: undefined,
+    });
+
+    expect(
+      screen.queryByText(
+        "Add at least one Chat Output node for Watsonx Orchestrate.",
+      ),
+    ).not.toBeInTheDocument();
   });
 });
 

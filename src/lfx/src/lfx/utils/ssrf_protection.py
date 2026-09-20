@@ -464,7 +464,7 @@ def is_connector_ssrf_validation_enabled() -> bool:
 
 
 def is_connector_loopback_allowed() -> bool:
-    """Whether a literal loopback host is allowed for CONNECTOR / model-provider URLs.
+    """Whether a literal loopback host is allowed for ordinary CONNECTOR URLs.
 
     Connector and model-provider components routinely target a *local* service — Ollama and
     LM Studio default to ``http://localhost:11434`` / ``http://localhost:1234`` and local vector

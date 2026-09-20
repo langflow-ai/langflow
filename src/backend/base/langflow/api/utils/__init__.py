@@ -37,6 +37,7 @@ from langflow.api.utils.core import (
     raise_error_if_astra_cloud_env,
     release_db_transaction,
     remove_api_keys,
+    strip_flow_secrets,
     strip_secret_field_values_in_place,
     validate_is_component,
 )
@@ -93,6 +94,7 @@ __all__ = [
     "release_db_transaction",
     "remove_api_keys",
     "scope_session_to_namespace",
+    "strip_flow_secrets",
     "strip_secret_field_values_in_place",
     "validate_is_component",
     "validate_public_files",

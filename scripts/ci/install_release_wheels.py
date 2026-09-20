@@ -21,6 +21,7 @@ from email.parser import BytesParser
 from pathlib import Path
 
 BASE_DISTRIBUTIONS = frozenset({"langflow-base", "langflow-sdk", "lfx"})
+CORE_DISTRIBUTIONS = BASE_DISTRIBUTIONS | {"langflow"}
 REQUIRED_DISTRIBUTIONS = {
     "base": frozenset({"langflow-base", "lfx"}),
     "main": frozenset({"langflow", "langflow-base", "lfx"}),
@@ -83,6 +84,20 @@ def _select_wheels(artifacts_dir: Path, mode: str) -> list[Wheel]:
     return sorted(by_name.values(), key=lambda wheel: wheel.name)
 
 
+def _installed_distribution_names(python: Path) -> frozenset[str]:
+    command = (
+        "import importlib.metadata as metadata, json; "
+        "names = {dist.metadata.get('Name') for dist in metadata.distributions()}; "
+        "print(json.dumps(sorted(name for name in names if name)))"
+    )
+    output = subprocess.check_output([python, "-I", "-c", command], text=True)  # noqa: S603
+    names = json.loads(output)
+    if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+        msg = f"Expected installed distribution names as a JSON string list, got {names!r}"
+        raise ValueError(msg)
+    return frozenset(_canonicalize_name(name) for name in names)
+
+
 def _restore_frontend(python: Path, frontend_source: Path) -> None:
     command = (
         "from importlib.util import find_spec; "
@@ -116,6 +131,15 @@ def install_release_wheels(
         return
 
     wheels = _select_wheels(artifacts_dir, mode)
+    if mode == "main":
+        target_profile = _installed_distribution_names(python) | CORE_DISTRIBUTIONS
+        skipped = [wheel for wheel in wheels if wheel.name not in target_profile]
+        wheels = [wheel for wheel in wheels if wheel.name in target_profile]
+        if skipped:
+            print("Skipping release wheels outside the target image profile:")
+            for wheel in skipped:
+                print(f"  {wheel.name}=={wheel.version} ({wheel.path})")
+
     expected_versions = {wheel.name: wheel.version for wheel in wheels}
     uv = _find_uv()
     print("Installing release wheels:")

@@ -4,6 +4,7 @@ import contextlib
 import copy
 import json
 import logging
+import os
 from pathlib import Path
 
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
@@ -70,6 +71,24 @@ MAX_ASSISTANT_ITERATIONS = 200
 # Pinned assistant step budget (a COST decision, tripwire-tested): LangflowAssistant.json
 # pins it on its Agents and the Python builder flow defaults to it — one source of truth.
 DEFAULT_ASSISTANT_ITERATIONS = 30
+ASSISTANT_ITERATIONS_ENV = "LANGFLOW_ASSISTANT_ITERATIONS"
+
+
+def assistant_iterations_default() -> int:
+    """Step budget for a request that carries no ``/iterations N`` override.
+
+    ``/iterations N`` tunes one browser session; an operator running Langflow for a
+    team whose flows are multi-stage by nature needs the DEFAULT to move, which is
+    what this env var does (same shape as ``LANGFLOW_ASSISTANT_HISTORY_TURNS``).
+    Precedence is per-request > env > pinned default, and the value is clamped to
+    ``[1, MAX_ASSISTANT_ITERATIONS]`` so a bad value can neither disable the cap nor
+    run away.
+    """
+    raw = os.environ.get(ASSISTANT_ITERATIONS_ENV, "")
+    try:
+        return max(1, min(int(raw), MAX_ASSISTANT_ITERATIONS))
+    except (TypeError, ValueError):
+        return DEFAULT_ASSISTANT_ITERATIONS
 
 
 def inject_iterations_into_flow(flow_data: dict, limit: int | None) -> dict:
@@ -324,12 +343,14 @@ def load_and_prepare_flow(
                 history_limit = None
     flow_data = inject_history_limit_into_flow(flow_data, history_limit)
 
-    # The runtime step budget rides in provider_vars as ITERATIONS_LIMIT.
-    if provider_vars:
-        raw_iterations = provider_vars.get("ITERATIONS_LIMIT")
-        if raw_iterations not in (None, ""):
-            with contextlib.suppress(TypeError, ValueError):
-                flow_data = inject_iterations_into_flow(flow_data, int(raw_iterations))
+    # The per-request step budget rides in provider_vars as ITERATIONS_LIMIT; without
+    # one the deployment default applies, so the env override reaches JSON flows too.
+    iterations = assistant_iterations_default()
+    raw_iterations = (provider_vars or {}).get("ITERATIONS_LIMIT")
+    if raw_iterations not in (None, ""):
+        with contextlib.suppress(TypeError, ValueError):
+            iterations = int(raw_iterations)
+    flow_data = inject_iterations_into_flow(flow_data, iterations)
 
     flow_data = inject_lfx_components_path(flow_data)
     flow_data = inject_assistant_fs_root(flow_data)

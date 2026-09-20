@@ -61,10 +61,39 @@ def registered_backends() -> tuple[BackendType, ...]:
     return tuple(sorted(_BACKEND_REGISTRY, key=lambda bt: bt.value))
 
 
+def is_local_chroma(backend_type: BackendType | str | None, backend_config: dict[str, Any] | None) -> bool:
+    """True when this KB's vectors live in a local Chroma directory on this box.
+
+    The single predicate every "does this KB need the filesystem?" decision must
+    go through. Local Chroma is the *only* backend that stores anything on local
+    disk; every other target (Chroma Cloud, OpenSearch, pgVector, Astra, Mongo)
+    is reachable from any replica and needs no path at all.
+
+    Cloud-vs-local is not visible in ``backend_type`` — both Chroma modes are
+    stored as ``"chroma"`` and the discriminator is ``backend_config["mode"]``.
+    That is why a bare ``backend_type == BackendType.CHROMA`` comparison is a bug:
+    it reads a Chroma Cloud KB as local and then consults a directory that does
+    not (and should not) exist.
+
+    ``None``/missing ``backend_type`` resolves to Chroma for backwards
+    compatibility with rows written before the backend selector existed.
+    """
+    resolved = backend_type or BackendType.CHROMA
+    try:
+        resolved = _resolve_backend_type(resolved)
+    except ValueError:
+        # An unknown backend string is certainly not local Chroma. Let the
+        # caller's own resolution path surface the error with better context.
+        return False
+    if resolved != BackendType.CHROMA:
+        return False
+    return str((backend_config or {}).get("mode", "local")).lower() != "cloud"
+
+
 def create_backend(
     backend_type: BackendType | str,
     kb_name: str,
-    kb_path: Path,
+    kb_path: Path | None = None,
     *,
     backend_config: dict[str, Any] | None = None,
     embedding_function: Embeddings | None = None,
@@ -75,6 +104,9 @@ def create_backend(
     Parameters mirror ``BaseVectorStoreBackend.__init__``. Intended as the
     single entry point for KB helper code so swapping the default backend is a
     one-line change in ``kb_helpers``.
+
+    ``kb_path`` is required only by local Chroma. Callers that resolved a remote
+    backend pass ``None``; see :func:`is_local_chroma`.
 
     ``user_id`` is forwarded so backends can resolve credential *variables*
     through Langflow's ``variable_service`` (same pattern as the connector

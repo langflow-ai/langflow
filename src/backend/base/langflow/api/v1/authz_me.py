@@ -30,7 +30,7 @@ from langflow.services.database.models.knowledge_base.model import KnowledgeBase
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/me", tags=["Authorization"])
+router = APIRouter(prefix="/authz/me", tags=["Authorization"], include_in_schema=False)
 
 # Match the resource slugs used by ensure_*_permission helpers.
 ResourceTypeLiteral = Literal[

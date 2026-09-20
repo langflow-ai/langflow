@@ -21,7 +21,7 @@ from langflow.api.utils import (
     build_content_disposition,
     normalize_code_for_import,
     normalize_flow_for_export,
-    remove_api_keys,
+    strip_flow_secrets,
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.flows import create_flows
@@ -73,9 +73,9 @@ async def download_project_flows(
         if not flows:
             raise HTTPException(status_code=404, detail="No flows found in project")
 
-        # Strip API keys then normalise for git-friendly export (sorted keys,
-        # volatile fields removed, code fields as line arrays).
-        normalised_flows = [normalize_flow_for_export(remove_api_keys(flow.model_dump())) for flow in flows]
+        # Strip secret field values then normalise for git-friendly export
+        # (sorted keys, volatile fields removed, code fields as line arrays).
+        normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
         zip_stream = io.BytesIO()
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:

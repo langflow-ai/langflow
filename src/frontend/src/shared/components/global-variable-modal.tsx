@@ -2,13 +2,18 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
 import { CommandItem } from "@/components/ui/command";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { cn } from "@/utils/utils";
 
-const GeneralGlobalVariableModal = () => {
+const GeneralGlobalVariableModal = ({
+  providerScope,
+}: {
+  providerScope?: ProviderScopeParams;
+}) => {
   const { t } = useTranslation();
   return (
     <>
-      <GlobalVariableModal disabled={false}>
+      <GlobalVariableModal disabled={false} providerScope={providerScope}>
         <CommandItem value="doNotFilter-addNewVariable">
           <ForwardedIconComponent
             name="Plus"

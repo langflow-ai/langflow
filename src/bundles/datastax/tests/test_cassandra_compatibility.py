@@ -1,4 +1,5 @@
 import json
+from importlib.metadata import version
 from pathlib import Path
 
 from lfx.components.cassandra import (
@@ -38,7 +39,12 @@ def test_manifest_exposes_cassandra_as_a_separate_bundle() -> None:
     manifest_path = Path(__file__).parents[1] / "src" / "lfx_datastax" / "extension.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    assert manifest["version"] == "0.1.3"
+    # Assert the manifest tracks the distribution rather than a literal: the release-plan guard
+    # bumps pyproject whenever releasable bundle source changes, and a hardcoded version here
+    # turns every one of those bumps into a spurious failure while checking nothing real. The
+    # invariant worth pinning is that extension.json and the package stay in lockstep -- bumping
+    # one without the other is the actual bug.
+    assert manifest["version"] == version("lfx-datastax")
     assert manifest["bundles"] == [
         {"name": "datastax", "path": "components/datastax"},
         {"name": "cassandra", "path": "components/cassandra"},

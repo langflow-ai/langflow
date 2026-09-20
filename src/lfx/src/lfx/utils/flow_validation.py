@@ -144,6 +144,61 @@ def is_protected_tweak_field(component_type: str | None, field_name: str, field_
     )
 
 
+# ---------------------------------------------------------------------------
+# Deployment tweak policy
+# ---------------------------------------------------------------------------
+# Two lists with two owners. The deployment owns the floor above
+# (``is_protected_tweak_field``), a denylist nothing can bypass. The flow author
+# owns the allowlist below, the per-field ``api_editable`` flag. The policy
+# setting only chooses which of the two is consulted; it never supplies list
+# content itself, because an operator cannot anticipate every flow.
+
+TWEAK_POLICY_PERMISSIVE = "permissive"
+TWEAK_POLICY_DECLARED = "declared"
+TWEAK_POLICY_OFF = "off"
+TWEAK_POLICIES = frozenset({TWEAK_POLICY_PERMISSIVE, TWEAK_POLICY_DECLARED, TWEAK_POLICY_OFF})
+
+
+def flow_declares_api_editable(nodes: list[dict[str, Any]]) -> bool:
+    """Return whether any node in the flow marks a template field ``api_editable``.
+
+    This is the derived form of the per-flow enforcement opt-in. A flow whose
+    author has toggled at least one field has declared an allowlist, so the
+    remaining fields are closed under ``declared``. A flow with no toggles has
+    declared nothing and keeps permissive behavior, which is what stops a
+    deployment-wide switch from breaking every flow nobody prepared.
+
+    A later release replaces this derived value with a stored flag on the flow.
+    """
+    for node in nodes:
+        template = node.get("data", {}).get("node", {}).get("template")
+        if not isinstance(template, dict):
+            continue
+        for field in template.values():
+            if isinstance(field, dict) and field.get("api_editable") is True:
+                return True
+    return False
+
+
+def is_tweak_refused_by_policy(
+    policy: str,
+    *,
+    flow_declares_allowlist: bool,
+    field_is_api_editable: bool,
+) -> bool:
+    """Return whether the deployment policy refuses a tweak on this field.
+
+    The caller checks ``is_protected_tweak_field`` separately. That floor refuses
+    in every policy, including ``permissive``. This function only decides the
+    policy layer above the floor.
+    """
+    if policy == TWEAK_POLICY_OFF:
+        return True
+    if policy == TWEAK_POLICY_DECLARED and flow_declares_allowlist:
+        return not field_is_api_editable
+    return False
+
+
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an
 # indirect code-execution primitive: a public wrapper flow with none of the
@@ -160,6 +215,25 @@ FLOW_REFERENCE_COMPONENT_TYPES: frozenset[str] = frozenset(
         "FlowTool",  # "Flow as Tool" (legacy) — exposes a selected flow as a tool
     }
 )
+
+# Component node ``type`` values whose only transport is an MCP **stdio** server, i.e. they
+# always spawn an OS subprocess. Unlike ``MCPTools`` — which is legitimate on the public path
+# when it points at a remote HTTP/SSE server — these carry no non-spawning configuration, so
+# the type itself is refused for anonymous visitors.
+MCP_STDIO_COMPONENT_TYPES: frozenset[str] = frozenset(
+    {
+        "MCPStdio",  # "MCP Tools (stdio) [DEPRECATED]" — packed command string input
+        "MCP Tools (stdio) [DEPRECATED]",
+    }
+)
+
+# Template field keys that carry an MCP server *selection* (``McpInput``). The stdio command
+# lives in this field's VALUE, never in the validated ``code`` field, so trusted-code
+# substitution does not touch it.
+MCP_SERVER_FIELD_NAMES: frozenset[str] = frozenset({"mcp_server"})
+
+# ``McpInput``'s serialized template ``type``.
+MCP_SERVER_FIELD_TYPE = "mcp"
 
 
 def _compute_code_hash(code: str) -> str:
@@ -1248,6 +1322,129 @@ def _log_outdated_component_code_substitution(swapped: list[str]) -> None:
     )
 
 
+def describe_component_code_substitution(flow_data: dict | None, *, include_component_names: bool = True) -> str | None:
+    """Describe the restricted-mode substitutions before sanitization discards the saved code.
+
+    Use the same substitution rule as the build, including nested flows and ambiguous types.
+    Work on a detached copy so collecting a warning never changes the saved flow or logs a build.
+    """
+    from copy import deepcopy
+
+    lookups = get_outdated_code_substitution_lookups()
+    if lookups is None or not flow_data or not isinstance(flow_data.get("nodes"), list):
+        return None
+    swapped = _substitute_outdated_node_code(deepcopy(flow_data["nodes"]), *lookups)
+    if not swapped:
+        return None
+    affected = f" for {', '.join(swapped)}" if include_component_names else ""
+    next_step = (
+        "Review and update the affected components in the flow editor to use the server version."
+        if include_component_names
+        else "Ask the flow owner to review and update the affected components to use the server version."
+    )
+    return (
+        "Custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). "
+        f"This run uses the server's component code instead of the code saved in the flow{affected}. "
+        f"The saved flow is unchanged. {next_step}"
+    )
+
+
+RESTRICTED_MODE_MISMATCH_HINT = (
+    "Note: custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false), so "
+    'the build ran this server\'s "{component_type}" component instead of the component code saved in '
+    "the flow, and the saved component does not match it{missing_clause}. If the error above does not "
+    "match how this component is configured in the flow, that substitution is why: update the component "
+    "in the flow editor, or set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to run the flow's own code."
+)
+
+
+def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:
+    """Return this server's registry entry for ``component_type``, aliases included."""
+    from lfx.interface.components import component_cache
+    from lfx.upgrade.checker import build_registry_lookup
+
+    with component_cache.state_lock:
+        all_types_dict = component_cache.all_types_dict if component_cache.all_types_ready else None
+    if not all_types_dict:
+        return None
+    return build_registry_lookup(all_types_dict).get(component_type)
+
+
+def _unfillable_required_fields(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> list[str]:
+    """Name the server inputs a saved node cannot supply, using the checker's own rule.
+
+    These are exactly the fields ``_template_keys_compatible`` refuses to introduce silently: a
+    required input the saved node has no key for and whose declared state cannot fill it.
+    """
+    from lfx.upgrade.checker import new_template_field_keys
+
+    missing = []
+    for key in new_template_field_keys(registry_template, flow_template):
+        field = registry_template.get(key)
+        if isinstance(field, Mapping) and field.get("required") and field.get("value") in (None, ""):
+            missing.append(key)
+    return sorted(missing)
+
+
+def describe_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+    """Explain a build failure caused by restricted mode running server code for a saved component.
+
+    In restricted mode a node's stored code never runs: the build executes this server's
+    component of the same ``data.type`` instead (:func:`substitute_outdated_component_code_in_place`
+    for drifted built-ins, :func:`resolve_trusted_code_for_build` at instantiation). That is what
+    keeps a flow saved before an upgrade runnable, but it is silent — so a node that is a
+    *customized* copy of a built-in is quietly rebuilt as the stock component, and the build fails
+    with whatever that component complains about. A customized Agent surfaces as "No model
+    selected", naming neither the customization nor the policy that discarded it.
+
+    Returns a sentence to append to the build error when the saved component is structurally
+    incompatible with this server's component of the same type -- the same condition the upgrade
+    checker reports as a breaking change, and the frontend as "flow needs review". Returns ``None``
+    in permissive mode, for an unknown type (already refused by :func:`check_flow_and_raise`), when
+    the registry is unavailable, and for a node this server's component can still drive: a legacy
+    Agent carrying ``agent_llm``/``model_name`` runs fine after the swap and must not be blamed.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None or getattr(settings_service.settings, "allow_custom_components", True):
+        return None
+    if not isinstance(component_type, str) or not component_type or not isinstance(node_info, Mapping):
+        return None
+
+    registry_entry = _registry_entry_for_component_type(component_type)
+    if registry_entry is None:
+        return None
+
+    from lfx.upgrade.checker import has_breaking_change
+
+    if not has_breaking_change(registry_entry, node_info):
+        return None
+
+    registry_template = registry_entry.get("template")
+    flow_template = node_info.get("template")
+    missing_clause = ""
+    if isinstance(registry_template, Mapping) and isinstance(flow_template, Mapping):
+        missing = _unfillable_required_fields(registry_template, flow_template)
+        if missing:
+            missing_clause = f" (missing required input: {', '.join(missing)})"
+
+    return RESTRICTED_MODE_MISMATCH_HINT.format(component_type=component_type, missing_clause=missing_clause)
+
+
+def explain_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+    """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
+
+    Callers are build-error handlers, where a diagnostic that raises would replace the
+    component's real error with an unrelated one.
+    """
+    try:
+        return describe_restricted_component_mismatch(component_type, node_info)
+    except Exception:  # noqa: BLE001 -- diagnosis is best effort; never mask the original failure
+        logger.debug("Could not diagnose restricted-mode component mismatch", exc_info=True)
+        return None
+
+
 async def _ensure_public_component_lookup_snapshot(
     settings_service: Any,
 ) -> tuple[dict[str, str], Mapping[str, set[str]]]:
@@ -1473,6 +1670,85 @@ def _collect_blocked_components(
     return found
 
 
+def _selects_mcp_stdio_transport(config: Any) -> bool:
+    """Return whether an MCP server configuration resolves to the subprocess-spawning transport.
+
+    Mirrors the transport selection in ``lfx.base.mcp.util.update_tools``: an explicit
+    ``mode`` of ``Stdio`` wins, otherwise the presence of ``command`` selects stdio. Keeping
+    the two in step means a config this helper passes cannot become a spawn at the sink.
+    """
+    if not isinstance(config, Mapping):
+        return False
+    mode = config.get("mode")
+    if isinstance(mode, str) and mode.strip():
+        return mode.strip().casefold() == "stdio"
+    return bool(config.get("command"))
+
+
+def _mcp_configs_in_field_value(value: Any) -> list[Any]:
+    """Return the MCP server configurations reachable from one template field value."""
+    if not isinstance(value, Mapping):
+        return []
+    # ``McpInput`` stores ``{"name": ..., "config": {...}}``; a raw config may also be stored
+    # directly, and an imported ``mcpServers`` map carries one config per server name.
+    configs: list[Any] = [value, value.get("config")]
+    servers = value.get("mcpServers")
+    if isinstance(servers, Mapping):
+        configs.extend(servers.values())
+    return configs
+
+
+def _is_mcp_server_field(field_name: Any, field: Mapping[str, Any]) -> bool:
+    """Return whether a template entry holds an MCP server selection.
+
+    Matched by the ``McpInput`` field type or name, and by the ``{"name", "config"}`` value
+    shape, so relabelling the field key cannot hide a stdio configuration.
+    """
+    if field.get("type") == MCP_SERVER_FIELD_TYPE:
+        return True
+    if field_name in MCP_SERVER_FIELD_NAMES or field.get("name") in MCP_SERVER_FIELD_NAMES:
+        return True
+    value = field.get("value")
+    return isinstance(value, Mapping) and ("config" in value or "mcpServers" in value)
+
+
+def _collect_mcp_stdio_components(nodes: list[dict]) -> list[str]:
+    """Return ``display_name (id)`` labels for nodes configuring an MCP stdio server.
+
+    Recurses into inlined nested flow definitions for the same reason as
+    ``_collect_blocked_components``.
+    """
+    found: list[str] = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data", {})
+        if not isinstance(node_data, dict):
+            continue
+        node_info = node_data.get("node", {})
+        if not isinstance(node_info, dict):
+            continue
+
+        template = node_info.get("template", {})
+        if isinstance(template, Mapping):
+            for field_name, field in template.items():
+                if not isinstance(field, Mapping) or not _is_mcp_server_field(field_name, field):
+                    continue
+                if any(
+                    _selects_mcp_stdio_transport(config) for config in _mcp_configs_in_field_value(field.get("value"))
+                ):
+                    display_name = node_info.get("display_name") or node_data.get("type", "unknown")
+                    node_id = node_data.get("id") or node.get("id", "unknown")
+                    found.append(f"{display_name} ({node_id})")
+                    break
+
+        nested_flow = node_info.get("flow", {})
+        nested_nodes = nested_flow.get("data", {}).get("nodes", []) if isinstance(nested_flow, dict) else []
+        if isinstance(nested_nodes, list) and nested_nodes:
+            found.extend(_collect_mcp_stdio_components(nested_nodes))
+    return found
+
+
 def validate_public_flow_no_code_execution(
     target: Mapping[str, Any] | Any | None,
     *,
@@ -1494,19 +1770,27 @@ def validate_public_flow_no_code_execution(
       database and never re-validated, so a public wrapper flow with no blocked
       nodes could otherwise invoke a private flow containing a code-execution
       component, bypassing the check above (the transitive case).
+    * MCP **stdio** server configuration — a node that launches an operating-system
+      process to speak MCP over stdin/stdout. The command and arguments live in an
+      ``McpInput`` field's VALUE (``mcp_server``), not in the ``code`` field, so
+      neither the two blocklists above nor ``prepare_public_flow_build``'s
+      trusted-code substitution touches them: the server would run the flow author's
+      chosen command for an anonymous visitor. Remote MCP transports (HTTP/SSE) spawn
+      nothing and remain allowed, so only the stdio selection is refused.
 
-    Each class is matched both by the node's declared ``type`` and by its
+    The first two classes are matched both by the node's declared ``type`` and by its
     ``code``-hash, so relabelling a node's ``type`` to an alias cannot smuggle a
     blocked component past the check (the build runs the stored ``code``, not the
-    ``type`` label).
+    ``type`` label). The MCP check matches the stored configuration's shape rather
+    than the node type, because the same component type is safe over HTTP.
 
     This is enforced only on the unauthenticated public build path; authenticated
     builds (``/api/v1/build/{flow_id}/flow``) are unaffected and may still use
     these components.
 
     Raises:
-        PublicFlowValidationError: if the flow contains a code-execution or
-            flow-invoking component.
+        PublicFlowValidationError: if the flow contains a code-execution component,
+            a flow-invoking component, or an MCP stdio server configuration.
     """
     normalized_flow_data = _extract_flow_data(target)
     if not normalized_flow_data:
@@ -1547,6 +1831,24 @@ def validate_public_flow_no_code_execution(
         message = (
             "Public flows cannot be built without authentication when they contain "
             f"components that can execute other flows: {blocked_names}"
+        )
+        raise PublicFlowValidationError(message)
+
+    mcp_stdio = _collect_mcp_stdio_components(nodes)
+    mcp_stdio += _collect_blocked_components(
+        nodes,
+        blocked_types=MCP_STDIO_COMPONENT_TYPES,
+        blocked_hashes=_blocked_code_hashes(
+            MCP_STDIO_COMPONENT_TYPES,
+            type_to_current_hash=type_to_current_hash,
+        ),
+    )
+    if mcp_stdio:
+        blocked_names = ", ".join(dict.fromkeys(mcp_stdio))
+        logger.warning(f"Public flow build blocked: MCP stdio servers are not allowed: {blocked_names}")
+        message = (
+            "Public flows cannot be built without authentication when they launch a local "
+            f"MCP server process (stdio transport): {blocked_names}"
         )
         raise PublicFlowValidationError(message)
 
@@ -1646,6 +1948,23 @@ def _sanitize_admin_only_flow_build(
 
 def _admin_only_build_required(settings: Any, *, is_superuser: bool) -> bool:
     return getattr(settings, "custom_component_admin_only", False) is True and not is_superuser
+
+
+def admin_only_build_required(*, is_superuser: bool) -> bool:
+    """Whether the admin-only component policy currently applies to this caller.
+
+    Exposed so execution seams that hold an already-compiled graph can decide whether that
+    compilation may still be trusted, without paying for the full sanitizer. A graph compiled
+    while the policy was off embeds the caller's own component source; if the policy applies
+    now, that compilation predates it and must not be reused.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        # Fail closed: without settings we cannot prove the policy is off.
+        return True
+    return _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
 
 
 async def prepare_admin_only_flow_build(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:

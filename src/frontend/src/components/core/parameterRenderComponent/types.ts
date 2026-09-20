@@ -87,6 +87,10 @@ export type IntComponentType = {
 export type ToggleComponentType = {
   size?: "small" | "medium" | "large";
   showToogle?: boolean;
+  /** Pass -1 to pull the switch out of tab order — for callers where an
+   *  ancestor element is the real keyboard-operable control and this switch
+   *  is purely a visual state indicator. */
+  tabIndex?: number;
 };
 
 export type FileComponentType = {

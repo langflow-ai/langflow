@@ -1,8 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
+import { isSettledSuccessfulQuery } from "@/controllers/API/helpers/query-cache";
 import {
   EnabledModelsResponse,
+  getEnabledModelsQueryKey,
   useGetEnabledModels,
 } from "@/controllers/API/queries/models/use-get-enabled-models";
 import {
@@ -30,8 +33,20 @@ const getErrorMessage = (error: unknown): string | undefined => {
 
 type ToggleMap = Map<string, ModelStatusUpdate>;
 
-const getToggleIdentity = (modelName: string, modelType: ModelType): string =>
-  JSON.stringify([modelType, modelName]);
+const getToggleContextIdentity = (
+  providerName: string | null | undefined,
+  flowId?: string,
+  projectId?: string,
+): string =>
+  JSON.stringify([providerName ?? null, flowId ?? null, projectId ?? null]);
+
+const getToggleIdentity = (
+  contextIdentity: string,
+  providerName: string,
+  modelName: string,
+  modelType: ModelType,
+): string =>
+  JSON.stringify([contextIdentity, providerName, modelType, modelName]);
 
 const getToggleEnabled = (
   data: EnabledModelsResponse,
@@ -110,7 +125,7 @@ const applyToggleMap = (
   return nextData;
 };
 
-export interface UseModelToggleQueueOptions {
+export interface UseModelToggleQueueOptions extends ProviderScopeParams {
   /**
    * Provider whose models the user is toggling. ``null`` short-circuits all
    * handlers — useful while the modal is still resolving the selection.
@@ -131,6 +146,16 @@ interface ToggleBatch {
   updates: ModelStatusUpdate[];
   previousData: EnabledModelsResponse | undefined;
   togglesToSend: ToggleMap;
+  queryKey: ReturnType<typeof getEnabledModelsQueryKey>;
+  flowId?: string;
+  projectId?: string;
+}
+
+interface ActiveToggleContext {
+  identity: string;
+  queryKey: ReturnType<typeof getEnabledModelsQueryKey>;
+  flowId?: string;
+  projectId?: string;
 }
 
 /**
@@ -157,6 +182,8 @@ interface ToggleBatch {
  */
 export const useModelToggleQueue = ({
   providerName,
+  flowId,
+  projectId,
 }: UseModelToggleQueueOptions): UseModelToggleQueueReturn => {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -164,11 +191,54 @@ export const useModelToggleQueue = ({
   const { mutate: updateEnabledModels, mutateAsync: updateEnabledModelsAsync } =
     useUpdateEnabledModels({ retry: 0 });
   const { refreshAllModelInputs } = useRefreshModelInputs();
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const providerScope = {
+    flowId,
+    projectId,
+    purpose: "configure" as const,
+  };
+  const enabledModelsQueryKey = getEnabledModelsQueryKey(providerScope);
+  const currentContextIdentity = getToggleContextIdentity(
+    providerName,
+    flowId,
+    projectId,
+  );
+  const {
+    data: enabledModelsData,
+    isSuccess: isEnabledModelsSuccess,
+    isFetching: isEnabledModelsFetching,
+    isFetchedAfterMount: isEnabledModelsFetchedAfterMount,
+    fetchStatus: enabledModelsFetchStatus,
+  } = useGetEnabledModels(providerScope);
+  const enabledModelsQueryIsFresh =
+    !!enabledModelsData &&
+    isEnabledModelsSuccess &&
+    !isEnabledModelsFetching &&
+    isEnabledModelsFetchedAfterMount &&
+    enabledModelsFetchStatus === "idle";
+  const enabledModelsIncludeProvider =
+    !!providerName &&
+    !!enabledModelsData &&
+    Object.hasOwn(enabledModelsData.enabled_models, providerName);
+
+  const canMutateEnabledModels = useCallback(
+    () =>
+      enabledModelsQueryIsFresh &&
+      enabledModelsIncludeProvider &&
+      isSettledSuccessfulQuery(queryClient, enabledModelsQueryKey),
+    [
+      enabledModelsQueryIsFresh,
+      enabledModelsIncludeProvider,
+      queryClient,
+      enabledModelsQueryKey,
+    ],
+  );
 
   const overlayToggles = useRef<ToggleMap>(new Map());
   const unsentToggles = useRef<ToggleMap>(new Map());
   const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
+    undefined,
+  );
+  const activeToggleContext = useRef<ActiveToggleContext | undefined>(
     undefined,
   );
 
@@ -185,8 +255,38 @@ export const useModelToggleQueue = ({
     }
     if (overlayToggles.current.size === 0) {
       fallbackModelData.current = undefined;
+      activeToggleContext.current = undefined;
     }
   }, []);
+
+  const discardPendingToggleContext = useCallback(() => {
+    const hadUnsentToggles = unsentToggles.current.size > 0;
+    const discardedContext = activeToggleContext.current;
+    const previousData = fallbackModelData.current;
+    unsentToggles.current = new Map();
+    overlayToggles.current = new Map();
+    fallbackModelData.current = undefined;
+    activeToggleContext.current = undefined;
+
+    if (discardedContext) {
+      if (previousData) {
+        queryClient.setQueryData(discardedContext.queryKey, previousData);
+      }
+      // setQueryData marks a query successful and clears invalidation. Restore
+      // the rollback snapshot for display only, then immediately mark that
+      // exact policy cache untrusted so stale grants cannot become actionable.
+      void queryClient.invalidateQueries({
+        queryKey: discardedContext.queryKey,
+        exact: true,
+      });
+    }
+    if (hadUnsentToggles) {
+      setErrorData({
+        title: t("errors.updateModelStatus"),
+        list: [t("modelProviders.errorUnexpected")],
+      });
+    }
+  }, [queryClient, setErrorData, t]);
 
   // Shared flush prelude: builds the mutation payload, snapshots the
   // pre-toggle cache for rollback, and drains ``unsentToggles`` so a
@@ -194,18 +294,38 @@ export const useModelToggleQueue = ({
   // just sent. Returns null when there's nothing to do so callers can
   // bail symmetrically.
   const buildAndConsumeToggleBatch = useCallback((): ToggleBatch | null => {
-    if (!providerName) return null;
+    if (!providerName || unsentToggles.current.size === 0) return null;
+    const activeContext = activeToggleContext.current;
+    if (!activeContext || activeContext.identity !== currentContextIdentity) {
+      discardPendingToggleContext();
+      return null;
+    }
+    if (!canMutateEnabledModels()) {
+      discardPendingToggleContext();
+      return null;
+    }
 
     const togglesToSend = new Map(unsentToggles.current);
-    if (togglesToSend.size === 0) return null;
 
     const updates = Array.from(togglesToSend.values());
 
     const previousData = fallbackModelData.current;
     unsentToggles.current = new Map();
 
-    return { updates, previousData, togglesToSend };
-  }, [providerName]);
+    return {
+      updates,
+      previousData,
+      togglesToSend,
+      queryKey: activeContext.queryKey,
+      flowId: activeContext.flowId,
+      projectId: activeContext.projectId,
+    };
+  }, [
+    providerName,
+    currentContextIdentity,
+    canMutateEnabledModels,
+    discardPendingToggleContext,
+  ]);
 
   // Shared error-path: drain the overlay BEFORE restoring previousData so
   // the re-overlay effect (triggered by setQueryData below) can't re-apply
@@ -214,30 +334,38 @@ export const useModelToggleQueue = ({
     (
       togglesToSend: ToggleMap,
       previousData: EnabledModelsResponse | undefined,
+      queryKey: ReturnType<typeof getEnabledModelsQueryKey>,
       error: unknown,
     ) => {
       clearSentOverlay(togglesToSend);
       if (previousData) {
-        queryClient.setQueryData(["useGetEnabledModels"], previousData);
+        queryClient.setQueryData(queryKey, previousData);
       }
       setErrorData({
         title: t("errors.updateModelStatus"),
         list: [getErrorMessage(error) || "Failed to update model status"],
       });
     },
-    [clearSentOverlay, queryClient, setErrorData],
+    [clearSentOverlay, queryClient, setErrorData, t],
   );
 
   const flushModelToggles = useDebounce(() => {
     const batch = buildAndConsumeToggleBatch();
     if (!batch) return;
-    const { updates, previousData, togglesToSend } = batch;
+    const {
+      updates,
+      previousData,
+      togglesToSend,
+      queryKey,
+      flowId: batchFlowId,
+      projectId: batchProjectId,
+    } = batch;
 
     updateEnabledModels(
-      { updates },
+      { updates, flowId: batchFlowId, projectId: batchProjectId },
       {
         onError: (error: unknown) => {
-          rollbackToggleBatch(togglesToSend, previousData, error);
+          rollbackToggleBatch(togglesToSend, previousData, queryKey, error);
         },
         onSettled: () => {
           clearSentOverlay(togglesToSend);
@@ -253,16 +381,51 @@ export const useModelToggleQueue = ({
     );
   }, 1000);
 
+  useEffect(() => {
+    const activeContext = activeToggleContext.current;
+    if (activeContext && activeContext.identity !== currentContextIdentity) {
+      flushModelToggles.cancel();
+      discardPendingToggleContext();
+    }
+  }, [currentContextIdentity, discardPendingToggleContext, flushModelToggles]);
+
+  const flushOnUnmountRef = useRef(flushModelToggles);
+  const discardOnUnmountRef = useRef(discardPendingToggleContext);
+  flushOnUnmountRef.current = flushModelToggles;
+  discardOnUnmountRef.current = discardPendingToggleContext;
+  useEffect(
+    () => () => {
+      // Scope-keyed modal navigation unmounts this hook instead of rerendering
+      // it with the next identity. Cancel the surviving lodash timer and roll
+      // back only unsent intent; an explicit close already consumes its batch
+      // through flushPendingChanges before unmount.
+      flushOnUnmountRef.current.cancel();
+      discardOnUnmountRef.current();
+    },
+    [],
+  );
+
   const flushPendingChanges = useCallback(async () => {
     // Cancel the pending debounce timer — we'll send the toggles directly
     flushModelToggles.cancel();
 
     const batch = buildAndConsumeToggleBatch();
     if (!batch) return;
-    const { updates, previousData, togglesToSend } = batch;
+    const {
+      updates,
+      previousData,
+      togglesToSend,
+      queryKey,
+      flowId: batchFlowId,
+      projectId: batchProjectId,
+    } = batch;
 
     try {
-      await updateEnabledModelsAsync({ updates });
+      await updateEnabledModelsAsync({
+        updates,
+        flowId: batchFlowId,
+        projectId: batchProjectId,
+      });
       clearSentOverlay(togglesToSend);
       // Invalidate the affected queries inline so callers don't need to
       // bolt this on. The modal's onClose still triggers
@@ -272,7 +435,7 @@ export const useModelToggleQueue = ({
       queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
       queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
     } catch (error: unknown) {
-      rollbackToggleBatch(togglesToSend, previousData, error);
+      rollbackToggleBatch(togglesToSend, previousData, queryKey, error);
     }
   }, [
     flushModelToggles,
@@ -285,7 +448,13 @@ export const useModelToggleQueue = ({
 
   const handleModelToggle = useCallback(
     (modelName: string, enabled: boolean, modelType: ModelType) => {
-      if (!providerName) return;
+      if (!providerName || !canMutateEnabledModels()) return;
+      const activeContext = activeToggleContext.current;
+      if (activeContext && activeContext.identity !== currentContextIdentity) {
+        flushModelToggles.cancel();
+        discardPendingToggleContext();
+        return;
+      }
 
       const update: ModelStatusUpdate = {
         provider: providerName,
@@ -293,23 +462,34 @@ export const useModelToggleQueue = ({
         model_type: modelType,
         enabled,
       };
-      const toggleIdentity = getToggleIdentity(modelName, modelType);
+      const toggleIdentity = getToggleIdentity(
+        currentContextIdentity,
+        providerName,
+        modelName,
+        modelType,
+      );
 
       // Cancel any in-flight refetch of useGetEnabledModels so its (stale)
       // result cannot overwrite the optimistic cache update below. The
       // re-overlay effect handles refetches that start AFTER this point;
       // ``cancelQueries`` covers the ones already in flight at click time.
-      void queryClient.cancelQueries({ queryKey: ["useGetEnabledModels"] });
+      void queryClient.cancelQueries({ queryKey: enabledModelsQueryKey });
 
       if (overlayToggles.current.size === 0) {
         fallbackModelData.current =
-          queryClient.getQueryData<EnabledModelsResponse>([
-            "useGetEnabledModels",
-          ]);
+          queryClient.getQueryData<EnabledModelsResponse>(
+            enabledModelsQueryKey,
+          );
+        activeToggleContext.current = {
+          identity: currentContextIdentity,
+          queryKey: enabledModelsQueryKey,
+          flowId,
+          projectId,
+        };
       }
 
       queryClient.setQueryData<EnabledModelsResponse>(
-        ["useGetEnabledModels"],
+        enabledModelsQueryKey,
         (old) => {
           if (!old) return old;
           return applyToggleToEnabledModels(old, update);
@@ -322,7 +502,17 @@ export const useModelToggleQueue = ({
       unsentToggles.current.set(toggleIdentity, update);
       flushModelToggles();
     },
-    [providerName, queryClient, flushModelToggles],
+    [
+      providerName,
+      currentContextIdentity,
+      canMutateEnabledModels,
+      queryClient,
+      flushModelToggles,
+      enabledModelsQueryKey,
+      discardPendingToggleContext,
+      flowId,
+      projectId,
+    ],
   );
 
   // Re-overlay effect — protects the pending-toggle window in its entirety,
@@ -339,6 +529,16 @@ export const useModelToggleQueue = ({
     const overlay = overlayToggles.current;
     if (overlay.size === 0) return;
 
+    const includesRevokedProvider = Array.from(overlay.values()).some(
+      (update) =>
+        !Object.hasOwn(enabledModelsData.enabled_models, update.provider),
+    );
+    if (includesRevokedProvider) {
+      flushModelToggles.cancel();
+      discardPendingToggleContext();
+      return;
+    }
+
     // Loop guard: the ``setQueryData`` below re-emits ``enabledModelsData``
     // and re-runs this effect; ``drifted`` must return false on the second
     // pass for the recursion to terminate. Don't replace this with an
@@ -353,13 +553,20 @@ export const useModelToggleQueue = ({
     if (!drifted) return;
 
     queryClient.setQueryData<EnabledModelsResponse>(
-      ["useGetEnabledModels"],
+      enabledModelsQueryKey,
       (old) => {
         if (!old) return old;
         return applyToggleMap(old, overlay);
       },
     );
-  }, [enabledModelsData, providerName, queryClient]);
+  }, [
+    enabledModelsData,
+    providerName,
+    queryClient,
+    enabledModelsQueryKey,
+    flushModelToggles,
+    discardPendingToggleContext,
+  ]);
 
   return {
     handleModelToggle,

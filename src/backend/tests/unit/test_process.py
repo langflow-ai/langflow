@@ -486,11 +486,11 @@ def test_apply_tweaks_code_override_prevention():
     node_tweaks = {"code": "malicious_code_injection", "param1": "new_value"}
 
     # Capture log output
-    with patch("langflow.processing.process.logger") as mock_logger:
+    with patch("lfx.processing.process.logger") as mock_logger:
         apply_tweaks(node, node_tweaks)
 
         # Verify warning was logged for code override attempt (and names the field)
-        mock_logger.warning.assert_called_once_with("Security: refusing to override code field 'code' via tweaks.")
+        mock_logger.warning.assert_called_once_with("Security: refusing to override protected field 'code' via tweaks.")
 
     # Verify code field was NOT modified
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"
@@ -519,7 +519,7 @@ def test_apply_tweaks_blocks_sql_connection_and_query():
         },
     }
 
-    with patch("langflow.processing.process.logger") as mock_logger:
+    with patch("lfx.processing.process.logger") as mock_logger:
         apply_tweaks(
             node,
             {
@@ -561,11 +561,11 @@ def test_apply_tweaks_code_only_prevention():
     node_tweaks = {"code": "attempted_code_injection"}
 
     # Capture log output
-    with patch("langflow.processing.process.logger") as mock_logger:
+    with patch("lfx.processing.process.logger") as mock_logger:
         apply_tweaks(node, node_tweaks)
 
         # Verify warning was logged and names the offending field (not a generic "Code field").
-        mock_logger.warning.assert_called_once_with("Security: refusing to override code field 'code' via tweaks.")
+        mock_logger.warning.assert_called_once_with("Security: refusing to override protected field 'code' via tweaks.")
 
     # Verify code field was NOT modified
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"

@@ -5,6 +5,7 @@ import type {
   Deployment,
   ProviderAccount,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { axe } from "@/utils/a11y-test";
 
 jest.mock(
   "@/components/common/genericIconComponent",
@@ -756,6 +757,63 @@ describe("DeployChoiceDialog — update phase", () => {
     expect(callbacks.onTestDeployment).toHaveBeenCalledWith(
       { id: "dep-1", name: "My Bot" },
       "p1",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — accessibility
+// ---------------------------------------------------------------------------
+
+describe("DeployChoiceDialog — accessibility", () => {
+  const twoProviders = [makeProvider("p1"), makeProvider("p2", "WxO Dev")];
+
+  it("should_have_no_axe_violations on the provider phase", async () => {
+    const { container } = render(
+      <TooltipProvider>
+        <DeployChoiceDialog
+          open={true}
+          setOpen={jest.fn()}
+          providers={twoProviders}
+          flowId="flow-1"
+          snapshotVersionId="snap-new"
+          snapshotVersionTag="v2.0"
+          onChooseNew={jest.fn()}
+          onUpdateComplete={jest.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  // DialogContent injects a fallback VisuallyHidden DialogTitle/Description
+  // whenever it can't find one directly among its children — but each phase
+  // component (ProviderPhaseContent, etc.) renders its OWN DialogTitle deep
+  // inside its own JSX, which DialogContent's shallow child scan can't see
+  // through a custom component boundary. Without hideTitle/hideDescription
+  // on DialogContent, that produces a SECOND DialogTitle sharing the same
+  // Radix-generated id as the real one (Radix ties the id to the Dialog.Root
+  // instance, not per-render), so aria-labelledby silently resolves to
+  // whichever renders first — the useless generic fallback "Dialog".
+  it("exposes the phase's real title as the dialog's accessible name, not a duplicate generic fallback", () => {
+    renderDialog({ providers: twoProviders });
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAccessibleName("Select Provider");
+    expect(screen.queryAllByText("Dialog")).toHaveLength(0);
+  });
+
+  it("updates the dialog's accessible name and description when advancing to the next phase", async () => {
+    const user = userEvent.setup();
+    renderDialog({ providers: twoProviders });
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAccessibleName("Select Deployment");
+    expect(dialog).toHaveAccessibleDescription(
+      "Deployments on WxO Prod for this flow.",
     );
   });
 });

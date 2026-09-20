@@ -508,6 +508,35 @@ describe("useAssistantChat — skip-all", () => {
       // rich loading state stays mounted.
       expect(statusObservedDuringBridge).toBe("streaming");
     });
+
+    it("should_not_auto_approve_after_the_selected_model_is_revoked", async () => {
+      localStorage.setItem(STORAGE_KEY, "true");
+      let modelAllowed = true;
+      mockPostAssistStream.mockImplementationOnce(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "Plan body",
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "", validated: true },
+          });
+        },
+      );
+      const { result } = renderHook(() =>
+        useAssistantChat({ canUseModel: () => modelAllowed }),
+      );
+
+      await act(async () => {
+        await result.current.handleSend("build a chatbot", TEST_MODEL);
+      });
+      modelAllowed = false;
+      await flushTimers();
+
+      expect(mockPostAssistStream).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("plan card is hidden in skip-all mode", () => {

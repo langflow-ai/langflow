@@ -8,7 +8,7 @@ export const useBarControls = (
   setSoundDetected?,
 ) => {
   const animationFrameRef = useRef<number | null>(null);
-  const timeDataRef = useRef<Uint8Array | null>(null);
+  const timeDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const baseHeightsRef = useRef<number[]>([]);
   const lastRandomizeTimeRef = useRef<number>(0);
   const minHeightRef = useRef<number>(20);

@@ -98,6 +98,38 @@ const codeHasBreakingChange = (
   return false;
 };
 
+/**
+ * Whether an administrator's catalog policy blocks this component type.
+ *
+ * `blocked` only means "no template for this type", which is equally the
+ * normal state of a user-authored component, an uninstalled bundle and a flow
+ * imported from another install. Only the policy's own identities can tell
+ * those apart, so the server sends them and this asks about *this* component
+ * rather than whether some policy exists somewhere.
+ */
+export const isBlockedByCatalogPolicy = (
+  blockedComponentTypes: ReadonlySet<string> | undefined,
+  componentType: string | undefined,
+): boolean =>
+  componentType !== undefined &&
+  blockedComponentTypes !== undefined &&
+  blockedComponentTypes.has(componentType);
+
+/**
+ * Whether a missing template should stop the node running.
+ *
+ * Restricted mode blocks any unknown code-bearing node on its own, as before.
+ * With custom components allowed, only an actual policy block makes one fatal
+ * — otherwise a user's own component could not run.
+ */
+export const blockedStopsExecution = (
+  allowCustomComponents: boolean,
+  blockedComponentTypes: ReadonlySet<string> | undefined,
+  componentType: string | undefined,
+): boolean =>
+  !allowCustomComponents ||
+  isBlockedByCatalogPolicy(blockedComponentTypes, componentType);
+
 export const checkCodeValidity = (
   data: NodeDataType,
   templates: { [key: string]: APIClassType },

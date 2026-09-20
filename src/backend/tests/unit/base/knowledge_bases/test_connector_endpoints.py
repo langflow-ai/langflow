@@ -11,12 +11,12 @@ dispatcher must reject them as 400 typos rather than 500s.
 
 from __future__ import annotations
 
-import json
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from langflow.api.utils import knowledge_base_service
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -47,12 +47,10 @@ class TestConnectorCatalog:
 
 
 class TestConnectorIngest:
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_unknown_source_type_returns_400(
         self,
         mock_root,
-        mock_meta,
         client: AsyncClient,
         logged_in_headers,
         active_user,
@@ -61,20 +59,11 @@ class TestConnectorIngest:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "connector_kb_bad"
         kb_dir.mkdir(parents=True)
-        (kb_dir / "embedding_metadata.json").write_text(
-            json.dumps(
-                {
-                    "id": "00000000-0000-0000-0000-000000000002",
-                    "embedding_provider": "OpenAI",
-                    "embedding_model": "x",
-                }
-            )
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_dir.name,
+            model_selection={"name": "x", "provider": "OpenAI"},
         )
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-000000000002",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "x",
-        }
 
         response = await client.post(
             "api/v1/knowledge_bases/connector_kb_bad/ingest/connector",
@@ -85,12 +74,10 @@ class TestConnectorIngest:
         assert "nonsense" in response.json()["detail"].lower()
 
     @pytest.mark.parametrize("source_type", _STUBBED_SOURCE_TYPES)
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_stubbed_source_type_returns_400(
         self,
         mock_root,
-        mock_meta,
         source_type,
         client: AsyncClient,
         logged_in_headers,
@@ -105,20 +92,11 @@ class TestConnectorIngest:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / f"connector_kb_{source_type}"
         kb_dir.mkdir(parents=True)
-        (kb_dir / "embedding_metadata.json").write_text(
-            json.dumps(
-                {
-                    "id": "00000000-0000-0000-0000-000000000003",
-                    "embedding_provider": "OpenAI",
-                    "embedding_model": "x",
-                }
-            )
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_dir.name,
+            model_selection={"name": "x", "provider": "OpenAI"},
         )
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-000000000003",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "x",
-        }
 
         response = await client.post(
             f"api/v1/knowledge_bases/connector_kb_{source_type}/ingest/connector",
@@ -145,12 +123,10 @@ class TestConnectorIngest:
     @patch("langflow.api.v1.knowledge_bases.get_task_service")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_settings_service")
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_folder_connector_rejects_request_controlled_allowed_root(
         self,
         mock_root,
-        mock_meta,
         mock_settings_service,
         mock_job_service,
         mock_task_service,
@@ -174,11 +150,11 @@ class TestConnectorIngest:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "connector_kb_untrusted_root"
         kb_dir.mkdir(parents=True)
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-000000000007",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "text-embedding-3-small",
-        }
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_dir.name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
 
         js = AsyncMock()
         js.create_job = AsyncMock()
@@ -209,12 +185,10 @@ class TestConnectorIngest:
     @patch("langflow.api.v1.knowledge_bases.get_task_service")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_settings_service")
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_folder_connector_uses_operator_security_settings(
         self,
         mock_root,
-        mock_meta,
         mock_settings_service,
         mock_job_service,
         mock_task_service,
@@ -238,11 +212,11 @@ class TestConnectorIngest:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "connector_kb_configured_root"
         kb_dir.mkdir(parents=True)
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-000000000008",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "text-embedding-3-small",
-        }
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_dir.name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
 
         js = AsyncMock()
         js.create_job = AsyncMock()
@@ -283,12 +257,10 @@ class TestFolderIngest:
     @patch("langflow.api.v1.knowledge_bases.get_task_service")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_settings_service")
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_dispatches_folder_source_with_settings_allow_list(
         self,
         mock_root,
-        mock_meta,
         mock_settings_service,
         mock_job_service,
         mock_task_service,
@@ -311,11 +283,11 @@ class TestFolderIngest:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "folder_kb"
         kb_dir.mkdir(parents=True)
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-000000000004",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "text-embedding-3-small",
-        }
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_dir.name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
 
         js = AsyncMock()
         js.create_job = AsyncMock()
@@ -347,12 +319,10 @@ class TestFolderIngest:
 
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_settings_service")
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_rejects_folder_outside_settings_allow_list_before_job(
         self,
         mock_root,
-        mock_meta,
         mock_settings_service,
         mock_job_service,
         client: AsyncClient,
@@ -374,11 +344,11 @@ class TestFolderIngest:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "folder_kb"
         kb_dir.mkdir(parents=True)
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-000000000005",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "text-embedding-3-small",
-        }
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_dir.name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
 
         response = await client.post(
             "api/v1/knowledge_bases/folder_kb/ingest/folder",
@@ -390,12 +360,10 @@ class TestFolderIngest:
         assert "outside the configured allow-list" in response.json()["detail"]
         mock_job_service.assert_not_called()
 
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_folder_ingest_with_real_settings_returns_400_not_500(
         self,
         mock_root,
-        mock_meta,
         client: AsyncClient,
         logged_in_headers,
         active_user,
@@ -421,11 +389,11 @@ class TestFolderIngest:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "folder_kb_real_settings"
         kb_dir.mkdir(parents=True)
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-000000000006",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "text-embedding-3-small",
-        }
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_dir.name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
 
         # ``tmp_path`` exists and is a directory, so validation advances past the
         # path checks to the allow-list gate (empty by default → actionable 400).

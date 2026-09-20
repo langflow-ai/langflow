@@ -81,7 +81,11 @@ export default function DeployChoiceDialog({
         setOpen(nextOpen);
       }}
     >
-      <DialogContent className="max-h-screen w-full max-w-xl overflow-y-auto">
+      <DialogContent
+        className="max-h-screen w-full max-w-xl overflow-y-auto"
+        hideTitle
+        hideDescription
+      >
         {isInUpdatePhase ? (
           <UpdatePhaseContent
             isUpdating={isUpdating}

@@ -31,6 +31,7 @@ export default function MultiselectComponent({
   showParameter = true,
   hideOnSelection,
   inspectionPanel,
+  ariaLabelledBy,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -115,6 +116,7 @@ export default function MultiselectComponent({
         role="combobox"
         ref={refButton}
         aria-expanded={open}
+        aria-labelledby={ariaLabelledBy}
         data-testid={id}
         className={cn(
           editNode

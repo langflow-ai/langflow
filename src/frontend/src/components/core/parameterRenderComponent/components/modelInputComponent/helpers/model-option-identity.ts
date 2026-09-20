@@ -1,4 +1,5 @@
 import type { ModelOption } from "../types";
+import { providerNamesMatch } from "./provider-identity";
 
 type ModelIdentity = Pick<ModelOption, "name"> &
   Partial<Pick<ModelOption, "provider">>;
@@ -12,4 +13,5 @@ export const matchesModelIdentity = (
   saved: ModelIdentity,
 ): boolean =>
   option.name === saved.name &&
-  (!saved.provider || option.provider === saved.provider);
+  (!saved.provider ||
+    (!!option.provider && providerNamesMatch(option.provider, saved.provider)));

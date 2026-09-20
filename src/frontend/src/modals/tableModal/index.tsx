@@ -83,6 +83,7 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
           <TableComponent
             className="h-full w-full"
             ref={ref}
+            tableLabel={tableTitle}
             {...props}
           ></TableComponent>
         </BaseModal.Content>

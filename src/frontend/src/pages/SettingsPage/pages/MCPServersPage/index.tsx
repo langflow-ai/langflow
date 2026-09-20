@@ -69,7 +69,9 @@ export default function MCPServersPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
+      {/* flex-wrap: at narrow viewports (WCAG 1.4.10, 320px) the action
+          button drops below the title instead of clipping off-screen. */}
+      <div className="flex w-full flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div className="flex flex-col">
           <h2
             className="flex items-center text-lg font-semibold tracking-tight"
@@ -125,9 +127,11 @@ export default function MCPServersPage() {
                     key={server.name}
                     className="flex items-center justify-between rounded-lg px-3 py-2 shadow-sm transition-colors hover:bg-accent"
                   >
-                    <div className="flex items-center gap-2">
+                    {/* min-w-0 + wrap: long unbreakable server names must not
+                        push the row (and its menu button) past the viewport. */}
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <span
-                        className="text-sm font-medium"
+                        className="min-w-0 break-words text-sm font-medium"
                         data-testid={"mcp_server_name_" + index}
                       >
                         {server.name}

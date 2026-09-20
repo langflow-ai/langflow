@@ -13,6 +13,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies IBM Confluent as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "IBM Confluent",
+          icon: "Confluent",
+          name: "confluent",
+        }),
+      ]),
+    );
+  });
+
   it("classifies ToolGuard as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

@@ -478,6 +478,24 @@ class ConfigResponse(BaseConfigResponse):
     # Mirrors LANGFLOW_AGENTIC_EXPERIENCE (default on) so the Assistant panel
     # can explain, rather than 404, when the experience is disabled server-side.
     agentic_experience: bool = True
+    # Mirrors LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH so the Assistant composer enforces the same
+    # cap the API does. A UI-only constant drifted below the API's and silently truncated long
+    # prompts before they were ever sent.
+    assistant_max_message_length: int = 2000
+    # True when local Chroma may back a knowledge base or memory base — i.e. on
+    # the dev profile. The production profile refuses it (vectors on the serving
+    # box's own disk don't survive a restart and can't be shared across
+    # replicas), so the vector-store picker hides the option rather than offering
+    # a choice the create endpoint always rejects with 422.
+    local_vector_store_available: bool = True
+    # The component types an administrator blocked, for authenticated callers
+    # only. ``catalog_governance_enabled`` says a policy exists somewhere; it
+    # cannot say which component in front of you it applies to, and a missing
+    # template is equally an uninstalled bundle, an imported flow or the
+    # caller's own component. The editor needs the identities to name a cause
+    # truthfully. It reveals nothing the palette does not: these are exactly
+    # the components already withheld from ``/all`` for this caller.
+    blocked_component_types: list[str] = []
 
     @classmethod
     def from_settings(
@@ -486,6 +504,7 @@ class ConfigResponse(BaseConfigResponse):
         auth_settings,
         *,
         catalog_governance_enabled: bool = False,
+        blocked_component_types: list[str] | None = None,
     ) -> "ConfigResponse":
         """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
 
@@ -493,6 +512,7 @@ class ConfigResponse(BaseConfigResponse):
             settings (Settings): The Settings object containing configuration values.
             auth_settings: The AuthSettings object containing authentication configuration values.
             catalog_governance_enabled: Whether any catalog policy currently restricts resources.
+            blocked_component_types: Component types this caller may not use.
 
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
@@ -522,6 +542,7 @@ class ConfigResponse(BaseConfigResponse):
             substitute_outdated_component_code=settings.substitute_outdated_component_code,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
             catalog_governance_enabled=catalog_governance_enabled,
+            blocked_component_types=sorted(blocked_component_types or []),
             embedded_mode=settings.embedded_mode,
             hide_logout_button=settings.hide_logout_button or settings.embedded_mode,
             hide_new_project_button=settings.hide_new_project_button or settings.embedded_mode,
@@ -531,6 +552,8 @@ class ConfigResponse(BaseConfigResponse):
             custom_component_admin_only=settings.custom_component_admin_only,
             a2a_enabled=settings.a2a_enabled,
             agentic_experience=settings.agentic_experience,
+            assistant_max_message_length=settings.assistant_max_message_length,
+            local_vector_store_available=settings.deployment_profile != "prod",
         )
 
 

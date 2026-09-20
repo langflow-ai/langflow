@@ -138,6 +138,7 @@ Omit `stream_protocol` or set it explicitly to `"langflow"`. Use `curl -N` so th
 | `token` | Streaming LLM token chunk (`data.chunk`). |
 | `end_vertex` | A component finished building. |
 | `output` | Normalized terminal component output (same shape as sync-mode `outputs`). |
+| `warning` | Non-terminal notice (`data.message`), such as server code replacing saved component code. The run continues. |
 | `end` | Run finished successfully. |
 | `error` | Run failed (`data.error`). |
 | `cancelled` | Run stopped by the client. |
@@ -182,6 +183,8 @@ Send `POST /api/v2/workflows` with `"mode": "stream"` and `"stream_protocol": "a
 | `CUSTOM` | Langflow-specific extensions (see below). |
 
 Langflow also emits `CUSTOM` events that generic AG-UI clients can ignore, such as `langflow.log`, `langflow.content.*`, `langflow.message.removed`, and `langflow.run.cancelled`.
+
+`CUSTOM` events named `langflow.warning` carry a non-terminal notice in `value.message`, such as server code replacing saved component code. Display the notice and continue processing events until `RUN_FINISHED` or `RUN_ERROR`.
 
 For the full AG-UI event catalog, see the [AG-UI specification](https://docs.ag-ui.com/concepts/architecture).
 
@@ -252,6 +255,7 @@ For more information, see [Execute flow with selected `stream` mode](#execute-fl
   },
   "has_errors": false,
   "errors": [],
+  "warnings": [],
   "inputs": {},
   "globals": {
     "FILENAME": "relatório—final.pdf",
@@ -278,8 +282,11 @@ For more information, see [Execute flow with selected `stream` mode](#execute-fl
 | `output.source` | Component id that produced `output.text` when `output.reason` is `single`. |
 | `outputs` | Map of component id → component result. |
 | `has_errors` | `true` when `errors` is non-empty. |
+| `warnings` | Non-fatal notices, such as server code replacing saved component code. Empty when none apply; warnings do not change `status` or `has_errors`. Also included when polling completed results. |
 | `created_timestamp` | ISO-8601 UTC timestamp (not a Unix epoch). |
 | `session_id` | Session used for the run; pass it on the next request to continue the same chat history. |
+
+Component substitution notices are returned to authenticated workflow callers. Anonymous public Playground runs do not expose these server policy details.
 
 Each value in `outputs` includes:
 
@@ -526,7 +533,7 @@ The API uses standard HTTP status codes to indicate success or failure:
 | `400 Bad Request` | Invalid request parameters. |
 | `403 Forbidden` | Invalid or missing API key. |
 | `404 Not Found` | Flow not found or developer API disabled. |
-| `422 Unprocessable Entity` | Unknown `stream_protocol` or unsupported field for the selected mode. |
+| `422 Unprocessable Entity` | Unknown `stream_protocol`, unsupported field for the selected mode, or refused `tweaks` with `TWEAKS_REFUSED`. |
 | `500 Internal Server Error` | Server error during execution. |
 | `501 Not Implemented` | Endpoint not yet implemented. |
 
@@ -539,6 +546,8 @@ The API uses standard HTTP status codes to indicate success or failure:
 ```
 
 For an unknown `stream_protocol`, the `422` response includes an `available` list of registered protocol names (`langflow`, `agui`).
+
+For a refused tweak, `detail` is an object with `code` `TWEAKS_REFUSED`. See [Refused tweaks with `TWEAKS_REFUSED`](/deployment-tweaks-policy#tweaks-refused).
 
 ## See also
 

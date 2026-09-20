@@ -267,6 +267,7 @@ async def test_get_enabled_models_returns_type_map_and_flat_union(monkeypatch):
     result = await models_api.get_enabled_models(
         session=SimpleNamespace(),
         current_user=SimpleNamespace(id=uuid4()),
+        provider_policy_attributes={"is_superuser": False},
         model_names=[shared_name],
     )
 

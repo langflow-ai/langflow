@@ -97,5 +97,5 @@ def _safe_to_lc_message(item: Data | Message) -> BaseMessage | None:
     try:
         return item.to_lc_message()
     except ValueError as exc:
-        logger.warning(f"Skipping malformed chat_history item ({type(item).__name__}): {exc}")
+        logger.warning(f"Skipping malformed chat_history item ({type(item).__name__})", exc_info=exc)
         return None

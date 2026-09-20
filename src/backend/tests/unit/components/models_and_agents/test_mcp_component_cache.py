@@ -404,10 +404,11 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
     ):
         """Test that cache persists across component instances."""
         server_name = "test_server"
+        shared_tenant_id = str(uuid4())
 
         # First component instance
         component1 = await self.component_setup(component_class, default_kwargs)
-        component1._user_id = "shared-tenant"
+        component1._user_id = shared_tenant_id
         component1.use_cache = True
         cache_key = component1._mcp_servers_cache_key(server_name)
 
@@ -422,7 +423,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
         # Second component instance
         component2 = await self.component_setup(component_class, default_kwargs)
-        component2._user_id = "shared-tenant"
+        component2._user_id = shared_tenant_id
         component2.use_cache = True
 
         # Should access the same cache

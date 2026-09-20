@@ -84,6 +84,11 @@ async def test_generate_flow_events_maps_rejected_file_tweaks_to_bad_request(mon
     user_id = uuid.uuid4()
     vertex = MagicMock(spec=Vertex)
     vertex.id = "file-node"
+    # The tweak only reaches update_raw_params if the template declares the
+    # field, so the stand-in needs a real node payload rather than bare mocks.
+    vertex.data = {"node": {"template": {"file": {"type": "file", "value": ""}}}}
+    vertex.params = {}
+    vertex.load_from_db_fields = []
     rejection = "FileInput path is outside the authenticated user's storage scope."
     vertex.update_raw_params.side_effect = LocalFileAccessError(rejection)
     graph = MagicMock()

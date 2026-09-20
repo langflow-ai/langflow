@@ -50,6 +50,7 @@ class GraphCheckpoint(BaseModel):
     vertices_layers: list[list[str]] = Field(default_factory=list)
     first_layer: list[str] = Field(default_factory=list)
     inactivated_vertices: set[str] = Field(default_factory=set)
+    branch_inactivation_sources: dict[str, set[str]] = Field(default_factory=dict)
     conditionally_excluded_vertices: set[str] = Field(default_factory=set)
     activated_vertices: list[str] = Field(default_factory=list)
     vertex_results: dict[str, VertexCheckpointData] = Field(default_factory=dict)

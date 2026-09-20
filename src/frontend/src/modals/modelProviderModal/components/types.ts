@@ -2,6 +2,7 @@
 export type Model = {
   model_name: string;
   /** Arbitrary metadata including icon, model_type, deprecated, default flags */
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   metadata: Record<string, any>;
 };
 
@@ -14,6 +15,9 @@ export type Provider = {
   model_count?: number;
   models?: Model[];
   api_docs_url?: string;
+  /** True when the model list is discovered from the provider's endpoint
+   *  after credentials are configured (e.g. IBM WatsonX, OpenRouter, vLLM). */
+  live_discovery?: boolean;
 };
 
 /** Map of provider -> model_name -> enabled status */

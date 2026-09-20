@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { useAssistantSelectedModel } from "../hooks/use-assistant-selected-model";
+import { useAutoGrowTextarea } from "../hooks/use-auto-grow-textarea";
 import { useComponentMentions } from "../hooks/use-component-mentions";
+import { useEnabledModels } from "../hooks/use-enabled-models";
 import { useInputHistory } from "../hooks/use-input-history";
 import { AssistantMentionPopover } from "./assistant-mention-popover";
 import { ModelSelector } from "./model-selector";
@@ -64,7 +67,7 @@ function useAnimatedPlaceholder(
   return currentMessage;
 }
 
-const MAX_MESSAGE_LENGTH = 500;
+const COMPOSER_MAX_HEIGHT_PX = 144; // 9rem — keeps the conversation above the composer readable
 
 interface AssistantInputProps {
   onSend: (message: string, model: AssistantModel | null) => void;
@@ -106,6 +109,11 @@ export function AssistantInput({
   onMentionOpenChange,
 }: AssistantInputProps) {
   const { t } = useTranslation();
+  // Server-owned cap (LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH), mirrored through /config so the
+  // composer and the assistant API agree on one number.
+  const maxMessageLength = useUtilityStore(
+    (state) => state.assistantMaxMessageLength,
+  );
   const [message, setMessage] = useState(draftMessage);
   const [idlePlaceholder] = useState(getAssistantPlaceholder);
 
@@ -116,8 +124,11 @@ export function AssistantInput({
     !GENERATING_STEPS.includes(currentStep);
   const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
   const [selectedModel, setSelectedModel] = useAssistantSelectedModel();
+  const { isCatalogReady, isModelEnabled } = useEnabledModels();
+  const limitHintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHistory = useInputHistory();
+  useAutoGrowTextarea(textareaRef, message, COMPOSER_MAX_HEIGHT_PX);
 
   // Auto-focus textarea when requested
   useEffect(() => {
@@ -144,6 +155,8 @@ export function AssistantInput({
   const handleSend = () => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled || isProcessing) return;
+    if (trimmedMessage.length > maxMessageLength) return;
+    if (!isCatalogReady || !isModelEnabled(selectedModel)) return;
     inputHistory.push(trimmedMessage);
     onSend(trimmedMessage, selectedModel);
     updateMessage("");
@@ -211,12 +224,17 @@ export function AssistantInput({
     }
   };
 
+  const messageLength = message.length;
+  // The cap is hard, but never silent: the counter is always on screen and hitting the limit
+  // names the environment variable that raises it.
+  const isAtLimit = messageLength >= maxMessageLength;
   // Gate on selectedModel too: a fast click during the model selector's
   // auto-select window would fire with a null model and drop the message.
   const canSend =
-    message.trim().length > 0 && !disabled && selectedModel !== null;
-  const charsRemaining = MAX_MESSAGE_LENGTH - message.length;
-  const showCharCount = message.length > MAX_MESSAGE_LENGTH * 0.8;
+    message.trim().length > 0 &&
+    !disabled &&
+    isCatalogReady &&
+    isModelEnabled(selectedModel);
 
   return (
     <div className="relative px-2 pb-2">
@@ -231,8 +249,11 @@ export function AssistantInput({
       />
       <div
         className={cn(
-          "relative flex cursor-text flex-col rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_hsl(var(--accent-assistant-purple)/0.12),0_0_30px_hsl(var(--accent-assistant-brand)/0.08)]",
+          "relative flex cursor-text flex-col rounded-md border border-control bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_hsl(var(--accent-assistant-purple)/0.12),0_0_30px_hsl(var(--accent-assistant-brand)/0.08)]",
           compact ? "gap-1" : "gap-4",
+          // With the limit hint on screen the column gap would stack on top of the hint's own
+          // padding, spacing it away from the footer far wider than from the text above it.
+          isAtLimit && "gap-0",
         )}
         onClick={() => textareaRef.current?.focus()}
       >
@@ -248,7 +269,8 @@ export function AssistantInput({
           <Textarea
             ref={textareaRef}
             value={message}
-            maxLength={MAX_MESSAGE_LENGTH}
+            maxLength={maxMessageLength}
+            aria-describedby={isAtLimit ? limitHintId : undefined}
             onChange={(e) => {
               updateMessage(e.target.value);
               mentions.handleValueChange(
@@ -270,7 +292,10 @@ export function AssistantInput({
             }
             disabled={disabled || isProcessing}
             className={cn(
-              "resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
+              "resize-none overflow-y-auto border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
+              // Hard stop for the auto-grow above: past this the draft scrolls inside the
+              // composer so the conversation stays readable.
+              "max-h-[9rem]",
               compact ? "min-h-0" : "min-h-[60px]",
               isProcessing && !isPostGenerationStep && "placeholder:opacity-50",
             )}
@@ -285,6 +310,19 @@ export function AssistantInput({
               <span className="animate-pulse">{animatedPlaceholder}</span>
             </div>
           )}
+          {/* Inside the textarea wrapper on purpose: as a direct child of the composer's
+              flex column it would also inherit the column gap, spacing the hint far wider
+              than the welcome screen's. */}
+          {isAtLimit && (
+            <div
+              id={limitHintId}
+              role="status"
+              data-testid="assistant-input-limit-hint"
+              className="px-4 py-1 text-xs text-destructive"
+            >
+              {t("assistant.messageLimitReached")}
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-between px-3">
           <div className="flex items-center gap-4">
@@ -294,18 +332,15 @@ export function AssistantInput({
             />
           </div>
           <div className="flex items-center gap-2">
-            {showCharCount && (
-              <span
-                className={cn(
-                  "text-xs tabular-nums",
-                  charsRemaining <= 20
-                    ? "text-destructive"
-                    : "text-muted-foreground",
-                )}
-              >
-                {charsRemaining}
-              </span>
-            )}
+            <span
+              data-testid="assistant-input-char-count"
+              className={cn(
+                "text-xs tabular-nums",
+                isAtLimit ? "text-destructive" : "text-muted-foreground",
+              )}
+            >
+              {messageLength}/{maxMessageLength}
+            </span>
             {isProcessing ? (
               <button
                 type="button"

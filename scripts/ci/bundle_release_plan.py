@@ -51,6 +51,9 @@ class PlanError(RuntimeError):
 class IndexClient(Protocol):
     """Minimal package-index interface used by production and tests."""
 
+    def get_latest_version(self, package: str) -> str | None:
+        """Return the public index's latest version, or None when the package is absent."""
+
     def get_release(self, package: str, version: str) -> dict[str, Any] | None:
         """Return release JSON, or None when the package/version is absent."""
 
@@ -137,6 +140,19 @@ class PyPIClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
+    def get_latest_version(self, package: str) -> str | None:
+        url = f"{self.base_url}/{canonicalize_name(package)}/json"
+        try:
+            with urllib.request.urlopen(url, timeout=self.timeout) as response:  # noqa: S310
+                payload = json.load(response)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                return None
+            raise PlanError(f"{package}: public index returned HTTP {exc.code} for {url}") from exc
+        except urllib.error.URLError as exc:
+            raise PlanError(f"{package}: unable to query public index {url}: {exc.reason}") from exc
+        return str(payload["info"]["version"])
+
     def get_release(self, package: str, version: str) -> dict[str, Any] | None:
         url = f"{self.base_url}/{canonicalize_name(package)}/{version}/json"
         try:
@@ -176,6 +192,16 @@ def parse_version(version: str) -> tuple[int, int, int, int, int]:
     else:
         phase = (0, 0)
     return (*release, *phase)
+
+
+def _ensure_not_behind_public_latest(package: str, version: str, client: IndexClient) -> None:
+    latest = client.get_latest_version(package)
+    if latest is None or parse_version(version) >= parse_version(latest):
+        return
+    raise PlanError(
+        f"{package} {version}: source version trails latest public version {latest}; "
+        f"bump {package} above {latest} before building so dependency resolution cannot prefer a newer release"
+    )
 
 
 def bump_version(version: str, bump: str = "patch", prerelease: str | None = None) -> str:
@@ -659,6 +685,7 @@ def restamp_unpublished_bundles(
     targets: list[VersionTarget] = []
     try:
         for bundle in bundles.values():
+            _ensure_not_behind_public_latest(bundle.name, bundle.version, client)
             if client.get_release(bundle.name, bundle.version) is not None:
                 targets.append(
                     VersionTarget(
@@ -746,6 +773,7 @@ def read_wheel(path: Path) -> WheelArtifact:
 
 def observe_artifact(artifact: WheelArtifact, client: IndexClient) -> ArtifactObservation:
     """Compare one local artifact with the public package index."""
+    _ensure_not_behind_public_latest(artifact.package, artifact.version, client)
     release = client.get_release(artifact.package, artifact.version)
     if release is None:
         return ArtifactObservation(

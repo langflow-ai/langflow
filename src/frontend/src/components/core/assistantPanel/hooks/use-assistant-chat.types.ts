@@ -49,7 +49,10 @@ export interface UseAssistantChatReturn {
   skipAll: boolean;
   /** Flip the skipAll preference and persist the change. */
   toggleSkipAll: () => void;
-  handleRetry: (messageId: string) => void;
+  handleRetry: (
+    messageId: string,
+    isModelEnabled: (model: AssistantModel) => boolean,
+  ) => void;
   /** Persist the reverted state on a message after a successful revert. */
   handleMarkReverted: (messageId: string) => void;
   handleStopGeneration: () => void;

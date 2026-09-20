@@ -7,6 +7,7 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -31,6 +32,8 @@ export default function PlaygroundPage() {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
+
+  useDocumentTitle(currentSavedFlow?.name);
 
   // The route gate admits anonymous visitors so a public link resolves without
   // a session; if the server declines the link, this is where they are sent.
@@ -81,7 +84,6 @@ export default function PlaygroundPage() {
   }, []);
 
   useEffect(() => {
-    document.title = currentSavedFlow?.name || "Langflow";
     if (currentSavedFlow?.data) {
       const { inputs, outputs } = getInputsAndOutputs(
         currentSavedFlow?.data?.nodes || [],

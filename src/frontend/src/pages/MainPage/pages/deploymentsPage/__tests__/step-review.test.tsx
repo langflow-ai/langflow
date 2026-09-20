@@ -76,7 +76,12 @@ function setupFolderStore() {
 }
 
 function setupFlowsQuery(
-  flows: Array<{ id: string; name: string; folder_id: string }> = [],
+  flows: Array<{
+    id: string;
+    name: string;
+    folder_id: string;
+    data?: unknown;
+  }> = [],
 ) {
   mockedUseGetRefreshFlowsQuery.mockReturnValue({
     data: flows,
@@ -113,7 +118,12 @@ function setupStepper(overrides: Record<string, unknown> = {}) {
 
 function setup(
   stepperOverrides: Record<string, unknown> = {},
-  flows: Array<{ id: string; name: string; folder_id: string }> = [],
+  flows: Array<{
+    id: string;
+    name: string;
+    folder_id: string;
+    data?: unknown;
+  }> = [],
 ) {
   setupFolderStore();
   setupFlowsQuery(flows);
@@ -219,6 +229,36 @@ describe("Attached flows section", () => {
 
     const versionLabels = screen.getAllByText("abc123");
     expect(versionLabels.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows the selected version's Watsonx eligibility warning", () => {
+    setup(
+      {
+        selectedInstance: {
+          id: "provider-1",
+          provider_key: "watsonx-orchestrate",
+        },
+        selectedVersionByFlow: new Map([
+          [
+            "flow-1:ver-1",
+            {
+              key: "flow-1:ver-1",
+              flowId: "flow-1",
+              versionId: "ver-1",
+              versionTag: "v1",
+              wxoEligibilityIssue: "multipleChatInputs",
+            },
+          ],
+        ]),
+      },
+      [{ id: "flow-1", name: "Some Flow", folder_id: "folder-1" }],
+    );
+
+    expect(
+      screen.getByText(
+        "Remove extra Chat Input nodes. Watsonx Orchestrate requires exactly one.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("uses entry keys so all sidebar-attached flows appear in review", () => {

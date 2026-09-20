@@ -67,7 +67,7 @@ test(
       hoverAdd: true,
       addButtonSlug: "message-history",
     });
-    const memoryNode = page.getByRole("group", {
+    const memoryNode = page.getByRole("application", {
       name: "Message History node",
     });
     await expect(memoryNode).toBeAttached();

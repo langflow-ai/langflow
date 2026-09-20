@@ -69,6 +69,16 @@ from pydantic import BaseModel, ValidationError
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
+def _valid_wxo_flow_data() -> dict:
+    return {
+        "nodes": [
+            {"data": {"type": "ChatInput"}},
+            {"data": {"type": "ChatOutput"}},
+        ],
+        "edges": [],
+    }
+
+
 class _FakeExecResult:
     def __init__(self, rows):
         self._rows = rows
@@ -1959,7 +1969,7 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     )
     row = SimpleNamespace(
         flow_version_id=flow_version_id,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=flow_id,
         flow_name="Flow A",
         flow_description="desc",
@@ -1985,6 +1995,69 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     assert raw_provider_data["tool_name"].startswith("langflow_Flow_A_")
     assert raw_tool_name == "Flow A"
     assert provider_data["operations"][0]["tool"]["name_of_raw"] == raw_provider_data["tool_name"]
+
+
+@pytest.mark.parametrize(
+    ("flow_data", "expected_detail"),
+    [
+        (
+            {"nodes": [{"data": {"type": "ChatOutput"}}], "edges": []},
+            "Add one Chat Input ('ChatInput') node",
+        ),
+        (
+            {
+                "nodes": [
+                    {"data": {"type": "ChatInput"}},
+                    {"data": {"type": "ChatInput"}},
+                    {"data": {"type": "ChatOutput"}},
+                ],
+                "edges": [],
+            },
+            "Remove extra Chat Input ('ChatInput') nodes",
+        ),
+        (
+            {"nodes": [{"data": {"type": "ChatInput"}}], "edges": []},
+            "Add at least one Chat Output ('ChatOutput') node",
+        ),
+    ],
+)
+async def test_watsonx_mapper_rejects_ineligible_flow_before_building_create_payload(
+    flow_data: dict,
+    expected_detail: str,
+) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        description="",
+        type="agent",
+        provider_data={
+            "display_name": "create-deploy",
+            "llm": TEST_WXO_LLM,
+            "add_flows": [{"flow_version_id": str(flow_version_id), "app_ids": []}],
+        },
+    )
+    row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_data=flow_data,
+        flow_id=uuid4(),
+        flow_name="Ineligible Flow",
+        flow_description="desc",
+        flow_tags=[],
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_deployment_create(
+            user_id=uuid4(),
+            project_id=uuid4(),
+            db=_FakeDb([row]),
+            payload=payload,
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "Ineligible Flow" in exc_info.value.detail
+    assert str(flow_version_id) in exc_info.value.detail
+    assert expected_detail in exc_info.value.detail
 
 
 @pytest.mark.asyncio
@@ -2013,7 +2086,7 @@ async def test_watsonx_mapper_translates_create_bind_with_tool_display_name_over
     )
     row = SimpleNamespace(
         flow_version_id=flow_version_id,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=flow_id,
         flow_name="Flow A",
         flow_description="desc",
@@ -2063,7 +2136,7 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_5
     )
     row = SimpleNamespace(
         flow_version_id=flow_version_id,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=flow_id,
         flow_name="Flow A",
         flow_description="desc",
@@ -2175,7 +2248,7 @@ async def test_watsonx_mapper_create_skips_empty_bind_operations_but_keeps_raw_t
     project_id = uuid4()
     row = SimpleNamespace(
         flow_version_id=flow_version_id,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=flow_id,
         flow_name="Flow A",
         flow_description="desc",
@@ -2226,7 +2299,7 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     row = SimpleNamespace(
         flow_version_id=flow_version_id,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=flow_id,
         flow_name="Flow A",
         flow_description="desc",
@@ -2277,7 +2350,7 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     row_unbound = SimpleNamespace(
         flow_version_id=flow_version_id_unbound,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="Flow Unbound",
         flow_description="desc",
@@ -2287,7 +2360,7 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     row_bound = SimpleNamespace(
         flow_version_id=flow_version_id_bound,
         flow_version_number=2,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="Flow Bound",
         flow_description="desc",
@@ -3022,7 +3095,7 @@ async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payl
     )
     row = SimpleNamespace(
         flow_version_id=flow_version_id,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=flow_id,
         flow_name="Flow B",
         flow_description="desc",
@@ -3082,7 +3155,7 @@ async def test_watsonx_mapper_bind_reuses_existing_tool_when_attachment_exists()
     flow_row = SimpleNamespace(
         flow_version_id=flow_version_id,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=flow_id,
         flow_name="Flow A",
         flow_description="desc",
@@ -3134,7 +3207,7 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
     flow_row = SimpleNamespace(
         flow_version_id=flow_version_id,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="Flow B",
         flow_description="desc",
@@ -3181,7 +3254,7 @@ async def test_watsonx_mapper_bind_reuse_with_empty_app_ids_emits_attach_tool() 
     flow_row = SimpleNamespace(
         flow_version_id=flow_version_id,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="Flow C",
         flow_description="desc",
@@ -3230,7 +3303,7 @@ async def test_watsonx_mapper_upsert_flow_with_tool_display_name_emits_rename_fo
     flow_row = SimpleNamespace(
         flow_version_id=flow_version_id,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="Flow C",
         flow_description="desc",
@@ -3282,7 +3355,7 @@ async def test_watsonx_mapper_upsert_flow_with_add_remove_and_tool_display_name_
     flow_row = SimpleNamespace(
         flow_version_id=flow_version_id,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="Flow D",
         flow_description="desc",
@@ -3342,7 +3415,7 @@ async def test_watsonx_mapper_tool_display_name_rename_compatible_with_all_updat
     flow_row = SimpleNamespace(
         flow_version_id=flow_version_id_upsert,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="Flow E",
         flow_description="desc",
@@ -3433,7 +3506,7 @@ async def test_watsonx_mapper_tool_display_name_override_generates_valid_technic
     flow_row = SimpleNamespace(
         flow_version_id=flow_version_id,
         flow_version_number=1,
-        flow_version_data={"nodes": [], "edges": []},
+        flow_version_data=_valid_wxo_flow_data(),
         flow_id=uuid4(),
         flow_name="123 bad flow",
         flow_description="desc",

@@ -46,6 +46,35 @@ router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 MESSAGE_UPDATE_FAILED = "Could not update the message."
 
+# Message-history reads must never return an entire table: the editor polls
+# this endpoint every few seconds, so an unbounded default serializes the full
+# history on every request and freezes the UI on flows with large histories
+# (issue #15023). Values match the list-endpoint defaults used by the authz
+# routers (_LIST_DEFAULT_LIMIT / _LIST_MAX_LIMIT).
+_MESSAGES_DEFAULT_LIMIT = 100
+_MESSAGES_MAX_LIMIT = 200
+
+
+def _sorted_for_display(messages: list[MessageTable], *, order_by: str | None, descending: bool) -> list[MessageTable]:
+    """Re-order an already-bounded window into the caller's requested display order."""
+    if not order_by:
+        return messages
+    if order_by == "timestamp":
+        return messages if descending else messages[::-1]
+    # Text is nullable in storage; preserve stable ordering within equal values.
+    return sorted(
+        messages,
+        key=lambda message: (getattr(message, order_by) is None, getattr(message, order_by) or ""),
+        reverse=descending,
+    )
+
+
+def _message_history_response(message: MessageTable) -> MessageResponse:
+    """Represent legacy NULL text as empty text in the existing response schema."""
+    if message.text is None:
+        return MessageResponse.model_validate(message.model_dump() | {"text": ""})
+    return MessageResponse.model_validate(message, from_attributes=True)
+
 
 async def _log_message_update_failure(error: Exception) -> None:
     from lfx.log.logger import logger
@@ -238,6 +267,7 @@ async def get_messages(
     current_user: Annotated[User, Depends(get_current_active_user)],
     flow_id: Annotated[UUID | None, Query()] = None,
     session_id: Annotated[str | None, Query()] = None,
+    end_user_id: Annotated[str | None, Query()] = None,
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
@@ -267,6 +297,13 @@ async def get_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
+        if end_user_id:
+            # Serving-plane: pull one end user's messages by the indexed owner column. Derive the
+            # raw id to the same UUID the write stamped (D6 / resolve_message_owner_id) so the
+            # predicate matches. Optional + off by default -> existing callers are unchanged (BC).
+            from lfx.memory.flow_context import derive_message_owner_uuid
+
+            stmt = stmt.where(MessageTable.user_id == derive_message_owner_uuid(end_user_id))
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
@@ -274,18 +311,23 @@ async def get_messages(
         normalized_order = order.upper()
         if normalized_order not in {"ASC", "DESC"}:
             raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by:
-            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by)
-            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
-            stmt = stmt.order_by(order_col)
-        if limit:
-            stmt = stmt.limit(limit)
+        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+        # Always select the newest window by timestamp DESC (anchored at the most
+        # recent row): the editor polls with flow_id only, and an unbounded default
+        # serializes the whole history on every poll (issue #15023). Selecting by
+        # timestamp keeps offset paging aligned with history age even when the
+        # caller sorts by a non-timestamp field. A falsy limit (None/0) falls back
+        # to the default, matching the previous `if limit:` behavior where 0 meant
+        # "no limit".
+        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
         if offset:
             stmt = stmt.offset(offset)
-        messages = await session.exec(stmt)
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+        stmt = stmt.limit(effective_limit)
+        window = list(await session.exec(stmt))
+        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
+        return [_message_history_response(message) for message in window]
     except HTTPException:
         raise
     except Exception as e:
@@ -597,19 +639,17 @@ async def get_shared_messages(
         normalized_order = order.upper()
         if normalized_order not in {"ASC", "DESC"}:
             raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by:
-            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by)
-            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
-            stmt = stmt.order_by(order_col)
-        if limit:
-            stmt = stmt.limit(limit)
+        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+        # Select the newest window by timestamp DESC, mirroring get_messages (issue #15023).
+        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
         if offset:
             stmt = stmt.offset(offset)
-
-        messages = await session.exec(stmt)
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+        stmt = stmt.limit(effective_limit)
+        window = list(await session.exec(stmt))
+        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
+        return [_message_history_response(message) for message in window]
     except HTTPException:
         raise
     except Exception as e:

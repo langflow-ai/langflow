@@ -194,4 +194,46 @@ describe("dbProviderConstants", () => {
       ]),
     ).toBe(true);
   });
+
+  describe("when local vector storage is unavailable (production profile)", () => {
+    const localUnavailable = false;
+
+    it("reports local Chroma as not configured", () => {
+      // Chroma is configured unconditionally when local storage is allowed…
+      expect(isDBProviderConfigured("chroma", [])).toBe(true);
+      // …but the production profile can't host it on the serving box's disk,
+      // so it must read as unconfigured — that's what disables it in pickers
+      // and blocks create-time validation instead of a server-side 422.
+      expect(isDBProviderConfigured("chroma", [], localUnavailable)).toBe(
+        false,
+      );
+    });
+
+    it("falls back to Postgres instead of Chroma", () => {
+      expect(getActiveDBProvider([], localUnavailable)).toBe("postgres");
+      expect(getDefaultDBProviderConfig([], localUnavailable)).toEqual({
+        backendType: "postgres",
+        backendConfig: {},
+      });
+    });
+
+    it("still honors an explicitly configured remote provider", () => {
+      const variables = [
+        variable(ACTIVE_DB_PROVIDER_VARIABLE, "opensearch"),
+        variable(OPENSEARCH_VARIABLES.URL, "https://search.example.com:9200"),
+        variable(OPENSEARCH_VARIABLES.USERNAME, "admin"),
+        variable(OPENSEARCH_VARIABLES.PASSWORD, "secret"),
+      ];
+      expect(getActiveDBProvider(variables, localUnavailable)).toBe(
+        "opensearch",
+      );
+    });
+
+    it("falls back to Postgres even when the active variable pins Chroma", () => {
+      // An explicit ``LANGFLOW_KNOWLEDGE_BACKEND=chroma`` must not resurrect a
+      // Chroma the create endpoint rejects on the production profile.
+      const variables = [variable(ACTIVE_DB_PROVIDER_VARIABLE, "chroma")];
+      expect(getActiveDBProvider(variables, localUnavailable)).toBe("postgres");
+    });
+  });
 });

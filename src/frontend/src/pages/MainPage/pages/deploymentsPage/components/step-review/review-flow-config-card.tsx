@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { WATSONX_ELIGIBILITY_MESSAGE_KEYS } from "../../helpers/watsonx-flow-eligibility";
 import { EditableToolName } from "./editable-tool-name";
 import type { ReviewFlowItem } from "./types";
 
@@ -122,6 +123,17 @@ export function ReviewFlowConfigCard({
               className="h-3.5 w-3.5 shrink-0 text-destructive"
             />
             <span className="text-xs text-destructive">{toolError}</span>
+          </div>
+        )}
+        {item.wxoEligibilityIssue && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2">
+            <ForwardedIconComponent
+              name="AlertTriangle"
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive"
+            />
+            <span className="text-xs text-destructive">
+              {t(WATSONX_ELIGIBILITY_MESSAGE_KEYS[item.wxoEligibilityIssue])}
+            </span>
           </div>
         )}
       </div>

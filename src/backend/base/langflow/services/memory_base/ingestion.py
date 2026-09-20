@@ -6,7 +6,6 @@ The MemoryBaseService delegates to these functions for all ingestion-related wor
 
 from __future__ import annotations
 
-import types
 import uuid
 from typing import TYPE_CHECKING
 
@@ -15,10 +14,9 @@ from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
 from langflow.api.utils.kb_helpers import (
-    KBIngestionHelper,
-    KBStorageHelper,
     resolve_backend_selection,
     resolve_embedding_selection,
+    resolve_local_store_path,
 )
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.memory_base.model import (
@@ -32,7 +30,10 @@ from langflow.services.memory_base.kb_path_helpers import (
     hash_session_id,
     resolve_kb_username,
     resolve_kb_username_by_user_id,
-    validate_kb_path,
+)
+from langflow.services.memory_base.provider_scope import (
+    preflight_memory_provider_use,
+    resolve_memory_provider_scope,
 )
 from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
@@ -42,7 +43,8 @@ if TYPE_CHECKING:
 
 async def trigger_ingestion(
     memory_base_id: uuid.UUID,
-    user_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
     session_id: str,
     *,
     get_mb_or_raise,
@@ -58,8 +60,27 @@ async def trigger_ingestion(
         RuntimeError: If a job is already active (caller should return 409).
     """
     async with session_scope() as db:
-        mb = await get_mb_or_raise(db, memory_base_id, user_id)
+        mb = await get_mb_or_raise(db, memory_base_id, owner_user_id)
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=memory_base_id,
+            owner_user_id=owner_user_id,
+            actor_user_id=actor_user_id,
+            memory_base=mb,
+        )
 
+    embedding_provider, embedding_model = await resolve_embedding_selection(
+        user_id=owner_user_id,
+        kb_name=mb.kb_name,
+    )
+    await preflight_memory_provider_use(
+        provider_scope,
+        embedding_provider=embedding_provider,
+        preprocessing=mb.preprocessing,
+        preproc_model=mb.preproc_model,
+    )
+
+    async with session_scope() as db:
         # Ensure a session record exists
         mbs = await get_or_create_session(db, memory_base_id, session_id)
 
@@ -73,11 +94,6 @@ async def trigger_ingestion(
             dedupe_key = f"ingestion:{memory_base_id}:{session_id}:{latest_job_id}"
 
         kb_username = await resolve_kb_username(db, mb.user_id)
-
-    # Resolve embedding from the KB row — sidecar skipped (kb_path=None) so the
-    # dispatch path never touches local disk. The MB always has a row, so this is
-    # replica-safe.
-    embedding_provider, embedding_model = await resolve_embedding_selection(user_id=mb.user_id, kb_name=mb.kb_name)
 
     # Create tracking job
     job_service = get_job_service()
@@ -103,7 +119,8 @@ async def trigger_ingestion(
             flow_id=mb.flow_id,
             kb_name=mb.kb_name,
             kb_username=kb_username,
-            user_id=mb.user_id,
+            owner_user_id=mb.user_id,
+            actor_user_id=actor_user_id,
             embedding_provider=embedding_provider,
             embedding_model=embedding_model,
             cursor_id=cursor_id_snapshot,
@@ -182,10 +199,23 @@ async def _maybe_trigger(
         if latest_wf_job_id is not None:
             dedupe_key = f"ingestion:{mb.id}:{session_id}:{latest_wf_job_id}"
 
-        kb_username = await resolve_kb_username(db, mb.user_id)
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=mb.id,
+            owner_user_id=mb.user_id,
+            actor_user_id=mb.user_id,
+            memory_base=mb,
+        )
 
-    # DB-row-driven embedding resolution (sidecar skipped); replica-safe.
     embedding_provider, embedding_model = await resolve_embedding_selection(user_id=mb.user_id, kb_name=mb.kb_name)
+    await preflight_memory_provider_use(
+        provider_scope,
+        embedding_provider=embedding_provider,
+        preprocessing=mb.preprocessing,
+        preproc_model=mb.preproc_model,
+    )
+    async with session_scope() as db:
+        kb_username = await resolve_kb_username(db, mb.user_id)
 
     job_service = get_job_service()
     job_id = uuid.uuid4()
@@ -214,7 +244,8 @@ async def _maybe_trigger(
             flow_id=mb.flow_id,
             kb_name=mb.kb_name,
             kb_username=kb_username,
-            user_id=mb.user_id,
+            owner_user_id=mb.user_id,
+            actor_user_id=mb.user_id,
             embedding_provider=embedding_provider,
             embedding_model=embedding_model,
             cursor_id=cursor_id_snapshot,
@@ -247,37 +278,31 @@ async def check_mismatch(
         return False
 
     kb_username = await resolve_kb_username_by_user_id(user_id)
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        return False
-    kb_path = kb_root / kb_username / mb.kb_name
-    validate_kb_path(kb_root, kb_path)
 
-    # Ask the vector store, not the on-disk sidecar. For a remote-backed Memory
-    # Base the local directory says nothing about whether the vectors are
-    # actually there, and on a replica that never ran an ingestion it may not
-    # exist at all — which the old check read as "empty" and would answer by
-    # regenerating a Memory Base that was perfectly intact.
+    # Ask the vector store, not the filesystem. For a remote-backed Memory Base
+    # the local directory says nothing about whether the vectors are actually
+    # there, and on a replica that never ran an ingestion it may not exist at
+    # all — which the old check read as "empty" and would answer by regenerating
+    # a Memory Base that was perfectly intact.
     try:
-        backend_type, backend_config = await resolve_backend_selection(
-            user_id=user_id, kb_name=mb.kb_name, kb_path=kb_path
-        )
+        backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=mb.kb_name)
     except ValueError:
-        # No record and no sidecar: nothing was ever provisioned, so the
+        # No ``knowledge_base`` row: nothing was ever provisioned, so the
         # processed-rows count genuinely has no vectors behind it.
         return True
 
-    embedding_provider, embedding_model = await resolve_embedding_selection(
-        user_id=user_id, kb_name=mb.kb_name, kb_path=kb_path
+    kb_path = resolve_local_store_path(
+        mb.kb_name,
+        kb_username,
+        backend_type=backend_type,
+        backend_config=backend_config,
     )
-    user_stub = types.SimpleNamespace(id=user_id)
-    embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
     backend = create_backend(
         backend_type,
         kb_name=mb.kb_name,
         kb_path=kb_path,
         backend_config=backend_config,
-        embedding_function=embeddings,
+        embedding_function=None,
         user_id=user_id,
     )
     try:
@@ -299,7 +324,8 @@ async def check_mismatch(
 
 async def regenerate(
     memory_base_id: uuid.UUID,
-    user_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
     *,
     get_mb_or_raise,
     trigger_ingestion_fn,
@@ -320,7 +346,24 @@ async def regenerate(
     )
 
     async with session_scope() as db:
-        await get_mb_or_raise(db, memory_base_id, user_id)
+        mb = await get_mb_or_raise(db, memory_base_id, owner_user_id)
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=memory_base_id,
+            owner_user_id=owner_user_id,
+            actor_user_id=actor_user_id,
+            memory_base=mb,
+        )
+        embedding_provider, _embedding_model = await resolve_embedding_selection(
+            user_id=owner_user_id,
+            kb_name=mb.kb_name,
+        )
+        await preflight_memory_provider_use(
+            provider_scope,
+            embedding_provider=embedding_provider,
+            preprocessing=mb.preprocessing,
+            preproc_model=mb.preproc_model,
+        )
 
         stmt = select(MemoryBaseSession).where(MemoryBaseSession.memory_base_id == memory_base_id)
         result = await db.exec(stmt)
@@ -346,7 +389,12 @@ async def regenerate(
     job_ids: list[str] = []
     for s in sessions:
         try:
-            jid = await trigger_ingestion_fn(memory_base_id, user_id, s.session_id)
+            jid = await trigger_ingestion_fn(
+                memory_base_id=memory_base_id,
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+                session_id=s.session_id,
+            )
             job_ids.append(jid)
         except DuplicateJobError:
             await logger.awarning(
@@ -401,28 +449,25 @@ async def purge_session_data(
         kb_username = await resolve_kb_username(db, user_id)
 
     # ---- 1. Delete vector-store chunks (best-effort, outside the DB session) ----
-    kb_root = KBStorageHelper.get_root_path()
-    if kb_root:
-        for mb, mbs in pairs:
-            try:
-                await _delete_chunks_for_session(
-                    kb_root=kb_root,
-                    kb_username=kb_username,
-                    kb_name=mb.kb_name,
-                    user_id=user_id,
-                    session_id=mbs.session_id,
-                )
-            # Broad on purpose: the purge now runs against whichever backend the
-            # KB is on, so the failure modes include remote transport errors, not
-            # just the local Chroma/OS set. One session's failure must not abort
-            # the purge for the rest.
-            except Exception:  # noqa: BLE001
-                await logger.aerror(
-                    "Failed to purge chunks for memory_base=%s session=%s",
-                    mb.id,
-                    hash_session_id(mbs.session_id),
-                    exc_info=True,
-                )
+    for mb, mbs in pairs:
+        try:
+            await _delete_chunks_for_session(
+                kb_username=kb_username,
+                kb_name=mb.kb_name,
+                user_id=user_id,
+                session_id=mbs.session_id,
+            )
+        # Broad on purpose: the purge runs against whichever backend the KB is
+        # on, so the failure modes include remote transport errors, not just the
+        # local Chroma/OS set. One session's failure must not abort the purge for
+        # the rest.
+        except Exception:  # noqa: BLE001
+            await logger.aerror(
+                "Failed to purge chunks for memory_base=%s session=%s",
+                mb.id,
+                hash_session_id(mbs.session_id),
+                exc_info=True,
+            )
 
     # ---- 2. Delete tracking rows in a single transaction ----
     pair_keys = [(mb.id, mbs.session_id) for mb, mbs in pairs]
@@ -458,7 +503,6 @@ async def purge_session_data(
 
 async def _delete_chunks_for_session(
     *,
-    kb_root,
     kb_username: str,
     kb_name: str,
     user_id: uuid.UUID,
@@ -472,22 +516,19 @@ async def _delete_chunks_for_session(
     Passing Chroma's explicit ``{"$eq": ...}`` operator form here would silently
     match nothing on a remote backend.
     """
-    kb_path = kb_root / kb_username / kb_name
-    validate_kb_path(kb_root, kb_path)
-
-    embedding_provider, embedding_model = await resolve_embedding_selection(
-        user_id=user_id, kb_name=kb_name, kb_path=kb_path
+    backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name)
+    kb_path = resolve_local_store_path(
+        kb_name,
+        kb_username,
+        backend_type=backend_type,
+        backend_config=backend_config,
     )
-    user_stub = types.SimpleNamespace(id=user_id)
-    embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
-
-    backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name, kb_path=kb_path)
     backend = create_backend(
         backend_type,
         kb_name=kb_name,
         kb_path=kb_path,
         backend_config=backend_config,
-        embedding_function=embeddings,
+        embedding_function=None,
         user_id=user_id,
     )
     try:

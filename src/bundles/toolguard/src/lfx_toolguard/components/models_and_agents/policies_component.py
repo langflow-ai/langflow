@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from uuid import uuid4
@@ -36,7 +37,14 @@ if TYPE_CHECKING:
     from toolguard.buildtime import ToolGuardsCodeGenerationResult, ToolGuardSpec
 
 
-TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")
+def _resolve_toolguard_work_dir() -> Path:
+    configured_work_dir = os.getenv("TOOLGUARD_WORK_DIR")
+    if configured_work_dir:
+        return Path(configured_work_dir)
+    return Path(tempfile.gettempdir()) / "tmp_toolguard"
+
+
+TOOLGUARD_WORK_DIR = _resolve_toolguard_work_dir()
 BUILDTIME_MODELS = ["gpt-5", "claude-sonnet"]  # currently inactive, we recommend but do not enforce
 STEP1 = "Step_1"
 STEP2 = "Step_2"

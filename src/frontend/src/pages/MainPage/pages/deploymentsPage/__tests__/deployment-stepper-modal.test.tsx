@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { axe } from "@/utils/a11y-test";
 import type { Deployment, ProviderAccount } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -271,7 +272,12 @@ describe("Edit mode — loading", () => {
     mockIsLoadingAttachments = true;
     mockIsLoadingDetail = true;
     renderModal({ editingDeployment: makeDeployment() });
-    expect(screen.getByText("Loading deployment data...")).toBeInTheDocument();
+    // getAllByText: the visible text is duplicated in a sr-only DialogTitle
+    // so the dialog has a real accessible name while loading (see the a11y
+    // tests below), matching the pattern already used for the main title.
+    expect(
+      screen.getAllByText("Loading deployment data...")[0],
+    ).toBeInTheDocument();
   });
 
   it("renders Update Deployment title in edit mode once loaded", () => {
@@ -360,5 +366,40 @@ describe("Step labels", () => {
     expect(screen.getByText("Type")).toBeInTheDocument();
     expect(screen.getByText("Flows")).toBeInTheDocument();
     expect(screen.getByText("Review")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+describe("Accessibility", () => {
+  it("should_have_no_axe_violations", async () => {
+    const { container } = renderModal();
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  // DialogContent injects a fallback VisuallyHidden DialogTitle/Description
+  // whenever it can't find one among its children — but here the real
+  // DialogTitle/DialogDescription render inside DeploymentStepperModalContent,
+  // reached through TWO custom-component boundaries (DeploymentStepperProvider
+  // -> DeploymentStepperModalContent), which DialogContent's child scan can't
+  // see through. Without hideTitle/hideDescription, Radix ties the fallback
+  // Title's id to the same Dialog.Root instance as the real one, so they
+  // collide and aria-labelledby silently resolves to the generic fallback.
+  it("exposes the real step title as the dialog's accessible name, not a duplicate generic fallback", () => {
+    renderModal();
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAccessibleName("Create New Deployment");
+    expect(screen.queryAllByText("Dialog")).toHaveLength(0);
+  });
+
+  it("exposes a step-progress description as the dialog's accessible description", () => {
+    renderModal();
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAccessibleDescription("Step 1 of 4");
   });
 });
