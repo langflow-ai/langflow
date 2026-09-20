@@ -341,6 +341,10 @@ export const lazyIconsMapping = {
     import("@/icons/Listennotes").then((mod) => ({
       default: mod.ListennotesIcon,
     })),
+  LiveTennisAPI: () =>
+    import("@/icons/LiveTennisAPI").then((mod) => ({
+      default: mod.LiveTennisAPIIcon,
+    })),
   Maritalk: () =>
     import("@/icons/Maritalk").then((mod) => ({ default: mod.MaritalkIcon })),
   Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),
