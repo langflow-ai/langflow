@@ -347,7 +347,11 @@ async def create_flow(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from e
 
 
-@router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
+@router.get(
+    "/",
+    response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader] | Page[FlowHeader],
+    status_code=200,
+)
 async def read_flows(
     *,
     current_user: CurrentActiveUser,
@@ -478,6 +482,15 @@ async def read_flows(
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
+        if header_flows:
+            # Same page of rows, header shape: one data-less listing that still
+            # carries ``total`` (the flow count) and each row's change hint.
+            return Page[FlowHeader].create(
+                [FlowHeader.model_validate(flow, from_attributes=True) for flow in page.items],
+                params,
+                total=page.total,
+            )
+
         return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
 
     except Exception as e:
