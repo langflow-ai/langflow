@@ -658,6 +658,40 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 logger.warning(msg)
                 raise ValueError(msg) from e
 
+        elif provider == "OpenCode Go":
+            from http import HTTPStatus
+
+            import requests
+
+            from lfx.base.models.model_utils import OPENCODE_GO_API_BASE
+
+            api_key = variables.get("OPENCODE_GO_API_KEY")
+            if not api_key:
+                return
+
+            # ``/models`` is the cheapest key-scoped call on the Go tier: it
+            # returns exactly the catalog this subscription may call, and 401s
+            # on a bad key. There is no documented key-introspection endpoint.
+            try:
+                response = requests.get(
+                    f"{OPENCODE_GO_API_BASE}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5,
+                )
+                if response.status_code == HTTPStatus.UNAUTHORIZED:
+                    msg = "Invalid OpenCode Go API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                # Surface as ValueError so the variable API returns a 400 rather
+                # than an unhandled 500 (api/v1/variable.py only catches ValueError).
+                msg = f"Could not reach OpenCode Go to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
+
         elif provider == "Azure AI Foundry":
             try:
                 from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel

@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+import requests
 
 # ---------------------------------------------------------------------------
 # Metadata
@@ -443,3 +444,53 @@ def test_resolve_session_id_without_graph_returns_none():
         """Deliberately has neither ``graph`` nor ``_session_id``."""
 
     assert AgentComponent._resolve_session_id(_NoGraphStub()) is None
+
+
+# ---------------------------------------------------------------------------
+# Credential validation
+# ---------------------------------------------------------------------------
+
+
+def test_validate_api_key_success():
+    from lfx.base.models.unified_models.credentials import validate_model_provider_key
+
+    response = MagicMock(status_code=200)
+    response.raise_for_status.return_value = None
+
+    with patch("requests.get", return_value=response) as mock_get:
+        validate_model_provider_key("OpenCode Go", {"OPENCODE_GO_API_KEY": "sk-test"})
+
+    assert mock_get.call_args[0][0] == "https://opencode.ai/zen/go/v1/models"
+    assert mock_get.call_args.kwargs["headers"]["Authorization"] == "Bearer sk-test"
+
+
+def test_validate_api_key_rejects_unauthorized():
+    from lfx.base.models.unified_models.credentials import validate_model_provider_key
+
+    response = MagicMock(status_code=401)
+
+    with (
+        patch("requests.get", return_value=response),
+        pytest.raises(ValueError, match="Invalid OpenCode Go API key"),
+    ):
+        validate_model_provider_key("OpenCode Go", {"OPENCODE_GO_API_KEY": "sk-bad"})
+
+
+def test_validate_api_key_network_error_raises_value_error():
+    """The variable API only catches ValueError; a RequestException would 500."""
+    from lfx.base.models.unified_models.credentials import validate_model_provider_key
+
+    with (
+        patch("requests.get", side_effect=requests.RequestException("boom")),
+        pytest.raises(ValueError, match="Could not reach OpenCode Go"),
+    ):
+        validate_model_provider_key("OpenCode Go", {"OPENCODE_GO_API_KEY": "sk-test"})
+
+
+def test_validate_api_key_missing_key_is_noop():
+    from lfx.base.models.unified_models.credentials import validate_model_provider_key
+
+    with patch("requests.get") as mock_get:
+        validate_model_provider_key("OpenCode Go", {})
+
+    mock_get.assert_not_called()
