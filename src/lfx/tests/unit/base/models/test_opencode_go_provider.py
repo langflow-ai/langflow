@@ -261,3 +261,185 @@ def test_get_live_models_for_provider_dispatches_opencode_go():
 
     mock_fetch.assert_called_once_with("user-1", "llm")
     assert result == [{"name": "x"}]
+
+
+# ---------------------------------------------------------------------------
+# get_llm header wiring
+# ---------------------------------------------------------------------------
+
+
+def _opencode_model() -> list[dict]:
+    return [{"provider": "OpenCode Go", "name": "claude-sonnet-5", "metadata": {}}]
+
+
+def _capture_factory():
+    captured: dict = {}
+
+    class FakeChatModel:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    return FakeChatModel, captured
+
+
+def _call_get_llm(**kwargs) -> dict:
+    """Call ``get_llm`` for OpenCode Go, returning the chat-model constructor kwargs.
+
+    Mirrors the harness in ``test_get_llm_streaming.py``: patching the two helpers
+    on the ``unified_models`` package works because ``get_llm`` resolves them via
+    ``unified_models_module.<name>`` at call time.
+    """
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    fake_cls, captured = _capture_factory()
+    with (
+        patch.object(
+            unified_models_module,
+            "get_api_key_for_provider",
+            return_value="sk-dummy",  # pragma: allowlist secret
+        ),
+        patch.object(unified_models_module, "get_model_class", return_value=fake_cls),
+    ):
+        get_llm(_opencode_model(), user_id=None, **kwargs)
+    return captured
+
+
+def test_get_llm_sets_base_url_and_required_headers():
+    kwargs = _call_get_llm(session_id="sess-abc")
+
+    assert kwargs["base_url"] == "https://opencode.ai/zen/go/v1"
+    headers = kwargs["default_headers"]
+    assert headers["x-opencode-session"] == "sess-abc"
+    assert headers["User-Agent"].startswith("langflow/")
+    # Never the generic openai SDK agent.
+    assert "openai" not in headers["User-Agent"].lower()
+
+
+def test_get_llm_session_header_is_stable_for_one_session():
+    first = _call_get_llm(session_id="sess-abc")["default_headers"]["x-opencode-session"]
+    second = _call_get_llm(session_id="sess-abc")["default_headers"]["x-opencode-session"]
+    assert first == second == "sess-abc"
+
+
+def test_get_llm_falls_back_to_generated_session_id():
+    """Callers that don't pass a session id must still get a valid header.
+
+    OpenCode Go rejects requests without it, so a missing session id degrades to
+    a generated value rather than an omitted header.
+    """
+    headers = _call_get_llm()["default_headers"]
+    assert headers["x-opencode-session"].startswith("langflow-")
+
+    other = _call_get_llm()["default_headers"]["x-opencode-session"]
+    assert other != headers["x-opencode-session"]
+
+
+def test_get_llm_blank_session_id_falls_back():
+    headers = _call_get_llm(session_id="   ")["default_headers"]
+    assert headers["x-opencode-session"].startswith("langflow-")
+
+
+def test_get_llm_does_not_add_headers_for_other_providers():
+    """The branch must be inert for every other provider."""
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    fake_cls, captured = _capture_factory()
+    anthropic = [
+        {
+            "name": "claude-3-5-sonnet-latest",
+            "provider": "Anthropic",
+            "metadata": {
+                "model_class": "ChatAnthropic",
+                "model_name_param": "model",
+                "api_key_param": "api_key",  # pragma: allowlist secret
+            },
+        }
+    ]
+    with (
+        patch.object(
+            unified_models_module,
+            "get_api_key_for_provider",
+            return_value="sk-dummy",  # pragma: allowlist secret
+        ),
+        patch.object(unified_models_module, "get_model_class", return_value=fake_cls),
+    ):
+        get_llm(anthropic, user_id=None, session_id="sess-abc")
+
+    assert "default_headers" not in captured
+    assert "base_url" not in captured
+
+
+# ---------------------------------------------------------------------------
+# Component -> get_llm session plumbing
+# ---------------------------------------------------------------------------
+
+
+def test_agent_passes_graph_session_id_to_get_llm():
+    """Forward a fake graph's session id through ``_get_llm`` into ``get_llm``.
+
+    ``AgentComponent.graph`` is a read-only property (``self._vertex.graph``) with no
+    setter, so a bare ``agent.graph = ...`` assignment raises. Stub ``_vertex`` instead
+    so the real property resolves to our fake graph.
+    """
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    agent = AgentComponent.__new__(AgentComponent)
+    agent._vertex = MagicMock(graph=MagicMock(session_id="sess-from-graph"))
+    agent.model = _opencode_model()
+    # ``user_id`` is also a read-only property (falls back to ``self.graph.user_id``);
+    # set the backing ``_user_id`` attribute directly rather than the property.
+    agent._user_id = "user-1"
+    agent.max_tokens = None
+
+    with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        AgentComponent._get_llm(agent)
+
+    assert mock_get_llm.call_args.kwargs["session_id"] == "sess-from-graph"
+
+
+def test_language_model_passes_graph_session_id_to_get_llm():
+    from lfx.components.models_and_agents.language_model import LanguageModelComponent
+
+    component = LanguageModelComponent.__new__(LanguageModelComponent)
+    component._vertex = MagicMock(graph=MagicMock(session_id="sess-from-graph"))
+    component.model = _opencode_model()
+    # ``user_id`` is also a read-only property; set the backing attribute directly.
+    component._user_id = "user-1"
+    component.api_key = None
+    component.temperature = 0.1
+    component.stream = False
+    component.max_tokens = None
+
+    with (
+        patch(
+            "lfx.components.models_and_agents.language_model.apply_model_overrides",
+            side_effect=lambda model, **_: model,
+        ),
+        patch("lfx.components.models_and_agents.language_model.get_llm") as mock_get_llm,
+    ):
+        LanguageModelComponent.build_model(component)
+
+    assert mock_get_llm.call_args.kwargs["session_id"] == "sess-from-graph"
+
+
+def test_resolve_session_id_without_graph_returns_none():
+    """Exercise ``_resolve_session_id`` with a bare stand-in rather than a real component.
+
+    ``AgentComponent.graph``/``user_id`` are read-only properties backed by
+    ``self._vertex``; on an uninitialized component (no ``_vertex``), accessing them
+    routes through ``CustomComponent.__getattr__``'s "graph" fallback, which itself
+    calls ``hasattr(self, "_user_id")`` — and that name is special-cased in
+    ``Component.__getattr__`` to read straight out of ``__dict__``, raising
+    ``KeyError`` (not ``AttributeError``) when unset. That's an unrelated framework
+    quirk when synthesizing components via ``__new__``, not something this test is
+    about. A plain object with neither attribute isolates the two ``hasattr`` checks
+    ``_resolve_session_id`` actually performs.
+    """
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    class _NoGraphStub:
+        """Deliberately has neither ``graph`` nor ``_session_id``."""
+
+    assert AgentComponent._resolve_session_id(_NoGraphStub()) is None

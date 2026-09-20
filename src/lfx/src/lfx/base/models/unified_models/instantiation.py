@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import os
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
@@ -28,6 +29,40 @@ if TYPE_CHECKING:
     from langchain_core.embeddings import Embeddings
 
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
+
+
+OPENCODE_GO_SESSION_HEADER = "x-opencode-session"
+
+
+def _opencode_go_user_agent() -> str:
+    """Identify Langflow to OpenCode Go.
+
+    The Go docs require the client to send its own agent string rather than a
+    generic SDK/HTTP-library name, so this must never fall through to the
+    ``openai`` package default.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    for distribution in ("langflow", "langflow-base", "lfx"):
+        try:
+            return f"langflow/{version(distribution)}"
+        except PackageNotFoundError:
+            continue
+    return "langflow/unknown"
+
+
+def _opencode_go_session_id(session_id: str | None) -> str:
+    """Return a stable conversation ID, generating one when the caller has none.
+
+    OpenCode Go rejects requests without ``x-opencode-session``, so a missing or
+    blank session ID must degrade to a generated value, never an absent header.
+    A real session ID (the executing graph's) keeps consecutive turns of one chat
+    on the same value, which is what lets OpenCode optimise routing and prompt
+    caching.
+    """
+    if isinstance(session_id, str) and session_id.strip():
+        return session_id.strip()
+    return f"langflow-{uuid4()}"
 
 
 def _env_if_allowed(key: str) -> str | None:
@@ -134,6 +169,7 @@ def get_llm(
     ollama_base_url=None,
     overrides: dict[str, Any] | None = None,
     provider_policy: ModelProviderPolicySnapshot | None = None,
+    session_id: str | None = None,
 ) -> Any:
     # Coerce provider-specific string params (Message/Data may leak through StrInput)
     ollama_base_url = _to_str(ollama_base_url)
@@ -461,6 +497,20 @@ def get_llm(
                 default_headers[header_name] = value
         if default_headers:
             kwargs["default_headers"] = default_headers
+    elif provider == "OpenCode Go":
+        # OpenCode Go speaks the OpenAI wire format but rejects any request
+        # missing ``x-opencode-session`` ("cannot be routed efficiently"), and
+        # asks clients to identify themselves with their own User-Agent.
+        # ChatOpenAI builds its HTTP clients in __init__, so these must be passed
+        # as the default_headers kwarg — mutating the attribute later is a no-op.
+        provider_meta = model_provider_metadata.get(provider, {})
+        base_url_value = provider_meta.get("base_url")
+        if base_url_value:
+            kwargs["base_url"] = base_url_value
+        kwargs["default_headers"] = {
+            OPENCODE_GO_SESSION_HEADER: _opencode_go_session_id(session_id),
+            "User-Agent": _opencode_go_user_agent(),
+        }
     elif provider == "Azure AI Foundry":
         from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT, normalize_azure_ai_foundry_endpoint
 

@@ -133,7 +133,16 @@ class LanguageModelComponent(LCModelComponent):
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
             ollama_base_url=getattr(self, "ollama_base_url", None),
+            session_id=self._resolve_session_id(),
         )
+
+    def _resolve_session_id(self) -> str | None:
+        """Return the executing session ID, for providers that need per-conversation identity."""
+        if hasattr(self, "graph"):
+            return self.graph.session_id
+        if hasattr(self, "_session_id"):
+            return self._session_id
+        return None
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
