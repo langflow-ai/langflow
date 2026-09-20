@@ -487,6 +487,8 @@ For A2A, `auth_type=none` applies this contract to both the direct agent card an
 The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
 When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
 
+The connection and integration endpoints count requests per signed-in user instead of per IP address, so users who reach Langflow through the same NAT or proxy do not share a limit. The unauthenticated OAuth callback is the exception and is still counted per IP address.
+
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting on the `/login` and `/api/v2/workflows/public` endpoints. Set to False to disable those limits (not recommended in production). |
@@ -494,6 +496,8 @@ When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` h
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
 | `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows consume resources under an isolated anonymous principal, so they are rate-limited separately from the `/login` endpoint. |
+| `LANGFLOW_CONNECTION_METADATA_RATE_LIMIT_PER_MINUTE` | Integer | `60` | Maximum number of connection and integration metadata reads allowed per minute for each signed-in user. These endpoints return no credential material and make no outbound provider call, and the Connections UI polls the connection listing every two seconds while an OAuth consent is pending, so they are limited separately from and more generously than the `/login` endpoint. Connection writes have their own limit, and credential tests, health checks, and the OAuth endpoints keep their own tighter buckets. |
+| `LANGFLOW_CONNECTION_WRITE_RATE_LIMIT_PER_MINUTE` | Integer | `30` | Maximum number of connection creates, updates, revokes, and deletes allowed per minute for each signed-in user. The four operations share one limit, sized for someone managing connections in the Connections UI rather than for login attempts. Credential tests, health checks, and starting an OAuth consent use `LANGFLOW_RATE_LIMIT_PER_MINUTE`, each with its own counter. |
 
 ### LANGFLOW_SSRF_* and LANGFLOW_CONNECTOR_SSRF_* {#ssrf-protection}
 

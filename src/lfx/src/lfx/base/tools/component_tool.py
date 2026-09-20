@@ -136,6 +136,7 @@ def _build_output_function(
             comp.set_event_manager(event_manager)
             comp.set_current_output(output_name)
             comp.set(**kwargs)
+            comp.require_integration_policy()
             result = local_method()
         except Exception as e:
             logger.error(
@@ -194,6 +195,7 @@ def _build_output_async_function(
             comp.set_event_manager(event_manager)
             comp.set_current_output(output_name)
             comp.set(**kwargs)
+            comp.require_integration_policy()
             result = await local_method()
         except Exception as e:
             logger.error(

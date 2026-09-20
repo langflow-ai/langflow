@@ -31,10 +31,12 @@ The default `uv pip install langflow` includes the following curated standalone 
 | [`docling`](/bundles-docling) (Docling) | `uv pip install lfx-docling` |
 | [`google`](/bundles-google) (Google components) | `uv pip install lfx-google` |
 | [`ibm`](/bundles-ibm) (IBM) | `uv pip install lfx-ibm` |
+| [`microsoft`](../Components/bundles-microsoft.mdx) (Microsoft 365) | `uv pip install lfx-microsoft` |
 | [`ollama`](/bundles-ollama) (Ollama) | `uv pip install lfx-ollama` |
 | [`openai`](/bundles-openai) (OpenAI) | `uv pip install lfx-openai` |
 | [`openai-compatible`](/bundles-openai-compatible) (OpenAI Compatible) | `uv pip install lfx-openai-compatible` |
 | [`oracle`](/bundles-oracle) (Oracle) | `uv pip install lfx-oracle` |
+| [`slack`](../Components/bundles-slack.mdx) (Slack) | `uv pip install lfx-slack` |
 | [`vllm`](/bundles-vllm) (vLLM) | `uv pip install lfx-vllm` |
 
 ## Opt-in standalone packages
@@ -53,6 +55,7 @@ Install one package, or install all of them together with the non-PyTorch provid
 | [`firecrawl`](/bundles-firecrawl) (Firecrawl) | `uv pip install lfx-firecrawl` |
 | [`nextplaid`](/bundles-nextplaid) (NextPlaid) | `uv pip install lfx-nextplaid` |
 | [`paddle`](/bundles-paddle) (Paddle) | `uv pip install lfx-paddle` |
+| [`serply`](./bundles-serply) (Serply) | `uv pip install lfx-serply` |
 | [`valkey`](/bundles-valkey) (Valkey) | `uv pip install lfx-valkey` |
 
 ## Providers in `lfx-bundles` {#lfx-bundles}
@@ -77,7 +80,7 @@ To install every provider, including providers that require PyTorch as a depende
 | [`cleanlab`](/bundles-cleanlab) (Cleanlab) | `uv pip install "lfx-bundles[cleanlab]"` |
 | [`clickhouse`](/bundles-clickhouse) (ClickHouse) | `uv pip install "lfx-bundles[clickhouse]"` |
 | [`cloudflare`](/bundles-cloudflare) (Cloudflare) | `uv pip install "lfx-bundles[cloudflare]"` |
-| [`codeagents`](/bundles-codeagents) (Code Agents) | `uv pip install "lfx-bundles[codeagents]"` |
+| [`codeagents`](/bundles-codeagents) (Code Agents) | `uv pip install "lfx-bundles[codeagents]"`, then [manually install OpenDsStar](/bundles-codeagents#prerequisites) |
 | [`cometapi`](/bundles-cometapi) (CometAPI) | `uv pip install "lfx-bundles[cometapi]"` |
 | [`composio`](/bundles-composio) (Composio) | `uv pip install "lfx-bundles[composio]"` |
 | `confluence` | `uv pip install "lfx-bundles[confluence]"` |
@@ -86,6 +89,7 @@ To install every provider, including providers that require PyTorch as a depende
 | [`deepseek`](/bundles-deepseek) (DeepSeek) | `uv pip install "lfx-bundles[deepseek]"` |
 | [`elastic`](/bundles-elastic) (Elastic) | `uv pip install "lfx-bundles[elastic]"` |
 | [`faiss`](/bundles-faiss) (FAISS) | `uv pip install "lfx-bundles[faiss]"` |
+| [`figranium`](./bundles-figranium) (Figranium) | `uv pip install "lfx-bundles[figranium]"` |
 | `git` | `uv pip install "lfx-bundles[git]"` |
 | [`glean`](/bundles-glean) (Glean) | `uv pip install "lfx-bundles[glean]"` |
 | [`groq`](/bundles-groq) (Groq) | `uv pip install "lfx-bundles[groq]"` |

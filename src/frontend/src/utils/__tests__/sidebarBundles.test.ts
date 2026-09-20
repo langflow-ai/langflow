@@ -25,6 +25,36 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Serply as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Serply",
+          icon: "Search",
+          name: "serply",
+        }),
+      ]),
+    );
+  });
+
+  it("classifies Microsoft 365 as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Microsoft 365",
+          icon: "Microsoft",
+          name: "microsoft",
+        }),
+      ]),
+    );
+  });
+
+  it("keeps the Microsoft 365 group separate from Azure", () => {
+    const names = SIDEBAR_BUNDLES.map((bundle) => bundle.name);
+    expect(names).toContain("azure");
+    expect(names).toContain("microsoft");
+  });
+
   it("classifies ToolGuard as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
@@ -32,6 +62,30 @@ describe("SIDEBAR_BUNDLES", () => {
           display_name: "ToolGuard",
           icon: "ShieldCheck",
           name: "toolguard",
+        }),
+      ]),
+    );
+  });
+
+  it("classifies Slack as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Slack",
+          icon: "Slack",
+          name: "slack",
+        }),
+      ]),
+    );
+  });
+
+  it("classifies Figranium as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Figranium",
+          icon: "Figranium",
+          name: "figranium",
         }),
       ]),
     );

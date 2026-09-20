@@ -123,6 +123,7 @@ async def execute_public_workflow(
     # Lazy-import to avoid the circular ``v2.workflow`` -> ``api.build`` ->
     # ``v1.chat`` -> ``api.build`` cycle that fires when ``v2.__init__`` is
     # collected at import time.
+    from langflow.api.utils.execution_principal import FAMILY_WORKFLOW_PUBLIC_V2
     from langflow.api.v2.workflow import _unknown_protocol_http_exception
     from langflow.api.v2.workflow_execution import _stream_event_frames
 
@@ -237,6 +238,8 @@ async def execute_public_workflow(
 
     # The narrower public schema has no ``data``/``tweaks`` fields; we
     # carry only the partial-run knobs into ParsedWorkflowRun.
+    # Substitution notices are for authenticated callers. Anonymous shared-link
+    # visitors cannot edit the flow and should not receive server policy details.
     parsed = ParsedWorkflowRun(
         flow_id=str(virtual_flow_id),
         input_value=request.input_value,
@@ -267,6 +270,9 @@ async def execute_public_workflow(
             # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
             # playground.public is kept apart from playground.
             protocol="v2.public",
+            # The anonymous visitor principal: no user connection is ever resolved
+            # for a public run, whichever connection the flow references.
+            execution_family=FAMILY_WORKFLOW_PUBLIC_V2,
             expose_error_details=False,
         ):
             yield frame

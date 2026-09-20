@@ -16,7 +16,7 @@ class NewsSearchComponent(Component):
     icon = "newspaper"
     name = "NewsSearch"
     legacy = True
-    replacement = "data.WebSearch"
+    replacement = ["data_source.UnifiedWebSearch"]
 
     inputs = [
         MessageTextInput(

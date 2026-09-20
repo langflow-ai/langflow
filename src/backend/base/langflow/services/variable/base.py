@@ -13,6 +13,9 @@ class VariableService(Service):
 
     name = "variable_service"
 
+    async def initialize_all_user_variables(self) -> None:
+        """Sync environment defaults at startup; external stores opt out by default."""
+
     async def get_default_field_bindings(
         self,
         user_id: UUID | str,

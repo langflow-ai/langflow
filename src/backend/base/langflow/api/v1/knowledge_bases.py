@@ -25,6 +25,7 @@ from lfx.base.knowledge_bases.ingestion_sources import (
 from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import provider_id_for
 from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
+from lfx.integrations.errors import IntegrationError
 from lfx.log import logger
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -35,6 +36,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
+from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
     KBStorageHelper,
@@ -785,18 +787,21 @@ async def create_knowledge_base(
         if kb_path is not None and kb_path.exists():
             # No DB row but a directory survives. If it carries the
             # ``.kb_deleted`` sentinel, a previous delete could not remove the
-            # bytes (typically a held Chroma SQLite lock) — reusing the name now
-            # would silently adopt the old collection's vectors.
+            # bytes (typically because of a held Chroma SQLite lock). Retry the
+            # cleanup now: after a restart the lock should be gone, but clearing
+            # only the sentinel would risk adopting the old collection's vectors.
             if KBStorageHelper.is_kb_dir_deleted(kb_path):
-                raise HTTPException(
-                    status_code=409,
-                    detail=(
-                        f"Knowledge base '{kb_name}' was recently deleted but its on-disk files "
-                        "are still being released by another process. Restart the server (or wait "
-                        "for the lock to clear) before recreating it with the same name."
-                    ),
-                )
-            raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
+                await asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name)
+                if kb_path.exists():
+                    raise HTTPException(
+                        status_code=409,
+                        detail=(
+                            f"Knowledge base '{kb_name}' was deleted, but its on-disk files are still locked "
+                            "by another process. Close that process, restart Langflow if needed, and try again."
+                        ),
+                    )
+            else:
+                raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
 
         await _validate_create_backend(
             backend_type=backend_type_value,
@@ -1434,6 +1439,8 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
                 description=getattr(source_cls, "description", "") or "",
                 icon=getattr(source_cls, "icon", None),
                 requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+                provider_key=getattr(source_cls, "connection_provider", "") or None,
+                required_scopes=list(getattr(source_cls, "connection_required_scopes", ()) or ()),
             )
         )
     return entries
@@ -1826,6 +1833,15 @@ async def ingest_via_connector(
             await source.validate_config()
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except IntegrationError as exc:
+            # A connection the caller cannot use (no allow_non_interactive opt-in,
+            # a missing scope, a provider denial) is theirs to fix: keep the typed
+            # code, status and hint instead of the catch-all 500 below. The handle
+            # was supplied by this caller, so the owner diagnostics are theirs too.
+            typed = integration_http_error(exc, expose_details=True)
+            if typed is None:
+                raise
+            raise typed from exc
 
         # Build an idempotency key over (user, kb, source, config) so
         # that a double-click on "Ingest" doesn't spawn two jobs for

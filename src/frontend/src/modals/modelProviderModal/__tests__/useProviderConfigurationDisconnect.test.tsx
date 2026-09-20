@@ -36,6 +36,19 @@ let mockModelProvidersIsError = false;
 let mockModelProvidersIsSuccess = true;
 let mockModelProvidersFetchStatus: "idle" | "fetching" | "paused" = "idle";
 let mockInvalidatedQueryKey: readonly unknown[] | null = null;
+// Age of every cached provider-policy snapshot unless a key is overridden
+// below. Defaults to "just fetched" so the shared caches read as fresh.
+let mockQueryDataUpdatedAt = Date.now();
+// Per-query-key overrides. A ``null`` entry models a cold cache slot, which is
+// what a scope the user has not visited yet looks like to ``getQueryState``.
+const mockQueryStateOverrides = new Map<
+  string,
+  { dataUpdatedAt: number } | null
+>();
+const setQueryStateOverride = (
+  queryKey: readonly unknown[],
+  state: { dataUpdatedAt: number } | null,
+) => mockQueryStateOverrides.set(JSON.stringify(queryKey), state);
 
 const deleteCalls: Array<{ id: string | undefined }> = [];
 const mockDeleteMutateAsync = jest.fn((params: { id: string | undefined }) => {
@@ -51,12 +64,25 @@ const mockSetErrorData = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockRefetchQueries = jest.fn();
 const mockRefreshAllModelInputs = jest.fn(() => Promise.resolve());
-const mockGetQueryState = jest.fn((queryKey: readonly unknown[]) => ({
-  status: "success",
-  fetchStatus: "idle",
-  isInvalidated:
-    JSON.stringify(queryKey) === JSON.stringify(mockInvalidatedQueryKey),
-}));
+const mockGetQueryState = jest.fn((queryKey: readonly unknown[]) => {
+  const serializedKey = JSON.stringify(queryKey);
+  if (mockQueryStateOverrides.has(serializedKey)) {
+    const override = mockQueryStateOverrides.get(serializedKey);
+    if (!override) return undefined;
+    return {
+      status: "success",
+      fetchStatus: "idle",
+      isInvalidated: false,
+      ...override,
+    };
+  }
+  return {
+    status: "success",
+    fetchStatus: "idle",
+    isInvalidated: serializedKey === JSON.stringify(mockInvalidatedQueryKey),
+    dataUpdatedAt: mockQueryDataUpdatedAt,
+  };
+});
 const mockUseGetModelProviders = jest.fn(
   (_params?: unknown, _options?: unknown) => ({
     data: mockModelProviders,
@@ -252,6 +278,8 @@ describe("useProviderConfiguration.handleDisconnect", () => {
     mockModelProvidersIsSuccess = true;
     mockModelProvidersFetchStatus = "idle";
     mockInvalidatedQueryKey = null;
+    mockQueryDataUpdatedAt = Date.now();
+    mockQueryStateOverrides.clear();
     mockValidateMutateAsync.mockReset();
     mockValidateMutateAsync.mockResolvedValue({ valid: true });
     deleteCalls.length = 0;
@@ -288,6 +316,126 @@ describe("useProviderConfiguration.handleDisconnect", () => {
       },
       expect.objectContaining({
         refetchInterval: false,
+      }),
+    );
+  });
+
+  it("does not refetch provider data when only the selected provider changes", () => {
+    const openAIProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    const anthropicProvider: Provider = {
+      provider: "Anthropic",
+      icon: "Anthropic",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [openAIProvider, anthropicProvider];
+
+    const { rerender } = renderScopedProviderConfiguration(
+      openAIProvider,
+      "flow-one",
+      "project-one",
+    );
+    mockInvalidateQueries.mockClear();
+    mockRefetchQueries.mockClear();
+
+    rerender({
+      provider: anthropicProvider,
+      flow: "flow-one",
+      project: "project-one",
+    });
+
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    expect(mockRefetchQueries).not.toHaveBeenCalled();
+  });
+
+  it("refetches provider data when a provider switch finds the shared snapshot stale", async () => {
+    const openAIProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    const anthropicProvider: Provider = {
+      provider: "Anthropic",
+      icon: "Anthropic",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [openAIProvider, anthropicProvider];
+
+    const { rerender } = renderScopedProviderConfiguration(
+      openAIProvider,
+      "flow-one",
+      "project-one",
+    );
+    mockInvalidateQueries.mockClear();
+
+    // ``ModelProvidersContent`` is keyed on the authorization scope, so a
+    // mounted hook only ever sees provider switches. Once the cached snapshot
+    // ages past the policy window, a switch is the moment to pick up a
+    // credential that was revoked or rotated elsewhere.
+    mockQueryDataUpdatedAt = Date.now() - 60_000;
+
+    rerender({
+      provider: anthropicProvider,
+      flow: "flow-one",
+      project: "project-one",
+    });
+
+    await waitFor(() =>
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetModelProviders"],
+      }),
+    );
+  });
+
+  it("refetches provider data for an authorization scope with no cached snapshot", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+
+    const { rerender } = renderScopedProviderConfiguration(
+      selectedProvider,
+      "flow-one",
+      "project-one",
+    );
+    mockInvalidateQueries.mockClear();
+
+    setQueryStateOverride(
+      [
+        "useGetModelProviders",
+        true,
+        undefined,
+        "flow-two",
+        "project-one",
+        "configure",
+      ],
+      null,
+    );
+
+    rerender({
+      provider: selectedProvider,
+      flow: "flow-two",
+      project: "project-one",
+    });
+
+    await waitFor(() =>
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetModelProviders"],
       }),
     );
   });

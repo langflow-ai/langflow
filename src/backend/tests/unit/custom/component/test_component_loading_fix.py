@@ -164,7 +164,14 @@ class TestComponentLoadingFix:
 
     @pytest.mark.asyncio
     async def test_lazy_loading_mode_with_base_path_filtering(self, mock_settings_service, mock_langflow_components):
-        """Test that lazy loading mode uses aget_component_metadata with filtered paths."""
+        """Test that lazy loading mode uses aget_component_metadata with filtered paths.
+
+        Previously this asserted the FULL path list ("not filtered in lazy mode"), which is the
+        defect: built-ins are already loaded from the prebuilt index, so rescanning
+        BASE_COMPONENTS_PATH produced metadata-only stubs that replaced them. Every built-in then
+        read as an unregistered custom component and LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+        rejected every flow. Both branches load custom paths only, as the test name always said.
+        """
         # Setup: Enable lazy loading and include BASE_COMPONENTS_PATH
         mock_settings_service.settings.lazy_load_components = True
         mock_settings_service.settings.components_path = [BASE_COMPONENTS_PATH, "/custom/path1"]
@@ -182,8 +189,8 @@ class TestComponentLoadingFix:
             # Execute the function
             result = await get_and_cache_all_types_dict(mock_settings_service)
 
-            # Verify that aget_component_metadata was called with the full path (not filtered in lazy mode)
-            mock_aget_metadata.assert_called_once_with([BASE_COMPONENTS_PATH, "/custom/path1"])
+            # Verify that aget_component_metadata was called with the base path filtered out
+            mock_aget_metadata.assert_called_once_with(["/custom/path1"])
 
             # Verify result contains both langflow and custom components
             assert "category1" in result
@@ -219,7 +226,15 @@ class TestComponentLoadingFix:
 
     @pytest.mark.asyncio
     async def test_component_merging_logic(self, mock_settings_service, mock_langflow_components):
-        """Test that langflow and custom components are properly merged."""
+        """Test that langflow and custom components are properly merged.
+
+        Merging is per COMPONENT, not per category. This previously asserted that a custom
+        category "should completely override" the built-in one of the same name, which meant a
+        custom directory containing a single component under a shared category name ("tools",
+        "embeddings", "utilities") silently deleted every built-in component in it. Those then
+        read as unregistered and were rejected under allow_custom_components=false. A same-named
+        *component* is still overridden, which is what the production comment always described.
+        """
         # Setup
         mock_settings_service.settings.components_path = ["/custom/path1"]
         mock_settings_service.settings.lazy_load_components = False
@@ -247,11 +262,13 @@ class TestComponentLoadingFix:
             assert "category2" in result  # From langflow
             assert "new_category" in result  # From custom
 
-            # Custom category should completely override langflow category
+            # A same-named component is still overridden by the custom one
             assert result["category1"]["Component1"]["display_name"] == "CustomComponent1"
 
-            # Only components from custom category should remain in category1
-            assert "Component2" not in result["category1"]  # Langflow component is replaced by custom category
+            # ...but its built-in siblings survive: the category is supplemented, not replaced
+            assert "Component2" in result["category1"], (
+                "a custom component in a shared category must not delete the built-ins beside it"
+            )
             assert "Component4" in result["category1"]  # New custom component
 
             # New custom component should be added

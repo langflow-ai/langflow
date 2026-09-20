@@ -343,6 +343,20 @@ class SecuritySettings(BaseModel):
     """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
     V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
     anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
+    connection_metadata_rate_limit_per_minute: int = 60
+    """Connection and integration metadata reads allowed per minute per authenticated user.
+
+    These endpoints return no credential material and make no outbound provider call, and the UI polls
+    the connection listing every two seconds while an OAuth consent is pending, so they get their own
+    bucket sized for that poll rather than the login budget. Writes take
+    connection_write_rate_limit_per_minute; credential tests, health checks, and the OAuth endpoints
+    stay on the tighter per-endpoint buckets. Gated by rate_limit_enabled."""
+    connection_write_rate_limit_per_minute: int = 30
+    """Connection creates, updates, revokes, and deletes allowed per minute per authenticated user.
+
+    The four share one bucket, sized for a person managing connections in the UI rather than the login
+    budget, which cut a user off after five actions. Counting per user rather than per client IP keeps
+    users behind one NAT or proxy from throttling each other. Gated by rate_limit_enabled."""
 
     @field_validator("sandbox_allowed_domains", mode="after")
     @classmethod

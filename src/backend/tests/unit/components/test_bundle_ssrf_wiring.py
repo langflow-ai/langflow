@@ -44,6 +44,7 @@ RAW_SINKS = frozenset({"get", "post", "put", "patch", "delete", "request", "stre
 # Mirrors the behavioural coverage that skips without the bundle installed.
 GUARDED_MODULES: dict[str, set[str]] = {
     "deepseek/deepseek.py": {"ssrf_safe_httpx_get", "ssrf_protected_openai_clients_for_url"},
+    "figranium/base.py": {"ssrf_safe_httpx_get", "ssrf_safe_httpx_post"},
     "funasr/funasr_transcription.py": {"ssrf_safe_httpx_post"},
     "glean/glean_search_api.py": {"ssrf_safe_httpx_post"},
     "git/git.py": {"validate_git_repository_url"},
