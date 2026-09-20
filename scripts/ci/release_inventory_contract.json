@@ -86,6 +86,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serpingapi",
         "lfx-serply",
         "lfx-valkey"
       ],
@@ -206,6 +207,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serpingapi",
         "lfx-serply",
         "lfx-valkey"
       ],
@@ -219,6 +221,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serpingapi",
         "lfx-serply",
         "lfx-valkey"
       ],
@@ -245,6 +248,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-serpingapi",
           "lfx-serply",
           "lfx-slack",
           "lfx-toolguard",

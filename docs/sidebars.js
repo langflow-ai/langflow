@@ -577,6 +577,7 @@ module.exports = {
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
+            "Components/bundles-serpingapi",
             "Components/bundles-serply",
             "Components/bundles-slack",
             "Components/bundles-supabase",
