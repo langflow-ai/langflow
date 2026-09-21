@@ -616,6 +616,21 @@ class Message(Data):
                     file_name=_safe_attachment_name(file),
                 )
                 continue
+            except Exception as exc:  # noqa: BLE001
+                # Storage backends raise their own error types, outside this hierarchy: S3 only
+                # translates a 404 into FileNotFoundError and re-raises everything else (an
+                # AccessDenied from a role without GetObject, throttling, a network blip) as a
+                # botocore ClientError, which is not an OSError. One unreadable attachment must
+                # not take the whole message down with it, so it is skipped like any other
+                # failure — loudly, with the traceback, because an unexpected error here is
+                # usually a storage misconfiguration an operator needs to see.
+                logger.error(
+                    "Skipping attachment during message conversion: storage backend error",
+                    error_type=type(exc).__name__,
+                    file_name=_safe_attachment_name(file),
+                    exc_info=True,
+                )
+                continue
         return content_dicts
 
     def load_lc_prompt(self):

@@ -11,6 +11,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from lfx.log.logger import logger
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from lfx.utils.image import create_image_content_dict
 from platformdirs import user_cache_dir
 
 
@@ -408,6 +409,15 @@ def cleanup():
             logger.error(f"Error cleaning up cache directory: {exc}")
 
 
+class _StorageBackendError(Exception):
+    """Stand-in for a botocore ClientError.
+
+    ``S3StorageService`` only translates a 404 into ``FileNotFoundError``; an AccessDenied,
+    throttling or a network blip is re-raised as a botocore ``ClientError``, which is not an
+    ``OSError`` and so matches none of the specific handlers in ``get_file_content_dicts``.
+    """
+
+
 class _S3LikeStorage:
     """Stand-in for S3StorageService: keys carry a prefix and nothing exists on local disk."""
 
@@ -415,6 +425,7 @@ class _S3LikeStorage:
 
     def __init__(self, blobs: dict[str, bytes]):
         self.blobs = blobs
+        self.unreadable: set[str] = set()
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         return f"{self.prefix}{flow_id}/{file_name}"
@@ -424,11 +435,14 @@ class _S3LikeStorage:
         return flow_id, file_name
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
+        key = f"{flow_id}/{file_name}"
+        if key in self.unreadable:
+            msg = f"An error occurred (AccessDenied) when calling the GetObject operation: {key}"
+            raise _StorageBackendError(msg)
         try:
-            return self.blobs[f"{flow_id}/{file_name}"]
+            return self.blobs[key]
         except KeyError as exc:
-            msg = f"{flow_id}/{file_name}"
-            raise FileNotFoundError(msg) from exc
+            raise FileNotFoundError(key) from exc
 
     async def get_file_size(self, flow_id: str, file_name: str) -> int:
         return len(await self.get_file(flow_id, file_name))
@@ -436,6 +450,9 @@ class _S3LikeStorage:
 
 @pytest.fixture
 def s3_storage(monkeypatch):
+    # ``create_image_content_dict`` is lru_cached on the path, so a stale entry from another
+    # test would be served instead of going through the stub.
+    create_image_content_dict.cache_clear()
     storage = _S3LikeStorage({})
     settings_service = SimpleNamespace(settings=SimpleNamespace(storage_type="s3"))
     for module in ("lfx.schema.image", "lfx.utils.image", "lfx.base.data.storage_utils"):
@@ -479,6 +496,27 @@ def test_absolute_local_path_attached_under_s3_storage_is_not_read(tmp_path):
     secret.write_text("do not leak")
 
     content = Message(text="summarize", files=[str(secret)]).get_file_content_dicts()
+
+    assert content == []
+
+
+@pytest.mark.parametrize(
+    ("file_name", "blob"),
+    [("denied.txt", b"Act 42: accepted"), ("denied.png", b"\x89PNG\r\n\x1a\n")],
+    ids=["document", "image"],
+)
+def test_s3_backend_error_skips_the_attachment_instead_of_failing_the_message(s3_storage, file_name, blob):
+    """A storage error that is not a 404 must not take the whole message down with it.
+
+    ``S3StorageService`` re-raises anything but a 404 as a botocore ``ClientError``, which is
+    neither an ``OSError`` nor any of the other types handled per attachment. Without the
+    catch-all a role that can PutObject but not GetObject turns every attachment-bearing chat
+    message into a failed run, losing the user's text along with the attachment.
+    """
+    s3_storage.blobs[f"flow-1/{file_name}"] = blob
+    s3_storage.unreadable.add(f"flow-1/{file_name}")
+
+    content = Message(text="summarize", files=[f"flow-1/{file_name}"]).get_file_content_dicts()
 
     assert content == []
 
