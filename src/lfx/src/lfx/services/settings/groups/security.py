@@ -83,6 +83,30 @@ class SecuritySettings(BaseModel):
     ``ssrf_allowed_hosts`` entry for loopback. Has no effect on the API Request component,
     database URLs, or git URLs, which validate loopback independently."""
 
+    kb_allowed_hosts: list[str] = []
+    """Comma-separated EXCLUSIVE allow-list of destination hosts for the network Knowledge Base
+    backends (OpenSearch, Chroma Cloud). Supports the same patterns as ssrf_allowed_hosts:
+    exact hostnames, wildcard domains (*.corp.example), exact IPs, and CIDR ranges.
+
+    Unlike ssrf_allowed_hosts — an *exception* list that widens the SSRF blocklist and still
+    admits every unlisted public host — this list is exclusive: a KB destination a tenant
+    supplied is refused unless its host appears here. That is deliberate. Both KB SDKs re-resolve
+    DNS when they connect and expose no seam to pin the address that was validated (chromadb
+    builds its own httpx client and dials during construction; langchain's OpenSearchVectorSearch
+    hands one kwargs dict to both its urllib3 and aiohttp clients), so a tenant-chosen hostname
+    whose answer flips between validation and connection can still land on an internal address.
+    Requiring the operator to name the host closes that, where merely "looks public" does not.
+
+    A destination resolved from a process environment variable is already operator-controlled
+    and does not need to be listed: an operator who sets OPENSEARCH_URL on the server keeps
+    working with no configuration change. Only values written through the Langflow variables
+    UI/API, or posted in a request body (Chroma's cloud_host), consult this list. Chroma Cloud's
+    fixed default host is not tenant input and is always permitted.
+
+    This is a second gate, not a replacement: an approved host must still satisfy the IP/DNS
+    policy in ssrf_protection_enabled / ssrf_allowed_hosts. Both gates share the
+    connector_ssrf_validation_enabled kill switch."""
+
     # API key handling
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False

@@ -133,6 +133,20 @@ class TestNVIDIACredentialEgress:
     OPERATOR_KEY = "nvapi-operator-canary-b7c6d5e4"  # pragma: allowlist secret
     CUSTOM_URL = "https://attacker.example.com/v1"
 
+    @pytest.fixture(autouse=True)
+    def _no_dns_dependency(self, monkeypatch):
+        """Neutralize the SSRF host lookup so these tests exercise the credential guard alone.
+
+        ``validate_provider_base_url`` resolves the host, and the canary domain used here has
+        no DNS record, so without this the "allowed" cases fail on resolution rather than
+        reaching the guard under test. Same seam the shared-helper tests patch in
+        ``src/lfx/tests/unit/base/models/test_provider_ssrf.py``.
+        """
+        monkeypatch.setattr(
+            "lfx.base.models.provider_ssrf.validate_strict_url_for_ssrf_or_raise",
+            lambda _url: None,
+        )
+
     def _component(self, base_url: str, api_key: str):
         from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
 
@@ -213,6 +227,10 @@ class TestNVIDIAAbsentKeyCredentialEgress:
     @pytest.fixture(autouse=True)
     def _no_allowlist(self, monkeypatch):
         monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+        monkeypatch.setattr(
+            "lfx.base.models.provider_ssrf.validate_strict_url_for_ssrf_or_raise",
+            lambda _url: None,
+        )
 
     @pytest.mark.parametrize("absent", [None, ""])
     def test_build_model_blocks_absent_key_when_env_would_supply_one(self, absent, monkeypatch):

@@ -35,16 +35,19 @@ sent rather than what the component happened to pass.
 from __future__ import annotations
 
 import os
+import re
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from lfx.services.deps import get_settings_service
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_httpx import (
+    ssrf_protected_strict_httpx_client_kwargs_for_url,
     ssrf_protected_strict_openai_clients_for_url,
     ssrf_safe_strict_httpx_post,
     validate_strict_url_for_ssrf_or_raise,
 )
+from lfx.utils.ssrf_protection import is_host_allowed, is_ssrf_protection_enabled
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -78,6 +81,44 @@ def _is_provider_default(base_url: str | None, default_url: str | None) -> bool:
     return base_url.rstrip("/") == default_url.rstrip("/")
 
 
+def _require_https_for_credentialed_endpoint(base_url: str | None) -> None:
+    """Refuse a plaintext endpoint that the operator's provider credential is sent to.
+
+    Every caller of this module hands ``base_url`` to an SDK that attaches a stored
+    provider API key to the request. Over ``http://`` that key crosses the network in
+    cleartext (CWE-319), so a tenant who can edit the field can downgrade the operator's
+    credential off TLS without needing an SSRF target at all - the host may be perfectly
+    public and still leak the key to anyone on the path.
+
+    The one exception is a host the *operator* explicitly allowlisted via
+    ``ssrf_allowed_hosts``: that is a deliberate deployment decision (a plaintext internal
+    gateway on a trusted segment), not something a tenant can arrange, and the SSRF policy
+    already requires it for such a host. Provider defaults never reach here - callers skip
+    them before calling this.
+
+    Raises:
+        ValueError: If the endpoint uses a scheme other than https and its host is not
+            operator-allowlisted.
+    """
+    if not base_url or not is_ssrf_protection_enabled():
+        # With connector SSRF protection off the operator has opted out of this
+        # policy wholesale; this check is part of it, not a separate control.
+        return
+    parsed = urlparse(str(base_url).strip())
+    if parsed.scheme == "https":
+        return
+    hostname = parsed.hostname
+    if parsed.scheme == "http" and hostname and is_host_allowed(hostname):
+        return
+    msg = (
+        f"Provider endpoint {base_url!r} must use https. The configured provider credential "
+        "is sent to this endpoint, and a plaintext connection would transmit it in the clear. "
+        "Use an https endpoint, or have an operator allowlist the host via "
+        "LANGFLOW_SSRF_ALLOWED_HOSTS if a plaintext internal gateway is intended."
+    )
+    raise ValueError(msg)
+
+
 def validate_provider_base_url(base_url: str | None, *, default_url: str | None = None) -> None:
     """Apply connector SSRF policy to a tenant-supplied provider base URL.
 
@@ -96,6 +137,39 @@ def validate_provider_base_url(base_url: str | None, *, default_url: str | None 
     if _is_provider_default(base_url, default_url):
         return
     validate_strict_url_for_ssrf_or_raise(base_url)
+    _require_https_for_credentialed_endpoint(base_url)
+
+
+_MODEL_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._\\-]*$")
+
+
+def validate_provider_model_identifier(value: str | None, *, field_name: str = "endpoint") -> None:
+    """Validate a provider field that names a *model*, not an HTTP endpoint.
+
+    Some SDKs call a model identifier an "endpoint" and append it to their own
+    configured API host (Qianfan builds ``/chat/{endpoint}``). Such a field is
+    not a URL: running it through the base-URL SSRF guard rejects every
+    legitimate value, while what actually needs preventing is a value that
+    changes the origin or escapes the path the SDK builds.
+
+    Accepts the identifier shape those SDKs document (``ernie-3.5-8k-0329``,
+    ``completions_pro``) and rejects anything carrying a scheme, authority,
+    path separator, traversal sequence, query, fragment or control character.
+
+    Raises:
+        ValueError: If the value is non-empty and is not a bare identifier.
+    """
+    if value is None or not str(value).strip():
+        return
+    candidate = str(value).strip()
+    if not _MODEL_IDENTIFIER_RE.match(candidate) or ".." in candidate:
+        msg = (
+            f"Invalid {field_name} '{candidate}': expected a model identifier such as "
+            "'ernie-3.5-8k-0329', not a URL or path. The provider SDK appends this value to "
+            "its own API host, so it must not contain a scheme, host, path separator or "
+            "traversal sequence."
+        )
+        raise ValueError(msg)
 
 
 def provider_httpx_clients(
@@ -104,7 +178,31 @@ def provider_httpx_clients(
     """Return strict, DNS-pinned clients for a credential-bearing provider SDK."""
     if _is_provider_default(base_url, default_url):
         return {}
-    return ssrf_protected_strict_openai_clients_for_url(base_url)
+    clients = ssrf_protected_strict_openai_clients_for_url(base_url)
+    _require_https_for_credentialed_endpoint(base_url)
+    return clients
+
+
+def provider_httpx_client_kwargs(
+    base_url: str | None, *, default_url: str | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return the pinned sync/async httpx *kwargs* for a provider endpoint.
+
+    Use this instead of :func:`provider_httpx_clients` when the SDK only builds
+    its own clients lazily (``if not self.client:``). Such an SDK configures
+    base URL, auth headers and timeout inside that same branch, so handing it a
+    ready-made client silently drops all of them. Taking the kwargs lets the
+    caller construct a client that satisfies the SDK's contract *and* keeps the
+    DNS pinning and redirect suppression.
+
+    Returns two empty dicts when there is nothing to enforce (default endpoint,
+    or SSRF protection disabled), so the caller leaves that path untouched.
+    """
+    if _is_provider_default(base_url, default_url):
+        return {}, {}
+    client_kwargs = ssrf_protected_strict_httpx_client_kwargs_for_url(base_url)
+    _require_https_for_credentialed_endpoint(base_url)
+    return client_kwargs
 
 
 def provider_safe_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:

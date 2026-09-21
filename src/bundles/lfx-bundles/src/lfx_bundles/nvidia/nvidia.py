@@ -1,14 +1,14 @@
 from typing import Any
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.schema.dotdict import dotdict
 from lfx.utils.ssrf_requests import refuse_aiohttp_redirects, refuse_redirects
 
-NVIDIA_DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
+DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
 # ChatNVIDIA talks to the endpoint through transports it owns -- ``requests`` for blocking
@@ -140,7 +140,7 @@ class NVIDIAModelComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
-            value=NVIDIA_DEFAULT_BASE_URL,
+            value=DEFAULT_NVIDIA_BASE_URL,
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
         ),
         SecretStrInput(
@@ -174,7 +174,7 @@ class NVIDIAModelComponent(LCModelComponent):
         ensure_credential_endpoint_allowed(
             self.api_key or None,
             self.base_url,
-            default_url=NVIDIA_DEFAULT_BASE_URL,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
             # An absent key is not an absent credential: ChatNVIDIA reads NVIDIA_API_KEY
             # from the server environment itself and sends it to whatever base URL is set.
             sdk_env_fallback="NVIDIA_API_KEY",
@@ -185,9 +185,29 @@ class NVIDIAModelComponent(LCModelComponent):
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
 
+        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. Block internal/cloud-metadata destinations before connecting.
+        # This is the only host check on this path: validate_provider_base_url is the
+        # strict one (no literal-loopback exemption, and it requires https for a
+        # credential-bearing endpoint), so running validate_connector_url_for_ssrf ahead of
+        # it only rejected the same URLs sooner, with a weaker message and a second lookup.
+        #
+        # Residual: this is validate-then-connect, not connection-time pinning.
+        # langchain-nvidia-ai-endpoints ~=1.0 builds its own requests.Session in
+        # _NVIDIAClient._create_session, so there is no supported hook to dial a
+        # pre-resolved IP while keeping TLS SNI and certificate verification --
+        # _install_redirect_policy below wraps that factory, which stops a redirect but does
+        # not pin an address. A hostname whose DNS answer changes between this check and the
+        # SDK's own resolution is therefore not covered. Literal IPs - the high-value
+        # targets, cloud metadata and RFC1918 - have no DNS to rebind and are blocked
+        # outright. Deployments that need a hard guarantee should restrict destinations with
+        # the ssrf_allowed_hosts operator allowlist.
+        validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
+
         # Must precede construction: this call is the model-discovery path, and ChatNVIDIA
         # issues the /v1/models request from inside its constructor.
         _install_redirect_policy()
+        # Note: don't include the previous model, as it may not exist in available models from the new base url
         model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key or None)
         if tool_model_enabled:
             tool_models = [m for m in model.get_available_models() if m.supports_tools]
@@ -224,7 +244,7 @@ class NVIDIAModelComponent(LCModelComponent):
         ensure_credential_endpoint_allowed(
             api_key,
             self.base_url,
-            default_url=NVIDIA_DEFAULT_BASE_URL,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
             sdk_env_fallback="NVIDIA_API_KEY",
         )
         try:
@@ -236,6 +256,9 @@ class NVIDIAModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         seed = self.seed
+        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. Block internal/cloud-metadata destinations before connecting.
+        validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
         _install_redirect_policy()
         return ChatNVIDIA(
             max_tokens=max_tokens or None,
