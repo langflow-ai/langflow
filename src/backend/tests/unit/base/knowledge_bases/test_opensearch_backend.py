@@ -537,3 +537,100 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         kwargs = fake_vs.asimilarity_search_with_score.call_args.kwargs
         assert kwargs == {"query": "hi", "k": 2}
         assert "filter" not in kwargs
+
+
+class TestOpenSearchSSRFProtection:
+    """The cluster URL is tenant-controlled, so the backend must not dial it blindly.
+
+    Regression guard for the KB OpenSearch SSRF (CWE-918): the URL comes from a
+    per-user Langflow variable whose value is stored verbatim, and
+    ``OpenSearch(hosts=[url]).info()`` otherwise fetches whatever host:port/path
+    the tenant chose — including loopback, RFC1918, and the cloud-metadata
+    address — even with ``LANGFLOW_SSRF_PROTECTION_ENABLED=true``. The backend
+    now applies the same connector SSRF policy the vector-store components use,
+    inside ``_resolve_secrets`` so every path (test-connection, ingestion,
+    retrieval) is covered.
+    """
+
+    @pytest.fixture
+    def ssrf_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pin the SSRF knobs so the tests don't depend on ambient settings."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    def _backend(self, tmp_path: Path, url: str) -> OpenSearchBackend:
+        backend = OpenSearchBackend(
+            kb_name="kb_ssrf",
+            kb_path=tmp_path,
+            backend_config={"index_name": "test_index"},
+        )
+        # resolve_secret is called for url, then username, then password.
+        backend.resolve_secret = AsyncMock(side_effect=[url, None, None])
+        return backend
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_cloud_metadata_url(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://169.254.169.254/latest/meta-data/")
+        with pytest.raises(SSRFProtectionError, match="blocked"):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_rfc1918_url(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://10.0.0.5:9200")
+        with pytest.raises(SSRFProtectionError, match="blocked"):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_hostname_resolving_to_private_ip(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://opensearch.internal:9200")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["10.1.2.3"]),
+            pytest.raises(SSRFProtectionError, match="blocked"),
+        ):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_non_http_scheme(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "file:///etc/passwd")
+        with pytest.raises(SSRFProtectionError):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_allowlisted_internal_host_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Operators whose cluster genuinely lives on an internal network keep a
+        # supported escape hatch: LANGFLOW_SSRF_ALLOWED_HOSTS.
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "10.0.0.5")
+        backend = self._backend(tmp_path, "http://10.0.0.5:9200")
+        await backend._resolve_secrets()
+        assert backend._resolved_url == "http://10.0.0.5:9200"
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_test_connection_reports_ssrf_block(self, tmp_path: Path) -> None:
+        # The blocked URL must surface as a failed test-connection result with
+        # an accurate type — never as a dialed connection.
+        backend = self._backend(tmp_path, "http://169.254.169.254:80")
+        result = await backend.test_connection()
+        assert result.ok is False
+        assert result.details["type"] == "SSRFProtectionError"
+        assert "blocked" in result.message
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_blocked_url_is_never_stashed_for_later_paths(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://169.254.169.254:80")
+        with pytest.raises(SSRFProtectionError):
+            await backend._resolve_secrets()
+        # A KB created against a hostile variable must not keep the SSRF alive
+        # on the ingestion/retrieval paths after test-connection.
+        assert getattr(backend, "_resolved_url", None) is None
