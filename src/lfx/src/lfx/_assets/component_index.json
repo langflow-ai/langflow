@@ -31565,6 +31565,158 @@
     [
       "triggers",
       {
+        "InboundWebhookTrigger": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Run this flow when a signed HTTP request arrives at this trigger's own URL.",
+          "display_name": "Inbound Webhook",
+          "documentation": "https://docs.langflow.org/triggers",
+          "edited": false,
+          "field_order": [
+            "event_payload",
+            "payload_schema",
+            "share_session"
+          ],
+          "frozen": false,
+          "icon": "Webhook",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "11804740f56b",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 1
+            },
+            "module": "lfx.components.triggers.inbound_webhook_trigger.InboundWebhookTriggerComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Event",
+              "group_outputs": false,
+              "method": "build_event",
+              "name": "trigger_event",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Fire a flow when a third-party system posts a signed request to Langflow.\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nfrom typing import Any\n\nfrom lfx.base.triggers.base import BaseTriggerComponent\nfrom lfx.io import BoolInput, MultilineInput\n\n\nclass InboundWebhookTriggerError(ValueError):\n    \"\"\"The webhook cannot be armed as configured.\"\"\"\n\n\ndef validate_payload_schema(raw: str) -> dict[str, Any] | None:\n    \"\"\"Parse the optional payload schema, or return None when it is empty.\n\n    Deliberately shallow: this checks that the schema is a JSON object, not that\n    it is valid JSON Schema. The server applies it, and a component that\n    duplicated the server's validation logic would be a second opinion about\n    what a caller's payload must look like.\n    \"\"\"\n    if not raw or raw.isspace():\n        return None\n    try:\n        parsed = json.loads(raw)\n    except ValueError as exc:\n        msg = \"The payload schema must be valid JSON, or empty to accept any body.\"\n        raise InboundWebhookTriggerError(msg) from exc\n    if not isinstance(parsed, dict):\n        msg = \"The payload schema must be a JSON object.\"\n        raise InboundWebhookTriggerError(msg)\n    return parsed\n\n\nclass InboundWebhookTriggerComponent(BaseTriggerComponent):\n    display_name = \"Inbound Webhook\"\n    description = \"Run this flow when a signed HTTP request arrives at this trigger's own URL.\"\n    documentation: str = \"https://docs.langflow.org/triggers\"\n    name = \"InboundWebhookTrigger\"\n    icon = \"Webhook\"\n\n    trigger_kind = \"inbound_webhook\"\n\n    inputs = [\n        MultilineInput(\n            name=\"payload_schema\",\n            display_name=\"Payload schema\",\n            value=\"\",\n            info=(\n                \"Optional JSON object describing the body you expect. \"\n                \"Leave empty to accept any JSON body. It documents the contract for whoever \"\n                \"calls this webhook; it does not replace the signature check.\"\n            ),\n            input_types=[],\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"share_session\",\n            display_name=\"Share session across deliveries\",\n            value=False,\n            info=(\n                \"Off: every delivery gets its own session. On: all deliveries share one session, \"\n                \"so an agent downstream keeps memory between calls.\"\n            ),\n            advanced=True,\n        ),\n    ]\n\n    def trigger_config(self) -> dict[str, Any]:\n        \"\"\"The JSON the flow-save reconciler copies onto the trigger row.\n\n        The URL and the signing secret are deliberately absent: they are minted\n        by the server and live on the trigger row, because a secret on the\n        canvas would travel in every flow export and every screenshot.\n        \"\"\"\n        schema = validate_payload_schema(self.payload_schema or \"\")\n        config: dict[str, Any] = {\"share_session\": bool(self.share_session)}\n        if schema is not None:\n            config[\"payload_schema\"] = schema\n        return config\n"
+            },
+            "event_payload": {
+              "_input_type": "MultilineInput",
+              "advanced": true,
+              "ai_enabled": false,
+              "api_editable": false,
+              "copy_field": false,
+              "display_name": "Event",
+              "dynamic": false,
+              "info": "Set by the server when this trigger fires: the JSON event the run was started with. Leave it empty; a manual run simply reports that no trigger event was present. Paste an event here to rehearse the downstream flow by hand.",
+              "input_types": [],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "event_payload",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "payload_schema": {
+              "_input_type": "MultilineInput",
+              "advanced": true,
+              "ai_enabled": false,
+              "api_editable": false,
+              "copy_field": false,
+              "display_name": "Payload schema",
+              "dynamic": false,
+              "info": "Optional JSON object describing the body you expect. Leave empty to accept any JSON body. It documents the contract for whoever calls this webhook; it does not replace the signature check.",
+              "input_types": [],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "payload_schema",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "share_session": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Share session across deliveries",
+              "dynamic": false,
+              "info": "Off: every delivery gets its own session. On: all deliveries share one session, so an agent downstream keeps memory between calls.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "share_session",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            }
+          },
+          "tool_mode": false
+        },
         "ScheduleTrigger": {
           "base_classes": [
             "JSON"
@@ -32208,9 +32360,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 129,
+    "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "9ae343e1f7a6c8befdfaca9083045f0d6c6c59f2796d345d3f1c5cf1766628af",
+  "sha256": "5edc9ee80abe0c6918dd3134ec9f242637c3195384b6f847cde26244e6cfcbbc",
   "version": "1.13.0"
 }

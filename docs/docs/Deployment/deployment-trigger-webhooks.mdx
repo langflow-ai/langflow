@@ -1,0 +1,131 @@
+---
+title: Receive provider events with trigger webhooks
+slug: /deployment-trigger-webhooks
+---
+
+A trigger fires a flow when something happens somewhere else. Providers deliver those events in two ways, and this page covers the first: the provider posts to a Langflow URL.
+
+That needs your Langflow to be reachable over HTTPS from the public internet. If it isn't, use the trigger listener process instead: Langflow dials out and holds the connection, and needs no inbound address at all.
+
+## The ingress endpoint
+
+One route accepts every provider delivery:
+
+```
+POST /api/v1/triggers/ingress/{provider}/{public_id}
+```
+
+`provider` is one of `webhook`, `slack`, `microsoft`, or `google`. `public_id` is an opaque address minted per trigger, so no two triggers share a URL and knowing one tells you nothing about another.
+
+The route is unauthenticated, because a provider has no Langflow account. It is not unprotected: every delivery must carry the provider's own proof, and everything else is refused.
+
+| Provider | What proves the delivery |
+|---|---|
+| `slack` | The `X-Slack-Signature` HMAC over the raw body, plus a timestamp no more than five minutes old |
+| `microsoft` | The `clientState` Langflow set when it created the subscription |
+| `google` | The `X-Goog-Channel-Token` Langflow set when it created the channel, bound to that channel's id |
+| `webhook` | An `X-Langflow-Signature` HMAC over the raw body with the trigger's own secret |
+
+### Every refusal answers the same way
+
+An unknown address, a wrong provider, a bad signature, a stale timestamp, a paused trigger, and an oversized body all return `404` with one body. An endpoint that distinguished them would tell an attacker which trigger addresses exist and how close they were getting.
+
+The actual reason is written to the authorization audit log, where you can read it and they cannot. Enable it with `LANGFLOW_AUTHZ_AUDIT_ENABLED=true`.
+
+### What the request does, and does not, do
+
+The request verifies the delivery, deduplicates it, writes one event to the trigger's ledger, and answers. That is all.
+
+It does not run your flow. The dispatcher picks the event up afterwards and runs the flow as the trigger's owner, which is why Slack's three-second acknowledgement window is never at risk.
+
+It also does not fetch anything back from the provider. Microsoft Graph notifications carry ids only; the run resolves them with the owner's connection, outside the request.
+
+## Send events to a flow from your own system
+
+Use an **Inbound Webhook** trigger for a system that is not one of the supported providers.
+
+1. Add an Inbound Webhook trigger to your flow and save it.
+2. Enable the trigger.
+3. Mint its address and secret:
+
+   ```bash
+   curl -X POST "$LANGFLOW_URL/api/v1/triggers/$TRIGGER_ID/signing-secret" -H "x-api-key: $LANGFLOW_API_KEY"
+   ```
+
+   The response carries `ingress_url` and `signing_secret`. **The secret is shown once.** Langflow stores it encrypted and never reads it back; if you lose it, mint a new one.
+
+4. Sign each delivery. The signature covers a version tag, the timestamp, and the raw body:
+
+   ```python
+   import hashlib, hmac, json, time, requests
+
+   body = json.dumps({"order": 42}).encode()
+   timestamp = str(int(time.time()))
+   basestring = f"v1:{timestamp}:".encode() + body
+   signature = "v1=" + hmac.new(secret.encode(), basestring, hashlib.sha256).hexdigest()
+
+   requests.post(
+       ingress_url,
+       data=body,
+       headers={
+           "Content-Type": "application/json",
+           "X-Langflow-Signature": signature,
+           "X-Langflow-Timestamp": timestamp,
+       },
+   )
+   ```
+
+A `202` means the event is durably recorded and will run. A `404` means it did not verify.
+
+### Rotate a secret
+
+Post to `/signing-secret` again. The address stays the same, so your callers keep their URL — and the old secret stops verifying on the very next delivery. There is no grace window, deliberately: a secret is rotated because it leaked, and a grace window is exactly the period a leak stays useful.
+
+## Duplicates, and why one event runs once
+
+Every provider here is at-least-once. Slack retries at zero, one, and five minutes when it doesn't get an acknowledgement in time; Graph and Google redeliver too.
+
+Langflow keys each delivery on the provider's own event identity — Slack's `event_id`, Graph's subscription and resource and change type, Google's channel and message number — and the ledger rejects a second event with the same key. Three retries of one Slack event produce one run.
+
+Duplicates are acknowledged with `202` rather than an error, because telling a provider its retry failed teaches it to retry forever.
+
+For the inbound webhook, the key is a digest of the signed body and timestamp. Two identical bodies at the same second are one event; to send two events, send two bodies.
+
+## Subscriptions expire, and Langflow renews them
+
+Provider subscriptions are short-lived: Microsoft Graph mail and calendar last seven days, rich notifications one day, files thirty; Google channels and Gmail watches last seven.
+
+A leased job inside the API renews each one ahead of its own expiry — half its lifetime, capped at a day, so a seven-day subscription renews a day early and a one-day subscription renews twelve hours early. Every replica may run the job and exactly one does at a time, so a provider never sees the same subscription renewed twice.
+
+Three things end a subscription rather than renew it:
+
+- **You pause or delete the trigger.** The subscription is retired with it, so it stops consuming the provider's per-tenant quota.
+- **You revoke the connection.** The subscription is retired and the trigger moves to **needs reconnect**.
+- **The provider says re-authorization is required.** Graph sends a lifecycle notification, and the trigger moves to **needs reconnect**. Reconnect the connection to resume it.
+
+A trigger in **needs reconnect** is waiting for a person. It won't quietly start working again.
+
+## Operator settings
+
+| Variable | Default | Description |
+|---|---|---|
+| `LANGFLOW_TRIGGER_INGRESS_ENABLED` | `true` | Set to `false` on an instance that should accept no inbound deliveries at all. Every ingress request then answers `404`. |
+| `LANGFLOW_TRIGGER_INGRESS_MAX_BODY_BYTES` | `1048576` | Per-route body cap, independent of the global request limit. |
+| `LANGFLOW_TRIGGER_INGRESS_RATE_LIMIT_PER_MINUTE` | `600` | Per-trigger delivery ceiling. |
+| `LANGFLOW_TRIGGER_INGRESS_UNKNOWN_RATE_LIMIT_PER_MINUTE` | `60` | Per-client ceiling for deliveries naming no known trigger, so probing for addresses is bounded without a real provider sharing the budget. |
+| `LANGFLOW_TRIGGER_INGRESS_SIGNATURE_TOLERANCE_S` | `300` | How stale a signed request's timestamp may be. |
+| `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_FRACTION` | `0.5` | Fraction of a subscription's lifetime after which renewal is attempted. |
+| `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_LEAD_CAP_S` | `86400` | Upper bound on how far ahead of expiry a subscription is renewed. |
+| `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_INTERVAL_S` | `300` | How often the renewal job scans for subscriptions coming due. |
+
+Slack signs with an app-level secret that is not the OAuth client secret. Put it on the OAuth registration as `signing_secret`, alongside `client_id` and `client_secret`, in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`.
+
+## Troubleshoot
+
+**Every delivery returns 404.** Check, in this order: the trigger is enabled; the URL's provider segment matches the trigger's provider; the clock on the sending host is within five minutes of Langflow's; the signature covers the *raw* body, not a re-serialized copy of it. Turn on the audit log to see which check actually failed.
+
+**Slack keeps retrying a delivery Langflow accepted.** Slack retries when it doesn't receive a `2xx` in three seconds. Check for a proxy or WAF in front of Langflow that is buffering or delaying the response.
+
+**Events stopped arriving and nothing looks wrong.** Look at the trigger's state. **Needs reconnect** means the provider withdrew authorization; reconnect the connection. If the trigger is still **active**, the subscription may have expired while the API was down — re-enable the trigger to subscribe again.
+
+**A delivery ran twice.** Check whether two triggers are armed on the same source. One trigger cannot run twice for one provider event.

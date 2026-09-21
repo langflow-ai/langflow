@@ -22,12 +22,14 @@ recompute does today.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
+from langflow.services.triggers.constants import KIND_INBOUND_WEBHOOK
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
     schedule_timing_changed,
@@ -42,6 +44,7 @@ if TYPE_CHECKING:
 #: Component type -> trigger kind. TRG-5 and TRG-6 append their provider
 #: components here; nothing else in the codebase needs to learn about them.
 TRIGGER_COMPONENT_KINDS: dict[str, str] = {
+    "InboundWebhookTrigger": "inbound_webhook",
     "ScheduleTrigger": "schedule",
 }
 
@@ -54,7 +57,48 @@ _CONFIG_FIELDS: dict[str, tuple[tuple[str, str, Any], ...]] = {
         ("catchup_policy", "catchup_policy", "coalesce"),
         ("share_session", "share_session", False),
     ),
+    # The URL and the signing secret are NOT here: they are minted by the server
+    # on the trigger row, so a flow export carries the webhook's shape without
+    # carrying its credential.
+    "inbound_webhook": (
+        ("payload_schema", "payload_schema", ""),
+        ("share_session", "share_session", False),
+    ),
 }
+
+
+class InvalidWebhookConfigError(ValueError):
+    """The inbound webhook node cannot be reconciled as configured."""
+
+
+def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Turn the node's fields into the stored config for an inbound webhook.
+
+    The node carries the schema as text (it is edited in a textarea); the row
+    carries it as a JSON object or not at all. Normalizing on save rather than
+    on delivery means a malformed schema is a save-time message next to the node
+    instead of a rejection the caller sees weeks later.
+    """
+    normalized: dict[str, Any] = {"share_session": bool(config.get("share_session"))}
+    raw = config.get("payload_schema")
+    if isinstance(raw, dict):
+        normalized["payload_schema"] = raw
+        return normalized
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return normalized
+    if not isinstance(raw, str):
+        msg = "The payload schema must be a JSON object, or empty to accept any body."
+        raise InvalidWebhookConfigError(msg)
+    try:
+        parsed = json.loads(raw)
+    except ValueError as exc:
+        msg = "The payload schema must be valid JSON, or empty to accept any body."
+        raise InvalidWebhookConfigError(msg) from exc
+    if not isinstance(parsed, dict):
+        msg = "The payload schema must be a JSON object."
+        raise InvalidWebhookConfigError(msg)
+    normalized["payload_schema"] = parsed
+    return normalized
 
 
 #: Why a trigger whose node left the canvas was paused. Reconciliation owns this
@@ -168,6 +212,11 @@ async def reconcile_flow_triggers(
             try:
                 config = validate_schedule_config(config)
             except InvalidScheduleError as exc:
+                error = str(exc)
+        elif kind == KIND_INBOUND_WEBHOOK:
+            try:
+                config = normalize_webhook_config(config)
+            except InvalidWebhookConfigError as exc:
                 error = str(exc)
         session_policy = (
             TriggerSessionPolicy.SHARED.value

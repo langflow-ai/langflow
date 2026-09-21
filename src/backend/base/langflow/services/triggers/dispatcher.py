@@ -565,6 +565,7 @@ class TriggerDispatcher:
         self._task: asyncio.Task | None = None
         self._stopping = asyncio.Event()
         self._last_purge_at: datetime | None = None
+        self._last_renewal_at: datetime | None = None
 
     @property
     def running(self) -> bool:
@@ -609,8 +610,10 @@ class TriggerDispatcher:
         not one bottleneck.
         """
         from langflow.services.triggers.scheduler import run_scheduler_pass
+        from langflow.services.triggers.subscriptions import run_renewal_pass
 
         await run_scheduler_pass(owner=self.owner)
+        await self._maybe_renew_subscriptions(run_renewal_pass)
         settings = get_settings_service().settings
         async with session_scope() as session:
             held = await leases.acquire(
@@ -624,6 +627,31 @@ class TriggerDispatcher:
         dispatched = await run_once(owner=self.owner)
         await self._maybe_purge()
         return dispatched
+
+    async def _maybe_renew_subscriptions(self, run_renewal_pass) -> None:
+        """Keep provider subscriptions alive, on their own slower cadence.
+
+        Renewal is leased separately from dispatch (a third independent
+        singleton, like the schedule tick) and runs far less often than the
+        dispatcher polls: every wave-1 provider measures subscription lifetimes
+        in days, so scanning for due rows every few minutes is already an order
+        of magnitude more attentive than it needs to be.
+        """
+        settings = get_settings_service().settings
+        now = _now()
+        if (
+            self._last_renewal_at is not None
+            and (now - self._last_renewal_at).total_seconds() < settings.trigger_subscription_renew_interval_s
+        ):
+            return
+        self._last_renewal_at = now
+        try:
+            renewed = await run_renewal_pass(owner=self.owner)
+        except Exception as exc:  # noqa: BLE001 - renewal must not end the dispatch loop
+            await logger.aerror("Trigger subscription renewal failed: %s", type(exc).__name__)
+            return
+        if renewed:
+            await logger.adebug("Renewed %s provider subscription(s)", renewed)
 
     async def _maybe_purge(self) -> None:
         settings = get_settings_service().settings
