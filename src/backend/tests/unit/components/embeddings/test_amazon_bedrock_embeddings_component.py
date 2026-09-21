@@ -31,8 +31,10 @@ class TestAmazonBedrockEmbeddingsComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "model_id": "amazon.titan-embed-text-v1",
-            "aws_access_key_id": None,
-            "aws_secret_access_key": None,
+            # Explicit keys let test_latest_version build the client offline; the
+            # profile-path tests below clear them to exercise credentials_profile_name.
+            "aws_access_key_id": "test_access_key",
+            "aws_secret_access_key": "test_secret",  # pragma: allowlist secret
             "aws_session_token": None,
             "credentials_profile_name": "my-profile",
             "region_name": "us-east-1",
@@ -58,7 +60,7 @@ class TestAmazonBedrockEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_bedrock_embeddings.return_value = mock_instance
         mock_session.return_value.client.return_value = MagicMock()
 
-        component = component_class(**default_kwargs)
+        component = component_class(**{**default_kwargs, "aws_access_key_id": None, "aws_secret_access_key": None})
         result = component.build_embeddings()
 
         # The profile is honored when constructing the session.
@@ -79,7 +81,7 @@ class TestAmazonBedrockEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_client = MagicMock()
         mock_session.return_value.client.return_value = mock_client
 
-        component = component_class(**default_kwargs)
+        component = component_class(**{**default_kwargs, "aws_access_key_id": None, "aws_secret_access_key": None})
         component.build_embeddings()
 
         call_kwargs = mock_bedrock_embeddings.call_args.kwargs
