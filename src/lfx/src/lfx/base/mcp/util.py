@@ -26,6 +26,7 @@ from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
+from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.security import (
     AGENTIC_MCP_MODULE,
     AGENTIC_USER_ID_ENV_VAR,
@@ -730,6 +731,41 @@ def get_unique_name(base_name, max_length, existing_names):
         i += 1
 
 
+def mcp_tool_base_name(flow, *, is_action: bool = False) -> str:
+    """Sanitize the name a flow contributes, before truncation and de-duplication.
+
+    ``is_action`` follows the two MCP surfaces: a project server addresses a flow by
+    its action name when it has one, the global server always by the flow name.
+    """
+    if is_action and getattr(flow, "action_name", None):
+        return sanitize_mcp_name(flow.action_name)
+    return sanitize_mcp_name(flow.name)
+
+
+def build_mcp_tool_name_map(flows, *, is_action: bool = False) -> dict[str, Any]:
+    """Map every published MCP tool name to the flow it was published for.
+
+    The tool name is the only thing joining ``tools/list`` to ``tools/call``: a client
+    stores the string the server gave it and sends that string back. Deriving it twice
+    is what let the two halves disagree -- the list path truncated to
+    ``MAX_MCP_TOOL_NAME_LENGTH`` and de-duplicated collisions with a numeric suffix,
+    the call path did neither, so any name past the limit was advertised and then
+    refused, and a truncated name could resolve to a different flow than the one it
+    was published for. Both halves read this map, which makes the round trip true by
+    construction rather than by two rules staying in step.
+
+    ``flows`` must arrive in the order the caller queries them (both call sites order by
+    ``Flow.id``): the suffix a collision gets depends on which flow is seen first.
+    """
+    name_map: dict[str, Any] = {}
+    taken: set[str] = set()
+    for flow in flows:
+        name = get_unique_name(mcp_tool_base_name(flow, is_action=is_action), MAX_MCP_TOOL_NAME_LENGTH, taken)
+        taken.add(name)
+        name_map[name] = flow
+    return name_map
+
+
 async def get_flow_snake_case(
     flow_name: str,
     user_id: str,
@@ -739,7 +775,12 @@ async def get_flow_snake_case(
     project_id: UUID | str | None = None,
     mcp_enabled_only: bool = False,
 ):
-    """Resolve an MCP tool name to a flow.
+    """Resolve a published MCP tool name to the flow it was published for.
+
+    ``flow_name`` is the name the server handed the client in ``tools/list``, which is
+    the only name a client can send back. It is looked up in ``build_mcp_tool_name_map``
+    rather than regenerated here: regenerating it is what made the server advertise
+    names past ``MAX_MCP_TOOL_NAME_LENGTH`` and then answer "not found" for them.
 
     ``project_id`` and ``mcp_enabled_only`` default to the historical behavior because
     this function is public ``lfx`` surface and still backs the global MCP server, where
@@ -768,15 +809,7 @@ async def get_flow_snake_case(
     stmt = stmt.order_by(Flow.id)
     flows = (await session.exec(stmt)).all()
 
-    for flow in flows:
-        if is_action and flow.action_name:
-            this_flow_name = sanitize_mcp_name(flow.action_name)
-        else:
-            this_flow_name = sanitize_mcp_name(flow.name)
-
-        if this_flow_name == flow_name:
-            return flow
-    return None
+    return build_mcp_tool_name_map(flows, is_action=bool(is_action)).get(flow_name)
 
 
 def _is_valid_key_value_item(item: Any) -> bool:
