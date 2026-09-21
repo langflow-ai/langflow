@@ -206,36 +206,48 @@ def test_unknown_event_types_yield_no_events(unknown_event_type):
 
 
 class TestExposeGraphState:
-    """``expose_graph_state=False`` keeps the flow's topology off the wire."""
+    """``expose_graph_state=False`` narrows the stream to the conversation."""
 
     @staticmethod
-    def _closed_ctx() -> StreamAdapterContext:
-        return StreamAdapterContext(run_id="run-8", thread_id="thread-8", expose_graph_state=False)
+    def _narrowed() -> StreamAdapterContext:
+        return StreamAdapterContext(run_id="run-7", thread_id="thread-7", expose_graph_state=False)
 
     def test_context_defaults_to_exposing_graph_state(self):
-        # The Langflow canvas relies on the default; a silent flip would blank
-        # out node highlighting for every existing caller.
+        """Every call site that does not thread the flag keeps today's behavior."""
         assert StreamAdapterContext(run_id="r", thread_id="t").expose_graph_state is True
 
-    def test_initial_events_omit_the_state_snapshot(self):
-        adapter = get_stream_adapter("agui", self._closed_ctx())
+    def test_initial_events_drop_the_seed_snapshot(self):
+        adapter = get_stream_adapter("agui", self._narrowed())
         assert [e.type for e in adapter.initial_events()] == ["RUN_STARTED"]
 
-    @pytest.mark.parametrize(
-        ("event_type", "data"),
-        [
-            ("vertices_sorted", {"to_run": ["ChatInput-a", "Agent-b"]}),
-            ("build_start", {"id": "Agent-b"}),
-            ("end_vertex", {"build_data": {"id": "Agent-b", "valid": True, "data": {"outputs": {}}}}),
-        ],
-    )
-    def test_graph_events_translate_to_nothing(self, event_type, data):
-        adapter = get_stream_adapter("agui", self._closed_ctx())
-        list(adapter.initial_events())
-        assert list(adapter.translate(event_type, data)) == []
+    def test_node_events_never_reach_the_wire(self):
+        adapter = get_stream_adapter("agui", self._narrowed())
+        frames = list(adapter.translate("vertices_sorted", {"to_run": ["ChatInput-a1b2c"]}))
+        frames += list(adapter.translate("build_start", {"id": "Agent-d3e4f"}))
+        frames += list(
+            adapter.translate(
+                "end_vertex",
+                {"build_data": {"id": "Store-g5h6i", "valid": True, "data": {"outputs": {"documents": "secret"}}}},
+            )
+        )
+        assert frames == []
 
-    def test_messages_and_tool_calls_still_stream(self):
-        adapter = get_stream_adapter("agui", self._closed_ctx())
-        list(adapter.initial_events())
-        events = list(adapter.translate("token", {"id": "m1", "chunk": "hello"}))
-        assert [e.type for e in events] == ["TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT"]
+    def test_conversation_events_still_frame(self):
+        adapter = get_stream_adapter("agui", self._narrowed())
+        frames = list(adapter.translate("token", {"id": "msg-1", "chunk": "Hi"}))
+        assert [f.type for f in frames] == ["TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT"]
+        assert json.loads(frames[1].data_json)["delta"] == "Hi"
+
+    def test_no_durable_frame_survives_suppression(self):
+        """Nothing reaches the durable log, so re-attach cannot recover the graph.
+
+        The durable set is protocol-wide and still lists the graph-state types;
+        the guarantee rests on suppression happening upstream of ``is_durable``,
+        so assert on the frames that actually exist.
+        """
+        adapter = get_stream_adapter("agui", self._narrowed())
+        frames = list(adapter.translate("vertices_sorted", {"to_run": ["ChatInput-a1b2c"]}))
+        frames += list(adapter.translate("build_start", {"id": "Agent-d3e4f"}))
+        assert not [f for f in frames if adapter.is_durable(f.type)]
+        # The types themselves are still durable; only their absence saves us.
+        assert adapter.is_durable("STATE_DELTA")

@@ -16,7 +16,7 @@ from lfx.workflow.adapters import (
     StreamEvent,
     register_stream_adapter,
 )
-from lfx.workflow.converters import build_component_output, resolve_output_type
+from lfx.workflow.converters import build_component_output, redact_component_identity, resolve_output_type
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -98,12 +98,34 @@ class LangflowAdapter:
         return ()
 
     def translate(self, event_type: str, event_data: dict[str, Any]) -> Iterable[StreamEvent]:
-        events = [self._passthrough(event_type, event_data)]
+        events: list[StreamEvent] = []
+        if self.context.expose_graph_state or not self._is_graph_state(event_type, event_data):
+            if not self.context.expose_graph_state and event_type in {"add_message", "error"}:
+                # The message body is the conversation; the component that
+                # produced it is not.
+                event_data = redact_component_identity(event_data)
+            events.append(self._passthrough(event_type, event_data))
         if event_type == "end_vertex":
+            # The terminal ``output`` event is the flow's answer, not graph state,
+            # so it survives the narrowed stream even though the ``end_vertex``
+            # it is built from does not.
             output_event = self._output_event(event_data)
             if output_event is not None:
                 events.append(output_event)
         return events
+
+    @staticmethod
+    def _is_graph_state(event_type: str, event_data: dict[str, Any]) -> bool:
+        """True for events that describe the flow rather than the conversation.
+
+        ``vertices_sorted`` names every component that will run, ``end_vertex``
+        carries a component's own output, and ``log`` is component log output.
+        ``build_start`` is per-vertex only when it carries an ``id``; the
+        graph-level one (``{}``) marks the run beginning and stays.
+        """
+        if event_type in {"vertices_sorted", "end_vertex", "log"}:
+            return True
+        return event_type == "build_start" and bool(event_data.get("id"))
 
     @staticmethod
     def _passthrough(event_type: str, event_data: dict[str, Any]) -> StreamEvent:

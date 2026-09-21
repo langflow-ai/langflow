@@ -226,18 +226,20 @@ class WorkflowRunRequest(BaseModel):
             "values return 422 with the available list. Ignored when mode=sync."
         ),
     )
-    expose_graph_state: bool = Field(
-        default=True,
+    expose_graph_state: bool | None = Field(
+        default=None,
         description=(
-            "Whether the stream may describe the flow's internal graph. When "
-            "``false``, the AG-UI stream omits ``STEP_STARTED``/``STEP_FINISHED`` "
-            "(whose step name is the component id) and the ``STATE_SNAPSHOT``/"
-            "``STATE_DELTA`` events that carry every component's status and output "
-            "payload, leaving only messages and tool calls. Set it ``false`` when "
-            "the stream is exposed to end users so the flow's topology and "
-            "intermediate outputs stay private. Defaults to ``true`` for backward "
-            "compatibility and because the Langflow canvas renders node status "
-            "from those events. Only the ``agui`` protocol honors it."
+            "Whether the stream may carry the flow's graph state: the events "
+            "naming every component that will run and carrying each component's "
+            "own output (``STATE_SNAPSHOT``/``STATE_DELTA``, ``STEP_STARTED``/"
+            "``STEP_FINISHED`` and ``langflow.log`` on ``agui``; "
+            "``vertices_sorted``, per-vertex ``build_start``, ``end_vertex`` and "
+            "``log`` on ``langflow``). Unset defaults to ``False`` for ``agui``, "
+            "whose consumers are usually third-party clients, and ``True`` for "
+            "``langflow``, whose passthrough shape existing callers already "
+            "parse. The terminal ``output`` event is the flow's answer and is "
+            "never suppressed. Not accepted by ``/workflows/public``, which "
+            "always forces it off."
         ),
     )
     data: dict[str, Any] | None = Field(
@@ -362,20 +364,6 @@ class PublicWorkflowRunRequest(BaseModel):
             "Wire protocol for streaming events. Defaults to ``langflow`` "
             "(raw EventManager payloads). ``agui`` emits AG-UI events. Unknown "
             "values return 422 with the available list."
-        ),
-    )
-    expose_graph_state: bool = Field(
-        default=True,
-        description=(
-            "Whether the stream may describe the flow's internal graph. When "
-            "``false``, the AG-UI stream omits ``STEP_STARTED``/``STEP_FINISHED`` "
-            "(whose step name is the component id) and the ``STATE_SNAPSHOT``/"
-            "``STATE_DELTA`` events that carry every component's status and output "
-            "payload, leaving only messages and tool calls. Set it ``false`` when "
-            "the stream is exposed to end users so the flow's topology and "
-            "intermediate outputs stay private. Defaults to ``true`` for backward "
-            "compatibility and because the Langflow canvas renders node status "
-            "from those events. Only the ``agui`` protocol honors it."
         ),
     )
     files: list[str] | None = Field(

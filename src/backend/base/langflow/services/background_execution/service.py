@@ -976,9 +976,9 @@ class BackgroundExecutionService(Service):
             StreamAdapterContext(
                 run_id=str(job_id),
                 thread_id=request.get("session_id") or str(flow_id),
-                # Replay must reproduce the live stream exactly, including the
-                # caller's opt-out. Legacy rows written before the field existed
-                # default to the historical behavior.
+                # ``submit`` persists the whole request body, so the replayed
+                # stream is narrowed exactly like the live one. Legacy rows
+                # written before the field existed default to today's behavior.
                 expose_graph_state=request.get("expose_graph_state", True),
             ),
         )

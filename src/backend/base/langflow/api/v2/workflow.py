@@ -709,6 +709,10 @@ async def execute_workflow_background(
             "files": parsed.files,
             "start_component_id": parsed.start_component_id,
             "stop_component_id": parsed.stop_component_id,
+            # Must survive the worker re-parse, or a job submitted with the
+            # narrowed stream would persist (and replay on re-attach) the graph
+            # state the caller opted out of.
+            "expose_graph_state": parsed.expose_graph_state,
             "idempotency_key": idempotency_key,
             # Serving-plane ephemeral decision must survive the worker re-parse so an
             # anonymous background/resume run does not persist memory (see the pop in

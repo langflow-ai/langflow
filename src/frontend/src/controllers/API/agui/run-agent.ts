@@ -48,10 +48,12 @@ export interface WorkflowRunOptions {
   /** Suppress success build UI for chat/playground runs that should not show a build panel. */
   silent?: boolean;
   /**
-   * Omit (server default `true`) to receive the `STEP_*` / `STATE_*` events the
-   * canvas renders node status from. Set `false` for a stream shown to someone
-   * other than the flow's author, so component ids and per-node outputs stay
-   * off the wire. The canvas and playground leave this unset.
+   * Whether to ask for the `STEP_*` / `STATE_*` events the canvas renders node
+   * status from. Defaults to `true` on the authenticated endpoint, since the
+   * canvas needs them and `agui` no longer sends them unless asked. Set `false`
+   * for a stream shown to someone other than the flow's author, so component
+   * ids and per-node outputs stay off the wire. Ignored for the public
+   * endpoint, whose schema forbids the field.
    */
   exposeGraphState?: boolean;
   /**
@@ -86,12 +88,6 @@ export interface WorkflowRunRequestBody {
   input_value: string;
   mode: WorkflowMode;
   stream_protocol: StreamProtocol;
-  /**
-   * Omit (server default `true`) to receive the `STEP_*` / `STATE_*` events
-   * the canvas renders node status from. External callers that expose the
-   * stream to their own end users send `false` so component ids and per-node
-   * outputs stay off the wire.
-   */
   expose_graph_state?: boolean;
   tweaks?: Record<string, Record<string, unknown>>;
   session_id?: string;
@@ -142,11 +138,11 @@ export function buildWorkflowRunRequest(
   if (opts.stopComponentId) body.stop_component_id = opts.stopComponentId;
   if (!isPublic && opts.flowData) body.data = opts.flowData;
   if (opts.files && opts.files.length > 0) body.files = opts.files;
-  // Only forward an explicit opt-out; omitting the field keeps the server
-  // default so existing callers are byte-identical on the wire.
-  if (opts.exposeGraphState !== undefined) {
-    body.expose_graph_state = opts.exposeGraphState;
-  }
+  // Sent explicitly rather than relying on the server default: `agui` defaults
+  // to withholding graph state for third-party clients, and being explicit
+  // means a later change to that default leaves the canvas alone. The public
+  // schema forbids the field, so a shared link must not send it.
+  if (!isPublic) body.expose_graph_state = opts.exposeGraphState ?? true;
   return body;
 }
 
