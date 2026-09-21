@@ -20,12 +20,18 @@ from langflow.api.v1.audit_reads import (
     parse_audit_query,
     read_audit_page,
 )
-from langflow.services.audit.vocabulary import AuditResourceType
-from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.audit.vocabulary import AuditEventType, AuditOperation, AuditResourceType, AuditResult
+from langflow.services.authorization import ensure_flow_audit_read_permission
 from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.flow.model import Flow
 
 router = APIRouter(prefix="/flows", tags=["Flows"])
+
+_FLOW_OPERATIONS = frozenset(
+    {AuditOperation.CREATE, AuditOperation.REPLACE, AuditOperation.PATCH, AuditOperation.DELETE}
+)
+_INITIAL_EVENT_TYPES = frozenset({AuditEventType.ACTION})
+_INITIAL_RESULTS = frozenset({AuditResult.SUCCEEDED, AuditResult.FAILED})
 
 
 class FlowAuditEventRead(AuditEventReadBase):
@@ -57,12 +63,18 @@ async def read_flow_audits(
     Requires the ``flow:audit_read`` permission. Without an authorization plugin,
     a non-superuser sees events on Flows they own and events they made.
     """
-    query = parse_audit_query(request, resource_type=AuditResourceType.FLOW, id_param="flow_id")
+    query = parse_audit_query(
+        request,
+        resource_type=AuditResourceType.FLOW,
+        id_param="flow_id",
+        allowed_operations=_FLOW_OPERATIONS,
+        allowed_event_types=_INITIAL_EVENT_TYPES,
+        allowed_results=_INITIAL_RESULTS,
+    )
     flow_id = query.filters.resource_id
     flow = await session.get(Flow, flow_id) if flow_id is not None else None
-    await ensure_flow_permission(
+    await ensure_flow_audit_read_permission(
         current_user,
-        FlowAction.AUDIT_READ,
         flow_id=flow_id,
         flow_user_id=getattr(flow, "user_id", None),
         workspace_id=getattr(flow, "workspace_id", None),

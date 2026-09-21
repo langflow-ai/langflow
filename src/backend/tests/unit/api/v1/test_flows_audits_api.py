@@ -146,35 +146,6 @@ async def test_reading_records_nothing_and_the_route_is_not_captured(client, log
     assert len(await events_by_user(active_user.id)) == before
 
 
-async def test_a_plugin_denial_is_readable_as_an_authz_event(client):
-    from tests.unit.services.authorization._policy_double import create_user_share, install_policy_authz
-
-    alice_id, alice_name = await make_user("alice")
-    bob_id, bob_name = await make_user("bob")
-    alice, bob = await login(client, alice_name), await login(client, bob_name)
-    flow = await _flow(client, alice)
-    async with session_scope() as session:
-        await create_user_share(
-            session,
-            resource_type="flow",
-            resource_id=UUID(flow["id"]),
-            target_user_id=bob_id,
-            permission_level="read",
-            created_by=alice_id,
-        )
-    with install_policy_authz(get_settings_service()):
-        await client.patch(f"api/v1/flows/{flow['id']}", json={"name": "nope"}, headers=bob)
-
-    feed = await _audits(client, alice, f"?flow_id={flow['id']}&event_type=authz")
-
-    [denial] = feed["items"]
-    assert (denial["result"], denial["error_code"], denial["actor"]["user_id"]) == (
-        "deny",
-        "PERMISSION_DENIED",
-        str(bob_id),
-    )
-
-
 async def _role(name: str, permissions: list[str]) -> UUID:
     async with session_scope() as session:
         role = AuthzRole(name=f"{name}-{uuid4().hex[:8]}", description=name, is_system=False, permissions=permissions)
@@ -202,10 +173,14 @@ async def test_with_a_plugin_the_flow_audit_permission_decides(client, logged_in
     project_auditor = await login(client, project_auditor_name)
 
     with install_policy_authz(get_settings_service()):
+        owner_one = await client.get(f"api/v1/flows/audits?flow_id={target['id']}", headers=logged_in_headers)
+        owner_all = await client.get("api/v1/flows/audits", headers=logged_in_headers)
         allowed = await client.get(f"api/v1/flows/audits?flow_id={target['id']}", headers=auditor)
         read_only = await client.get("api/v1/flows/audits", headers=reader)
         wrong_resource = await client.get("api/v1/flows/audits", headers=project_auditor)
 
+    assert owner_one.status_code == status.HTTP_403_FORBIDDEN
+    assert owner_all.status_code == status.HTTP_403_FORBIDDEN
     assert allowed.status_code == status.HTTP_200_OK
     assert [item["operation"] for item in allowed.json()["items"]] == ["create"]
     assert read_only.status_code == status.HTTP_403_FORBIDDEN
