@@ -1,9 +1,14 @@
 from contextlib import asynccontextmanager
+from copy import deepcopy
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 from uuid import uuid4
 
 import pytest
+from langflow.services.database.models.flow.model import FlowCreate
 from lfx.base.tools.run_flow import RunFlowBaseComponent
+from lfx.components.flow_controls.run_flow import RunFlowComponent
+from lfx.components.input_output import TextInputComponent, TextOutputComponent
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
@@ -957,3 +962,110 @@ class TestRunFlowBaseComponentTweaks:
 
         assert set(exc_info.value.refused) == {"code", "function_code"}
         vertex1.update_raw_params.assert_not_called()
+
+
+class TestRunFlowToolInvocation:
+    """The tool wrapper copies the component per call; that copy must be the one that runs.
+
+    Regression coverage for #15034: the tool call carried the right arguments,
+    the sub-flow ran without them, and the tool answered with empty content.
+    """
+
+    @staticmethod
+    def _tool_mode_vertex(flow_id: str) -> SimpleNamespace:
+        """A Run Flow node the way it is saved once tool mode is on.
+
+        ``run_and_validate_update_outputs`` collapses the node's outputs to the
+        single ``component_as_tool`` handle, so the vertex-built component
+        registers no selected-flow resolvers of its own; ``to_toolkit`` creates
+        them on the instance when the agent asks for the tool.
+        """
+        return SimpleNamespace(
+            id="RunFlow-le2650",
+            outputs=[
+                {
+                    "name": "component_as_tool",
+                    "display_name": "Toolset",
+                    "method": "to_toolkit",
+                    "types": ["Tool"],
+                    "selected": "Tool",
+                }
+            ],
+            data={"node": {"template": {"flow_name_selected": {"selected_metadata": {"id": flow_id}}}}},
+            outgoing_edges=[],
+            edges_source_names={"component_as_tool"},
+        )
+
+    @staticmethod
+    async def _echo_sub_flow(client, logged_in_headers, user_id: str) -> tuple[str, str, str]:
+        """A saved Text Input -> Text Output flow that returns whatever it is given."""
+        text_in = TextInputComponent()
+        text_out = TextOutputComponent()
+        text_out.set(input_value=text_in.text_response)
+        flow_dict = Graph(start=text_in, end=text_out).dump(name="LE2650 Echo", description="echoes its input")
+        for node in flow_dict["data"]["nodes"]:
+            node_data = node["data"]["node"]
+            # The UI writes a field_order on every node; Graph.dump leaves it empty,
+            # and get_new_fields skips a node without one, so no tool-mode field
+            # would be exposed and the component would produce no tool at all.
+            node_data["field_order"] = [
+                name for name in node_data.get("template", {}) if not name.startswith("_") and name != "code"
+            ]
+
+        response = await client.post(
+            "api/v1/flows/",
+            json=FlowCreate(**flow_dict, user_id=user_id).model_dump(mode="json"),
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 201, response.text
+        flow = response.json()
+        return flow["id"], flow["name"], text_in.get_id()
+
+    @pytest.mark.asyncio
+    async def test_tool_call_reaches_the_component_that_runs(self, client, logged_in_headers, active_user):
+        """The sub-flow must run with the arguments the agent passed to the tool."""
+        client.follow_redirects = True
+        flow_id, flow_name, text_input_id = await self._echo_sub_flow(client, logged_in_headers, str(active_user.id))
+
+        component = RunFlowComponent(
+            _vertex=self._tool_mode_vertex(flow_id), _id="RunFlow-le2650", _user_id=str(active_user.id)
+        )
+        component._user_id = str(active_user.id)
+        # loading.instantiate_class feeds the node's params in this way
+        component.set_attributes({"flow_name_selected": flow_name, "flow_id_selected": flow_id})
+        component._pre_run_setup()
+
+        tools = await component.to_toolkit()
+        assert [tool.name for tool in tools] == ["LE2650-Echo_tool"]
+
+        result = await tools[0].coroutine(flow_tweak_data={f"{text_input_id}~input_value": "Test123"})
+
+        assert "Test123" in str(result)
+        # The arguments belong to the copy; the component the toolkit was built
+        # from must not have been the one that ran.
+        assert component._attributes.get("flow_tweak_data") is None
+
+    @pytest.mark.asyncio
+    async def test_a_copy_keeps_its_own_flow_output_methods(self):
+        """A copied component must resolve flow outputs through itself.
+
+        ``Component.__deepcopy__`` rebuilds the component instead of copying its
+        ``__dict__``, and a tool-mode node carries no selected-flow outputs to
+        rebuild them from, so the copy used to advertise resolver names in
+        ``_outputs_map`` that it did not have.
+        """
+        component = RunFlowBaseComponent(_id="RunFlow-copy")
+        component._outputs_map["TextOutput-1~text"] = Output(
+            name="TextOutput-1~text", display_name="text", method=None, types=["Message"]
+        )
+        component.map_outputs()
+        component._cached_flow_updated_at = "2026-09-15T10:00:00Z"
+        method_name = component._outputs_map["TextOutput-1~text"].method
+
+        copied = deepcopy(component)
+
+        assert getattr(copied, method_name).__self__ is copied
+        assert getattr(component, method_name).__self__ is component
+        # _pre_run_setup only runs on the vertex-built component, so without this
+        # the copy reads every cached graph as stale and refetches it per call.
+        assert copied._cached_flow_updated_at == "2026-09-15T10:00:00Z"
