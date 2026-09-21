@@ -32,7 +32,7 @@ from langflow.services.audit.query import (
     keyset_after,
     to_utc,
 )
-from langflow.services.database.models.audit_event.model import AuditEvent, as_utc
+from langflow.services.database.models.audit_event.model import AuditDatabaseClock, AuditEvent, as_utc
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.user.model import User
 
@@ -273,17 +273,27 @@ async def _store_window(
     model: Any,
     clauses: list[ColumnElement[bool]],
     state: CursorState | None,
+    cutoff: datetime,
     size: int,
 ) -> list[Any]:
-    where = [*clauses, keyset_after(model, state)] if state is not None else clauses
+    snapshot = col(model.timestamp) <= cutoff
+    where = [*clauses, snapshot]
+    if state is not None:
+        where.append(keyset_after(model, state))
     statement = select(model).where(*where).order_by(col(model.timestamp).desc(), col(model.id).desc()).limit(size)
     return list((await session.exec(statement)).all())
 
 
-async def count_feed(session: AsyncSession, filters: AuditFeedFilters) -> int:
+async def _database_cutoff(session: AsyncSession) -> datetime:
+    return to_utc((await session.exec(select(AuditDatabaseClock()))).one())
+
+
+async def count_feed(session: AsyncSession, filters: AuditFeedFilters, *, cutoff: datetime | None = None) -> int:
+    cutoff = cutoff or await _database_cutoff(session)
     total = 0
     for _, model, clauses in _store_plans(filters):
-        statement = select(func.count()).select_from(model).where(*clauses)
+        snapshot = col(model.timestamp) <= cutoff
+        statement = select(func.count()).select_from(model).where(*clauses, snapshot)
         total += int((await session.exec(statement)).one())
     return total
 
@@ -305,13 +315,21 @@ async def list_feed(
         msg = f"limit must be between 1 and {MAX_FEED_PAGE_SIZE}"
         raise ValueError(msg)
     state = decode_feed_cursor(cursor, filters) if cursor is not None else None
-    rows = await _merged_window(session, filters, state, limit + 1)
+    cutoff = state.cutoff if state is not None else await _database_cutoff(session)
+    rows = await _merged_window(session, filters, state, cutoff, limit + 1)
     items = rows[:limit]
     next_cursor = None
     if len(rows) > limit:
         timestamp, event_id = items[-1].key
-        next_cursor = encode_cursor(CursorState(filters.fingerprint(), timestamp, event_id))
-    total = await count_feed(session, filters) if include_total else None
+        next_cursor = encode_cursor(
+            CursorState(
+                fingerprint=filters.fingerprint(),
+                cutoff=cutoff,
+                timestamp=timestamp,
+                event_id=event_id,
+            )
+        )
+    total = await count_feed(session, filters, cutoff=cutoff) if include_total else None
     return AuditFeedPage(items=items, next_cursor=next_cursor, total=total)
 
 
@@ -319,11 +337,12 @@ async def _merged_window(
     session: AsyncSession,
     filters: AuditFeedFilters,
     state: CursorState | None,
+    cutoff: datetime,
     size: int,
 ) -> list[AuditFeedRow]:
     candidates: list[AuditFeedRow] = []
     for source, model, clauses in _store_plans(filters):
-        rows = await _store_window(session, model, clauses, state, size)
+        rows = await _store_window(session, model, clauses, state, cutoff, size)
         candidates.extend(AuditFeedRow(source, row) for row in rows)
     candidates.sort(key=lambda candidate: candidate.key, reverse=True)
     return candidates[:size]
@@ -343,14 +362,15 @@ async def iter_feed_batches(
     """
     state: CursorState | None = None
     fingerprint = filters.fingerprint()
+    cutoff = await _database_cutoff(session)
     while True:
-        rows = await _merged_window(session, filters, state, batch_size)
+        rows = await _merged_window(session, filters, state, cutoff, batch_size)
         if rows:
             yield rows
         if len(rows) < batch_size:
             return
         timestamp, event_id = rows[-1].key
-        state = CursorState(fingerprint, timestamp, event_id)
+        state = CursorState(fingerprint=fingerprint, cutoff=cutoff, timestamp=timestamp, event_id=event_id)
         session.expunge_all()
 
 
