@@ -5,7 +5,6 @@ from lfx.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
-from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 from pydantic.v1 import SecretStr
 
 
@@ -67,9 +66,6 @@ class SambaNovaComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         sambanova_url = self.base_url
-        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
-        if sambanova_url:
-            validate_connector_url_for_ssrf(sambanova_url)
 
         sambanova_api_key = self.api_key
         model_name = self.model_name
@@ -81,6 +77,10 @@ class SambaNovaComponent(LCModelComponent):
 
         # base_url is tenant-editable and the SDK sends the operator's API key to whatever
         # host it names. Block internal/cloud-metadata destinations before connecting.
+        # This is the only host check on this path: validate_provider_base_url is the strict
+        # one (no literal-loopback exemption, and it requires https for a credential-bearing
+        # endpoint), so running validate_connector_url_for_ssrf ahead of it only rejected the
+        # same URLs sooner, with a weaker message and a second lookup.
         validate_provider_base_url(sambanova_url)
 
         return ChatSambaNovaCloud(

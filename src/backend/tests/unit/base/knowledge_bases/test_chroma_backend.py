@@ -375,34 +375,44 @@ class TestChromaCloudMode:
         assert kwargs["cloud_host"] == "custom.host.example"
         assert kwargs["cloud_port"] == 8080
 
-    def test_get_cloud_client_rejects_ssrf_targets(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    @pytest.mark.parametrize("hostile_host", ["169.254.169.254", "10.0.0.5"])
+    async def test_resolve_secrets_rejects_ssrf_targets(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, hostile_host: str
+    ):
         """Tenant-controlled cloud_host must not reach internal/metadata IPs.
 
         Regression guard for the KB Chroma Cloud SSRF (CWE-918): cloud_host /
         cloud_port come straight from the request body's backend_config and
         were handed to chromadb.CloudClient unvalidated, letting a tenant point
-        the server at 169.254.169.254 / RFC1918 targets. The connector SSRF
-        policy must reject them before the client is built.
+        the server at 169.254.169.254 / RFC1918 targets.
+
+        The check lives in ``_resolve_secrets``, which ``ensure_ready`` runs before
+        anything can build a client, so it covers test-connection, create, ingest,
+        retrieval and delete from one place. It is deliberately *not* repeated in
+        ``_get_cloud_client``: ``vector_store`` builds lazily from a sync property,
+        so a validator call there is a blocking DNS lookup on the event loop.
         """
+        from unittest.mock import AsyncMock
+
         from lfx.utils.ssrf_protection import SSRFProtectionError
 
         monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
         monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
         monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
-        for hostile_host in ("169.254.169.254", "10.0.0.5"):
-            bk = ChromaCloudBackend(
-                kb_name="cloud_kb",
-                kb_path=tmp_path / "cloud_kb",
-                backend_config={"mode": "cloud", "cloud_host": hostile_host},
-                embedding_function=_DeterministicEmbeddings(),
-            )
-            bk._resolved_api_key = "k"
-            with (
-                patch("chromadb.CloudClient") as mock_cloud,
-                pytest.raises(SSRFProtectionError, match="blocked"),
-            ):
-                bk._get_cloud_client()
-            mock_cloud.assert_not_called()
+        bk = ChromaCloudBackend(
+            kb_name="cloud_kb",
+            kb_path=tmp_path / "cloud_kb",
+            backend_config={"mode": "cloud", "cloud_host": hostile_host},
+            embedding_function=_DeterministicEmbeddings(),
+        )
+        bk.resolve_required_secret = AsyncMock(return_value="k")
+        bk.resolve_secret = AsyncMock(return_value=None)
+        with (
+            patch("chromadb.CloudClient") as mock_cloud,
+            pytest.raises(SSRFProtectionError, match="blocked"),
+        ):
+            await bk._resolve_secrets()
+        mock_cloud.assert_not_called()
 
     def test_get_cloud_client_omits_host_port_when_not_configured(self, tmp_path: Path):
         from unittest.mock import patch

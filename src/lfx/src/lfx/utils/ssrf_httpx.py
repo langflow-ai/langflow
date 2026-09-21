@@ -35,7 +35,12 @@ def validate_url_for_ssrf_or_raise(url: str) -> None:
         validate_connector_url_for_ssrf(url)
     except SSRFProtectionError as e:
         msg = f"SSRF Protection: {e}"
-        raise ValueError(msg) from e
+        # Keep the typed error rather than flattening to a bare ValueError. It subclasses
+        # ValueError, so every `except ValueError` / pytest.raises(ValueError) caller is
+        # unaffected, but a caller that wants to distinguish a blocked destination from an
+        # ordinary bad value can, and a component that stacks this guard behind another one
+        # no longer changes the exception type depending on which fired first.
+        raise SSRFProtectionError(msg) from e
 
 
 def validate_strict_url_for_ssrf_or_raise(url: str) -> None:
@@ -45,7 +50,12 @@ def validate_strict_url_for_ssrf_or_raise(url: str) -> None:
             validate_url_for_ssrf(url)
     except SSRFProtectionError as e:
         msg = f"SSRF Protection: {e}"
-        raise ValueError(msg) from e
+        # Keep the typed error rather than flattening to a bare ValueError. It subclasses
+        # ValueError, so every `except ValueError` / pytest.raises(ValueError) caller is
+        # unaffected, but a caller that wants to distinguish a blocked destination from an
+        # ordinary bad value can, and a component that stacks this guard behind another one
+        # no longer changes the exception type depending on which fired first.
+        raise SSRFProtectionError(msg) from e
 
 
 def _validate_and_resolve_strict_url(url: str) -> tuple[str, list[str]]:
@@ -107,7 +117,12 @@ def ssrf_protected_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any]
         validated_url, validated_ips = validate_and_resolve_connector_url(url)
     except SSRFProtectionError as e:
         msg = f"SSRF Protection: {e}"
-        raise ValueError(msg) from e
+        # Keep the typed error rather than flattening to a bare ValueError. It subclasses
+        # ValueError, so every `except ValueError` / pytest.raises(ValueError) caller is
+        # unaffected, but a caller that wants to distinguish a blocked destination from an
+        # ordinary bad value can, and a component that stacks this guard behind another one
+        # no longer changes the exception type depending on which fired first.
+        raise SSRFProtectionError(msg) from e
     return _httpx_client_kwargs_for_validated_url(validated_url, validated_ips)
 
 
@@ -117,7 +132,12 @@ def ssrf_protected_strict_httpx_client_kwargs_for_url(url: str) -> tuple[dict[st
         validated_url, validated_ips = _validate_and_resolve_strict_url(url)
     except SSRFProtectionError as e:
         msg = f"SSRF Protection: {e}"
-        raise ValueError(msg) from e
+        # Keep the typed error rather than flattening to a bare ValueError. It subclasses
+        # ValueError, so every `except ValueError` / pytest.raises(ValueError) caller is
+        # unaffected, but a caller that wants to distinguish a blocked destination from an
+        # ordinary bad value can, and a component that stacks this guard behind another one
+        # no longer changes the exception type depending on which fired first.
+        raise SSRFProtectionError(msg) from e
     return _httpx_client_kwargs_for_validated_url(validated_url, validated_ips)
 
 
