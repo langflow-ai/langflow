@@ -27,7 +27,7 @@ from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.services.deps import session_scope
 from lfx.services.mcp_composer.service import COMPOSER_BACKEND_AUTH_HEADER
 from lfx.services.settings.base import Settings
@@ -1747,6 +1747,42 @@ async def test_list_project_tools_response_structure(client: AsyncClient, user_t
         assert "action_name" in tool
         assert "action_description" in tool
         assert "mcp_enabled" in tool
+
+
+async def test_list_project_tools_returns_registered_server_name(
+    client: AsyncClient, user_test_project, logged_in_headers
+):
+    """The response carries the name the backend registers.
+
+    Clients render this instead of deriving their own, which is how the copyable config
+    and the installed server stay in agreement.
+    """
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["server_name"] == project_mcp_server_name(user_test_project.name)
+
+
+async def test_list_project_tools_server_name_keeps_chinese_characters(client: AsyncClient, logged_in_headers):
+    """A Chinese project name survives into the server name the API reports."""
+    created = await client.post(
+        "api/v1/projects/",
+        json={"name": "\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert created.status_code in (200, 201)
+    project = created.json()
+
+    try:
+        response = await client.get(f"/api/v1/mcp/project/{project['id']}", headers=logged_in_headers)
+
+        assert response.status_code == 200
+        assert response.json()["server_name"] == "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848"
+    finally:
+        await client.delete(f"api/v1/projects/{project['id']}", headers=logged_in_headers)
 
 
 @pytest.mark.asyncio

@@ -1991,6 +1991,7 @@
   "sidebar.discoverMore": "探索更多组件",
   "sidebar.download": "下载",
   "sidebar.downloadError": "下载项目时发生错误。",
+  "sidebar.renameError": "重命名项目时出错。",
   "sidebar.emptyMessage": "开始创建项目或流程",
   "sidebar.getStarted": "开始",
   "sidebar.joinCommunity": "加入社区",

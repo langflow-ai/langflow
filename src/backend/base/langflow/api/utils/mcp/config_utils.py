@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
@@ -111,11 +111,11 @@ def project_mcp_server_name_candidates(project_id: UUID, project_name: str) -> l
     id-suffixed fallback keeps those projects apart without renaming servers that already exist.
     Sanitized names never contain hyphens, so the fallback cannot equal another project's base name.
     """
-    sanitized_name = sanitize_mcp_name(project_name)
-    base_name = f"lf-{sanitized_name[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    base_name = project_mcp_server_name(project_name)
     id_suffix = UUID(str(project_id)).hex[:PROJECT_SERVER_ID_SUFFIX_LENGTH]
     prefix_length = MAX_MCP_SERVER_NAME_LENGTH - 4 - PROJECT_SERVER_ID_SUFFIX_LENGTH - 1
-    return [base_name, f"lf-{sanitized_name[:prefix_length].rstrip('_')}-{id_suffix}"]
+    stem = base_name.removeprefix("lf-")
+    return [base_name, f"lf-{stem[:prefix_length].rstrip('_')}-{id_suffix}"]
 
 
 async def _server_config_targets_project(server_config: dict, project_id: UUID) -> bool:
@@ -187,6 +187,19 @@ async def validate_mcp_server_for_project(
                     server_name=candidate_name,
                     existing_config=candidate_config,
                 )
+
+        # A row stored under an older naming scheme (every CJK name used to collapse to
+        # lf-unnamed) matches no candidate. Registration and deletion adopt it so they neither
+        # duplicate nor orphan it; a rename keeps deriving from names so the row still moves.
+        if operation in {"create", "delete"}:
+            for stored_name, stored_config in existing_servers.items():
+                if stored_name.startswith("lf-") and await _server_config_targets_project(stored_config, project_id):
+                    return MCPServerValidationResult(
+                        server_exists=True,
+                        project_id_matches=True,
+                        server_name=stored_name,
+                        existing_config=stored_config,
+                    )
 
         free_name = next((name for name in candidate_names if name not in existing_servers), None)
         if free_name is not None:

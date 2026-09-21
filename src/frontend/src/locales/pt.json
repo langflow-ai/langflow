@@ -1991,6 +1991,7 @@
   "sidebar.discoverMore": "Descubra mais componentes",
   "sidebar.download": "Baixe aqui",
   "sidebar.downloadError": "Ocorreu um erro ao baixar seu projeto.",
+  "sidebar.renameError": "Ocorreu um erro ao renomear seu projeto.",
   "sidebar.emptyMessage": "Comece a criar um projeto ou um fluxo",
   "sidebar.getStarted": "Introdução",
   "sidebar.joinCommunity": "Junte-se à comunidade",

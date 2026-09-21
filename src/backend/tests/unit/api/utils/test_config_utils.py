@@ -174,6 +174,45 @@ class TestValidateMcpServerForProject:
             assert result.conflict_message == ""
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(("operation", "found"), [("create", True), ("delete", True), ("update", False)])
+    async def test_validate_finds_a_row_stored_under_an_older_name(
+        self, active_user, test_project, created_api_key, client: AsyncClient, operation, found
+    ):
+        """Registration and deletion adopt the project's row even when its name is stale.
+
+        Non-Latin names used to collapse to ``lf-unnamed``. Without this, startup
+        reconciliation would register a second row and deletion would orphan the first.
+        A rename keeps deriving from names, so a real rename still moves the row.
+        """
+        _, server_config = _build_server_config(client.base_url, test_project.id, "streamable")
+        response = await client.post(
+            "/api/v2/mcp/servers/lf-unnamed", json=server_config, headers={"x-api-key": created_api_key.api_key}
+        )
+        assert response.status_code == 200
+
+        from langflow.services.deps import get_settings_service, get_storage_service
+
+        async with session_scope() as session:
+            result = await validate_mcp_server_for_project(
+                test_project.id,
+                test_project.name,
+                active_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                operation=operation,
+            )
+
+        if found:
+            assert result.server_exists is True
+            assert result.project_id_matches is True
+            assert result.server_name == "lf-unnamed"
+            assert result.existing_config == server_config
+        else:
+            assert result.server_exists is False
+            assert result.server_name == "lf-test_project"
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("transport", ["streamable", "sse"])
     async def test_validate_server_exists_project_matches(
         self, active_user, test_project, created_api_key, client: AsyncClient, transport

@@ -13,6 +13,7 @@ import orjson
 from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import (
@@ -174,7 +175,11 @@ async def upload_project_flows(
 
     data["folder_name"] = project_name
 
-    project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+    try:
+        project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+    except ValidationError as e:
+        # The imported name is validated like a typed one; report why rather than 500
+        raise HTTPException(status_code=422, detail=e.errors()[0]["msg"]) from e
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None
