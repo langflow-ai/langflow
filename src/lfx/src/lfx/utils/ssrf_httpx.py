@@ -21,6 +21,7 @@ from lfx.utils.ssrf_transport import (
     SSRFProtectedTransport,
     create_ssrf_protected_client,
     create_ssrf_protected_sync_client,
+    pin_host_for_url,
 )
 
 # HTTP redirect responses carrying a Location header (RFC 9110).
@@ -62,7 +63,7 @@ def _raise_if_following_redirects(request_kwargs: dict[str, Any]) -> None:
 
 def _transport_host(url: str) -> str:
     """Return the IDNA-normalized host httpx/httpcore uses for connections."""
-    return httpx.URL(url).raw_host.decode("ascii")
+    return pin_host_for_url(url)
 
 
 def _async_client_for_url(url: str, validated_ips: list[str]) -> httpx.AsyncClient:
