@@ -5,6 +5,7 @@ from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.schema.dotdict import dotdict
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class NVIDIAModelComponent(LCModelComponent):
@@ -76,6 +77,10 @@ class NVIDIAModelComponent(LCModelComponent):
     ]
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
+        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        if self.base_url:
+            validate_connector_url_for_ssrf(self.base_url)
+
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
@@ -115,6 +120,10 @@ class NVIDIAModelComponent(LCModelComponent):
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        if self.base_url:
+            validate_connector_url_for_ssrf(self.base_url)
+
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
