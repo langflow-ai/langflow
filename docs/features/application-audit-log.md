@@ -233,8 +233,9 @@ the Flow schema (`written_fields`, `project`, `attempted_fields`). A
 `project_id` parameter here is an unknown parameter and answers 400.
 
 **Access.** Requires the `flow:audit_read` permission (`FlowAction.AUDIT_READ`);
-`project:audit_read` does not grant it. Without a plugin, a non-superuser reads
-events on Flows they own and events they made; a superuser reads every Flow event.
+`project:audit_read` does not grant it, and resource ownership does not implicitly
+grant it when an authorization plugin is active. Without a plugin, a non-superuser
+reads events on Flows they own and events they made; a superuser reads every Flow event.
 
 ## Invariants
 
