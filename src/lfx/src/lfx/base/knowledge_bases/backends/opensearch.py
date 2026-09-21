@@ -219,7 +219,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # ensure_ready()'s one-shot hook — covers test_connection, ingestion,
         # and retrieval alike, so a KB created against a hostile variable
         # stays blocked after configuration time too.
-        validate_connector_url_for_ssrf(url)
+        # ``_resolve_secrets`` is async and the validator resolves DNS, so run it off
+        # the event loop rather than stalling every other task on the worker for the
+        # duration of a lookup (a hostile or simply slow record makes that visible).
+        await asyncio.to_thread(validate_connector_url_for_ssrf, url)
         self._resolved_url = url
 
         username_variable = self.backend_config.get("username_variable") or DEFAULT_USERNAME_VARIABLE

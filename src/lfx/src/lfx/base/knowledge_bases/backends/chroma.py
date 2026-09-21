@@ -26,6 +26,7 @@ backend handle.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import gc
 import uuid
@@ -439,7 +440,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         """Verify Chroma Cloud credentials and reachability via heartbeat."""
         try:
             await self._resolve_secrets()
-            client = self._get_cloud_client()
+            # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+            # connection) called from async: keep it off the event loop.
+            client = await asyncio.to_thread(self._get_cloud_client)
             client.heartbeat()
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
@@ -468,7 +471,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         """
         await self.ensure_ready()
         collection_name = self._resolve_collection_name()
-        client = self._get_cloud_client()
+        # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+        # connection) called from async: keep it off the event loop.
+        client = await asyncio.to_thread(self._get_cloud_client)
         client.delete_collection(name=collection_name)
 
     def raw_langchain_store(self) -> Chroma:

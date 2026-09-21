@@ -11,6 +11,8 @@ codecov measures ``src/lfx`` from — sees the new lines exercised.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -100,3 +102,32 @@ def test_chroma_cloud_client_passes_allowlisted_host_and_port(tmp_path: Path, mo
     _, kwargs = mock_cloud.call_args
     assert kwargs["cloud_host"] == "custom.host.example"
     assert kwargs["cloud_port"] == 8080
+
+
+async def test_opensearch_ssrf_validation_runs_off_the_event_loop(ssrf_env) -> None:
+    """The validator resolves DNS, so it must not run inline on the loop.
+
+    ``_resolve_secrets`` is async, and a hostile or merely slow DNS record would
+    otherwise stall every other task on the worker for the length of a lookup.
+    """
+    _ = ssrf_env
+    backend = OpenSearchBackend.__new__(OpenSearchBackend)
+    backend.backend_config = {"url_variable": "OPENSEARCH_URL"}
+    backend.resolve_secret = AsyncMock(return_value="https://opensearch.example.com:9200")
+
+    offloaded: list[object] = []
+    real_to_thread = asyncio.to_thread
+
+    async def recording_to_thread(func, /, *args, **kwargs):
+        offloaded.append(func)
+        return await real_to_thread(func, *args, **kwargs)
+
+    with (
+        patch("lfx.base.knowledge_bases.backends.opensearch.asyncio.to_thread", recording_to_thread),
+        patch("lfx.base.knowledge_bases.backends.opensearch.validate_connector_url_for_ssrf") as mock_validate,
+        contextlib.suppress(Exception),
+    ):
+        await backend._resolve_secrets()
+
+    assert mock_validate in offloaded, "the SSRF validator resolved DNS on the event loop instead of in a worker thread"
+    mock_validate.assert_called_once_with("https://opensearch.example.com:9200")
