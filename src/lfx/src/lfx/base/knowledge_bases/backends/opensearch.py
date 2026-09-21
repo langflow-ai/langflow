@@ -210,6 +210,19 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 "(or env var of the same name) populated with the cluster URL."
             )
             raise ValueError(msg)
+        # The URL comes from a tenant-controlled Langflow variable, so the
+        # server must not dial it blindly (CWE-918). Enforce the same
+        # connector SSRF policy the vector-store components use: private /
+        # link-local / cloud-metadata targets are rejected unless the operator
+        # allowlists the host via LANGFLOW_SSRF_ALLOWED_HOSTS (or disables
+        # connector SSRF validation). Running the check here — inside
+        # ensure_ready()'s one-shot hook — covers test_connection, ingestion,
+        # and retrieval alike, so a KB created against a hostile variable
+        # stays blocked after configuration time too.
+        # ``_resolve_secrets`` is async and the validator resolves DNS, so run it off
+        # the event loop rather than stalling every other task on the worker for the
+        # duration of a lookup (a hostile or simply slow record makes that visible).
+        await asyncio.to_thread(validate_connector_url_for_ssrf, url)
         await self._validate_url(url, url_variable)
         self._resolved_url = url
 
@@ -392,6 +405,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """
         try:
             await self.ensure_ready()
+        except SSRFProtectionError as exc:
+            # SSRFProtectionError subclasses ValueError, so it must be caught
+            # ahead of the ConfigError branch to keep the reported type honest.
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc),
+                details={"type": type(exc).__name__},
+            )
         except ValueError as exc:
             return TestConnectionResult(
                 ok=False,

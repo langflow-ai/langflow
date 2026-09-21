@@ -353,6 +353,17 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         if self._resolved_database:
             kwargs["database"] = self._resolved_database
         if cfg.get("cloud_host"):
+            # ``cloud_host`` / ``cloud_port`` are tenant-controlled (they come
+            # straight from the request body's backend_config), so the server
+            # must not dial them blindly (CWE-918). Enforce the same connector
+            # SSRF policy the vector-store components use before handing the
+            # target to chromadb.CloudClient; private / link-local /
+            # cloud-metadata targets are rejected unless the operator
+            # allowlists the host via LANGFLOW_SSRF_ALLOWED_HOSTS.
+            # ``CloudClient`` speaks HTTPS by default, so the check URL uses
+            # the https scheme and the configured port (443 when unset).
+            cloud_port = int(cfg["cloud_port"]) if cfg.get("cloud_port") else 443
+            validate_connector_url_for_ssrf(f"https://{cfg['cloud_host']}:{cloud_port}")
             kwargs["cloud_host"] = cfg["cloud_host"]
         if cfg.get("cloud_port"):
             kwargs["cloud_port"] = int(cfg["cloud_port"])
@@ -460,7 +471,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         """Verify Chroma Cloud credentials and reachability via heartbeat."""
         try:
             await self._resolve_secrets()
-            client = self._get_cloud_client()
+            # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+            # connection) called from async: keep it off the event loop.
+            client = await asyncio.to_thread(self._get_cloud_client)
             client.heartbeat()
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
@@ -489,7 +502,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         """
         await self.ensure_ready()
         collection_name = self._resolve_collection_name()
-        client = self._get_cloud_client()
+        # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+        # connection) called from async: keep it off the event loop.
+        client = await asyncio.to_thread(self._get_cloud_client)
         client.delete_collection(name=collection_name)
 
     def raw_langchain_store(self) -> Chroma:
