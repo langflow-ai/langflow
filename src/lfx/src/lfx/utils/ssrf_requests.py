@@ -16,6 +16,7 @@ is unchanged for operators who have not enabled it.
 
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -71,6 +72,54 @@ def refuse_redirects(session: requests.Session) -> requests.Session:
         raise SSRFProtectionError(msg)
 
     session.resolve_redirects = resolve_redirects
+    return session
+
+
+def refuse_aiohttp_redirects(session: Any) -> Any:
+    """Make an ``aiohttp.ClientSession`` raise instead of following a redirect, and return it.
+
+    The asynchronous counterpart of :func:`refuse_redirects`, for SDKs that run their
+    streaming and async inference over ``aiohttp`` while their blocking calls go through
+    ``requests``. Hardening only the ``requests`` side leaves the async path free to follow
+    a redirect, which is the same credential- and prompt-disclosure hole in a different
+    transport: ``aiohttp`` follows redirects by default and, like ``requests``, keeps the
+    ``Authorization`` header when the hop stays on the same hostname.
+
+    ``aiohttp`` decides redirects inside ``ClientSession._request``, and the SDK calls
+    ``session.get``/``session.post`` without forwarding request kwargs, so the policy is
+    installed by wrapping that method on the instance: every request is issued with
+    ``allow_redirects=False`` and a redirect response is refused rather than returned, so a
+    caller cannot resume the hop by reading ``Location`` itself.
+
+    The session's own configuration (connector, TLS context, timeouts, headers) is left
+    intact; only redirect resolution is replaced. ``aiohttp`` is not imported here -- the
+    session is duck-typed -- so this module stays importable without it.
+
+    Args:
+        session: The ``aiohttp.ClientSession`` to harden. It is modified in place.
+
+    Returns:
+        The same session, for use as a drop-in factory result.
+    """
+    # Redirects are decided inside ClientSession._request; aiohttp exposes no public seam.
+    original_request = session._request  # noqa: SLF001
+
+    async def guarded_request(method: str, url: Any, **kwargs: Any):
+        kwargs["allow_redirects"] = False
+        response = await original_request(method, url, **kwargs)
+        if response.status in REDIRECT_STATUS_CODES:
+            location = response.headers.get("Location", "")
+            response.close()
+            msg = (
+                f"Refusing to follow the redirect from {response.url} to '{location}'. "
+                "This provider transport cannot re-validate a redirect target, and a same-host "
+                "redirect keeps the Authorization header, so following it could send the "
+                "credential to an unvalidated destination."
+            )
+            raise SSRFProtectionError(msg)
+        return response
+
+    session._request = guarded_request  # noqa: SLF001
     return session
 
 

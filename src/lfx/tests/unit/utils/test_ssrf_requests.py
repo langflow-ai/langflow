@@ -8,7 +8,12 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 from lfx.utils.ssrf_protection import SSRFProtectionError
-from lfx.utils.ssrf_requests import REDIRECT_STATUS_CODES, refuse_redirects, ssrf_safe_get
+from lfx.utils.ssrf_requests import (
+    REDIRECT_STATUS_CODES,
+    refuse_aiohttp_redirects,
+    refuse_redirects,
+    ssrf_safe_get,
+)
 
 
 def _resolve_public(host, *_args, **_kwargs):
@@ -256,3 +261,84 @@ class TestRefuseRedirects:
         assert hardened is session
         assert hardened.verify == "/etc/ssl/corp-ca.pem"
         assert hardened.headers["X-Marker"] == "kept"
+
+
+class _StubAiohttpSession:
+    """The two attributes ``refuse_aiohttp_redirects`` touches, without depending on aiohttp.
+
+    ``aiohttp`` is not an lfx dependency -- only bundles that ship an SDK using it pull it in
+    -- so the helper duck-types the session and these tests do the same. The real transport is
+    exercised against the pinned SDK in ``src/bundles/lfx-bundles/tests/test_nvidia_component.py``.
+    """
+
+    def __init__(self, response):
+        self._response = response
+        self.calls: list[dict] = []
+
+    async def _request(self, method, url, **kwargs):
+        self.calls.append({"method": method, "url": url, **kwargs})
+        return self._response
+
+
+class _StubAiohttpResponse:
+    def __init__(self, status, location=None):
+        self.status = status
+        self.headers = {"Location": location} if location else {}
+        self.url = "https://api.example.com/v1/chat/completions"
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+class TestRefuseAiohttpRedirects:
+    """The async transports need the same refusal; aiohttp follows redirects by default too."""
+
+    @staticmethod
+    def _session(status, location=None):
+        response = _StubAiohttpResponse(status, location)
+        session = _StubAiohttpSession(response)
+        return refuse_aiohttp_redirects(session), response
+
+    @pytest.mark.parametrize("status", sorted(REDIRECT_STATUS_CODES))
+    async def test_should_raise_on_any_redirect_status(self, status):
+        session, response = self._session(status, "https://elsewhere.example.com/v1")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            await session._request("POST", "https://api.example.com/v1/chat/completions")
+
+        assert response.closed, "the refused response must be released, not left dangling"
+
+    async def test_should_raise_on_a_same_host_port_change(self):
+        """A same-host hop keeps the Authorization header, so a new port is still a new service."""
+        session, _ = self._session(307, "http://api.example.com:9999/internal")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            await session._request("POST", "https://api.example.com/v1/chat/completions")
+
+    async def test_should_disable_redirect_following_on_every_request(self):
+        """Refusing the response is the backstop; aiohttp must not have followed it already."""
+        session, _ = self._session(200)
+
+        await session._request("POST", "https://api.example.com/v1", json={"prompt": "hi"})
+
+        assert session.calls[0]["allow_redirects"] is False
+        assert session.calls[0]["json"] == {"prompt": "hi"}
+
+    async def test_should_override_a_caller_supplied_allow_redirects(self):
+        session, _ = self._session(200)
+
+        await session._request("GET", "https://api.example.com/v1/models", allow_redirects=True)
+
+        assert session.calls[0]["allow_redirects"] is False
+
+    async def test_should_return_a_normal_response_untouched(self):
+        session, response = self._session(200)
+
+        assert await session._request("GET", "https://api.example.com/v1/models") is response
+        assert not response.closed
+
+    def test_should_return_the_same_session(self):
+        session = _StubAiohttpSession(_StubAiohttpResponse(200))
+
+        assert refuse_aiohttp_redirects(session) is session

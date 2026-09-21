@@ -5,7 +5,11 @@ and that model options are populated dynamically via update_build_config.
 """
 
 import contextlib
+import http.server
+import json
 import sys
+import threading
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -238,103 +242,280 @@ class TestNVIDIAAbsentKeyCredentialEgress:
         assert mock_module.ChatNVIDIA.call_args.kwargs["base_url"] == self.CUSTOM_URL
 
 
-class TestNVIDIARedirectHandling:
-    """ChatNVIDIA owns a ``requests.Session``, which follows redirects by default.
+class _LoopbackHandler(http.server.BaseHTTPRequestHandler):
+    """Base handler: silences logging and records what actually reached this server."""
 
-    ``requests`` only drops the Authorization header when a redirect changes the
-    *hostname*, so a same-host redirect -- including one that switches port or downgrades
-    to cleartext http -- carries the API key to a destination the endpoint guard never
-    validated. Every other guarded provider takes redirect-free httpx clients; this one
-    has to be hardened on the session itself.
+    protocol_version = "HTTP/1.1"
+    received: list[dict]
+
+    def log_message(self, *args):  # noqa: ARG002 - silence the stderr access log
+        return
+
+    def _read_body(self) -> str:
+        length = int(self.headers.get("Content-Length") or 0)
+        return self.rfile.read(length).decode() if length else ""
+
+    def _json(self, payload: dict) -> None:
+        body = json.dumps(payload).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def _serve(handler_cls) -> tuple[Any, int]:
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, server.server_address[1]
+
+
+@pytest.fixture
+def redirect_endpoint():
+    """A base_url that answers every request with a 307 to a second, unapproved port.
+
+    Yields ``(base_url, received)`` where ``received`` is the list of requests that reached
+    the *redirect target*. It must stay empty: nothing may be forwarded there, and in
+    particular no prompt body.
+    """
+    received: list[dict] = []
+
+    class Target(_LoopbackHandler):
+        def _record(self):
+            received.append(
+                {
+                    "path": self.path,
+                    "authorization": self.headers.get("Authorization"),
+                    "body": self._read_body(),
+                }
+            )
+            self._json({"data": [{"id": "target-model", "object": "model"}]})
+
+        def do_GET(self):
+            self._record()
+
+        def do_POST(self):
+            self._record()
+
+    target_server, target_port = _serve(Target)
+
+    class Redirector(_LoopbackHandler):
+        def _redirect(self):
+            self.send_response(307)
+            self.send_header("Location", f"http://127.0.0.1:{target_port}{self.path}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_GET(self):
+            self._redirect()
+
+        def do_POST(self):
+            self._redirect()
+
+    redirect_server, redirect_port = _serve(Redirector)
+    try:
+        yield f"http://127.0.0.1:{redirect_port}/v1", received
+    finally:
+        redirect_server.shutdown()
+        target_server.shutdown()
+
+
+@pytest.fixture
+def working_endpoint():
+    """A base_url that answers normally, to prove the policy does not break ordinary calls."""
+    served: list[str] = []
+
+    class Endpoint(_LoopbackHandler):
+        def do_GET(self):
+            served.append(self.path)
+            self._json({"data": [{"id": "ok-model", "object": "model"}]})
+
+        def do_POST(self):
+            served.append(self.path)
+            if json.loads(self._read_body() or "{}").get("stream"):
+                body = (
+                    b'data: {"choices":[{"index":0,"delta":{"content":"he"}}]}\n\n'
+                    b'data: {"choices":[{"index":0,"delta":{"content":"llo"}}]}\n\n'
+                    b"data: [DONE]\n\n"
+                )
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            self._json(
+                {
+                    "id": "x",
+                    "choices": [
+                        {"index": 0, "message": {"role": "assistant", "content": "hello"}, "finish_reason": "stop"}
+                    ],
+                }
+            )
+
+    server, port = _serve(Endpoint)
+    try:
+        yield f"http://127.0.0.1:{port}/v1", served
+    finally:
+        server.shutdown()
+
+
+@pytest.fixture
+def redirect_policy():
+    """Install the policy on the real pinned SDK and restore the class afterwards.
+
+    The policy patches ``_NVIDIAClient`` itself -- that is the point, since the client issues
+    a request from inside its own constructor -- so it has to be undone or it would leak into
+    every later test in the session.
+    """
+    common = pytest.importorskip("langchain_nvidia_ai_endpoints._common")
+    from lfx_bundles.nvidia.nvidia import _REDIRECT_POLICY_INSTALLED, _install_redirect_policy
+
+    client_cls = common._NVIDIAClient
+    saved = {
+        "__init__": client_cls.__init__,
+        "_create_session": client_cls._create_session,
+        "_create_async_session": client_cls._create_async_session,
+    }
+    was_installed = getattr(client_cls, _REDIRECT_POLICY_INSTALLED, False)
+    _install_redirect_policy()
+    try:
+        yield
+    finally:
+        for name, attr in saved.items():
+            setattr(client_cls, name, attr)
+        if not was_installed:
+            with contextlib.suppress(AttributeError):
+                delattr(client_cls, _REDIRECT_POLICY_INSTALLED)
+
+
+@pytest.mark.usefixtures("redirect_policy")
+class TestNVIDIARedirectPolicy:
+    """Redirects must be refused on every NVIDIA transport, from the first request onward.
+
+    ``requests`` and ``aiohttp`` both follow redirects by default and both keep the
+    ``Authorization`` header across a same-host hop, so an endpoint the operator allowlisted
+    could bounce the request -- key and prompt included -- to a port the endpoint guard never
+    saw. These tests run the real pinned SDK against loopback servers; the assertion that
+    matters in each is that the redirect target received nothing.
     """
 
-    @staticmethod
-    def _fake_chat_nvidia_module(*, with_session_factory=True):
-        """A stand-in for the SDK whose client mirrors ``_NVIDIAClient``'s session factory."""
-        import requests
-
-        module = MagicMock()
-        client = MagicMock()
-        if with_session_factory:
-            client.get_session_fn = requests.Session
-        else:
-            del client.get_session_fn
-        model = MagicMock()
-        model._client = client
-        del model._async_client
-        module.ChatNVIDIA.return_value = model
-        return module
+    API_KEY = "nvapi-canary-0123456789"  # pragma: allowlist secret
+    PROMPT = "SECRET_PROMPT_CANARY"
 
     @staticmethod
-    def _redirect_response():
-        response = MagicMock()
-        response.status_code = 302
-        response.headers = {"Location": "http://integrate.api.nvidia.com:9999/internal"}
-        response.url = "https://integrate.api.nvidia.com/v1/chat/completions"
-        response.is_redirect = True
-        return response
+    def _chat(base_url: str, **kwargs):
+        from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
-    def _component(self):
+        return ChatNVIDIA(base_url=base_url, api_key=TestNVIDIARedirectPolicy.API_KEY, **kwargs)
+
+    def test_constructor_discovery_refuses_redirect(self, redirect_endpoint):
+        """ChatNVIDIA resolves available_models inside __init__, before any hook could run."""
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        base_url, received = redirect_endpoint
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            self._chat(base_url)
+
+        assert received == [], "model discovery followed the redirect to an unapproved host"
+
+    def test_sync_inference_refuses_redirect(self, redirect_endpoint):
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        base_url, received = redirect_endpoint
+        model = self._chat(base_url, model="target-model")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            model.invoke(self.PROMPT)
+
+        assert received == []
+
+    async def test_async_inference_refuses_redirect(self, redirect_endpoint):
+        """_agenerate runs on aiohttp, which a requests-only hook leaves unprotected."""
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        base_url, received = redirect_endpoint
+        model = self._chat(base_url, model="target-model")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            await model.ainvoke(self.PROMPT)
+
+        assert received == [], "async inference forwarded the request to the redirect target"
+        assert all(self.PROMPT not in entry["body"] for entry in received)
+
+    async def test_streaming_refuses_redirect(self, redirect_endpoint):
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        base_url, received = redirect_endpoint
+        model = self._chat(base_url, model="target-model")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            async for _ in model.astream(self.PROMPT):
+                pass
+
+        assert received == []
+
+    async def test_ordinary_requests_still_work(self, working_endpoint):
+        """The policy replaces redirect resolution only; normal traffic is untouched."""
+        base_url, served = working_endpoint
+
+        model = self._chat(base_url)
+        assert model.model == "ok-model"  # resolved by constructor-time discovery
+        assert model.invoke("hi").content == "hello"
+        assert (await model.ainvoke("hi")).content == "hello"
+        assert "".join([chunk.content async for chunk in model.astream("hi")]) == "hello"
+
+        assert served == ["/v1/models"] + ["/v1/chat/completions"] * 3
+
+
+class TestNVIDIARedirectPolicyFailsClosed:
+    """A moved SDK seam must stop the request, not downgrade to an unprotected client."""
+
+    def test_missing_client_class_refuses_to_build(self, monkeypatch):
+        common = pytest.importorskip("langchain_nvidia_ai_endpoints._common")
+        from lfx_bundles.nvidia.nvidia import _install_redirect_policy
+
+        monkeypatch.delattr(common, "_NVIDIAClient", raising=False)
+
+        with pytest.raises(ValueError, match="no longer exposes '_NVIDIAClient'"):
+            _install_redirect_policy()
+
+    def test_missing_session_factory_refuses_to_build(self, monkeypatch):
+        common = pytest.importorskip("langchain_nvidia_ai_endpoints._common")
+        from lfx_bundles.nvidia.nvidia import _install_redirect_policy
+
+        class Moved:
+            def _create_session(self):
+                return None
+
+        monkeypatch.setattr(common, "_NVIDIAClient", Moved)
+
+        with pytest.raises(ValueError, match="no longer exposes its session factories"):
+            _install_redirect_policy()
+
+    def test_component_installs_policy_before_constructing_the_client(self, monkeypatch):
+        """get_models must harden the SDK first: the client requests during construction."""
         from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
+
+        order: list[str] = []
+        monkeypatch.setattr(
+            "lfx_bundles.nvidia.nvidia._install_redirect_policy",
+            lambda: order.append("install"),
+        )
+
+        mock_module = MagicMock()
+        mock_module.ChatNVIDIA.side_effect = lambda **_kwargs: order.append("construct") or MagicMock(
+            available_models=[]
+        )
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", mock_module)
 
         component = NVIDIAModelComponent()
         component._attributes = {
             "base_url": "https://integrate.api.nvidia.com/v1",
             "api_key": "nvapi-tenant-owned-1a2b3c4d",  # pragma: allowlist secret
             "tool_model_enabled": False,
-            "model_name": "model-a",
-            "max_tokens": 10,
-            "temperature": 0.1,
-            "seed": 1,
         }
-        return component
+        component.get_models()
 
-    def test_build_model_session_refuses_a_same_host_redirect(self, monkeypatch):
-        from lfx.utils.ssrf_protection import SSRFProtectionError
-
-        module = self._fake_chat_nvidia_module()
-        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
-
-        model = self._component().build_model()
-
-        session = model._client.get_session_fn()
-        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
-            list(session.resolve_redirects(self._redirect_response(), MagicMock()))
-
-    def test_get_models_session_refuses_a_same_host_redirect(self, monkeypatch):
-        """Model discovery fires before any inference call and must be hardened too."""
-        from lfx.utils.ssrf_protection import SSRFProtectionError
-
-        module = self._fake_chat_nvidia_module()
-        model = module.ChatNVIDIA.return_value
-        model.available_models = []
-        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
-
-        self._component().get_models()
-
-        session = model._client.get_session_fn()
-        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
-            list(session.resolve_redirects(self._redirect_response(), MagicMock()))
-
-    def test_session_still_serves_non_redirect_responses(self, monkeypatch):
-        module = self._fake_chat_nvidia_module()
-        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
-
-        model = self._component().build_model()
-
-        ok = MagicMock()
-        ok.is_redirect = False
-        assert list(model._client.get_session_fn().resolve_redirects(ok, MagicMock())) == []
-
-    def test_warns_when_the_sdk_stops_exposing_the_session_factory(self, monkeypatch):
-        """A silent fail-open on an SDK bump is the thing to avoid; make it loud."""
-        import lfx_bundles.nvidia.nvidia as nvidia_mod
-
-        module = self._fake_chat_nvidia_module(with_session_factory=False)
-        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
-        warnings = []
-        monkeypatch.setattr(nvidia_mod.logger, "warning", warnings.append)
-
-        self._component().build_model()
-
-        assert any("no longer exposes 'get_session_fn'" in message for message in warnings)
+        assert order == ["install", "construct"]
