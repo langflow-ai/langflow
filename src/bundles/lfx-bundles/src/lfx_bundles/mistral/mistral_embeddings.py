@@ -1,6 +1,7 @@
+import httpx
 from langchain_mistralai import MistralAIEmbeddings
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import provider_httpx_clients
+from lfx.base.models.provider_ssrf import provider_httpx_client_kwargs
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from pydantic.v1 import SecretStr
@@ -53,12 +54,27 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
         # endpoint is tenant-editable and the SDK sends the operator's API key to whatever
         # host it names. Route a custom endpoint through DNS-pinned, redirect-free clients
         # (no-op for the default Mistral endpoint).
-        ssrf_clients = provider_httpx_clients(self.endpoint, default_url=DEFAULT_MISTRAL_ENDPOINT)
+        #
+        # MistralAIEmbeddings only configures its clients inside "if not self.client:", so an
+        # injected client has to arrive fully formed: it posts to the *relative* path
+        # "/embeddings", and it puts the API key in an Authorization header rather than on
+        # the request. A transport-only client therefore has no base URL (httpx raises
+        # UnsupportedProtocol on the relative path) and no credentials. Build the clients
+        # here to the SDK's contract and keep the pinned transport.
+        sync_kwargs, async_kwargs = provider_httpx_client_kwargs(self.endpoint, default_url=DEFAULT_MISTRAL_ENDPOINT)
         client_kwargs = {}
-        if "http_client" in ssrf_clients:
-            client_kwargs["client"] = ssrf_clients["http_client"]
-        if "http_async_client" in ssrf_clients:
-            client_kwargs["async_client"] = ssrf_clients["http_async_client"]
+        if sync_kwargs or async_kwargs:
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            }
+            client_kwargs["client"] = httpx.Client(
+                base_url=self.endpoint, headers=headers, timeout=self.timeout, **sync_kwargs
+            )
+            client_kwargs["async_client"] = httpx.AsyncClient(
+                base_url=self.endpoint, headers=headers, timeout=self.timeout, **async_kwargs
+            )
 
         return MistralAIEmbeddings(
             api_key=api_key,

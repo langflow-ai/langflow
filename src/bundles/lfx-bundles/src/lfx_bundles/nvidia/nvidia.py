@@ -87,6 +87,16 @@ class NVIDIAModelComponent(LCModelComponent):
 
         # base_url is tenant-editable and the SDK sends the operator's API key to whatever
         # host it names. Block internal/cloud-metadata destinations before connecting.
+        #
+        # Residual: this is validate-then-connect, not connection-time pinning.
+        # langchain-nvidia-ai-endpoints ~=1.0 builds its own requests.Session in
+        # _NVIDIAClient._create_session and overwrites get_session_fn with it in __init__, so
+        # there is no supported hook to dial a pre-resolved IP while keeping TLS SNI and
+        # certificate verification. A hostname whose DNS answer changes between this check
+        # and the SDK's own resolution is therefore not covered. Literal IPs - the
+        # high-value targets, cloud metadata and RFC1918 - have no DNS to rebind and are
+        # blocked outright. Deployments that need a hard guarantee should restrict
+        # destinations with the ssrf_allowed_hosts operator allowlist.
         validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
 
         # Note: don't include the previous model, as it may not exist in available models from the new base url

@@ -350,3 +350,113 @@ def test_baidu_qianfan_build_blocks_metadata_url_before_sdk_client():
         component.build_model()
 
     mock_qianfan.assert_not_called()
+
+
+def test_mistral_embeddings_custom_endpoint_client_satisfies_the_sdk_contract():
+    """An injected client must arrive fully formed, not transport-only.
+
+    MistralAIEmbeddings only configures its clients inside ``if not self.client:``,
+    and that branch is what sets base_url, the bearer header and the timeout. It
+    then posts to the *relative* path "/embeddings", so a transport-only client
+    has no base URL (httpx raises UnsupportedProtocol) and no credentials.
+    """
+    import httpx
+
+    pytest.importorskip("langchain_mistralai")
+    from lfx_bundles.mistral.mistral_embeddings import MistralAIEmbeddingsComponent
+
+    component = MistralAIEmbeddingsComponent(
+        endpoint="https://mistral.example.com/v1",
+        mistral_api_key="sk-test",  # pragma: allowlist secret
+        model="mistral-embed",
+        max_concurrent_requests=1,
+        max_retries=1,
+        timeout=30,
+    )
+    # Pinning itself is exercised elsewhere; here we only need the non-default path,
+    # so stand in kwargs that require no DNS resolution.
+    with patch(
+        "lfx_bundles.mistral.mistral_embeddings.provider_httpx_client_kwargs",
+        return_value=({"follow_redirects": False}, {"follow_redirects": False}),
+    ):
+        embeddings = component.build_embeddings()
+
+    client = embeddings.client
+    assert str(client.base_url) == "https://mistral.example.com/v1/"
+    assert client.headers["authorization"] == "Bearer sk-test"
+    assert client.headers["content-type"] == "application/json"
+    assert client.timeout.connect == 30
+    assert client.follow_redirects is False
+    assert str(embeddings.async_client.base_url) == "https://mistral.example.com/v1/"
+    assert embeddings.async_client.headers["authorization"] == "Bearer sk-test"
+
+    # And the request the SDK actually issues resolves and parses.
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["auth"] = request.headers.get("authorization")
+        return httpx.Response(200, json={"data": [{"embedding": [0.1, 0.2]}]})
+
+    embeddings.client = httpx.Client(
+        base_url=client.base_url,
+        headers=client.headers,
+        timeout=client.timeout,
+        transport=httpx.MockTransport(handler),
+    )
+    assert embeddings.embed_documents(["hello"]) == [[0.1, 0.2]]
+    assert seen["url"] == "https://mistral.example.com/v1/embeddings"
+    assert seen["auth"] == "Bearer sk-test"
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    ["ernie-3.5-8k-0329", "ernie-4.0-8k", "completions_pro", "ERNIE_Speed", ""],
+)
+def test_baidu_qianfan_accepts_model_identifiers(endpoint):
+    """Qianfan's "endpoint" is a model id appended to the SDK's own host, not a URL.
+
+    Validating it as an HTTP base URL rejected every legitimate value.
+    """
+    pytest.importorskip("qianfan")
+    try:
+        from lfx_bundles.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
+    except Exception:
+        pytest.skip("qianfan stack is not importable (likely pydantic v1 incompatibility)")
+
+    component = QianfanChatEndpointComponent(
+        endpoint=endpoint, model="ERNIE-Bot-turbo-AI", qianfan_ak="ak", qianfan_sk="sk"
+    )
+    with patch("lfx_bundles.baidu.baidu_qianfan_chat.QianfanChatEndpoint") as mock_qianfan:
+        component.build_model()
+    mock_qianfan.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        BLOCKED_URL,
+        "https://evil.example.com",
+        "//evil.example.com/x",
+        "../../etc/passwd",
+        "chat/completions",
+        "model?x=1",
+    ],
+)
+def test_baidu_qianfan_rejects_origin_and_path_injection(endpoint):
+    """A value that changes the origin or escapes the SDK's path is still refused."""
+    pytest.importorskip("qianfan")
+    try:
+        from lfx_bundles.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
+    except Exception:
+        pytest.skip("qianfan stack is not importable (likely pydantic v1 incompatibility)")
+
+    component = QianfanChatEndpointComponent(
+        endpoint=endpoint, model="ERNIE-Bot-turbo-AI", qianfan_ak="ak", qianfan_sk="sk"
+    )
+    with (
+        patch("lfx_bundles.baidu.baidu_qianfan_chat.QianfanChatEndpoint") as mock_qianfan,
+        pytest.raises(ValueError, match="model identifier"),
+    ):
+        component.build_model()
+    mock_qianfan.assert_not_called()

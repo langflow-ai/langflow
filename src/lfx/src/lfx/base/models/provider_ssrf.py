@@ -23,9 +23,11 @@ which hosts a stored provider credential may be sent to is a separate, additive 
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 from lfx.utils.ssrf_httpx import (
+    ssrf_protected_strict_httpx_client_kwargs_for_url,
     ssrf_protected_strict_openai_clients_for_url,
     ssrf_safe_strict_httpx_post,
     validate_strict_url_for_ssrf_or_raise,
@@ -78,6 +80,38 @@ def validate_provider_base_url(base_url: str | None, *, default_url: str | None 
     validate_strict_url_for_ssrf_or_raise(base_url)
 
 
+_MODEL_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._\\-]*$")
+
+
+def validate_provider_model_identifier(value: str | None, *, field_name: str = "endpoint") -> None:
+    """Validate a provider field that names a *model*, not an HTTP endpoint.
+
+    Some SDKs call a model identifier an "endpoint" and append it to their own
+    configured API host (Qianfan builds ``/chat/{endpoint}``). Such a field is
+    not a URL: running it through the base-URL SSRF guard rejects every
+    legitimate value, while what actually needs preventing is a value that
+    changes the origin or escapes the path the SDK builds.
+
+    Accepts the identifier shape those SDKs document (``ernie-3.5-8k-0329``,
+    ``completions_pro``) and rejects anything carrying a scheme, authority,
+    path separator, traversal sequence, query, fragment or control character.
+
+    Raises:
+        ValueError: If the value is non-empty and is not a bare identifier.
+    """
+    if value is None or not str(value).strip():
+        return
+    candidate = str(value).strip()
+    if not _MODEL_IDENTIFIER_RE.match(candidate) or ".." in candidate:
+        msg = (
+            f"Invalid {field_name} '{candidate}': expected a model identifier such as "
+            "'ernie-3.5-8k-0329', not a URL or path. The provider SDK appends this value to "
+            "its own API host, so it must not contain a scheme, host, path separator or "
+            "traversal sequence."
+        )
+        raise ValueError(msg)
+
+
 def provider_httpx_clients(
     base_url: str | None, *, default_url: str | None = None
 ) -> dict[str, httpx.Client | httpx.AsyncClient]:
@@ -85,6 +119,26 @@ def provider_httpx_clients(
     if _is_provider_default(base_url, default_url):
         return {}
     return ssrf_protected_strict_openai_clients_for_url(base_url)
+
+
+def provider_httpx_client_kwargs(
+    base_url: str | None, *, default_url: str | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return the pinned sync/async httpx *kwargs* for a provider endpoint.
+
+    Use this instead of :func:`provider_httpx_clients` when the SDK only builds
+    its own clients lazily (``if not self.client:``). Such an SDK configures
+    base URL, auth headers and timeout inside that same branch, so handing it a
+    ready-made client silently drops all of them. Taking the kwargs lets the
+    caller construct a client that satisfies the SDK's contract *and* keeps the
+    DNS pinning and redirect suppression.
+
+    Returns two empty dicts when there is nothing to enforce (default endpoint,
+    or SSRF protection disabled), so the caller leaves that path untouched.
+    """
+    if _is_provider_default(base_url, default_url):
+        return {}, {}
+    return ssrf_protected_strict_httpx_client_kwargs_for_url(base_url)
 
 
 def provider_safe_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:

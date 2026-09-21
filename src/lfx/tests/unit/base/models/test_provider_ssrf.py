@@ -1,7 +1,11 @@
 """Unit coverage for the shared model-provider base-URL SSRF helpers."""
 
 import pytest
-from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs, validate_provider_base_url
+from lfx.base.models.provider_ssrf import (
+    openai_compatible_client_kwargs,
+    validate_provider_base_url,
+    validate_provider_model_identifier,
+)
 from lfx.utils.ssrf_transport import SSRFProtectedSyncTransport, SSRFProtectedTransport
 
 BLOCKED_URLS = [
@@ -101,3 +105,56 @@ class TestOpenAICompatibleClientKwargs:
         kwargs = openai_compatible_client_kwargs("http://127.0.0.1:1234/v1")
 
         assert set(kwargs) == {"http_client", "http_async_client"}
+
+
+class TestProviderModelIdentifier:
+    """Some provider fields called "endpoint" name a model, not an HTTP endpoint.
+
+    Qianfan's ``endpoint`` is appended to the SDK's own API host as
+    ``/chat/{endpoint}``, so running it through the base-URL guard rejected every
+    legitimate value. These live here rather than beside the component because the
+    qianfan stack is not importable in every environment, and a skipped test would
+    leave the validator uncovered.
+    """
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "ernie-3.5-8k-0329",
+            "ernie-4.0-8k",
+            "completions_pro",
+            "ERNIE_Speed",
+            "model.v2",
+            "a",
+            "",
+            "   ",
+            None,
+        ],
+    )
+    def test_accepts_model_identifiers(self, value):
+        validate_provider_model_identifier(value)
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "http://169.254.169.254/latest/meta-data/",
+            "https://evil.example.com",
+            "//evil.example.com/x",
+            "../../etc/passwd",
+            "a/../../b",
+            "chat/completions",
+            "model?x=1",
+            "model#frag",
+            "model with space",
+            "model\nX",
+            "model\x00",
+            "-leading-dash-is-not-an-identifier",
+        ],
+    )
+    def test_rejects_origin_and_path_injection(self, value):
+        with pytest.raises(ValueError, match="model identifier"):
+            validate_provider_model_identifier(value)
+
+    def test_error_names_the_field(self):
+        with pytest.raises(ValueError, match="Invalid endpoint"):
+            validate_provider_model_identifier("http://x/", field_name="endpoint")

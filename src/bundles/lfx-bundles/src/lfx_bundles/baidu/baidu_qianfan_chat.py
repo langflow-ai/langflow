@@ -1,6 +1,6 @@
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import validate_provider_model_identifier
 from lfx.field_typing.constants import LanguageModel
 from lfx.io import DropdownInput, FloatInput, MessageTextInput, SecretStrInput
 
@@ -91,9 +91,11 @@ class QianfanChatEndpointComponent(LCModelComponent):
         penalty_score = self.penalty_score
         endpoint = self.endpoint
 
-        # endpoint is tenant-editable and the SDK sends the operator's credentials to
-        # whatever host it names. Block internal/cloud-metadata destinations before connecting.
-        validate_provider_base_url(endpoint)
+        # "endpoint" here is a Qianfan *model identifier* (ernie-3.5-8k-0329), not an HTTP
+        # base URL: the SDK appends it to its own configured API host as /chat/{endpoint}.
+        # Validating it as a URL rejects every legitimate value; what must be prevented is a
+        # value that injects an origin or escapes that path.
+        validate_provider_model_identifier(endpoint, field_name="endpoint")
 
         try:
             kwargs = {
