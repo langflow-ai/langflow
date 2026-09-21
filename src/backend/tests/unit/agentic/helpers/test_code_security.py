@@ -2051,6 +2051,149 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         assert scan_code_security(code).is_safe is True
 
 
+class TestScanCodeSecurityStdlibReexportBypass:
+    """Stdlib modules re-exporting os/sys/__builtins__ must not bypass the scan.
+
+    Regression tests for H1-3991551: ``platform`` (and any other stdlib module
+    with a module-level ``import os`` / ``import sys``) re-exports the real
+    restricted modules, and every imported module's ``__dict__`` carries
+    ``__builtins__``.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("import platform\nplatform.os.system('id')", id="platform-os-call"),
+            pytest.param("import platform\nsecret = platform.os.environ", id="platform-os-read"),
+            pytest.param(
+                "import platform\nplatform.sys.modules['subprocess'].Popen(['id'])", id="platform-sys-modules"
+            ),
+            pytest.param("import platform\ngetattr(platform, 'o' + 's').spawnv()", id="platform-reflective-os"),
+            pytest.param("from platform import os\nos.system('id')", id="from-platform-import-os"),
+            pytest.param(
+                "from platform import sys as runtime\nruntime.modules['os'].fork()", id="from-platform-import-sys"
+            ),
+            pytest.param("import zipfile\nzipfile.os.system('id')", id="zipfile-os-call"),
+            pytest.param("import tarfile\ntarfile.sys.modules['os'].posix_spawn()", id="tarfile-sys-modules"),
+            pytest.param("import zipfile\nzipfile.__dict__['os'].spawnv()", id="zipfile-dict-os"),
+            pytest.param("import tarfile\nvars(tarfile).get('os').fork()", id="tarfile-vars-get-os"),
+        ],
+    )
+    def test_should_detect_stdlib_module_reexports(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\nplatform.__dict__['__builtins__']['eval']('1')", id="platform-dict-builtins"
+            ),
+            pytest.param(
+                "import platform\nvars(platform)['__builtins__']['__import__']('os').system('id')",
+                id="platform-vars-builtins",
+            ),
+            pytest.param(
+                "import platform\ngetattr(platform, '__dict__')['__builtins__']['eval']('1')",
+                id="getattr-dict-builtins",
+            ),
+            pytest.param("import zipfile\nzipfile.__dict__['__builtins__']['eval']('1')", id="zipfile-dict-builtins"),
+            pytest.param(
+                "import requests\nrequests.__dict__['__builtins__']['eval']('1')", id="third-party-dict-builtins"
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__')['eval']('1')",
+                id="third-party-dict-get-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.get(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.__getitem__(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-unbound-builtins",
+            ),
+            pytest.param(
+                "import platform\nplatform.__dict__.get('__builtins__')['eval']('1')", id="platform-dict-get-builtins"
+            ),
+            pytest.param(
+                "import zipfile\nzipfile.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="zipfile-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import zipfile\ndict.get(zipfile.__dict__, '__builtins__')['eval']('1')",
+                id="zipfile-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__', {})['eval']('1')",
+                id="third-party-dict-get-default-builtins",
+            ),
+            pytest.param(
+                "import zipfile\nzipfile.__dict__['__loader__'].load_module('os').system('id')",
+                id="zipfile-dict-loader",
+            ),
+        ],
+    )
+    def test_should_detect_builtins_reflection_through_module_dict(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\ndef expose():\n    return platform\nexpose().os.system('id')",
+                id="returned-platform",
+            ),
+            pytest.param(
+                "import platform\nname = 'o' + 's'\nplatform.__dict__[name].system('id')",
+                id="platform-dict-dynamic-key",
+            ),
+        ],
+    )
+    def test_should_treat_platform_as_restricted_module(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\nname = platform.system()\nrelease = platform.release()", id="platform-safe-api"
+            ),
+            pytest.param('import json\ndata = json.loads(\'{"key": "value"}\')', id="json-loads"),
+            pytest.param(
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
+                id="glob-dict-safe-member",
+            ),
+            # ``vars(<host>)`` resolves to the same mapping as ``<host>.__dict__``;
+            # a safe member read through it stays allowed.
+            pytest.param("import glob\ncheck = vars(glob)['magic_check']", id="vars-safe-member"),
+            pytest.param(
+                "import example_module\nexample_module.os.system('ordinary object')",
+                id="unknown-module-os-attribute",
+            ),
+            pytest.param("from example_module import os\nos.system('ordinary object')", id="unknown-module-import-os"),
+            pytest.param(
+                "class Record:\n    value = 1\nobj = Record()\nkey = 'value'\nresult = obj.__dict__[key]",
+                id="ordinary-object-dict-dynamic",
+            ),
+            pytest.param("data = {'__builtins__': 'text'}\nvalue = data['__builtins__']", id="plain-dict-dunder-key"),
+            pytest.param(
+                "import requests\nsession_class = requests.__dict__.get('Session')",
+                id="third-party-dict-get-safe-member",
+            ),
+            pytest.param(
+                "import requests\nname = 'Ses' + 'sion'\nsession_class = requests.__dict__.get(name)",
+                id="third-party-dict-get-dynamic-safe",
+            ),
+        ],
+    )
+    def test_should_allow_safe_stdlib_and_object_access(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
 class TestScanCodeSecurityDottedSubmoduleAccess:
     """Bare-package imports must not reach a blocked submodule via dotted access.
 
@@ -2588,3 +2731,81 @@ class TestStaticEvaluationBudget:
         source = f'"{separator}".join(["a", "b", "c", "d", "e", "f", "g", "h"])'
         with pytest.raises(StaticEvaluationBudgetExceededError):
             _static_string_value(ast.parse(source, mode="eval").body)
+
+
+class TestStdlibReexportHostBoundary:
+    """A stdlib module handed across an opaque boundary still carries os/sys.
+
+    ``_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the
+    real ``os`` for every stdlib host, which is what closes
+    ``platform.os.system(...)``. That only runs while the host is a named value,
+    so the boundary rule has to cover the same set: passing ``zipfile`` into a
+    helper and reading ``m.os`` inside it otherwise reaches ``os`` with the
+    scanner unable to relate ``m`` back to a module.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import zipfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(zipfile)",
+            "import zipfile\n\n\ndef helper(m):\n    return m.os.system('id')\n\n\nhelper(zipfile)",
+            "import zipfile\n\n\ndef give():\n    return zipfile\n\n\nvalue = give().os.getenv('HOME')",
+            "import zipfile\n\nmodules = [zipfile]\nvalue = modules[0].os.getenv('HOME')",
+            "import zipfile\n\n\nclass C:\n    m = zipfile\n\n\nvalue = C.m.os.getenv('HOME')",
+            "import zipfile\n\n\ndef helper(m=zipfile):\n    return m.os.getenv('HOME')\n\n\nvalue = helper()",
+            "import zipfile\n\nmapping = {'z': zipfile}\nvalue = mapping['z'].os.getenv('HOME')",
+            "import tempfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(tempfile)",
+        ],
+        ids=[
+            "carrier-through-argument",
+            "carrier-through-argument-os-system",
+            "carrier-through-return",
+            "carrier-through-list",
+            "carrier-through-class-attribute",
+            "carrier-through-default-argument",
+            "carrier-through-dict-value",
+            "carrier-through-argument-tempfile",
+        ],
+    )
+    def test_stdlib_module_cannot_cross_an_opaque_boundary(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary stdlib use is unaffected: only a bare *module value*
+            # crossing a boundary is a carrier.
+            "import json\nvalue = json.dumps({'a': 1})",
+            "import zipfile\narchive = zipfile.ZipFile('x.zip')\nnames = archive.namelist()",
+            "import re\nmatch = re.match('a', 'abc')",
+            "import math\nvalue = math.sqrt(4)",
+            "import datetime\nvalue = datetime.datetime.now()",
+            # A *member* of a stdlib module is not a carrier and must stay
+            # usable as an ordinary argument.
+            "import json\nvalue = isinstance(1, json.JSONDecoder)",
+            "import json\n\ntry:\n    pass\nexcept json.JSONDecodeError:\n    pass",
+            "import functools\nimport operator\n\nadd_one = functools.partial(operator.add, 1)",
+        ],
+        ids=[
+            "json-dumps",
+            "zipfile-normal-use",
+            "re-match",
+            "math-sqrt",
+            "datetime-now",
+            "stdlib-member-as-argument",
+            "stdlib-exception-member",
+            "functools-partial-over-operator-member",
+        ],
+    )
+    def test_ordinary_stdlib_use_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_wildcard_import_of_an_untabled_module_does_not_crash_the_scan(self):
+        """Pre-existing: "tuple | set" raised TypeError out of scan_code_security.
+
+        Any ``from <module> import *`` where the module has no entry in the
+        dangerous-call table hit the tuple default and crashed the scan rather
+        than returning a result.
+        """
+        assert scan_code_security("from typing import *\nvalue = 1").is_safe is True
+        assert scan_code_security("from dataclasses import *\nvalue = 1").is_safe is True

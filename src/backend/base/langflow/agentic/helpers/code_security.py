@@ -6,6 +6,7 @@ to user.
 """
 
 import ast
+import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
@@ -516,14 +517,39 @@ _PACKAGE_REEXPORT_MODULE_PATHS: dict[str, str] = {
 # or ``.sys`` attribute is not necessarily the stdlib module. ``tempfile``
 # imports both under private aliases (``_os`` / ``_sys``), which are the real
 # modules at runtime.
+# Hosts listed here are additionally treated as fully restricted modules: they
+# cannot cross opaque boundaries (returns, call arguments, class attributes)
+# and their ``__dict__`` rejects dynamic reads. Stdlib modules beyond this list
+# still have their ``.os`` / ``.sys`` members canonicalized — see
+# _reexported_restricted_module below.
 _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
     "glob": {"os": "os", "sys": "sys"},
     "logging": {"os": "os"},
     "os": {"sys": "sys"},
     "os.path": {"os": "os", "sys": "sys"},
     "pathlib": {"os": "os", "sys": "sys"},
+    "platform": {"os": "os", "sys": "sys"},
     "tempfile": {"_os": "os", "_sys": "sys"},
 }
+
+# A stdlib module that runs ``import os`` / ``import sys`` at module level
+# re-exports the real restricted module under its original name
+# (``platform.os is os``), which is how the allowlist above would otherwise be
+# bypassed (``platform.os.system(...)``). Unlike third-party modules, a
+# stdlib-rooted attribute named ``os`` or ``sys`` is near-certainly the stdlib
+# module, so canonicalize it for every stdlib host.
+_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys"})
+_STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
+
+
+def _reexported_restricted_module(module_name: str, member_name: str) -> str | None:
+    """The restricted module ``<module_name>.<member_name>`` resolves to, if it is one."""
+    if (canonical := _RESTRICTED_MODULE_REEXPORTS.get(module_name, {}).get(member_name)) is not None:
+        return canonical
+    if member_name in _STDLIB_REEXPORTED_MODULE_NAMES and module_name.split(".")[0] in _STDLIB_MODULE_NAMES:
+        return member_name
+    return None
+
 
 # Modules with a mix of allowed and forbidden members may be used directly so
 # legitimate operations such as ``os.path.join`` remain available. They must
@@ -539,12 +565,33 @@ _RESTRICTED_MODULE_REFERENCES: set[str] = {
 }
 
 
+def _is_stdlib_reexport_host(resolved_name: str) -> bool:
+    """Whether a value is a bare stdlib module, and so a potential ``os``/``sys`` carrier.
+
+    ``_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the real
+    ``os`` for every stdlib host, which is what closed ``platform.os.system(...)``.
+    That canonicalization only runs while the host is still a *named* value, so
+    the boundary rule has to cover the same set: handing ``zipfile`` to a helper
+    and reading ``m.os`` inside it otherwise reaches ``os`` with the scanner
+    unable to relate ``m`` back to a module.
+
+    Exact membership only, so it matches a module value (``zipfile``) and not a
+    member of one (``json.JSONDecodeError``), which is not a carrier and must
+    stay usable as an ordinary argument.
+    """
+    return resolved_name in _STDLIB_MODULE_NAMES
+
+
 def _is_restricted_module_reference(resolved_name: str) -> bool:
     """Whether a value retains access to a restricted module across an opaque boundary."""
-    if resolved_name in _RESTRICTED_MODULE_REFERENCES:
+    if resolved_name in _RESTRICTED_MODULE_REFERENCES or _is_stdlib_reexport_host(resolved_name):
         return True
     module_name, separator, member_name = resolved_name.rpartition(".")
-    return bool(separator and member_name == "__dict__" and module_name in _RESTRICTED_MODULE_REFERENCES)
+    return bool(
+        separator
+        and member_name == "__dict__"
+        and (module_name in _RESTRICTED_MODULE_REFERENCES or _is_stdlib_reexport_host(module_name))
+    )
 
 
 def _restricted_mapping_owner(resolved_name: str) -> str | None:
@@ -586,10 +633,9 @@ def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
         elif isinstance(node, ast.ImportFrom) and node.module and any(a.name == "*" for a in node.names):
             wildcard_modules.add(node.module.split(".")[0])
         elif isinstance(node, ast.ImportFrom) and node.module:
-            reexports = _RESTRICTED_MODULE_REEXPORTS.get(node.module, {})
             for alias in node.names:
-                if alias.name in reexports:
-                    aliases[alias.asname or alias.name] = reexports[alias.name]
+                if (canonical := _reexported_restricted_module(node.module, alias.name)) is not None:
+                    aliases[alias.asname or alias.name] = canonical
     return aliases, wildcard_modules
 
 
@@ -639,7 +685,7 @@ class _SecurityChecker(ast.NodeVisitor):
         for base_name in base_names:
             if member_name == "__call__":
                 resolved.add(base_name)
-            elif (canonical := _RESTRICTED_MODULE_REEXPORTS.get(base_name, {}).get(member_name)) is not None:
+            elif (canonical := _reexported_restricted_module(base_name, member_name)) is not None:
                 resolved.add(canonical)
             elif member_name in _PACKAGE_REEXPORT_SUBMODULES.get(base_name, ()):
                 # yaml.loader.FullLoader is yaml.FullLoader: stay on the package.
@@ -1039,14 +1085,16 @@ class _SecurityChecker(ast.NodeVisitor):
 
         for alias in node.names:
             if alias.name == "*":
-                for name in _DANGEROUS_CALL_MEMBERS.get(root_module, ()) | _DANGEROUS_READ_MEMBERS.get(
+                # Both defaults must be sets: "tuple | set" is a TypeError, so a
+                # wildcard import from any module absent from the call table
+                # (``from typing import *``) crashed the scan out to the caller.
+                for name in _DANGEROUS_CALL_MEMBERS.get(root_module, set()) | _DANGEROUS_READ_MEMBERS.get(
                     root_module, set()
                 ):
                     self._bind_name(name, frozenset({f"{root_module}.{name}"}))
             else:
                 binding = alias.asname or alias.name
-                reexports = _RESTRICTED_MODULE_REEXPORTS.get(node.module, {})
-                imported_name = reexports.get(alias.name, f"{node.module}.{alias.name}")
+                imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
                 imported_names = frozenset({imported_name})
                 self._bind_name(binding, imported_names)
                 self._check_escaping_binding(binding, imported_names)
@@ -1450,41 +1498,44 @@ class _SecurityChecker(ast.NodeVisitor):
         return self.generic_visit(node)
 
     def visit_Subscript(self, node: ast.Subscript):
-        """Reject dynamic reads from a restricted module's ``__dict__`` mapping."""
-        mapping_names = frozenset(
-            name
-            for name in self._resolved_assignment_value(node.value)
-            if name.endswith(".__dict__") and _is_restricted_module_reference(name)
+        """Reject dangerous reads from a module ``__dict__`` mapping."""
+        mapping_values = frozenset(
+            name for name in self._resolved_assignment_value(node.value) if name.endswith(".__dict__")
         )
-        if mapping_names:
-            member_name = self._static_name(node.slice)
-            if member_name is None:
-                self.violations.append(
-                    f"Dynamic mapping access on module '{sorted(mapping_names)[0]}' is forbidden in components"
-                )
-            elif member_name in DANGEROUS_DUNDER_ATTRS:
-                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
-            else:
-                # A static key into a restricted module's namespace reaches the
-                # same dangerous members as dotted access (``yaml.__dict__['UnsafeLoader']``).
-                module_names = {name.removesuffix(".__dict__") for name in mapping_names}
-                violation = next(
-                    (
-                        message
-                        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
-                        if mod in module_names and attr == member_name
-                    ),
-                    None,
-                ) or next(
-                    (
-                        message
-                        for mod, method, message in DANGEROUS_ATTR_CALLS
-                        if mod in module_names and method == member_name
-                    ),
-                    None,
-                )
-                if violation:
-                    self.violations.append(violation)
+        if not mapping_values:
+            return self.generic_visit(node)
+        restricted_mapping_names = frozenset(name for name in mapping_values if _is_restricted_module_reference(name))
+        member_name = self._static_name(node.slice)
+        if restricted_mapping_names and member_name is None:
+            self.violations.append(
+                f"Dynamic mapping access on module '{sorted(restricted_mapping_names)[0]}' is forbidden in components"
+            )
+        elif member_name in DANGEROUS_DUNDER_ATTRS:
+            # Every imported module's ``__dict__`` carries ``__builtins__`` (and
+            # loader dunders), whether or not the module is on the restricted
+            # list, so a dunder key is rejected on any module mapping.
+            self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+        elif restricted_mapping_names and member_name is not None:
+            # A static key into a restricted module's namespace reaches the
+            # same dangerous members as dotted access (``yaml.__dict__['UnsafeLoader']``).
+            module_names = {name.removesuffix(".__dict__") for name in restricted_mapping_names}
+            violation = next(
+                (
+                    message
+                    for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                    if mod in module_names and attr == member_name
+                ),
+                None,
+            ) or next(
+                (
+                    message
+                    for mod, method, message in DANGEROUS_ATTR_CALLS
+                    if mod in module_names and method == member_name
+                ),
+                None,
+            )
+            if violation:
+                self.violations.append(violation)
         return self.generic_visit(node)
 
     def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
@@ -1630,14 +1681,18 @@ class _SecurityChecker(ast.NodeVisitor):
             if node.args and method_name == "__getattribute__" and receiver_name in _RESTRICTED_MODULE_REFERENCES:
                 _validate_selector(node.args[0], frozenset({receiver_name}), "__getattribute__()")
                 return 1
-            if (
-                node.args
-                and method_name in {"get", "__getitem__"}
-                and receiver_name.endswith(".__dict__")
-                and _is_restricted_module_reference(receiver_name)
-            ):
-                _validate_selector(node.args[0], frozenset({receiver_name}), f"{method_name}()")
-                return 1
+            if node.args and method_name in {"get", "__getitem__"} and receiver_name.endswith(".__dict__"):
+                if _is_restricted_module_reference(receiver_name):
+                    _validate_selector(node.args[0], frozenset({receiver_name}), f"{method_name}()")
+                    return 1
+                # Every imported module's ``__dict__`` carries ``__builtins__``
+                # (and loader dunders), whether or not the module is on the
+                # restricted list, so a dunder key is rejected on any module
+                # mapping — mirroring visit_Subscript.
+                member_name = self._static_name(node.args[0])
+                if member_name in DANGEROUS_DUNDER_ATTRS:
+                    self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+                    return 1
             if _restricted_mapping_owner(receiver_name) is not None:
                 self.violations.append(
                     f"Use of '{method_name}()' on restricted module mapping '{receiver_name}' is forbidden"
@@ -1649,6 +1704,13 @@ class _SecurityChecker(ast.NodeVisitor):
             mapping_names = _restricted_mappings(node.args[0])
             if mapping_names:
                 _validate_selector(node.args[1], mapping_names, "module mapping")
+                return 2
+            # Same dunder-key rule as above for non-restricted module mappings.
+            member_name = self._static_name(node.args[1])
+            if member_name in DANGEROUS_DUNDER_ATTRS and any(
+                name.endswith(".__dict__") for name in self._resolved_assignment_value(node.args[0])
+            ):
+                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
                 return 2
 
         return 0
