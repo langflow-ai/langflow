@@ -2126,3 +2126,93 @@ class MyComponent:
         """The alias deferral itself must survive: ``module = os`` alone is not a violation."""
         result = scan_code_security("import os\nmodule = os\nmodule = object()\nmodule.system('not os')")
         assert result.is_safe is True
+
+
+class TestReflectiveNamespaceDynamicKeys:
+    """A dynamically selected key into a namespace mapping is a sandbox escape.
+
+    Static-key checks cover ``vars(X)["__globals__"]``, but a runtime-built key
+    such as ``"__GLOBALS__".lower()`` resolves to the same descriptor, and a
+    second dynamically selected getter recovers function globals and the
+    builtins evaluator without a direct dunder attribute access or a getattr
+    call. The owner does not have to be nameable -- ``vars(type(f))`` is opaque
+    to this scanner -- so the mapping itself is tracked and an unresolvable
+    selector fails closed.
+
+    Every proof here is harmless: the recovered callable only evaluates 2 + 2.
+    """
+
+    # Recovers builtins.eval through two dynamically selected keys.
+    DYNAMIC_REFLECTION_POC = (
+        "def f():\n"
+        "    pass\n"
+        "\n"
+        "key = '__GLOBALS__'.lower()\n"
+        "getter_key = '__GET__'.lower()\n"
+        "builtins_key = '__BUILTINS__'.lower()\n"
+        "eval_key = 'EVAL'.lower()\n"
+        "ns = vars(type(f))\n"
+        "desc = ns[key]\n"
+        "getter = vars(type(desc))[getter_key]\n"
+        "g = getter(desc, f)\n"
+        "evaluator = g[builtins_key][eval_key]\n"
+        "result = evaluator('2 + 2')\n"
+    )
+
+    def test_dynamic_reflection_poc_is_rejected(self):
+        assert scan_code_security(self.DYNAMIC_REFLECTION_POC).is_safe is False
+
+    def test_dynamic_reflection_poc_really_recovers_an_evaluator(self):
+        """The regression is only meaningful if the payload actually works."""
+        namespace: dict = {}
+        exec(self.DYNAMIC_REFLECTION_POC, namespace)  # noqa: S102 - arithmetic only
+        assert namespace["result"] == 4
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f))[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f)).get(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f)).__getitem__(k)",
+            "def f():\n    pass\nlookup = vars(type(f)).get\nk = '__GLOBALS__'.lower()\nd = lookup(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = type(f).__dict__[k]",
+            "def f():\n    pass\nk = 'x'.join(['__glo', 'bals__'])\nd = vars(type(f))[k]",
+            "import os\nk = input()\nd = vars(os)[k]",
+        ],
+        ids=[
+            "vars-subscript-dynamic-key",
+            "vars-get-dynamic-key",
+            "vars-getitem-dynamic-key",
+            "aliased-vars-get-dynamic-key",
+            "opaque-dunder-dict-dynamic-key",
+            "dynamic-key-built-by-join",
+            "restricted-module-dynamic-key",
+        ],
+    )
+    def test_dynamic_namespace_keys_are_rejected(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary application dictionaries are untouched: only mappings
+            # that came from vars()/__dict__ are namespaces.
+            "d = {'a': 1}\nk = input()\nvalue = d[k]",
+            "d = {'a': 1}\nk = input()\nvalue = d.get(k)",
+            "items = [1, 2, 3]\nindex = 0\nvalue = items[index]",
+            "def g(**kwargs):\n    key = 'a'\n    return kwargs[key]",
+            "config = {}\nfor key in ('a', 'b'):\n    config[key] = 1",
+            # A statically known, non-dunder key into a namespace stays allowed.
+            "class C:\n    x = 1\n\n\nvalue = vars(C)['x']",
+        ],
+        ids=[
+            "plain-dict-dynamic-key",
+            "plain-dict-get-dynamic-key",
+            "list-index",
+            "kwargs-lookup",
+            "dict-assignment-in-loop",
+            "namespace-static-safe-key",
+        ],
+    )
+    def test_ordinary_mappings_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
