@@ -3,6 +3,7 @@ from urllib import parse
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.field_typing.constants import Memory
 from lfx.inputs.inputs import IntInput, MessageTextInput, SecretStrInput, StrInput
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class ValkeyIndexChatMemory(LCChatMemoryComponent):
@@ -35,6 +36,9 @@ class ValkeyIndexChatMemory(LCChatMemoryComponent):
 
     def build_message_history(self) -> Memory:
         from langchain_community.chat_message_histories.redis import RedisChatMessageHistory
+
+        # host/port are tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        validate_connector_url_for_ssrf(f"http://{self.host}:{int(self.port)}")
 
         kwargs = {}
         if self.key_prefix:
