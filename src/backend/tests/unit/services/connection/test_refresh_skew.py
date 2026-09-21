@@ -5,6 +5,10 @@ is inside a 60-second skew window, or when the caller reports the provider
 rejected exactly the stored access token (``rejected_token_digest``). A token
 fresh beyond the skew, or a rejection digest that does not match what is stored,
 must never trigger a provider call.
+
+The last two tests cover the other side of the same call: what a refresh means
+when it fails before it starts, because *this* process cannot see the OAuth
+registration the connection was authorized under.
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ from langflow.services.connection.oauth.broker import digest
 from langflow.services.connection.service import _decrypt_credential_payload, _encrypt_credential_payload
 from langflow.services.database.models.connection import ConnectionSecret
 from langflow.services.deps import get_connection_resolver_service, session_scope
-from lfx.integrations.errors import AuthExpiredError
+from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
 
@@ -228,3 +232,47 @@ async def test_expired_oauth_credential_without_a_refresh_token_is_auth_expired(
     assert calls == []
     assert STORED_ACCESS_TOKEN not in str(caught.value)
     assert STORED_ACCESS_TOKEN not in repr(vars(caught.value))
+
+
+async def test_a_process_without_the_registrations_reports_configuration_not_expiry(authorized_connection, monkeypatch):
+    """LE-2479 finding 3: the refresh fails locally, so nothing may look revoked.
+
+    A listener deployed with only a database URL and a secret key holds
+    OAuth-backed connections it cannot refresh, because refresh happens in that
+    process rather than over HTTP to the API. Reporting ``auth-expired`` there
+    is what made every affected trigger disarm itself: the consent is intact,
+    the provider was never contacted, and only the process's environment is
+    wrong.
+    """
+    row = authorized_connection
+    await _rewrite_stored_payload(row["id"], expires_at=(datetime.now(timezone.utc) - timedelta(hours=1)).isoformat())
+    calls = _recording_refresh(monkeypatch)
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", "{}")
+
+    with pytest.raises(ConnectionUnresolvedError) as caught:
+        await get_connection_resolver_service().resolve(_resolution(row["owner_id"]))
+
+    assert caught.value.reason == "registration-unavailable"
+    assert calls == [], "the refresh must fail before it reaches the provider's token endpoint"
+
+
+async def test_a_health_check_without_the_registrations_leaves_the_connection_alone(
+    authorized_connection, client, logged_in_headers, monkeypatch
+):
+    """The same failure must not write ``expired`` onto a connection that works.
+
+    An expired connection is one the listener supervisor stops dialling
+    altogether, so a health check run on a misconfigured process could disarm
+    every trigger on the connection by itself - without an adapter ever failing.
+    """
+    row = authorized_connection
+    await _rewrite_stored_payload(row["id"], expires_at=(datetime.now(timezone.utc) - timedelta(hours=1)).isoformat())
+    _recording_refresh(monkeypatch)
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", "{}")
+
+    checked = await client.post(f"/api/v1/connections/{row['id']}/health", headers=logged_in_headers)
+
+    assert checked.status_code == 200, checked.text
+    body = checked.json()
+    assert body["status"] == "ready", "the credential is intact; only this process is misconfigured"
+    assert body["health"] == "unhealthy"

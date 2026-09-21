@@ -1,0 +1,68 @@
+# Langflow trigger listeners (TRG-3), as their own Compose service.
+#
+# Track B triggers - Slack Socket Mode, Microsoft Graph delta polling, Gmail
+# Pub/Sub pull - need a process that holds outbound connections. That process
+# must not be the API: the API runs several uvicorn workers and is restarted and
+# autoscaled on its own schedule, so hosting connections there either duplicates
+# or drops them.
+#
+# Run this alongside your existing Langflow stack:
+#
+#   docker compose -f docker-compose.yml -f deploy/listeners/docker-compose.listeners.yml up -d
+#
+# Requirements:
+#   * the same LANGFLOW_DATABASE_URL and LANGFLOW_SECRET_KEY as the API - the
+#     listener reads the same connection rows and decrypts the same tokens;
+#   * the same LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS as the API, if any
+#     connection was authorized through OAuth. The listener refreshes those
+#     tokens itself rather than asking the API to;
+#   * PostgreSQL. SQLite is single-process: use LANGFLOW_LISTENERS_MODE=subprocess
+#     on the API container instead of this service;
+#   * the API started (or upgraded) first. The listener never migrates.
+#
+# Sizing: start at 1 and add replicas when a single process cannot keep up. Each
+# replica announces itself, divides the armed connections by the number of live
+# replicas, and hands back whatever it holds above that share, so an added
+# replica takes its share within a few reconcile passes without restarting
+# anything. A lease says the previous owner stopped heartbeating, not that its
+# socket closed, so a handover permits a few seconds of overlap; the ledger's
+# dedupe key collapses whatever both sides emit into one run.
+services:
+  langflow-listeners:
+    image: langflowai/langflow:latest
+    pull_policy: always
+    command: ["langflow", "listeners"]
+    depends_on:
+      - langflow
+      - postgres
+    environment:
+      # Both must be the values the API is configured with, and both are
+      # required rather than defaulted: the listener reads the API's connection
+      # rows and decrypts them with the API's key, so a wrong or empty value
+      # here fails at the first credential instead of at startup. Set them once
+      # in .env and pass the same two variables to your langflow service.
+      - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL:?set LANGFLOW_DATABASE_URL to the API's database}
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?set LANGFLOW_SECRET_KEY to the API's key}
+      # Required when any connection was authorized through OAuth, and
+      # harmlessly empty when none was. The listener refreshes access tokens in
+      # this process - it never calls the API to do it - so without the API's
+      # registrations here every refresh fails locally, without a single request
+      # reaching the provider, hours after the deploy looked healthy.
+      - LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS=${LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS:-}
+      - LANGFLOW_CONFIG_DIR=/app/langflow
+      # Bind the health endpoint on all interfaces so the healthcheck below can
+      # reach it. There is nothing else on this port: no API, no UI.
+      - LANGFLOW_LISTENERS_HEALTH_HOST=0.0.0.0
+      - LANGFLOW_LISTENERS_HEALTH_PORT=7861
+    healthcheck:
+      # /healthz is readiness: database reachable, reconcile loop fresh, no
+      # lease renewal failure inside the last TTL.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:7861/healthz', timeout=5).status == 200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Give the process time to release its connection leases on SIGTERM instead
+    # of leaving them to expire, which would cost the next holder up to 2 TTLs.
+    stop_grace_period: 30s
+    restart: unless-stopped

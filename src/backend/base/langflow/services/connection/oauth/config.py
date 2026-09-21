@@ -11,9 +11,23 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+#: The one reason worth telling apart. ``registration-unavailable`` means this
+#: process cannot see a usable registration for a connection - unparsable or
+#: absent ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS``, a registration that does
+#: not validate, one that belongs to another deployment context. The
+#: authorization is intact; the process is configured wrong, so a caller that
+#: would otherwise disarm the work (a listener holding a trigger) should retry
+#: instead. Every other OAuthError describes the authorization itself and does
+#: need a human to reconnect.
+OAuthErrorReason = Literal["registration-unavailable"]
+
 
 class OAuthError(ValueError):
     """A deliberately credential-free error safe for API responses."""
+
+    def __init__(self, message: str, *, reason: OAuthErrorReason | None = None) -> None:
+        super().__init__(message)
+        self.reason: OAuthErrorReason | None = reason
 
 
 class OAuthRegistration(BaseModel):
@@ -157,26 +171,26 @@ class OAuthSettings(BaseSettings):
             configs = json.loads(self.registrations.get_secret_value())
         except ValueError:
             msg = "OAuth registrations must contain valid JSON."
-            raise OAuthError(msg) from None
+            raise OAuthError(msg, reason="registration-unavailable") from None
         if not isinstance(configs, dict):
             msg = "OAuth registrations must be a JSON object keyed by registration ID."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         if registration_id not in configs:
             msg = "OAuth registration ID is not configured."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         try:
             registration = OAuthRegistration.model_validate(configs[registration_id])
         except ValidationError as exc:
-            raise OAuthError(_registration_validation_message(exc)) from None
+            raise OAuthError(_registration_validation_message(exc), reason="registration-unavailable") from None
         except (ValueError, TypeError):
             msg = "OAuth registration is not configured correctly."
-            raise OAuthError(msg) from None
+            raise OAuthError(msg, reason="registration-unavailable") from None
         if registration.context != self.context:
             msg = "OAuth registration is unavailable in this deployment context."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         if registration.owner == "langflow" and registration.context == "hosted" and not self.hosted_enabled:
             msg = "Hosted OAuth registrations are disabled."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         return registration
 
 
@@ -185,4 +199,4 @@ def get_oauth_settings() -> OAuthSettings:
         return OAuthSettings()
     except ValueError:
         msg = "OAuth instance configuration is invalid."
-        raise OAuthError(msg) from None
+        raise OAuthError(msg, reason="registration-unavailable") from None
