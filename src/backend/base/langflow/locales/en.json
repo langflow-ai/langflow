@@ -618,6 +618,8 @@
   "components.chatoutput.inputs.session_id.info.162e77a2": "The session ID of the chat. If empty, the current session ID parameter will be used.",
   "components.chatoutput.inputs.should_store_message.display_name.ad8da7d4": "Store Messages",
   "components.chatoutput.inputs.should_store_message.info.b40af1c4": "Store the message in the history.",
+  "components.chatoutput.inputs.truncate_table_cells.display_name.bef5b32f": "Truncate Table Cells",
+  "components.chatoutput.inputs.truncate_table_cells.info.33b36459": "Cap each cell of a table input at the serialization max text length and keep it on one line, so long multiline cells cannot inflate the chat message. Disable to render the table in full.",
   "components.chatoutput.outputs.message.display_name.40cd21b3": "Output Message",
   "components.cohereembeddings.description.b08a8902": "Generate embeddings using Cohere models.",
   "components.cohereembeddings.display_name.30468fec": "Cohere Embeddings",

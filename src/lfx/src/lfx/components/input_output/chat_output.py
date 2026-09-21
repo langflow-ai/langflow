@@ -11,6 +11,8 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.schema.properties import Source
+from lfx.serialization.serialization import get_max_text_length
+from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
 from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
@@ -83,6 +85,16 @@ class ChatOutput(ChatComponent):
             value=True,
             advanced=True,
             info="Whether to clean data before converting to string.",
+        ),
+        BoolInput(
+            name="truncate_table_cells",
+            display_name="Truncate Table Cells",
+            value=True,
+            advanced=True,
+            info=(
+                "Cap each cell of a table input at the serialization max text length and keep it on one line, "
+                "so long multiline cells cannot inflate the chat message. Disable to render the table in full."
+            ),
         ),
     ]
     outputs = [
@@ -193,9 +205,19 @@ class ChatOutput(ChatComponent):
     def convert_to_string(self) -> str | Generator[Any, None, None]:
         """Convert input data to string with proper error handling."""
         self._validate_input()
+        max_cell_chars = self._table_cell_limit()
         if isinstance(self.input_value, list):
             clean_data: bool = getattr(self, "clean_data", False)
-            return "\n".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])
+            return "\n".join(
+                [safe_convert(item, clean_data=clean_data, max_cell_chars=max_cell_chars) for item in self.input_value]
+            )
         if isinstance(self.input_value, Generator):
             return self.input_value
-        return safe_convert(self.input_value)
+        return safe_convert(self.input_value, max_cell_chars=max_cell_chars)
+
+    def _table_cell_limit(self) -> int | None:
+        """Same limit the UI truncates serialized text by, so raising it applies here too."""
+        if not getattr(self, "truncate_table_cells", True):
+            return None
+        settings_service = get_settings_service()
+        return settings_service.settings.max_text_length if settings_service else get_max_text_length()
