@@ -84,6 +84,7 @@ from langflow.services.authorization.access_ceiling import clear_current_externa
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import authenticate_api_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
@@ -748,6 +749,11 @@ async def update_project_mcp_settings(
                     )
                 except HTTPException:
                     raise
+                except ApiKeyIssuanceDeniedError as denial:
+                    # The caller asked for apikey auth explicitly. Reporting
+                    # success here would leave the project on its old auth with
+                    # nothing to say so.
+                    raise HTTPException(status_code=403, detail=str(denial)) from denial
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(
                         "Failed to reconcile MCP server config for project %s after auth update: %s",
