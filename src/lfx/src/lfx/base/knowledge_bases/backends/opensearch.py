@@ -79,6 +79,7 @@ from lfx.base.knowledge_bases.backends.base import (
     TestConnectionResult,
     drain_queue_until_sentinel,
 )
+from lfx.base.knowledge_bases.backends.destination_policy import enforce_kb_destination
 from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name, resolve_storage_name
 from lfx.log.logger import logger
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
@@ -203,27 +204,21 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         invent here.
         """
         url_variable = self.backend_config.get("url_variable") or DEFAULT_URL_VARIABLE
-        url = await self.resolve_secret(url_variable)
+        # The provenance decides whether the destination counts as operator-chosen:
+        # a Langflow variable is tenant-written, a process env var is not.
+        url, url_source = await self.resolve_secret_with_source(url_variable)
         if not url:
             msg = (
                 f"OpenSearchBackend needs the {url_variable!r} Langflow variable "
                 "(or env var of the same name) populated with the cluster URL."
             )
             raise ValueError(msg)
-        # The URL comes from a tenant-controlled Langflow variable, so the
-        # server must not dial it blindly (CWE-918). Enforce the same
-        # connector SSRF policy the vector-store components use: private /
-        # link-local / cloud-metadata targets are rejected unless the operator
-        # allowlists the host via LANGFLOW_SSRF_ALLOWED_HOSTS (or disables
-        # connector SSRF validation). Running the check here — inside
-        # ensure_ready()'s one-shot hook — covers test_connection, ingestion,
-        # and retrieval alike, so a KB created against a hostile variable
-        # stays blocked after configuration time too.
-        # ``_resolve_secrets`` is async and the validator resolves DNS, so run it off
-        # the event loop rather than stalling every other task on the worker for the
-        # duration of a lookup (a hostile or simply slow record makes that visible).
-        await asyncio.to_thread(validate_connector_url_for_ssrf, url)
-        await self._validate_url(url, url_variable)
+        # The URL comes from a tenant-controlled Langflow variable, so the server must
+        # not dial it blindly (CWE-918). Running the check here — inside
+        # ensure_ready()'s one-shot hook — covers test_connection, ingestion, and
+        # retrieval alike, so a KB created against a hostile variable stays blocked
+        # after configuration time too.
+        await self._validate_url(url, url_variable, url_source)
         self._resolved_url = url
 
         username_variable = self.backend_config.get("username_variable") or DEFAULT_USERNAME_VARIABLE
@@ -232,8 +227,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         self._resolved_password = await self.resolve_secret(password_variable)
 
     @staticmethod
-    async def _validate_url(url: str, url_variable: str) -> None:
-        """SSRF-validate the resolved cluster URL before any client is built from it.
+    async def _validate_url(url: str, url_variable: str, url_source: str) -> None:
+        """Check the resolved cluster URL against both destination gates before use.
 
         The URL comes from a tenant-controlled Langflow variable (``backend_config``
         only names the variable), and the client built from it makes server-side
@@ -244,12 +239,28 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         components, MCP, model providers); operators reach legitimate internal
         clusters via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname`` blocks,
         so the check runs off the event loop.
+
+        This is the *only* place the cluster URL is validated. ``_resolve_secrets``
+        briefly called the validator itself as well, which resolved DNS twice per
+        KB and left the re-raise below unreachable.
+
+        Re-raised as ``SSRFProtectionError`` (which subclasses ``ValueError``, so every
+        existing ``except ValueError`` config path still catches it) rather than flattened
+        to a bare ``ValueError``: ``test_connection`` reports ``type(exc).__name__`` back to
+        the caller, and a blocked destination should not read as a typo in the index name.
+
+        The second gate is ``enforce_kb_destination``: opensearch-py re-resolves DNS when it
+        connects and offers no seam to pin the validated address (langchain's wrapper hands one
+        kwargs dict to both the urllib3 and aiohttp clients), so a tenant-written hostname is
+        additionally required to be one the operator approved. It runs first, and without a DNS
+        lookup, so a refused destination is never resolved on the tenant's behalf.
         """
+        enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
         try:
             await asyncio.to_thread(validate_connector_url_for_ssrf, url)
         except SSRFProtectionError as exc:
             msg = f"OpenSearch URL from variable {url_variable!r} is not allowed: {exc}"
-            raise ValueError(msg) from exc
+            raise SSRFProtectionError(msg) from exc
 
     def _build_vector_store(self) -> VectorStore:
         # Validate config before touching optional deps so missing

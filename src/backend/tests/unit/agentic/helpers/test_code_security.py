@@ -1696,6 +1696,37 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     @pytest.mark.parametrize(
         "code",
         [
+            pytest.param("method = vars(type)['__subclasses__']", id="vars-type-subscript"),
+            pytest.param("method = vars(type)['__sub' + 'classes__']", id="vars-type-computed-key"),
+            pytest.param("method = vars(type).get('__subclasses__')", id="vars-type-get"),
+            pytest.param("method = vars(type).__getitem__('__subclasses__')", id="vars-type-getitem"),
+            pytest.param("method = dict.get(vars(type), '__subclasses__')", id="unbound-dict-get"),
+            pytest.param("method = dict.__getitem__(vars(type), '__subclasses__')", id="unbound-dict-getitem"),
+            pytest.param("lookup = vars(type).get\nmethod = lookup('__subclasses__')", id="aliased-vars-get"),
+            pytest.param("method = vars(type).get(*('__subclasses__',))", id="vars-type-get-starred"),
+            pytest.param("method = vars(type).__getitem__(*['__subclasses__'])", id="vars-type-getitem-starred-list"),
+            pytest.param("method = vars(type).get(*('__subclasses__', None))", id="vars-type-get-starred-default"),
+            pytest.param("method = dict.get(vars(type), *('__subclasses__',))", id="unbound-dict-get-starred"),
+            pytest.param(
+                "method = dict.__getitem__(vars(type), *('__subclasses__',))", id="unbound-dict-getitem-starred"
+            ),
+            pytest.param(
+                "lookup = vars(type).get\nmethod = lookup(*('__subclasses__',))", id="aliased-vars-get-starred"
+            ),
+            pytest.param("g = vars(init).get('__globals__')", id="opaque-receiver-get-globals"),
+            pytest.param("g = namespace['__globals__']", id="opaque-receiver-subscript-globals"),
+            pytest.param("b = g['__builtins__']", id="opaque-receiver-subscript-builtins"),
+        ],
+    )
+    def test_should_detect_dangerous_dunder_mapping_reads(self, code):
+        """Dunder keys must be blocked regardless of the mapping's receiver."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("(sandbox escape)" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
             pytest.param(
                 "def helper():\n    return None\ngetattr(helper, ''.join(['__glob', 'als__']))",
                 id="join-list-getattr-globals",
@@ -1742,6 +1773,46 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         )
         result = scan_code_security(code)
         assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("config = {'timeout': 5}\nvalue = config.get('timeout')", id="dict-get-safe-key"),
+            pytest.param("record = {'name': 'x'}\nname = record['name']", id="subscript-safe-key"),
+            pytest.param("class Record:\n    value = 1\ndata = vars(Record())", id="vars-plain-read"),
+            pytest.param("import glob\nchecker = vars(glob).get('magic_check')", id="vars-module-safe-key"),
+            pytest.param("d = {}\nvalue = d.get('__name__')", id="non-dangerous-dunder-key"),
+            pytest.param("config = {'timeout': 5}\nvalue = config.get(*('timeout',))", id="dict-get-starred-safe-key"),
+            pytest.param("d = {}\nvalue = d.get(*('__name__',))", id="starred-non-dangerous-dunder-key"),
+            pytest.param("keys = ()\nconfig = {'timeout': 5}\nvalue = config.get(*keys)", id="dict-get-opaque-starred"),
+        ],
+    )
+    def test_should_allow_safe_mapping_reads(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_should_detect_vars_subclasses_subscript_rce(self):
+        """H1-3989735: vars() subscript access to __subclasses__ bypasses the scanner."""
+        code = """
+obj = type(()).mro()[1]
+method = vars(type)["__subclasses__"]
+subs = method(obj)
+for s in subs:
+    try:
+        init = vars(s).get("__init__")
+        if init:
+            g = vars(init).get("__globals__")
+            if g and "__builtins__" in g:
+                b = g["__builtins__"]
+                if isinstance(b, dict) and "__import__" in b:
+                    os_mod = b["__import__"]("os")
+                    result = os_mod.popen("id").read()
+                    break
+    except Exception:
+        pass
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("__subclasses__" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -2189,7 +2260,6 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 id="unknown-module-os-attribute",
             ),
             pytest.param("from example_module import os\nos.system('ordinary object')", id="unknown-module-import-os"),
-            pytest.param("data = {'__builtins__': 'text'}\nvalue = data['__builtins__']", id="plain-dict-dunder-key"),
         ],
     )
     def test_should_allow_safe_stdlib_and_object_access(self, code):
@@ -2203,16 +2273,8 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 id="glob-dict-safe-member",
             ),
             pytest.param(
-                "class Record:\n    value = 1\nobj = Record()\nkey = 'value'\nresult = obj.__dict__[key]",
-                id="ordinary-object-dict-dynamic",
-            ),
-            pytest.param(
                 "import requests\nsession_class = requests.__dict__.get('Session')",
                 id="third-party-dict-get-safe-member",
-            ),
-            pytest.param(
-                "import requests\nname = 'Ses' + 'sion'\nsession_class = requests.__dict__.get(name)",
-                id="third-party-dict-get-dynamic-safe",
             ),
         ],
     )
@@ -2221,6 +2283,30 @@ class TestScanCodeSecurityStdlibReexportBypass:
         # so the safe-host carve-outs above no longer extend to the mapping
         # spelling — even for a safe member or an ordinary object. ``vars(x)``
         # reaches the same mapping and stays allowed.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "class Record:\n    value = 1\nobj = Record()\nkey = 'value'\nresult = obj.__dict__[key]",
+                id="ordinary-object-dict-dynamic",
+            ),
+            pytest.param(
+                "import requests\nname = 'Ses' + 'sion'\nsession_class = requests.__dict__.get(name)",
+                id="third-party-dict-get-dynamic-safe",
+            ),
+            # Cost of the receiver-independent static-dunder rule: a plain
+            # dictionary that happens to use a dunder string as a key is
+            # rejected too, because the receiver is not consulted.
+            pytest.param("data = {'__builtins__': 'text'}\nvalue = data['__builtins__']", id="plain-dict-dunder-key"),
+        ],
+    )
+    def test_should_detect_namespace_mapping_reads_on_safe_hosts(self, code):
+        # A ``__dict__`` mapping is a namespace whoever owns it, so a key this
+        # scanner cannot resolve fails closed even on a safe host (H1-3989735).
         result = scan_code_security(code)
         assert result.is_safe is False
         assert any("sandbox escape" in violation for violation in result.violations)
@@ -2851,6 +2937,212 @@ class TestStdlibReexportHostBoundary:
         assert scan_code_security("from dataclasses import *\nvalue = 1").is_safe is True
 
 
+class TestReflectiveNamespaceDynamicKeys:
+    """A dynamically selected key into a namespace mapping is a sandbox escape.
+
+    Static-key checks cover ``vars(X)["__globals__"]``, but a runtime-built key
+    such as ``"__GLOBALS__".lower()`` resolves to the same descriptor, and a
+    second dynamically selected getter recovers function globals and the
+    builtins evaluator without a direct dunder attribute access or a getattr
+    call. The owner does not have to be nameable -- ``vars(type(f))`` is opaque
+    to this scanner -- so the mapping itself is tracked and an unresolvable
+    selector fails closed.
+
+    Every proof here is harmless: the recovered callable only evaluates 2 + 2.
+    """
+
+    # Recovers builtins.eval through two dynamically selected keys.
+    DYNAMIC_REFLECTION_POC = (
+        "def f():\n"
+        "    pass\n"
+        "\n"
+        "key = '__GLOBALS__'.lower()\n"
+        "getter_key = '__GET__'.lower()\n"
+        "builtins_key = '__BUILTINS__'.lower()\n"
+        "eval_key = 'EVAL'.lower()\n"
+        "ns = vars(type(f))\n"
+        "desc = ns[key]\n"
+        "getter = vars(type(desc))[getter_key]\n"
+        "g = getter(desc, f)\n"
+        "evaluator = g[builtins_key][eval_key]\n"
+        "result = evaluator('2 + 2')\n"
+    )
+
+    def test_dynamic_reflection_poc_is_rejected(self):
+        assert scan_code_security(self.DYNAMIC_REFLECTION_POC).is_safe is False
+
+    def test_dynamic_reflection_poc_really_recovers_an_evaluator(self):
+        """The regression is only meaningful if the payload actually works."""
+        namespace: dict = {}
+        exec(self.DYNAMIC_REFLECTION_POC, namespace)  # noqa: S102 - arithmetic only
+        assert namespace["result"] == 4
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f))[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f)).get(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f)).__getitem__(k)",
+            "def f():\n    pass\nlookup = vars(type(f)).get\nk = '__GLOBALS__'.lower()\nd = lookup(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = type(f).__dict__[k]",
+            "def f():\n    pass\nk = 'x'.join(['__glo', 'bals__'])\nd = vars(type(f))[k]",
+            "import os\nk = input()\nd = vars(os)[k]",
+        ],
+        ids=[
+            "vars-subscript-dynamic-key",
+            "vars-get-dynamic-key",
+            "vars-getitem-dynamic-key",
+            "aliased-vars-get-dynamic-key",
+            "opaque-dunder-dict-dynamic-key",
+            "dynamic-key-built-by-join",
+            "restricted-module-dynamic-key",
+        ],
+    )
+    def test_dynamic_namespace_keys_are_rejected(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary application dictionaries are untouched: only mappings
+            # that came from vars()/__dict__ are namespaces.
+            "d = {'a': 1}\nk = input()\nvalue = d[k]",
+            "d = {'a': 1}\nk = input()\nvalue = d.get(k)",
+            "items = [1, 2, 3]\nindex = 0\nvalue = items[index]",
+            "def g(**kwargs):\n    key = 'a'\n    return kwargs[key]",
+            "config = {}\nfor key in ('a', 'b'):\n    config[key] = 1",
+            # A statically known, non-dunder key into a namespace stays allowed.
+            "class C:\n    x = 1\n\n\nvalue = vars(C)['x']",
+        ],
+        ids=[
+            "plain-dict-dynamic-key",
+            "plain-dict-get-dynamic-key",
+            "list-index",
+            "kwargs-lookup",
+            "dict-assignment-in-loop",
+            "namespace-static-safe-key",
+        ],
+    )
+    def test_ordinary_mappings_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestReflectiveNamespaceProvenance:
+    """A namespace mapping must keep its marker across a copy.
+
+    The dynamic-key rule only fires on a value this scanner still recognizes as
+    a namespace. Copying or reconstructing the mapping dropped that marker, so
+    ``dict(vars(type(f)))`` and ``vars(type(f)).copy()`` read as ordinary
+    application dictionaries and every key rule stopped applying — the original
+    descriptor/evaluator chain stayed reachable. The marker now rides the value
+    through ``dict()``, ``{**ns}``, ``.copy()`` and any call this scanner cannot
+    model, and namespace methods that hand out members without presenting a key
+    are rejected outright.
+
+    Every proof here is harmless: the recovered callable only evaluates 2 + 2.
+    """
+
+    # Recovers builtins.eval through a copied namespace, so no marker survives
+    # unless provenance is preserved.
+    COPIED_NAMESPACE_POC = (
+        "f = lambda: None\n"
+        "ns = dict(vars(type(f)))\n"
+        'd = ns["__globals__".lower()]\n'
+        "getters = dict(vars(type(d)))\n"
+        'g = getters["__get__".lower()](d, f)\n'
+        'b = g["__builtins__".lower()]\n'
+        'e = b["eval"] if isinstance(b, dict) else vars(b)["eval"]\n'
+        'result = e("2 + 2")\n'
+    )
+
+    def test_copied_namespace_poc_is_rejected(self):
+        result = scan_code_security(self.COPIED_NAMESPACE_POC)
+        assert result.is_safe is False
+        assert any("(sandbox escape)" in violation for violation in result.violations)
+
+    def test_copied_namespace_poc_really_recovers_an_evaluator(self):
+        """The regression is only meaningful if the payload actually works."""
+        namespace: dict = {}
+        exec(self.COPIED_NAMESPACE_POC, namespace)  # noqa: S102 - arithmetic only
+        assert namespace["result"] == 4
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(vars(type(f)))\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = vars(type(f)).copy()\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = {**vars(type(f))}\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(**vars(type(f)))\nd = ns[k]",
+            "import copy\ndef f():\n    pass\nk = '__GLOBALS__'.lower()\nns = copy.deepcopy(vars(type(f)))\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\n"
+            "def passthrough(m):\n    return m\nd = passthrough(vars(type(f)))[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(vars(type(f)))\nd = ns.get(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\ncopied = dict(vars(type(f)))\nd = dict.get(copied, k)",
+        ],
+        ids=[
+            "dict-constructor-copy",
+            "copy-method",
+            "dict-unpack",
+            "dict-keyword-unpack",
+            "copy-deepcopy",
+            "unmodeled-helper-passthrough",
+            "copied-namespace-get",
+            "copied-namespace-unbound-get",
+        ],
+    )
+    def test_provenance_survives_copies_and_conversions(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nvalues = list(vars(type(f)).values())",
+            "def f():\n    pass\nfor k, v in vars(type(f)).items():\n    pass",
+            "def f():\n    pass\nentry = vars(type(f)).popitem()",
+            "def f():\n    pass\nns = dict(vars(type(f)))\nvalues = list(ns.values())",
+        ],
+        ids=["values", "items", "popitem", "copied-namespace-values"],
+    )
+    def test_namespace_methods_without_a_selector_are_rejected(self, code):
+        # ``values()``/``items()`` return the descriptors directly, so the key
+        # rules never see a selector at all.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary application dictionaries survive the same copies: they
+            # never carry the marker to begin with.
+            "base = {'a': 1}\ncopied = dict(base)\nvalue = copied[selector]",
+            "base = {'a': 1}\nmerged = {**base, 'b': 2}\nvalue = merged[selector]",
+            "base = {'a': 1}\nvalues = list(base.values())",
+            "base = {'a': 1}\nfor k, v in base.items():\n    pass",
+            # A namespace read with a statically known, non-dunder key still works.
+            "import argparse\nparsed = argparse.Namespace()\nconfig = dict(vars(parsed))\nname = config['name']",
+            "class C:\n    x = 1\n\n\nfields = sorted(vars(C).keys())",
+            "class C:\n    x = 1\n\n\ncount = len(vars(C))",
+            # The marker rides onto non-mappings, so sequence reads must stay clean.
+            "import json\n\n\nclass C:\n    x = 1\n\n\ntext = json.dumps(vars(C()))\nhead = text[:100]",
+        ],
+        ids=[
+            "plain-dict-copy",
+            "plain-dict-merge",
+            "plain-dict-values",
+            "plain-dict-items",
+            "namespace-copy-static-key",
+            "namespace-keys",
+            "namespace-length",
+            "serialized-namespace-slice",
+        ],
+    )
+    def test_ordinary_dictionary_copies_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
 class TestScanCodeSecurityDynamicGetattrSandboxBypass:
     """Regression for H1-3977745: AST sandbox bypass via dynamic attribute names.
 
@@ -2971,211 +3263,6 @@ class TestScanCodeSecurityDynamicGetattrSandboxBypass:
         ],
     )
     def test_should_still_allow_safe_patterns(self, code):
-        assert scan_code_security(code).is_safe is True
-
-
-class TestScanCodeSecurityReflectiveNamespaceSelectorBypass:
-    """Regression: dynamic/dunder selectors into a ``vars()`` reflective namespace.
-
-    The static-key checks permitted a runtime key such as ``"__globals__".lower()``
-    in ``vars(type(f))[key]``. Because the argument to ``vars()`` is opaque, the
-    scanner modeled no mapping for it, so a dynamically selected descriptor getter
-    could recover function globals without a literal dunder attribute or a
-    ``getattr`` call. A selector into a reflective namespace now fails closed when
-    it is not a statically resolvable, non-dunder string — matching the ``getattr``
-    rule — while ordinary application dictionaries stay allowed.
-    """
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            pytest.param(
-                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nns = vars(type(f))\ndescriptor = ns[key]",
-                id="dynamic-key-vars-type-subscript",
-            ),
-            pytest.param(
-                "def f():\n    pass\ndescriptor = vars(type(f))['__globals__'.lower()]",
-                id="dynamic-key-vars-type-inline",
-            ),
-            pytest.param(
-                "def f():\n    pass\nkey = '__globals__'.lower()\ndescriptor = vars(type(f)).get(key)",
-                id="dynamic-key-vars-get",
-            ),
-            pytest.param(
-                "def f():\n    pass\nlookup = vars(type(f)).get\nkey = '__globals__'.lower()\ndescriptor = lookup(key)",
-                id="dynamic-key-aliased-accessor",
-            ),
-            pytest.param(
-                "def f():\n    pass\nkey = '__globals__'.lower()\ndescriptor = dict.get(vars(type(f)), key)",
-                id="dynamic-key-unbound-dict-get",
-            ),
-            pytest.param(
-                "def f():\n    pass\ndescriptor = vars(type(f)).__getitem__('__globals__'.lower())",
-                id="dynamic-key-getitem",
-            ),
-            pytest.param(
-                "obj = object()\ndescriptor = vars(obj)['__globals__']",
-                id="static-dunder-key-vars-subscript",
-            ),
-            pytest.param(
-                "obj = object()\ndescriptor = vars(obj).get('__globals__')",
-                id="static-dunder-key-vars-get",
-            ),
-        ],
-    )
-    def test_should_detect_reflective_namespace_selector(self, code):
-        result = scan_code_security(code)
-        assert result.is_safe is False
-        assert result.violations
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            pytest.param(
-                "settings = {'debug': True}\nkey = 'debug'\nvalue = settings[key]",
-                id="dict-literal-dynamic-key",
-            ),
-            pytest.param(
-                "config = {'a': 1, 'b': 2}\nvalue = config.get(user_choice)",
-                id="dict-literal-get-dynamic",
-            ),
-            pytest.param("data = dict(a=1, b=2)\nvalue = data[selector]", id="dict-constructor-dynamic-key"),
-            pytest.param(
-                "class Record:\n    value = 1\nrecord = Record()\nattr = vars(record)['value']",
-                id="vars-static-safe-member-subscript",
-            ),
-            pytest.param(
-                "class Record:\n    value = 1\nrecord = Record()\nattr = vars(record).get('value')",
-                id="vars-static-safe-member-get",
-            ),
-            pytest.param(
-                "class Record:\n    value = 1\nnamespace = vars(Record())",
-                id="vars-without-selector",
-            ),
-        ],
-    )
-    def test_should_allow_ordinary_dictionary_and_static_namespace_reads(self, code):
-        assert scan_code_security(code).is_safe is True
-
-
-class TestScanCodeSecurityReflectiveNamespaceProvenance:
-    """Regression: a reflective namespace must not launder through a copy.
-
-    At commit 9d3dff4efe the direct selector was rejected, but copying or
-    reconstructing the mapping dropped its marker, so the copy read as an
-    ordinary application dictionary and every selector rule stopped applying:
-    ``dict(vars(type(f)))["__globals__"]`` recovered the function-globals
-    descriptor, and a second copy recovered its ``__get__``. The marker now
-    survives ``dict()``, ``{**ns}``, ``.copy()``, ``copy.deepcopy()`` and any
-    other call the scanner cannot model, and namespace methods that hand out
-    members without presenting a selector are rejected outright.
-
-    Every case below is analyzed statically; nothing here is executed.
-    """
-
-    FUNCTION_GLOBALS_PROVENANCE_POC = (
-        "def f():\n"
-        "    pass\n"
-        "function_type_mapping = dict(vars(type(f)))\n"
-        'globals_descriptor = function_type_mapping["__globals__"]\n'
-        "descriptor_type_mapping = dict(vars(type(globals_descriptor)))\n"
-        'descriptor_getter = descriptor_type_mapping["__get__"]\n'
-        "recovered_globals = descriptor_getter(globals_descriptor, f)\n"
-    )
-
-    def test_should_detect_function_globals_provenance_poc(self):
-        """The verbatim copy-laundering PoC must not pass."""
-        result = scan_code_security(self.FUNCTION_GLOBALS_PROVENANCE_POC)
-        assert result.is_safe is False
-        assert any("sandbox escape" in violation for violation in result.violations)
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            pytest.param(
-                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = dict(vars(type(f)))\nd = mapping[key]",
-                id="dict-constructor-copy",
-            ),
-            pytest.param(
-                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = {**vars(type(f))}\nd = mapping[key]",
-                id="dict-unpack-copy",
-            ),
-            pytest.param(
-                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = vars(type(f)).copy()\nd = mapping[key]",
-                id="mapping-copy-method",
-            ),
-            pytest.param(
-                "import copy\ndef f():\n    pass\nkey = '__GLOBALS__'.lower()\n"
-                "mapping = copy.deepcopy(vars(type(f)))\nd = mapping[key]",
-                id="copy-deepcopy",
-            ),
-            pytest.param(
-                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\n"
-                "def passthrough(mapping):\n    return mapping\nd = passthrough(vars(type(f)))[key]",
-                id="unmodeled-helper-passthrough",
-            ),
-            pytest.param(
-                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = dict(**vars(type(f)))\nd = mapping[key]",
-                id="dict-keyword-unpack",
-            ),
-        ],
-    )
-    def test_should_preserve_provenance_through_copies(self, code):
-        result = scan_code_security(code)
-        assert result.is_safe is False
-        assert any("reflective namespace" in violation for violation in result.violations)
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            pytest.param("def f():\n    pass\nvalues = list(vars(type(f)).values())", id="values-method"),
-            pytest.param("def f():\n    pass\nfor k, v in vars(type(f)).items():\n    pass", id="items-method"),
-            pytest.param(
-                "def f():\n    pass\nnamespace = vars(type(f))\ngrab = namespace.values\nvalues = list(grab())",
-                id="aliased-values-accessor",
-            ),
-            pytest.param("def f():\n    pass\nentry = vars(type(f)).popitem()", id="popitem-method"),
-        ],
-    )
-    def test_should_detect_namespace_methods_without_a_selector(self, code):
-        # ``values()``/``items()`` return the descriptors themselves, so the
-        # selector rules never see a key at all.
-        result = scan_code_security(code)
-        assert result.is_safe is False
-        assert any("reflective namespace" in violation for violation in result.violations)
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            pytest.param(
-                "import argparse\nparser = argparse.ArgumentParser()\nparsed = parser.parse_args()\n"
-                "config = dict(vars(parsed))\nname = config['name']",
-                id="argparse-namespace-copy-static-key",
-            ),
-            pytest.param(
-                "class Record:\n    value = 1\nmerged = {**vars(Record()), 'extra': 2}\nvalue = merged['extra']",
-                id="namespace-merge-static-key",
-            ),
-            pytest.param(
-                "class Record:\n    value = 1\nfields = sorted(vars(Record()).keys())",
-                id="namespace-keys",
-            ),
-            pytest.param(
-                "import json\nclass Record:\n    value = 1\ntext = json.dumps(vars(Record()))\nhead = text[:100]",
-                id="namespace-serialized-then-sliced",
-            ),
-            pytest.param(
-                "class Record:\n    value = 1\ncount = len(vars(Record()))",
-                id="namespace-length",
-            ),
-            # Ordinary application dictionaries keep working through the same
-            # copy operations: they never carry the marker to begin with.
-            pytest.param("base = {'a': 1}\ncopied = dict(base)\nvalue = copied[selector]", id="plain-dict-copy"),
-            pytest.param("base = {'a': 1}\nmerged = {**base, 'b': 2}\nvalue = merged[selector]", id="plain-dict-merge"),
-            pytest.param("base = {'a': 1}\nvalues = list(base.values())", id="plain-dict-values"),
-        ],
-    )
-    def test_should_allow_ordinary_dictionary_copies_and_key_reads(self, code):
         assert scan_code_security(code).is_safe is True
 
 
