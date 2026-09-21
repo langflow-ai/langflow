@@ -124,5 +124,13 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
             runAsNonRoot: true
+            # `runAsNonRoot` alone is not enough: the image's USER is the name
+            # `user`, and the kubelet cannot prove a name is not root, so the
+            # container never starts (`CreateContainerConfigError: image has
+            # non-numeric user`). 1000 is that user's uid in both Dockerfiles.
+            # Its group is left to the image - gid 0, which is what owns /app
+            # under UBI. On OpenShift, drop `runAsUser` and let the SCC assign
+            # one instead.
+            runAsUser: 1000
             capabilities:
               drop: ["ALL"]
