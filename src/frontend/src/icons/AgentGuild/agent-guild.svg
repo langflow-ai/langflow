@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">Agent Guild</title>
+  <rect width="128" height="128" rx="24" fill="#123b32"/>
+  <path d="M35 45 64 28 93 45v35L64 98 35 80Z" fill="none" stroke="#81dfb4" stroke-width="6" stroke-linejoin="round"/>
+  <path d="m35 45 29 18 29-18M64 63v35" fill="none" stroke="#81dfb4" stroke-width="5"/>
+  <g fill="#eefcf5"><circle cx="35" cy="45" r="7"/><circle cx="93" cy="45" r="7"/><circle cx="64" cy="98" r="7"/></g>
+</svg>

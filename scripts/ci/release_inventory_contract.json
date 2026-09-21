@@ -260,6 +260,7 @@
         ]
       },
       "bundle_names": [
+        "agentguild",
         "agentql",
         "aiml",
         "altk",
