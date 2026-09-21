@@ -1366,6 +1366,33 @@ def test_graph_state_exposed_by_default():
     assert any(isinstance(e, CustomEvent) and e.name == "langflow.log" for e in events)
 
 
+def test_tool_calls_survive_opt_out():
+    """A tool call is conversation, not graph state, so its lifecycle stays.
+
+    Without this, a future filter that also dropped ``TOOL_CALL_*`` would still
+    pass the suppression test above, which only drives tokens and graph events.
+    """
+    translator = AGUITranslator(run_id="run-1", thread_id="session-1", expose_graph_state=False)
+    translator.start()
+    message = Message(
+        text="",
+        content_blocks=[
+            ContentBlock(
+                title="Agent steps",
+                contents=[ToolContent(name="search", tool_input={"q": "weather"}, output="sunny")],
+            )
+        ],
+    )
+    events = _fire_add_message(translator, message, "msg-tool")
+
+    emitted = [type(e).__name__ for e in events]
+    assert "ToolCallStartEvent" in emitted
+    assert "ToolCallArgsEvent" in emitted
+    assert "ToolCallEndEvent" in emitted
+    assert "ToolCallResultEvent" in emitted
+    assert not [e for e in events if isinstance(e, _GRAPH_STATE_TYPES)]
+
+
 def test_graph_state_suppressed_when_opted_out():
     """No node ids, no per-node output, no logs: only the conversation."""
     events = _drive_a_run(AGUITranslator(run_id="run-1", thread_id="session-1", expose_graph_state=False))

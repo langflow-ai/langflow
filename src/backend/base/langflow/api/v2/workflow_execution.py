@@ -40,7 +40,11 @@ from lfx.observability import execution_protocol, extract_trace_link, queued_tra
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
-from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_terminal_output_event
+from lfx.workflow.adapters.langflow import (
+    WORKFLOW_OUTPUT_CAPTURE_EVENT,
+    WORKFLOW_STOP_CHECKPOINT_EVENT,
+    build_terminal_output_event,
+)
 from lfx.workflow.converters import (
     ParsedWorkflowRun,
     create_error_response,
@@ -385,6 +389,10 @@ async def _stream_event_frames(
     # primitives, which carry the same conversation without the internals. The
     # public playground is the exception and sets it independently.
     emit_side_channel = adapter.name == "agui" and parsed.emit_v1_side_channel
+    # Only for a background run (the runner is the only consumer) whose per-vertex
+    # frames are suppressed; with graph state on those frames are durable and the
+    # runner already polls on them.
+    emit_stop_checkpoint = emit_output_capture and not parsed.expose_graph_state
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False
@@ -448,6 +456,16 @@ async def _stream_event_frames(
                         seq,
                     )
                     seq += 1
+
+            if emit_stop_checkpoint and event_type == "end_vertex":
+                # Carries no payload: its only job is to give the runner a
+                # vertex boundary to poll STOP on, now that the frames it used
+                # to poll on are suppressed.
+                yield _frame(
+                    StreamEvent(type=WORKFLOW_STOP_CHECKPOINT_EVENT, data_json="{}"),
+                    seq,
+                )
+                seq += 1
 
             for event in adapter.translate(event_type, event_data):
                 if terminal_error_type is not None and event.type == terminal_error_type:

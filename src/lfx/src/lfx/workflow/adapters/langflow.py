@@ -31,6 +31,15 @@ if TYPE_CHECKING:
 # clients and independent of durable-event storage.
 WORKFLOW_OUTPUT_CAPTURE_EVENT = "__workflow_output_capture__"
 
+# Reserved event type for the OFF-WIRE vertex-boundary checkpoint. A background
+# worker polls the durable STOP signal when a durable frame goes by, so a run
+# whose per-vertex frames are suppressed would only notice a stop at its next
+# conversation frame, which may be a whole flow away. The frame source emits
+# this instead, the runner polls on it and drops it: never persisted, never
+# published, carrying no graph data. Cancellation must not depend on how much
+# the caller asked to see.
+WORKFLOW_STOP_CHECKPOINT_EVENT = "__workflow_stop_checkpoint__"
+
 
 def build_terminal_output_event(event_data: dict[str, Any]) -> OutputEvent | None:
     """Build the normalized terminal ``OutputEvent`` from a raw ``end_vertex``, or None.
@@ -134,12 +143,14 @@ class LangflowAdapter:
 
         ``vertices_sorted`` names every component that will run, ``end_vertex``
         carries a component's own output, and ``log`` is component log output.
-        ``build_start`` is per-vertex only when it carries an ``id``; the
-        graph-level one (``{}``) marks the run beginning and stays.
+        ``build_start`` and ``build_end`` are per-vertex only when they carry an
+        ``id``: the component-tool wrappers emit ``build_end`` with the id of the
+        component they wrap, while the graph-level ``build_start`` (``{}``) marks
+        the run beginning and stays.
         """
         if event_type in {"vertices_sorted", "end_vertex", "log"}:
             return True
-        return event_type == "build_start" and bool(event_data.get("id"))
+        return event_type in {"build_start", "build_end"} and bool(event_data.get("id"))
 
     @staticmethod
     def _passthrough(event_type: str, event_data: dict[str, Any]) -> StreamEvent:

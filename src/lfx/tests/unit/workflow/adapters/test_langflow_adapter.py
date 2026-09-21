@@ -199,6 +199,22 @@ class TestExposeGraphState:
         )
         assert frames == []
 
+    def test_component_tool_build_events_are_dropped(self):
+        """``ComponentToolkit`` emits ``build_end`` carrying the wrapped component's id.
+
+        A flow whose agent calls a component-tool would otherwise name that
+        component on the narrowed stream, the public one included.
+        """
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        frames = list(adapter.translate("build_start", {"id": "CalculatorComponent-x1y2z"}))
+        frames += list(adapter.translate("build_end", {"id": "CalculatorComponent-x1y2z"}))
+        assert frames == []
+
+    def test_component_tool_build_events_survive_with_graph_state_on(self):
+        adapter = get_stream_adapter("langflow", _ctx())
+        frames = list(adapter.translate("build_end", {"id": "CalculatorComponent-x1y2z"}))
+        assert [f.type for f in frames] == ["build_end"]
+
     def test_graph_level_build_start_and_conversation_survive(self):
         """The run-beginning marker carries no component id, so it stays."""
         adapter = get_stream_adapter("langflow", self._narrowed())

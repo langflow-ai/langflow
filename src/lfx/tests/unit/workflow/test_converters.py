@@ -22,6 +22,7 @@ Test Strategy:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from unittest.mock import Mock
 from uuid import uuid4
@@ -1730,6 +1731,36 @@ def test_parse_keeps_side_channel_by_default():
     parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(uuid4())))
     assert parsed.expose_graph_state is True
     assert parsed.emit_v1_side_channel is True
+
+
+def test_redaction_covers_both_copies_of_a_real_message_source():
+    """``Message.model_dump()`` carries properties twice, so both must be emptied.
+
+    Redacting only the outer copy leaves the component id, its display name and
+    the model name on the wire under ``data``.
+    """
+    from lfx.schema.message import Message
+    from lfx.schema.properties import Properties, Source
+    from lfx.workflow.converters import redact_component_identity
+
+    message = Message(
+        text="hello",
+        sender="Machine",
+        sender_name="AI",
+        properties=Properties(source=Source(id="Prompt-ABC", display_name="Prompt", source="gpt-4o")),
+    )
+    payload = message.model_dump()
+    assert payload["data"]["properties"]["source"]["id"] == "Prompt-ABC", "fixture must carry the nested copy"
+
+    redacted = redact_component_identity(payload)
+
+    assert not any(redacted["properties"]["source"].values())
+    assert not any(redacted["data"]["properties"]["source"].values())
+    for canary in ("Prompt-ABC", "gpt-4o"):
+        assert canary not in json.dumps(redacted, default=str)
+    # The conversation itself is untouched, and the caller's payload is not mutated.
+    assert redacted["text"] == "hello"
+    assert payload["properties"]["source"]["id"] == "Prompt-ABC"
 
 
 def test_expose_graph_state_defaults_off_for_agui():

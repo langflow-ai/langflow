@@ -113,20 +113,32 @@ _GRAPH_STATE_OFF_BY_DEFAULT: frozenset[str] = frozenset({"agui"})
 
 
 def redact_component_identity(event_data: dict[str, Any]) -> dict[str, Any]:
-    """Return a copy of a message payload with ``properties.source`` emptied.
+    """Return a copy of a message payload with every ``properties.source`` emptied.
 
     A message names the component that produced it, and for an LLM component
     ``source.source`` is the model name. That is graph identity rather than
     conversation, so a stream running without graph state must not carry it.
-    The keys stay present (clients read them unconditionally); only the values
-    go. Copied rather than mutated: the caller hands the same payload to the
-    adapter afterwards.
+
+    ``Message.model_dump()`` carries the same properties twice, once at the top
+    level and once under ``data``, so both are cleared: redacting only the outer
+    copy leaves the id on the wire. The keys stay present (clients read them
+    unconditionally); only the values go. Copied rather than mutated: the caller
+    hands the same payload to the adapter afterwards.
     """
-    properties = event_data.get("properties")
+    redacted = _redact_source(event_data)
+    nested = redacted.get("data")
+    if isinstance(nested, dict):
+        redacted = {**redacted, "data": _redact_source(nested)}
+    return redacted
+
+
+def _redact_source(payload: dict[str, Any]) -> dict[str, Any]:
+    """Empty ``properties.source`` on one level of a message payload."""
+    properties = payload.get("properties")
     if not isinstance(properties, dict) or not isinstance(properties.get("source"), dict):
-        return event_data
+        return payload
     source = dict.fromkeys(properties["source"])
-    return {**event_data, "properties": {**properties, "source": source}}
+    return {**payload, "properties": {**properties, "source": source}}
 
 
 def resolve_expose_graph_state(stream_protocol: str, *, requested: bool | None) -> bool:
