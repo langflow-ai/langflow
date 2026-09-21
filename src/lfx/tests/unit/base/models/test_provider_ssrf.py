@@ -3,6 +3,8 @@
 import pytest
 from lfx.base.models.provider_ssrf import (
     openai_compatible_client_kwargs,
+    provider_httpx_client_kwargs,
+    provider_httpx_clients,
     validate_provider_base_url,
     validate_provider_model_identifier,
 )
@@ -158,3 +160,80 @@ class TestProviderModelIdentifier:
     def test_error_names_the_field(self):
         with pytest.raises(ValueError, match="Invalid endpoint"):
             validate_provider_model_identifier("http://x/", field_name="endpoint")
+
+
+class TestCredentialedEndpointRequiresHttps:
+    """A plaintext provider endpoint leaks the operator's API key (CWE-319).
+
+    This is not an SSRF question: the host can be perfectly public and routable
+    and still put the stored credential on the wire in the clear, so a tenant who
+    can edit the field can downgrade it off TLS without needing an internal target.
+
+    The SSRF host check runs first, so these patch it out to exercise the scheme
+    rule on its own rather than depending on whether a test host resolves.
+    """
+
+    DEFAULT = "https://api.mistral.ai/v1"
+
+    @pytest.fixture(autouse=True)
+    def _protection_on(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.setattr(
+            "lfx.base.models.provider_ssrf.validate_strict_url_for_ssrf_or_raise",
+            lambda _url: None,
+        )
+        monkeypatch.setattr(
+            "lfx.base.models.provider_ssrf.ssrf_protected_strict_openai_clients_for_url",
+            lambda _url: {},
+        )
+        monkeypatch.setattr(
+            "lfx.base.models.provider_ssrf.ssrf_protected_strict_httpx_client_kwargs_for_url",
+            lambda _url: ({}, {}),
+        )
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://api.groq.com/openai/v1",
+            "http://api.aimlapi.com/v1",
+            "http://integrate.api.nvidia.com/v1",
+            "http://mistral.example.com/v1",
+            "HTTP://api.groq.com/openai/v1",
+        ],
+    )
+    def test_public_http_endpoint_is_rejected(self, url):
+        with pytest.raises(ValueError, match="must use https"):
+            validate_provider_base_url(url, default_url=self.DEFAULT)
+
+    @pytest.mark.parametrize(
+        "helper",
+        [provider_httpx_clients, provider_httpx_client_kwargs, openai_compatible_client_kwargs],
+    )
+    def test_every_credentialed_entry_point_rejects_http(self, helper):
+        """The guard belongs to the shared helpers, not to one component."""
+        with pytest.raises(ValueError, match="must use https"):
+            helper("http://api.groq.com/openai/v1", default_url=self.DEFAULT)
+
+    def test_custom_https_endpoint_is_accepted(self):
+        validate_provider_base_url("https://mistral.example.com/v1", default_url=self.DEFAULT)
+
+    def test_https_default_endpoint_is_untouched(self):
+        validate_provider_base_url(self.DEFAULT, default_url=self.DEFAULT)
+        assert provider_httpx_clients(self.DEFAULT, default_url=self.DEFAULT) == {}
+        assert provider_httpx_client_kwargs(self.DEFAULT, default_url=self.DEFAULT) == ({}, {})
+
+    def test_operator_allowlisted_host_may_use_http(self, monkeypatch):
+        """A plaintext internal gateway is an operator decision, not a tenant one."""
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "internal-llm.corp")
+        validate_provider_base_url("http://internal-llm.corp:8000/v1", default_url=self.DEFAULT)
+
+    def test_allowlisting_one_host_does_not_admit_another(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "other.corp")
+        with pytest.raises(ValueError, match="must use https"):
+            validate_provider_base_url("http://internal-llm.corp:8000/v1", default_url=self.DEFAULT)
+
+    def test_disabled_protection_does_not_enforce(self, monkeypatch):
+        """The check is part of the SSRF policy, not a separate always-on control."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
+        validate_provider_base_url("http://api.groq.com/openai/v1", default_url=self.DEFAULT)
