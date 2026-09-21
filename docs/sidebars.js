@@ -130,6 +130,8 @@ module.exports = {
             "Develop/external-authentication",
             "Develop/authorization",
             "Develop/admin-api-cli",
+            "Develop/connection-oauth",
+            "Develop/entra-app-registration",
           ],
         },
         "Develop/install-custom-dependencies",
@@ -370,6 +372,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-connections",
+          label: "Resolve connections in headless LFX"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-prewarm",
           label: "Pre-warm LFX"
         },
@@ -531,6 +538,7 @@ module.exports = {
             "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-figranium",
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
@@ -544,6 +552,7 @@ module.exports = {
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
+            "Components/bundles-microsoft",
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
@@ -568,6 +577,9 @@ module.exports = {
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
+            "Components/bundles-serpingapi",
+            "Components/bundles-serply",
+            "Components/bundles-slack",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
             "Components/bundles-valkey",

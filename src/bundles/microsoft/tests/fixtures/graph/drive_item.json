@@ -1,0 +1,14 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#drives('b!drive')/items/$entity",
+  "@microsoft.graph.downloadUrl": "https://contoso-my.sharepoint.com/personal/_layouts/15/download.aspx?SECRET=preauth",
+  "id": "01BYE5RZ6QN3ZWBTUFOFD3GSPGOHDJD36K",
+  "name": "notes.txt",
+  "size": 17,
+  "webUrl": "https://contoso.sharepoint.com/Documents/notes.txt",
+  "eTag": "\"{GUID},2\"",
+  "cTag": "\"c:{GUID},1\"",
+  "createdDateTime": "2026-08-01T09:00:00Z",
+  "lastModifiedDateTime": "2026-08-30T18:22:00Z",
+  "file": {"mimeType": "text/plain"},
+  "parentReference": {"driveId": "b!drive", "id": "root"}
+}

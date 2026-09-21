@@ -48,6 +48,7 @@ from lfx.observability import (
 )
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
@@ -162,6 +163,7 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        self.execution_principal = ExecutionPrincipal.unknown()
         # Warm-registry templates need the parsed graph structure without
         # executing component constructors at preload/reconcile time. Normal
         # graphs keep the historical eager-instantiation behavior.
@@ -195,6 +197,11 @@ class Graph:
         self.persist_messages: bool = True
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
+        # Branch stops are transient and must be released by the vertex that
+        # created them. The graph can execute sibling vertices concurrently, so
+        # a graph-wide reset when one sibling finishes would otherwise revive a
+        # branch stopped by another sibling that is still running.
+        self.branch_inactivation_sources: dict[str, set[str]] = {}
         self.activated_vertices: list[str] = []
         self.vertices_layers: list[list[str]] = []
         self.vertices_to_run: set[str] = set()
@@ -1378,15 +1385,30 @@ class Graph:
         self.in_degree_map = self.build_in_degree(edges)
         self.parent_child_map = self.build_parent_child_map(vertices)
 
-    def reset_inactivated_vertices(self) -> None:
-        """Resets the inactivated vertices in the graph."""
-        for vertex_id in self.inactivated_vertices.copy():
+    def _held_branch_inactivations(self) -> set[str]:
+        """Vertices a source vertex stopped and has not released yet."""
+        return set().union(*self.branch_inactivation_sources.values())
+
+    def reset_inactivated_vertices(self, source_vertex_id: str | None = None) -> None:
+        """Reactivate inactivated vertices.
+
+        With ``source_vertex_id``, release only the branch stops that completed
+        vertex made; a vertex another source still holds stays inactive.
+        Inactivations with no recorded source (graphs cached or checkpointed
+        before ownership was tracked) keep the legacy behavior and are released
+        by any completion. Without a source, every inactivation is reset.
+        """
+        if source_vertex_id is None:
+            self.branch_inactivation_sources.clear()
+        else:
+            self.branch_inactivation_sources.pop(source_vertex_id, None)
+        for vertex_id in self.inactivated_vertices - self._held_branch_inactivations():
             self.mark_vertex(vertex_id, "ACTIVE")
-        self.inactivated_vertices = set()
-        self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str) -> None:
         """Marks all vertices in the graph."""
+        # Every vertex now shares one state, so no earlier branch stop is held.
+        self.branch_inactivation_sources.clear()
         for vertex in self.vertices:
             vertex.set_state(state)
 
@@ -1470,6 +1492,7 @@ class Graph:
             output_name=output_name,
             protected_vertices=protected_vertices,
         )
+        self._track_branch_inactivation(vertex_id, state, visited - {vertex_id})
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1482,6 +1505,22 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+
+    def _track_branch_inactivation(self, source_vertex_id: str, state: str, branch_vertices: set[str]) -> None:
+        """Record which source holds each stopped vertex so a completion releases only its own stops."""
+        if state == VertexStates.INACTIVE:
+            stopped = branch_vertices & self.inactivated_vertices
+            if stopped:
+                held = self.branch_inactivation_sources.get(source_vertex_id, set())
+                self.branch_inactivation_sources[source_vertex_id] = held | stopped
+        elif state == VertexStates.ACTIVE:
+            remaining = self.branch_inactivation_sources.pop(source_vertex_id, set()) - branch_vertices
+            if remaining:
+                self.branch_inactivation_sources[source_vertex_id] = remaining
+            # start() releases only this source's stops; one another still-running
+            # vertex holds on a shared descendant stays in effect.
+            for held_vertex_id in branch_vertices & self._held_branch_inactivations():
+                self.mark_vertex(held_vertex_id, VertexStates.INACTIVE)
 
     def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
         """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
@@ -1582,6 +1621,7 @@ class Graph:
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
             "inactivated_vertices": self.inactivated_vertices,
+            "branch_inactivation_sources": self.branch_inactivation_sources,
             "run_manager": self.run_manager.to_dict(),
             "_run_id": self._run_id,
             "in_degree_map": self.in_degree_map,
@@ -1680,6 +1720,7 @@ class Graph:
                 before_initialize(new_graph)
 
         new_graph.requires_extension_event_replay = self.requires_extension_event_replay
+        new_graph.execution_principal = self.execution_principal
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
@@ -1724,6 +1765,8 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("execution_principal", ExecutionPrincipal.unknown())
+        state.setdefault("branch_inactivation_sources", {})
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -2191,7 +2234,7 @@ class Graph:
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
         self.extend_run_queue(next_runnable_vertices)
-        self.reset_inactivated_vertices()
+        self.reset_inactivated_vertices(vertex_id)
         self.reset_activated_vertices()
 
         if chat_service is not None:
@@ -3162,6 +3205,7 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        subgraph.execution_principal = self.execution_principal
         # A subgraph extends the parent's run, so it inherits the ephemeral
         # (no-persist) decision too.
         subgraph.persist_messages = self.persist_messages

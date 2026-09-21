@@ -1,4 +1,5 @@
 import contextlib
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -39,6 +40,12 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return the file names mapping for different versions."""
         return []  # New component
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "message": "uploads the file to the current user's file store, which needs a user in the database",
+        }
 
     def test_basic_setup(self, component_class, default_kwargs):
         """Test basic component initialization."""
@@ -768,6 +775,8 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             ('{"type": "service_account", "private_key": "-----BEGIN\nKEY\n-----END"}', "With control chars"),
             # Case 3: JSON with extra whitespace
             ('  \n{"type": "service_account", "project_id": "test"}  \n', "With whitespace"),
+            # Case 4: Double-encoded JSON, as emitted by some secret pipelines (LE-2561)
+            (json.dumps('{"type": "service_account", "project_id": "test"}'), "Double-encoded"),
         ]
 
         for service_account_json, test_name in test_cases:

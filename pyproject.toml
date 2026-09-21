@@ -28,8 +28,8 @@ dependencies = [
     # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-ibm>=0.2.3,<1.0.0",
-    "lfx-docling>=0.1.6,<1.0.0",
+    "lfx-ibm>=0.2.4,<1.0.0",
+    "lfx-docling>=0.1.7,<1.0.0",
     "lfx-datastax>=0.1.8,<1.0.0",
     "lfx-toolguard>=0.1.2,<1.0.0",
     "lfx-openai>=0.1.4,<1.0.0",
@@ -37,11 +37,13 @@ dependencies = [
     "lfx-azure>=0.1.0,<1.0.0",
     "lfx-ollama>=0.1.1,<1.0.0",
     "lfx-amazon>=0.1.7,<1.0.0",
-    "lfx-cohere>=0.1.3,<1.0.0",
-    "lfx-oracle>=0.1.3,<1.0.0",
+    "lfx-cohere>=0.1.4,<1.0.0",
+    "lfx-oracle>=0.1.4,<1.0.0",
     "lfx-vllm>=0.1.3,<1.0.0",
     "lfx-openai-compatible>=0.1.5,<1.0.0",
-    "lfx-google>=0.1.1,<1.0.0",
+    "lfx-google>=0.2.1,<1.0.0",
+    "lfx-microsoft>=0.1.0,<1.0.0",
+    "lfx-slack>=0.1.1,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -123,6 +125,10 @@ lfx-exa = { workspace = true }
 lfx-valkey = { workspace = true }
 lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
+lfx-serply = { workspace = true }
+lfx-serpingapi = { workspace = true }
+lfx-microsoft = { workspace = true }
+lfx-slack = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -159,6 +165,10 @@ members = [
     "src/bundles/valkey",
     "src/bundles/google",
     "src/bundles/confluent",
+    "src/bundles/serply",
+    "src/bundles/serpingapi",
+    "src/bundles/microsoft",
+    "src/bundles/slack",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -171,7 +181,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.22,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.27,<2.0",
     "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.5,<1.0.0",
@@ -180,19 +190,21 @@ bundles = [
     "lfx-firecrawl>=0.1.3,<1.0.0",
     "lfx-nextplaid>=0.1.6,<1.0.0",
     "lfx-paddle>=0.1.4,<1.0.0",
+    "lfx-serpingapi>=0.1.0,<1.0.0",
+    "lfx-serply>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.3,<1.0.0",
 ]
 
 docling = [
-    "lfx-docling[local]>=0.1.6,<1.0.0",
+    "lfx-docling[local]>=0.1.7,<1.0.0",
 ]
 
 docling-chunking = [
-    "lfx-docling[chunking]>=0.1.6,<1.0.0",
+    "lfx-docling[chunking]>=0.1.7,<1.0.0",
 ]
 
 docling-image-description = [
-    "lfx-docling[image-description]>=0.1.6,<1.0.0",
+    "lfx-docling[image-description]>=0.1.7,<1.0.0",
 ]
 
 audio = [
@@ -248,7 +260,7 @@ override-dependencies = [
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
     "orjson>=3.11.6",
     "gunicorn>=25.3.0",
-    "pypdf>=6.15.0,<7.0.0",  # Force a patched pypdf 6.x release
+    "pypdf>=6.16.1,<7.0.0",  # Force a patched pypdf 6.x release
     "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
     "nltk>=3.10.3",
     "Markdown>=3.8.0",
@@ -416,6 +428,9 @@ external = ["RUF027"]
     "TRY003",  # Long exception messages
     "EM101",   # String literals in exceptions
 ]
+"docs/docs/Lfx/samples/connections/*" = [
+    "INP001", # Reference samples are standalone files, loaded by path, not a package
+]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/base/langflow/custom/__init__.py" = [
     "I001",  # Import order affects initialization - must import custom module first
@@ -553,13 +568,6 @@ external = ["RUF027"]
     "S110",  # Try-except-pass for optional error logging
 ]
 "src/backend/tests/*" = [
-    "D1",
-    "PLR2004",
-    "S101",
-    "SLF001",
-    "BLE001",  # allow broad-exception catching in tests
-]
-"src/backend/base/langflow/tests/*" = [
     "D1",
     "PLR2004",
     "S101",

@@ -941,6 +941,7 @@ class ErrorMessage(Message):
         session_metadata: dict | None = None,
         *,
         include_traceback: bool = True,
+        context_note: str | None = None,
     ) -> None:
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
@@ -948,6 +949,11 @@ class ErrorMessage(Message):
 
         plain_reason = self._format_plain_reason(exception)
         markdown_reason = self._format_markdown_reason(exception)
+        # Keep the original exception's formatting and metadata while adding
+        # diagnostic context to both the streamed text and the error details.
+        if context_note:
+            plain_reason = f"{plain_reason.rstrip()}\n\n{context_note}\n"
+            markdown_reason = f"{markdown_reason.rstrip()}\n\n{context_note}\n"
         # Get the sender ID
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)

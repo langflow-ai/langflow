@@ -6,6 +6,7 @@ Re-exports all public symbols so that existing imports from
 
 from lfx.cli.validation._env_validation import (
     is_valid_env_var_name,
+    validate_connection_refs_for_env,
     validate_global_variables_for_env,
 )
 from lfx.cli.validation.core import (
@@ -56,6 +57,7 @@ __all__ = [
     "_render_result",
     "is_valid_env_var_name",
     "validate_command",
+    "validate_connection_refs_for_env",
     "validate_flow_file",
     "validate_global_variables_for_env",
 ]

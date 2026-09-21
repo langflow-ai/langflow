@@ -46,6 +46,7 @@ from lfx.base.models.unified_models import get_embedding_model_options, get_embe
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
+from lfx.helpers.base_model import coalesce_bool
 from lfx.io import (
     BoolInput,
     DBProviderInput,
@@ -109,6 +110,17 @@ def _is_retrieve_mode(value: Any) -> bool:
     keeps those loading without forcing a flow rewrite.
     """
     return isinstance(value, str) and "Retrieve" in value
+
+
+# Boolean flags of a ``column_config`` row. Toggled cells hold real booleans,
+# but a typed cell (or a flow saved while the cell rendered as plain text)
+# keeps the raw string, e.g. ``"true"`` — read them with ``coalesce_bool``.
+_COLUMN_FLAGS = ("vectorize", "identifier")
+
+
+def _normalize_column_config(config_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return copies of the rows with every flag as a real boolean."""
+    return [{**row, **{key: coalesce_bool(row.get(key)) for key in _COLUMN_FLAGS}} for row in config_list]
 
 
 # Error message used by both the ingest and retrieve paths when the user is
@@ -477,9 +489,33 @@ class KnowledgeComponent(Component):
         canvas could land with both outputs visible.
         """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
-        mode_value = new_frontend_node.get("template", {}).get("mode", {}).get("value", MODE_INGEST)
+        template = new_frontend_node.get("template", {})
+        mode_value = template.get("mode", {}).get("value", MODE_INGEST)
         self.update_outputs(new_frontend_node, "mode", mode_value)
+        # The rebuilt template carries class-default (Ingest) ``show`` flags,
+        # so a saved Retrieve node returned ``search_query`` hidden and the canvas
+        # silently dropped the edge feeding it.
+        self._apply_mode_visibility(template)
         return new_frontend_node
+
+    def _apply_mode_visibility(self, build_config, field_name: str | None = None, field_value: Any = None):
+        """Show only the inputs that belong to the effective mode."""
+        current_mode = build_config.get("mode", {}).get("value") if isinstance(build_config, dict) else None
+        if field_name == "mode":
+            current_mode = field_value
+        # Map legacy/emoji-prefixed labels onto the current canonical values so
+        # flows saved before the label change still toggle visibility correctly.
+        if _is_retrieve_mode(current_mode):
+            current_mode = MODE_RETRIEVE
+        elif current_mode not in self.mode_config:
+            current_mode = MODE_INGEST
+        return set_current_fields(
+            build_config=build_config if isinstance(build_config, dotdict) else dotdict(build_config),
+            action_fields=self.mode_config,
+            selected_action=current_mode,
+            default_fields=self.default_keys,
+            func=set_field_display,
+        )
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Filter visible outputs to match the selected mode.
@@ -617,23 +653,7 @@ class KnowledgeComponent(Component):
                 build_config["knowledge_base"]["value"] = None
 
         # Honor the current mode regardless of which field triggered the refresh.
-        # Falls back to MODE_INGEST when ``mode`` is missing (legacy nodes).
-        current_mode = build_config.get("mode", {}).get("value") if isinstance(build_config, dict) else None
-        if field_name == "mode":
-            current_mode = field_value
-        # Map legacy/emoji-prefixed labels onto the current canonical values so
-        # flows saved before the label change still toggle visibility correctly.
-        if _is_retrieve_mode(current_mode):
-            current_mode = MODE_RETRIEVE
-        elif current_mode not in self.mode_config:
-            current_mode = MODE_INGEST
-        return set_current_fields(
-            build_config=build_config if isinstance(build_config, dotdict) else dotdict(build_config),
-            action_fields=self.mode_config,
-            selected_action=current_mode,
-            default_fields=self.default_keys,
-            func=set_field_display,
-        )
+        return self._apply_mode_visibility(build_config, field_name, field_value)
 
     # =====================================================================
     #                       INGESTION CODE PATH
@@ -879,7 +899,9 @@ class KnowledgeComponent(Component):
                 user_id=user_id,
                 name=name,
                 model_selection=model_selection,
-                column_config=self.column_config if isinstance(self.column_config, list) else [],
+                column_config=_normalize_column_config(self.column_config)
+                if isinstance(self.column_config, list)
+                else [],
                 backend_type=backend_type,
                 backend_config=backend_config,
             )
@@ -898,8 +920,8 @@ class KnowledgeComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
+            vectorize = coalesce_bool(config.get("vectorize"))
+            identifier = coalesce_bool(config.get("identifier"))
 
             metadata["columns"].append(
                 {
@@ -997,12 +1019,10 @@ class KnowledgeComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
 
-            if vectorize:
+            if coalesce_bool(config.get("vectorize")):
                 content_cols.append(col_name)
-            if identifier:
+            if coalesce_bool(config.get("identifier")):
                 identifier_cols.append(col_name)
 
         for _, row in df_source.iterrows():

@@ -1,0 +1,273 @@
+{
+  "nodes": [
+    {
+      "id": "GmailLoaderComponent-17120",
+      "type": "genericNode",
+      "position": {
+        "x": 200,
+        "y": 180
+      },
+      "data": {
+        "id": "GmailLoaderComponent-17120",
+        "type": "GmailLoaderComponent",
+        "node": {
+          "template": {
+            "_type": "Component",
+            "code": {
+              "type": "code",
+              "required": true,
+              "placeholder": "",
+              "list": false,
+              "show": true,
+              "multiline": true,
+              "value": "import base64\nimport json\nimport re\nfrom collections.abc import Iterator\nfrom json.decoder import JSONDecodeError\nfrom typing import Any\n\nfrom google.auth.exceptions import RefreshError\nfrom google.oauth2.credentials import Credentials\nfrom googleapiclient.discovery import build\nfrom langchain_core.chat_sessions import ChatSession\nfrom langchain_core.messages import HumanMessage\nfrom langchain_google_community.gmail.loader import GMailLoader\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import MessageTextInput\nfrom lfx.io import SecretStrInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.template.field.base import Output\n\n\nclass GmailLoaderComponent(Component):\n    display_name = \"Gmail Loader\"\n    description = \"Loads emails from Gmail using provided credentials.\"\n    icon = \"Google\"\n    legacy: bool = True\n    replacement = [\"composio.ComposioGmailAPIComponent\"]\n\n    inputs = [\n        SecretStrInput(\n            name=\"json_string\",\n            display_name=\"JSON String of the Service Account Token\",\n            info=\"JSON string containing OAuth 2.0 access token information for service account access\",\n            required=True,\n            value=\"\"\"{\n                \"account\": \"\",\n                \"client_id\": \"\",\n                \"client_secret\": \"\",\n                \"expiry\": \"\",\n                \"refresh_token\": \"\",\n                \"scopes\": [\n                    \"https://www.googleapis.com/auth/gmail.readonly\",\n                ],\n                \"token\": \"\",\n                \"token_uri\": \"https://oauth2.googleapis.com/token\",\n                \"universe_domain\": \"googleapis.com\"\n            }\"\"\",\n        ),\n        MessageTextInput(\n            name=\"label_ids\",\n            display_name=\"Label IDs\",\n            info=\"Comma-separated list of label IDs to filter emails.\",\n            required=True,\n            value=\"INBOX,SENT,UNREAD,IMPORTANT\",\n        ),\n        MessageTextInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of emails to load.\",\n            required=True,\n            value=\"10\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"JSON\", name=\"data\", method=\"load_emails\"),\n    ]\n\n    def load_emails(self) -> Data:\n        class CustomGMailLoader(GMailLoader):\n            def __init__(\n                self, creds: Any, *, n: int = 100, label_ids: list[str] | None = None, raise_error: bool = False\n            ) -> None:\n                super().__init__(creds, n, raise_error)\n                self.label_ids = label_ids if label_ids is not None else [\"SENT\"]\n\n            def clean_message_content(self, message):\n                # Remove URLs\n                message = re.sub(r\"http\\S+|www\\S+|https\\S+\", \"\", message, flags=re.MULTILINE)\n\n                # Remove email addresses\n                message = re.sub(r\"\\S+@\\S+\", \"\", message)\n\n                # Remove special characters and excessive whitespace\n                message = re.sub(r\"[^A-Za-z0-9\\s]+\", \" \", message)\n                message = re.sub(r\"\\s{2,}\", \" \", message)\n\n                # Trim leading and trailing whitespace\n                return message.strip()\n\n            def _extract_email_content(self, msg: Any) -> HumanMessage:\n                from_email = None\n                for values in msg[\"payload\"][\"headers\"]:\n                    name = values[\"name\"]\n                    if name == \"From\":\n                        from_email = values[\"value\"]\n                if from_email is None:\n                    msg = \"From email not found.\"\n                    raise ValueError(msg)\n\n                parts = msg[\"payload\"][\"parts\"] if \"parts\" in msg[\"payload\"] else [msg[\"payload\"]]\n\n                for part in parts:\n                    if part[\"mimeType\"] == \"text/plain\":\n                        data = part[\"body\"][\"data\"]\n                        data = base64.urlsafe_b64decode(data).decode(\"utf-8\")\n                        pattern = re.compile(r\"\\r\\nOn .+(\\r\\n)*wrote:\\r\\n\")\n                        newest_response = re.split(pattern, data)[0]\n                        return HumanMessage(\n                            content=self.clean_message_content(newest_response),\n                            additional_kwargs={\"sender\": from_email},\n                        )\n                msg = \"No plain text part found in the email.\"\n                raise ValueError(msg)\n\n            def _get_message_data(self, service: Any, message: Any) -> ChatSession:\n                msg = service.users().messages().get(userId=\"me\", id=message[\"id\"]).execute()\n                message_content = self._extract_email_content(msg)\n\n                in_reply_to = None\n                email_data = msg[\"payload\"][\"headers\"]\n                for values in email_data:\n                    name = values[\"name\"]\n                    if name == \"In-Reply-To\":\n                        in_reply_to = values[\"value\"]\n\n                thread_id = msg[\"threadId\"]\n\n                if in_reply_to:\n                    thread = service.users().threads().get(userId=\"me\", id=thread_id).execute()\n                    messages = thread[\"messages\"]\n\n                    response_email = None\n                    for _message in messages:\n                        email_data = _message[\"payload\"][\"headers\"]\n                        for values in email_data:\n                            if values[\"name\"] == \"Message-ID\":\n                                message_id = values[\"value\"]\n                                if message_id == in_reply_to:\n                                    response_email = _message\n                    if response_email is None:\n                        msg = \"Response email not found in the thread.\"\n                        raise ValueError(msg)\n                    starter_content = self._extract_email_content(response_email)\n                    return ChatSession(messages=[starter_content, message_content])\n                return ChatSession(messages=[message_content])\n\n            def lazy_load(self) -> Iterator[ChatSession]:\n                service = build(\"gmail\", \"v1\", credentials=self.creds)\n                results = (\n                    service.users().messages().list(userId=\"me\", labelIds=self.label_ids, maxResults=self.n).execute()\n                )\n                messages = results.get(\"messages\", [])\n                if not messages:\n                    logger.warning(\"No messages found with the specified labels.\")\n                for message in messages:\n                    try:\n                        yield self._get_message_data(service, message)\n                    except Exception:\n                        if self.raise_error:\n                            raise\n                        else:\n                            logger.exception(f\"Error processing message {message['id']}\")\n\n        json_string = self.json_string\n        label_ids = self.label_ids.split(\",\") if self.label_ids else [\"INBOX\"]\n        try:\n            max_results = int(self.max_results) if self.max_results else 100\n        except (TypeError, ValueError) as e:\n            msg = f\"Invalid max_results value: {self.max_results}\"\n            raise ValueError(msg) from e\n\n        # Load the token information from the JSON string\n        try:\n            token_info = json.loads(json_string)\n        except JSONDecodeError as e:\n            msg = \"Invalid JSON string\"\n            raise ValueError(msg) from e\n\n        creds = Credentials.from_authorized_user_info(token_info)\n\n        # Initialize the custom loader with the provided credentials\n        loader = CustomGMailLoader(creds=creds, n=max_results, label_ids=label_ids)\n\n        try:\n            docs = loader.load()\n        except RefreshError as e:\n            msg = \"Authentication error: Unable to refresh authentication token. Please try to reauthenticate.\"\n            raise ValueError(msg) from e\n        except Exception as e:\n            msg = f\"Error loading documents: {e}\"\n            raise ValueError(msg) from e\n\n        # Return the loaded documents\n        self.status = docs\n        return Data(data={\"text\": docs})\n",
+              "fileTypes": [],
+              "file_path": "",
+              "password": false,
+              "name": "code",
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "info": "",
+              "load_from_db": false,
+              "title_case": false
+            },
+            "json_string": {
+              "load_from_db": true,
+              "override_skip": false,
+              "required": true,
+              "placeholder": "",
+              "show": true,
+              "name": "json_string",
+              "value": "{\n                \"account\": \"\",\n                \"client_id\": \"\",\n                \"client_secret\": \"\",\n                \"expiry\": \"\",\n                \"refresh_token\": \"\",\n                \"scopes\": [\n                    \"https://www.googleapis.com/auth/gmail.readonly\",\n                ],\n                \"token\": \"\",\n                \"token_uri\": \"https://oauth2.googleapis.com/token\",\n                \"universe_domain\": \"googleapis.com\"\n            }",
+              "display_name": "JSON String of the Service Account Token",
+              "advanced": false,
+              "api_editable": false,
+              "input_types": [],
+              "dynamic": false,
+              "info": "JSON string containing OAuth 2.0 access token information for service account access",
+              "title_case": false,
+              "track_in_telemetry": false,
+              "password": true,
+              "type": "str",
+              "_input_type": "SecretStrInput"
+            },
+            "label_ids": {
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "load_from_db": false,
+              "list": false,
+              "list_add_label": "Add More",
+              "override_skip": false,
+              "required": true,
+              "placeholder": "",
+              "show": true,
+              "name": "label_ids",
+              "value": "INBOX,SENT,UNREAD,IMPORTANT",
+              "display_name": "Label IDs",
+              "advanced": false,
+              "api_editable": false,
+              "input_types": [
+                "Message"
+              ],
+              "dynamic": false,
+              "info": "Comma-separated list of label IDs to filter emails.",
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "_input_type": "MessageTextInput"
+            },
+            "max_results": {
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "load_from_db": false,
+              "list": false,
+              "list_add_label": "Add More",
+              "override_skip": false,
+              "required": true,
+              "placeholder": "",
+              "show": true,
+              "name": "max_results",
+              "value": "10",
+              "display_name": "Max Results",
+              "advanced": false,
+              "api_editable": false,
+              "input_types": [
+                "Message"
+              ],
+              "dynamic": false,
+              "info": "Maximum number of emails to load.",
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "_input_type": "MessageTextInput"
+            }
+          },
+          "description": "Loads emails from Gmail using provided credentials.",
+          "icon": "Google",
+          "base_classes": [
+            "JSON"
+          ],
+          "display_name": "Gmail Loader",
+          "documentation": "",
+          "minimized": false,
+          "custom_fields": {},
+          "output_types": [],
+          "pinned": false,
+          "conditional_paths": [],
+          "frozen": false,
+          "outputs": [
+            {
+              "types": [
+                "JSON"
+              ],
+              "selected": "JSON",
+              "name": "data",
+              "display_name": "JSON",
+              "method": "load_emails",
+              "value": "__UNDEFINED__",
+              "cache": true,
+              "allows_loop": false,
+              "group_outputs": false,
+              "tool_mode": true
+            }
+          ],
+          "field_order": [],
+          "beta": false,
+          "legacy": true,
+          "replacement": [
+            "composio.ComposioGmailAPIComponent"
+          ],
+          "edited": false,
+          "metadata": {},
+          "tool_mode": false
+        }
+      }
+    },
+    {
+      "id": "GoogleDriveComponent-17121",
+      "type": "genericNode",
+      "position": {
+        "x": 600,
+        "y": 180
+      },
+      "data": {
+        "id": "GoogleDriveComponent-17121",
+        "type": "GoogleDriveComponent",
+        "node": {
+          "template": {
+            "_type": "Component",
+            "code": {
+              "type": "code",
+              "required": true,
+              "placeholder": "",
+              "list": false,
+              "show": true,
+              "multiline": true,
+              "value": "import json\nfrom json.decoder import JSONDecodeError\n\nfrom google.auth.exceptions import RefreshError\nfrom google.oauth2.credentials import Credentials\nfrom langchain_google_community import GoogleDriveLoader\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.inputs.inputs import MessageTextInput\nfrom lfx.io import SecretStrInput\nfrom lfx.schema.data import Data\nfrom lfx.template.field.base import Output\n\n\nclass GoogleDriveComponent(Component):\n    display_name = \"Google Drive Loader\"\n    description = \"Loads documents from Google Drive using provided credentials.\"\n    icon = \"Google\"\n    legacy: bool = True\n\n    inputs = [\n        SecretStrInput(\n            name=\"json_string\",\n            display_name=\"JSON String of the Service Account Token\",\n            info=\"JSON string containing OAuth 2.0 access token information for service account access\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"document_id\", display_name=\"Document ID\", info=\"Single Google Drive document ID\", required=True\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Loaded Documents\", name=\"docs\", method=\"load_documents\"),\n    ]\n\n    def load_documents(self) -> Data:\n        class CustomGoogleDriveLoader(GoogleDriveLoader):\n            creds: Credentials | None = None\n            \"\"\"Credentials object to be passed directly.\"\"\"\n\n            def _load_credentials(self):\n                \"\"\"Load credentials from the provided creds attribute or fallback to the original method.\"\"\"\n                if self.creds:\n                    return self.creds\n                msg = \"No credentials provided.\"\n                raise ValueError(msg)\n\n            class Config:\n                arbitrary_types_allowed = True\n\n        json_string = self.json_string\n\n        document_ids = [self.document_id]\n        if len(document_ids) != 1:\n            msg = \"Expected a single document ID\"\n            raise ValueError(msg)\n\n        # TODO: Add validation to check if the document ID is valid\n\n        # Load the token information from the JSON string\n        try:\n            token_info = json.loads(json_string)\n        except JSONDecodeError as e:\n            msg = \"Invalid JSON string\"\n            raise ValueError(msg) from e\n\n        # Initialize the custom loader with the provided credentials and document IDs\n        loader = CustomGoogleDriveLoader(\n            creds=Credentials.from_authorized_user_info(token_info), document_ids=document_ids\n        )\n\n        # Load the documents\n        try:\n            docs = loader.load()\n        # catch google.auth.exceptions.RefreshError\n        except RefreshError as e:\n            msg = \"Authentication error: Unable to refresh authentication token. Please try to reauthenticate.\"\n            raise ValueError(msg) from e\n        except Exception as e:\n            msg = f\"Error loading documents: {e}\"\n            raise ValueError(msg) from e\n\n        if len(docs) != 1:\n            msg = \"Expected a single document to be loaded.\"\n            raise ValueError(msg)\n\n        data = docs_to_data(docs)\n        # Return the loaded documents\n        self.status = data\n        return Data(data={\"text\": data})\n",
+              "fileTypes": [],
+              "file_path": "",
+              "password": false,
+              "name": "code",
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "info": "",
+              "load_from_db": false,
+              "title_case": false
+            },
+            "document_id": {
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "load_from_db": false,
+              "list": false,
+              "list_add_label": "Add More",
+              "override_skip": false,
+              "required": true,
+              "placeholder": "",
+              "show": true,
+              "name": "document_id",
+              "value": "",
+              "display_name": "Document ID",
+              "advanced": false,
+              "api_editable": false,
+              "input_types": [
+                "Message"
+              ],
+              "dynamic": false,
+              "info": "Single Google Drive document ID",
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "_input_type": "MessageTextInput"
+            },
+            "json_string": {
+              "load_from_db": true,
+              "override_skip": false,
+              "required": true,
+              "placeholder": "",
+              "show": true,
+              "name": "json_string",
+              "value": "",
+              "display_name": "JSON String of the Service Account Token",
+              "advanced": false,
+              "api_editable": false,
+              "input_types": [],
+              "dynamic": false,
+              "info": "JSON string containing OAuth 2.0 access token information for service account access",
+              "title_case": false,
+              "track_in_telemetry": false,
+              "password": true,
+              "type": "str",
+              "_input_type": "SecretStrInput"
+            }
+          },
+          "description": "Loads documents from Google Drive using provided credentials.",
+          "icon": "Google",
+          "base_classes": [
+            "JSON"
+          ],
+          "display_name": "Google Drive Loader",
+          "documentation": "",
+          "minimized": false,
+          "custom_fields": {},
+          "output_types": [],
+          "pinned": false,
+          "conditional_paths": [],
+          "frozen": false,
+          "outputs": [
+            {
+              "types": [
+                "JSON"
+              ],
+              "selected": "JSON",
+              "name": "docs",
+              "display_name": "Loaded Documents",
+              "method": "load_documents",
+              "value": "__UNDEFINED__",
+              "cache": true,
+              "allows_loop": false,
+              "group_outputs": false,
+              "tool_mode": true
+            }
+          ],
+          "field_order": [],
+          "beta": false,
+          "legacy": true,
+          "edited": false,
+          "metadata": {},
+          "tool_mode": false
+        }
+      }
+    }
+  ],
+  "edges": [],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 1
+  }
+}

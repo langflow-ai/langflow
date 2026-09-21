@@ -274,8 +274,13 @@ async def test_webhook_events_releases_auth_transaction_before_streaming(
     async def fake_subscribe(_flow_id):
         state = sa_inspect(captured["user"])
         session = state.session
-        assert session is not None, "precondition: the SSE auth user must still be attached to the request session"
-        captured["in_transaction"] = session.in_transaction()
+        # ``DbSession`` is function-scoped, so the request session is closed --
+        # and the auth user detached -- before the stream body runs. Record both
+        # facts: "detached" is the strong outcome (the pooled connection is back
+        # in the pool), and the transaction check still holds if a future change
+        # keeps the session open.
+        captured["detached"] = session is None
+        captured["in_transaction"] = session.in_transaction() if session is not None else False
         return asyncio.Queue()
 
     async def fake_unsubscribe(_flow_id, _queue):
@@ -303,3 +308,7 @@ async def test_webhook_events_releases_auth_transaction_before_streaming(
     assert response.status_code == 200, response.text
     assert "event: connected" in response.text
     assert captured["in_transaction"] is False, "the auth transaction must not span the webhook EventSource stream"
+    assert captured["detached"] is True, (
+        "the function-scoped request session must be closed before the stream body runs, "
+        "returning its pooled connection instead of holding it for the stream's lifetime"
+    )

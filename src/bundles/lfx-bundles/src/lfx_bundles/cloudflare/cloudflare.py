@@ -1,7 +1,8 @@
-from langchain_community.embeddings.cloudflare_workersai import CloudflareWorkersAIEmbeddings
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput
+
+from lfx_bundles.cloudflare.cloudflare_common import CompatibleCloudflareEmbeddings
 
 
 class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
@@ -64,7 +65,7 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
 
     def build_embeddings(self) -> Embeddings:
         try:
-            embeddings = CloudflareWorkersAIEmbeddings(
+            embeddings = CompatibleCloudflareEmbeddings(
                 account_id=self.account_id,
                 api_base_url=self.api_base_url,
                 api_token=self.api_token,
@@ -72,6 +73,8 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
                 headers=self.headers,
                 model_name=self.model_name,
                 strip_new_lines=self.strip_new_lines,
+                # Existing flows do not opt into the new package's AI_GATEWAY environment default.
+                ai_gateway=None,
             )
         except Exception as e:
             msg = f"Could not connect to CloudflareWorkersAIEmbeddings API: {e!s}"

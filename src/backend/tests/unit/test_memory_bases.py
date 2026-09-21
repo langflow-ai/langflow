@@ -714,7 +714,10 @@ class TestMemoryBaseProviderPolicy:
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
-            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="OpenAI"),
+            patch(
+                "langflow.services.memory_base.service.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", mb.embedding_model)),
+            ),
             patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
             patch(
                 "langflow.services.memory_base.service.aresolve_model_provider_policy",
@@ -757,7 +760,10 @@ class TestMemoryBaseProviderPolicy:
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
-            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
+            patch(
+                "langflow.services.memory_base.service.resolve_embedding_selection",
+                AsyncMock(return_value=("Anthropic", mb.embedding_model)),
+            ),
             patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             pytest.raises(ModelProviderPolicyError),
         ):
@@ -875,6 +881,10 @@ class TestMemoryBaseProviderPolicy:
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch(
+                "langflow.services.memory_base.service.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", mb.embedding_model)),
+            ),
+            patch(
                 "langflow.services.memory_base.service.aresolve_model_provider_policy",
                 side_effect=deny_current_project,
                 create=True,
@@ -923,6 +933,198 @@ class TestMemoryBaseProviderPolicy:
         get_api_key.assert_not_called()
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
+
+
+class TestMemoryBaseEmbeddingProviderSelection:
+    """The provider the caller selected is authoritative over name-based inference.
+
+    Regression for the OpenAI-Compatible case: those models are discovered
+    per-user, so ``infer_embedding_provider`` cannot see them and defaults them
+    to ``"OpenAI"``. The wrong label was persisted on the backing
+    ``knowledge_base`` row, and ingestion then demanded an OpenAI API key.
+    """
+
+    @pytest.fixture
+    def service(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        return MemoryBaseService()
+
+    @staticmethod
+    def _fake_scope(mock_db):
+        class _FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *_args):
+                pass
+
+        scope = MagicMock()
+        scope.return_value = _FakeCtx()
+        return scope
+
+    @staticmethod
+    def _create_db(flow):
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        missing_result = MagicMock()
+        missing_result.first.return_value = None
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[flow_result, missing_result, missing_result])
+        db.add = MagicMock()
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
+        return db
+
+    @pytest.mark.asyncio
+    async def test_create_persists_the_selected_provider_without_inferring(self, service):
+        from langflow.services.database.models.flow.model import Flow
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        flow = Flow(id=flow_id, user_id=user_id, name="flow")
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=flow_id,
+            embedding_model="mock-embed-1",
+            embedding_provider="OpenAI Compatible",
+        )
+        db = self._create_db(flow)
+        create_record = AsyncMock()
+        infer = MagicMock(return_value="OpenAI")
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", infer),
+            patch(
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()),
+            patch("langflow.api.utils.knowledge_base_service.create_record", create_record),
+            # The bundle registers this at startup; unit tests run without extensions loaded.
+            patch.dict(
+                "langflow.services.memory_base.service.EMBEDDING_PROVIDER_CLASS_MAPPING",
+                {"OpenAI Compatible": "OpenAIEmbeddings"},
+            ),
+        ):
+            await service.create(payload, user_id=user_id)
+
+        assert create_record.await_args.kwargs["model_selection"] == {
+            "name": "mock-embed-1",
+            "provider": "OpenAI Compatible",
+        }
+        infer.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_create_rejects_a_provider_without_embedding_class_before_provisioning(self, service):
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.memory_base.service import EmbeddingProviderValidationError
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        flow = Flow(id=flow_id, user_id=user_id, name="flow")
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=flow_id,
+            embedding_model="text-embedding-3-small",
+            embedding_provider="OpenAl",
+        )
+        db = self._create_db(flow)
+        create_record = AsyncMock()
+        initialize = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
+            patch(
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch("langflow.services.memory_base.service.initialize_kb", initialize),
+            patch("langflow.api.utils.knowledge_base_service.create_record", create_record),
+            pytest.raises(EmbeddingProviderValidationError, match="OpenAl"),
+        ):
+            await service.create(payload, user_id=user_id)
+
+        initialize.assert_not_awaited()
+        create_record.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_without_a_provider_falls_back_to_inference(self, service):
+        from langflow.services.database.models.flow.model import Flow
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        flow = Flow(id=flow_id, user_id=user_id, name="flow")
+        payload = MemoryBaseCreate(name="mb", flow_id=flow_id, embedding_model="text-embedding-3-small")
+        db = self._create_db(flow)
+        create_record = AsyncMock()
+        infer = MagicMock(return_value="OpenAI")
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", infer),
+            patch(
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()),
+            patch("langflow.api.utils.knowledge_base_service.create_record", create_record),
+        ):
+            await service.create(payload, user_id=user_id)
+
+        infer.assert_called_once_with("text-embedding-3-small")
+        assert create_record.await_args.kwargs["model_selection"] == {
+            "name": "text-embedding-3-small",
+            "provider": "OpenAI",
+        }
+
+    @pytest.mark.asyncio
+    async def test_update_authorizes_the_stored_provider_not_an_inferred_one(self, service):
+        from langflow.services.database.models.flow.model import Flow
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id, threshold=10)
+        mb.embedding_model = "mock-embed-1"
+        flow = Flow(id=mb.flow_id, user_id=user_id, name="flow")
+        mb_result = MagicMock()
+        mb_result.first.return_value = mb
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, flow_result])
+        db.add = MagicMock()
+        policy = MagicMock()
+        resolve_policy = AsyncMock(return_value=policy)
+        infer = MagicMock(return_value="OpenAI")
+        resolve_selection = AsyncMock(return_value=("OpenAI Compatible", "mock-embed-1"))
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.resolve_embedding_selection", resolve_selection),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", infer),
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
+        ):
+            await service.update(
+                mb.id,
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=user_id,
+            )
+
+        resolve_selection.assert_awaited_once_with(user_id=user_id, kb_name=mb.kb_name)
+        resolve_policy.assert_awaited_once_with(
+            user_id=user_id,
+            providers=["OpenAI Compatible"],
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        policy.require.assert_called_once_with("OpenAI Compatible")
+        infer.assert_not_called()
+        assert mb.threshold == 99
 
 
 class TestMemoryBaseGuardPassesRealKbIdentity:
@@ -2599,6 +2801,34 @@ class TestMemoriesAPIHandlers:
         assert "API key" in exc_info.value.detail
 
     @pytest.mark.asyncio
+    async def test_create_unusable_embedding_provider_returns_422(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services.memory_base.service import EmbeddingProviderValidationError
+
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=uuid.uuid4(),
+            user_id=mock_user.id,
+            kb_name="kb",
+            embedding_model="text-embedding-3-small",
+            embedding_provider="OpenAl",
+        )
+
+        svc = MagicMock()
+        svc.create = AsyncMock(
+            side_effect=EmbeddingProviderValidationError("Embedding provider 'OpenAl' is not available for embeddings.")
+        )
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_memory_base(current_user=mock_user, payload=payload)
+
+        assert exc_info.value.status_code == 422
+        assert "OpenAl" in exc_info.value.detail
+
+    @pytest.mark.asyncio
     async def test_update_missing_api_key_returns_403(self, mock_user):
         from fastapi import HTTPException
         from langflow.api.v1.memories import update_memory_base
@@ -3773,3 +4003,49 @@ class TestMemoryBaseDBDriven:
         assert kwargs["backend_type"] == "chroma"
         assert kwargs["source_types"] == ["memory"]
         assert kwargs["model_selection"]["name"] == "text-embedding-3-small"
+
+
+class TestSelectEmbeddingProvider:
+    """``_select_embedding_provider`` persists exactly the key downstream lookups use.
+
+    The policy layer matches providers case- and alias-insensitively, but
+    ``EMBEDDING_PROVIDER_CLASS_MAPPING`` is matched verbatim, so a variant that
+    is authorized but persisted as-is would create a Memory Base that can never
+    embed. The ``"Unknown"`` sentinel from ``get_embedding_provider`` must fall
+    back to inference instead of being authorized as a provider name.
+    """
+
+    @pytest.mark.parametrize(
+        ("supplied", "expected"),
+        [
+            ("OpenAI", "OpenAI"),
+            ("openai", "OpenAI"),
+            ("  OpenAI  ", "OpenAI"),
+            ("IBM watsonx.ai", "IBM WatsonX"),
+        ],
+    )
+    def test_supplied_provider_is_canonicalized(self, supplied, expected):
+        from langflow.services.memory_base.service import _select_embedding_provider
+
+        assert _select_embedding_provider(supplied, "text-embedding-3-small") == expected
+
+    def test_unregistered_provider_is_kept_for_policy_to_reject(self):
+        from langflow.services.memory_base.service import _select_embedding_provider
+
+        assert _select_embedding_provider("Not A Provider", "some-model") == "Not A Provider"
+
+    @pytest.mark.parametrize("provider", ["OpenAl", "Not A Provider", "Anthropic"])
+    def test_provider_without_embedding_class_is_rejected(self, provider):
+        """Typos, unknown names, and chat-only providers fail fast instead of breaking ingestion later."""
+        from langflow.services.memory_base.service import EmbeddingProviderValidationError, _require_embedding_class
+
+        with pytest.raises(EmbeddingProviderValidationError, match=provider):
+            _require_embedding_class(provider)
+
+    @pytest.mark.parametrize("supplied", [None, "", "   ", "Unknown"])
+    def test_missing_or_unknown_provider_falls_back_to_inference(self, supplied):
+        from langflow.services.memory_base import service as service_module
+
+        with patch.object(service_module, "infer_embedding_provider", return_value="Inferred") as infer:
+            assert service_module._select_embedding_provider(supplied, "text-embedding-3-small") == "Inferred"
+        infer.assert_called_once_with("text-embedding-3-small")

@@ -18,6 +18,18 @@ HTML report all use the same source.
 - `excluded`: redirects, aliases, or same-component surfaces excluded from the
   default batch.
 
+Every route reachable from `src/frontend/src/routes.tsx` must appear in exactly
+one of those four sections, and no section may name a route that no longer
+exists. `src/frontend/src/__tests__/a11y-route-manifest.test.ts` parses the JSX
+route tree and enforces both directions in the Jest unit-test job, so a newly
+registered route cannot be silently skipped by the scanners.
+
+`assumptions` records the feature-flag environment the path list is valid under.
+The same test checks each assumption against
+`src/frontend/src/customization/feature-flags.ts` and requires an assumption for
+every flag that gates a route, so the manifest cannot quietly diverge from the
+flags it was written for.
+
 ## Python Scanner
 
 Use the manifest directly:

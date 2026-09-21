@@ -1,9 +1,13 @@
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.database.models.connection import Connection, ConnectionSecret
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
+from langflow.services.deps import session_scope
 
 CURRENT_CREDENTIAL = "test" + "password"
 REPLACEMENT_CREDENTIAL = "new_" + "password"
@@ -134,6 +138,24 @@ async def test_add_user_duplicate_username(client: AsyncClient):
 
     # Try to create second user with same username
     response2 = await client.post("api/v1/users/", json=basic_case)
+    assert response2.status_code == status.HTTP_400_BAD_REQUEST
+    assert "unavailable" in response2.json()["detail"].lower()
+
+
+async def test_add_user_rejects_a_case_variant_of_an_existing_username(client: AsyncClient):
+    """Case variants such as "owner1" and "Owner1" must not coexist as two separate accounts.
+
+    A byte-for-byte unique constraint alone lets a lookalike account through
+    silently, which reads to a user as their password having "stopped
+    working" once they land on the wrong one by accident.
+    """
+    response1 = await client.post("api/v1/users/", json={"username": "owner1", "password": "password123"})
+    assert response1.status_code == status.HTTP_201_CREATED
+
+    response2 = await client.post(
+        "api/v1/users/",
+        json={"username": "Owner1", "password": "password456"},  # pragma: allowlist secret
+    )
     assert response2.status_code == status.HTTP_400_BAD_REQUEST
     assert "unavailable" in response2.json()["detail"].lower()
 
@@ -324,6 +346,34 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
     assert result["username"] == updated_name, "The username must be updated"
 
 
+async def test_patch_user_rejects_a_case_variant_of_an_existing_username(
+    client: AsyncClient, logged_in_headers_super_user
+):
+    """Renaming onto another account's case variant gets the signup 400, not the raw SQL error."""
+    owner = await client.post(
+        "api/v1/users/", json={"username": "owner1", "password": "password123"}, headers=logged_in_headers_super_user
+    )
+    assert owner.status_code == status.HTTP_201_CREATED
+    other = await client.post(
+        "api/v1/users/", json={"username": "other1", "password": "password123"}, headers=logged_in_headers_super_user
+    )
+    assert other.status_code == status.HTTP_201_CREATED
+
+    response = await client.patch(
+        f"api/v1/users/{other.json()['id']}", json={"username": "OWNER1"}, headers=logged_in_headers_super_user
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "This username is unavailable."
+
+    # Re-casing your own username only collides with yourself, so it is allowed.
+    recased = await client.patch(
+        f"api/v1/users/{other.json()['id']}", json={"username": "OTHER1"}, headers=logged_in_headers_super_user
+    )
+    assert recased.status_code == status.HTTP_200_OK
+    assert recased.json()["username"] == "OTHER1"
+
+
 async def test_reset_password(client: AsyncClient, logged_in_headers, active_user):
     id_ = str(active_user.id)
     basic_case = {"current_password": CURRENT_CREDENTIAL, "password": REPLACEMENT_CREDENTIAL}
@@ -442,6 +492,201 @@ async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "detail" in result, "The result must have an 'detail' key"
+
+
+async def test_delete_user_removes_their_role_assignments(client: AsyncClient, logged_in_headers_super_user):
+    """A deleted user's role assignments must not survive as "unknown user" rows.
+
+    ON DELETE CASCADE on authz_role_assignment.user_id is declared but inert
+    on SQLite; the ORM-level cascade on User.role_assignments is what
+    actually cleans these up regardless of backend.
+    """
+    suffix = uuid4().hex
+    user_response = await client.post(
+        "api/v1/users/",
+        json={"username": f"orphan-check-{suffix}", "password": "password123"},
+        headers=logged_in_headers_super_user,
+    )
+    assert user_response.status_code == status.HTTP_201_CREATED
+    user_id = user_response.json()["id"]
+
+    role_response = await client.post(
+        "api/v1/authz/roles/",
+        json={"name": f"orphan-check-role-{suffix}", "permissions": ["flow:read"]},
+        headers=logged_in_headers_super_user,
+    )
+    assert role_response.status_code == status.HTTP_201_CREATED
+    role_id = role_response.json()["id"]
+
+    assignment_response = await client.post(
+        "api/v1/authz/role-assignments/",
+        json={"user_id": user_id, "role_id": role_id},
+        headers=logged_in_headers_super_user,
+    )
+    assert assignment_response.status_code == status.HTTP_201_CREATED
+
+    delete_response = await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+    assert delete_response.status_code == status.HTTP_200_OK
+
+    remaining = await client.get(
+        f"api/v1/authz/role-assignments/?user_id={user_id}",
+        headers=logged_in_headers_super_user,
+    )
+    assert remaining.status_code == status.HTTP_200_OK
+    assert remaining.json() == []
+
+    await client.delete(f"api/v1/authz/roles/{role_id}", headers=logged_in_headers_super_user)
+
+
+async def test_delete_user_clears_assigned_by_on_assignments_they_granted(
+    client: AsyncClient, logged_in_headers_super_user
+):
+    """Deleting the *granter* must clear ``assigned_by``, not delete the grantee's assignment.
+
+    AuthzRoleAssignment.assigned_by has its own (also SQLite-inert) SET NULL
+    FK to user.id, separate from the user_id FK that owns the assignment.
+    """
+    suffix = uuid4().hex
+    granter_password = "password" + "123"
+    granter_response = await client.post(
+        "api/v1/users/",
+        json={"username": f"granter-{suffix}", "password": granter_password},
+        headers=logged_in_headers_super_user,
+    )
+    assert granter_response.status_code == status.HTTP_201_CREATED
+    granter_id = granter_response.json()["id"]
+
+    promote_response = await client.patch(
+        f"api/v1/users/{granter_id}",
+        json={"is_superuser": True, "is_active": True},
+        headers=logged_in_headers_super_user,
+    )
+    assert promote_response.status_code == status.HTTP_200_OK
+
+    login_response = await client.post(
+        "api/v1/login",
+        data={"username": f"granter-{suffix}", "password": granter_password},
+    )
+    assert login_response.status_code == status.HTTP_200_OK
+    granter_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+    client.cookies.clear()  # the granter's login also set a session cookie on the shared client
+
+    grantee_response = await client.post(
+        "api/v1/users/",
+        json={"username": f"grantee-{suffix}", "password": "password123"},
+        headers=logged_in_headers_super_user,
+    )
+    assert grantee_response.status_code == status.HTTP_201_CREATED
+    grantee_id = grantee_response.json()["id"]
+
+    role_response = await client.post(
+        "api/v1/authz/roles/",
+        json={"name": f"granter-check-role-{suffix}", "permissions": ["flow:read"]},
+        headers=logged_in_headers_super_user,
+    )
+    assert role_response.status_code == status.HTTP_201_CREATED
+    role_id = role_response.json()["id"]
+
+    assignment_response = await client.post(
+        "api/v1/authz/role-assignments/",
+        json={"user_id": grantee_id, "role_id": role_id},
+        headers=granter_headers,
+    )
+    assert assignment_response.status_code == status.HTTP_201_CREATED
+    assert assignment_response.json()["assigned_by"] == granter_id
+
+    delete_response = await client.delete(f"api/v1/users/{granter_id}", headers=logged_in_headers_super_user)
+    assert delete_response.status_code == status.HTTP_200_OK
+
+    remaining = await client.get(
+        f"api/v1/authz/role-assignments/?user_id={grantee_id}",
+        headers=logged_in_headers_super_user,
+    )
+    assert remaining.status_code == status.HTTP_200_OK
+    assignments = remaining.json()
+    assert len(assignments) == 1
+    assert assignments[0]["assigned_by"] is None
+
+    await client.delete(f"api/v1/authz/role-assignments/{assignments[0]['id']}", headers=logged_in_headers_super_user)
+    await client.delete(f"api/v1/authz/roles/{role_id}", headers=logged_in_headers_super_user)
+    await client.delete(f"api/v1/users/{grantee_id}", headers=logged_in_headers_super_user)
+
+
+def _pending_consent(connection_id: UUID, user_id: UUID) -> ConnectionOAuth:
+    return ConnectionOAuth(
+        connection_id=connection_id,
+        user_id=user_id,
+        registration_id="google-work",
+        config_digest="0" * 64,
+        scopes=["calendar.readonly"],
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+    )
+
+
+async def test_delete_user_removes_their_connections_and_credentials(client: AsyncClient, logged_in_headers_super_user):
+    """A deleted user's connections, credential envelopes, and pending consents must not survive.
+
+    connection.owner_id, connection_secret.connection_id, and
+    connection_oauth.user_id / connection_id all declare ON DELETE CASCADE,
+    which is inert on SQLite; the ORM cascades on User and Connection do the
+    cleanup on every backend. An instance connection has no owner and must
+    survive, losing only the consent binding the deleted user had started.
+    """
+    suffix = uuid4().hex
+    user_response = await client.post(
+        "api/v1/users/",
+        json={"username": f"connection-owner-{suffix}", "password": CURRENT_CREDENTIAL},
+        headers=logged_in_headers_super_user,
+    )
+    assert user_response.status_code == status.HTTP_201_CREATED
+    user_id = UUID(user_response.json()["id"])
+
+    async with session_scope() as session:
+        owned = Connection(
+            provider_key="google",
+            name=f"work_{suffix}",
+            display_name="Work Google",
+            ownership_mode="user",
+            owner_id=user_id,
+        )
+        instance = Connection(
+            provider_key="google",
+            name=f"shared_{suffix}",
+            display_name="Shared Google",
+            ownership_mode="instance",
+            owner_id=None,
+        )
+        session.add_all([owned, instance])
+        await session.flush()
+        owned_id, instance_id = owned.id, instance.id
+        session.add_all(
+            [
+                ConnectionSecret(connection_id=owned_id, encrypted_payload="owned-envelope"),
+                ConnectionSecret(connection_id=instance_id, encrypted_payload="instance-envelope"),
+                _pending_consent(owned_id, user_id),
+                _pending_consent(instance_id, user_id),
+            ]
+        )
+
+    delete_response = await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+    assert delete_response.status_code == status.HTTP_200_OK
+
+    try:
+        async with session_scope() as session:
+            assert await session.get(Connection, owned_id) is None
+            assert await session.get(ConnectionSecret, owned_id) is None
+            assert await session.get(ConnectionOAuth, owned_id) is None
+            # The instance connection and its credential stay; only the consent
+            # the deleted user had started on it goes.
+            assert await session.get(Connection, instance_id) is not None
+            assert await session.get(ConnectionSecret, instance_id) is not None
+            assert await session.get(ConnectionOAuth, instance_id) is None
+    finally:
+        async with session_scope() as session:
+            if (secret := await session.get(ConnectionSecret, instance_id)) is not None:
+                await session.delete(secret)
+            if (row := await session.get(Connection, instance_id)) is not None:
+                await session.delete(row)
 
 
 async def test_patch_user_self_deactivation_forbidden(client: AsyncClient, logged_in_headers, active_user):

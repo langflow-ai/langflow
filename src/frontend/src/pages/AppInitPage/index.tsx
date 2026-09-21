@@ -5,6 +5,7 @@ import {
   useGetAuthSession,
   useGetAutoLogin,
 } from "@/controllers/API/queries/auth";
+import { canSessionProbeClearAuth } from "@/controllers/API/queries/auth/session-probe";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
@@ -17,6 +18,7 @@ import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primar
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { Users } from "@/types/api";
 import { LoadingPage } from "../LoadingPage";
 
 export function AppInitPage() {
@@ -28,6 +30,7 @@ export function AppInitPage() {
   const { setUserData, storeApiKey } = useContext(AuthContext);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
   const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
+  const setStoreUserData = useAuthStore((state) => state.setUserData);
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -63,14 +66,23 @@ export function AppInitPage() {
   // Update auth state when session data is available
   useEffect(() => {
     if (sessionData?.authenticated && sessionData.user) {
-      setUserData(sessionData.user);
+      // Keep AuthContext and the auth store in sync, as the playground gate
+      // does: on a reload this probe is the only thing that restores the user,
+      // and pages reading `useAuthStore.userData` would otherwise see null.
+      const user = sessionData.user as Users;
+      setUserData(user);
+      setStoreUserData(user);
       setIsAuthenticated(true);
       setIsAdmin(sessionData.user.is_superuser || false);
       if (sessionData.store_api_key) {
         storeApiKey(sessionData.store_api_key);
       }
-    } else if (sessionData && !sessionData.authenticated) {
-      // Explicitly not authenticated
+    } else if (
+      sessionData &&
+      !sessionData.authenticated &&
+      canSessionProbeClearAuth()
+    ) {
+      // Explicitly not authenticated, and auto-login hasn't signed the page in.
       setIsAuthenticated(false);
     }
   }, [sessionData]);

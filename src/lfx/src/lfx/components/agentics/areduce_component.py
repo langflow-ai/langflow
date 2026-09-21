@@ -44,6 +44,7 @@ class AreduceComponent(BaseAgenticComponent):
     )
     documentation: str = "https://docs.langflow.org/bundles-agentics"
     icon = "Agentics"
+    legacy = True
 
     inputs = [
         *get_model_provider_inputs(),
