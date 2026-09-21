@@ -110,23 +110,42 @@ def test_opencode_go_seed_catalog_is_well_formed():
         assert row["tool_calling"] is True
 
 
-def test_opencode_go_seed_does_not_shadow_established_providers():
-    """``get_provider_for_model_name`` returns the FIRST catalog hit.
+def test_opencode_go_seed_is_registered_last():
+    """Ordering IS the anti-shadowing mechanism, so pin it directly.
 
-    OpenCode Go model IDs are bare names (``claude-sonnet-5``, ``gpt-5.2``) that
-    also exist in the Anthropic/OpenAI catalogs. Registering the seed last keeps
-    those names resolving to their original providers, so flows saved before this
-    provider existed keep working.
+    ``get_provider_for_model_name`` returns the FIRST catalog hit. OpenCode Go
+    exposes short, unprefixed IDs (``kimi-k3``, ``glm-5.3``) and its live endpoint
+    can introduce new ones at any time, so its group must sit last: any name it
+    ends up sharing with an earlier provider then keeps resolving to the provider
+    a flow was saved with.
+
+    This asserts the ordering rather than a specific collision on purpose. The Go
+    catalog currently shares no names with Anthropic/OpenAI, so a collision-based
+    test would silently become vacuous while looking like it still guarded this.
     """
-    from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
-    from lfx.base.models.openai_constants import OPENAI_MODELS_DETAILED
+    from lfx.base.models.opencode_go_constants import OPENCODE_GO_MODELS_DETAILED
+    from lfx.base.models.unified_models.provider_queries import _STATIC_MODELS_DETAILED
+
+    assert _STATIC_MODELS_DETAILED[-1] is OPENCODE_GO_MODELS_DETAILED
+
+
+def test_opencode_go_seed_resolution_respects_earlier_providers():
+    """Each seed name resolves to whichever provider declares it first.
+
+    Unique names must resolve to OpenCode Go (proving the seed is registered at
+    all); any name an earlier catalog already claims must not.
+    """
     from lfx.base.models.opencode_go_constants import OPENCODE_GO_MODELS_DETAILED
     from lfx.base.models.unified_models import get_provider_for_model_name
+    from lfx.base.models.unified_models.provider_queries import _STATIC_MODELS_DETAILED
 
-    established = {m["name"] for m in (*ANTHROPIC_MODELS_DETAILED, *OPENAI_MODELS_DETAILED)}
+    claimed_earlier = {row["name"] for group in _STATIC_MODELS_DETAILED[:-1] for row in group}
     for row in OPENCODE_GO_MODELS_DETAILED:
-        if row["name"] in established:
-            assert get_provider_for_model_name(row["name"]) != "OpenCode Go"
+        resolved = get_provider_for_model_name(row["name"])
+        if row["name"] in claimed_earlier:
+            assert resolved != "OpenCode Go"
+        else:
+            assert resolved == "OpenCode Go"
 
 
 def test_opencode_go_resolves_to_langchain_openai():
@@ -142,11 +161,16 @@ def test_opencode_go_resolves_to_langchain_openai():
 
 
 def _models_payload():
+    """Two IDs that are in the seed list, plus one that is live-only.
+
+    The overlap is what exercises the default-set intersection; ``live-only-model``
+    stands in for a model the live endpoint serves but the seed does not list.
+    """
     return {
         "data": [
-            {"id": "claude-sonnet-5", "created": 1730000000},
-            {"id": "gpt-5.2", "created": 1731000000},
-            {"id": "big-pickle"},
+            {"id": "kimi-k3", "created": 1730000000},
+            {"id": "glm-5.3", "created": 1731000000},
+            {"id": "live-only-model"},
         ]
     }
 
@@ -169,11 +193,11 @@ def test_fetch_live_models_returns_catalog_rows():
     assert mock_get.call_args.kwargs["headers"]["Authorization"] == "Bearer sk-test"
 
     # Sorted by id, every row owned by OpenCode Go, tool_calling assumed True.
-    assert [m["name"] for m in models] == ["big-pickle", "claude-sonnet-5", "gpt-5.2"]
+    assert [m["name"] for m in models] == ["glm-5.3", "kimi-k3", "live-only-model"]
     assert all(m["provider"] == "OpenCode Go" for m in models)
     assert all(m["tool_calling"] is True for m in models)
     # Missing "created" degrades to 0 rather than raising.
-    assert next(m for m in models if m["name"] == "big-pickle")["created"] == 0
+    assert next(m for m in models if m["name"] == "live-only-model")["created"] == 0
 
 
 def test_fetch_live_models_marks_defaults():
@@ -194,7 +218,7 @@ def test_fetch_live_models_marks_defaults():
     # the seed module (rather than hardcoded) so this test pins the intersection
     # *behaviour* and doesn't retroactively break when the seed list is later
     # revised from the real endpoint.
-    live_ids = {"claude-sonnet-5", "gpt-5.2", "big-pickle"}
+    live_ids = {row["id"] for row in _models_payload()["data"]}
     expected = {m["name"] for m in OPENCODE_GO_MODELS_DETAILED} & live_ids
     assert expected, "payload must overlap the seed for this test to be meaningful"
 
@@ -289,7 +313,7 @@ def test_get_live_models_for_provider_dispatches_opencode_go():
 
 
 def _opencode_model() -> list[dict]:
-    return [{"provider": "OpenCode Go", "name": "claude-sonnet-5", "metadata": {}}]
+    return [{"provider": "OpenCode Go", "name": "kimi-k3", "metadata": {}}]
 
 
 def _capture_factory():

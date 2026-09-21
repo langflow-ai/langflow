@@ -10,23 +10,28 @@ The small seed list below is shown only while the user has not yet configured an
 swaps these rows wholesale for the live catalog from
 ``https://opencode.ai/zen/go/v1/models``.
 
-These IDs are bare names that also exist in the Anthropic/OpenAI catalogs, so this
-list is registered LAST in ``_STATIC_MODELS_DETAILED``; ``get_provider_for_model_name``
-returns the first hit, which keeps those names resolving to their original provider.
+OpenCode Go exposes models under short, unprefixed IDs (``kimi-k3``, ``glm-5.3``)
+rather than the ``vendor/model`` form OpenRouter uses. Nothing stops such a name
+from colliding with an entry in another provider's catalog — and the live endpoint
+can introduce new names at any time — so this list is registered LAST in
+``_STATIC_MODELS_DETAILED``. ``get_provider_for_model_name`` returns the first hit,
+which keeps any shared name resolving to the provider a flow was saved with.
 """
 
 from .model_metadata import create_model_metadata
 
-# Seed IDs are a conservative subset of the published OpenCode Zen catalog
-# (https://opencode.ai/docs/zen/). Verified against the live Go ``/models``
-# endpoint when a Go subscription key is available; the live catalog overrides
-# this seed at runtime.
+# Verified against the live ``https://opencode.ai/zen/go/v1/models`` endpoint with
+# a Go subscription: a flagship spread across the vendors the Go tier actually
+# curates. The published OpenCode Zen catalog (https://opencode.ai/docs/zen/) is
+# NOT a reliable source for these — it lists models the Go endpoint does not serve.
+# This seed is only shown before an API key is configured; once one is saved,
+# ``replace_with_live_models`` swaps it wholesale for the live catalog.
 _SEED_MODEL_NAMES = (
-    "claude-sonnet-5",
-    "claude-haiku-4.5",
-    "gpt-5.2",
-    "gemini-3-flash",
-    "qwen3-coder",
+    "deepseek-v4-pro",
+    "glm-5.3",
+    "kimi-k3",
+    "minimax-m3",
+    "qwen3.8-max",
 )
 
 OPENCODE_GO_MODELS_DETAILED = [
