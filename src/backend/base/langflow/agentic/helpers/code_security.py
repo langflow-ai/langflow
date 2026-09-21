@@ -114,6 +114,11 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     # PyYAML unsafe deserialization entry points (``!!python/object*`` tags).
     ("yaml", "unsafe_load", "yaml.unsafe_load() is forbidden — use yaml.safe_load()"),
     ("yaml", "unsafe_load_all", "yaml.unsafe_load_all() is forbidden — use yaml.safe_load_all()"),
+    # full_load/full_load_all are public wrappers that select FullLoader without
+    # ever naming it, so blocking the Loader attribute alone left the same
+    # constructor-invocation surface reachable through a plain function call.
+    ("yaml", "full_load", "yaml.full_load() is forbidden — use yaml.safe_load()"),
+    ("yaml", "full_load_all", "yaml.full_load_all() is forbidden — use yaml.safe_load_all()"),
 ]
 
 # Imports that are forbidden entirely
@@ -214,6 +219,8 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "CFullLoader",
         "unsafe_load",
         "unsafe_load_all",
+        "full_load",
+        "full_load_all",
     },
 }
 
@@ -323,6 +330,22 @@ _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 # Known stdlib modules that expose restricted modules under their original
 # names. Keep this exact-host allowlist narrow: an arbitrary third-party
 # module's ``.os`` or ``.sys`` attribute is not necessarily the stdlib module.
+# Submodules that a package re-exports wholesale, so ``pkg.sub.Member`` is the
+# same object as ``pkg.Member``: ``yaml.loader.FullLoader is yaml.FullLoader``
+# and ``yaml.cyaml.CUnsafeLoader is yaml.CUnsafeLoader``. Resolving the
+# submodule back to its package lets the member rules above cover the dotted
+# spelling without a second copy of every loader name.
+_PACKAGE_REEXPORT_SUBMODULES: dict[str, frozenset[str]] = {
+    "yaml": frozenset({"loader", "cyaml"}),
+}
+
+_PACKAGE_REEXPORT_MODULE_PATHS: dict[str, str] = {
+    f"{package}.{submodule}": package
+    for package, submodules in _PACKAGE_REEXPORT_SUBMODULES.items()
+    for submodule in submodules
+}
+
+
 _RESTRICTED_MODULE_REEXPORTS: dict[str, frozenset[str]] = {
     "glob": frozenset({"os", "sys"}),
     "logging": frozenset({"os"}),
@@ -446,6 +469,9 @@ class _SecurityChecker(ast.NodeVisitor):
                 resolved.add(base_name)
             elif member_name in _RESTRICTED_MODULE_REEXPORTS.get(base_name, ()):
                 resolved.add(member_name)
+            elif member_name in _PACKAGE_REEXPORT_SUBMODULES.get(base_name, ()):
+                # yaml.loader.FullLoader is yaml.FullLoader: stay on the package.
+                resolved.add(base_name)
             else:
                 resolved.add(f"{base_name}.{member_name}")
         return frozenset(resolved)
@@ -797,6 +823,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.violations.append(f"Import of '{alias.name}' is forbidden in components")
             binding = alias.asname or module
             imported_name = alias.name if alias.asname else module
+            imported_name = _PACKAGE_REEXPORT_MODULE_PATHS.get(imported_name, imported_name)
             self._bind_name(binding, frozenset({imported_name}))
             # An import inside a class body binds a class attribute, not a local.
             self._check_escaping_binding(binding, frozenset({imported_name}))

@@ -2165,6 +2165,24 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
             "from yaml import *\nunsafe_load(text)",
             "import yaml\nyaml.__dict__['UnsafeLoader']",
             "import yaml\nvars(yaml)['Loader']",
+            # full_load/full_load_all select FullLoader without naming it, so
+            # blocking only the Loader attributes left the wrappers reachable.
+            "import yaml\nyaml.full_load(text)",
+            "import yaml\nyaml.full_load_all(text)",
+            "from yaml import full_load\nfull_load(text)",
+            "from yaml import full_load_all\nfull_load_all(text)",
+            "from yaml import full_load as fl\nfl(text)",
+            "import yaml as y\ny.full_load(text)",
+            "import yaml\nloader = yaml.full_load\nloader(text)",
+            "import yaml\nyaml.__dict__['full_load'](text)",
+            "from yaml import *\nfull_load(text)",
+            # yaml re-exports its loaders from these submodules, so the dotted
+            # path is the same class object: yaml.loader.FullLoader is
+            # yaml.FullLoader.
+            "import yaml.loader\nyaml.load(text, yaml.loader.UnsafeLoader)",
+            "import yaml.loader\nyaml.load(text, yaml.loader.FullLoader)",
+            "import yaml.cyaml\nyaml.load(text, yaml.cyaml.CUnsafeLoader)",
+            "import yaml.loader as L\nyaml.load(text, L.UnsafeLoader)",
         ],
         ids=[
             "unsafe-loader-kwarg",
@@ -2183,6 +2201,19 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
             "wildcard-import-unsafe-load",
             "module-dict-unsafe-loader",
             "vars-loader",
+            "full-load-call",
+            "full-load-all-call",
+            "from-import-full-load",
+            "from-import-full-load-all",
+            "from-import-full-load-aliased",
+            "aliased-module-full-load",
+            "assigned-full-load",
+            "module-dict-full-load",
+            "wildcard-import-full-load",
+            "submodule-loader-unsafe-loader",
+            "submodule-loader-full-loader",
+            "submodule-cyaml-c-unsafe-loader",
+            "submodule-loader-aliased",
         ],
     )
     def test_should_detect_yaml_unsafe_deserialization(self, code):
@@ -2197,6 +2228,10 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
             "import yaml\nconfig = yaml.load(text, yaml.SafeLoader)",
             "from yaml import safe_load\nconfig = safe_load(text)",
             "import yaml\nconfig = yaml.load(text, Loader=yaml.CSafeLoader)",
+            # The submodule resolution must not sweep up the safe loaders.
+            "import yaml.loader\nconfig = yaml.load(text, yaml.loader.SafeLoader)",
+            "import yaml\nconfig = yaml.load(text, yaml.BaseLoader)",
+            "import yaml\nout = yaml.dump({'a': 1})",
         ],
         ids=[
             "safe-load",
@@ -2205,6 +2240,9 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
             "load-with-positional-safe-loader",
             "from-import-safe-load",
             "load-with-c-safe-loader",
+            "submodule-loader-safe-loader",
+            "base-loader",
+            "yaml-dump",
         ],
     )
     def test_should_allow_yaml_safe_deserialization(self, code):
