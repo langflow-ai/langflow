@@ -26,6 +26,16 @@ class TestRejectedPrograms:
             '.data | "\\(env)"',
             # Dangerous builtin inside a nested interpolation is still live code.
             '"\\("\\(env)")"',
+            # Object-key *shorthand* over a dangerous variable is not a key at
+            # all: {$ENV} expands to {"ENV": $ENV} and discloses the environment.
+            "{$ENV}",
+            "{a: 1, $ENV}",
+            # Key position exempts the key, never the value (the "{env: env}"
+            # case above is the same rule seen from the other side).
+            "{env: $ENV}",
+            # A computed key is live code, not a key name.
+            "{(env): 1}",
+            '{"\\(env)": 1}',
             # Source-location information disclosure.
             "$__loc__",
             "def f: $__loc__; f",
@@ -33,9 +43,6 @@ class TestRejectedPrograms:
             "input",
             "inputs",
             "[inputs]",
-            "getpath",
-            'getpath(["data"])',
-            '. as $x | getpath(["a"])',
             # Definition aliasing does not launder the builtin.
             "def leak: env; leak",
         ],
@@ -82,6 +89,22 @@ class TestAllowedPrograms:
             ".my_input",
             ".envelope",
             ".getpath_from_config",
+            # Object keys that happen to share a name with a builtin: these are
+            # literal key names, not function references (LE-2550 follow-up).
+            "{env: .a}",
+            "{input: .a}",
+            "{inputs: .a}",
+            "{env : .a}",
+            '{"env": .a}',
+            "{a: .x, env: .y}",
+            "{outer: {env: .a}}",
+            "{env}",
+            "{input}",
+            ". as {env: $e} | $e",
+            # getpath only indexes the value it is applied to.
+            'getpath(["a", "b"])',
+            '. | getpath(["data", "id"])',
+            "getpath([.key])",
             # String-literal prose is not executable.
             '"env"',
             '"input data"',
@@ -113,3 +136,26 @@ class TestMasking:
 
         program = '.a | "x\\"y \\(f(.))" # comment\n.b'
         assert len(_mask_strings_and_comments(program)) == len(program)
+
+
+class TestObjectKeyMasking:
+    """The key-position exemption must be positional, not a blanket allowance."""
+
+    def test_key_masked_value_not(self):
+        from lfx.utils.jq_security import _mask_object_keys, _mask_strings_and_comments
+
+        masked = _mask_object_keys(_mask_strings_and_comments("{env: env}"))
+        # Exactly one "env" survives: the one in value position.
+        assert masked.count("env") == 1
+        assert masked.endswith("env}")
+
+    def test_masking_preserves_length(self):
+        from lfx.utils.jq_security import _mask_object_keys
+
+        program = '{env: .a, b: {input: [1, 2]}, c: "x"}'
+        assert len(_mask_object_keys(program)) == len(program)
+
+    def test_dollar_keys_left_visible(self):
+        from lfx.utils.jq_security import _mask_object_keys
+
+        assert "ENV" in _mask_object_keys("{$ENV}")

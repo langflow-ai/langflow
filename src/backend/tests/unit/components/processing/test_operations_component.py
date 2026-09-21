@@ -24,6 +24,7 @@ from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
+from lfx.utils.jq_security import validate_jq_program
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -569,3 +570,75 @@ class TestDynamicOutputs:
 
 if __name__ == "__main__":
     pytest.main([__file__])
+
+
+class TestJqGuardLibjqConformance:
+    """The guard's allow/deny sets are checked against the real libjq compiler.
+
+    These live in the backend suite rather than beside ``jq_security`` because
+    ``jq`` is a ``langflow-base`` dependency: the lfx-only test environment has
+    no libjq, so a conformance test there would silently skip.
+    """
+
+    ALLOWED = [
+        # Object keys that merely share a name with a builtin (LE-2550 follow-up).
+        "{env: .a}",
+        "{input: .a}",
+        "{inputs: .a}",
+        "{env : .a}",
+        '{"env": .a}',
+        "{env}",
+        "{input}",
+        "{a: .x, env: .y}",
+        "{outer: {env: .a}}",
+        ". as {env: $e} | $e",
+        # getpath only indexes the value it is applied to.
+        'getpath(["nested", "id"])',
+        'getpath(["data", "id"])',
+        # Ordinary selections.
+        ".env",
+        ".data",
+    ]
+
+    # Programs that demonstrably emit server environment data.
+    REJECTED = ["env", "$ENV", "{a: env}", "{(env.LF_JQ_CANARY_2550): 1}", "{$ENV}", '{"\\(env)": 1}']
+
+    # Programs the guard must reject that libjq evaluates but cannot emit --
+    # ``{(env): 1}`` resolves the builtin and then fails on "object as object
+    # key", so it proves reachability of the call, not of the output.
+    REJECTED_UNEMITTABLE = ["{(env): 1}", "{(env): .a}"]
+
+    @pytest.mark.parametrize("program", ALLOWED)
+    def test_allowed_programs_compile_and_read_only_their_input(self, program, monkeypatch):
+        import jq
+
+        validate_jq_program(program)
+        monkeypatch.setenv("LF_JQ_CANARY_2550", "canary-value")
+        document = {
+            "a": 1,
+            "x": 2,
+            "y": 3,
+            "env": "from-input",
+            "input": "from-input",
+            "data": {"id": 7},
+            "nested": {"id": 9},
+        }
+        # Compiles under real libjq, and its output carries nothing from the
+        # process environment.
+        assert "canary-value" not in str(jq.compile(program).input(document).all())
+
+    @pytest.mark.parametrize("program", REJECTED)
+    def test_rejected_programs_really_reach_the_environment(self, program, monkeypatch):
+        """Each negative case is rejected because it leaks, not by coincidence."""
+        import jq
+
+        monkeypatch.setenv("LF_JQ_CANARY_2550", "canary-value")
+        assert "canary-value" in str(jq.compile(program).input({"a": 1}).all())
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_jq_program(program)
+
+    @pytest.mark.parametrize("program", REJECTED_UNEMITTABLE)
+    def test_computed_key_builtin_calls_are_rejected(self, program):
+        """A builtin inside a computed key ``{(expr): v}`` is a call, not a key name."""
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_jq_program(program)

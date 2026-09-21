@@ -22,9 +22,13 @@ import re
 # jq builtins that must never be reachable from a user-supplied program:
 #  - env: full process-environment disclosure (the crown-jewel leak).
 #  - input / inputs: read values outside the component's declared input data.
-#  - getpath: retained as defense-in-depth per the remediation guidance; it has
-#    no legitimate use in the simple field selections these components are for.
-_DANGEROUS_BARE_BUILTINS = ("env", "input", "inputs", "getpath")
+#
+# ``getpath`` is deliberately NOT here. It indexes the value it is applied to and
+# reads nothing else, so ``getpath(["a", "b"])`` is an ordinary field selection --
+# the equivalent of ``.a.b`` with a computed path. The only way to point it at
+# server state is to feed it ``env``/``$ENV`` first, and both of those are
+# rejected in their own right. Blocking it only broke working flows.
+_DANGEROUS_BARE_BUILTINS = ("env", "input", "inputs")
 
 # A builtin is only dangerous when invoked as a bare jq function, i.e. not
 # preceded by "." (field access on the input data, e.g. ".env"), "$" (a
@@ -98,6 +102,64 @@ def _mask_strings_and_comments(program: str) -> str:
     return "".join(out)
 
 
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _mask_object_keys(scanned: str) -> str:
+    r"""Blank bare identifiers sitting in jq object-key position.
+
+    Takes the output of :func:`_mask_strings_and_comments` and returns a
+    same-length string with object *keys* blanked out, so the builtin scan sees
+    only identifiers that are actually function references.
+
+    A bare identifier in key position never invokes a builtin. jq object keys are
+    identifiers, keywords, string literals, ``$var`` or ``(expr)``; a bare one is
+    a literal key, and the ``{k}`` shorthand expands to ``{k: .k}`` -- field
+    access on the input. So ``{env: .a}``, ``{input: .a}`` and ``{env}`` are all
+    ordinary transformations, and ``. as {env: $e}`` is an ordinary destructuring
+    pattern.
+
+    ``$``-prefixed keys are deliberately left visible: ``{$ENV}`` expands to
+    ``{"ENV": $ENV}`` and really does disclose the environment, so it must still
+    reach :data:`_DANGEROUS_VARIABLE_RE`.
+
+    Quote characters are skipped rather than tracked. String *contents* are
+    already blanked by the previous pass, and the interpolated code that
+    survives inside them is paren-balanced by construction, so the container
+    stack stays aligned while ``\(env)`` remains visible under a ``(`` frame
+    (never key position) and is still rejected.
+    """
+    out = list(scanned)
+    # Open containers, innermost last. Each entry is [opening char, expecting_key].
+    # ``expecting_key`` only means anything for "{" frames: it is True at "{" and
+    # after a ",", and False after the ":" that starts the value.
+    stack: list[list] = []
+    i, n = 0, len(scanned)
+    while i < n:
+        ch = scanned[i]
+        if ch == "{":
+            stack.append(["{", True])
+        elif ch in "([":
+            stack.append([ch, False])
+        elif ch in ")]}":
+            if stack:
+                stack.pop()
+        elif stack and stack[-1][0] == "{" and ch in ":,":
+            stack[-1][1] = ch == ","
+        else:
+            match = _IDENTIFIER_RE.match(scanned, i)
+            if match:
+                in_key_position = bool(stack) and stack[-1][0] == "{" and stack[-1][1]
+                # ".env" / "$env" are already exempt downstream; leave them be.
+                qualified = i > 0 and scanned[i - 1] in ".$"
+                if in_key_position and not qualified:
+                    out[match.start() : match.end()] = " " * (match.end() - match.start())
+                i = match.end()
+                continue
+        i += 1
+    return "".join(out)
+
+
 def validate_jq_program(program: str) -> None:
     """Reject a jq program that references dangerous builtins or variables.
 
@@ -106,14 +168,14 @@ def validate_jq_program(program: str) -> None:
 
     Raises:
         ValueError: If the program is empty/non-string, or references ``$ENV``,
-            ``env``, ``$__loc__``, ``input``, ``inputs``, or ``getpath`` as a
-            jq builtin/variable.
+            ``env``, ``$__loc__``, ``input`` or ``inputs`` as a jq
+            builtin/variable.
     """
     if not program or not isinstance(program, str):
         msg = "A jq program is required and must be a string."
         raise ValueError(msg)
 
-    scanned = _mask_strings_and_comments(program)
+    scanned = _mask_object_keys(_mask_strings_and_comments(program))
 
     match = _DANGEROUS_VARIABLE_RE.search(scanned)
     if match:
