@@ -6,7 +6,6 @@ from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.schema.dotdict import dotdict
-from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
@@ -80,10 +79,6 @@ class NVIDIAModelComponent(LCModelComponent):
     ]
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
-        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
-        if self.base_url:
-            validate_connector_url_for_ssrf(self.base_url)
-
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
@@ -92,6 +87,10 @@ class NVIDIAModelComponent(LCModelComponent):
 
         # base_url is tenant-editable and the SDK sends the operator's API key to whatever
         # host it names. Block internal/cloud-metadata destinations before connecting.
+        # This is the only host check on this path: validate_provider_base_url is the
+        # strict one (no literal-loopback exemption, and it requires https for a
+        # credential-bearing endpoint), so running validate_connector_url_for_ssrf ahead of
+        # it only rejected the same URLs sooner, with a weaker message and a second lookup.
         #
         # Residual: this is validate-then-connect, not connection-time pinning.
         # langchain-nvidia-ai-endpoints ~=1.0 builds its own requests.Session in
@@ -137,10 +136,6 @@ class NVIDIAModelComponent(LCModelComponent):
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
-        if self.base_url:
-            validate_connector_url_for_ssrf(self.base_url)
-
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
