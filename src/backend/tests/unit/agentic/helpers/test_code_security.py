@@ -7,10 +7,18 @@ Tests cover:
 - Edge cases (syntax errors, empty code)
 """
 
+import ast
+import contextlib
 import sys
+import tracemalloc
 
 import pytest
-from langflow.agentic.helpers.code_security import scan_code_security
+from langflow.agentic.helpers.code_security import (
+    _STATIC_EVAL_MAX_RESOLVED_CHARS,
+    StaticEvaluationBudgetExceededError,
+    _static_string_value,
+    scan_code_security,
+)
 
 
 class TestScanCodeSecuritySafeCode:
@@ -260,6 +268,42 @@ class TestScanCodeSecurityDangerousAttrCalls:
     @pytest.mark.parametrize(
         "code",
         [
+            "import tempfile\ntempfile._os.system('id')",
+            "import tempfile\nsecret = tempfile._os.environ",
+            "import tempfile\ngetattr(tempfile, '_os').spawnv('id', [], {})",
+            "from tempfile import _os\n_os.system('id')",
+            "from tempfile import _os as operating_system\noperating_system.execlpe('id')",
+            "import tempfile\ntempfile._sys.exit(1)",
+            "import tempfile\nmodules = tempfile._sys.modules",
+        ],
+        ids=[
+            "dangerous-call",
+            "dangerous-read",
+            "reflective-access",
+            "from-import",
+            "from-import-alias",
+            "sys-exit",
+            "sys-modules-read",
+        ],
+    )
+    def test_should_detect_restricted_access_through_tempfile_private_reexports(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import tempfile\ntempfile.mkdtemp()",
+            "import tempfile\nwith tempfile.NamedTemporaryFile() as handle:\n    handle.write(b'x')",
+            "from tempfile import mkdtemp\nmkdtemp()",
+        ],
+        ids=["mkdtemp", "named-temporary-file", "from-import-safe-member"],
+    )
+    def test_should_allow_legitimate_tempfile_usage(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
             "from os import *\ndef write(value):\n    return value\nwrite('ok')",
             "from os import *\nwrite = lambda value: value\nwrite('ok')",
             "from os import *\ndef run(write):\n    return write('ok')",
@@ -486,6 +530,130 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
         result = scan_code_security('data = open("/etc/passwd").read()')
         assert result.is_safe is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: stdlib equivalents of bare open() must not bypass the scan.
+            "import io\nio.open('/etc/passwd').read()",
+            "import io\nio.open_code('/etc/passwd')",
+            "import io as io_alias\nio_alias.open('/etc/passwd').read()",
+            "from io import open\nopen('/etc/passwd').read()",
+            "from io import open_code\nopen_code('/etc/passwd')",
+            "import codecs\ncodecs.open('/etc/passwd').read()",
+            "from codecs import open\ncodec_open = open\ncodec_open('/etc/passwd')",
+            "import io\nopener = getattr(io, 'open')\nopener('/etc/passwd')",
+        ],
+        ids=[
+            "io-open",
+            "io-open-code",
+            "io-open-aliased-module",
+            "from-io-import-open",
+            "from-io-import-open-code",
+            "codecs-open",
+            "from-codecs-import-open",
+            "io-open-via-getattr",
+        ],
+    )
+    def test_should_detect_stdlib_open_equivalents(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: pathlib is the object-oriented raw filesystem API
+            # (Path.read_text/write_text/open/...). The whole module is blocked.
+            "import pathlib\npathlib.Path('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/tmp/x').write_text('payload')",
+            "from pathlib import Path\nPath('/tmp/x').open('r')",
+        ],
+        ids=[
+            "pathlib-module-read-text",
+            "pathlib-from-import-read-text",
+            "pathlib-write-text",
+            "pathlib-open",
+        ],
+    )
+    def test_should_detect_pathlib_file_access(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # io.FileIO is the raw constructor behind open(): it opens the path
+            # directly, so blocking only io.open/codecs.open left the same
+            # capability reachable. _io is the C module io re-exports from, so
+            # io.FileIO *is* _io.FileIO and both spellings must be covered.
+            "import io\ndata = io.FileIO('/etc/passwd').read()",
+            "import _io\ndata = _io.FileIO('/etc/passwd').read()",
+            "from io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from _io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "from _io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "import io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import _io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import io\nctor = io.FileIO\ndata = ctor('/etc/passwd').read()",
+            "import io\nio.FileIO('/tmp/payload', 'w').write(b'x')",
+            "import io\nio.FileIO('/tmp/payload', 'a').write(b'x')",
+            "import io\ndata = io.BufferedReader(io.FileIO('/etc/passwd')).read()",
+            "from io import *\ndata = FileIO('/etc/passwd').read()",
+            "import _io\n_io.open('/etc/passwd').read()",
+            "import _io\n_io.open_code('/etc/passwd')",
+        ],
+        ids=[
+            "io-fileio-read",
+            "underscore-io-fileio-read",
+            "from-io-import-fileio",
+            "from-underscore-io-import-fileio",
+            "from-io-import-fileio-aliased",
+            "from-underscore-io-import-fileio-aliased",
+            "io-fileio-aliased-module",
+            "underscore-io-fileio-aliased-module",
+            "io-fileio-assigned-constructor",
+            "io-fileio-write",
+            "io-fileio-append",
+            "io-fileio-buffered-wrapper",
+            "io-fileio-wildcard-import",
+            "underscore-io-open",
+            "underscore-io-open-code",
+        ],
+    )
+    def test_should_detect_raw_fileio_constructors(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # The _io canonicalization must not sweep up the in-memory types.
+            "import _io\nbuf = _io.BytesIO(b'x')",
+            "import _io\nbuf = _io.StringIO('x')",
+            "from _io import BytesIO\nbuf = BytesIO(b'x')",
+            "import io\nw = io.TextIOWrapper(io.BytesIO(b'x'))",
+            "import io\nassert isinstance(io.BytesIO(b''), io.IOBase)",
+            "import codecs\ncodecs.encode('x', 'hex')",
+            "import codecs\ncodecs.decode(b'78', 'hex')",
+        ],
+        ids=[
+            "underscore-io-bytesio",
+            "underscore-io-stringio",
+            "from-underscore-io-import-bytesio",
+            "io-textiowrapper-over-memory-buffer",
+            "io-iobase-isinstance",
+            "codecs-encode",
+            "codecs-decode",
+        ],
+    )
+    def test_should_still_allow_in_memory_and_codec_helpers(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_io_and_underscore_io_fileio_are_the_same_object(self):
+        """The canonicalization rests on a runtime fact; assert it rather than assume it."""
+        import _io
+        import io
+
+        assert io.FileIO is _io.FileIO
+        assert io.open is _io.open
+
     def test_should_detect_subclasses_sandbox_escape(self):
         result = scan_code_security("evil = ().__class__.__bases__[0].__subclasses__()")
         assert result.is_safe is False
@@ -512,6 +680,16 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
     def test_should_still_allow_getattr(self):
         # getattr is common/legit — banning it would regress real components.
         result = scan_code_security('v = getattr(self, "field", None)')
+        assert result.is_safe is True
+
+    def test_should_still_allow_in_memory_io_streams(self):
+        # io.StringIO/BytesIO are in-memory and legit; only io.open/open_code are blocked.
+        result = scan_code_security("import io\nbuf = io.BytesIO(b'data')\ntext = io.StringIO('x')")
+        assert result.is_safe is True
+
+    def test_should_still_allow_codecs_transcoding(self):
+        # codecs.encode/decode are legit; only codecs.open is blocked.
+        result = scan_code_security("import codecs\ndata = codecs.decode(b'x', 'utf-8')")
         assert result.is_safe is True
 
 
@@ -1387,9 +1565,9 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     @pytest.mark.parametrize(
         "code",
         [
-            "import pathlib\npath = getattr.__call__(pathlib, 'Path')('a')",
-            "import pathlib\nreflect = getattr\npath = reflect.__call__(pathlib, 'Path')('a')",
-            "import builtins, pathlib\npath = builtins.getattr.__call__(pathlib, 'Path')('a')",
+            "import math\nresult = getattr.__call__(math, 'sqrt')(4)",
+            "import math\nreflect = getattr\nresult = reflect.__call__(math, 'sqrt')(4)",
+            "import builtins, math\nresult = builtins.getattr.__call__(math, 'sqrt')(4)",
         ],
         ids=["direct-getattr-call", "aliased-getattr-call", "builtins-getattr-call"],
     )
@@ -1513,6 +1691,81 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         result = scan_code_security("getattr(record, 'display' + '_name', None)")
         assert result.is_safe is True
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "def helper():\n    return None\ngetattr(helper, ''.join(['__glob', 'als__']))",
+                id="join-list-getattr-globals",
+            ),
+            pytest.param(
+                "getattr(object, ''.join(('__sub', 'classes__')))()",
+                id="join-tuple-getattr-subclasses",
+            ),
+            pytest.param(
+                "getattr(helper, ''.join(part for part in ['__glob', 'als__']))",
+                id="join-generator-getattr-globals",
+            ),
+            pytest.param(
+                "import os\ngetattr(os, ''.join(['sys', 'tem']))('id')",
+                id="join-getattr-os-system",
+            ),
+            pytest.param(
+                "import os\ngetattr(os, ''.join(['get', 'env']))('HOME')",
+                id="join-getattr-os-getenv",
+            ),
+            pytest.param(
+                "import os\nname = ''.join(['sy', 'stem'])\ngetattr(os, name)('id')",
+                id="join-name-then-getattr",
+            ),
+            pytest.param(
+                "import pathlib\npathlib.__dict__[''.join(['o', 's'])].fork()",
+                id="join-module-dict-key",
+            ),
+        ],
+    )
+    def test_should_detect_join_computed_dangerous_names(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    def test_should_detect_join_computed_end_to_end_rce_payload(self):
+        """H1-3995693: join-computed reflection must not recover globals/builtins."""
+        code = (
+            "def helper():\n    return None\n\n"
+            "globals_map = getattr(helper, ''.join(['__glob', 'als__']))\n"
+            "builtins_map = globals_map[''.join(['__built', 'ins__'])]\n"
+            "import_function = builtins_map[''.join(['__imp', 'ort__'])]\n"
+            "os_module = import_function(''.join(['o', 's']))\n"
+            "os_module.system('placeholder')\n"
+        )
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "separator = '-'\nvalue = separator.join(['a', 'b'])",
+                id="aliased-separator-join",
+            ),
+            pytest.param(
+                "value = ''.join(part for part in ['a', 'b'] if part)",
+                id="filtered-generator-join",
+            ),
+            pytest.param(
+                "value = ''.join([prefix, 'b'])",
+                id="dynamic-element-join",
+            ),
+            pytest.param(
+                "getattr(record, ''.join(['display', '_name']), None)",
+                id="safe-join-getattr",
+            ),
+        ],
+    )
+    def test_should_allow_unresolved_or_safe_join_strings(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
     def test_should_detect_reflective_call_through_assignment_alias(self):
         result = scan_code_security("import os\nmodule = os\ngetattr(module, 'system')('id')")
         assert result.is_safe is False
@@ -1626,7 +1879,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         "code",
         [
             pytest.param(
-                "import pathlib\npathlib = object()\ngetattr(pathlib, 'os').system('ordinary object')",
+                "import glob\nglob = object()\ngetattr(glob, 'os').system('ordinary object')",
                 id="rebound-module-name",
             ),
             pytest.param(
@@ -1634,12 +1887,11 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="ordinary-object-getattribute",
             ),
             pytest.param(
-                "import pathlib\npathlib = object()\nvars = lambda value: {'os': value}\n"
-                "vars(pathlib)['os'].Path('file')",
+                "import glob\nglob = object()\nvars = lambda value: {'os': value}\nvars(glob)['os'].glob('file')",
                 id="shadowed-vars",
             ),
             pytest.param(
-                "import pathlib\nos_module = getattr(pathlib, 'os')\npath = os_module.path.join('a', 'b')",
+                "import logging\nos_module = getattr(logging, 'os')\npath = os_module.path.join('a', 'b')",
                 id="safe-os-member",
             ),
             pytest.param(
@@ -1648,15 +1900,15 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="rebound-getattr-alias",
             ),
             pytest.param(
-                "import pathlib\npath = pathlib.Path('a')\nname = getattr(pathlib, f\"{'P'}ath\")('b')",
-                id="direct-pathlib-and-static-safe-getattr",
+                "import glob\nfiles = glob.glob('*.txt')\nname = getattr(glob, f\"{'g'}lob\")('b')",
+                id="direct-glob-and-static-safe-getattr",
             ),
             pytest.param(
                 "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
                 id="direct-glob-and-safe-dict-member",
             ),
             pytest.param(
-                "import pathlib\npath_class = vars(pathlib)['Path']",
+                "import glob\npath_class = vars(glob)['glob']",
                 id="vars-safe-member",
             ),
             pytest.param(
@@ -1664,7 +1916,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="vars-mapping-get-safe-member",
             ),
             pytest.param(
-                "import pathlib\npath_class = object.__getattribute__(pathlib, 'Path')",
+                "import glob\npath_class = object.__getattribute__(glob, 'glob')",
                 id="object-getattribute-safe-member",
             ),
             pytest.param(
@@ -1672,7 +1924,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="dict-get-safe-member",
             ),
             pytest.param(
-                "import pathlib\nlookup = pathlib.__dict__.get\npath_class = lookup.__call__('Path')",
+                "import glob\nlookup = glob.__dict__.get\npath_class = lookup.__call__('glob')",
                 id="normalized-call-safe-member",
             ),
         ],
@@ -2091,11 +2343,8 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
         "code",
         [
             # Runtime-built names on a literal-container receiver.
-            "subs = getattr((), ''.join(['__sub', 'classes__']))",
             "subs = getattr((), chr(95) + '__subclasses_')",
             "cls = getattr((), f'__cl{suffix}__')",
-            # Runtime-built names on a nested-getattr (call-result) receiver.
-            "bases = getattr(getattr((), '__class__'), ''.join(['__ba', 'ses__']))",
             # Runtime-built names on an untracked local receiver.
             "def f(k):\n    return getattr(k, name)",
             # Runtime-built names via an aliased/qualified getattr.
@@ -2103,10 +2352,8 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
             "import builtins\nsubs = builtins.getattr((), name)",
         ],
         ids=[
-            "str-join-on-literal-tuple",
             "chr-built-name",
             "fstring-name",
-            "nested-getattr-receiver",
             "untracked-local-receiver",
             "aliased-getattr",
             "builtins-getattr",
@@ -2117,10 +2364,23 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
         assert result.is_safe is False
         assert any("Dynamic getattr()" in violation for violation in result.violations)
 
-    def test_should_detect_statically_assembled_dunder_getattr_name(self):
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "subs = getattr((), '__sub' + 'classes__')",
+            # ``str.join`` is resolved statically (#15195), so these spellings
+            # land on the dunder guard rather than the dynamic-name rule. Either
+            # way the escape is blocked; keep them as regressions for both.
+            "subs = getattr((), ''.join(['__sub', 'classes__']))",
+            "bases = getattr(getattr((), '__class__'), ''.join(['__ba', 'ses__']))",
+        ],
+        ids=["concat-name", "join-name", "join-name-nested-receiver"],
+    )
+    def test_should_detect_statically_assembled_dunder_getattr_name(self, code):
         # Statically resolvable escape names are still caught by the dunder guard.
-        result = scan_code_security("subs = getattr((), '__sub' + 'classes__')")
+        result = scan_code_security(code)
         assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -2247,3 +2507,84 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
     )
     def test_should_allow_yaml_safe_deserialization(self, code):
         assert scan_code_security(code).is_safe is True
+
+
+class TestStaticEvaluationBudget:
+    """The static string evaluator must not be usable as a memory-exhaustion primitive.
+
+    ``_static_string_value`` exists to recover attribute names like
+    ``getattr(io, "op" + "en")``. Resolving ``str.join`` gave it an amplifier: a
+    generator repeats its element once per item, so nesting
+    ``"".join(<expr> for _ in ("a", "b"))`` doubles the resolved string per level
+    while the source grows by a constant. These run *before* the submitted Python
+    executes, inside the scan, so an overrun costs a worker its memory.
+
+    Every assertion here uses small configured limits or shallow nesting -- no
+    test is allowed to allocate anything large to prove the point.
+    """
+
+    @staticmethod
+    def _nested_join(levels: int) -> str:
+        expr = '"ab"'
+        for _ in range(levels):
+            expr = f'"".join({expr} for _p in ("x", "y"))'
+        return expr
+
+    def test_nested_generator_joins_are_rejected_not_resolved(self):
+        node = ast.parse(self._nested_join(20), mode="eval").body
+        with pytest.raises(StaticEvaluationBudgetExceededError):
+            _static_string_value(node)
+
+    def test_resolved_size_is_bounded_by_the_budget(self):
+        """Whatever does resolve stays under the cap; nothing near it is materialized."""
+        resolved = _static_string_value(ast.parse(self._nested_join(8), mode="eval").body)
+        assert resolved is not None
+        assert len(resolved) <= _STATIC_EVAL_MAX_RESOLVED_CHARS
+
+    def test_peak_allocation_does_not_grow_with_nesting(self):
+        """30 levels implies a gigabyte unbudgeted; measure instead of assuming."""
+        peaks = []
+        for levels in (10, 20, 30):
+            node = ast.parse(self._nested_join(levels), mode="eval").body
+            tracemalloc.start()
+            with contextlib.suppress(StaticEvaluationBudgetExceededError):
+                _static_string_value(node)
+            _, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            peaks.append(peak)
+        assert max(peaks) < 4 * _STATIC_EVAL_MAX_RESOLVED_CHARS
+
+    def test_overrun_is_a_violation_not_a_permissive_none(self):
+        """The scan must fail closed: None would be read as "dynamic, carry on"."""
+        code = f"import io\nx = getattr(io, {self._nested_join(20)})\n"
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("resource exhaustion" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import io\nx = getattr(io, ''.join(['Str', 'ingIO']))",
+            "import io\nx = getattr(io, 'Str' + 'ingIO')",
+            "import io\nx = getattr(io, f'Str{\"ingIO\"}')",
+            "import os\nx = getattr(os, '_'.join(['path']))",
+            "import io\nx = getattr(io, ''.join(p for p in ('Str', 'ingIO')))",
+        ],
+        ids=[
+            "small-literal-join",
+            "small-concat",
+            "small-fstring",
+            "small-join-with-separator",
+            "small-passthrough-generator",
+        ],
+    )
+    def test_ordinary_static_strings_still_resolve(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_separator_repetition_is_charged_before_allocating(self):
+        """A long separator over many elements is priced from the projection, not after."""
+        # Built here rather than written out, so the test source stays small.
+        separator = "s" * 4096
+        source = f'"{separator}".join(["a", "b", "c", "d", "e", "f", "g", "h"])'
+        with pytest.raises(StaticEvaluationBudgetExceededError):
+            _static_string_value(ast.parse(source, mode="eval").body)

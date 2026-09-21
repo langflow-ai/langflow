@@ -81,6 +81,7 @@ from lfx.base.knowledge_bases.backends.base import (
 )
 from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name, resolve_storage_name
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -209,12 +210,33 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 "(or env var of the same name) populated with the cluster URL."
             )
             raise ValueError(msg)
+        await self._validate_url(url, url_variable)
         self._resolved_url = url
 
         username_variable = self.backend_config.get("username_variable") or DEFAULT_USERNAME_VARIABLE
         password_variable = self.backend_config.get("password_variable") or DEFAULT_PASSWORD_VARIABLE
         self._resolved_username = await self.resolve_secret(username_variable)
         self._resolved_password = await self.resolve_secret(password_variable)
+
+    @staticmethod
+    async def _validate_url(url: str, url_variable: str) -> None:
+        """SSRF-validate the resolved cluster URL before any client is built from it.
+
+        The URL comes from a tenant-controlled Langflow variable (``backend_config``
+        only names the variable), and the client built from it makes server-side
+        connections whose outcome is echoed back by the test-connection route.
+        Without validation a tenant can probe cloud-metadata (169.254.169.254),
+        RFC1918, or loopback targets from the server's network position. Apply the
+        same connector SSRF policy every other tenant-URL sink uses (vector-store
+        components, MCP, model providers); operators reach legitimate internal
+        clusters via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname`` blocks,
+        so the check runs off the event loop.
+        """
+        try:
+            await asyncio.to_thread(validate_connector_url_for_ssrf, url)
+        except SSRFProtectionError as exc:
+            msg = f"OpenSearch URL from variable {url_variable!r} is not allowed: {exc}"
+            raise ValueError(msg) from exc
 
     def _build_vector_store(self) -> VectorStore:
         # Validate config before touching optional deps so missing
