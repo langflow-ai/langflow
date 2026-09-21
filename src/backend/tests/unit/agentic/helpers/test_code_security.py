@@ -2195,3 +2195,81 @@ class MyComponent:
         """The alias deferral itself must survive: ``module = os`` alone is not a violation."""
         result = scan_code_security("import os\nmodule = os\nmodule = object()\nmodule.system('not os')")
         assert result.is_safe is True
+
+
+class TestStdlibReexportHostBoundary:
+    """A stdlib module handed across an opaque boundary still carries os/sys.
+
+    ``_is_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the
+    real ``os`` for every stdlib host, which is what closes
+    ``platform.os.system(...)``. That only runs while the host is a named value,
+    so the boundary rule has to cover the same set: passing ``zipfile`` into a
+    helper and reading ``m.os`` inside it otherwise reaches ``os`` with the
+    scanner unable to relate ``m`` back to a module.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import zipfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(zipfile)",
+            "import zipfile\n\n\ndef helper(m):\n    return m.os.system('id')\n\n\nhelper(zipfile)",
+            "import zipfile\n\n\ndef give():\n    return zipfile\n\n\nvalue = give().os.getenv('HOME')",
+            "import zipfile\n\nmodules = [zipfile]\nvalue = modules[0].os.getenv('HOME')",
+            "import zipfile\n\n\nclass C:\n    m = zipfile\n\n\nvalue = C.m.os.getenv('HOME')",
+            "import zipfile\n\n\ndef helper(m=zipfile):\n    return m.os.getenv('HOME')\n\n\nvalue = helper()",
+            "import zipfile\n\nmapping = {'z': zipfile}\nvalue = mapping['z'].os.getenv('HOME')",
+            "import tempfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(tempfile)",
+        ],
+        ids=[
+            "carrier-through-argument",
+            "carrier-through-argument-os-system",
+            "carrier-through-return",
+            "carrier-through-list",
+            "carrier-through-class-attribute",
+            "carrier-through-default-argument",
+            "carrier-through-dict-value",
+            "carrier-through-argument-tempfile",
+        ],
+    )
+    def test_stdlib_module_cannot_cross_an_opaque_boundary(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary stdlib use is unaffected: only a bare *module value*
+            # crossing a boundary is a carrier.
+            "import json\nvalue = json.dumps({'a': 1})",
+            "import zipfile\narchive = zipfile.ZipFile('x.zip')\nnames = archive.namelist()",
+            "import re\nmatch = re.match('a', 'abc')",
+            "import math\nvalue = math.sqrt(4)",
+            "import datetime\nvalue = datetime.datetime.now()",
+            # A *member* of a stdlib module is not a carrier and must stay
+            # usable as an ordinary argument.
+            "import json\nvalue = isinstance(1, json.JSONDecoder)",
+            "import json\n\ntry:\n    pass\nexcept json.JSONDecodeError:\n    pass",
+            "import functools\nimport operator\n\nadd_one = functools.partial(operator.add, 1)",
+        ],
+        ids=[
+            "json-dumps",
+            "zipfile-normal-use",
+            "re-match",
+            "math-sqrt",
+            "datetime-now",
+            "stdlib-member-as-argument",
+            "stdlib-exception-member",
+            "functools-partial-over-operator-member",
+        ],
+    )
+    def test_ordinary_stdlib_use_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_wildcard_import_of_an_untabled_module_does_not_crash_the_scan(self):
+        """Pre-existing: "tuple | set" raised TypeError out of scan_code_security.
+
+        Any ``from <module> import *`` where the module has no entry in the
+        dangerous-call table hit the tuple default and crashed the scan rather
+        than returning a result.
+        """
+        assert scan_code_security("from typing import *\nvalue = 1").is_safe is True
+        assert scan_code_security("from dataclasses import *\nvalue = 1").is_safe is True

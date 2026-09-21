@@ -344,12 +344,33 @@ _RESTRICTED_MODULE_REFERENCES: set[str] = {
 }
 
 
+def _is_stdlib_reexport_host(resolved_name: str) -> bool:
+    """Whether a value is a bare stdlib module, and so a potential ``os``/``sys`` carrier.
+
+    ``_is_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the real
+    ``os`` for every stdlib host, which is what closed ``platform.os.system(...)``.
+    That canonicalization only runs while the host is still a *named* value, so
+    the boundary rule has to cover the same set: handing ``zipfile`` to a helper
+    and reading ``m.os`` inside it otherwise reaches ``os`` with the scanner
+    unable to relate ``m`` back to a module.
+
+    Exact membership only, so it matches a module value (``zipfile``) and not a
+    member of one (``json.JSONDecodeError``), which is not a carrier and must
+    stay usable as an ordinary argument.
+    """
+    return resolved_name in _STDLIB_MODULE_NAMES
+
+
 def _is_restricted_module_reference(resolved_name: str) -> bool:
     """Whether a value retains access to a restricted module across an opaque boundary."""
-    if resolved_name in _RESTRICTED_MODULE_REFERENCES:
+    if resolved_name in _RESTRICTED_MODULE_REFERENCES or _is_stdlib_reexport_host(resolved_name):
         return True
     module_name, separator, member_name = resolved_name.rpartition(".")
-    return bool(separator and member_name == "__dict__" and module_name in _RESTRICTED_MODULE_REFERENCES)
+    return bool(
+        separator
+        and member_name == "__dict__"
+        and (module_name in _RESTRICTED_MODULE_REFERENCES or _is_stdlib_reexport_host(module_name))
+    )
 
 
 def _restricted_mapping_owner(resolved_name: str) -> str | None:
@@ -823,7 +844,10 @@ class _SecurityChecker(ast.NodeVisitor):
 
         for alias in node.names:
             if alias.name == "*":
-                for name in _DANGEROUS_CALL_MEMBERS.get(root_module, ()) | _DANGEROUS_READ_MEMBERS.get(
+                # Both defaults must be sets: "tuple | set" is a TypeError, so a
+                # wildcard import from any module absent from the call table
+                # (``from typing import *``) crashed the scan out to the caller.
+                for name in _DANGEROUS_CALL_MEMBERS.get(root_module, set()) | _DANGEROUS_READ_MEMBERS.get(
                     root_module, set()
                 ):
                     self._bind_name(name, frozenset({f"{root_module}.{name}"}))
