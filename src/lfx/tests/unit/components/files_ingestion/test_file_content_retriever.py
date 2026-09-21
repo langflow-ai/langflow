@@ -571,3 +571,82 @@ class TestPersistentIndexTraversal:
 
         assert "victim_key" not in text_map
         assert all("SECRET_VIA_SYMLINK" not in v for v in text_map.values())
+
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_symlinked_index_directory_does_not_move_the_boundary(self, tmp_path):
+        """texts/ itself being a symlink out of the base must not be followed.
+
+        The boundary has to be the authorized base. Deriving it from the child
+        directory means that when the child is a redirect, both it and the
+        candidate resolve outside the base and the containment check passes
+        against a directory nobody approved.
+        """
+        import json
+
+        base = tmp_path / "persist"
+        base.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "marker.txt").write_text("SECRET_OUTSIDE_BASE", encoding="utf-8")
+        (base / "texts").symlink_to(outside, target_is_directory=True)
+        (base / "text_index.json").write_text(json.dumps({"victim_key": "marker.txt"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert "victim_key" not in text_map
+        assert all("SECRET_OUTSIDE_BASE" not in value for value in text_map.values())
+
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_nested_symlinked_index_directory_rejected(self, tmp_path):
+        """The redirect can be more than one hop; resolution is what matters."""
+        import json
+
+        base = tmp_path / "persist"
+        base.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "marker.txt").write_text("SECRET_OUTSIDE_BASE", encoding="utf-8")
+        middle = tmp_path / "middle"
+        middle.mkdir()
+        (middle / "hop").symlink_to(outside, target_is_directory=True)
+        (base / "dataframes").symlink_to(middle / "hop", target_is_directory=True)
+        (base / "dataframe_index.json").write_text(json.dumps({"victim_key": "marker.txt"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            _, dataframe_map = comp._load_persistent_maps()
+
+        assert "victim_key" not in dataframe_map
+
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_saving_through_a_symlinked_index_directory_is_refused(self, tmp_path):
+        """Saving is the destructive half: the orphan sweep unlinks what it finds."""
+        base = tmp_path / "persist"
+        base.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        bystander = outside / "victim.txt"
+        bystander.write_text("must survive", encoding="utf-8")
+        (base / "texts").symlink_to(outside, target_is_directory=True)
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)), pytest.raises(ValueError, match="outside"):
+            comp._save_persistent_maps({"/some/file": "payload"}, {})
+
+        assert bystander.exists(), "a file outside the authorized base was deleted by the orphan sweep"
+        assert bystander.read_text(encoding="utf-8") == "must survive"
+
+    def test_in_scope_persistence_round_trips(self, tmp_path):
+        """The containment checks must not break ordinary save/load."""
+        base = tmp_path / "persist"
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            comp._save_persistent_maps({"/some/file": "hello"}, {})
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {"/some/file": "hello"}
+        assert (base / "texts").is_dir()
+        assert not (base / "texts").is_symlink()

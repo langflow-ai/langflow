@@ -127,13 +127,35 @@ class FileContentRetrieverComponent(Component):
         )
 
     @staticmethod
-    def _resolve_index_entry(index_dir: Path, entry_name: object) -> Path | None:
-        """Resolve an index-listed file name inside *index_dir*, rejecting traversal.
+    def _resolve_scoped_dir(base: Path, name: str) -> Path | None:
+        """Resolve ``base/name`` and require it to stay inside the authorized *base*.
+
+        ``texts`` / ``dataframes`` are children of a validated directory, but a child
+        can be a symlink: if it points outside, its own resolved path is outside too,
+        so anything checked against *it* is checked against the wrong boundary. The
+        authorized base is the only boundary that means anything here, and it must be
+        resolved first so a symlinked base is compared like with like.
+        """
+        resolved_base = base.resolve()
+        candidate = (resolved_base / name).resolve()
+        if candidate != resolved_base and not candidate.is_relative_to(resolved_base):
+            logger.warning(
+                f"FileContentRetriever: Refusing directory '{name}': resolves outside the persistent directory."
+            )
+            return None
+        return candidate
+
+    @staticmethod
+    def _resolve_index_entry(index_dir: Path, entry_name: object, authorized_base: Path | None = None) -> Path | None:
+        """Resolve an index-listed file name, rejecting anything outside the authorized base.
 
         Index files (text_index.json / dataframe_index.json) may be staged or tampered
         with, so entry names are untrusted. Names with path separators or traversal
-        sequences are refused, and the resolved path must stay inside *index_dir*
-        (which also catches symlinks planted inside the directory pointing outside).
+        sequences are refused, and the resolved path must stay inside *authorized_base*
+        - the directory the access check actually approved. Validating against
+        *index_dir* alone is not enough: if that child directory is itself a symlink out
+        of the base, both it and the candidate resolve outside and the comparison
+        succeeds against a boundary that was never authorized.
         """
         if not isinstance(entry_name, str) or not entry_name:
             return None
@@ -143,11 +165,12 @@ class FileContentRetrieverComponent(Component):
                 "or traversal sequences."
             )
             return None
-        resolved_dir = index_dir.resolve()
-        candidate = (resolved_dir / entry_name).resolve()
-        if candidate != resolved_dir and not candidate.is_relative_to(resolved_dir):
+        boundary = (authorized_base if authorized_base is not None else index_dir).resolve()
+        candidate = (index_dir.resolve() / entry_name).resolve()
+        if candidate != boundary and not candidate.is_relative_to(boundary):
             logger.warning(
-                f"FileContentRetriever: Ignoring index entry '{entry_name}': resolves outside its index directory."
+                f"FileContentRetriever: Ignoring index entry '{entry_name}': resolves outside the "
+                "authorized persistent directory."
             )
             return None
         return candidate
@@ -165,7 +188,7 @@ class FileContentRetrieverComponent(Component):
             try:
                 index = json.loads(text_index_file.read_text(encoding="utf-8"))
                 for fp, txt_name in index.items():
-                    txt_path = self._resolve_index_entry(text_dir, txt_name)
+                    txt_path = self._resolve_index_entry(text_dir, txt_name, base)
                     if txt_path is not None and txt_path.exists():
                         try:
                             text_map[fp] = txt_path.read_text(encoding="utf-8")
@@ -182,7 +205,7 @@ class FileContentRetrieverComponent(Component):
             try:
                 index = json.loads(df_index_file.read_text(encoding="utf-8"))
                 for fp, parquet_name in index.items():
-                    pq_path = self._resolve_index_entry(df_dir, parquet_name)
+                    pq_path = self._resolve_index_entry(df_dir, parquet_name, base)
                     if pq_path is not None and pq_path.exists():
                         try:
                             dataframe_map[fp] = DataFrame(pd.read_parquet(pq_path))
@@ -199,9 +222,18 @@ class FileContentRetrieverComponent(Component):
         """Save maps to the persistent directory (atomic writes)."""
         base = self._resolve_persistent_base()
         base.mkdir(parents=True, exist_ok=True)
-        text_dir = base / "texts"
+        # Resolve the children against the authorized base before writing: this
+        # loop also unlinks orphans, so a "texts" symlink pointing out of the
+        # base would delete files outside it, not merely write to them.
+        text_dir = self._resolve_scoped_dir(base, "texts")
+        df_dir = self._resolve_scoped_dir(base, "dataframes")
+        if text_dir is None or df_dir is None:
+            msg = (
+                "FileContentRetriever: persistent directory contains a 'texts' or 'dataframes' entry that "
+                "resolves outside it; refusing to persist."
+            )
+            raise ValueError(msg)
         text_dir.mkdir(exist_ok=True)
-        df_dir = base / "dataframes"
         df_dir.mkdir(exist_ok=True)
 
         # Save each text entry as a separate file
