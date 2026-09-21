@@ -133,7 +133,13 @@ class ListenerHealthServer:
             if method != "GET":
                 writer.write(_response(405, "Method Not Allowed", {"error": "method_not_allowed"}))
             elif path == "/health":
-                writer.write(_response(200, "OK", {"status": "alive", "running": self.supervisor.running}))
+                # A reconcile task that died leaves a process that answers and
+                # holds nothing. The liveness probe compares status codes, so
+                # saying 200 here is how a useless listener stays scheduled
+                # forever instead of being restarted.
+                running = self.supervisor.running
+                body = {"status": "alive" if running else "stopped", "running": running}
+                writer.write(_response(200, "OK", body) if running else _response(503, "Service Unavailable", body))
             elif path == "/healthz":
                 ready, body = await readiness(self.supervisor)
                 writer.write(_response(200, "OK", body) if ready else _response(503, "Service Unavailable", body))

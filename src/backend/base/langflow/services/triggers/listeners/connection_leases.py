@@ -21,6 +21,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
+from sqlalchemy import exists, false
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select, update
 
@@ -29,6 +30,7 @@ from langflow.services.database.models.trigger.model import TriggerListenerLease
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from sqlalchemy.sql.elements import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -50,8 +52,8 @@ def _is_live(row: TriggerListenerLease, *, ttl_s: float, now: datetime) -> bool:
     return heartbeat + timedelta(seconds=ttl_s) > now
 
 
-async def claim(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_s: float) -> bool:
-    """Take or renew the lease on one connection. True when this holder has it.
+async def claim_generation(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_s: float) -> datetime | None:
+    """Take or renew the lease, returning the *generation* this holder now owns.
 
     ``trigger_listener_lease`` carries no ``expires_at`` column: the TTL is a
     runtime policy applied to ``heartbeat_at``, which is what lets an operator
@@ -62,6 +64,17 @@ async def claim(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_
     dead holder's. Every process is expected to read the same
     ``listener_lease_ttl_s``; a replica configured with a longer one simply
     waits longer before taking over, which is the safe direction.
+
+    ``acquired_at`` is the fencing token. It is written when a lease is taken or
+    stolen and left alone by every renewal, so it names one uninterrupted period
+    of ownership: a holder that lost the connection and won it back gets a new
+    generation, which is exactly the distinction a fence has to make. Pair it
+    with :func:`held_clause` to make a write conditional on still owning it.
+
+    Returns ``None`` when another replica holds the lease. The value is always
+    UTC-aware, whatever the backend hands back (SQLite reads datetimes naive),
+    so a generation read on one path compares equal to the same generation read
+    on another.
     """
     now = _now()
     row = (
@@ -77,8 +90,8 @@ async def claim(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_
                 await session.flush()
         except IntegrityError:
             # Another replica inserted first. Not an error: it holds the lease.
-            return False
-        return True
+            return None
+        return _as_aware(now)
 
     if row.holder == holder:
         statement = (
@@ -89,8 +102,10 @@ async def claim(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_
             )
             .values(heartbeat_at=now)
         )
+        # A renewal does not start a new generation: the adapter never stopped.
+        generation = _as_aware(row.acquired_at)
     elif _is_live(row, ttl_s=ttl_s, now=now):
-        return False
+        return None
     else:
         # Steal, guarded on the exact stale heartbeat we read so only one of
         # several replicas racing the same dead holder wins.
@@ -103,9 +118,37 @@ async def claim(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_
             )
             .values(holder=holder, acquired_at=now, heartbeat_at=now)
         )
+        generation = _as_aware(now)
     result = await session.exec(statement)  # type: ignore[call-overload]
     await session.flush()
-    return bool(result.rowcount == 1)
+    return generation if result.rowcount == 1 else None
+
+
+async def claim(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_s: float) -> bool:
+    """Take or renew the lease on one connection. True when this holder has it."""
+    generation = await claim_generation(session, connection_id=connection_id, holder=holder, ttl_s=ttl_s)
+    return generation is not None
+
+
+def held_clause(*, connection_id: UUID, holder: str, generation: datetime | None) -> ColumnElement[bool]:
+    """A predicate that is true only while ``holder`` still owns ``generation``.
+
+    Composed into another statement's ``WHERE`` so that the fence and the write
+    it guards are a single atomic mutation. Lease expiry is a Langflow recovery
+    bound, not proof that the previous holder stopped: without a fence, an old
+    adapter can land a stale write *after* its successor saved a newer one and
+    silently rewind a provider cursor. With one, the stale write matches no rows.
+    """
+    if generation is None:
+        # No generation means no proven ownership, so nothing may be written.
+        return false()
+    return exists(
+        select(TriggerListenerLease.connection_id).where(
+            TriggerListenerLease.connection_id == connection_id,
+            TriggerListenerLease.holder == holder,
+            TriggerListenerLease.acquired_at == generation,
+        )
+    )
 
 
 async def release(session: AsyncSession, *, connection_id: UUID, holder: str) -> bool:

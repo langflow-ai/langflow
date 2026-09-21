@@ -16,6 +16,7 @@ from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import TriggerListenerLease
 from langflow.services.deps import session_scope
 from langflow.services.triggers.listeners import connection_leases
+from sqlalchemy import literal
 from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
@@ -165,3 +166,59 @@ async def test_release_all_drops_every_lease_this_holder_owns(make_connection) -
         assert await connection_leases.release_all(session, holder="alpha") == 3
     async with session_scope() as session:
         assert await connection_leases.held_by(session, holder="alpha", ttl_s=60) == set()
+
+
+async def test_the_generation_survives_renewal_and_moves_on_takeover(make_connection) -> None:
+    """``acquired_at`` is the fencing token: one uninterrupted period of ownership.
+
+    A renewal must not look like a handover, or every later fenced write would
+    be discarded; re-taking a lapsed lease must, or a write from the previous
+    period would be let through.
+    """
+    connection_id = await make_connection()
+
+    async with session_scope() as session:
+        first = await connection_leases.claim_generation(
+            session, connection_id=connection_id, holder="replica-a", ttl_s=300
+        )
+        renewed = await connection_leases.claim_generation(
+            session, connection_id=connection_id, holder="replica-a", ttl_s=300
+        )
+    assert first is not None
+    assert renewed == first, "a heartbeat does not start a new generation"
+
+    async with session_scope() as session:
+        # A rival cannot claim a live lease, and so gets no generation.
+        assert (
+            await connection_leases.claim_generation(
+                session, connection_id=connection_id, holder="replica-b", ttl_s=300
+            )
+            is None
+        )
+        # After the TTL lapses it can, and the generation moves.
+        stolen = await connection_leases.claim_generation(
+            session, connection_id=connection_id, holder="replica-b", ttl_s=0
+        )
+    assert stolen is not None
+    assert stolen != first, "a takeover must start a new generation"
+
+
+async def test_the_fence_matches_only_the_current_holders_generation(make_connection) -> None:
+    connection_id = await make_connection()
+    async with session_scope() as session:
+        generation = await connection_leases.claim_generation(
+            session, connection_id=connection_id, holder="replica-a", ttl_s=300
+        )
+
+    async def held(**kwargs) -> bool:
+        async with session_scope() as session:
+            return bool((await session.exec(select(literal(1)).where(connection_leases.held_clause(**kwargs)))).first())
+
+    assert await held(connection_id=connection_id, holder="replica-a", generation=generation) is True
+    assert await held(connection_id=connection_id, holder="replica-b", generation=generation) is False
+    assert await held(connection_id=connection_id, holder="replica-a", generation=None) is False
+
+    async with session_scope() as session:
+        await connection_leases.release(session, connection_id=connection_id, holder="replica-a")
+        await connection_leases.claim_generation(session, connection_id=connection_id, holder="replica-b", ttl_s=300)
+    assert await held(connection_id=connection_id, holder="replica-a", generation=generation) is False

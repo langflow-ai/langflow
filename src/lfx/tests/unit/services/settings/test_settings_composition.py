@@ -263,6 +263,17 @@ EXPECTED_FIELDS = {
     "trigger_replay_window_days",
     "trigger_event_retention_days",
     "trigger_purge_interval_s",
+    # Triggers (TRG-3): the listener process
+    "listeners_mode",
+    "listeners_health_host",
+    "listeners_health_port",
+    "listener_lease_ttl_s",
+    "listener_heartbeat_interval_s",
+    "listener_reconcile_interval_s",
+    "listener_poll_interval_s",
+    "listener_backoff_base_s",
+    "listener_backoff_cap_s",
+    "listener_failure_threshold",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",

@@ -31,7 +31,7 @@ import contextlib
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, runtime_checkable
 
 from lfx.log.logger import logger
 
@@ -82,7 +82,7 @@ class ListenerContext:
     triggers: list[ListenerTrigger]
     emit: Callable[..., Awaitable[bool]]
     save_cursor: Callable[..., Awaitable[None]]
-    resolve_credential: Callable[[], Awaitable[Any]]
+    resolve_credential: Callable[..., Awaitable[Any]]
     stopping: asyncio.Event
 
 
@@ -170,14 +170,16 @@ class SelfTestAdapter(PollingListenerAdapter):
         return appended
 
 
-AdapterFactory = "Callable[[ListenerTrigger], ListenerAdapter]"
+#: What a bundle hands :func:`register_adapter`: given one trigger snapshot,
+#: build the adapter that will hold its connection.
+AdapterFactory: TypeAlias = "Callable[[ListenerTrigger], ListenerAdapter]"
 
 #: ``(kind, mechanism_id)`` -> factory. ``mechanism_id`` of ``None`` is the
 #: wildcard for a kind that has exactly one transport.
-_REGISTRY: dict[tuple[str, str | None], Any] = {}
+_REGISTRY: dict[tuple[str, str | None], AdapterFactory] = {}
 
 
-def register_adapter(*, kind: str, mechanism: str | None, factory: Any) -> None:
+def register_adapter(*, kind: str, mechanism: str | None, factory: AdapterFactory) -> None:
     """Register an adapter factory for a trigger kind (and optional mechanism).
 
     Registration is by ``(kind, mechanism_id)`` because a provider trigger names
@@ -241,6 +243,7 @@ def register_builtin_adapters() -> None:
 __all__ = [
     "TRANSPORT_POLL",
     "TRANSPORT_SOCKET",
+    "AdapterFactory",
     "ListenerAdapter",
     "ListenerContext",
     "ListenerTrigger",

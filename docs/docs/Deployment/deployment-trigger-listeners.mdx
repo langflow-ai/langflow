@@ -16,7 +16,7 @@ This page covers the second kind: the `langflow listeners` process.
 
 The Langflow API runs several worker processes, and it is restarted, upgraded, and autoscaled on its own schedule. A long-lived provider connection held inside it is either opened once per worker — duplicating every event — or dropped on the next rollout.
 
-So listeners run as their own process. It uses the same image, the same database, and the same configuration as the API, and it hosts no HTTP application at all: only a health endpoint. Each provider connection is held by exactly one listener process, elected by a lease row in the database, so you can run several replicas without duplicating events.
+So listeners run as their own process. It uses the same image, the same database, and the same configuration as the API, and it hosts no HTTP application at all: only a health endpoint. A lease row in the database elects one owner per provider connection, so you can run several replicas. During a handover the outgoing process may still be connected for a few seconds — the lease says the previous holder stopped reporting in, not that its socket closed — and Langflow collapses the resulting duplicates on the event's dedupe key, so a flow still runs once.
 
 ## Choose a shape
 
@@ -93,8 +93,8 @@ services:
       - langflow
       - postgres
     environment:
-      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
-      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY}
+      - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL:?set LANGFLOW_DATABASE_URL to the API's database}
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?set LANGFLOW_SECRET_KEY to the API's key}
       - LANGFLOW_LISTENERS_HEALTH_HOST=0.0.0.0
     stop_grace_period: 30s
     restart: unless-stopped
@@ -116,10 +116,10 @@ The listener serves two paths on `LANGFLOW_LISTENERS_HEALTH_PORT` (default `7861
 
 | Path | Meaning | Use it for |
 |---|---|---|
-| `/health` | The process is up and its reconcile loop is alive. | Liveness probes |
+| `/health` | The process is up and its reconcile loop is alive. Returns `503` when the loop has stopped. | Liveness probes |
 | `/healthz` | The database answers, the reconcile loop is current, and no connection lease has failed to renew. | Readiness probes |
 
-`/healthz` returns `503` with a JSON body naming which check failed:
+Both paths return `503` when they fail, so a probe that only compares status codes still restarts a listener whose reconcile loop died. `/healthz` names the failing check in its body:
 
 ```json
 {

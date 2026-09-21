@@ -43,9 +43,14 @@ class RecordingAdapter:
         self.started = asyncio.Event()
         self.stopped = False
         self.start_count = 0
+        #: The context this adapter is *running* with. A socket adapter is
+        #: started once and never restarted, so this is the only list of
+        #: triggers it will ever read.
+        self.ctx: ListenerContext | None = None
 
     async def start(self, ctx: ListenerContext) -> None:
         self.start_count += 1
+        self.ctx = ctx
         self.started.set()
         if self.emit_on_start:
             for trigger in ctx.triggers:
@@ -346,3 +351,228 @@ async def test_stop_releases_every_lease_and_stops_every_adapter(
     assert adapter.stopped is True
     async with session_scope() as session:
         assert await connection_leases.held_by(session, holder="replica-a", ttl_s=300) == set()
+
+
+# --------------------------------------------------------------------------- #
+# A running adapter has to see the trigger list change under it
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_running_adapter_sees_triggers_armed_and_paused_on_a_held_connection(
+    make_connection, make_trigger, adapter_registry
+) -> None:
+    """A second trigger on an already-held connection must reach the open socket.
+
+    The supervisor fans a connection's trigger list into one adapter, and a
+    healthy socket adapter is started once and never restarted. If reconcile
+    replaced the list object instead of updating it, the adapter would keep
+    reading the snapshot it was born with: a trigger armed afterwards would
+    never fire, and one the owner paused would keep being emitted.
+    """
+    adapter = adapter_registry(RecordingAdapter())
+    connection_id = await make_connection()
+    first = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await supervisor.reconcile()
+        await asyncio.wait_for(adapter.started.wait(), timeout=5)
+        assert adapter.ctx is not None
+        assert [t.id for t in adapter.ctx.triggers] == [first]
+
+        # The owner arms a second trigger on the same connection.
+        second = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+        await supervisor.reconcile()
+
+        assert adapter.start_count == 1, "a healthy socket adapter is not restarted for a list change"
+        assert {t.id for t in adapter.ctx.triggers} == {first, second}
+
+        # ...and then pauses the first one.
+        async with session_scope() as session:
+            row = await session.get(Trigger, first)
+            row.state = TriggerState.PAUSED.value
+            session.add(row)
+        await supervisor.reconcile()
+
+        assert [t.id for t in adapter.ctx.triggers] == [second], "a paused trigger must stop being emitted"
+    finally:
+        await supervisor.stop()
+
+
+async def test_editing_the_adapter_configuration_rebuilds_it_without_losing_the_lease(
+    make_connection, make_trigger, adapter_registry
+) -> None:
+    """An adapter built from an edited trigger cannot be the one already running."""
+    adapter = adapter_registry(RecordingAdapter())
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id, config={"interval_s": 30})
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await supervisor.reconcile()
+        await asyncio.wait_for(adapter.started.wait(), timeout=5)
+        assert adapter.start_count == 1
+
+        # The owner changes the cadence on the canvas.
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger_id)
+            row.config = {"interval_s": 5}
+            session.add(row)
+        await supervisor.reconcile()
+
+        for _ in range(50):
+            if adapter.start_count > 1:
+                break
+            await asyncio.sleep(0.05)
+        assert adapter.start_count == 2, "the edited configuration must reach a freshly built adapter"
+        # The lease stays with this replica: a configuration change is not a
+        # reason to hand the connection to someone else.
+        async with session_scope() as session:
+            assert (
+                await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) == "replica-a"
+            )
+    finally:
+        await supervisor.stop()
+
+
+# --------------------------------------------------------------------------- #
+# Fencing: lease expiry is a recovery bound, not proof the old holder stopped
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_dispossessed_adapter_cannot_rewind_the_cursor_its_successor_saved(
+    make_connection, make_trigger, adapter_registry
+) -> None:
+    """The late-write race handover permits, fenced on the lease generation."""
+    adapter_registry(RecordingAdapter())
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    old_holder = ListenerSupervisor(holder="replica-a")
+    await old_holder.reconcile()
+    stale_ctx = old_holder._context(old_holder.workers[connection_id])
+    await stale_ctx.save_cursor(trigger_id=trigger_id, provider_state={"delta": "1"})
+
+    # A stall, a stolen lease, and the new holder saves a newer cursor.
+    async with session_scope() as session:
+        await connection_leases.release(session, connection_id=connection_id, holder="replica-a")
+    new_holder = ListenerSupervisor(holder="replica-b")
+    await new_holder.reconcile()
+    new_ctx = new_holder._context(new_holder.workers[connection_id])
+    await new_ctx.save_cursor(trigger_id=trigger_id, provider_state={"delta": "2"})
+
+    # Only now does the old adapter get around to writing what it read before
+    # the handover. Without a fence this is the write that wins.
+    await stale_ctx.save_cursor(trigger_id=trigger_id, provider_state={"delta": "1"})
+
+    try:
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger_id)
+            assert row.provider_state == {"delta": "2"}, "a stale holder must not rewind the cursor"
+    finally:
+        await old_holder.stop()
+        await new_holder.stop()
+
+
+async def test_the_lease_holder_can_still_save_a_cursor_after_renewing(
+    make_connection, make_trigger, adapter_registry
+) -> None:
+    """A renewal must not look like a handover: the generation only moves on takeover."""
+    adapter_registry(RecordingAdapter())
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        ctx = supervisor._context(worker)
+
+        # Force several heartbeats through the reconcile path.
+        for _ in range(3):
+            worker.last_renewed_at = worker.last_renewed_at.replace(year=2020)
+            await supervisor.reconcile()
+
+        await ctx.save_cursor(trigger_id=trigger_id, provider_state={"delta": "renewed"})
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger_id)
+            assert row.provider_state == {"delta": "renewed"}
+    finally:
+        await supervisor.stop()
+
+
+# --------------------------------------------------------------------------- #
+# Recovery and cleanup
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_duplicate_delivery_still_clears_the_error_banner(
+    make_connection, make_trigger, adapter_registry, monkeypatch
+) -> None:
+    """After an outage a poll source re-reads events it already delivered.
+
+    Every one of those is a ledger duplicate, so gating recovery on "the row was
+    new" would leave the owner staring at a stale failure banner until something
+    genuinely new arrived - hours, on a quiet source - while the connection is
+    demonstrably working again.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "listener_backoff_base_s", 0.01)
+    monkeypatch.setattr(settings, "listener_backoff_cap_s", 0.02)
+
+    adapter_registry(RecordingAdapter(fail_with=RuntimeError("provider said no")))
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        for _ in range(5):
+            if worker.task is not None:
+                await asyncio.gather(worker.task, return_exceptions=True)
+            worker.next_attempt_at = None
+            supervisor._spawn(worker)
+        await asyncio.gather(worker.task, return_exceptions=True)
+        _value, last_error = await _state(trigger_id)
+        assert "could not hold this connection" in (last_error or "")
+
+        # The provider comes back and re-delivers an event already in the ledger.
+        ctx = supervisor._context(worker)
+        assert await ctx.emit(trigger_id=trigger_id, dedupe_key="replayed:1", payload={}) is True
+        worker.succeeded_since_failure = False
+        worker.consecutive_failures = 5
+        assert await ctx.emit(trigger_id=trigger_id, dedupe_key="replayed:1", payload={}) is False
+
+        _value, last_error = await _state(trigger_id)
+        assert last_error is None, "a successful round trip is the health signal, not the dedupe outcome"
+        assert worker.consecutive_failures == 0
+    finally:
+        await supervisor.stop()
+
+
+async def test_an_auth_failure_finishes_its_own_cleanup(make_connection, make_trigger, adapter_registry) -> None:
+    """``_needs_reconnect`` runs inside the worker task it is about to stop.
+
+    Cancelling and awaiting that task from inside itself raises ``RuntimeError``
+    and leaves a cancellation pending, which then fires at the next await -
+    interrupting the adapter shutdown and the lease release that follow.
+    """
+    adapter = adapter_registry(RecordingAdapter(fail_with=AuthExpiredError(provider="selftest")))
+    connection_id = await make_connection()
+    await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    await supervisor.reconcile()
+    await asyncio.wait_for(adapter.started.wait(), timeout=5)
+    for _ in range(50):
+        if connection_id not in supervisor.workers:
+            break
+        await asyncio.sleep(0.05)
+
+    assert connection_id not in supervisor.workers
+    assert adapter.stopped is True, "adapter.stop() must run to completion, not be cut short by a cancellation"
+    async with session_scope() as session:
+        assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None

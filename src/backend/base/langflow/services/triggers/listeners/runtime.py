@@ -41,21 +41,28 @@ async def verify_schema() -> None:
     A listener started before its API (a Compose ``depends_on`` that only waits
     for the container, a Kubernetes Deployment that rolls first) would otherwise
     die on an opaque "no such table" once per restart.
+
+    Every table the runtime touches is probed, not just ``trigger``: a database
+    carrying the trigger table but not the lease or the ledger would pass a
+    narrower check and then fail once per reconcile forever, which is the
+    opaque failure this function exists to replace with one actionable message.
     """
     from sqlmodel import select
 
-    from langflow.services.database.models.trigger.model import Trigger
+    from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerListenerLease
     from langflow.services.deps import session_scope
 
-    try:
-        async with session_scope() as session:
-            await session.exec(select(Trigger).limit(1))
-    except Exception as exc:
-        msg = (
-            "The trigger tables are missing or unreadable. The listener process never migrates: "
-            "start (or upgrade) the Langflow API against this database first, then start the listeners."
-        )
-        raise RuntimeError(msg) from exc
+    for model in (Trigger, TriggerListenerLease, TriggerEvent):
+        try:
+            async with session_scope() as session:
+                await session.exec(select(model).limit(1))
+        except Exception as exc:
+            msg = (
+                f"The trigger tables are missing or unreadable ({model.__tablename__}). "
+                "The listener process never migrates: start (or upgrade) the Langflow API "
+                "against this database first, then start the listeners."
+            )
+            raise RuntimeError(msg) from exc
 
 
 async def boot_services() -> None:
@@ -78,11 +85,15 @@ async def run_listeners(*, stop_event: asyncio.Event | None = None) -> None:
     supervisor = ListenerSupervisor()
     health = ListenerHealthServer(supervisor)
 
-    supervisor.start()
-    await health.start()
-    await logger.ainfo("Langflow listeners started (holder %s)", supervisor.holder)
-
     try:
+        # Both starts sit inside the try: a health port already in use would
+        # otherwise propagate out with the reconcile task still holding claimed
+        # leases, and every one of them would be left to expire - costing the
+        # next holder up to two TTLs, which is what the clean-shutdown path
+        # below exists to avoid.
+        supervisor.start()
+        await health.start()
+        await logger.ainfo("Langflow listeners started (holder %s)", supervisor.holder)
         await stopping.wait()
     finally:
         await logger.ainfo("Langflow listeners stopping")

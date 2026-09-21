@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -43,7 +44,7 @@ from lfx.integrations.errors import (
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.log.logger import logger
 from pydantic import ValidationError
-from sqlmodel import col, select
+from sqlmodel import col, select, update
 
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
@@ -115,9 +116,17 @@ async def load_desired_state(session: AsyncSession) -> dict[UUID, list[ListenerT
     switch, ``needs_reconnect`` is waiting on a human, and ``error`` and
     ``dead`` have already stopped; none of them should hold a socket open.
     """
-    statement = select(Trigger).where(
-        Trigger.state == TriggerState.ACTIVE.value,
-        col(Trigger.connection_id).is_not(None),
+    statement = (
+        select(Trigger)
+        .where(
+            Trigger.state == TriggerState.ACTIVE.value,
+            col(Trigger.connection_id).is_not(None),
+        )
+        # Ordered so the *first* trigger on a connection is the same row on
+        # every pass: it is the one ``build_adapter`` is given, so an unordered
+        # query would let a reconcile silently rebuild an adapter from a
+        # different trigger's configuration.
+        .order_by(col(Trigger.id))
     )
     desired: dict[UUID, list[ListenerTrigger]] = {}
     for row in (await session.exec(statement)).all():
@@ -186,6 +195,18 @@ async def clear_listener_error(session: AsyncSession, *, trigger_ids: list[UUID]
     await session.flush()
 
 
+def _adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
+    """What ``build_adapter`` reads off a trigger, as a comparable value.
+
+    An adapter is constructed once from the connection's first trigger, so a
+    later edit to that trigger - a new mechanism, a new poll interval - cannot
+    reach a socket that is already open. Comparing this spec is how the
+    supervisor notices and rebuilds instead of running yesterday's config
+    forever.
+    """
+    return (trigger.kind, trigger.mechanism_id, json.dumps(trigger.config or {}, sort_keys=True, default=str))
+
+
 @dataclass
 class ConnectionWorker:
     """One held connection: its adapter, its task, and its failure history."""
@@ -194,6 +215,10 @@ class ConnectionWorker:
     triggers: list[ListenerTrigger]
     adapter: ListenerAdapter
     stopping: asyncio.Event
+    adapter_spec: tuple[str, str | None, str] | None = None
+    #: ``trigger_listener_lease.acquired_at`` for the period of ownership this
+    #: adapter is running under. Fences writes that outlive a handover.
+    lease_generation: datetime | None = None
     task: asyncio.Task | None = None
     consecutive_failures: int = 0
     next_attempt_at: datetime | None = None
@@ -268,8 +293,13 @@ class ListenerSupervisor:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - one bad pass must not end the process
+                # The class name alone is what ``/healthz`` publishes, because
+                # that port is unauthenticated by design and an exception
+                # message can carry a DSN or a query. The full exception and its
+                # traceback go to the log, which is where an operator debugging
+                # a red readiness probe can actually read them.
                 self.last_reconcile_error = type(exc).__name__
-                await logger.aerror("Listener reconcile failed: %s", type(exc).__name__)
+                await logger.aexception("Listener reconcile failed: %s", exc)
             with contextlib.suppress(TimeoutError, asyncio.TimeoutError):
                 await asyncio.wait_for(self._stopping.wait(), timeout=settings.listener_reconcile_interval_s)
 
@@ -307,10 +337,10 @@ class ListenerSupervisor:
 
         if worker is None:
             async with session_scope() as session:
-                claimed = await connection_leases.claim(
+                generation = await connection_leases.claim_generation(
                     session, connection_id=connection_id, holder=self.holder, ttl_s=ttl_s
                 )
-            if not claimed:
+            if generation is None:
                 return
             adapter = build_adapter(triggers[0])
             if adapter is None:  # pragma: no cover - filtered by is_listener_kind
@@ -319,9 +349,11 @@ class ListenerSupervisor:
                 return
             worker = ConnectionWorker(
                 connection_id=connection_id,
-                triggers=triggers,
+                triggers=list(triggers),
                 adapter=adapter,
                 stopping=asyncio.Event(),
+                adapter_spec=_adapter_spec(triggers[0]),
+                lease_generation=generation,
             )
             self.workers[connection_id] = worker
             self._spawn(worker)
@@ -331,19 +363,53 @@ class ListenerSupervisor:
         # one state this design must not have.
         if (_now() - worker.last_renewed_at).total_seconds() >= settings.listener_heartbeat_interval_s:
             async with session_scope() as session:
-                renewed = await connection_leases.claim(
+                generation = await connection_leases.claim_generation(
                     session, connection_id=connection_id, holder=self.holder, ttl_s=ttl_s
                 )
-            if not renewed:
+            if generation is None:
                 self.last_renew_failure_at = _now()
                 await logger.awarning("Listener lost the lease on connection %s; stopping its adapter", connection_id)
                 await self._drop(connection_id, release_lease=False)
                 return
+            # A renewal keeps the generation; re-taking a lapsed lease starts a
+            # new one, and the fence has to follow it or every later cursor
+            # write would be discarded.
+            worker.lease_generation = generation
             worker.last_renewed_at = _now()
 
-        worker.triggers = triggers
+        # In place, not a rebind: ``_context`` handed this exact list object to
+        # the running adapter, and an adapter that has held a socket for hours
+        # would otherwise iterate the snapshot it was born with - never seeing a
+        # newly armed trigger, and still emitting for one the owner paused.
+        worker.triggers[:] = triggers
+
+        spec = _adapter_spec(triggers[0])
+        if spec != worker.adapter_spec:
+            await self._rebuild_adapter(worker, spec)
+            return
+
         if not worker.running and not worker.resting():
             self._spawn(worker)
+
+    async def _rebuild_adapter(self, worker: ConnectionWorker, spec: tuple[str, str | None, str]) -> None:
+        """Swap in an adapter built from the edited configuration, keeping the lease.
+
+        Dropping the connection instead would hand it to another replica for a
+        configuration change the owner made in this one.
+        """
+        await logger.ainfo(
+            "Listener rebuilding the adapter on connection %s after a configuration change", worker.connection_id
+        )
+        await self._stop_worker(worker)
+        adapter = build_adapter(worker.triggers[0])
+        if adapter is None:  # pragma: no cover - filtered by is_listener_kind
+            await self._drop(worker.connection_id)
+            return
+        worker.adapter = adapter
+        worker.adapter_spec = spec
+        worker.consecutive_failures = 0
+        worker.next_attempt_at = None
+        self._spawn(worker)
 
     async def _drop(self, connection_id: UUID, *, release_lease: bool = True) -> None:
         worker = self.workers.pop(connection_id, None)
@@ -358,7 +424,13 @@ class ListenerSupervisor:
     async def _stop_worker(self, worker: ConnectionWorker) -> None:
         worker.stopping.set()
         task, worker.task = worker.task, None
-        if task is not None:
+        # ``_needs_reconnect`` runs *inside* ``worker.task``, so this is reached
+        # with ``task is asyncio.current_task()``. Cancelling there schedules a
+        # CancelledError into this very coroutine, which would then fire at the
+        # next await - cutting the adapter shutdown and the lease release below
+        # in half. The stopping event is already set, which is what actually
+        # ends the adapter; the task is returning anyway.
+        if task is not None and task is not asyncio.current_task():
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await task
@@ -399,7 +471,12 @@ class ListenerSupervisor:
                 _row, created = await ledger.append_event(
                     session, trigger_id=trigger_id, dedupe_key=dedupe_key, payload=payload
                 )
-            if created and not worker.succeeded_since_failure:
+            # A completed round trip is the proof the connection works; what
+            # the ledger did with the row is a dedupe outcome, not a health
+            # signal. Requiring ``created`` would leave the error banner up
+            # through an entire replay window after an outage - hours, on a
+            # quiet source - even though the adapter is demonstrably back.
+            if not worker.succeeded_since_failure:
                 await self._succeeded(worker)
             return created
 
@@ -408,14 +485,37 @@ class ListenerSupervisor:
 
             Written to ``trigger.provider_state``, never to ``config``, so a
             canvas save cannot clobber a cursor and replay the world.
+
+            Fenced on the lease generation this adapter started under, in the
+            same statement as the write. Lease expiry says the previous holder
+            stopped heartbeating, not that it stopped running: without the
+            fence, an adapter that was slow to notice a handover could land an
+            older cursor on top of its successor's and replay or skip a window
+            of provider events. With it, the stale write matches no rows.
             """
             async with session_scope() as session:
-                row = await session.get(Trigger, trigger_id)
-                if row is None:
+                result = await session.exec(  # type: ignore[call-overload]
+                    update(Trigger)
+                    .where(
+                        col(Trigger.id) == trigger_id,
+                        connection_leases.held_clause(
+                            connection_id=worker.connection_id,
+                            holder=self.holder,
+                            generation=worker.lease_generation,
+                        ),
+                    )
+                    .values(provider_state=dict(provider_state), updated_at=_now())
+                )
+                if result.rowcount:
                     return
-                row.provider_state = dict(provider_state)
-                row.updated_at = _now()
-                session.add(row)
+                if await session.get(Trigger, trigger_id) is None:
+                    # The owner deleted the trigger mid-poll. Routine, not a fence.
+                    return
+            await logger.awarning(
+                "Listener discarded a stale cursor for trigger %s: the lease on connection %s moved on",
+                trigger_id,
+                worker.connection_id,
+            )
 
         async def resolve_credential(trigger_id: UUID | None = None) -> Any:
             """Resolve this connection through the registered resolver.
@@ -487,11 +587,19 @@ class ListenerSupervisor:
         )
         delay *= random.uniform(0.85, 1.15)  # noqa: S311 - jitter, not crypto
         worker.next_attempt_at = _now() + timedelta(seconds=delay)
+        # A flapping provider is a warning, not an error - backing off and
+        # retrying is the designed response, and a traceback per hiccup would
+        # bury the reconcile-loop failures that really do need one.
+        # ``worker.last_error`` stays the class name because it reaches the
+        # owner's trigger banner, where a provider library's raw message is
+        # noise at best; the message goes to the log, where it is useful.
         await logger.awarning(
-            "Listener connection %s failed (%s consecutive); retrying in %.1fs",
+            "Listener connection %s failed (%s consecutive); retrying in %.1fs: %s: %s",
             worker.connection_id,
             worker.consecutive_failures,
             delay,
+            type(exc).__name__,
+            exc,
         )
         if worker.consecutive_failures >= settings.listener_failure_threshold:
             # Persistent enough that the owner should see it on the trigger,
@@ -502,14 +610,16 @@ class ListenerSupervisor:
                         session,
                         trigger_ids=[t.id for t in worker.triggers],
                         message=(
-                            f"The listener could not hold this connection after "
-                            f"{worker.consecutive_failures} attempts ({worker.last_error}). Retrying."
+                            f"The listener could not hold this connection after {worker.consecutive_failures} "
+                            f"attempts ({worker.last_error}). Retrying."
                         ),
                     )
 
     async def _needs_reconnect(self, worker: ConnectionWorker, exc: Exception) -> None:
         """Stop retrying: only a human re-granting consent fixes this."""
-        await logger.awarning("Listener connection %s needs reconnect: %s", worker.connection_id, type(exc).__name__)
+        await logger.awarning(
+            "Listener connection %s needs reconnect (%s): %s", worker.connection_id, type(exc).__name__, exc
+        )
         with contextlib.suppress(Exception):
             async with session_scope() as session:
                 await mark_needs_reconnect(

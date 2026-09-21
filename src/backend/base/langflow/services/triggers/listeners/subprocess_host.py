@@ -25,6 +25,7 @@ import contextlib
 import os
 import subprocess
 import sys
+import time
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -39,6 +40,10 @@ if TYPE_CHECKING:
 #: How long a terminated child gets to release its leases and close its sockets
 #: before it is killed.
 GRACE_PERIOD_S = 15.0
+
+#: A child that stayed up this long was not a boot failure, so its exit clears
+#: the crash-loop backoff. Anything shorter is counted against it.
+HEALTHY_CHILD_S = 60.0
 
 
 def listener_command() -> Sequence[str]:
@@ -61,6 +66,9 @@ class ListenerSubprocess:
         self._task: asyncio.Task | None = None
         self._stopping = asyncio.Event()
         self.holding = False
+        self.consecutive_spawn_failures = 0
+        self._next_spawn_at = 0.0
+        self._child_started_at: float | None = None
 
     @property
     def running(self) -> bool:
@@ -88,13 +96,35 @@ class ListenerSubprocess:
 
     async def _loop(self) -> None:
         settings = get_settings_service().settings
+        last_renewal = time.monotonic()
         while not self._stopping.is_set():
             try:
                 await self.tick()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - supervision must outlive one bad pass
-                await logger.aerror("Listener subprocess supervision failed: %s", type(exc).__name__)
+                await logger.aexception("Listener subprocess supervision failed: %s", exc)
+                # The renewal happens inside ``tick``. If it has been failing -
+                # a database that briefly went away is the usual reason - this
+                # worker's host lease is expiring even though ``holding`` still
+                # says True and the child is still running. Another worker will
+                # take the lease at the TTL and spawn a second child, and two
+                # listener processes competing for the same connection leases is
+                # the exact condition this module exists to prevent. So stand
+                # down on our own once the TTL has passed without a renewal.
+                if time.monotonic() - last_renewal >= settings.listener_lease_ttl_s:
+                    await logger.aerror(
+                        "Listener host lease has not been renewed in %.0fs; standing down",
+                        settings.listener_lease_ttl_s,
+                    )
+                    self.holding = False
+                    await self.terminate_child()
+                    # Already stood down; start the clock again so a database
+                    # that stays away does not re-log and re-terminate on every
+                    # pass for as long as the outage lasts.
+                    last_renewal = time.monotonic()
+            else:
+                last_renewal = time.monotonic()
             with contextlib.suppress(TimeoutError, asyncio.TimeoutError):
                 await asyncio.wait_for(self._stopping.wait(), timeout=settings.listener_reconcile_interval_s)
 
@@ -115,7 +145,12 @@ class ListenerSubprocess:
             await self.terminate_child()
             return False
         if not self.running:
-            self.spawn_child()
+            exit_code = None if self.process is None else self.process.poll()
+            if exit_code is not None:
+                self._note_child_exit(exit_code)
+                self.process = None
+            if time.monotonic() >= self._next_spawn_at:
+                self.spawn_child()
         return True
 
     def spawn_child(self) -> None:
@@ -126,20 +161,57 @@ class ListenerSubprocess:
         curated subset of the environment is a list that goes stale the first
         time someone adds a setting.
         """
-        exit_code = None if self.process is None else self.process.poll()
-        if exit_code is not None:
-            logger.warning("Langflow listeners child exited with %s; restarting", exit_code)
+        # stdout and stderr are inherited rather than piped: the child's own
+        # startup error - "the trigger tables are missing", a plugin that will
+        # not import - is what the operator needs to see, and it lands in the
+        # API's log stream where they are already looking. A pipe nobody drains
+        # would instead fill and block the child.
         self.process = subprocess.Popen(  # noqa: S603 - fixed argv, no shell, no user input
             listener_command(),
             env=os.environ.copy(),
             stdin=subprocess.DEVNULL,
             close_fds=True,
         )
+        self._child_started_at = time.monotonic()
         logger.info("Started langflow listeners subprocess (pid %s)", self.process.pid)
+
+    def _note_child_exit(self, exit_code: int) -> None:
+        """Back off before respawning a child that will not stay up.
+
+        A child that dies during boot - an unmigrated database, a broken
+        enterprise plugin - dies the same way on every retry, and without a
+        backoff ``tick`` would respawn a whole Python interpreter every
+        reconcile interval forever. Exactly the misconfiguration this feature is
+        most likely to meet in the wild, turned into permanent CPU churn and a
+        log flood.
+        """
+        settings = get_settings_service().settings
+        lifetime = None if self._child_started_at is None else time.monotonic() - self._child_started_at
+        if lifetime is not None and lifetime >= HEALTHY_CHILD_S:
+            # It ran, then stopped. Not a crash loop: restart it immediately.
+            self.consecutive_spawn_failures = 0
+        else:
+            self.consecutive_spawn_failures += 1
+        delay = 0.0
+        if self.consecutive_spawn_failures:
+            delay = min(
+                settings.listener_backoff_base_s * (2 ** (self.consecutive_spawn_failures - 1)),
+                settings.listener_backoff_cap_s,
+            )
+        self._next_spawn_at = time.monotonic() + delay
+        logger.warning(
+            "Langflow listeners child exited with %s after %.0fs (%s consecutive); restarting in %.0fs. "
+            "The child logs its own reason on this process's stderr.",
+            exit_code,
+            lifetime or 0.0,
+            self.consecutive_spawn_failures,
+            delay,
+        )
 
     async def terminate_child(self) -> None:
         """SIGTERM, wait out the grace period, then kill."""
         process, self.process = self.process, None
+        self._child_started_at = None
         if process is None or process.poll() is not None:
             return
         with contextlib.suppress(ProcessLookupError, OSError):

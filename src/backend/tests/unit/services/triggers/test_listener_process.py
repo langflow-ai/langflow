@@ -9,7 +9,6 @@ the child command that Desktop and a single container rely on.
 from __future__ import annotations
 
 import asyncio
-import subprocess
 import sys
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -76,15 +75,12 @@ def test_the_child_is_this_interpreter_not_a_path_lookup() -> None:
 
 
 def test_the_listeners_command_is_registered_on_the_cli() -> None:
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, "-m", "langflow", "listeners", "--help"],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=300,
-    )
-    assert result.returncode == 0, result.stderr
-    assert "listener" in result.stdout.lower()
+    """In process: ``python -m langflow --help`` imports the whole application."""
+    from langflow.__main__ import app as cli
+
+    command = next((c for c in cli.registered_commands if c.name == "listeners"), None)
+    assert command is not None, [c.name for c in cli.registered_commands]
+    assert "listener" in (command.callback.__doc__ or "").lower()
 
 
 # --------------------------------------------------------------------------- #
@@ -265,3 +261,122 @@ async def test_a_listener_resolves_its_own_connection_without_the_api(client, tr
             await ctx.resolve_credential(trigger_id)
     finally:
         await supervisor.stop()
+
+
+# --------------------------------------------------------------------------- #
+# A child that will not stay up, and a host that cannot renew
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_crash_looping_child_is_not_respawned_every_pass(client, monkeypatch) -> None:  # noqa: ARG001
+    """An unmigrated database kills the child at boot, identically, every time.
+
+    Without a backoff the host would start a whole Python interpreter once per
+    reconcile interval forever - real CPU churn and a permanent log stream on
+    exactly the misconfiguration this feature is most likely to meet.
+    """
+    from langflow.services.triggers.listeners import subprocess_host as host_module
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "listener_backoff_base_s", 60.0)
+    monkeypatch.setattr(settings, "listener_backoff_cap_s", 300.0)
+
+    class DeadChild:
+        pid = 4242
+
+        def poll(self) -> int:
+            return 1
+
+    spawns: list[int] = []
+
+    def fake_popen(*_args, **_kwargs):
+        spawns.append(1)
+        return DeadChild()
+
+    monkeypatch.setattr(host_module.subprocess, "Popen", fake_popen)
+
+    host = ListenerSubprocess(owner="worker-a")
+    try:
+        assert await host.tick() is True
+        assert len(spawns) == 1, "the first attempt is immediate"
+
+        # The child is already dead by the next pass.
+        assert await host.tick() is True
+        assert host.consecutive_spawn_failures == 1
+        assert len(spawns) == 1, "a crash-looping child must not be respawned every pass"
+
+        assert await host.tick() is True
+        assert len(spawns) == 1, "and not on the pass after that either"
+
+        # Once the backoff is served, it gets another go.
+        host._next_spawn_at = 0.0
+        assert await host.tick() is True
+        assert len(spawns) == 2
+    finally:
+        await host.stop()
+
+
+async def test_a_long_lived_child_that_exits_is_restarted_immediately(client, monkeypatch) -> None:  # noqa: ARG001
+    """A child that ran for an hour and stopped is not a crash loop."""
+    from langflow.services.triggers.listeners import subprocess_host as host_module
+
+    class DeadChild:
+        pid = 4242
+
+        def poll(self) -> int:
+            return 0
+
+    spawns: list[int] = []
+    monkeypatch.setattr(host_module.subprocess, "Popen", lambda *_a, **_k: (spawns.append(1), DeadChild())[1])
+
+    host = ListenerSubprocess(owner="worker-a")
+    try:
+        assert await host.tick() is True
+        # Pretend the child had been up well past the crash-loop window.
+        host._child_started_at -= host_module.HEALTHY_CHILD_S + 1
+        assert await host.tick() is True
+        assert host.consecutive_spawn_failures == 0
+        assert len(spawns) == 2
+    finally:
+        await host.stop()
+
+
+async def test_a_host_that_cannot_renew_stands_down_before_the_ttl_lapses(client, monkeypatch) -> None:  # noqa: ARG001
+    """The renewal lives inside ``tick``. If it keeps raising, the lease expires.
+
+    Another API worker then takes ``trigger_listener_host`` and spawns a second
+    child - two listener processes competing for the same connection leases,
+    which is the one condition this module exists to prevent. So the holder has
+    to notice on its own.
+    """
+    settings = get_settings_service().settings
+    # Settings validates on assignment, and the cadence rule spans three fields,
+    # so shrink the intervals before the TTL they have to stay under.
+    monkeypatch.setattr(settings, "listener_heartbeat_interval_s", 0.05)
+    monkeypatch.setattr(settings, "listener_reconcile_interval_s", 0.01)
+    monkeypatch.setattr(settings, "listener_lease_ttl_s", 0.2)
+
+    terminated: list[str] = []
+
+    async def record_terminate(self) -> None:
+        terminated.append(self.owner)
+
+    async def always_fails(self) -> bool:  # noqa: ARG001 - stands in for the real bound method
+        msg = "the database went away"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(ListenerSubprocess, "terminate_child", record_terminate)
+
+    host = ListenerSubprocess(owner="worker-a")
+    host.holding = True
+    monkeypatch.setattr(ListenerSubprocess, "tick", always_fails)
+    host.start()
+    try:
+        for _ in range(100):
+            if terminated:
+                break
+            await asyncio.sleep(0.05)
+        assert terminated[0] == "worker-a", "a host that cannot renew must stop its child"
+        assert host.holding is False
+    finally:
+        await host.stop()

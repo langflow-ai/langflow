@@ -41,14 +41,18 @@ webhook.
 `LANGFLOW_LISTENERS_HEALTH_HOST` says otherwise. Nothing else: the process
 refuses to build a FastAPI application.
 
+Both paths answer `503` when they fail, so a probe comparing status codes is
+enough. Liveness is false when the reconcile task has died: the process is up
+and answering while holding nothing, which is what a liveness probe is for.
 Readiness is false when the database is unreachable, when the reconcile loop has
 gone stale, or when a connection lease failed to renew inside the last TTL -
 the three ways a listener can be running and useless at the same time.
 
 ## Scaling and failover
 
-Each connection is held by exactly one replica, elected by a
-`trigger_listener_lease` row with a 30-second TTL and a 10-second heartbeat.
+A `trigger_listener_lease` row with a 30-second TTL and a 10-second heartbeat
+elects one owner per connection - with the bounded handover overlap described
+below, which the ledger's dedupe key collapses into one run.
 A replica that dies has its connections taken over within two TTLs. Scale out
 when one process cannot keep up with the number of armed connections; do not
 scale out for redundancy, because failover does not require a warm standby.

@@ -277,6 +277,27 @@ class RuntimeSettings(BaseModel):
             raise ValueError(msg)
         return self
 
+    @model_validator(mode="after")
+    def validate_listener_lease_cadence(self) -> "RuntimeSettings":
+        """A lease must not be able to expire before its holder gets to renew it.
+
+        Renewal happens inside the reconcile pass, so the worst case between two
+        renewals is a heartbeat that came due just after a pass plus a whole
+        reconcile interval. Individually valid settings can combine to exceed
+        the TTL - 30s TTL, 25s heartbeat, 20s reconcile renews at 45s - and then
+        another replica takes over a connection whose adapter is still running.
+        """
+        renewal_ceiling = self.listener_heartbeat_interval_s + self.listener_reconcile_interval_s
+        if renewal_ceiling >= self.listener_lease_ttl_s:
+            msg = (
+                "listener_heartbeat_interval_s + listener_reconcile_interval_s "
+                f"({renewal_ceiling:g}s) must be below listener_lease_ttl_s "
+                f"({self.listener_lease_ttl_s:g}s): renewal happens on a reconcile pass, so a "
+                "healthy holder would otherwise look dead and lose its connections to another replica."
+            )
+            raise ValueError(msg)
+        return self
+
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):

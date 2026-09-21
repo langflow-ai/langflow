@@ -131,3 +131,28 @@ async def test_a_supervisor_that_is_not_running_is_never_ready(client) -> None: 
     ready, body = await readiness(supervisor)
     assert ready is False
     assert body["running"] is False
+
+
+async def test_liveness_goes_red_when_the_reconcile_task_has_died(client) -> None:  # noqa: ARG001
+    """The one failure only a liveness probe can fix, reported as a status code.
+
+    ``ListenerSupervisor.running`` is false as soon as its task is gone or done.
+    The process still answers, so a probe that compares status codes would keep
+    a listener holding nothing scheduled forever if ``/health`` said 200.
+    """
+    supervisor = ListenerSupervisor(holder="probe-test")
+    assert supervisor.running is False
+    server = ListenerHealthServer(supervisor, host="127.0.0.1", port=0)
+    await server.start()
+    try:
+        status, body = await _get(server.bound_port, "/health")
+        assert status == 503
+        assert body == {"status": "stopped", "running": False}
+
+        supervisor.start()
+        status, body = await _get(server.bound_port, "/health")
+        assert status == 200
+        assert body == {"status": "alive", "running": True}
+    finally:
+        await supervisor.stop()
+        await server.stop()

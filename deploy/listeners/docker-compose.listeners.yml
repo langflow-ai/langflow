@@ -19,7 +19,10 @@
 #
 # Sizing: one replica holds every connection it wins a lease on. Start at 1 and
 # add replicas when a single process cannot keep up - leases spread connections
-# across replicas automatically, and each connection is held by exactly one.
+# across replicas automatically, electing one owner per connection. A lease says
+# the previous owner stopped heartbeating, not that its socket closed, so a
+# handover permits a few seconds of overlap; the ledger's dedupe key collapses
+# whatever both sides emit into one run.
 services:
   langflow-listeners:
     image: langflowai/langflow:latest
@@ -29,9 +32,13 @@ services:
       - langflow
       - postgres
     environment:
-      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
-      # Must equal the API's key: the listener decrypts the same tokens.
-      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?set LANGFLOW_SECRET_KEY in .env}
+      # Both must be the values the API is configured with, and both are
+      # required rather than defaulted: the listener reads the API's connection
+      # rows and decrypts them with the API's key, so a wrong or empty value
+      # here fails at the first credential instead of at startup. Set them once
+      # in .env and pass the same two variables to your langflow service.
+      - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL:?set LANGFLOW_DATABASE_URL to the API's database}
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?set LANGFLOW_SECRET_KEY to the API's key}
       - LANGFLOW_CONFIG_DIR=/app/langflow
       # Bind the health endpoint on all interfaces so the healthcheck below can
       # reach it. There is nothing else on this port: no API, no UI.
