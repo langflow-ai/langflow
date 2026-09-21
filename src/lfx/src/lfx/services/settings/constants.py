@@ -53,6 +53,8 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "OPENROUTER_API_KEY",
     "OPENROUTER_SITE_URL",
     "OPENROUTER_APP_NAME",
+    # OpenCode Go variables
+    "OPENCODE_GO_API_KEY",
 ]
 
 # Agentic experience specific variables

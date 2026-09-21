@@ -430,7 +430,27 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
             overrides=getattr(self, "_model_overrides", None),
+            session_id=self._resolve_session_id(),
         )
+
+    def _resolve_session_id(self) -> str | None:
+        """Return the executing session ID, for providers that need per-conversation identity.
+
+        OpenCode Go requires a stable ``x-opencode-session`` per conversation;
+        passing the graph session ID keeps every turn of one chat on one value.
+
+        ``self.graph`` is read inside ``try`` rather than guarded by ``hasattr``:
+        ``Component.__getattr__`` reaches into ``__dict__`` for backwards-compatible
+        attributes and raises ``KeyError`` when one is absent, which ``hasattr`` does
+        not suppress. ``_session_id`` is then read straight out of ``vars(self)`` so
+        the fallback cannot re-enter ``__getattr__`` either.
+        """
+        try:
+            graph = self.graph
+        except (AttributeError, KeyError):
+            graph = None
+        session_id = getattr(graph, "session_id", None)
+        return session_id or vars(self).get("_session_id")
 
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
