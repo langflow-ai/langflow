@@ -60,6 +60,7 @@ from langflow.services.database.lock_retry import (
     run_with_lock_retry,
     sanitize_database_error,
 )
+from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -178,6 +179,10 @@ async def _new_project(
 
     settings_service = get_settings_service()
     mcp_auth: dict = {"auth_type": "none"}
+    # Whether the API key below is something the caller asked for or something
+    # this endpoint chose for them. It decides what happens if the deployment
+    # refuses to issue one: a request is answered, a convenience is dropped.
+    auth_was_chosen_for_caller = False
 
     if project.auth_settings:
         mcp_auth = project.auth_settings.copy()
@@ -185,6 +190,7 @@ async def _new_project(
     # If AUTO_LOGIN is false, automatically enable API key authentication
     elif not settings_service.auth_settings.AUTO_LOGIN:
         mcp_auth = {"auth_type": "apikey"}
+        auth_was_chosen_for_caller = True
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
         await logger.adebug(
             "Auto-enabled API key authentication for project %s (%s) due to AUTO_LOGIN=false",
@@ -198,7 +204,21 @@ async def _new_project(
 
     # Auto-register MCP server for this project with configured default auth
     if get_settings_service().settings.add_projects_to_mcp_servers:
-        await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
+        try:
+            await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
+        except ApiKeyIssuanceDeniedError as denial:
+            if not auth_was_chosen_for_caller:
+                raise HTTPException(status_code=403, detail=str(denial)) from denial
+            # The caller never asked for a key. Create the project without the
+            # MCP server rather than failing on a credential they did not
+            # request and cannot be given.
+            new_project.auth_settings = None
+            await logger.awarning(
+                "Skipped MCP auto-registration for project %s (%s): %s",
+                new_project.name,
+                new_project.id,
+                denial,
+            )
 
     flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
     authorized_flow_owner_ids: dict[UUID, UUID] = {}
