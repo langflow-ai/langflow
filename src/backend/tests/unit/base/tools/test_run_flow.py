@@ -80,9 +80,32 @@ class TestRunFlowBaseComponentFlowRetrieval:
 
     @pytest.fixture(autouse=True)
     def _target_scope(self):
-        with patch(
-            "lfx.base.tools.run_flow.scoped_model_provider_policy_for_target_flow",
-            _authorized_target_scope,
+        # The caller-aware component-policy seam has dedicated coverage in
+        # test_run_flow_nested_component_policy.py; neutralize it here so these
+        # tests stay on the retrieval/caching behavior.
+        with (
+            patch(
+                "lfx.base.tools.run_flow.scoped_model_provider_policy_for_target_flow",
+                _authorized_target_scope,
+            ),
+            patch(
+                "lfx.base.tools.run_flow.get_user_is_superuser",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch(
+                "lfx.base.tools.run_flow.admin_only_build_required",
+                lambda *, is_superuser: False,  # noqa: ARG005
+            ),
+            patch(
+                "lfx.base.tools.run_flow.custom_component_admin_only_enabled",
+                lambda: None,
+            ),
+            patch(
+                "lfx.base.tools.run_flow.prepare_flow_build_for_user",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
         ):
             yield
 
