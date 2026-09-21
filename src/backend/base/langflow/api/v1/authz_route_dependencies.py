@@ -9,9 +9,6 @@ from fastapi import Depends, HTTPException, status
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.flows_helpers import _canonicalize_flow_destination, _read_flow
-from langflow.services.audit import vocabulary as audit_vocab
-from langflow.services.audit.attribution import resolve_audit_actor
-from langflow.services.audit.operations import AuditedOperation, record_denial
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -19,25 +16,6 @@ from langflow.services.database.models.folder.model import Folder
 
 _FLOW_WRITE_DENIED_DETAIL = "You don't have permission to edit this flow."
 _FLOW_DELETE_DENIED_DETAIL = "You don't have permission to delete this flow."
-_AUDITED_ACTS = {
-    FlowAction.WRITE: (audit_vocab.FLOW_WRITE, audit_vocab.AuditOperation.PATCH),
-    FlowAction.CREATE: (audit_vocab.FLOW_CREATE, audit_vocab.AuditOperation.CREATE),
-    FlowAction.DELETE: (audit_vocab.FLOW_DELETE, audit_vocab.AuditOperation.DELETE),
-}
-
-
-async def _record_flow_denial(act: FlowAction, user_id: UUID, flow_id: UUID | None, flow_name: str | None) -> None:
-    action, operation = _AUDITED_ACTS[act]
-    await record_denial(
-        AuditedOperation(
-            resource_type=audit_vocab.AuditResourceType.FLOW,
-            action=action,
-            operation=operation,
-            actor=resolve_audit_actor(user_id),
-            resource_id=flow_id,
-            resource_name=flow_name,
-        )
-    )
 
 
 async def _get_authorized_flow(
@@ -62,7 +40,6 @@ async def _get_authorized_flow(
         )
     except HTTPException as exc:
         if act in (FlowAction.WRITE, FlowAction.DELETE) and exc.status_code == status.HTTP_403_FORBIDDEN:
-            await _record_flow_denial(act, current_user.id, flow_id, flow.name)
             try:
                 await ensure_flow_permission(
                     current_user,
@@ -127,18 +104,13 @@ async def require_flow_create_permission(
     # override cover creating a flow in a project you own — the new flow has no
     # owner of its own yet.
     destination_folder = await session.get(Folder, destination_folder_id)
-    try:
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.CREATE,
-            workspace_id=flow.workspace_id,
-            folder_id=flow.folder_id,
-            folder_user_id=getattr(destination_folder, "user_id", None),
-        )
-    except HTTPException as exc:
-        if exc.status_code == status.HTTP_403_FORBIDDEN:
-            await _record_flow_denial(FlowAction.CREATE, current_user.id, None, flow.name)
-        raise
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.CREATE,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+        folder_user_id=getattr(destination_folder, "user_id", None),
+    )
     return destination
 
 

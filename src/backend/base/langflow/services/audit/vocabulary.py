@@ -48,7 +48,6 @@ class AuditOperation(str, Enum):
     REPLACE = "replace"
     PATCH = "patch"
     DELETE = "delete"
-    RUN = "run"
 
 
 class AuditResourceType(str, Enum):
@@ -65,7 +64,6 @@ class AuditErrorCode(str, Enum):
     FLOW_NOT_FOUND = "FLOW_NOT_FOUND"
     FLOW_ID_CONFLICT = "FLOW_ID_CONFLICT"
     FLOW_NAME_CONFLICT = "FLOW_NAME_CONFLICT"
-    FLOW_EXECUTION_FAILED = "FLOW_EXECUTION_FAILED"
     INVALID_CONTENT = "INVALID_CONTENT"
     CONSTRAINT_VIOLATION = "CONSTRAINT_VIOLATION"
     SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
@@ -84,9 +82,8 @@ PROJECT_DELETE = audit_action(AuditResourceType.PROJECT, "delete")
 FLOW_CREATE = audit_action(AuditResourceType.FLOW, "create")
 FLOW_WRITE = audit_action(AuditResourceType.FLOW, "write")
 FLOW_DELETE = audit_action(AuditResourceType.FLOW, "delete")
-FLOW_EXECUTE = audit_action(AuditResourceType.FLOW, "execute")
 
 ACTIONS_BY_RESOURCE_TYPE: dict[AuditResourceType, frozenset[str]] = {
     AuditResourceType.PROJECT: frozenset({PROJECT_CREATE, PROJECT_WRITE, PROJECT_DELETE}),
-    AuditResourceType.FLOW: frozenset({FLOW_CREATE, FLOW_WRITE, FLOW_DELETE, FLOW_EXECUTE}),
+    AuditResourceType.FLOW: frozenset({FLOW_CREATE, FLOW_WRITE, FLOW_DELETE}),
 }

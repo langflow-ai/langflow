@@ -203,7 +203,7 @@ async def test_a_request_for_someone_elses_flow_records_nothing(client, logged_i
     assert len(await events_for(flow["id"])) == before
 
 
-async def test_a_plugin_denial_records_one_authz_deny_and_no_action(client):
+async def test_a_plugin_denial_is_not_duplicated_into_action_audit_events(client):
     from tests.unit.services.authorization._policy_double import create_user_share, install_policy_authz
 
     alice_id, alice_name = await make_user("alice")
@@ -225,12 +225,7 @@ async def test_a_plugin_denial_records_one_authz_deny_and_no_action(client):
         delete = await client.delete(f"api/v1/flows/{flow['id']}", headers=bob_headers)
 
     assert (patch.status_code, delete.status_code) == (403, 403)
-    bob_events = await events_by_user(bob_id)
-    assert [(e.event_type, e.result, e.error_code, e.operation) for e in bob_events] == [
-        ("authz", "deny", "PERMISSION_DENIED", "patch"),
-        ("authz", "deny", "PERMISSION_DENIED", "delete"),
-    ]
-    assert {e.resource_name for e in bob_events} == {flow["name"]}
+    assert await events_by_user(bob_id) == []
 
 
 async def test_nothing_is_recorded_when_auditing_is_off(client, logged_in_headers, active_user):
