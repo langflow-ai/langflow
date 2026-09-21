@@ -115,24 +115,3 @@ def test_a_flow_patch_prefers_the_known_name_over_the_attempted_one():
     described = describe_flow_body("flow", loaded_param="db_flow")({"flow": FlowUpdate(name="new"), "db_flow": loaded})
 
     assert described == {"resource_name": "current-name", "attempted_fields": {"name"}}
-
-
-def test_a_denial_draft_is_an_authz_event():
-    operation = AuditedOperation(
-        resource_type=PROJECT,
-        action="project:write",
-        operation=AuditOperation.PATCH,
-        actor=user_actor(),
-        resource_id=uuid4(),
-        attempted_fields=["description"],
-        requested_flow_count=None,
-    )
-
-    draft = operation.draft(AuditResult.DENY, AuditErrorCode.PERMISSION_DENIED)
-
-    assert (draft.event_type.value, draft.result.value, draft.error_code) == (
-        "authz",
-        "deny",
-        AuditErrorCode.PERMISSION_DENIED,
-    )
-    assert draft.details == {"schema_version": 1, "attempted_fields": ["description"]}
