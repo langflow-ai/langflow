@@ -21,10 +21,17 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import func, or_
 from sqlmodel import col, select
 
-from langflow.services.audit.query import AuditCursorError, CursorState, decode_state, encode_cursor, to_utc
+from langflow.services.audit.query import (
+    AuditCursorError,
+    CursorState,
+    decode_state,
+    encode_cursor,
+    keyset_after,
+    to_utc,
+)
 from langflow.services.database.models.audit_event.model import AuditEvent, as_utc
 from langflow.services.database.models.auth import AuthzAuditLog
 
@@ -216,13 +223,6 @@ class AuditFeedPage:
     total: int | None = None
 
 
-def _after(model: Any, state: CursorState) -> ColumnElement[bool]:
-    return or_(
-        col(model.timestamp) < state.timestamp,
-        and_(col(model.timestamp) == state.timestamp, col(model.id) < state.event_id),
-    )
-
-
 def _store_plans(filters: AuditFeedFilters) -> list[tuple[AuditSource, Any, list[ColumnElement[bool]]]]:
     plans: list[tuple[AuditSource, Any, list[ColumnElement[bool]]]] = []
     resource = resource_clauses(filters)
@@ -241,7 +241,7 @@ async def _store_window(
     state: CursorState | None,
     size: int,
 ) -> list[Any]:
-    where = [*clauses, _after(model, state)] if state is not None else clauses
+    where = [*clauses, keyset_after(model, state)] if state is not None else clauses
     statement = select(model).where(*where).order_by(col(model.timestamp).desc(), col(model.id).desc()).limit(size)
     return list((await session.exec(statement)).all())
 
