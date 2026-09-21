@@ -4,6 +4,7 @@ from lfx.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 from pydantic.v1 import SecretStr
 
 
@@ -65,6 +66,10 @@ class SambaNovaComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         sambanova_url = self.base_url
+        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        if sambanova_url:
+            validate_connector_url_for_ssrf(sambanova_url)
+
         sambanova_api_key = self.api_key
         model_name = self.model_name
         max_tokens = self.max_tokens
