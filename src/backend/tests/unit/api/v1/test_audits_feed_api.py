@@ -229,6 +229,10 @@ async def test_the_total_is_opt_in_and_counts_every_match(client, logged_in_head
         "limit=5&limit=6",
         "action=",
         "cursor=not-a-cursor",
+        "q=",
+        "q=%20%20",
+        f"q={'x' * 201}",
+        "q=a&q=b",
     ],
 )
 async def test_a_malformed_query_is_refused(client, logged_in_headers_super_user, query):
@@ -321,3 +325,64 @@ async def test_an_export_spanning_many_batches_keeps_every_row_once_in_order(cli
 
     exported = [json.loads(line)["id"] for line in response.text.splitlines()]
     assert exported == expected
+
+
+async def test_the_search_matches_names_actions_details_and_actors(client, logged_in_headers_super_user):
+    me = (await client.get("api/v1/users/whoami", headers=logged_in_headers_super_user)).json()
+    by_name, by_action, by_details, by_actor, _other = await seed(
+        resource_event(1, resource_name="Invoice Parser"),
+        authz_event(2, action="catalog:block", details={"resource_key": "PythonREPL"}),
+        authz_event(3, action="role:update", details={"role_name": "QA Operator"}),
+        resource_event(4, resource_name="Router", user_id=UUID(me["id"])),
+        resource_event(5, resource_name="Unrelated"),
+    )
+
+    assert await ids(client, logged_in_headers_super_user, "q=invoice") == [by_name]
+    assert await ids(client, logged_in_headers_super_user, "q=CATALOG:BLOCK") == [by_action]
+    assert await ids(client, logged_in_headers_super_user, "q=qa%20operator") == [by_details]
+    assert by_actor in await ids(client, logged_in_headers_super_user, f"q={me['username']}")
+
+
+async def test_the_search_narrows_every_other_filter_and_the_total(client, logged_in_headers_super_user):
+    kept, _failed, _role = await seed(
+        resource_event(1, resource_name="Ticket Router"),
+        resource_event(2, resource_name="Ticket Router", result="failed", error_code="FLOW_NAME_CONFLICT"),
+        authz_event(3, details={"role_name": "Ticket Router"}),
+    )
+
+    page = await feed(client, logged_in_headers_super_user, "q=ticket&result=succeeded&include_total=true")
+
+    assert [item["id"] for item in page["items"]] == [kept]
+    assert page["total"] == 1
+
+
+async def test_like_wildcards_in_the_search_match_themselves(client, logged_in_headers_super_user):
+    percent, _plain = await seed(
+        resource_event(1, resource_name="Discount 50% off"),
+        resource_event(2, resource_name="Discount 50 off"),
+    )
+
+    assert await ids(client, logged_in_headers_super_user, "q=50%25") == [percent]
+
+
+async def test_a_cursor_is_bound_to_the_search_that_issued_it(client, logged_in_headers_super_user):
+    await seed(*(resource_event(minute, resource_name="Router") for minute in range(3)))
+    page = await feed(client, logged_in_headers_super_user, "q=router&limit=1")
+
+    response = await client.get(
+        f"api/v1/audits?{WINDOW}&q=other&limit=1&cursor={page['next_cursor']}",
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+async def test_the_export_applies_the_search(client, logged_in_headers_super_user):
+    kept, _other = await seed(resource_event(1, resource_name="Invoice Parser"), resource_event(2))
+
+    response = await client.get(
+        f"api/v1/audits/export?{WINDOW}&q=invoice&format=ndjson", headers=logged_in_headers_super_user
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [json.loads(line)["id"] for line in response.text.splitlines()] == [kept]

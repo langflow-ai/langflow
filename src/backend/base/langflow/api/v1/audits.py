@@ -31,6 +31,7 @@ from langflow.api.v1.audit_reads import (
 )
 from langflow.services.audit.feed import (
     FEED_RESULTS,
+    MAX_SEARCH_LENGTH,
     AuditCursorError,
     AuditFeedFilters,
     AuditFeedRow,
@@ -65,7 +66,7 @@ _ENUM_LISTS: dict[str, frozenset[str]] = {
 }
 _REPEATABLE = frozenset({*_SLUG_LISTS, *_ACTION_LISTS, *_ENUM_LISTS})
 _UUIDS = ("resource_id", "user_id", "actor_id", "request_id")
-_FILTER_PARAMS = frozenset({*_REPEATABLE, *_UUIDS, "since", "until"})
+_FILTER_PARAMS = frozenset({*_REPEATABLE, *_UUIDS, "since", "until", "q"})
 _PAGE_PARAMS = frozenset({"cursor", "limit", "include_total"})
 _EXPORT_FORMATS = {"csv": "text/csv; charset=utf-8", "ndjson": "application/x-ndjson"}
 _EXPORT_BATCH = 500
@@ -108,6 +109,16 @@ def _window(single: dict[str, str]) -> tuple[datetime | None, datetime | None]:
     return since, until
 
 
+def _search(single: dict[str, str]) -> str | None:
+    if "q" not in single:
+        return None
+    text = single["q"].strip()
+    if not text or len(text) > MAX_SEARCH_LENGTH:
+        msg = f"q must be 1 to {MAX_SEARCH_LENGTH} characters"
+        raise bad_request(msg)
+    return text
+
+
 def _filters(grouped: dict[str, list[str]]) -> AuditFeedFilters:
     single = {key: values[0] for key, values in grouped.items() if key not in _REPEATABLE}
     lists = {key: _repeatable_values(key, values) for key, values in grouped.items() if key in _REPEATABLE}
@@ -128,6 +139,7 @@ def _filters(grouped: dict[str, list[str]]) -> AuditFeedFilters:
         request_id=uuids.get("request_id"),
         since=since,
         until=until,
+        search=_search(single),
     )
 
 
@@ -242,7 +254,9 @@ async def read_audits(
     Filters: ``source``, ``kind``, ``resource_type``, ``action``, ``exclude_action``,
     ``operation``, ``result`` and ``actor_type`` repeat and OR within themselves;
     ``resource_id``, ``user_id``, ``actor_id``, ``request_id``, ``since`` and
-    ``until`` narrow further. ``include_total=true`` adds a count of every match.
+    ``until`` narrow further. ``q`` keeps rows whose action, operation, resource
+    type or name, actor username or details contain it, ignoring case.
+    ``include_total=true`` adds a count of every match.
     """
     grouped = _grouped(request, _PAGE_PARAMS)
     filters = _filters(grouped)
