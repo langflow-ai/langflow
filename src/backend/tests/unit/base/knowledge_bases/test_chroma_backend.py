@@ -354,6 +354,7 @@ class TestChromaCloudMode:
         monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
         monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
         monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "custom.host.example")
+        monkeypatch.setenv("LANGFLOW_KB_ALLOWED_HOSTS", "custom.host.example")
         bk = ChromaCloudBackend(
             kb_name="cloud_kb",
             kb_path=tmp_path / "cloud_kb",
@@ -374,6 +375,39 @@ class TestChromaCloudMode:
         _, kwargs = mock_cloud.call_args
         assert kwargs["cloud_host"] == "custom.host.example"
         assert kwargs["cloud_port"] == 8080
+
+    # ---- SSRF and destination policy -------------------------------------
+
+    @pytest.fixture
+    def ssrf_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pin the destination knobs so the tests don't depend on ambient settings.
+
+        The hosts under test are approved for the exclusive destination gate so
+        each assertion measures the *address* policy. The gate itself is covered
+        by ``test_custom_host_needs_operator_approval`` below.
+        """
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.setenv(
+            "LANGFLOW_KB_ALLOWED_HOSTS",
+            "169.254.169.254,10.0.0.5,chroma.internal.example",
+        )
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    def _cloud_backend_with_host(self, tmp_path: Path, cloud_host: str) -> ChromaCloudBackend:
+        """Cloud backend whose credential lookups are stubbed, leaving only the host checks."""
+        from unittest.mock import AsyncMock
+
+        bk = ChromaCloudBackend(
+            kb_name="cloud_kb",
+            kb_path=tmp_path / "cloud_kb",
+            backend_config={"mode": "cloud", "cloud_host": cloud_host},
+            embedding_function=_DeterministicEmbeddings(),
+        )
+        bk.resolve_required_secret = AsyncMock(return_value="k")
+        bk.resolve_secret = AsyncMock(return_value=None)
+        return bk
 
     @pytest.mark.parametrize("hostile_host", ["169.254.169.254", "10.0.0.5"])
     async def test_resolve_secrets_rejects_ssrf_targets(
@@ -398,6 +432,10 @@ class TestChromaCloudMode:
 
         monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
         monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.setenv(
+            "LANGFLOW_KB_ALLOWED_HOSTS",
+            "169.254.169.254,10.0.0.5,chroma.internal.example",
+        )
         monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
         bk = ChromaCloudBackend(
             kb_name="cloud_kb",
@@ -413,6 +451,71 @@ class TestChromaCloudMode:
         ):
             await bk._resolve_secrets()
         mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_rejects_hostname_resolving_to_private_ip(self, tmp_path: Path):
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        bk = self._cloud_backend_with_host(tmp_path, "chroma.internal.example")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["10.1.2.3"]),
+            patch("chromadb.CloudClient") as mock_cloud,
+            pytest.raises(SSRFProtectionError, match="blocked"),
+        ):
+            await bk._resolve_secrets()
+        mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_default_cloud_host_needs_no_validation(self, tmp_path: Path):
+        """No ``cloud_host`` means chromadb's fixed public default, which has no tenant input."""
+        from unittest.mock import AsyncMock
+
+        bk = self._cloud_backend(tmp_path)
+        bk.resolve_required_secret = AsyncMock(return_value="k")
+        bk.resolve_secret = AsyncMock(return_value=None)
+        with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
+            await bk._resolve_secrets()
+        mock_resolve.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_test_connection_reports_ssrf_block(self, tmp_path: Path):
+        """A blocked host surfaces as a failed probe typed ``SSRFProtectionError``."""
+        bk = self._cloud_backend_with_host(tmp_path, "169.254.169.254")
+        with patch("chromadb.CloudClient") as mock_cloud:
+            result = await bk.test_connection()
+        assert result.ok is False
+        assert result.details["type"] == "SSRFProtectionError"
+        assert "blocked" in result.message
+        mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_custom_host_needs_operator_approval(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """A public-looking custom host is still refused — the KB list is exclusive.
+
+        chromadb builds its own httpx client inside ``CloudClient`` and dials during
+        construction, so the address validated here cannot be pinned for the connection
+        that follows. ``cloud_host`` is a testing-only knob upstream, so requiring
+        approval leaves the ordinary Chroma Cloud path alone.
+        """
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        monkeypatch.delenv("LANGFLOW_KB_ALLOWED_HOSTS", raising=False)
+        bk = self._cloud_backend_with_host(tmp_path, "rebind.attacker.example")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            patch("chromadb.CloudClient") as mock_cloud,
+            pytest.raises(SSRFProtectionError, match="not an approved destination"),
+        ):
+            await bk._resolve_secrets()
+        mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_approved_custom_host_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("LANGFLOW_KB_ALLOWED_HOSTS", "chroma.corp.example")
+        bk = self._cloud_backend_with_host(tmp_path, "chroma.corp.example")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            await bk._resolve_secrets()
+        assert bk._resolved_api_key == "k"  # pragma: allowlist secret
 
     def test_get_cloud_client_omits_host_port_when_not_configured(self, tmp_path: Path):
         from unittest.mock import patch

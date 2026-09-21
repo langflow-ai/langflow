@@ -117,17 +117,23 @@ def get_allowed_hosts() -> list[str]:
     return []
 
 
-def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
-    """Check if a hostname or IP is in the allowed hosts list.
+def is_host_allowed(hostname: str, ip: str | None = None, allowed_hosts: list[str] | None = None) -> bool:
+    """Check if a hostname or IP matches an allow-list.
 
     Args:
         hostname: Hostname to check
         ip: Optional IP address to check
+        allowed_hosts: Patterns to match against. Defaults to the SSRF allow-list
+            (``LANGFLOW_SSRF_ALLOWED_HOSTS``). Callers that maintain their own
+            operator-controlled list — e.g. the Knowledge Base destination policy in
+            ``lfx.base.knowledge_bases.backends.destination_policy`` — pass it here so the
+            exact-host / wildcard-domain / IP / CIDR matching is not reimplemented.
 
     Returns:
         bool: True if hostname or IP is in the allowed list, False otherwise.
     """
-    allowed_hosts = get_allowed_hosts()
+    if allowed_hosts is None:
+        allowed_hosts = get_allowed_hosts()
     if not allowed_hosts:
         return False
 

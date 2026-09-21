@@ -554,20 +554,33 @@ class TestOpenSearchSSRFProtection:
 
     @pytest.fixture
     def ssrf_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Pin the SSRF knobs so the tests don't depend on ambient settings."""
+        """Pin the destination knobs so the tests don't depend on ambient settings.
+
+        ``LANGFLOW_KB_ALLOWED_HOSTS`` is opened up to the hosts these tests use so
+        the exclusive destination gate lets them through and the *address* policy
+        is what each assertion is actually measuring. The gate itself is covered
+        by ``TestOpenSearchDestinationPolicy`` below.
+        """
         monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
         monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.setenv(
+            "LANGFLOW_KB_ALLOWED_HOSTS",
+            "169.254.169.254,10.0.0.5,opensearch.internal",
+        )
         monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
         monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
 
-    def _backend(self, tmp_path: Path, url: str) -> OpenSearchBackend:
+    def _backend(self, tmp_path: Path, url: str, source: str = "variable") -> OpenSearchBackend:
         backend = OpenSearchBackend(
             kb_name="kb_ssrf",
             kb_path=tmp_path,
             backend_config={"index_name": "test_index"},
         )
-        # resolve_secret is called for url, then username, then password.
-        backend.resolve_secret = AsyncMock(side_effect=[url, None, None])
+        # The URL is resolved with its provenance; username/password follow via
+        # the plain resolve_secret wrapper, which delegates to the same hook.
+        backend.resolve_secret_with_source = AsyncMock(
+            side_effect=[(url, source), (None, "missing"), (None, "missing")]
+        )
         return backend
 
     @pytest.mark.usefixtures("ssrf_env")
@@ -634,3 +647,70 @@ class TestOpenSearchSSRFProtection:
         # A KB created against a hostile variable must not keep the SSRF alive
         # on the ingestion/retrieval paths after test-connection.
         assert getattr(backend, "_resolved_url", None) is None
+
+
+class TestOpenSearchDestinationPolicy:
+    """Only an operator-chosen cluster may be dialed at all.
+
+    The address policy above cannot close DNS rebinding here: langchain's
+    ``OpenSearchVectorSearch`` forwards one ``**kwargs`` dict to both its urllib3
+    and aiohttp clients, so no single ``connection_class`` can pin the sync and
+    async transports to the address that was validated. The destination gate
+    answers the prior question — who chose this host — and refuses anything the
+    tenant supplied that the operator has not named, public-looking or not.
+    """
+
+    @pytest.fixture
+    def destination_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_KB_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    def _backend(self, tmp_path: Path, url: str, source: str) -> OpenSearchBackend:
+        backend = OpenSearchBackend(
+            kb_name="kb_dest",
+            kb_path=tmp_path,
+            backend_config={"index_name": "test_index"},
+        )
+        backend.resolve_secret_with_source = AsyncMock(
+            side_effect=[(url, source), (None, "missing"), (None, "missing")]
+        )
+        return backend
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_tenant_variable_needs_an_approved_host(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "https://rebind.attacker.example:9200", "variable")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="not an approved destination"),
+        ):
+            await backend._resolve_secrets()
+        assert getattr(backend, "_resolved_url", None) is None
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_operator_env_var_needs_no_approval(self, tmp_path: Path) -> None:
+        backend = self._backend(tmp_path, "https://search.example.com:9200", "environment")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            await backend._resolve_secrets()
+        assert backend._resolved_url == "https://search.example.com:9200"
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_approved_host_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("LANGFLOW_KB_ALLOWED_HOSTS", "search.corp.example")
+        backend = self._backend(tmp_path, "https://search.corp.example:9200", "variable")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            await backend._resolve_secrets()
+        assert backend._resolved_url == "https://search.corp.example:9200"
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_test_connection_reports_the_refusal(self, tmp_path: Path) -> None:
+        backend = self._backend(tmp_path, "https://rebind.attacker.example:9200", "variable")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            result = await backend.test_connection()
+        assert result.ok is False
+        assert result.details["type"] == "SSRFProtectionError"
+        assert "not an approved destination" in result.message
