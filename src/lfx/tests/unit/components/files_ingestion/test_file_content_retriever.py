@@ -368,7 +368,7 @@ class TestPersistentDirFileAccess:
     """persistent_dir is tenant-controlled and must honor LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS."""
 
     def test_arbitrary_persistent_dir_allowed_when_unrestricted(self, tmp_path):
-        """OSS default (restriction off): any absolute persistent_dir keeps working."""
+        """Explicit single-tenant opt-out: any absolute persistent_dir keeps working."""
         persist = tmp_path / "attacker_dir"
         data = _make_data_with_content("/etc/hostname", "PAYLOAD")
         comp = _build_component(file_data=[data], persistent_dir=str(persist))
