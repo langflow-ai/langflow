@@ -3056,3 +3056,172 @@ class TestScanCodeSecurityReflectiveNamespaceSelectorBypass:
     )
     def test_should_allow_ordinary_dictionary_and_static_namespace_reads(self, code):
         assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityReflectiveNamespaceProvenance:
+    """Regression: a reflective namespace must not launder through a copy.
+
+    At commit 9d3dff4efe the direct selector was rejected, but copying or
+    reconstructing the mapping dropped its marker, so the copy read as an
+    ordinary application dictionary and every selector rule stopped applying:
+    ``dict(vars(type(f)))["__globals__"]`` recovered the function-globals
+    descriptor, and a second copy recovered its ``__get__``. The marker now
+    survives ``dict()``, ``{**ns}``, ``.copy()``, ``copy.deepcopy()`` and any
+    other call the scanner cannot model, and namespace methods that hand out
+    members without presenting a selector are rejected outright.
+
+    Every case below is analyzed statically; nothing here is executed.
+    """
+
+    FUNCTION_GLOBALS_PROVENANCE_POC = (
+        "def f():\n"
+        "    pass\n"
+        "function_type_mapping = dict(vars(type(f)))\n"
+        'globals_descriptor = function_type_mapping["__globals__"]\n'
+        "descriptor_type_mapping = dict(vars(type(globals_descriptor)))\n"
+        'descriptor_getter = descriptor_type_mapping["__get__"]\n'
+        "recovered_globals = descriptor_getter(globals_descriptor, f)\n"
+    )
+
+    def test_should_detect_function_globals_provenance_poc(self):
+        """The verbatim copy-laundering PoC must not pass."""
+        result = scan_code_security(self.FUNCTION_GLOBALS_PROVENANCE_POC)
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = dict(vars(type(f)))\nd = mapping[key]",
+                id="dict-constructor-copy",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = {**vars(type(f))}\nd = mapping[key]",
+                id="dict-unpack-copy",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = vars(type(f)).copy()\nd = mapping[key]",
+                id="mapping-copy-method",
+            ),
+            pytest.param(
+                "import copy\ndef f():\n    pass\nkey = '__GLOBALS__'.lower()\n"
+                "mapping = copy.deepcopy(vars(type(f)))\nd = mapping[key]",
+                id="copy-deepcopy",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\n"
+                "def passthrough(mapping):\n    return mapping\nd = passthrough(vars(type(f)))[key]",
+                id="unmodeled-helper-passthrough",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nmapping = dict(**vars(type(f)))\nd = mapping[key]",
+                id="dict-keyword-unpack",
+            ),
+        ],
+    )
+    def test_should_preserve_provenance_through_copies(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("reflective namespace" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("def f():\n    pass\nvalues = list(vars(type(f)).values())", id="values-method"),
+            pytest.param("def f():\n    pass\nfor k, v in vars(type(f)).items():\n    pass", id="items-method"),
+            pytest.param(
+                "def f():\n    pass\nnamespace = vars(type(f))\ngrab = namespace.values\nvalues = list(grab())",
+                id="aliased-values-accessor",
+            ),
+            pytest.param("def f():\n    pass\nentry = vars(type(f)).popitem()", id="popitem-method"),
+        ],
+    )
+    def test_should_detect_namespace_methods_without_a_selector(self, code):
+        # ``values()``/``items()`` return the descriptors themselves, so the
+        # selector rules never see a key at all.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("reflective namespace" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import argparse\nparser = argparse.ArgumentParser()\nparsed = parser.parse_args()\n"
+                "config = dict(vars(parsed))\nname = config['name']",
+                id="argparse-namespace-copy-static-key",
+            ),
+            pytest.param(
+                "class Record:\n    value = 1\nmerged = {**vars(Record()), 'extra': 2}\nvalue = merged['extra']",
+                id="namespace-merge-static-key",
+            ),
+            pytest.param(
+                "class Record:\n    value = 1\nfields = sorted(vars(Record()).keys())",
+                id="namespace-keys",
+            ),
+            pytest.param(
+                "import json\nclass Record:\n    value = 1\ntext = json.dumps(vars(Record()))\nhead = text[:100]",
+                id="namespace-serialized-then-sliced",
+            ),
+            pytest.param(
+                "class Record:\n    value = 1\ncount = len(vars(Record()))",
+                id="namespace-length",
+            ),
+            # Ordinary application dictionaries keep working through the same
+            # copy operations: they never carry the marker to begin with.
+            pytest.param("base = {'a': 1}\ncopied = dict(base)\nvalue = copied[selector]", id="plain-dict-copy"),
+            pytest.param("base = {'a': 1}\nmerged = {**base, 'b': 2}\nvalue = merged[selector]", id="plain-dict-merge"),
+            pytest.param("base = {'a': 1}\nvalues = list(base.values())", id="plain-dict-values"),
+        ],
+    )
+    def test_should_allow_ordinary_dictionary_copies_and_key_reads(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityUnpackedGetattrArguments:
+    """Regression: starred ``getattr()`` arguments skipped selector validation.
+
+    ``getattr(*(f, "__globals__"))`` carries a single starred argument, so
+    ``node.args[1]`` did not exist and the attribute name was never checked —
+    the call returned before any rule ran. Unpacked arguments cannot be modeled
+    statically, so they now fail closed.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("def f():\n    pass\ng = getattr(*(f, '__globals__'))", id="starred-tuple-literal"),
+            pytest.param(
+                "def f():\n    pass\nargs = (f, '__globals__')\ng = getattr(*args)",
+                id="starred-name",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkw = {'name': '__globals__'}\ng = getattr(f, **kw)",
+                id="double-starred-keywords",
+            ),
+            pytest.param(
+                "import builtins\ndef f():\n    pass\ng = builtins.getattr(*(f, '__globals__'))",
+                id="qualified-getattr-starred",
+            ),
+        ],
+    )
+    def test_should_detect_unpacked_getattr_arguments(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("getattr()" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Unpacking elsewhere is untouched; only ``getattr`` is gated.
+            pytest.param("def add(a, b):\n    return a + b\nargs = (1, 2)\ntotal = add(*args)", id="ordinary-starred"),
+            pytest.param(
+                "def build(**options):\n    return options\nopts = {'a': 1}\nresult = build(**opts)",
+                id="ordinary-double-starred",
+            ),
+            pytest.param("value = getattr(self, 'field', None)", id="explicit-getattr-arguments"),
+        ],
+    )
+    def test_should_allow_unpacking_outside_getattr(self, code):
+        assert scan_code_security(code).is_safe is True

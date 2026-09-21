@@ -100,6 +100,14 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # matching ``_is_blocked_attribute`` / the ``.__dict__`` suffix tests.
 _REFLECTIVE_NAMESPACE = "<reflective-namespace>"
 
+# The only methods modeled on a reflective namespace. ``values()`` / ``items()``
+# hand out the descriptors themselves, so no selector is ever presented to the
+# checks below; anything not listed here fails closed rather than growing this
+# list into another bypassable denylist.
+_REFLECTIVE_NAMESPACE_METHODS: frozenset[str] = frozenset(
+    {"get", "keys", "copy", "__getitem__", "__contains__", "__len__", "__iter__"}
+)
+
 
 # Non-call attribute *reads* that are forbidden: (module, attr, message).
 # Secret/env exfiltration is the concrete threat — components must use
@@ -776,6 +784,15 @@ class _SecurityChecker(ast.NodeVisitor):
             )
         if isinstance(node, ast.Attribute):
             return self._resolved_member_names(self._resolved_assignment_value(node.value), node.attr)
+        if isinstance(node, ast.Dict):
+            # ``{**ns, ...}`` copies a reflective namespace wholesale, so the
+            # marker has to survive or the copy reads as an ordinary dictionary.
+            if any(
+                key is None and _REFLECTIVE_NAMESPACE in self._resolved_assignment_value(value)
+                for key, value in zip(node.keys, node.values, strict=True)
+            ):
+                return frozenset({_REFLECTIVE_NAMESPACE})
+            return frozenset()
         if isinstance(node, ast.Subscript) and (member_name := self._static_name(node.slice)) is not None:
             module_dicts = self._resolved_assignment_value(node.value)
             module_names = frozenset(
@@ -832,8 +849,31 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
                 resolved.update(self._resolved_member_names(module_names, member_name))
 
+            if _REFLECTIVE_NAMESPACE not in resolved and self._call_reaches_reflective_namespace(node, function_names):
+                # A namespace laundered through a call — ``dict(ns)``,
+                # ``copy.deepcopy(ns)``, ``ns.copy()``, or any helper the scanner
+                # cannot model — keeps its marker. Without this, a copy reads as
+                # an ordinary application dictionary and every selector rule
+                # below silently stops applying. Propagating pessimistically is
+                # free on values never used as a namespace: the marker is only
+                # ever consulted by the selector checks.
+                resolved.add(_REFLECTIVE_NAMESPACE)
+
             return frozenset(resolved)
         return frozenset()
+
+    def _call_reaches_reflective_namespace(self, node: ast.Call, function_names: frozenset[str]) -> bool:
+        """True if a reflective namespace is this call's receiver or one of its arguments."""
+        if any(
+            separator and receiver_name == _REFLECTIVE_NAMESPACE
+            for receiver_name, separator, _ in (name.rpartition(".") for name in function_names)
+        ):
+            return True
+        arguments: list[ast.AST] = [
+            argument.value if isinstance(argument, ast.Starred) else argument for argument in node.args
+        ]
+        arguments.extend(keyword.value for keyword in node.keywords)
+        return any(_REFLECTIVE_NAMESPACE in self._resolved_assignment_value(argument) for argument in arguments)
 
     @staticmethod
     def _dangerous_callable_message(resolved_name: str) -> str | None:
@@ -1651,6 +1691,7 @@ class _SecurityChecker(ast.NodeVisitor):
         self._check_attribute_call(node)
         getattr_arguments_validated = self._check_getattr_access(node)
         self._check_reflective_namespace_read(node)
+        self._check_reflective_namespace_escape(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
         reflective_arguments_validated = self._check_restricted_reflection_access(node, resolved_call_names)
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
@@ -1720,6 +1761,13 @@ class _SecurityChecker(ast.NodeVisitor):
         but a dunder key is a sandbox escape on any object and a dynamically
         assembled key cannot be proven safe, so both fail closed.
         """
+        if isinstance(selector, ast.Slice) or (
+            isinstance(selector, ast.Constant) and not isinstance(selector.value, str)
+        ):
+            # ``value[0]`` / ``value[1:2]`` is a sequence read, not a member
+            # lookup. The marker is propagated pessimistically through calls, so
+            # it also rides on values that are not mappings at all.
+            return
         member_name = self._static_name(selector)
         if member_name is None:
             self.violations.append(
@@ -1727,6 +1775,26 @@ class _SecurityChecker(ast.NodeVisitor):
             )
         elif _is_blocked_attribute(member_name):
             self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+
+    def _check_reflective_namespace_escape(self, node: ast.Call) -> None:
+        """Reject namespace methods that yield members without presenting a selector.
+
+        ``vars(x).values()`` / ``.items()`` return the descriptors themselves, so
+        the selector checks never see a key. Only the methods in
+        ``_REFLECTIVE_NAMESPACE_METHODS`` are modeled; everything else on a
+        reflective namespace fails closed.
+        """
+        for function_name in self._resolved_assignment_value(node.func):
+            receiver_name, separator, method_name = function_name.rpartition(".")
+            if (
+                separator
+                and receiver_name == _REFLECTIVE_NAMESPACE
+                and method_name not in _REFLECTIVE_NAMESPACE_METHODS
+            ):
+                self.violations.append(
+                    f"Use of '{method_name}()' on a reflective namespace is forbidden in components (sandbox escape)"
+                )
+                return
 
     def _check_reflective_namespace_read(self, node: ast.Call) -> None:
         """Reject ``.get()``/``.__getitem__()`` reads of a reflective namespace mapping.
@@ -1849,6 +1917,14 @@ class _SecurityChecker(ast.NodeVisitor):
 
         if not ({"getattr", "builtins.getattr", "__builtins__.getattr"} & function_names and node.args):
             return False
+        if any(isinstance(argument, ast.Starred) for argument in node.args) or any(
+            keyword.arg is None for keyword in node.keywords
+        ):
+            # ``getattr(*(f, "__globals__"))`` presents one starred argument, so
+            # ``node.args[1]`` does not exist and the attribute name is never
+            # validated. The unpacked sequence cannot be modeled, so fail closed.
+            self.violations.append("Unpacked getattr() arguments are forbidden in components (sandbox escape)")
+            return True
         try:
             attr_node = node.args[1]
         except IndexError:
