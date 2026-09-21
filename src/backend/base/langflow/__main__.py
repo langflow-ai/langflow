@@ -1139,6 +1139,62 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
     typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
 
 
+@app.command(name="relocate-files")
+def relocate_files_command(
+    bucket: str = typer.Option(..., "--bucket", help="Target S3 bucket to copy uploaded files into."),
+    prefix: str = typer.Option("files", help="Key prefix inside the bucket."),
+    username: str = typer.Option("", help="Only relocate this user's files."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be copied without writing."),  # noqa: FBT001
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+) -> None:
+    """Copy uploaded file bytes into an S3 bucket, keeping each file's key.
+
+    Credentials come from the environment, the same way the S3 storage backend
+    reads them. A file counts as copied only once the bucket reports an object of
+    the same size, and files already there are skipped, so a run can be repeated.
+
+    Nothing is deleted from the source and no database row changes: readers
+    address a file by its owner and name, which the copy preserves.
+
+    Uploaded files and files attached to flows are copied. Profile pictures and
+    knowledge bases live outside the storage backend and stay where they are.
+
+    Exits non-zero if any file could not be copied.
+    """
+    configure(log_level=log_level)
+    failed = asyncio.run(
+        _relocate_files(
+            bucket=bucket,
+            prefix=prefix,
+            username=username or None,
+            dry_run=dry_run,
+        )
+    )
+    if failed:
+        raise typer.Exit(1)
+
+
+async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry_run: bool) -> int:
+    from langflow.api.utils.file_relocation import relocate_files
+
+    await initialize_services()
+    results = await relocate_files(
+        target_bucket=bucket,
+        target_prefix=prefix,
+        username=username,
+        dry_run=dry_run,
+    )
+    for result in results:
+        line = f"{result.status:12} {result.owner}/{result.file_name}  {result.size} bytes  -> {result.key}"
+        typer.echo(f"{line}  ({result.reason})" if result.reason else line)
+    counts: dict[str, int] = {}
+    for result in results:
+        counts[result.status] = counts.get(result.status, 0) + 1
+    summary = ", ".join(f"{count} {status}" for status, count in sorted(counts.items())) or "no files"
+    typer.echo(f"File relocation complete: {summary}.")
+    return counts.get("failed", 0)
+
+
 # command to copy the langflow database from the cache to the current directory
 # because now the database is stored per installation
 @app.command()

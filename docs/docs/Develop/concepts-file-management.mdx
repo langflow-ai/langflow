@@ -154,6 +154,24 @@ Replace the following placeholders with the actual values for your S3 instance:
 * `S3_ACCESS_SECRET_KEY`: Your AWS Secret Access Key.
 * `S3_REGION`: The AWS region where your bucket is located, such as `us-east-2`.
 
+### Move existing files to S3
+
+Changing `LANGFLOW_STORAGE_TYPE` to `s3` doesn't copy the files you already have.
+Langflow keeps reading and writing new files in the bucket, and the previously uploaded bytes stay on local disk, where the S3 backend can't find them.
+
+To copy them, stop Langflow and run the following command with the same AWS credentials Langflow uses:
+
+```bash
+langflow relocate-files --bucket S3_BUCKET_NAME --prefix S3_BUCKET_DIRECTORY
+```
+
+Each file keeps its key, so no database row changes.
+Nothing is deleted from local disk, files already in the bucket are skipped, and a file counts as copied only when the bucket reports an object of the same size, so you can run the command again after an interrupted run.
+Add `--dry-run` to see what it would copy, and `--username` to limit it to one user's files.
+
+The command moves uploaded files and files attached to flows.
+Profile pictures and knowledge bases are stored outside the file storage backend, so they stay on local disk.
+
 Your AWS credentials must have the necessary permissions to perform the required S3 operations for your use case, such as reading, writing, and deleting files in S3.
 This example policy allows basic CRUD operations on S3 objects.
 
