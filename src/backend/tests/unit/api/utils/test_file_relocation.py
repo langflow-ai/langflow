@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import anyio
 import pytest
-from langflow.api.utils.file_relocation import relocate_files
+from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError, relocate_files
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
@@ -28,7 +28,11 @@ def _s3_configured() -> bool:
     return bool(os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY"))
 
 
-pytestmark = pytest.mark.skipif(not _s3_configured(), reason="AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY not set")
+pytestmark = [
+    # The repo marks tests that need real credentials, so the unit lane deselects them.
+    pytest.mark.api_key_required,
+    pytest.mark.skipif(not _s3_configured(), reason="AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY not set"),
+]
 
 
 @pytest.fixture
@@ -148,3 +152,81 @@ class TestFlowScopedUploads:
 
         assert [r.status for r in results] == ["copied"]
         assert await _stored_keys(bucket) == [f"files/{flow_id}/2026-01-01_notes.txt"]
+
+
+class TestRefusals:
+    async def test_an_s3_source_is_refused_before_anything_is_read(self, active_user, storage_dir, bucket):
+        """The docs used to end here: switch to s3, then run this, and read the bucket onto itself."""
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        settings = get_settings_service().settings
+        monkey = pytest.MonkeyPatch()
+        monkey.setattr(settings, "storage_type", "s3")
+        try:
+            with pytest.raises(SourceNotLocalError, match="LANGFLOW_STORAGE_TYPE"):
+                await relocate_files(target_bucket=bucket, target_prefix="files")
+        finally:
+            monkey.undo()
+        assert await _stored_keys(bucket) == []
+
+    async def test_a_username_nobody_has_is_refused(self, active_user, storage_dir, bucket):  # noqa: ARG002
+        with pytest.raises(NoSuchUserError, match="nobody"):
+            await relocate_files(target_bucket=bucket, target_prefix="files", username="nobody")
+
+
+class TestOneBadNameDoesNotStopTheRest:
+    async def test_a_name_object_storage_rejects_is_reported(self, active_user, storage_dir, bucket):
+        """Uploads reject `..` today, so a name like this is a row from before that guard."""
+        for name in ("aaa_first.txt", "legacy..name.txt", "zzz_last.txt"):
+            await _seed_user_file(storage_dir, active_user.id, name=name, data=b"bytes")
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert sorted(r.status for r in results) == ["copied", "copied", "failed"]
+        failed = next(r for r in results if r.status == "failed")
+        assert failed.file_name == "legacy..name.txt"
+        assert len(await _stored_keys(bucket)) == 2
+
+
+class TestWhatGetsFound:
+    async def test_a_file_with_no_row_is_copied(self, active_user, storage_dir, bucket):
+        """Ephemeral chat uploads write bytes under the user id and record no row."""
+        owner_dir = storage_dir / str(active_user.id)
+        owner_dir.mkdir(parents=True, exist_ok=True)
+        (owner_dir / "chat-attachment.png").write_bytes(b"png-bytes")
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert [r.status for r in results] == ["copied"]
+        assert await _stored_keys(bucket) == [f"files/{active_user.id}/chat-attachment.png"]
+
+    async def test_a_dry_run_does_not_read_the_bytes(self, active_user, storage_dir, bucket):
+        """A dry run over a real instance would otherwise pull every file into memory."""
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        reads = []
+        original = type(get_storage_service()).get_file
+
+        async def counted(self, *args, **kwargs):
+            reads.append(kwargs.get("file_name"))
+            return await original(self, *args, **kwargs)
+
+        monkey = pytest.MonkeyPatch()
+        monkey.setattr(type(get_storage_service()), "get_file", counted)
+        try:
+            results = await relocate_files(target_bucket=bucket, target_prefix="files", dry_run=True)
+        finally:
+            monkey.undo()
+
+        assert [r.status for r in results] == ["would_copy"]
+        assert reads == []
+
+    async def test_a_flow_with_no_uploads_is_not_looked_up(self, active_user, storage_dir, bucket, caplog):  # noqa: ARG002
+        """One warning per flow buries the report on an instance with many flows."""
+        async with session_scope() as session:
+            for _ in range(3):
+                session.add(Flow(name=f"flow-{uuid.uuid4().hex[:6]}", user_id=active_user.id, data={"nodes": []}))
+            await session.commit()
+
+        with caplog.at_level("WARNING"):
+            await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert "does not exist" not in caplog.text

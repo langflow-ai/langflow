@@ -1140,36 +1140,46 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
 
 
 @app.command(name="relocate-files")
-def relocate_files_command(
-    bucket: str = typer.Option(..., "--bucket", help="Target S3 bucket to copy uploaded files into."),
-    prefix: str = typer.Option("files", help="Key prefix inside the bucket."),
-    username: str = typer.Option("", help="Only relocate this user's files."),
-    dry_run: bool = typer.Option(default=False, help="Report what would be copied without writing."),  # noqa: FBT001
+def relocate_files(
     log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    bucket: str = typer.Option(..., help="Target S3 bucket to copy stored files into."),
+    prefix: str = typer.Option("files", help="Key prefix inside the bucket."),
+    username: str = typer.Option("", help="Only copy this user's files."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be copied without writing."),  # noqa: FBT001
 ) -> None:
-    """Copy uploaded file bytes into an S3 bucket, keeping each file's key.
+    """Copy stored file bytes into an S3 bucket, keeping each file's key.
 
-    Credentials come from the environment, the same way the S3 storage backend
-    reads them. A file counts as copied only once the bucket reports an object of
-    the same size, and files already there are skipped, so a run can be repeated.
+    Run this with LANGFLOW_STORAGE_TYPE=local, the setting the instance had before
+    the switch, so it reads the files on local disk. Credentials come from the
+    environment, the same way the S3 storage backend reads them.
+
+    A file counts as copied only once the bucket reports an object of the same
+    size, and files already there are skipped, so a run can be repeated.
 
     Nothing is deleted from the source and no database row changes: readers
     address a file by its owner and name, which the copy preserves.
 
-    Uploaded files and files attached to flows are copied. Profile pictures and
-    knowledge bases live outside the storage backend and stay where they are.
+    Uploads, chat attachments and files attached to flows are copied. Profile
+    pictures and knowledge bases live outside the storage backend and stay where
+    they are.
 
     Exits non-zero if any file could not be copied.
     """
+    from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError
+
     configure(log_level=log_level)
-    failed = asyncio.run(
-        _relocate_files(
-            bucket=bucket,
-            prefix=prefix,
-            username=username or None,
-            dry_run=dry_run,
+    try:
+        failed = asyncio.run(
+            _relocate_files(
+                bucket=bucket,
+                prefix=prefix,
+                username=username or None,
+                dry_run=dry_run,
+            )
         )
-    )
+    except (SourceNotLocalError, NoSuchUserError) as exc:
+        typer.echo(f"Cannot copy files: {exc}", err=True)
+        raise typer.Exit(2) from exc
     if failed:
         raise typer.Exit(1)
 
@@ -1190,8 +1200,9 @@ async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry
     counts: dict[str, int] = {}
     for result in results:
         counts[result.status] = counts.get(result.status, 0) + 1
-    summary = ", ".join(f"{count} {status}" for status, count in sorted(counts.items())) or "no files"
-    typer.echo(f"File relocation complete: {summary}.")
+    scope = f"user '{username}'" if username else "all users"
+    summary = ", ".join(f"{count} {status}" for status, count in sorted(counts.items())) or "no files found"
+    typer.echo(f"File relocation complete for {scope}: {summary}.")
     return counts.get("failed", 0)
 
 
