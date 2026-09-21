@@ -1,10 +1,10 @@
 """Reading audit events: filtered, newest first, with keyset pagination.
 
 Offsets are not used because inserts and the retention sweep shift every offset
-under a reader. Walking ``(timestamp DESC, id DESC)`` from the last row seen pins a
-traversal by construction: a row inserted later is newer than every position the
-walk can still reach, so it never appears midway. A cursor is bound to the
-filters that produced it.
+under a reader. The first page captures the database clock as an insertion
+boundary; every later page reapplies it before walking ``(timestamp DESC, id
+DESC)`` from the last row seen. A cursor is bound to the filters that produced
+it.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from uuid import UUID
 from sqlalchemy import and_, or_
 from sqlmodel import col, select
 
-from langflow.services.database.models.audit_event.model import AuditEvent, as_utc
+from langflow.services.database.models.audit_event.model import AuditDatabaseClock, AuditEvent, as_utc
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import ColumnElement
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
         AuditResult,
     )
 
-CURSOR_VERSION = 1
+CURSOR_VERSION = 2
 MAX_PAGE_SIZE = 200
 
 
@@ -114,6 +114,7 @@ class AuditEventFilters:
 @dataclass(frozen=True)
 class _CursorState:
     fingerprint: str
+    cutoff: datetime
     timestamp: datetime
     event_id: UUID
 
@@ -122,6 +123,7 @@ def encode_cursor(state: _CursorState) -> str:
     payload = {
         "v": CURSOR_VERSION,
         "f": state.fingerprint,
+        "c": state.cutoff.isoformat(),
         "t": state.timestamp.isoformat(),
         "i": str(state.event_id),
     }
@@ -136,6 +138,7 @@ def decode_cursor(cursor: str, filters: AuditEventFilters) -> _CursorState:
         payload = json.loads(raw.decode("utf-8"))
         state = _CursorState(
             fingerprint=str(payload["f"]),
+            cutoff=_utc(datetime.fromisoformat(payload["c"])),
             timestamp=_utc(datetime.fromisoformat(payload["t"])),
             event_id=UUID(payload["i"]),
         )
@@ -180,12 +183,17 @@ async def list_audit_events(
 
     if cursor is not None:
         state = decode_cursor(cursor, filters)
+        cutoff = state.cutoff
         clauses.append(
             or_(
                 col(AuditEvent.timestamp) < state.timestamp,
                 and_(col(AuditEvent.timestamp) == state.timestamp, col(AuditEvent.id) < state.event_id),
             )
         )
+    else:
+        cutoff = _utc((await session.exec(select(AuditDatabaseClock()))).one())
+
+    clauses.append(col(AuditEvent.timestamp) <= cutoff)
 
     statement = (
         select(AuditEvent)
@@ -202,6 +210,7 @@ async def list_audit_events(
     next_cursor = encode_cursor(
         _CursorState(
             fingerprint=filters.fingerprint(),
+            cutoff=cutoff,
             timestamp=as_utc(last.timestamp),
             event_id=last.id,
         )

@@ -13,6 +13,8 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Column, Index
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.functions import FunctionElement
 from sqlmodel import Field, SQLModel
 
 RESOURCE_TYPE_MAX_LENGTH = 64
@@ -34,6 +36,32 @@ EVENT_TYPE_RESULT_CHECK = (
 ACTING_PAIR_CHECK = (
     "(acting_issuer IS NULL AND acting_subject IS NULL) OR (acting_issuer IS NOT NULL AND acting_subject IS NOT NULL)"
 )
+
+
+class AuditDatabaseClock(FunctionElement[datetime]):
+    """Database wall clock with sub-second precision on supported backends."""
+
+    type = sa.DateTime(timezone=True)
+    inherit_cache = True
+
+
+@compiles(AuditDatabaseClock, "sqlite")
+def _compile_sqlite_audit_database_clock(_element: AuditDatabaseClock, _compiler: Any, **_kwargs: Any) -> str:
+    # SQLite renders ``%f`` with milliseconds, while SQLAlchemy binds
+    # ``datetime`` values with six fractional digits. Pad the stored form so
+    # keyset comparisons remain equal at a page boundary instead of comparing
+    # two differently sized timestamp strings lexicographically.
+    return "(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW') || '000')"
+
+
+@compiles(AuditDatabaseClock, "postgresql")
+def _compile_postgresql_audit_database_clock(_element: AuditDatabaseClock, _compiler: Any, **_kwargs: Any) -> str:
+    return "clock_timestamp()"
+
+
+@compiles(AuditDatabaseClock)
+def _compile_default_audit_database_clock(_element: AuditDatabaseClock, _compiler: Any, **_kwargs: Any) -> str:
+    return "CURRENT_TIMESTAMP"
 
 
 class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
@@ -73,18 +101,21 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
     event_type: str = Field(sa_column=Column(sa.String(EVENT_TYPE_MAX_LENGTH), nullable=False))
     result: str = Field(sa_column=Column(sa.String(RESULT_MAX_LENGTH), nullable=False))
     error_code: str | None = Field(default=None, sa_column=Column(sa.String(ERROR_CODE_MAX_LENGTH), nullable=True))
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(sa.DateTime(timezone=True), nullable=False),
+    timestamp: datetime | None = Field(
+        default=None,
+        sa_column=Column(sa.DateTime(timezone=True), server_default=AuditDatabaseClock(), nullable=False),
     )
     request_id: UUID = Field(sa_column=Column(sa.Uuid(), nullable=False))
     details: dict[str, Any] = Field(sa_column=Column(sa.JSON(), nullable=False))
 
 
-def as_utc(value: datetime) -> datetime:
+def as_utc(value: datetime | None) -> datetime:
     """Read a stored timestamp as UTC on every backend.
 
     SQLite hands the column back without a timezone and PostgreSQL with one; the
     same event must not read differently depending on where it was stored.
     """
+    if value is None:
+        msg = "Database-generated audit timestamp is missing"
+        raise ValueError(msg)
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
