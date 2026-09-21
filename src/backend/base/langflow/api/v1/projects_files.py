@@ -26,7 +26,7 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.flows_helpers import _sanitize_flow_filename
+from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
@@ -76,7 +76,12 @@ async def download_project_flows(
 
         # Strip secret field values then normalise for git-friendly export
         # (sorted keys, volatile fields removed, code fields as line arrays).
-        normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
+        # Bindings survive only when they name one of the owner's global variables.
+        known_variable_names = await _export_variable_names(session, owner_id)
+        normalised_flows = [
+            normalize_flow_for_export(strip_flow_secrets(flow.model_dump(), known_variable_names=known_variable_names))
+            for flow in flows
+        ]
         zip_stream = io.BytesIO()
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:

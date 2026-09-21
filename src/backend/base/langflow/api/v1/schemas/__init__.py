@@ -611,8 +611,9 @@ class MCPProjectResponse(BaseModel):
 
     tools: list[MCPSettings]
     auth_settings: AuthSettings | None = None
-    # The name the project's MCP server is registered under. Sent so clients show the
-    # name the backend actually uses instead of deriving their own and disagreeing.
+    # The MCP server name the backend derives for this project, which client installs use
+    # unless another project already holds it there. Sent so clients show it instead of
+    # deriving their own and disagreeing about non-Latin names.
     server_name: str | None = None
 
 

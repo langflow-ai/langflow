@@ -95,7 +95,7 @@ export const getAuthHeaders = ({
 
 export const buildMcpServerJson = (opts: {
   folderName?: string;
-  /** Name the backend registered. Preferred over deriving one from the project name:
+  /** Name the backend derives. Preferred over deriving one here from the project name:
    *  the two disagree for names this helper cannot represent, such as Chinese ones. */
   backendServerName?: string | null;
   selectedPlatform?: string;

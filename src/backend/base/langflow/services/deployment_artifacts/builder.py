@@ -465,6 +465,7 @@ _SAFE_BACKEND_ROUTING_KEYS = frozenset(
         "cloud_host",
         "cloud_port",
         "cloud_region",
+        "collection_name",
         "engine",
         "index_name",
         "mode",

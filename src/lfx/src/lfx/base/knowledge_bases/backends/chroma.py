@@ -6,7 +6,15 @@ Two independent classes cover the two Chroma deployment modes:
   directory at ``kb_path``.  No credentials needed.
 * ``ChromaCloudBackend`` — ``chromadb.CloudClient`` connecting to Chroma Cloud.
   Credentials (API key; optionally tenant / database) are resolved through
-  Langflow's variable service or env vars.
+  Langflow's variable service or env vars. Users who resolve to the same tenant
+  and database share one namespace, so the collection is owner-scoped (the same
+  ``lf_<sha256[:24]>`` name pgvector gives the KB's table) rather than named
+  after the KB, whose name is only unique per user. ``backend_config`` may set
+  ``collection_name`` to use an existing collection instead; Alembic revision
+  ``386662af02e9`` pins KBs created before owner scoping to their ``kb_name``
+  collection that way, or records ``legacy_shared_collection`` when KBs of
+  several owners already used that collection. Only a superuser may persist
+  ``collection_name`` (see ``naming.ensure_storage_routing_allowed``).
 
 ``create_backend()`` in the registry dispatches to the right class based on
 ``backend_config["mode"]``; call sites never instantiate these directly.
@@ -36,6 +44,7 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
+from lfx.base.knowledge_bases.backends.naming import resolve_storage_name
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
 
@@ -46,6 +55,13 @@ if TYPE_CHECKING:
     from chromadb.api import ClientAPI
     from langchain_core.embeddings import Embeddings
     from langchain_core.vectorstores import VectorStore
+
+
+# ``backend_config`` keys for Chroma Cloud collection routing. The origin and
+# shared markers are written by alembic revision ``386662af02e9``.
+COLLECTION_NAME_KEY = "collection_name"
+COLLECTION_NAME_ORIGIN_KEY = "collection_name_origin"
+LEGACY_SHARED_COLLECTION_KEY = "legacy_shared_collection"
 
 
 # ---------------------------------------------------------------------------
@@ -311,11 +327,39 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         # accept a region parameter directly.
         return chromadb.CloudClient(**kwargs)
 
+    def _resolve_collection_name(self) -> str:
+        """Resolve this KB's collection in the resolved tenant and database.
+
+        Unlike local Chroma, which isolates each owner under its own directory,
+        every user whose credentials resolve to the same tenant and database
+        shares one collection namespace.
+        """
+        return resolve_storage_name(
+            kb_name=self.kb_name,
+            owner_id=self._coerce_user_uuid(),
+            override=self.backend_config.get(COLLECTION_NAME_KEY),
+            override_key=COLLECTION_NAME_KEY,
+            backend="ChromaCloudBackend",
+            storage="collection",
+        )
+
     def _build_vector_store(self) -> VectorStore:
+        collection_name = self._resolve_collection_name()
+        shared_legacy_collection = self.backend_config.get(LEGACY_SHARED_COLLECTION_KEY)
+        if shared_legacy_collection and collection_name != shared_legacy_collection:
+            logger.warning(
+                "Knowledge base %s no longer uses Chroma Cloud collection %s: another user's knowledge base used "
+                "the same collection, or the name is reserved for owner-scoped collections. Its earlier chunks "
+                "were left in %s, and it now uses its own collection %s. Re-ingest its sources to restore them.",
+                self.kb_name,
+                shared_legacy_collection,
+                shared_legacy_collection,
+                collection_name,
+            )
         self._client = self._get_cloud_client()
         return Chroma(
             client=self._client,
-            collection_name=self.kb_name,
+            collection_name=collection_name,
             embedding_function=self.embedding_function,
             **chroma_langchain_collection_kwargs(),
         )
@@ -411,8 +455,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         while still completing local storage and DB-row cleanup.
         """
         await self.ensure_ready()
+        collection_name = self._resolve_collection_name()
         client = self._get_cloud_client()
-        client.delete_collection(name=self.kb_name)
+        client.delete_collection(name=collection_name)
 
     def raw_langchain_store(self) -> Chroma:
         """Expose the underlying LangChain Chroma instance."""

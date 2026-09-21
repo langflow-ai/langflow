@@ -26,7 +26,7 @@ export type MCPSettingsType = {
 export type MCPProjectResponseType = {
   tools: MCPSettingsType[];
   auth_settings?: AuthSettingsType;
-  /** Name the backend registers this project's MCP server under. */
+  /** MCP server name the backend derives for this project. */
   server_name?: string | null;
 };
 

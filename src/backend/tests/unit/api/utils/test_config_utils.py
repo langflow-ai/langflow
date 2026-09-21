@@ -7,6 +7,7 @@ from langflow.api.utils.mcp.config_utils import (
     MCPServerValidationResult,
     auto_configure_starter_projects_mcp,
     mcp_server_config_uses_current_uvx_constraint,
+    project_mcp_server_name_candidates,
     validate_mcp_server_for_project,
 )
 from langflow.services.database.models.flow.model import Flow
@@ -246,82 +247,115 @@ class TestValidateMcpServerForProject:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("transport", ["streamable", "sse"])
-    async def test_validate_server_exists_project_doesnt_match(
+    async def test_validate_server_falls_back_when_base_name_belongs_to_other_project(
         self, active_user, test_project, created_api_key, client: AsyncClient, transport
     ):
-        """Test validation when server exists but project ID doesn't match."""
-        other_project_id = uuid4()
-        server_name = "lf-test_project"
-        _, server_config = _build_server_config(client.base_url, other_project_id, transport)
-
-        # Create MCP server with different project ID via API
+        """A base name taken by a different project yields the id-suffixed name instead of a conflict."""
+        base_name, fallback_name = project_mcp_server_name_candidates(test_project.id, test_project.name)
+        _, other_config = _build_server_config(client.base_url, uuid4(), transport)
         response = await client.post(
-            f"/api/v2/mcp/servers/{server_name}", json=server_config, headers={"x-api-key": created_api_key.api_key}
+            f"/api/v2/mcp/servers/{base_name}", json=other_config, headers={"x-api-key": created_api_key.api_key}
         )
         assert response.status_code == 200
 
         from langflow.services.deps import get_settings_service, get_storage_service
 
         async with session_scope() as session:
-            storage_service = get_storage_service()
-            settings_service = get_settings_service()
-
             result = await validate_mcp_server_for_project(
-                test_project.id, test_project.name, active_user, session, storage_service, settings_service, "create"
+                test_project.id,
+                test_project.name,
+                active_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                "create",
             )
 
-            assert result.server_exists is True
-            assert result.project_id_matches is False
-            assert result.server_name == server_name
-            assert result.existing_config == server_config
-            assert "MCP server name conflict" in result.conflict_message
-            assert str(test_project.id) in result.conflict_message
+            assert result.server_exists is False
+            assert result.has_conflict is False
+            assert result.server_name == fallback_name
+            assert result.conflict_message == ""
 
-        # Cleanup - delete the server
-        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": created_api_key.api_key})
+        await client.delete(f"/api/v2/mcp/servers/{base_name}", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("transport", ["streamable", "sse"])
-    async def test_validate_server_different_operations_messages(
+    async def test_validate_server_finds_own_fallback_server_after_base_name_is_freed(
         self, active_user, test_project, created_api_key, client: AsyncClient, transport
     ):
-        """Test different conflict messages for different operations."""
-        other_project_id = uuid4()
-        server_name = "lf-test_project"
-        _, server_config = _build_server_config(client.base_url, other_project_id, transport)
-
-        # Create MCP server with different project ID via API
+        """A project registered under the fallback name keeps resolving to it once the base name is free."""
+        _, fallback_name = project_mcp_server_name_candidates(test_project.id, test_project.name)
+        _, own_config = _build_server_config(client.base_url, test_project.id, transport)
         response = await client.post(
-            f"/api/v2/mcp/servers/{server_name}", json=server_config, headers={"x-api-key": created_api_key.api_key}
+            f"/api/v2/mcp/servers/{fallback_name}", json=own_config, headers={"x-api-key": created_api_key.api_key}
         )
         assert response.status_code == 200
 
         from langflow.services.deps import get_settings_service, get_storage_service
 
         async with session_scope() as session:
+            result = await validate_mcp_server_for_project(
+                test_project.id,
+                test_project.name,
+                active_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                "delete",
+            )
+
+            assert result.server_exists is True
+            assert result.project_id_matches is True
+            assert result.server_name == fallback_name
+
+        await client.delete(f"/api/v2/mcp/servers/{fallback_name}", headers={"x-api-key": created_api_key.api_key})
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("transport", ["streamable", "sse"])
+    async def test_validate_server_conflicts_when_every_candidate_belongs_to_other_projects(
+        self, active_user, test_project, created_api_key, client: AsyncClient, transport
+    ):
+        """Only when every candidate name is taken by a different project is a conflict reported."""
+        candidate_names = project_mcp_server_name_candidates(test_project.id, test_project.name)
+        base_name = candidate_names[0]
+        _, base_config = _build_server_config(client.base_url, uuid4(), transport)
+        for candidate_name in candidate_names:
+            _, other_config = _build_server_config(client.base_url, uuid4(), transport)
+            config = base_config if candidate_name == base_name else other_config
+            response = await client.post(
+                f"/api/v2/mcp/servers/{candidate_name}", json=config, headers={"x-api-key": created_api_key.api_key}
+            )
+            assert response.status_code == 200
+
+        from langflow.services.deps import get_settings_service, get_storage_service
+
+        async with session_scope() as session:
             storage_service = get_storage_service()
             settings_service = get_settings_service()
+            results = {
+                operation: await validate_mcp_server_for_project(
+                    test_project.id,
+                    test_project.name,
+                    active_user,
+                    session,
+                    storage_service,
+                    settings_service,
+                    operation,
+                )
+                for operation in ("create", "update", "delete")
+            }
 
-            # Test create operation
-            result = await validate_mcp_server_for_project(
-                test_project.id, test_project.name, active_user, session, storage_service, settings_service, "create"
-            )
-            assert "Cannot create MCP server" in result.conflict_message
+        assert results["create"].server_exists is True
+        assert results["create"].project_id_matches is False
+        assert results["create"].server_name == base_name
+        assert results["create"].existing_config == base_config
+        assert str(test_project.id) in results["create"].conflict_message
+        assert "Cannot create MCP server" in results["create"].conflict_message
+        assert "Cannot update MCP server" in results["update"].conflict_message
+        assert "Cannot delete MCP server" in results["delete"].conflict_message
 
-            # Test update operation
-            result = await validate_mcp_server_for_project(
-                test_project.id, test_project.name, active_user, session, storage_service, settings_service, "update"
-            )
-            assert "Cannot update MCP server" in result.conflict_message
-
-            # Test delete operation
-            result = await validate_mcp_server_for_project(
-                test_project.id, test_project.name, active_user, session, storage_service, settings_service, "delete"
-            )
-            assert "Cannot delete MCP server" in result.conflict_message
-
-        # Cleanup - delete the server
-        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": created_api_key.api_key})
+        for candidate_name in candidate_names:
+            await client.delete(f"/api/v2/mcp/servers/{candidate_name}", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
     async def test_validate_server_exception_handling(self, active_user, test_project, client: AsyncClient):  # noqa: ARG002

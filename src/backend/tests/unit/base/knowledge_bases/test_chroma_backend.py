@@ -9,7 +9,10 @@ tmp_path-backed collections with tiny document sets.
 from __future__ import annotations
 
 import gc
+import re
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
+from uuid import UUID, uuid4
 
 import chromadb.errors
 import pytest
@@ -24,12 +27,16 @@ from lfx.base.knowledge_bases.backends import (
     ChromaCloudBackend,
     ChromaLocalBackend,
     IngestedDocument,
+    PostgresBackend,
 )
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_JOB_ID,
     METADATA_KEY_SOURCE,
     METADATA_KEY_SOURCE_TYPE,
 )
+from lfx.base.knowledge_bases.backends.chroma import LEGACY_SHARED_COLLECTION_KEY
+from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name
+from lfx.base.knowledge_bases.validation import is_valid_collection_name
 
 
 class _DeterministicEmbeddings(Embeddings):
@@ -205,6 +212,9 @@ _CLOUD_CONFIG: dict = {
 }
 
 
+_CLOUD_OWNER = UUID("7a0c2f7e-5f1b-4b8e-9d0c-2b1f6f3c9e41")
+
+
 class TestChromaCloudMode:
     """Unit tests for ChromaBackend cloud mode — all network calls are mocked."""
 
@@ -214,6 +224,7 @@ class TestChromaCloudMode:
             kb_path=tmp_path / "cloud_test_kb",
             backend_config=cfg or _CLOUD_CONFIG,
             embedding_function=_DeterministicEmbeddings(),
+            user_id=_CLOUD_OWNER,
         )
 
     # ---- mode detection --------------------------------------------------
@@ -330,7 +341,7 @@ class TestChromaCloudMode:
         mock_local.assert_not_called()
         mock_chroma.assert_called_once_with(
             client=mock_client,
-            collection_name="cloud_test_kb",
+            collection_name=owner_scoped_collection_name(_CLOUD_OWNER, "cloud_test_kb"),
             embedding_function=bk.embedding_function,
             collection_configuration={"embedding_function": None},
         )
@@ -448,7 +459,9 @@ class TestChromaCloudMode:
         ):
             await bk.delete_collection()
 
-        mock_client.delete_collection.assert_called_once_with(name="cloud_test_kb")
+        mock_client.delete_collection.assert_called_once_with(
+            name=owner_scoped_collection_name(_CLOUD_OWNER, "cloud_test_kb")
+        )
 
     async def test_delete_collection_propagates_cloud_errors(self, tmp_path: Path):
         """Cloud errors must bubble up so the route can surface a warning."""
@@ -462,3 +475,94 @@ class TestChromaCloudMode:
             pytest.raises(chromadb.errors.ChromaError),
         ):
             await bk.delete_collection()
+
+
+class TestChromaCloudCollectionIsolation:
+    """Each owner's Chroma Cloud knowledge base must get its own collection.
+
+    Every user whose credentials resolve to the same tenant and database shares
+    one collection namespace, and KB names are only unique per user. Naming the
+    collection after the KB let two users' same-named KBs read, count, and delete
+    each other's chunks. The collection is now owner-scoped unless an explicit
+    ``collection_name`` override is configured.
+    """
+
+    def _make(self, kb_name: str, backend_config: dict, user_id: UUID | str | None) -> ChromaCloudBackend:
+        backend = ChromaCloudBackend(kb_name=kb_name, backend_config=backend_config, user_id=user_id)
+        backend._resolved_api_key = "k"
+        return backend
+
+    def _built_collection(self, backend: ChromaCloudBackend) -> str:
+        with (
+            patch("chromadb.CloudClient", return_value=MagicMock()),
+            patch("lfx.base.knowledge_bases.backends.chroma.Chroma", return_value=MagicMock()) as fake_chroma,
+        ):
+            backend._build_vector_store()
+        return fake_chroma.call_args.kwargs["collection_name"]
+
+    def test_same_kb_name_for_different_owners_gets_different_collections(self) -> None:
+        first = self._built_collection(self._make("docs", {"mode": "cloud"}, uuid4()))
+        second = self._built_collection(self._make("docs", {"mode": "cloud"}, uuid4()))
+        assert first != second
+
+    def test_collection_matches_pgvector_and_is_a_valid_chroma_name(self) -> None:
+        owner = uuid4()
+        collection = self._built_collection(self._make("Team Docs", {"mode": "cloud"}, owner))
+        assert collection == PostgresBackend(kb_name="Team Docs", user_id=owner).collection_name
+        assert re.fullmatch(r"lf_[0-9a-f]{24}", collection)
+        assert is_valid_collection_name(collection)
+
+    def test_string_and_uuid_owner_ids_resolve_to_the_same_collection(self) -> None:
+        owner = uuid4()
+        from_uuid = self._built_collection(self._make("docs", {"mode": "cloud"}, owner))
+        from_string = self._built_collection(self._make("docs", {"mode": "cloud"}, str(owner).upper()))
+        assert from_uuid == from_string
+
+    def test_missing_owner_fails_closed(self) -> None:
+        with pytest.raises(ValueError, match="valid user_id"):
+            self._built_collection(self._make("docs", {"mode": "cloud"}, None))
+
+    def test_explicit_collection_name_overrides_derivation(self) -> None:
+        backend = self._make("docs", {"mode": "cloud", "collection_name": "docs"}, uuid4())
+        assert self._built_collection(backend) == "docs"
+
+    def test_override_cannot_target_another_owners_scoped_collection(self) -> None:
+        victim = owner_scoped_collection_name(uuid4(), "docs")
+        backend = self._make("docs", {"mode": "cloud", "collection_name": victim}, uuid4())
+        with pytest.raises(ValueError, match="reserved for owner-scoped"):
+            self._built_collection(backend)
+
+    async def test_delete_collection_uses_the_resolved_collection(self) -> None:
+        owner = uuid4()
+        client = MagicMock()
+        backend = self._make("docs", {"mode": "cloud"}, owner)
+        backend._secrets_resolved = True
+        with patch.object(backend, "_get_cloud_client", return_value=client):
+            await backend.delete_collection()
+        client.delete_collection.assert_called_once_with(name=owner_scoped_collection_name(owner, "docs"))
+
+    async def test_delete_collection_without_owner_touches_nothing(self) -> None:
+        client = MagicMock()
+        backend = self._make("docs", {"mode": "cloud"}, None)
+        backend._secrets_resolved = True
+        with (
+            patch.object(backend, "_get_cloud_client", return_value=client),
+            pytest.raises(ValueError, match="valid user_id"),
+        ):
+            await backend.delete_collection()
+        client.delete_collection.assert_not_called()
+
+    def test_shared_legacy_collection_marker_warns(self) -> None:
+        owner = uuid4()
+        backend = self._make("docs", {"mode": "cloud", LEGACY_SHARED_COLLECTION_KEY: "docs"}, owner)
+        with patch("lfx.base.knowledge_bases.backends.chroma.logger") as fake_logger:
+            collection = self._built_collection(backend)
+        assert collection == owner_scoped_collection_name(owner, "docs")
+        fake_logger.warning.assert_called_once()
+        assert "docs" in fake_logger.warning.call_args.args
+
+    def test_no_warning_without_the_marker(self) -> None:
+        backend = self._make("docs", {"mode": "cloud"}, uuid4())
+        with patch("lfx.base.knowledge_bases.backends.chroma.logger") as fake_logger:
+            self._built_collection(backend)
+        fake_logger.warning.assert_not_called()
