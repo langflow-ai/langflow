@@ -167,6 +167,52 @@ class RuntimeSettings(BaseModel):
     trigger_purge_interval_s: float = Field(default=3600.0, gt=0)
     """How often the purge pass runs inside the dispatcher loop."""
 
+    # Triggers (TRG-3): the supervised listener process that holds Track B
+    # provider connections (Slack Socket Mode, Graph delta polling, Gmail
+    # Pub/Sub pull). The listeners never run the dispatcher loops and the API
+    # never holds a provider connection; the two processes meet only at the
+    # ledger.
+    listeners_mode: Literal["off", "subprocess"] = "off"
+    """Whether the API lifespan spawns ``langflow listeners`` as a child process.
+
+    ``off`` (default) means the API hosts no listeners: either nothing needs
+    Track B, or an operator runs ``langflow listeners`` as its own service (the
+    supported shape for multi-replica deployments). ``subprocess`` is the
+    single-container and Desktop shape - exactly one API worker spawns the child
+    and stops it on shutdown, so a multi-worker API does not start N copies."""
+    listeners_health_host: str = "127.0.0.1"
+    """Interface the listener health server binds. Loopback by default so a
+    listener container exposes nothing by accident; set ``0.0.0.0`` when a
+    Kubernetes probe or a Compose healthcheck must reach it from outside the
+    process namespace."""
+    listeners_health_port: int = Field(default=7861, gt=0, le=65535)
+    """Port serving ``/health`` (liveness) and ``/healthz`` (readiness) in the
+    listener process. The listener serves nothing else: it has no HTTP app."""
+    listener_lease_ttl_s: float = Field(default=30.0, gt=0)
+    """How long a ``trigger_listener_lease`` row stays valid without a
+    heartbeat. A replica that dies has its connections taken over within two
+    TTLs, which is the failover target ``decisions/process-model.md`` records.
+    Expiry is a Langflow recovery bound, not proof that the dead process closed
+    its socket, so adapters must tolerate bounded overlap."""
+    listener_heartbeat_interval_s: float = Field(default=10.0, gt=0)
+    """How often a held connection lease is renewed. Must stay well below
+    ``listener_lease_ttl_s`` so a healthy holder never looks dead."""
+    listener_reconcile_interval_s: float = Field(default=5.0, gt=0)
+    """How often the supervisor compares the triggers in the database with the
+    connections it is holding, and claims or drops leases accordingly. There is
+    no broker: this poll is how a listener learns about a new trigger."""
+    listener_poll_interval_s: float = Field(default=30.0, gt=0)
+    """Default interval for the generic poll loop that drives pull adapters.
+    An adapter may ask for a different cadence; this is the fallback."""
+    listener_backoff_base_s: float = Field(default=2.0, gt=0)
+    """First delay after a connection task fails. Subsequent consecutive
+    failures back off exponentially, with jitter, up to the cap."""
+    listener_backoff_cap_s: float = Field(default=300.0, gt=0)
+    """Ceiling on the listener reconnect backoff."""
+    listener_failure_threshold: int = Field(default=5, gt=0)
+    """Consecutive failures on one connection before the error is surfaced on
+    every trigger that connection feeds. A success resets the counter."""
+
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.
 

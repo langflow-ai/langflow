@@ -1,0 +1,538 @@
+"""The supervisor: which connections this replica holds, and what to do when one breaks.
+
+The shape comes from ``decisions/process-model.md``. One reconcile loop compares
+the triggers in the database with the connections this process is holding and
+moves one step toward agreement. There is no broker and no push: the poll *is*
+how a listener learns that a trigger was armed, paused, or deleted.
+
+Three invariants hold the design together.
+
+**One replica per connection.** A ``trigger_listener_lease`` row is claimed
+before an adapter starts and renewed on a heartbeat. Losing the lease cancels
+the adapter immediately; a replica that cannot renew must assume another one has
+already taken over.
+
+**One connection per adapter, not one per trigger.** Several triggers on several
+flows may share one Slack workspace connection. Opening a socket per trigger
+would blow the provider's connection budget (Slack allows ten per app), so the
+supervisor fans the trigger list into one adapter and the adapter emits per
+trigger.
+
+**Failure is the supervisor's problem.** An adapter raises; the supervisor backs
+off with jitter, keeps the lease so the connection does not thrash between
+replicas, surfaces the error on the triggers once it is persistent, and - for
+the one failure a retry can never fix, a revoked or expired credential - moves
+the triggers to ``needs_reconnect`` and stops.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import random
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any
+
+from lfx.integrations.errors import (
+    AuthExpiredError,
+    ConnectionNotAuthorizedError,
+    ConnectionUnresolvedError,
+    ScopeMissingError,
+)
+from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
+from lfx.log.logger import logger
+from pydantic import ValidationError
+from sqlmodel import col, select
+
+from langflow.services.database.models.connection.model import Connection
+from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
+from langflow.services.database.models.trigger.model import Trigger
+from langflow.services.database.models.trigger.schemas import TriggerState
+from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
+from langflow.services.triggers import ledger
+from langflow.services.triggers.constants import FAMILY_TRIGGER_LISTENER
+from langflow.services.triggers.listeners import connection_leases
+from langflow.services.triggers.listeners.adapters import (
+    ListenerContext,
+    ListenerTrigger,
+    build_adapter,
+    is_listener_kind,
+)
+from langflow.services.triggers.principal import trigger_execution_principal
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.triggers.listeners.adapters import ListenerAdapter
+
+#: Connection statuses that no amount of retrying fixes. The owner has to
+#: re-consent, so the triggers say so and the listener stops dialling.
+_UNUSABLE_CONNECTION_STATUSES = frozenset(
+    {PersistedConnectionStatus.REVOKED.value, PersistedConnectionStatus.EXPIRED.value}
+)
+
+#: Adapter failures that mean the same thing.
+_NEEDS_RECONNECT_ERRORS = (
+    AuthExpiredError,
+    ConnectionNotAuthorizedError,
+    ConnectionUnresolvedError,
+    ScopeMissingError,
+)
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def new_holder_token() -> str:
+    """A process-unique holder token for this replica's leases."""
+    from langflow.services.triggers.leases import new_owner_token
+
+    return new_owner_token("listener")
+
+
+def _snapshot(row: Trigger) -> ListenerTrigger:
+    config = row.config or {}
+    return ListenerTrigger(
+        id=row.id,
+        flow_id=row.flow_id,
+        user_id=row.user_id,
+        kind=row.kind,
+        provider=row.provider,
+        mechanism_id=config.get("mechanism_id"),
+        config=dict(config),
+        provider_state=dict(row.provider_state or {}),
+    )
+
+
+async def load_desired_state(session: AsyncSession) -> dict[UUID, list[ListenerTrigger]]:
+    """Every armed Track B trigger, grouped by the connection it holds.
+
+    Only ``active`` triggers are listened to. ``paused`` is the owner's off
+    switch, ``needs_reconnect`` is waiting on a human, and ``error`` and
+    ``dead`` have already stopped; none of them should hold a socket open.
+    """
+    statement = select(Trigger).where(
+        Trigger.state == TriggerState.ACTIVE.value,
+        col(Trigger.connection_id).is_not(None),
+    )
+    desired: dict[UUID, list[ListenerTrigger]] = {}
+    for row in (await session.exec(statement)).all():
+        snapshot = _snapshot(row)
+        if not is_listener_kind(snapshot):
+            # A schedule or a TRG-4 push trigger. Not ours.
+            continue
+        assert row.connection_id is not None  # noqa: S101 - narrowed by the query
+        desired.setdefault(row.connection_id, []).append(snapshot)
+    return desired
+
+
+async def unusable_connection_ids(session: AsyncSession, connection_ids: list[UUID]) -> set[UUID]:
+    """Connections whose credential the owner has to re-grant."""
+    if not connection_ids:
+        return set()
+    statement = select(Connection).where(col(Connection.id).in_(connection_ids))
+    rows = (await session.exec(statement)).all()
+    found = {row.id for row in rows}
+    unusable = {row.id for row in rows if row.status in _UNUSABLE_CONNECTION_STATUSES}
+    # A connection row that vanished is unusable too: ``ON DELETE SET NULL``
+    # clears the trigger's reference, but until reconciliation notices, the
+    # listener would otherwise dial a connection that no longer exists.
+    return unusable | (set(connection_ids) - found)
+
+
+async def mark_needs_reconnect(session: AsyncSession, *, trigger_ids: list[UUID], reason: str) -> None:
+    """Move triggers to ``needs_reconnect`` and stop listening for them."""
+    if not trigger_ids:
+        return
+    for row in (await session.exec(select(Trigger).where(col(Trigger.id).in_(trigger_ids)))).all():
+        if row.state == TriggerState.NEEDS_RECONNECT.value:
+            continue
+        row.state = TriggerState.NEEDS_RECONNECT.value
+        row.last_error = reason
+        row.updated_at = _now()
+        session.add(row)
+    await session.flush()
+
+
+async def record_listener_error(session: AsyncSession, *, trigger_ids: list[UUID], message: str) -> None:
+    """Surface a persistent connection failure on the triggers it affects.
+
+    The state is deliberately left alone. A flapping provider is not an owner
+    configuration error, and moving the trigger out of ``active`` would stop the
+    listener retrying - which is the opposite of what a transient outage needs.
+    """
+    if not trigger_ids:
+        return
+    for row in (await session.exec(select(Trigger).where(col(Trigger.id).in_(trigger_ids)))).all():
+        row.last_error = message
+        row.updated_at = _now()
+        session.add(row)
+    await session.flush()
+
+
+async def clear_listener_error(session: AsyncSession, *, trigger_ids: list[UUID]) -> None:
+    """Clear an error a later success disproved."""
+    if not trigger_ids:
+        return
+    statement = select(Trigger).where(col(Trigger.id).in_(trigger_ids), col(Trigger.last_error).is_not(None))
+    for row in (await session.exec(statement)).all():
+        row.last_error = None
+        row.updated_at = _now()
+        session.add(row)
+    await session.flush()
+
+
+@dataclass
+class ConnectionWorker:
+    """One held connection: its adapter, its task, and its failure history."""
+
+    connection_id: UUID
+    triggers: list[ListenerTrigger]
+    adapter: ListenerAdapter
+    stopping: asyncio.Event
+    task: asyncio.Task | None = None
+    consecutive_failures: int = 0
+    next_attempt_at: datetime | None = None
+    last_error: str | None = None
+    last_renewed_at: datetime = field(default_factory=_now)
+    succeeded_since_failure: bool = False
+
+    @property
+    def running(self) -> bool:
+        return self.task is not None and not self.task.done()
+
+    def resting(self, *, now: datetime | None = None) -> bool:
+        """True while the worker is inside its backoff window."""
+        return self.next_attempt_at is not None and self.next_attempt_at > (now or _now())
+
+    def healthy(self) -> bool:
+        return self.running and self.adapter.healthy()
+
+
+class ListenerSupervisor:
+    """Reconciles held connections against the trigger table, forever."""
+
+    def __init__(self, *, holder: str | None = None) -> None:
+        self.holder = holder or new_holder_token()
+        self.workers: dict[UUID, ConnectionWorker] = {}
+        self._task: asyncio.Task | None = None
+        self._stopping = asyncio.Event()
+        self.last_reconcile_at: datetime | None = None
+        self.last_reconcile_error: str | None = None
+        self.last_renew_failure_at: datetime | None = None
+        self.started_at = _now()
+
+    # ------------------------------------------------------------------ #
+    # Lifecycle
+    # ------------------------------------------------------------------ #
+
+    @property
+    def running(self) -> bool:
+        return self._task is not None and not self._task.done()
+
+    def start(self) -> None:
+        if self.running:
+            return
+        self._stopping = asyncio.Event()
+        self._task = asyncio.create_task(self._loop())
+
+    async def stop(self) -> None:
+        """Stop every adapter and hand back every lease.
+
+        Leases are released rather than left to expire so a rolling restart
+        moves connections in seconds instead of a TTL, and so a Desktop user
+        closing the app leaves nothing behind that looks alive.
+        """
+        self._stopping.set()
+        task, self._task = self._task, None
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        for worker in list(self.workers.values()):
+            await self._stop_worker(worker)
+        self.workers.clear()
+        with contextlib.suppress(Exception):
+            async with session_scope() as session:
+                await connection_leases.release_all(session, holder=self.holder)
+
+    async def _loop(self) -> None:
+        settings = get_settings_service().settings
+        while not self._stopping.is_set():
+            try:
+                await self.reconcile()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001 - one bad pass must not end the process
+                self.last_reconcile_error = type(exc).__name__
+                await logger.aerror("Listener reconcile failed: %s", type(exc).__name__)
+            with contextlib.suppress(TimeoutError, asyncio.TimeoutError):
+                await asyncio.wait_for(self._stopping.wait(), timeout=settings.listener_reconcile_interval_s)
+
+    # ------------------------------------------------------------------ #
+    # Reconciliation
+    # ------------------------------------------------------------------ #
+
+    async def reconcile(self) -> None:
+        """One pass toward agreement between the table and the held set."""
+        settings = get_settings_service().settings
+        async with session_scope() as session:
+            desired = await load_desired_state(session)
+            unusable = await unusable_connection_ids(session, list(desired))
+            for connection_id in unusable:
+                await mark_needs_reconnect(
+                    session,
+                    trigger_ids=[trigger.id for trigger in desired[connection_id]],
+                    reason="The connection was revoked or expired. Reconnect it to resume this trigger.",
+                )
+                desired.pop(connection_id, None)
+
+        # Connections we hold but no longer want.
+        for connection_id in [cid for cid in self.workers if cid not in desired]:
+            await self._drop(connection_id)
+
+        for connection_id, triggers in desired.items():
+            await self._ensure(connection_id, triggers, ttl_s=settings.listener_lease_ttl_s)
+
+        self.last_reconcile_at = _now()
+        self.last_reconcile_error = None
+
+    async def _ensure(self, connection_id: UUID, triggers: list[ListenerTrigger], *, ttl_s: float) -> None:
+        worker = self.workers.get(connection_id)
+        settings = get_settings_service().settings
+
+        if worker is None:
+            async with session_scope() as session:
+                claimed = await connection_leases.claim(
+                    session, connection_id=connection_id, holder=self.holder, ttl_s=ttl_s
+                )
+            if not claimed:
+                return
+            adapter = build_adapter(triggers[0])
+            if adapter is None:  # pragma: no cover - filtered by is_listener_kind
+                async with session_scope() as session:
+                    await connection_leases.release(session, connection_id=connection_id, holder=self.holder)
+                return
+            worker = ConnectionWorker(
+                connection_id=connection_id,
+                triggers=triggers,
+                adapter=adapter,
+                stopping=asyncio.Event(),
+            )
+            self.workers[connection_id] = worker
+            self._spawn(worker)
+            return
+
+        # Renew before anything else: an adapter running without a lease is the
+        # one state this design must not have.
+        if (_now() - worker.last_renewed_at).total_seconds() >= settings.listener_heartbeat_interval_s:
+            async with session_scope() as session:
+                renewed = await connection_leases.claim(
+                    session, connection_id=connection_id, holder=self.holder, ttl_s=ttl_s
+                )
+            if not renewed:
+                self.last_renew_failure_at = _now()
+                await logger.awarning("Listener lost the lease on connection %s; stopping its adapter", connection_id)
+                await self._drop(connection_id, release_lease=False)
+                return
+            worker.last_renewed_at = _now()
+
+        worker.triggers = triggers
+        if not worker.running and not worker.resting():
+            self._spawn(worker)
+
+    async def _drop(self, connection_id: UUID, *, release_lease: bool = True) -> None:
+        worker = self.workers.pop(connection_id, None)
+        if worker is None:
+            return
+        await self._stop_worker(worker)
+        if release_lease:
+            with contextlib.suppress(Exception):
+                async with session_scope() as session:
+                    await connection_leases.release(session, connection_id=connection_id, holder=self.holder)
+
+    async def _stop_worker(self, worker: ConnectionWorker) -> None:
+        worker.stopping.set()
+        task, worker.task = worker.task, None
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
+        with contextlib.suppress(Exception):
+            await worker.adapter.stop()
+
+    # ------------------------------------------------------------------ #
+    # One connection's task
+    # ------------------------------------------------------------------ #
+
+    def _spawn(self, worker: ConnectionWorker) -> None:
+        worker.stopping = asyncio.Event()
+        worker.next_attempt_at = None
+        worker.task = asyncio.create_task(self._run_worker(worker))
+
+    async def _run_worker(self, worker: ConnectionWorker) -> None:
+        ctx = self._context(worker)
+        try:
+            await worker.adapter.start(ctx)
+        except asyncio.CancelledError:
+            raise
+        except _NEEDS_RECONNECT_ERRORS as exc:
+            await self._needs_reconnect(worker, exc)
+        except Exception as exc:  # noqa: BLE001 - every adapter failure is a backoff, not a crash
+            await self._failed(worker, exc)
+
+    def _context(self, worker: ConnectionWorker) -> ListenerContext:
+        async def emit(*, trigger_id: UUID, dedupe_key: str, payload: dict[str, Any]) -> bool:
+            """Commit one ledger row. Returns True when it was new.
+
+            The write happens in its own transaction and is committed before the
+            caller regains control, so an adapter that acknowledges a provider
+            immediately afterwards is acknowledging something durable. That is
+            the whole of the listener's delivery responsibility: it never runs a
+            flow, and the dispatcher picks the row up from the ledger.
+            """
+            async with session_scope() as session:
+                _row, created = await ledger.append_event(
+                    session, trigger_id=trigger_id, dedupe_key=dedupe_key, payload=payload
+                )
+            if created and not worker.succeeded_since_failure:
+                await self._succeeded(worker)
+            return created
+
+        async def save_cursor(*, trigger_id: UUID, provider_state: dict[str, Any]) -> None:
+            """Persist a provider cursor (``deltaLink``, ``historyId``, ...).
+
+            Written to ``trigger.provider_state``, never to ``config``, so a
+            canvas save cannot clobber a cursor and replay the world.
+            """
+            async with session_scope() as session:
+                row = await session.get(Trigger, trigger_id)
+                if row is None:
+                    return
+                row.provider_state = dict(provider_state)
+                row.updated_at = _now()
+                session.add(row)
+
+        async def resolve_credential(trigger_id: UUID | None = None) -> Any:
+            """Resolve this connection through the registered resolver.
+
+            In this process, not over HTTP: the whole reason the listener is a
+            separate process rather than a second API replica is that it holds
+            connections itself (``decisions/process-model.md``, and the 1.13
+            boundary obligation on INT-2). Refresh goes through the same
+            cross-process coordinator the API uses, so two processes refreshing
+            one token still mint one.
+            """
+            target = next((t for t in worker.triggers if trigger_id is None or t.id == trigger_id), None)
+            if target is None:
+                msg = "No trigger on this connection to resolve a credential for."
+                raise ConnectionUnresolvedError(provider=None, hint=msg)
+            async with session_scope() as session:
+                row = await session.get(Connection, worker.connection_id)
+                trigger_row = await session.get(Trigger, target.id)
+            if row is None or trigger_row is None:
+                raise ConnectionUnresolvedError(provider=None)
+            try:
+                request = ConnectionResolutionRequest(
+                    ref=ConnectionRef(provider=row.provider_key, name=row.name),
+                    principal=trigger_execution_principal(trigger_row, family=FAMILY_TRIGGER_LISTENER),
+                    required_scopes=frozenset(),
+                )
+            except ValidationError as exc:
+                # A row whose handle does not parse cannot be resolved. Raise the
+                # typed error so the supervisor classifies it as "needs
+                # reconnect" instead of retrying a row that can never work -
+                # the same treatment ``principal.connection_preflight`` gives it
+                # on the dispatch side.
+                raise ConnectionUnresolvedError(provider=row.provider_key) from exc
+            return await get_connection_resolver_service().resolve(request)
+
+        return ListenerContext(
+            connection_id=worker.connection_id,
+            triggers=worker.triggers,
+            emit=emit,
+            save_cursor=save_cursor,
+            resolve_credential=resolve_credential,
+            stopping=worker.stopping,
+        )
+
+    # ------------------------------------------------------------------ #
+    # Failure accounting
+    # ------------------------------------------------------------------ #
+
+    async def _succeeded(self, worker: ConnectionWorker) -> None:
+        """A delivery landed: forget the failure history and the error banner."""
+        had_failures = worker.consecutive_failures >= get_settings_service().settings.listener_failure_threshold
+        worker.consecutive_failures = 0
+        worker.next_attempt_at = None
+        worker.last_error = None
+        worker.succeeded_since_failure = True
+        if had_failures:
+            with contextlib.suppress(Exception):
+                async with session_scope() as session:
+                    await clear_listener_error(session, trigger_ids=[t.id for t in worker.triggers])
+
+    async def _failed(self, worker: ConnectionWorker, exc: Exception) -> None:
+        settings = get_settings_service().settings
+        worker.consecutive_failures += 1
+        worker.succeeded_since_failure = False
+        worker.last_error = type(exc).__name__
+        delay = min(
+            settings.listener_backoff_base_s * (2 ** (worker.consecutive_failures - 1)),
+            settings.listener_backoff_cap_s,
+        )
+        delay *= random.uniform(0.85, 1.15)  # noqa: S311 - jitter, not crypto
+        worker.next_attempt_at = _now() + timedelta(seconds=delay)
+        await logger.awarning(
+            "Listener connection %s failed (%s consecutive); retrying in %.1fs",
+            worker.connection_id,
+            worker.consecutive_failures,
+            delay,
+        )
+        if worker.consecutive_failures >= settings.listener_failure_threshold:
+            # Persistent enough that the owner should see it on the trigger,
+            # not only in a log the owner cannot read.
+            with contextlib.suppress(Exception):
+                async with session_scope() as session:
+                    await record_listener_error(
+                        session,
+                        trigger_ids=[t.id for t in worker.triggers],
+                        message=(
+                            f"The listener could not hold this connection after "
+                            f"{worker.consecutive_failures} attempts ({worker.last_error}). Retrying."
+                        ),
+                    )
+
+    async def _needs_reconnect(self, worker: ConnectionWorker, exc: Exception) -> None:
+        """Stop retrying: only a human re-granting consent fixes this."""
+        await logger.awarning("Listener connection %s needs reconnect: %s", worker.connection_id, type(exc).__name__)
+        with contextlib.suppress(Exception):
+            async with session_scope() as session:
+                await mark_needs_reconnect(
+                    session,
+                    trigger_ids=[t.id for t in worker.triggers],
+                    reason="The connection is no longer authorized. Reconnect it to resume this trigger.",
+                )
+        await self._drop(worker.connection_id)
+
+    # ------------------------------------------------------------------ #
+    # Health
+    # ------------------------------------------------------------------ #
+
+    def snapshot(self) -> dict[str, Any]:
+        """What ``/healthz`` reports. Cheap: no database access."""
+        return {
+            "holder": self.holder,
+            "running": self.running,
+            "connections": len(self.workers),
+            "healthy_connections": sum(1 for worker in self.workers.values() if worker.healthy()),
+            "resting_connections": sum(1 for worker in self.workers.values() if worker.resting()),
+            "last_reconcile_at": self.last_reconcile_at.isoformat() if self.last_reconcile_at else None,
+            "last_reconcile_error": self.last_reconcile_error,
+            "last_renew_failure_at": (self.last_renew_failure_at.isoformat() if self.last_renew_failure_at else None),
+            "started_at": self.started_at.isoformat(),
+        }

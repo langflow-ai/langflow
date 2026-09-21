@@ -1,0 +1,51 @@
+# Langflow trigger listeners (TRG-3), as their own Compose service.
+#
+# Track B triggers - Slack Socket Mode, Microsoft Graph delta polling, Gmail
+# Pub/Sub pull - need a process that holds outbound connections. That process
+# must not be the API: the API runs several uvicorn workers and is restarted and
+# autoscaled on its own schedule, so hosting connections there either duplicates
+# or drops them.
+#
+# Run this alongside your existing Langflow stack:
+#
+#   docker compose -f docker-compose.yml -f deploy/listeners/docker-compose.listeners.yml up -d
+#
+# Requirements:
+#   * the same LANGFLOW_DATABASE_URL and LANGFLOW_SECRET_KEY as the API - the
+#     listener reads the same connection rows and decrypts the same tokens;
+#   * PostgreSQL. SQLite is single-process: use LANGFLOW_LISTENERS_MODE=subprocess
+#     on the API container instead of this service;
+#   * the API started (or upgraded) first. The listener never migrates.
+#
+# Sizing: one replica holds every connection it wins a lease on. Start at 1 and
+# add replicas when a single process cannot keep up - leases spread connections
+# across replicas automatically, and each connection is held by exactly one.
+services:
+  langflow-listeners:
+    image: langflowai/langflow:latest
+    pull_policy: always
+    command: ["langflow", "listeners"]
+    depends_on:
+      - langflow
+      - postgres
+    environment:
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+      # Must equal the API's key: the listener decrypts the same tokens.
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?set LANGFLOW_SECRET_KEY in .env}
+      - LANGFLOW_CONFIG_DIR=/app/langflow
+      # Bind the health endpoint on all interfaces so the healthcheck below can
+      # reach it. There is nothing else on this port: no API, no UI.
+      - LANGFLOW_LISTENERS_HEALTH_HOST=0.0.0.0
+      - LANGFLOW_LISTENERS_HEALTH_PORT=7861
+    healthcheck:
+      # /healthz is readiness: database reachable, reconcile loop fresh, no
+      # lease renewal failure inside the last TTL.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:7861/healthz', timeout=5).status == 200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Give the process time to release its connection leases on SIGTERM instead
+    # of leaving them to expire, which would cost the next holder up to 2 TTLs.
+    stop_grace_period: 30s
+    restart: unless-stopped

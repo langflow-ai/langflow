@@ -1,0 +1,106 @@
+# Langflow trigger listeners (TRG-3) as a Kubernetes Deployment.
+#
+# This is the supported shape for multi-replica deployments. The API Deployment
+# keeps serving HTTP and running the trigger dispatcher; this Deployment holds
+# the outbound provider connections (Slack Socket Mode, Microsoft Graph delta
+# polling, Gmail Pub/Sub pull) and writes events to the same ledger.
+#
+# Apply after the API has started against this database: the listener never runs
+# migrations, and it exits with an explicit message if the trigger tables are
+# missing.
+#
+#   kubectl apply -f deploy/listeners/kubernetes-deployment.yaml
+#
+# Sizing. Each connection is held by exactly one replica, elected by a
+# `trigger_listener_lease` row. One replica is the right starting point for most
+# installs; scale out when a single process cannot keep up with the number of
+# armed connections, not to gain redundancy - a dead replica's leases are taken
+# over within two lease TTLs (60s at the defaults) whether or not another
+# replica was already running.
+#
+# There is no Service and no Ingress on purpose. The listener accepts no
+# inbound traffic; the health port exists for probes only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langflow-listeners
+  labels:
+    app.kubernetes.io/name: langflow
+    app.kubernetes.io/component: listeners
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: langflow
+      app.kubernetes.io/component: listeners
+  strategy:
+    # Stop the old pod before starting the new one. Two pods overlapping is
+    # safe (leases serialize them) but pointless: the newcomer would idle until
+    # the outgoing pod released its leases.
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: langflow
+        app.kubernetes.io/component: listeners
+    spec:
+      # Long enough for SIGTERM to stop every adapter and release every lease.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: listeners
+          image: langflowai/langflow:latest
+          args: ["langflow", "listeners"]
+          env:
+            # The same database and the same secret key as the API: the listener
+            # reads the same connection rows and decrypts the same tokens.
+            - name: LANGFLOW_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-secrets
+                  key: database-url
+            - name: LANGFLOW_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-secrets
+                  key: secret-key
+            # Probes reach the pod on its pod IP, so the health server cannot
+            # stay on loopback here.
+            - name: LANGFLOW_LISTENERS_HEALTH_HOST
+              value: "0.0.0.0"
+            - name: LANGFLOW_LISTENERS_HEALTH_PORT
+              value: "7861"
+          ports:
+            - name: health
+              containerPort: 7861
+          livenessProbe:
+            # The process is up and its reconcile task is alive.
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            # The database answers, the reconcile loop is fresh, and no lease
+            # renewal has failed inside the last TTL.
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            # A listener holds connections and normalizes small payloads; it
+            # does not execute flows. Flow execution stays on the API/worker
+            # side, which is why these requests are modest.
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
