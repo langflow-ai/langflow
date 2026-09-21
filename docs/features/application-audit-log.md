@@ -153,7 +153,8 @@ its event share the later transaction.
 A read-only, Project-specific view over `audit_events`. It never returns
 Project or Flow content, and reading records no event.
 
-**Query parameters** — `project_id`, `operation`*, `event_type`*, `result`*,
+**Query parameters** — `project_id`, `operation`* (`create`, `replace`, `patch`,
+`delete`), `event_type`* (`action`), `result`* (`succeeded`, `failed`),
 `user_id`, `actor_type`*, `actor_id`, `acting_subject`, `acting_issuer`
 (requires `acting_subject`), `request_id`, `since` (inclusive RFC 3339),
 `until` (exclusive, later than `since`), `cursor`, `limit` (1–200, default 50).
@@ -188,7 +189,8 @@ No total and no page number. Ordered by `(timestamp DESC, id DESC)`; the
 timestamp keeps microseconds so a client re-sorting a page agrees with the server.
 
 **Access.** Requires the `project:audit_read` permission (`ProjectAction.AUDIT_READ`),
-which a role can grant like any other `project:*` action.
+which a role can grant like any other `project:*` action. Resource ownership does
+not implicitly grant this permission when an authorization plugin is active.
 
 | Caller | Without `project_id` | With `project_id` |
 |---|---|---|

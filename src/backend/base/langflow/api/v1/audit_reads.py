@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -29,8 +30,6 @@ from langflow.services.database.models.audit_event.model import (
 from langflow.services.deps import get_authorization_service
 
 if TYPE_CHECKING:
-    from enum import Enum
-
     from fastapi import Request
     from sqlalchemy.sql.elements import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -113,16 +112,28 @@ def _grouped(request: Request, allowed: set[str]) -> dict[str, list[str]]:
     return grouped
 
 
-def _enum_values(key: str, values: list[str]) -> frozenset[Any]:
+def _enum_values(key: str, values: list[str], allowed_values: frozenset[Enum] | None = None) -> frozenset[Any]:
     enum = _REPEATABLE[key]
     try:
-        return frozenset(enum(value) for value in values)
+        parsed = frozenset(enum(value) for value in values)
     except ValueError as exc:
         msg = f"Unsupported value for {key}"
         raise _bad_request(msg) from exc
+    if allowed_values is not None and not parsed.issubset(allowed_values):
+        msg = f"Unsupported value for {key}"
+        raise _bad_request(msg)
+    return parsed
 
 
-def parse_audit_query(request: Request, *, resource_type: AuditResourceType, id_param: str) -> AuditReadQuery:
+def parse_audit_query(
+    request: Request,
+    *,
+    resource_type: AuditResourceType,
+    id_param: str,
+    allowed_operations: frozenset[AuditOperation],
+    allowed_event_types: frozenset[AuditEventType],
+    allowed_results: frozenset[AuditResult],
+) -> AuditReadQuery:
     """Turn the raw query string into filters, or answer 400."""
     allowed = {id_param, *_REPEATABLE, *_SINGLE_UUIDS, *_TEXT_LIMITS, "since", "until", "cursor", "limit"}
     grouped = _grouped(request, allowed)
@@ -140,13 +151,20 @@ def parse_audit_query(request: Request, *, resource_type: AuditResourceType, id_
         msg = "until must be later than since"
         raise _bad_request(msg)
     uuids = {key: _uuid(key, single[key]) for key in (id_param, *_SINGLE_UUIDS) if key in single}
-    enums = {key: _enum_values(key, values) for key, values in grouped.items() if key in _REPEATABLE}
+    allowed_enums: dict[str, frozenset[Enum]] = {
+        "operation": allowed_operations,
+        "event_type": allowed_event_types,
+        "result": allowed_results,
+    }
+    enums = {
+        key: _enum_values(key, values, allowed_enums.get(key)) for key, values in grouped.items() if key in _REPEATABLE
+    }
     filters = AuditEventFilters(
         resource_type=resource_type,
         resource_id=uuids.get(id_param),
-        operations=enums.get("operation", frozenset()),
-        event_types=enums.get("event_type", frozenset()),
-        results=enums.get("result", frozenset()),
+        operations=enums.get("operation", allowed_operations),
+        event_types=enums.get("event_type", allowed_event_types),
+        results=enums.get("result", allowed_results),
         actor_types=enums.get("actor_type", frozenset()),
         user_id=uuids.get("user_id"),
         actor_id=uuids.get("actor_id"),
