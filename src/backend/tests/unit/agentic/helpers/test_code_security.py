@@ -7,10 +7,18 @@ Tests cover:
 - Edge cases (syntax errors, empty code)
 """
 
+import ast
+import contextlib
 import sys
+import tracemalloc
 
 import pytest
-from langflow.agentic.helpers.code_security import scan_code_security
+from langflow.agentic.helpers.code_security import (
+    _STATIC_EVAL_MAX_RESOLVED_CHARS,
+    StaticEvaluationBudgetExceededError,
+    _static_string_value,
+    scan_code_security,
+)
 
 
 class TestScanCodeSecuritySafeCode:
@@ -1546,6 +1554,81 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         result = scan_code_security("getattr(record, 'display' + '_name', None)")
         assert result.is_safe is True
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "def helper():\n    return None\ngetattr(helper, ''.join(['__glob', 'als__']))",
+                id="join-list-getattr-globals",
+            ),
+            pytest.param(
+                "getattr(object, ''.join(('__sub', 'classes__')))()",
+                id="join-tuple-getattr-subclasses",
+            ),
+            pytest.param(
+                "getattr(helper, ''.join(part for part in ['__glob', 'als__']))",
+                id="join-generator-getattr-globals",
+            ),
+            pytest.param(
+                "import os\ngetattr(os, ''.join(['sys', 'tem']))('id')",
+                id="join-getattr-os-system",
+            ),
+            pytest.param(
+                "import os\ngetattr(os, ''.join(['get', 'env']))('HOME')",
+                id="join-getattr-os-getenv",
+            ),
+            pytest.param(
+                "import os\nname = ''.join(['sy', 'stem'])\ngetattr(os, name)('id')",
+                id="join-name-then-getattr",
+            ),
+            pytest.param(
+                "import pathlib\npathlib.__dict__[''.join(['o', 's'])].fork()",
+                id="join-module-dict-key",
+            ),
+        ],
+    )
+    def test_should_detect_join_computed_dangerous_names(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    def test_should_detect_join_computed_end_to_end_rce_payload(self):
+        """H1-3995693: join-computed reflection must not recover globals/builtins."""
+        code = (
+            "def helper():\n    return None\n\n"
+            "globals_map = getattr(helper, ''.join(['__glob', 'als__']))\n"
+            "builtins_map = globals_map[''.join(['__built', 'ins__'])]\n"
+            "import_function = builtins_map[''.join(['__imp', 'ort__'])]\n"
+            "os_module = import_function(''.join(['o', 's']))\n"
+            "os_module.system('placeholder')\n"
+        )
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "separator = '-'\nvalue = separator.join(['a', 'b'])",
+                id="aliased-separator-join",
+            ),
+            pytest.param(
+                "value = ''.join(part for part in ['a', 'b'] if part)",
+                id="filtered-generator-join",
+            ),
+            pytest.param(
+                "value = ''.join([prefix, 'b'])",
+                id="dynamic-element-join",
+            ),
+            pytest.param(
+                "getattr(record, ''.join(['display', '_name']), None)",
+                id="safe-join-getattr",
+            ),
+        ],
+    )
+    def test_should_allow_unresolved_or_safe_join_strings(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
     def test_should_detect_reflective_call_through_assignment_alias(self):
         result = scan_code_security("import os\nmodule = os\ngetattr(module, 'system')('id')")
         assert result.is_safe is False
@@ -2090,3 +2173,84 @@ class MyComponent:
         """The alias deferral itself must survive: ``module = os`` alone is not a violation."""
         result = scan_code_security("import os\nmodule = os\nmodule = object()\nmodule.system('not os')")
         assert result.is_safe is True
+
+
+class TestStaticEvaluationBudget:
+    """The static string evaluator must not be usable as a memory-exhaustion primitive.
+
+    ``_static_string_value`` exists to recover attribute names like
+    ``getattr(io, "op" + "en")``. Resolving ``str.join`` gave it an amplifier: a
+    generator repeats its element once per item, so nesting
+    ``"".join(<expr> for _ in ("a", "b"))`` doubles the resolved string per level
+    while the source grows by a constant. These run *before* the submitted Python
+    executes, inside the scan, so an overrun costs a worker its memory.
+
+    Every assertion here uses small configured limits or shallow nesting -- no
+    test is allowed to allocate anything large to prove the point.
+    """
+
+    @staticmethod
+    def _nested_join(levels: int) -> str:
+        expr = '"ab"'
+        for _ in range(levels):
+            expr = f'"".join({expr} for _p in ("x", "y"))'
+        return expr
+
+    def test_nested_generator_joins_are_rejected_not_resolved(self):
+        node = ast.parse(self._nested_join(20), mode="eval").body
+        with pytest.raises(StaticEvaluationBudgetExceededError):
+            _static_string_value(node)
+
+    def test_resolved_size_is_bounded_by_the_budget(self):
+        """Whatever does resolve stays under the cap; nothing near it is materialized."""
+        resolved = _static_string_value(ast.parse(self._nested_join(8), mode="eval").body)
+        assert resolved is not None
+        assert len(resolved) <= _STATIC_EVAL_MAX_RESOLVED_CHARS
+
+    def test_peak_allocation_does_not_grow_with_nesting(self):
+        """30 levels implies a gigabyte unbudgeted; measure instead of assuming."""
+        peaks = []
+        for levels in (10, 20, 30):
+            node = ast.parse(self._nested_join(levels), mode="eval").body
+            tracemalloc.start()
+            with contextlib.suppress(StaticEvaluationBudgetExceededError):
+                _static_string_value(node)
+            _, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            peaks.append(peak)
+        assert max(peaks) < 4 * _STATIC_EVAL_MAX_RESOLVED_CHARS
+
+    def test_overrun_is_a_violation_not_a_permissive_none(self):
+        """The scan must fail closed: None would be read as "dynamic, carry on"."""
+        code = f"import io\nx = getattr(io, {self._nested_join(20)})\n"
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("resource exhaustion" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import io\nx = getattr(io, ''.join(['Str', 'ingIO']))",
+            "import io\nx = getattr(io, 'Str' + 'ingIO')",
+            "import io\nx = getattr(io, f'Str{\"ingIO\"}')",
+            "import os\nx = getattr(os, '_'.join(['path']))",
+            "import io\nx = getattr(io, ''.join(p for p in ('Str', 'ingIO')))",
+        ],
+        ids=[
+            "small-literal-join",
+            "small-concat",
+            "small-fstring",
+            "small-join-with-separator",
+            "small-passthrough-generator",
+        ],
+    )
+    def test_ordinary_static_strings_still_resolve(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_separator_repetition_is_charged_before_allocating(self):
+        """A long separator over many elements is priced from the projection, not after."""
+        # Built here rather than written out, so the test source stays small.
+        separator = "s" * 4096
+        source = f'"{separator}".join(["a", "b", "c", "d", "e", "f", "g", "h"])'
+        with pytest.raises(StaticEvaluationBudgetExceededError):
+            _static_string_value(ast.parse(source, mode="eval").body)
