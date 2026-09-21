@@ -384,6 +384,68 @@ def test_get_llm_blank_session_id_falls_back():
     assert headers["x-opencode-session"].startswith("langflow-")
 
 
+# ---------------------------------------------------------------------------
+# Header-safety of the session ID
+#
+# Langflow session IDs are user-influenced, and httpx encodes header values as
+# ASCII. An unsendable value raises UnicodeEncodeError from inside the transport,
+# several frames below get_llm, reporting only a byte offset -- nothing names the
+# session ID as the cause. These pin the sanitisation that prevents that.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "session_id",
+    [
+        "sessão",  # accented Latin - a plausibly-named chat session
+        "会话-1",  # non-Latin script
+        # U+2060 WORD JOINER + U+202F NARROW NO-BREAK SPACE, built from codepoints
+        # so the literal stays visible in source. These invisible characters ride
+        # along when a value is copied out of a rendered web page.
+        "session-" + chr(0x2060) + chr(0x202F) + "1",
+        "chat 🙂",  # emoji
+        "session\r\nX-Injected: 1",  # CRLF header-injection attempt
+        "x" * 500,  # over-length
+    ],
+)
+def test_session_header_is_always_ascii_encodable(session_id):
+    """Every header value must survive the encoding httpx performs."""
+    headers = _call_get_llm(session_id=session_id)["default_headers"]
+    value = headers["x-opencode-session"]
+
+    value.encode("ascii")  # would raise UnicodeEncodeError before sanitisation
+    assert len(value) <= 200
+    assert "\r" not in value
+    assert "\n" not in value
+
+
+def test_session_header_is_stable_across_calls_for_unsafe_ids():
+    """Sanitisation must be deterministic, or prompt caching breaks between turns."""
+    first = _call_get_llm(session_id="sessão")["default_headers"]["x-opencode-session"]
+    second = _call_get_llm(session_id="sessão")["default_headers"]["x-opencode-session"]
+    assert first == second
+
+
+def test_session_header_does_not_collide_across_distinct_unsafe_ids():
+    """Two differently-named sessions must not collapse onto one header value.
+
+    Naive stripping would map "sessão" and "sessao" (and "会话-1" / "会话-2") to the
+    same value, silently merging unrelated conversations into one cache namespace.
+    """
+    values = {
+        _call_get_llm(session_id=sid)["default_headers"]["x-opencode-session"]
+        for sid in ("sessão", "sessao", "会话-1", "会话-2")
+    }
+    assert len(values) == 4
+
+
+def test_safe_session_ids_are_passed_through_untouched():
+    """The common case must not be perturbed by the guard."""
+    for sid in ("abc123", "flow-uuid:session-uuid", "a" * 200):
+        headers = _call_get_llm(session_id=sid)["default_headers"]
+        assert headers["x-opencode-session"] == sid
+
+
 def test_get_llm_does_not_add_headers_for_other_providers():
     """The branch must be inert for every other provider."""
     from lfx.base.models import unified_models as unified_models_module

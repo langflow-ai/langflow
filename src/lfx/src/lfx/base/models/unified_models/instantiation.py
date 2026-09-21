@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import os
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
@@ -33,6 +34,14 @@ if TYPE_CHECKING:
 
 
 OPENCODE_GO_SESSION_HEADER = "x-opencode-session"
+# Header values are encoded as ASCII by httpx. Langflow session IDs are
+# user-influenced (a caller may set any string via the run API), so they are
+# sanitized before use -- see ``_opencode_go_session_id``.
+_MAX_SESSION_ID_LENGTH = 200
+_SAFE_SESSION_PREFIX_LENGTH = 64
+# Bounds of the printable-ASCII range a header value may contain.
+_ASCII_SPACE = 32
+_ASCII_DEL = 127
 
 
 @lru_cache(maxsize=1)
@@ -58,17 +67,45 @@ def _opencode_go_user_agent() -> str:
 
 
 def _opencode_go_session_id(session_id: str | None) -> str:
-    """Return a stable conversation ID, generating one when the caller has none.
+    """Return a stable, header-safe conversation ID.
 
     OpenCode Go rejects requests without ``x-opencode-session``, so a missing or
     blank session ID must degrade to a generated value, never an absent header.
     A real session ID (the executing graph's) keeps consecutive turns of one chat
     on the same value, which is what lets OpenCode optimise routing and prompt
     caching.
+
+    Langflow session IDs are user-influenced -- a caller may set any string via
+    the run API, and a chat session may simply be named in a non-Latin script.
+    ``httpx`` encodes header values as ASCII and raises ``UnicodeEncodeError``
+    from inside the transport if it cannot, which surfaces as an opaque byte
+    offset several frames below this call with nothing naming the session ID as
+    the cause. So anything not safely sendable is mapped to a derived value here.
+
+    Stability is preserved over fidelity: the same input always yields the same
+    output (a digest of the full original, so two differently-named sessions
+    never collapse onto one header value), because a value that changed between
+    turns would defeat the caching the header exists to enable.
     """
-    if isinstance(session_id, str) and session_id.strip():
-        return session_id.strip()
-    return f"langflow-{uuid4()}"
+    if not isinstance(session_id, str) or not session_id.strip():
+        return f"langflow-{uuid4()}"
+
+    candidate = session_id.strip()
+    if _is_header_safe(candidate) and len(candidate) <= _MAX_SESSION_ID_LENGTH:
+        return candidate
+
+    digest = hashlib.sha256(candidate.encode("utf-8")).hexdigest()[:16]
+    readable = "".join(c for c in candidate if _is_header_safe(c))[:_SAFE_SESSION_PREFIX_LENGTH].strip()
+    return f"langflow-{readable}-{digest}" if readable else f"langflow-{digest}"
+
+
+def _is_header_safe(value: str) -> bool:
+    """True when every character is printable ASCII (space through ``~``).
+
+    Excludes control characters (CR/LF header injection) and anything non-ASCII,
+    which is exactly what ``httpx`` will refuse to encode.
+    """
+    return all(_ASCII_SPACE <= ord(c) < _ASCII_DEL for c in value)
 
 
 def _env_if_allowed(key: str) -> str | None:
