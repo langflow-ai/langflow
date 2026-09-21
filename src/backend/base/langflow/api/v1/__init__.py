@@ -1,5 +1,6 @@
 from langflow.api.v1.a2a import router as a2a_router
 from langflow.api.v1.api_key import router as api_key_router
+from langflow.api.v1.audits import router as audits_router
 from langflow.api.v1.authz_audit import router as authz_audit_router
 from langflow.api.v1.authz_capabilities import router as authz_capabilities_router
 from langflow.api.v1.authz_me import router as authz_me_router
@@ -44,6 +45,7 @@ from langflow.api.v1.voice_mode import router as voice_mode_router
 __all__ = [
     "a2a_router",
     "api_key_router",
+    "audits_router",
     "authz_audit_router",
     "authz_capabilities_router",
     "authz_me_router",
