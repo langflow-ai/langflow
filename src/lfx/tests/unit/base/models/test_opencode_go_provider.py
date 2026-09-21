@@ -297,6 +297,63 @@ def test_fetch_live_models_degrades_on_malformed_payload():
         assert fetch_live_opencode_go_models("user-1", "llm") == []
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [{"id": "a"}],  # top-level array: .get() would raise AttributeError
+        "a string",
+        42,
+        None,
+    ],
+)
+def test_fetch_live_models_degrades_on_non_object_payload(payload):
+    """No caller of this fetcher catches anything, so it must never raise.
+
+    A top-level JSON array reached ``.get("data")`` and raised ``AttributeError``,
+    which is caught by neither of the ``except`` clauses.
+    """
+    from lfx.base.models.model_utils import fetch_live_opencode_go_models
+
+    response = MagicMock()
+    response.json.return_value = payload
+    response.raise_for_status.return_value = None
+
+    with (
+        patch("lfx.base.models.model_utils.get_provider_variable_value", return_value="sk-test"),
+        patch("lfx.base.models.model_utils.httpx.get", return_value=response),
+    ):
+        assert fetch_live_opencode_go_models("user-1", "llm") == []
+
+
+def test_fetch_live_models_skips_non_string_ids():
+    """A numeric id became a dict key and made ``sorted()`` raise TypeError.
+
+    Valid rows alongside it must still be returned rather than the whole fetch
+    failing.
+    """
+    from lfx.base.models.model_utils import fetch_live_opencode_go_models
+
+    response = MagicMock()
+    response.json.return_value = {
+        "data": [
+            {"id": 123},
+            {"id": ""},
+            {"id": None},
+            {"id": ["nested"]},
+            {"id": "kimi-k3"},
+        ]
+    }
+    response.raise_for_status.return_value = None
+
+    with (
+        patch("lfx.base.models.model_utils.get_provider_variable_value", return_value="sk-test"),
+        patch("lfx.base.models.model_utils.httpx.get", return_value=response),
+    ):
+        models = fetch_live_opencode_go_models("user-1", "llm")
+
+    assert [m["name"] for m in models] == ["kimi-k3"]
+
+
 def test_get_live_models_for_provider_dispatches_opencode_go():
     from lfx.base.models import model_utils
 
@@ -538,17 +595,45 @@ def test_resolve_session_id_without_graph_returns_none():
     routes through ``CustomComponent.__getattr__``'s "graph" fallback, which itself
     calls ``hasattr(self, "_user_id")`` — and that name is special-cased in
     ``Component.__getattr__`` to read straight out of ``__dict__``, raising
-    ``KeyError`` (not ``AttributeError``) when unset. That's an unrelated framework
-    quirk when synthesizing components via ``__new__``, not something this test is
-    about. A plain object with neither attribute isolates the two ``hasattr`` checks
-    ``_resolve_session_id`` actually performs.
+    ``KeyError`` (not ``AttributeError``) when unset.
+
+    The resolver now catches that, so this asserts against real component classes
+    rather than a stand-in: an uninitialized component must yield ``None``, not
+    raise.
     """
     from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.components.models_and_agents.language_model import LanguageModelComponent
 
-    class _NoGraphStub:
-        """Deliberately has neither ``graph`` nor ``_session_id``."""
+    for cls in (AgentComponent, LanguageModelComponent):
+        detached = cls.__new__(cls)  # bypasses __init__, so _vertex/_user_id are absent
+        assert detached._resolve_session_id() is None, cls.__name__
 
-    assert AgentComponent._resolve_session_id(_NoGraphStub()) is None
+
+def test_resolve_session_id_on_initialized_component_returns_none():
+    """A real component with no executing graph resolves to None, without raising."""
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    assert AgentComponent()._resolve_session_id() is None
+
+
+def test_resolve_session_id_prefers_the_graph_session():
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    component = AgentComponent.__new__(AgentComponent)
+    component.__dict__["_vertex"] = MagicMock(graph=MagicMock(session_id="from-graph"))
+    component.__dict__["_session_id"] = "from-attr"
+
+    assert component._resolve_session_id() == "from-graph"
+
+
+def test_resolve_session_id_falls_back_to_session_attribute():
+    """When the graph carries no session, the stored ``_session_id`` is used."""
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    component = AgentComponent.__new__(AgentComponent)
+    component.__dict__["_session_id"] = "from-attr"
+
+    assert component._resolve_session_id() == "from-attr"
 
 
 # ---------------------------------------------------------------------------

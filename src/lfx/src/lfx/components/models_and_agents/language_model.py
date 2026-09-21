@@ -137,12 +137,20 @@ class LanguageModelComponent(LCModelComponent):
         )
 
     def _resolve_session_id(self) -> str | None:
-        """Return the executing session ID, for providers that need per-conversation identity."""
-        if hasattr(self, "graph"):
-            return self.graph.session_id
-        if hasattr(self, "_session_id"):
-            return self._session_id
-        return None
+        """Return the executing session ID, for providers that need per-conversation identity.
+
+        ``self.graph`` is read inside ``try`` rather than guarded by ``hasattr``:
+        ``Component.__getattr__`` reaches into ``__dict__`` for backwards-compatible
+        attributes and raises ``KeyError`` when one is absent, which ``hasattr`` does
+        not suppress. ``_session_id`` is then read straight out of ``vars(self)`` so
+        the fallback cannot re-enter ``__getattr__`` either.
+        """
+        try:
+            graph = self.graph
+        except (AttributeError, KeyError):
+            graph = None
+        session_id = getattr(graph, "session_id", None)
+        return session_id or vars(self).get("_session_id")
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""

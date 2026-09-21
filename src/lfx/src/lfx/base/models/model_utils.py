@@ -1084,7 +1084,7 @@ def fetch_live_opencode_go_models(user_id: UUID | str | None, model_type: str = 
     try:
         response = httpx.get(url, headers=headers, timeout=OPENCODE_GO_FETCH_TIMEOUT)
         response.raise_for_status()
-        raw_models = response.json().get("data", [])
+        payload = response.json()
     except (httpx.RequestError, httpx.HTTPStatusError) as e:
         # Warning, not debug: a user who just saved a key and sees an empty
         # catalog needs a server-side breadcrumb.
@@ -1095,6 +1095,19 @@ def fetch_live_opencode_go_models(user_id: UUID | str | None, model_type: str = 
         logger.warning("Malformed OpenCode Go /models response from %s: %s", url, e)
         return []
 
+    # A top-level array (or any non-object) would make ``.get`` raise
+    # AttributeError, which no caller of this function catches -- the contract
+    # here is that every failure degrades to an empty catalog.
+    if not isinstance(payload, dict):
+        logger.warning(
+            "Unexpected OpenCode Go /models payload from %s (top level is %s): %r",
+            url,
+            type(payload).__name__,
+            payload,
+        )
+        return []
+    raw_models = payload.get("data", [])
+
     if not isinstance(raw_models, list):
         logger.warning("Unexpected OpenCode Go /models payload (data is %s): %r", type(raw_models).__name__, raw_models)
         return []
@@ -1104,7 +1117,9 @@ def fetch_live_opencode_go_models(user_id: UUID | str | None, model_type: str = 
         if not isinstance(raw, dict):
             continue
         mid = raw.get("id")
-        if not mid:
+        # Require a non-empty string: a numeric id would otherwise become a dict
+        # key and make the ``sorted()`` below raise TypeError comparing str to int.
+        if not isinstance(mid, str) or not mid:
             continue
         created_raw = raw.get("created")
         try:
