@@ -32,6 +32,16 @@ INDEXES = (
 )
 
 
+def _database_clock_default() -> sa.TextClause:
+    """Render the same wall-clock default used by the runtime model."""
+    dialect = op.get_bind().dialect.name
+    if dialect == "sqlite":
+        return sa.text("((STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW') || '000'))")
+    if dialect == "postgresql":
+        return sa.text("clock_timestamp()")
+    return sa.text("CURRENT_TIMESTAMP")
+
+
 def upgrade() -> None:
     if migration.table_exists(TABLE, op.get_bind()):
         return
@@ -51,7 +61,7 @@ def upgrade() -> None:
         sa.Column("event_type", sa.String(16), nullable=False),
         sa.Column("result", sa.String(16), nullable=False),
         sa.Column("error_code", sa.String(64), nullable=True),
-        sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("timestamp", sa.DateTime(timezone=True), server_default=_database_clock_default(), nullable=False),
         sa.Column("request_id", sa.Uuid(), nullable=False),
         sa.Column("details", sa.JSON(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
