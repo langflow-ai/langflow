@@ -38,7 +38,7 @@ To close this exposure, apply one of the two lockdowns below:
 - Set `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true` to allow only superusers to author component code, while regular users keep using built-in and existing components. See [Restrict custom component creation to superusers](#restrict-custom-components-to-superusers).
 - Set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` to run only the server's built-in component code, as described above.
 
-For untrusted or multi-tenant deployments, combine a lockdown with hardware-level isolation via [`LANGFLOW_SANDBOX_BACKEND`](./sandbox-backends.mdx).
+[`LANGFLOW_SANDBOX_BACKEND`](./sandbox-backends.mdx) is not a substitute for either lockdown. It isolates the **Python Interpreter** and legacy **Python REPL** components, which run code supplied as a component input at runtime. Custom-component code is compiled and executed in the Langflow server process at flow-build time, before any sandbox backend is consulted, so a sandbox backend does not contain it. For untrusted or multi-tenant deployments, apply one of the lockdowns above as the primary control, and enable a sandbox backend in addition to cover the interpreter components.
 
 ### Restrict custom component creation to superusers{#restrict-custom-components-to-superusers}
 

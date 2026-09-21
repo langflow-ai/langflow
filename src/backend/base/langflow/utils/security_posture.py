@@ -21,8 +21,9 @@ CUSTOM_COMPONENT_EXECUTION_WARNING = (
     "at flow-build time, so any active non-admin user can run arbitrary code on this host. "
     "Restrict this by setting LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true (only admins may "
     "author component code) or LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false (only built-in server "
-    "components run). For untrusted or multi-tenant deployments, also enable hardware "
-    "isolation with LANGFLOW_SANDBOX_BACKEND. "
+    "components run). LANGFLOW_SANDBOX_BACKEND does not substitute for either lockdown: it "
+    "isolates the Python Interpreter and legacy Python REPL components, not custom-component "
+    "code, which is compiled and executed in the server process. "
     "See https://docs.langflow.org/deployment-block-custom-components#multi-user-code-execution"
 )
 

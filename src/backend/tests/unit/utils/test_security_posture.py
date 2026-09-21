@@ -36,6 +36,20 @@ def test_warning_names_both_lockdowns():
     assert "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in warning
 
 
+def test_warning_scopes_the_sandbox_backend():
+    """LANGFLOW_SANDBOX_BACKEND covers the interpreter components, not custom-component build.
+
+    It is only consulted by ``lfx.components.tools.python_repl`` and
+    ``lfx.components.utilities.python_repl_core``; custom component code is exec'd in the
+    server process at build time, so the warning must not read as an alternative lockdown.
+    """
+    warning = custom_component_execution_warning(
+        _settings_service(auto_login=False, allow_custom_components=True, admin_only=False)
+    )
+    assert "LANGFLOW_SANDBOX_BACKEND does not substitute" in warning
+    assert "Python Interpreter and legacy Python REPL" in warning
+
+
 def test_silent_single_user_default():
     """AUTO_LOGIN=true is the single-superuser default: no non-admin exists, so no warning."""
     svc = _settings_service(auto_login=True, allow_custom_components=True, admin_only=False)
