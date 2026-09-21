@@ -405,6 +405,26 @@ class RunFlowBaseComponent(Component):
 
         return None
 
+    def __deepcopy__(self, memo: dict):
+        """Let the copy resolve every output it carries, and reuse the graph cache.
+
+        ``_register_flow_output_method`` writes one resolver per selected-flow
+        output onto the *instance*, and ``Component.__deepcopy__`` rebuilds the
+        component through ``type(self)(**kwargs)`` rather than copying
+        ``__dict__``. A tool-mode node's saved outputs are only the
+        ``component_as_tool`` handle, so the rebuilt component registers nothing
+        from its vertex, while ``_outputs_map`` is copied over naming resolvers
+        it does not have. What makes the tool call run on the copy at all is
+        ``component_tool._resolve_local_method``; this keeps the copy able to
+        resolve any output it advertises.
+        """
+        new_component = super().__deepcopy__(memo)
+        # _pre_run_setup only runs on the vertex-built component, so hand the
+        # timestamp over; without it the copy reads every cached graph as stale.
+        new_component._cached_flow_updated_at = self._cached_flow_updated_at  # noqa: SLF001
+        new_component._ensure_flow_output_methods()  # noqa: SLF001
+        return new_component
+
     def _clear_dynamic_flow_output_methods(self) -> None:
         for method_name in self._flow_output_methods:
             if hasattr(self, method_name):
