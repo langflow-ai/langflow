@@ -310,3 +310,14 @@ async def test_an_export_rejects_an_unknown_format(client, logged_in_headers_sup
     response = await client.get("api/v1/audits/export?format=xlsx", headers=logged_in_headers_super_user)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+async def test_an_export_spanning_many_batches_keeps_every_row_once_in_order(client, logged_in_headers_super_user):
+    rows = [resource_event(index / 60) if index % 3 else authz_event(index / 60) for index in range(1203)]
+    await seed(*rows)
+    expected = [str(row.id) for row in sorted(rows, key=lambda row: (row.timestamp, UUID(str(row.id))), reverse=True)]
+
+    response = await client.get(f"api/v1/audits/export?{WINDOW}&format=ndjson", headers=logged_in_headers_super_user)
+
+    exported = [json.loads(line)["id"] for line in response.text.splitlines()]
+    assert exported == expected
