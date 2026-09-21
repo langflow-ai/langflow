@@ -26,7 +26,7 @@ from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH, MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.security import (
     AGENTIC_MCP_MODULE,
     AGENTIC_USER_ID_ENV_VAR,
@@ -45,10 +45,10 @@ MCP_TOOL_SPAN_NAME = "mcp.tool.call"
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 # HTTP status codes used in validation
+HTTP_BAD_REQUEST = 400
 HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_NOT_ACCEPTABLE = 406
-HTTP_BAD_REQUEST = 400
 HTTP_TOO_MANY_REQUESTS = 429
 HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
@@ -775,6 +775,41 @@ def get_unique_name(base_name, max_length, existing_names):
         i += 1
 
 
+def mcp_tool_base_name(flow, *, is_action: bool = False) -> str:
+    """Sanitize the name a flow contributes, before truncation and de-duplication.
+
+    ``is_action`` follows the two MCP surfaces: a project server addresses a flow by
+    its action name when it has one, the global server always by the flow name.
+    """
+    if is_action and getattr(flow, "action_name", None):
+        return sanitize_mcp_name(flow.action_name)
+    return sanitize_mcp_name(flow.name)
+
+
+def build_mcp_tool_name_map(flows, *, is_action: bool = False) -> dict[str, Any]:
+    """Map every published MCP tool name to the flow it was published for.
+
+    The tool name is the only thing joining ``tools/list`` to ``tools/call``: a client
+    stores the string the server gave it and sends that string back. Deriving it twice
+    is what let the two halves disagree -- the list path truncated to
+    ``MAX_MCP_TOOL_NAME_LENGTH`` and de-duplicated collisions with a numeric suffix,
+    the call path did neither, so any name past the limit was advertised and then
+    refused, and a truncated name could resolve to a different flow than the one it
+    was published for. Both halves read this map, which makes the round trip true by
+    construction rather than by two rules staying in step.
+
+    ``flows`` must arrive in the order the caller queries them (both call sites order by
+    ``Flow.id``): the suffix a collision gets depends on which flow is seen first.
+    """
+    name_map: dict[str, Any] = {}
+    taken: set[str] = set()
+    for flow in flows:
+        name = get_unique_name(mcp_tool_base_name(flow, is_action=is_action), MAX_MCP_TOOL_NAME_LENGTH, taken)
+        taken.add(name)
+        name_map[name] = flow
+    return name_map
+
+
 async def get_flow_snake_case(
     flow_name: str,
     user_id: str,
@@ -784,7 +819,12 @@ async def get_flow_snake_case(
     project_id: UUID | str | None = None,
     mcp_enabled_only: bool = False,
 ):
-    """Resolve an MCP tool name to a flow.
+    """Resolve a published MCP tool name to the flow it was published for.
+
+    ``flow_name`` is the name the server handed the client in ``tools/list``, which is
+    the only name a client can send back. It is looked up in ``build_mcp_tool_name_map``
+    rather than regenerated here: regenerating it is what made the server advertise
+    names past ``MAX_MCP_TOOL_NAME_LENGTH`` and then answer "not found" for them.
 
     ``project_id`` and ``mcp_enabled_only`` default to the historical behavior because
     this function is public ``lfx`` surface and still backs the global MCP server, where
@@ -813,15 +853,7 @@ async def get_flow_snake_case(
     stmt = stmt.order_by(Flow.id)
     flows = (await session.exec(stmt)).all()
 
-    for flow in flows:
-        if is_action and flow.action_name:
-            this_flow_name = sanitize_mcp_name(flow.action_name)
-        else:
-            this_flow_name = sanitize_mcp_name(flow.name)
-
-        if this_flow_name == flow_name:
-            return flow
-    return None
+    return build_mcp_tool_name_map(flows, is_action=bool(is_action)).get(flow_name)
 
 
 def _is_valid_key_value_item(item: Any) -> bool:
@@ -974,6 +1006,12 @@ def extract_http_status(error: BaseException) -> int | None:
     return None
 
 
+def _describe_transport_error(error: BaseException) -> str:
+    """Prefix a transport failure with its HTTP status, which ``str()`` of a TaskGroup error hides."""
+    status = extract_http_status(error)
+    return f"HTTP {status}: {error}" if status is not None else str(error)
+
+
 def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseException) -> str:
     """Describe a tool call the remote server rejected, naming the status when there is one.
 
@@ -1076,6 +1114,9 @@ def _iter_exception_leaves(exc: BaseException) -> list[BaseException]:
     return [exc]
 
 
+_SSE_FALLBACK_STATUS_CODES = (HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_METHOD_NOT_ALLOWED, HTTP_NOT_ACCEPTABLE)
+
+
 def _is_transient_streamable_http_error(exc: BaseException) -> bool:
     """True when Streamable HTTP failed for a likely-temporary reason; do not fall back to SSE."""
     for leaf in _iter_exception_leaves(exc):
@@ -1091,12 +1132,9 @@ def _is_transient_streamable_http_error(exc: BaseException) -> bool:
                 return True
             if leaf.response.status_code == HTTP_TOO_MANY_REQUESTS:
                 return True
-            # 404/405/406: try SSE; other 4xx: retry Streamable HTTP
-            return leaf.response.status_code not in (
-                HTTP_NOT_FOUND,
-                HTTP_METHOD_NOT_ALLOWED,
-                HTTP_NOT_ACCEPTABLE,
-            )
+            # 400/404/405/406: the endpoint rejected the transport, try SSE; other 4xx: retry Streamable HTTP.
+            # Legacy SSE servers answer the Streamable HTTP POST (no session_id) with 400.
+            return leaf.response.status_code not in _SSE_FALLBACK_STATUS_CODES
         if isinstance(leaf, McpError):
             msg = str(leaf).lower()
             return not any(x in msg for x in ("404", "405", "406", "not found", "method not allowed"))
@@ -1124,11 +1162,7 @@ def _should_attempt_sse_after_streamable_failure(exc: BaseException) -> bool:
     if _is_transient_streamable_http_error(exc):
         return False
     for leaf in _iter_exception_leaves(exc):
-        if isinstance(leaf, httpx.HTTPStatusError) and leaf.response.status_code in (
-            HTTP_NOT_FOUND,
-            HTTP_METHOD_NOT_ALLOWED,
-            HTTP_NOT_ACCEPTABLE,
-        ):
+        if isinstance(leaf, httpx.HTTPStatusError) and leaf.response.status_code in _SSE_FALLBACK_STATUS_CODES:
             return True
         if isinstance(leaf, McpError):
             msg = str(leaf).lower()
@@ -1487,8 +1521,10 @@ class MCPSessionManager:
                 session, task = await self._create_stdio_session(session_id, connection_params)
                 actual_transport = "stdio"
             elif transport_type == "streamable_http":
-                # Pass the cached transport preference if available (SSE only when last success required it)
-                preferred_transport = self._transport_preference.get(server_key)
+                # An explicit transport (mode="SSE") wins; otherwise use the cached preference from the last success.
+                preferred_transport = connection_params.get("preferred_transport") or self._transport_preference.get(
+                    server_key
+                )
                 session, task, actual_transport, sse_pref_lock = await self._create_streamable_http_session(
                     session_id, connection_params, preferred_transport
                 )
@@ -1685,7 +1721,7 @@ class MCPSessionManager:
                         "Trying SSE (endpoint may require legacy transport)..."
                     )
             else:
-                await logger.adebug(f"Skipping Streamable HTTP for session {session_id}, using cached SSE preference")
+                await logger.adebug(f"Skipping Streamable HTTP for session {session_id}, SSE transport preferred")
 
             # SSE path: preferred mode, or Streamable indicated legacy transport
             try:
@@ -1723,15 +1759,19 @@ class MCPSessionManager:
                         f"Streamable HTTP error: {streamable_error}. SSE error: {sse_error}"
                     )
                     if not session_future.done():
+                        streamable_detail = _describe_transport_error(streamable_error)
+                        sse_detail = _describe_transport_error(sse_error)
                         session_future.set_exception(
                             ValueError(
-                                f"Failed to connect via Streamable HTTP ({streamable_error}) or SSE ({sse_error})"
+                                f"Failed to connect via Streamable HTTP ({streamable_detail}) or SSE ({sse_detail})"
                             )
                         )
                 else:
                     await logger.aerror(f"SSE connection failed for session {session_id}: {sse_error}")
                     if not session_future.done():
-                        session_future.set_exception(ValueError(f"Failed to connect via SSE: {sse_error}"))
+                        # Raise the transport error itself: wrapping it hides the HTTP status (e.g. a 401)
+                        # that describe_mcp_connection_failure reports.
+                        session_future.set_exception(sse_error)
 
         task = asyncio.create_task(session_task())
         self._background_tasks.add(task)
@@ -2268,8 +2308,12 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        preferred_transport: str | None = None,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
+        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style).
+
+        ``preferred_transport="sse"`` connects over legacy SSE directly, without a Streamable HTTP probe.
+        """
         # Validate and sanitize headers early
         validated_headers = _process_headers(headers)
 
@@ -2295,6 +2339,7 @@ class MCPStreamableHttpClient:
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
+        self._connection_params["preferred_transport"] = preferred_transport
 
         # If no session context is set, create a default one
         if not self._session_context:
@@ -2325,11 +2370,16 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        preferred_transport: str | None = None,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
         return await asyncio.wait_for(
             self._connect_to_server(
-                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+                url,
+                headers,
+                sse_read_timeout_seconds=sse_read_timeout_seconds,
+                verify_ssl=verify_ssl,
+                preferred_transport=preferred_transport,
             ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
@@ -2737,7 +2787,11 @@ async def update_tools(
         headers = _maybe_inject_end_user_header(headers, url, end_user_id)
         verify_ssl = server_config.get("verify_ssl", True)
         try:
-            tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+            # Explicit SSE mode skips the Streamable HTTP probe; legacy servers reject it with HTTP 400.
+            transport_kwargs = {"preferred_transport": "sse"} if mode == "SSE" else {}
+            tools = await mcp_streamable_http_client.connect_to_server(
+                url, headers=headers, verify_ssl=verify_ssl, **transport_kwargs
+            )
         except Exception as exc:
             # A rejected credential otherwise surfaced as "unhandled errors in a TaskGroup",
             # naming neither the target nor the fact that authentication was the problem.

@@ -175,7 +175,12 @@ async def test_run_query_uses_ca_bundle_path(component, tmp_path):
     ca = tmp_path / "ca.crt"
     ca.write_text("-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n")
     component.ssl_ca_file = str(ca)
-    with patch(CONNECT_TARGET, side_effect=_fake_connect):
+    # Exercises TLS verify wiring against a tmp_path CA file, not containment; opt out of restriction.
+    settings = SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False))
+    with (
+        patch(CONNECT_TARGET, side_effect=_fake_connect),
+        patch("lfx.utils.file_path_security.get_settings_service", return_value=settings),
+    ):
         await component.run_query()
     assert _FakeConnection.last._http_session.verify == str(ca)
 
