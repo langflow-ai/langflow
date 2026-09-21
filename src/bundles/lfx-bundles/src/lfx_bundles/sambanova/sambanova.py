@@ -1,5 +1,6 @@
 from langchain_sambanova import ChatSambaNovaCloud
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
@@ -77,6 +78,10 @@ class SambaNovaComponent(LCModelComponent):
         temperature = self.temperature
 
         api_key = SecretStr(sambanova_api_key).get_secret_value() if sambanova_api_key else None
+
+        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. Block internal/cloud-metadata destinations before connecting.
+        validate_provider_base_url(sambanova_url)
 
         return ChatSambaNovaCloud(
             model=model_name,

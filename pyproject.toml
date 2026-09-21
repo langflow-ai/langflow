@@ -28,7 +28,7 @@ dependencies = [
     # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-ibm>=0.2.4,<1.0.0",
+    "lfx-ibm>=0.2.5,<1.0.0",
     "lfx-docling>=0.1.7,<1.0.0",
     "lfx-datastax>=0.1.8,<1.0.0",
     "lfx-toolguard>=0.1.2,<1.0.0",
