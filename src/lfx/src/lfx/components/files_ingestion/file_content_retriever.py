@@ -8,8 +8,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
@@ -21,6 +24,9 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class FileContentRetrieverComponent(Component):
@@ -175,6 +181,28 @@ class FileContentRetrieverComponent(Component):
             return None
         return candidate
 
+    @staticmethod
+    def _resolve_write_target(index_dir: Path, name: str, authorized_base: Path) -> Path:
+        """Return the path to write *name* to, refusing one that escapes *authorized_base*.
+
+        ``_resolve_scoped_dir`` keeps the parent directory in scope, but the final
+        filename can be a symlink of its own: ``write_text()`` and ``to_parquet()``
+        follow it and overwrite whatever it points at. The component owns these hashed
+        names, so a link sitting on one was planted by somebody else - refuse it, and
+        re-check the resolved path against the authorized base.
+        """
+        target = index_dir / name
+        if target.is_symlink():
+            msg = f"FileContentRetriever: persistence target '{name}' is a symlink; refusing to write through it."
+            raise ValueError(msg)
+        if not target.resolve().is_relative_to(authorized_base.resolve()):
+            msg = (
+                f"FileContentRetriever: persistence target '{name}' resolves outside the persistent "
+                "directory; refusing to persist."
+            )
+            raise ValueError(msg)
+        return target
+
     def _load_persistent_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:
         """Load maps from the persistent directory. Returns ({}, {}) if nothing on disk."""
         base = self._resolve_persistent_base()
@@ -236,26 +264,29 @@ class FileContentRetrieverComponent(Component):
         text_dir.mkdir(exist_ok=True)
         df_dir.mkdir(exist_ok=True)
 
+        # Validate every output path before writing anything: an in-scope directory can
+        # still hold a symlinked leaf, and refusing halfway through would leave part of
+        # the escape carried out.
+        text_index: dict[str, str] = {fp: f"{self._path_hash(fp)}.txt" for fp in text_map}
+        df_index: dict[str, str] = {fp: f"{self._path_hash(fp)}.parquet" for fp in dataframe_map}
+        text_targets = {fp: self._resolve_write_target(text_dir, name, base) for fp, name in text_index.items()}
+        df_targets = {fp: self._resolve_write_target(df_dir, name, base) for fp, name in df_index.items()}
+
         # Save each text entry as a separate file
-        text_index: dict[str, str] = {}
         for fp, text in text_map.items():
-            txt_name = f"{self._path_hash(fp)}.txt"
-            txt_path = text_dir / txt_name
-            txt_path.write_text(text, encoding="utf-8")
-            text_index[fp] = txt_name
+            with self._atomic_target(text_targets[fp]) as tmp:
+                tmp.write_text(text, encoding="utf-8")
 
         # Atomic write for text_index.json
-        self._atomic_json_write(base / "text_index.json", text_index, base)
+        self._atomic_json_write(base / "text_index.json", text_index)
 
         # Save each DataFrame as parquet
-        df_index: dict[str, str] = {}
         for fp, df in dataframe_map.items():
-            parquet_name = f"{self._path_hash(fp)}.parquet"
-            df.to_parquet(df_dir / parquet_name, index=False)
-            df_index[fp] = parquet_name
+            with self._atomic_target(df_targets[fp]) as tmp:
+                df.to_parquet(tmp, index=False)
 
         # Atomic write for dataframe_index.json
-        self._atomic_json_write(base / "dataframe_index.json", df_index, base)
+        self._atomic_json_write(base / "dataframe_index.json", df_index)
 
         # Clean up orphaned files on disk
         valid_txt_files = set(text_index.values())
@@ -270,19 +301,29 @@ class FileContentRetrieverComponent(Component):
         logger.debug(f"FileContentRetriever: Saved {len(text_map)} text + {len(dataframe_map)} dataframes to '{base}'")
 
     @staticmethod
-    def _atomic_json_write(target: Path, data: dict, tmp_dir: Path) -> None:
-        """Write JSON atomically via temp file + rename."""
-        import os
+    @contextmanager
+    def _atomic_target(target: Path) -> Iterator[Path]:
+        """Yield a temp sibling to write into, then move it onto *target*.
 
-        fd, tmp = tempfile.mkstemp(dir=str(tmp_dir), suffix=".tmp")
+        ``Path.replace`` acts on the path itself rather than on what it points to, so a
+        symlink sitting at *target* is replaced instead of written through - the payload
+        cannot land outside the directory even if the link appears between the check in
+        ``_resolve_write_target`` and this write.
+        """
+        fd, tmp_name = tempfile.mkstemp(dir=str(target.parent), suffix=".tmp")
+        tmp = Path(tmp_name)
         try:
             os.close(fd)
-            with Path(tmp).open("w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False)
-            Path(tmp).replace(target)
-        except Exception:
-            Path(tmp).unlink(missing_ok=True)
-            raise
+            yield tmp
+            tmp.replace(target)
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    @classmethod
+    def _atomic_json_write(cls, target: Path, data: dict) -> None:
+        """Write JSON atomically via temp file + rename."""
+        with cls._atomic_target(target) as tmp, tmp.open("w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
 
     # ---- Map building helpers ----
 

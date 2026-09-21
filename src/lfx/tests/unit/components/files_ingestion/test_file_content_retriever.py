@@ -6,6 +6,7 @@ DataFrames with attrs, DataFrames with file_path column).
 """
 
 import os
+import pathlib
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -638,6 +639,94 @@ class TestPersistentIndexTraversal:
         assert bystander.exists(), "a file outside the authorized base was deleted by the orphan sweep"
         assert bystander.read_text(encoding="utf-8") == "must survive"
 
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_symlinked_text_leaf_is_not_written_through(self, tmp_path):
+        """The directory can be in scope while the hashed filename itself is a symlink."""
+        base = tmp_path / "persist"
+        (base / "texts").mkdir(parents=True)
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        victim = outside / "victim.txt"
+        victim.write_text("must survive", encoding="utf-8")
+        file_path = "/some/file.txt"
+        leaf = f"{FileContentRetrieverComponent._path_hash(file_path)}.txt"
+        (base / "texts" / leaf).symlink_to(victim)
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)), pytest.raises(ValueError, match="refusing"):
+            comp._save_persistent_maps({file_path: "CANARY_OUTSIDE_BASE"}, {})
+
+        assert victim.read_text(encoding="utf-8") == "must survive"
+
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_symlinked_parquet_leaf_is_not_written_through(self, tmp_path):
+        """Same leaf as above on the dataframe side, which writes via to_parquet().
+
+        to_parquet stands in for the real writer (lfx has no parquet engine
+        dependency) but still writes bytes to the path it is handed, so the outside
+        file is genuinely at risk if containment lets the call through.
+        """
+        base = tmp_path / "persist"
+        (base / "dataframes").mkdir(parents=True)
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        victim = outside / "victim.parquet"
+        victim.write_bytes(b"must survive")
+        file_path = "/some/file.csv"
+        leaf = f"{FileContentRetrieverComponent._path_hash(file_path)}.parquet"
+        (base / "dataframes" / leaf).symlink_to(victim)
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+        df = DataFrame(pd.DataFrame({"a": [1, 2]}))
+
+        def _write_bytes_to_target(_self, path, *_args, **_kwargs):
+            pathlib.Path(path).write_bytes(b"CANARY_OUTSIDE_BASE")
+
+        with (
+            _mock_settings(restricted=False, config_dir=str(tmp_path)),
+            patch.object(type(df), "to_parquet", _write_bytes_to_target),
+            pytest.raises(ValueError, match="refusing"),
+        ):
+            comp._save_persistent_maps({}, {file_path: df})
+
+        assert victim.read_bytes() == b"must survive"
+
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_write_replaces_a_symlinked_leaf_instead_of_following_it(self, tmp_path):
+        """Validation can be raced; the write itself must not follow a link either.
+
+        The check is bypassed here to stand in for a link planted after it ran. Writes
+        go to a temp sibling and are moved onto the target with os.replace(), which
+        acts on the path rather than on what it points to, so the payload stays inside
+        the base and the link is replaced by a real file.
+        """
+        base = tmp_path / "persist"
+        (base / "texts").mkdir(parents=True)
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        victim = outside / "victim.txt"
+        victim.write_text("must survive", encoding="utf-8")
+        file_path = "/some/file.txt"
+        target = base / "texts" / f"{FileContentRetrieverComponent._path_hash(file_path)}.txt"
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        def _plant_symlink_after_validation(index_dir, name, authorized_base):  # noqa: ARG001
+            (index_dir / name).symlink_to(victim)
+            return index_dir / name
+
+        with (
+            _mock_settings(restricted=False, config_dir=str(tmp_path)),
+            patch.object(
+                FileContentRetrieverComponent,
+                "_resolve_write_target",
+                staticmethod(_plant_symlink_after_validation),
+            ),
+        ):
+            comp._save_persistent_maps({file_path: "CANARY_OUTSIDE_BASE"}, {})
+
+        assert victim.read_text(encoding="utf-8") == "must survive"
+        assert not target.is_symlink()
+        assert target.read_text(encoding="utf-8") == "CANARY_OUTSIDE_BASE"
+
     def test_in_scope_persistence_round_trips(self, tmp_path):
         """The containment checks must not break ordinary save/load."""
         base = tmp_path / "persist"
@@ -650,3 +739,4 @@ class TestPersistentIndexTraversal:
         assert text_map == {"/some/file": "hello"}
         assert (base / "texts").is_dir()
         assert not (base / "texts").is_symlink()
+        assert not list(base.glob("**/*.tmp")), "atomic writes left temp files behind"
