@@ -217,67 +217,160 @@ def _dotted_parts(node: ast.AST) -> list[str] | None:
     return None
 
 
-def _static_string_iterable(node: ast.AST) -> list[str] | None:
+class StaticEvaluationBudgetExceededError(Exception):
+    """Resolving a static string would cost more than one scan is allowed to spend.
+
+    Raised rather than returning ``None`` on purpose: ``None`` means "this value
+    is dynamic", which several callers treat permissively. A budget overrun is
+    not a dynamic value, it is a refusal to do the work, and it must surface as
+    a security violation.
+    """
+
+
+# One shared ceiling per top-level static expression. These are resolved only to
+# recover attribute/member *names* -- ``getattr(io, "op" + "en")`` and friends --
+# so a few kilobytes is already far past any honest use, while the evaluator
+# itself can amplify: a generator repeats its element once per item, so nesting
+# ``"".join(<expr> for _ in ("a", "b"))`` doubles the resolved string at every
+# level while the source grows by a constant. 544 bytes of source resolved to
+# 512 KiB before this cap existed, and 30 levels implies a gigabyte.
+_STATIC_EVAL_MAX_RESOLVED_CHARS = 16_384
+_STATIC_EVAL_MAX_ELEMENTS = 1_024
+_STATIC_EVAL_MAX_DEPTH = 24
+_STATIC_EVAL_MAX_STEPS = 4_096
+
+
+class _StaticEvalBudget:
+    """Bytes / elements / nesting / work allowance shared by one resolution."""
+
+    __slots__ = ("depth", "remaining_chars", "remaining_elements", "remaining_steps")
+
+    def __init__(self) -> None:
+        self.remaining_chars = _STATIC_EVAL_MAX_RESOLVED_CHARS
+        self.remaining_elements = _STATIC_EVAL_MAX_ELEMENTS
+        self.remaining_steps = _STATIC_EVAL_MAX_STEPS
+        self.depth = 0
+
+    def step(self) -> None:
+        self.remaining_steps -= 1
+        if self.remaining_steps < 0:
+            raise StaticEvaluationBudgetExceededError
+
+    def enter(self) -> None:
+        self.depth += 1
+        if self.depth > _STATIC_EVAL_MAX_DEPTH:
+            raise StaticEvaluationBudgetExceededError
+
+    def leave(self) -> None:
+        self.depth -= 1
+
+    def charge_chars(self, count: int) -> None:
+        """Charge for characters *about to be* produced, before allocating them."""
+        self.remaining_chars -= count
+        if self.remaining_chars < 0:
+            raise StaticEvaluationBudgetExceededError
+
+    def charge_elements(self, count: int) -> None:
+        self.remaining_elements -= count
+        if self.remaining_elements < 0:
+            raise StaticEvaluationBudgetExceededError
+
+
+def _static_string_iterable(node: ast.AST, budget: _StaticEvalBudget) -> list[str] | None:
     """Resolve a literal list/tuple of static strings, or a pass-through generator over one."""
-    if isinstance(node, (ast.List, ast.Tuple)):
-        parts: list[str] = []
-        for element in node.elts:
-            if isinstance(element, ast.Starred):
+    budget.step()
+    budget.enter()
+    try:
+        if isinstance(node, (ast.List, ast.Tuple)):
+            budget.charge_elements(len(node.elts))
+            parts: list[str] = []
+            for element in node.elts:
+                if isinstance(element, ast.Starred):
+                    return None
+                value = _static_string_value(element, budget)
+                if value is None:
+                    return None
+                parts.append(value)
+            return parts
+        if isinstance(node, ast.GeneratorExp) and len(node.generators) == 1:
+            generator = node.generators[0]
+            if generator.is_async or generator.ifs or not isinstance(generator.target, ast.Name):
                 return None
-            value = _static_string_value(element)
-            if value is None:
+            values = _static_string_iterable(generator.iter, budget)
+            if values is None:
                 return None
-            parts.append(value)
-        return parts
-    if isinstance(node, ast.GeneratorExp) and len(node.generators) == 1:
-        generator = node.generators[0]
-        if generator.is_async or generator.ifs or not isinstance(generator.target, ast.Name):
-            return None
-        values = _static_string_iterable(generator.iter)
-        if values is None:
-            return None
-        if isinstance(node.elt, ast.Name) and node.elt.id == generator.target.id:
-            return values
-        if (element := _static_string_value(node.elt)) is not None:
-            return [element] * len(values)
-    return None
+            if isinstance(node.elt, ast.Name) and node.elt.id == generator.target.id:
+                return values
+            if (element := _static_string_value(node.elt, budget)) is not None:
+                # The repeat is where the amplification lives: price the whole
+                # expansion before materializing any of it.
+                budget.charge_elements(len(values))
+                budget.charge_chars(len(element) * len(values))
+                return [element] * len(values)
+        return None
+    finally:
+        budget.leave()
 
 
-def _static_string_value(node: ast.AST) -> str | None:
-    """Resolve a literal string assembled with ``+``, a static f-string, or ``str.join``."""
-    if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        return node.value
-    if (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "join"
-        and not node.keywords
-        and len(node.args) == 1
-        and (separator := _static_string_value(node.func.value)) is not None
-        and (parts := _static_string_iterable(node.args[0])) is not None
-    ):
-        return separator.join(parts)
-    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-        left = _static_string_value(node.left)
-        right = _static_string_value(node.right)
-        if left is not None and right is not None:
-            return left + right
-    if isinstance(node, ast.JoinedStr):
-        resolved: list[str] = []
-        for value in node.values:
-            if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                resolved.append(value.value)
-            elif (
-                isinstance(value, ast.FormattedValue)
-                and value.conversion == -1
-                and value.format_spec is None
-                and (formatted := _static_string_value(value.value)) is not None
-            ):
-                resolved.append(formatted)
-            else:
-                return None
-        return "".join(resolved)
-    return None
+def _static_string_value(node: ast.AST, budget: _StaticEvalBudget | None = None) -> str | None:
+    """Resolve a literal string assembled with ``+``, a static f-string, or ``str.join``.
+
+    Every construction step is charged against ``budget`` *before* it allocates,
+    so a small source expression cannot make the scanner build a large string.
+    Callers that do not pass a budget get a fresh one for that expression.
+
+    Raises:
+        StaticEvaluationBudgetExceededError: If the expression costs more than
+            one resolution is allowed. Callers must treat this as a violation,
+            not as an unresolvable (dynamic) value.
+    """
+    if budget is None:
+        budget = _StaticEvalBudget()
+    budget.step()
+    budget.enter()
+    try:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            budget.charge_chars(len(node.value))
+            return node.value
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "join"
+            and not node.keywords
+            and len(node.args) == 1
+            and (separator := _static_string_value(node.func.value, budget)) is not None
+            and (parts := _static_string_iterable(node.args[0], budget)) is not None
+        ):
+            projected = sum(len(part) for part in parts) + len(separator) * max(len(parts) - 1, 0)
+            budget.charge_chars(projected)
+            return separator.join(parts)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            left = _static_string_value(node.left, budget)
+            right = _static_string_value(node.right, budget)
+            if left is not None and right is not None:
+                budget.charge_chars(len(left) + len(right))
+                return left + right
+        if isinstance(node, ast.JoinedStr):
+            resolved: list[str] = []
+            budget.charge_elements(len(node.values))
+            for value in node.values:
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    budget.charge_chars(len(value.value))
+                    resolved.append(value.value)
+                elif (
+                    isinstance(value, ast.FormattedValue)
+                    and value.conversion == -1
+                    and value.format_spec is None
+                    and (formatted := _static_string_value(value.value, budget)) is not None
+                ):
+                    resolved.append(formatted)
+                else:
+                    return None
+            budget.charge_chars(sum(len(part) for part in resolved))
+            return "".join(resolved)
+        return None
+    finally:
+        budget.leave()
 
 
 def _static_positional_argument_count(arguments: list[ast.expr]) -> int | None:
@@ -461,6 +554,22 @@ class _SecurityChecker(ast.NodeVisitor):
                 resolved.add(f"{base_name}.{member_name}")
         return frozenset(resolved)
 
+    def _static_name(self, node: ast.AST) -> str | None:
+        """Resolve a static string used as a member/attribute name, failing closed.
+
+        A budget overrun is recorded as a violation instead of being reported as
+        an unresolvable value: several callers treat ``None`` as "dynamic but
+        harmless here", which would turn a refusal to evaluate into a pass.
+        """
+        try:
+            return _static_string_value(node)
+        except StaticEvaluationBudgetExceededError:
+            self.violations.append(
+                "A statically resolvable string in this component is too large or too deeply "
+                "nested to analyze (scanner resource exhaustion)"
+            )
+            return None
+
     def _resolved_assignment_value(self, node: ast.AST) -> frozenset[str]:
         """Resolve a statically identifiable reference RHS without executing it."""
         if isinstance(node, ast.Name):
@@ -471,7 +580,7 @@ class _SecurityChecker(ast.NodeVisitor):
             )
         if isinstance(node, ast.Attribute):
             return self._resolved_member_names(self._resolved_assignment_value(node.value), node.attr)
-        if isinstance(node, ast.Subscript) and (member_name := _static_string_value(node.slice)) is not None:
+        if isinstance(node, ast.Subscript) and (member_name := self._static_name(node.slice)) is not None:
             module_dicts = self._resolved_assignment_value(node.value)
             module_names = frozenset(
                 mapping_name.removesuffix(".__dict__")
@@ -486,14 +595,14 @@ class _SecurityChecker(ast.NodeVisitor):
             if (
                 {"getattr", "builtins.getattr", "__builtins__.getattr"} & function_names
                 and node.args[1:]
-                and (member_name := _static_string_value(node.args[1])) is not None
+                and (member_name := self._static_name(node.args[1])) is not None
             ):
                 resolved.update(self._resolved_member_names(self._resolved_assignment_value(node.args[0]), member_name))
 
             if {"vars", "builtins.vars", "__builtins__.vars"} & function_names and len(node.args) == 1:
                 resolved.update(f"{base_name}.__dict__" for base_name in self._resolved_assignment_value(node.args[0]))
 
-            if node.args and (member_name := _static_string_value(node.args[0])) is not None:
+            if node.args and (member_name := self._static_name(node.args[0])) is not None:
                 for function_name in function_names:
                     module_name, separator, method_name = function_name.rpartition(".")
                     if separator and method_name == "__getattribute__" and module_name in _RESTRICTED_MODULE_REFERENCES:
@@ -507,14 +616,14 @@ class _SecurityChecker(ast.NodeVisitor):
                 {"object.__getattribute__", "builtins.object.__getattribute__", "__builtins__.object.__getattribute__"}
                 & function_names
                 and node.args[1:]
-                and (member_name := _static_string_value(node.args[1])) is not None
+                and (member_name := self._static_name(node.args[1])) is not None
             ):
                 resolved.update(self._resolved_member_names(self._resolved_assignment_value(node.args[0]), member_name))
 
             if (
                 {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"} & function_names
                 and node.args[1:]
-                and (member_name := _static_string_value(node.args[1])) is not None
+                and (member_name := self._static_name(node.args[1])) is not None
             ):
                 module_names = frozenset(
                     mapping_name.removesuffix(".__dict__")
@@ -1256,7 +1365,7 @@ class _SecurityChecker(ast.NodeVisitor):
             if name.endswith(".__dict__") and _is_restricted_module_reference(name)
         )
         if mapping_names:
-            member_name = _static_string_value(node.slice)
+            member_name = self._static_name(node.slice)
             if member_name is None:
                 self.violations.append(
                     f"Dynamic mapping access on module '{sorted(mapping_names)[0]}' is forbidden in components"
@@ -1378,7 +1487,7 @@ class _SecurityChecker(ast.NodeVisitor):
             )
 
         def _validate_selector(selector: ast.AST, module_names: frozenset[str], operation: str) -> None:
-            member_name = _static_string_value(selector)
+            member_name = self._static_name(selector)
             if member_name is None:
                 self.violations.append(
                     f"Dynamic {operation} access on module '{sorted(module_names)[0]}' is forbidden in components"
@@ -1448,7 +1557,7 @@ class _SecurityChecker(ast.NodeVisitor):
             attr_node = node.args[1]
         except IndexError:
             return False
-        attr_name = _static_string_value(attr_node)
+        attr_name = self._static_name(attr_node)
         if attr_name in DANGEROUS_DUNDER_ATTRS:
             self.violations.append(f"Access to '{attr_name}' is forbidden in components (sandbox escape)")
             return True
