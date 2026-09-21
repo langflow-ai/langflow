@@ -21,7 +21,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import func, or_
+from sqlalchemy import Text, cast, func, or_
 from sqlmodel import col, select
 
 from langflow.services.audit.query import (
@@ -34,6 +34,7 @@ from langflow.services.audit.query import (
 )
 from langflow.services.database.models.audit_event.model import AuditEvent, as_utc
 from langflow.services.database.models.auth import AuthzAuditLog
+from langflow.services.database.models.user.model import User
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -43,6 +44,8 @@ if TYPE_CHECKING:
 
 MAX_FEED_PAGE_SIZE = 200
 AUTHZ_DECISION_EVENT = "authorization_decision"
+MAX_SEARCH_LENGTH = 200
+_LIKE_ESCAPE = "\\"
 
 
 class AuditSource(str, Enum):
@@ -86,6 +89,7 @@ class AuditFeedFilters:
     request_id: UUID | None = None
     since: datetime | None = None
     until: datetime | None = None
+    search: str | None = None
 
     def fingerprint(self) -> str:
         canonical: dict[str, Any] = {
@@ -104,6 +108,7 @@ class AuditFeedFilters:
             "request_id": str(self.request_id) if self.request_id else None,
             "since": to_utc(self.since).isoformat() if self.since else None,
             "until": to_utc(self.until).isoformat() if self.until else None,
+            "search": self.search,
         }
         encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
@@ -114,6 +119,33 @@ class AuditFeedFilters:
 
     def includes(self, source: AuditSource) -> bool:
         return not self.sources or source in self.sources
+
+
+def _like_pattern(text: str) -> str:
+    """A substring pattern in which ``%`` and ``_`` typed by the user match themselves."""
+    escaped = text.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2)
+    for wildcard in ("%", "_"):
+        escaped = escaped.replace(wildcard, f"{_LIKE_ESCAPE}{wildcard}")
+    return f"%{escaped}%"
+
+
+def _search_clause(model: Any, search: str) -> ColumnElement[bool]:
+    """Case-insensitive match on what a row records: action, names, actor and details."""
+    pattern = _like_pattern(search)
+
+    def matches(column: Any) -> ColumnElement[bool]:
+        return col(column).ilike(pattern, escape=_LIKE_ESCAPE)
+
+    actors = select(User.id).where(matches(User.username))
+    candidates = [
+        matches(model.action),
+        matches(model.resource_type),
+        cast(col(model.details), Text).ilike(pattern, escape=_LIKE_ESCAPE),
+        col(model.user_id).in_(actors),
+    ]
+    if model is AuditEvent:
+        candidates += [matches(AuditEvent.resource_name), matches(AuditEvent.operation)]
+    return or_(*candidates)
 
 
 def _shared_clauses(model: Any, filters: AuditFeedFilters) -> list[ColumnElement[bool]]:
@@ -131,6 +163,8 @@ def _shared_clauses(model: Any, filters: AuditFeedFilters) -> list[ColumnElement
         clauses.append(col(model.timestamp) >= to_utc(filters.since))
     if filters.until is not None:
         clauses.append(col(model.timestamp) < to_utc(filters.until))
+    if filters.search:
+        clauses.append(_search_clause(model, filters.search))
     return clauses
 
 
