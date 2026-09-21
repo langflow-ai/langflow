@@ -277,3 +277,94 @@ class TestOpenAICredentialEgress:
             component.build_embeddings()
 
         mock_embeddings.assert_not_called()
+
+
+class TestOpenAIAbsentKeyCredentialEgress:
+    """An absent component key is not an absent credential (LE-2670 follow-up).
+
+    Both components normalize an empty key to ``api_key=None`` before handing it to the
+    SDK, and the OpenAI SDK answers ``None`` by loading ``OPENAI_API_KEY`` out of the
+    server process environment -- while keeping the tenant's ``base_url``. Leaving the
+    field blank was therefore a way around the credential guard.
+    """
+
+    CUSTOM_URL = "https://attacker.example.com/v1"
+
+    @pytest.fixture(autouse=True)
+    def _no_allowlist(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+
+    @pytest.mark.parametrize("absent", [None, ""])
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_chat_should_block_absent_key_when_env_would_supply_one(self, mock_chat_openai, absent, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        component = _component(self.CUSTOM_URL)
+        component.api_key = absent
+
+        with pytest.raises(ValueError, match=r"falls back to \$OPENAI_API_KEY"):
+            component.build_model()
+
+        mock_chat_openai.assert_not_called()
+
+    @pytest.mark.parametrize("absent", [None, ""])
+    @patch("lfx_openai.components.openai.openai.OpenAIEmbeddings")
+    def test_embeddings_should_block_absent_key_when_env_would_supply_one(self, mock_embeddings, absent, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        component = _embeddings_component(self.CUSTOM_URL)
+        component.openai_api_key = absent
+
+        with pytest.raises(ValueError, match=r"falls back to \$OPENAI_API_KEY"):
+            component.build_embeddings()
+
+        mock_embeddings.assert_not_called()
+
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_chat_should_allow_absent_key_when_no_env_fallback_exists(self, mock_chat_openai, monkeypatch):
+        """With nothing for the SDK to resolve, there is no operator credential to protect."""
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["93.184.216.34"])
+        component = _component("https://provider.example/v1")
+        component.api_key = None
+
+        component.build_model()
+
+        assert mock_chat_openai.call_args.kwargs["base_url"] == "https://provider.example/v1"
+
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_chat_should_allow_absent_key_to_an_allowlisted_host(self, mock_chat_openai, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "llm-gateway.corp.example")
+        monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["93.184.216.34"])
+        component = _component("https://llm-gateway.corp.example/v1")
+        component.api_key = None
+
+        component.build_model()
+
+        assert mock_chat_openai.call_args.kwargs["base_url"] == "https://llm-gateway.corp.example/v1"
+
+    def test_the_sdk_really_does_resolve_the_operator_key_for_a_custom_host(self, monkeypatch):
+        """Pin the SDK behavior the guard exists to defend against.
+
+        This builds the real ``ChatOpenAI`` -- no network call is made, the client is only
+        constructed and inspected -- to show that ``api_key=None`` puts the operator's
+        environment key into the Authorization header while keeping the tenant's host. If a
+        future langchain-openai stops doing this, this test fails and the guard's premise
+        can be revisited rather than silently over-blocking.
+        """
+        from langchain_openai import ChatOpenAI
+
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+
+        client = ChatOpenAI(model="gpt-4.1-nano", api_key=None, base_url=self.CUSTOM_URL).root_client
+
+        assert _OPERATOR_ENV_KEY in str(client.auth_headers)
+        assert str(client.base_url).startswith(self.CUSTOM_URL)
+
+    def test_the_guard_runs_before_that_client_is_ever_built(self, monkeypatch):
+        """The same scenario through the component, with the SDK left unmocked."""
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        component = _component(self.CUSTOM_URL)
+        component.api_key = None
+
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            component.build_model()

@@ -23,6 +23,13 @@ operator, deliberately unreadable by the tenant), the destination must be one th
 sanctioned -- the component's own default endpoint, or a host in
 ``LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS``. A tenant-supplied key is unaffected, so
 bring-your-own-key flows against custom endpoints keep working.
+
+An *absent* key is the same problem wearing a disguise: a component that hands its SDK
+``api_key=None`` has not opted out of sending a credential, it has delegated the choice, and
+the SDK then loads ``OPENAI_API_KEY`` (or ``NVIDIA_API_KEY``, ...) straight out of the server
+process environment while keeping the tenant's destination. Call sites therefore name the
+variable their SDK reads via ``sdk_env_fallback`` so the guard judges what will actually be
+sent rather than what the component happened to pass.
 """
 
 from __future__ import annotations
@@ -40,6 +47,8 @@ from lfx.utils.ssrf_httpx import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import httpx
 
 __all__ = [
@@ -131,12 +140,6 @@ def openai_compatible_client_kwargs(base_url: str | None, *, default_url: str | 
     return provider_httpx_clients(base_url)
 
 
-# Minimum length for an environment value to be treated as a credential. Shorter values
-# (booleans, log levels, paths such as "localhost") are too collision-prone to fail
-# closed on; real provider API keys are well above this.
-_MIN_ENV_CREDENTIAL_LENGTH = 8
-
-
 def is_env_sourced_credential(value: Any) -> bool:
     """Whether ``value`` exactly matches a value held in the server process environment.
 
@@ -147,13 +150,19 @@ def is_env_sourced_credential(value: Any) -> bool:
     regardless of which route delivered it. A tenant cannot arrange a false positive
     without already knowing the value they are not allowed to read.
 
-    Accepts plain strings and ``SecretStr``-style wrappers. Values shorter than
-    ``_MIN_ENV_CREDENTIAL_LENGTH`` never match.
+    Every non-empty environment value counts, with no minimum length. A short
+    operator-provisioned key (a LiteLLM virtual key, a self-hosted NIM token) is still the
+    operator's, and neither the LiteLLM nor the local-provider component imposes a length
+    floor of its own, so exempting short values would forward exactly those keys to a
+    tenant-chosen endpoint. The cost of erring the other way is bounded: a tenant whose own
+    key happens to equal some short environment value is merely refused a custom endpoint.
+
+    Accepts plain strings and ``SecretStr``-style wrappers.
     """
     text = secret_value_to_str(value)
-    if not text or len(text) < _MIN_ENV_CREDENTIAL_LENGTH:
+    if not text:
         return False
-    return any(text == env_value for env_value in os.environ.values() if len(env_value) >= _MIN_ENV_CREDENTIAL_LENGTH)
+    return any(text == env_value for env_value in os.environ.values())
 
 
 def get_provider_credential_allowed_hosts() -> list[str]:
@@ -174,21 +183,86 @@ def get_provider_credential_allowed_hosts() -> list[str]:
     return []
 
 
-def _host_is_allowlisted(base_url: str, allowed_hosts: list[str]) -> bool:
+def _parse_allowlist_entry(entry: str) -> tuple[str, bool]:
+    """Split an allowlist entry into its host pattern and whether it opts into cleartext.
+
+    An entry is a bare host (``api.example.com``), a ``host:port`` pair, or a wildcard
+    (``*.example.com``). Writing it with an explicit ``http://`` scheme is how an operator
+    states that they accept the credential reaching that host in cleartext; every other
+    form requires HTTPS.
+    """
+    allows_cleartext = entry.startswith("http://")
+    pattern = entry.split("://", 1)[1] if "://" in entry else entry
+    return pattern.rstrip("/"), allows_cleartext
+
+
+def _matching_allowlist_entry(base_url: str, allowed_hosts: list[str]) -> str | None:
+    """The allowlist entry covering ``base_url``'s host, or None when none does."""
     parsed = urlparse(base_url if "://" in base_url else f"https://{base_url}")
     hostname = (parsed.hostname or "").lower()
     if not hostname:
-        return False
+        return None
     host_port = f"{hostname}:{parsed.port}" if parsed.port else hostname
     for entry in allowed_hosts:
-        if entry in {hostname, host_port}:
-            return True
-        if entry.startswith("*.") and hostname.endswith(entry[1:]):
-            return True
-    return False
+        pattern, _ = _parse_allowlist_entry(entry)
+        if pattern in {hostname, host_port}:
+            return entry
+        if pattern.startswith("*.") and hostname.endswith(pattern[1:]):
+            return entry
+    return None
 
 
-def ensure_credential_endpoint_allowed(api_key: Any, base_url: str | None, *, default_url: str | None = None) -> None:
+def _host_is_allowlisted(base_url: str, allowed_hosts: list[str]) -> bool:
+    return _matching_allowlist_entry(base_url, allowed_hosts) is not None
+
+
+def _first_set_env_var(names: str | Sequence[str] | None) -> str | None:
+    """The first of ``names`` that holds a non-empty value in the server environment."""
+    if not names:
+        return None
+    candidates = (names,) if isinstance(names, str) else names
+    return next((name for name in candidates if os.environ.get(name, "").strip()), None)
+
+
+def _env_credential_reason(api_key: Any, sdk_env_fallback: str | Sequence[str] | None) -> str | None:
+    """Why the credential this call is about to put on the wire is the operator's, or None.
+
+    Two distinct routes send an operator-provisioned key. The component may hand the SDK a
+    key it resolved from the environment itself, which :func:`is_env_sourced_credential`
+    recognizes by value. Or the component may hand the SDK *nothing* — ``None`` rather than
+    an empty string — in which case the SDK resolves a credential of its own from
+    ``sdk_env_fallback`` and the destination receives a key the component never saw. The
+    second route carries no value for a value-based check to inspect, so it is judged by
+    whether the variable the SDK reads is set.
+
+    An empty string is not the same as ``None``: it is a credential the component is
+    deliberately withholding, and the provider SDKs treat it as "no key" rather than
+    substituting one from the environment, so nothing of the operator's can leave.
+    """
+    if api_key is not None:
+        text = secret_value_to_str(api_key)
+        if not text:
+            return None
+        if not is_env_sourced_credential(text):
+            return None
+        return "This component's API key resolves to a value from the server environment"
+
+    fallback_var = _first_set_env_var(sdk_env_fallback)
+    if fallback_var is None:
+        return None
+    return (
+        f"This component has no API key set, so the provider SDK falls back to ${fallback_var} "
+        "from the server environment"
+    )
+
+
+def ensure_credential_endpoint_allowed(
+    api_key: Any,
+    base_url: str | None,
+    *,
+    default_url: str | None = None,
+    sdk_env_fallback: str | Sequence[str] | None = None,
+) -> None:
     """Refuse to forward a server-environment credential to a tenant-chosen endpoint.
 
     Model-provider components resolve their ``api_key`` field from the server process
@@ -198,33 +272,53 @@ def ensure_credential_endpoint_allowed(api_key: Any, base_url: str | None, *, de
     key leaves the deployment to an address the operator never sanctioned.
 
     This is a no-op when the destination is the provider's own default endpoint (or
-    absent), when the destination host is in
-    ``LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS``, or when the key is not
-    environment-sourced (a tenant's own key may go wherever the SSRF policy permits).
+    absent), when the destination host is in ``LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS``,
+    or when the credential is not environment-sourced (a tenant's own key may go wherever
+    the SSRF policy permits). An allowlisted host is additionally held to HTTPS unless the
+    operator wrote the entry with an explicit ``http://`` scheme, so a sanctioned
+    destination cannot receive the credential in cleartext by accident.
 
     Args:
-        api_key: The resolved credential about to be sent (string or secret wrapper).
+        api_key: The credential this component will hand the SDK — the same expression the
+            SDK constructor receives. ``None`` means the component is passing no key and the
+            SDK will resolve one itself; an empty string means no credential is sent at all.
         base_url: The tenant-supplied base URL, or None/empty for the provider default.
         default_url: The provider's own canonical endpoint, which is always allowed.
+        sdk_env_fallback: Environment variable name(s) the provider SDK reads when the
+            component passes no key (``OPENAI_API_KEY`` for the OpenAI-compatible SDKs,
+            ``NVIDIA_API_KEY`` for ``ChatNVIDIA``). Required for the guard to see the
+            absent-key route; omitting it leaves that route unchecked.
 
     Raises:
         ValueError: If the credential is environment-sourced and the destination is a
-            non-default, non-allowlisted endpoint.
+            non-default, non-allowlisted endpoint, or is allowlisted but reached over
+            cleartext HTTP without an explicit opt-in.
     """
-    if api_key is None or not secret_value_to_str(api_key):
-        return
     if not base_url or _is_provider_default(base_url, default_url):
         return
-    if _host_is_allowlisted(base_url, get_provider_credential_allowed_hosts()):
+
+    reason = _env_credential_reason(api_key, sdk_env_fallback)
+    if reason is None:
         return
-    if is_env_sourced_credential(api_key):
-        host = urlparse(base_url).hostname
-        display_host = host if isinstance(host, str) else base_url
+
+    parsed = urlparse(base_url)
+    display_host = parsed.hostname if isinstance(parsed.hostname, str) else base_url
+    entry = _matching_allowlist_entry(base_url, get_provider_credential_allowed_hosts())
+
+    if entry is None:
         msg = (
             f"Refusing to send a server-provisioned API credential to the non-default endpoint "
-            f"'{display_host}'. This component's API key resolves to a value from the server environment, "
-            "which may only be sent to the provider's default endpoint or to a host the operator "
-            "has allowlisted via LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS. "
+            f"'{display_host}'. {reason}, which may only be sent to the provider's default endpoint "
+            "or to a host the operator has allowlisted via LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS. "
             "Set an explicit API key to use a custom endpoint."
+        )
+        raise ValueError(msg)
+
+    if parsed.scheme.lower() == "http" and not _parse_allowlist_entry(entry)[1]:
+        msg = (
+            f"Refusing to send a server-provisioned API credential to '{display_host}' over cleartext "
+            f"HTTP. {reason}, so the request must use HTTPS. Use an https:// base URL, or, if this "
+            f"deployment genuinely requires cleartext to that host, write the allowlist entry with an "
+            f"explicit scheme ('http://{entry}') in LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS."
         )
         raise ValueError(msg)

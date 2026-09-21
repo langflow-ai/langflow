@@ -6,8 +6,9 @@ import socket
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
 from lfx.utils.ssrf_protection import SSRFProtectionError
-from lfx.utils.ssrf_requests import ssrf_safe_get
+from lfx.utils.ssrf_requests import REDIRECT_STATUS_CODES, refuse_redirects, ssrf_safe_get
 
 
 def _resolve_public(host, *_args, **_kwargs):
@@ -203,3 +204,55 @@ class TestSSRFSafeGet:
         ):
             ssrf_safe_get("http://feed.example.com/a", timeout=5, headers=headers)
         assert mock_get.call_args_list[1].kwargs["headers"] == headers
+
+
+class TestRefuseRedirects:
+    """Transports that own their session cannot re-validate hops, so they must not follow one."""
+
+    @staticmethod
+    def _resp(status_code, location=None):
+        """A response mock whose ``is_redirect`` follows requests' own definition."""
+        response = Mock()
+        response.status_code = status_code
+        response.headers = {"Location": location} if location else {}
+        response.url = "https://api.example.com/v1/chat/completions"
+        response.is_redirect = bool(location) and status_code in REDIRECT_STATUS_CODES
+        return response
+
+    @staticmethod
+    def _session():
+        return refuse_redirects(requests.Session())
+
+    @pytest.mark.parametrize("status", sorted(REDIRECT_STATUS_CODES))
+    def test_should_raise_on_any_redirect_status(self, status):
+        response = self._resp(status, "https://elsewhere.example.com/v1")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            list(self._session().resolve_redirects(response, Mock()))
+
+    def test_should_raise_on_a_same_host_port_change(self):
+        """The Authorization header survives a same-host redirect, including a new port."""
+        response = self._resp(302, "http://api.example.com:9999/internal")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            list(self._session().resolve_redirects(response, Mock()))
+
+    def test_should_be_a_no_op_for_a_normal_response(self):
+        assert list(self._session().resolve_redirects(self._resp(200), Mock())) == []
+
+    def test_should_not_raise_on_the_yield_requests_probe(self):
+        """Session.send probes for a follow-up request without following it; that is not egress."""
+        response = self._resp(302, "https://elsewhere.example.com/v1")
+
+        assert list(self._session().resolve_redirects(response, Mock(), yield_requests=True)) == []
+
+    def test_should_leave_the_rest_of_the_session_intact(self):
+        session = requests.Session()
+        session.verify = "/etc/ssl/corp-ca.pem"
+        session.headers["X-Marker"] = "kept"
+
+        hardened = refuse_redirects(session)
+
+        assert hardened is session
+        assert hardened.verify == "/etc/ssl/corp-ca.pem"
+        assert hardened.headers["X-Marker"] == "kept"

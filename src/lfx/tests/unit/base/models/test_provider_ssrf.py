@@ -163,14 +163,164 @@ class TestEnsureCredentialEndpointAllowed:
         with pytest.raises(ValueError, match="server-provisioned API credential"):
             ensure_credential_endpoint_allowed(SecretStr(self.OPERATOR_KEY), self.CUSTOM_URL, default_url=DEFAULT_URL)
 
-    def test_should_ignore_short_env_values(self, monkeypatch):
-        """Low-entropy environment values must not fail closed on coincidental matches."""
-        monkeypatch.setenv("SHORT_FLAG", "on")
-        assert ensure_credential_endpoint_allowed("on", self.CUSTOM_URL, default_url=DEFAULT_URL) is None
+    def test_should_block_short_env_sourced_keys(self, monkeypatch):
+        """A short operator key is still the operator's; failing open would forward it."""
+        monkeypatch.setenv("SHORT_PROXY_KEY", "sk-abc")
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            ensure_credential_endpoint_allowed("sk-abc", self.CUSTOM_URL, default_url=DEFAULT_URL)
 
-    @pytest.mark.parametrize("empty", [None, ""])
-    def test_should_no_op_without_a_key(self, empty):
-        assert ensure_credential_endpoint_allowed(empty, self.CUSTOM_URL, default_url=DEFAULT_URL) is None
+    def test_should_no_op_for_an_empty_key(self):
+        """An empty string is a credential deliberately withheld: the SDK sends no key."""
+        assert ensure_credential_endpoint_allowed("", self.CUSTOM_URL, default_url=DEFAULT_URL) is None
+
+    def test_should_no_op_for_a_missing_key_when_no_fallback_is_declared(self):
+        """Without a declared SDK fallback there is nothing known to be resolvable."""
+        assert ensure_credential_endpoint_allowed(None, self.CUSTOM_URL, default_url=DEFAULT_URL) is None
+
+    # --- host:port allowlist contract (CodeRabbit) ---
+
+    def test_should_allow_matching_host_port_allowlist_entry(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "gateway.example.com:8443")
+
+        assert (
+            ensure_credential_endpoint_allowed(
+                self.OPERATOR_KEY, "https://gateway.example.com:8443/v1", default_url=DEFAULT_URL
+            )
+            is None
+        )
+
+    def test_should_reject_allowlisted_host_on_a_different_port(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "gateway.example.com:8443")
+
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            ensure_credential_endpoint_allowed(
+                self.OPERATOR_KEY, "https://gateway.example.com:9999/v1", default_url=DEFAULT_URL
+            )
+
+    def test_should_allow_any_port_for_a_bare_host_entry(self, monkeypatch):
+        """A bare host entry is not port-scoped, so an explicit port still matches."""
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "gateway.example.com")
+
+        assert (
+            ensure_credential_endpoint_allowed(
+                self.OPERATOR_KEY, "https://gateway.example.com:8443/v1", default_url=DEFAULT_URL
+            )
+            is None
+        )
+
+    # --- cleartext transport (CodeRabbit) ---
+
+    def test_should_reject_cleartext_http_to_an_allowlisted_host(self, monkeypatch):
+        """Allowlisting a host sanctions the destination, not sending the key in the clear."""
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "gateway.example.com")
+
+        with pytest.raises(ValueError, match="cleartext"):
+            ensure_credential_endpoint_allowed(
+                self.OPERATOR_KEY, "http://gateway.example.com/v1", default_url=DEFAULT_URL
+            )
+
+    def test_should_allow_cleartext_when_the_operator_opts_in_by_scheme(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "http://gateway.example.com")
+
+        assert (
+            ensure_credential_endpoint_allowed(
+                self.OPERATOR_KEY, "http://gateway.example.com/v1", default_url=DEFAULT_URL
+            )
+            is None
+        )
+
+    def test_should_still_allow_https_for_a_cleartext_optin_entry(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "http://gateway.example.com")
+
+        assert (
+            ensure_credential_endpoint_allowed(
+                self.OPERATOR_KEY, "https://gateway.example.com/v1", default_url=DEFAULT_URL
+            )
+            is None
+        )
+
+    def test_should_not_apply_cleartext_rule_to_the_provider_default(self, monkeypatch):
+        """LM Studio and LiteLLM Proxy default to http; their own endpoint stays a no-op."""
+        monkeypatch.setenv("LOCAL_PROVIDER_KEY", self.OPERATOR_KEY)
+        local_default = "http://localhost:1234/v1"
+
+        assert ensure_credential_endpoint_allowed(self.OPERATOR_KEY, local_default, default_url=local_default) is None
+
+
+class TestEnsureCredentialEndpointAllowedSdkFallback:
+    """An absent component key still sends the operator's credential (LE-2670 follow-up).
+
+    ``ChatOpenAI(api_key=None)`` and ``ChatNVIDIA(api_key=None)`` do not send an empty
+    Authorization header -- they load the key from the server process environment and send
+    that, to whatever base URL the tenant chose. The guard has to judge the credential the
+    SDK will resolve, not the one the component happened to pass.
+    """
+
+    CUSTOM_URL = "https://attacker.example.com/v1"
+
+    @pytest.fixture(autouse=True)
+    def _clean_allowlist(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def test_should_block_absent_key_when_the_sdk_would_resolve_one(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-operator-env-fallback-0123456789")  # pragma: allowlist secret
+
+        with pytest.raises(ValueError, match=r"falls back to \$OPENAI_API_KEY"):
+            ensure_credential_endpoint_allowed(
+                None, self.CUSTOM_URL, default_url=DEFAULT_URL, sdk_env_fallback="OPENAI_API_KEY"
+            )
+
+    def test_should_allow_absent_key_when_the_fallback_var_is_unset(self):
+        """Nothing for the SDK to resolve means nothing of the operator's can leave."""
+        assert (
+            ensure_credential_endpoint_allowed(
+                None, self.CUSTOM_URL, default_url=DEFAULT_URL, sdk_env_fallback="OPENAI_API_KEY"
+            )
+            is None
+        )
+
+    def test_should_ignore_a_blank_fallback_var(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "   ")
+
+        assert (
+            ensure_credential_endpoint_allowed(
+                None, self.CUSTOM_URL, default_url=DEFAULT_URL, sdk_env_fallback="OPENAI_API_KEY"
+            )
+            is None
+        )
+
+    def test_should_allow_absent_key_to_the_provider_default(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-operator-env-fallback-0123456789")  # pragma: allowlist secret
+
+        assert (
+            ensure_credential_endpoint_allowed(
+                None, DEFAULT_URL, default_url=DEFAULT_URL, sdk_env_fallback="OPENAI_API_KEY"
+            )
+            is None
+        )
+
+    def test_should_allow_absent_key_to_an_allowlisted_host(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-operator-env-fallback-0123456789")  # pragma: allowlist secret
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "attacker.example.com")
+
+        assert (
+            ensure_credential_endpoint_allowed(
+                None, self.CUSTOM_URL, default_url=DEFAULT_URL, sdk_env_fallback="OPENAI_API_KEY"
+            )
+            is None
+        )
+
+    def test_should_check_the_first_set_variable_of_several(self, monkeypatch):
+        monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-operator-0123456789")  # pragma: allowlist secret
+
+        with pytest.raises(ValueError, match=r"falls back to \$NVIDIA_API_KEY"):
+            ensure_credential_endpoint_allowed(
+                None,
+                self.CUSTOM_URL,
+                default_url=DEFAULT_URL,
+                sdk_env_fallback=("OPENAI_API_KEY", "NVIDIA_API_KEY"),
+            )
 
 
 class TestIsEnvSourcedCredential:
@@ -181,6 +331,11 @@ class TestIsEnvSourcedCredential:
     def test_should_not_match_a_value_absent_from_env(self):
         assert is_env_sourced_credential("definitely-not-in-the-environment-xyz") is False
 
-    def test_should_not_match_short_values(self, monkeypatch):
+    def test_should_match_short_values(self, monkeypatch):
+        """No length floor: a short operator-provisioned key is still the operator's."""
         monkeypatch.setenv("SHORT_ENV", "abc")
-        assert is_env_sourced_credential("abc") is False
+        assert is_env_sourced_credential("abc") is True
+
+    def test_should_not_match_an_empty_value(self):
+        assert is_env_sourced_credential("") is False
+        assert is_env_sourced_credential(None) is False

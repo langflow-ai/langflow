@@ -35,6 +35,45 @@ DEFAULT_MAX_REDIRECTS = 30
 SENSITIVE_REDIRECT_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
 
 
+def refuse_redirects(session: requests.Session) -> requests.Session:
+    """Make ``session`` raise instead of following a redirect, and return it.
+
+    Some provider SDKs own their ``requests.Session`` and expose no way to pass request
+    kwargs, so :func:`ssrf_safe_get`'s validate-every-hop loop cannot be applied to them.
+    Refusing outright is the workable equivalent: an inference API answering a redirect to
+    ``/chat/completions`` is not a flow any provider supports, while ``requests`` keeps the
+    ``Authorization`` header across a same-host redirect -- including one that changes port
+    or downgrades to cleartext -- so following one can hand the credential to a different
+    service on a host the operator did sanction.
+
+    The session's own configuration (TLS verification, adapters, proxies) is left intact;
+    only redirect resolution is replaced.
+
+    Args:
+        session: The session to harden. It is modified in place.
+
+    Returns:
+        requests.Session: The same session, for use as a drop-in factory result.
+    """
+
+    def resolve_redirects(response, request, *, yield_requests: bool = False, **kwargs):  # noqa: ARG001
+        # ``Session.send`` probes for a follow-up request with yield_requests=True even when
+        # it is not following redirects; that probe is not an egress and must not raise.
+        if yield_requests or not response.is_redirect:
+            return iter(())
+        location = response.headers.get("Location", "")
+        msg = (
+            f"Refusing to follow the redirect from {response.url} to '{location}'. "
+            "This provider transport cannot re-validate a redirect target, and a same-host "
+            "redirect keeps the Authorization header, so following it could send the "
+            "credential to an unvalidated destination."
+        )
+        raise SSRFProtectionError(msg)
+
+    session.resolve_redirects = resolve_redirects
+    return session
+
+
 def ssrf_safe_get(
     url: str,
     *,

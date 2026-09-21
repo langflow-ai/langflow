@@ -78,7 +78,14 @@ class LiteLLMProxyComponent(LCModelComponent):
         api_key = secret_value_to_str(self.api_key) or ""
         # The virtual key may resolve to the operator's environment-provisioned
         # credential; refuse to forward it to a tenant-chosen endpoint.
-        ensure_credential_endpoint_allowed(api_key, self.api_base, default_url=DEFAULT_LITELLM_PROXY_BASE)
+        ensure_credential_endpoint_allowed(
+            api_key or None,
+            self.api_base,
+            default_url=DEFAULT_LITELLM_PROXY_BASE,
+            # A ChatOpenAI is built below, so an absent virtual key means the OpenAI SDK
+            # supplies OPENAI_API_KEY from the server environment to this proxy address.
+            sdk_env_fallback="OPENAI_API_KEY",
+        )
         ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(self.api_base)
 
         self._validate_proxy_connection(api_key)

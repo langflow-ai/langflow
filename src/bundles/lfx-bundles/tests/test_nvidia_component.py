@@ -179,3 +179,162 @@ class TestNVIDIACredentialEgress:
         component.build_model()
 
         assert mock_module.ChatNVIDIA.call_args.kwargs["base_url"] == self.CUSTOM_URL
+
+
+class TestNVIDIAAbsentKeyCredentialEgress:
+    """An absent NVIDIA key is not an absent credential (LE-2670 follow-up).
+
+    ``ChatNVIDIA`` answers a missing ``api_key`` by reading ``NVIDIA_API_KEY`` from the
+    server process environment, so leaving the field blank was a way around the guard.
+    """
+
+    OPERATOR_KEY = "nvapi-operator-canary-b7c6d5e4"  # pragma: allowlist secret
+    CUSTOM_URL = "https://attacker.example.com/v1"
+
+    def _component(self, base_url, api_key):
+        from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
+
+        component = NVIDIAModelComponent()
+        component._attributes = {
+            "base_url": base_url,
+            "api_key": api_key,
+            "tool_model_enabled": False,
+            "model_name": "model-a",
+            "max_tokens": 10,
+            "temperature": 0.1,
+            "seed": 1,
+        }
+        return component
+
+    @pytest.fixture(autouse=True)
+    def _no_allowlist(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+
+    @pytest.mark.parametrize("absent", [None, ""])
+    def test_build_model_blocks_absent_key_when_env_would_supply_one(self, absent, monkeypatch):
+        monkeypatch.setenv("NVIDIA_API_KEY", self.OPERATOR_KEY)
+        component = self._component(self.CUSTOM_URL, absent)
+
+        with pytest.raises(ValueError, match=r"falls back to \$NVIDIA_API_KEY"):
+            component.build_model()
+
+    @pytest.mark.parametrize("absent", [None, ""])
+    def test_get_models_blocks_absent_key_when_env_would_supply_one(self, absent, monkeypatch):
+        monkeypatch.setenv("NVIDIA_API_KEY", self.OPERATOR_KEY)
+        component = self._component(self.CUSTOM_URL, absent)
+
+        with pytest.raises(ValueError, match=r"falls back to \$NVIDIA_API_KEY"):
+            component.get_models()
+
+    def test_build_model_allows_absent_key_when_env_var_is_unset(self, monkeypatch):
+        """Nothing for the SDK to resolve means nothing of the operator's can leave."""
+        monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+        component = self._component(self.CUSTOM_URL, None)
+
+        mock_module = MagicMock()
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", mock_module)
+        component.build_model()
+
+        assert mock_module.ChatNVIDIA.call_args.kwargs["base_url"] == self.CUSTOM_URL
+
+
+class TestNVIDIARedirectHandling:
+    """ChatNVIDIA owns a ``requests.Session``, which follows redirects by default.
+
+    ``requests`` only drops the Authorization header when a redirect changes the
+    *hostname*, so a same-host redirect -- including one that switches port or downgrades
+    to cleartext http -- carries the API key to a destination the endpoint guard never
+    validated. Every other guarded provider takes redirect-free httpx clients; this one
+    has to be hardened on the session itself.
+    """
+
+    @staticmethod
+    def _fake_chat_nvidia_module(*, with_session_factory=True):
+        """A stand-in for the SDK whose client mirrors ``_NVIDIAClient``'s session factory."""
+        import requests
+
+        module = MagicMock()
+        client = MagicMock()
+        if with_session_factory:
+            client.get_session_fn = requests.Session
+        else:
+            del client.get_session_fn
+        model = MagicMock()
+        model._client = client
+        del model._async_client
+        module.ChatNVIDIA.return_value = model
+        return module
+
+    @staticmethod
+    def _redirect_response():
+        response = MagicMock()
+        response.status_code = 302
+        response.headers = {"Location": "http://integrate.api.nvidia.com:9999/internal"}
+        response.url = "https://integrate.api.nvidia.com/v1/chat/completions"
+        response.is_redirect = True
+        return response
+
+    def _component(self):
+        from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
+
+        component = NVIDIAModelComponent()
+        component._attributes = {
+            "base_url": "https://integrate.api.nvidia.com/v1",
+            "api_key": "nvapi-tenant-owned-1a2b3c4d",  # pragma: allowlist secret
+            "tool_model_enabled": False,
+            "model_name": "model-a",
+            "max_tokens": 10,
+            "temperature": 0.1,
+            "seed": 1,
+        }
+        return component
+
+    def test_build_model_session_refuses_a_same_host_redirect(self, monkeypatch):
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        module = self._fake_chat_nvidia_module()
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
+
+        model = self._component().build_model()
+
+        session = model._client.get_session_fn()
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            list(session.resolve_redirects(self._redirect_response(), MagicMock()))
+
+    def test_get_models_session_refuses_a_same_host_redirect(self, monkeypatch):
+        """Model discovery fires before any inference call and must be hardened too."""
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        module = self._fake_chat_nvidia_module()
+        model = module.ChatNVIDIA.return_value
+        model.available_models = []
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
+
+        self._component().get_models()
+
+        session = model._client.get_session_fn()
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            list(session.resolve_redirects(self._redirect_response(), MagicMock()))
+
+    def test_session_still_serves_non_redirect_responses(self, monkeypatch):
+        module = self._fake_chat_nvidia_module()
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
+
+        model = self._component().build_model()
+
+        ok = MagicMock()
+        ok.is_redirect = False
+        assert list(model._client.get_session_fn().resolve_redirects(ok, MagicMock())) == []
+
+    def test_warns_when_the_sdk_stops_exposing_the_session_factory(self, monkeypatch):
+        """A silent fail-open on an SDK bump is the thing to avoid; make it loud."""
+        import lfx_bundles.nvidia.nvidia as nvidia_mod
+
+        module = self._fake_chat_nvidia_module(with_session_factory=False)
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", module)
+        warnings = []
+        monkeypatch.setattr(nvidia_mod.logger, "warning", warnings.append)
+
+        self._component().build_model()
+
+        assert any("no longer exposes 'get_session_fn'" in message for message in warnings)

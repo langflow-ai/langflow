@@ -60,9 +60,11 @@ class SecuritySettings(BaseModel):
 
     List a host here (exact hostname, 'host:port', or wildcard '*.example.com') when the
     deployment legitimately fronts a provider with a proxy/gateway and provisions the key
-    via the environment, e.g. 'llm-gateway.corp.example'. Tenants' own keys (typed or stored
-    as their own global variables) are unaffected by this setting and follow the ordinary
-    SSRF policy above."""
+    via the environment, e.g. 'llm-gateway.corp.example'. A listed host is still required to
+    be reached over HTTPS; prefix the entry with 'http://' to also accept the credential
+    travelling there in cleartext, e.g. 'http://llm-gateway.internal:8000'. Tenants' own keys
+    (typed or stored as their own global variables) are unaffected by this setting and follow
+    the ordinary SSRF policy above."""
 
     connector_ssrf_allow_loopback: bool = True
     """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for ordinary HTTP

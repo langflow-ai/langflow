@@ -78,8 +78,14 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
         # A key that resolves to a value held in the server process environment is the
         # operator's credential: it may only leave the deployment to an endpoint the
         # operator sanctioned (the default OpenAI endpoint or an allowlisted host).
+        # Pass the same expression OpenAIEmbeddings receives below: `or None` means an empty key
+        # reaches the SDK as None, at which point it loads OPENAI_API_KEY from the server
+        # environment and sends it to this tenant-chosen base URL.
         ensure_credential_endpoint_allowed(
-            self.openai_api_key, self.openai_api_base, default_url=DEFAULT_OPENAI_API_BASE
+            self.openai_api_key or None,
+            self.openai_api_base,
+            default_url=DEFAULT_OPENAI_API_BASE,
+            sdk_env_fallback="OPENAI_API_KEY",
         )
 
         # openai_api_base is tenant-editable and the SDK sends the operator's stored API key to

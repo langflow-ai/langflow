@@ -122,7 +122,15 @@ class OpenAIModelComponent(LCModelComponent):
         # A key that resolves to a value held in the server process environment is the
         # operator's credential: it may only leave the deployment to an endpoint the
         # operator sanctioned (the default OpenAI endpoint or an allowlisted host).
-        ensure_credential_endpoint_allowed(api_key_value, self.openai_api_base, default_url=DEFAULT_OPENAI_API_BASE)
+        # api_key_value is the exact expression handed to ChatOpenAI below: when it is None the
+        # SDK resolves OPENAI_API_KEY from the server environment itself, so the guard has to
+        # know that variable to see the credential that would actually be sent.
+        ensure_credential_endpoint_allowed(
+            api_key_value,
+            self.openai_api_base,
+            default_url=DEFAULT_OPENAI_API_BASE,
+            sdk_env_fallback="OPENAI_API_KEY",
+        )
 
         # openai_api_base is tenant-editable and the SDK sends the operator's stored API key to
         # whatever host it names. Apply the connector SSRF policy and route a custom endpoint

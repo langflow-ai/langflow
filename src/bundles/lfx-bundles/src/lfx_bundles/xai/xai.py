@@ -139,7 +139,14 @@ class XAIModelComponent(LCModelComponent):
         json_mode = self.json_mode
         seed = self.seed
 
-        ensure_credential_endpoint_allowed(self.api_key, base_url, default_url=XAI_DEFAULT_BASE_URL)
+        # This component builds a ChatOpenAI, so an absent key makes the OpenAI SDK -- not xAI's --
+        # fall back to OPENAI_API_KEY from the server environment while keeping this base URL.
+        ensure_credential_endpoint_allowed(
+            self.api_key or None,
+            base_url,
+            default_url=XAI_DEFAULT_BASE_URL,
+            sdk_env_fallback="OPENAI_API_KEY",
+        )
         ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(base_url)
         api_key = SecretStr(api_key).get_secret_value() if api_key else None
 
