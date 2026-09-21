@@ -2986,3 +2986,119 @@ class TestReflectiveNamespaceDynamicKeys:
     )
     def test_ordinary_mappings_still_allowed(self, code):
         assert scan_code_security(code).is_safe is True
+
+
+class TestReflectiveNamespaceProvenance:
+    """A namespace mapping must keep its marker across a copy.
+
+    The dynamic-key rule only fires on a value this scanner still recognizes as
+    a namespace. Copying or reconstructing the mapping dropped that marker, so
+    ``dict(vars(type(f)))`` and ``vars(type(f)).copy()`` read as ordinary
+    application dictionaries and every key rule stopped applying — the original
+    descriptor/evaluator chain stayed reachable. The marker now rides the value
+    through ``dict()``, ``{**ns}``, ``.copy()`` and any call this scanner cannot
+    model, and namespace methods that hand out members without presenting a key
+    are rejected outright.
+
+    Every proof here is harmless: the recovered callable only evaluates 2 + 2.
+    """
+
+    # Recovers builtins.eval through a copied namespace, so no marker survives
+    # unless provenance is preserved.
+    COPIED_NAMESPACE_POC = (
+        "f = lambda: None\n"
+        "ns = dict(vars(type(f)))\n"
+        'd = ns["__globals__".lower()]\n'
+        "getters = dict(vars(type(d)))\n"
+        'g = getters["__get__".lower()](d, f)\n'
+        'b = g["__builtins__".lower()]\n'
+        'e = b["eval"] if isinstance(b, dict) else vars(b)["eval"]\n'
+        'result = e("2 + 2")\n'
+    )
+
+    def test_copied_namespace_poc_is_rejected(self):
+        result = scan_code_security(self.COPIED_NAMESPACE_POC)
+        assert result.is_safe is False
+        assert any("(sandbox escape)" in violation for violation in result.violations)
+
+    def test_copied_namespace_poc_really_recovers_an_evaluator(self):
+        """The regression is only meaningful if the payload actually works."""
+        namespace: dict = {}
+        exec(self.COPIED_NAMESPACE_POC, namespace)  # noqa: S102 - arithmetic only
+        assert namespace["result"] == 4
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(vars(type(f)))\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = vars(type(f)).copy()\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = {**vars(type(f))}\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(**vars(type(f)))\nd = ns[k]",
+            "import copy\ndef f():\n    pass\nk = '__GLOBALS__'.lower()\nns = copy.deepcopy(vars(type(f)))\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\n"
+            "def passthrough(m):\n    return m\nd = passthrough(vars(type(f)))[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(vars(type(f)))\nd = ns.get(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\ncopied = dict(vars(type(f)))\nd = dict.get(copied, k)",
+        ],
+        ids=[
+            "dict-constructor-copy",
+            "copy-method",
+            "dict-unpack",
+            "dict-keyword-unpack",
+            "copy-deepcopy",
+            "unmodeled-helper-passthrough",
+            "copied-namespace-get",
+            "copied-namespace-unbound-get",
+        ],
+    )
+    def test_provenance_survives_copies_and_conversions(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nvalues = list(vars(type(f)).values())",
+            "def f():\n    pass\nfor k, v in vars(type(f)).items():\n    pass",
+            "def f():\n    pass\nentry = vars(type(f)).popitem()",
+            "def f():\n    pass\nns = dict(vars(type(f)))\nvalues = list(ns.values())",
+        ],
+        ids=["values", "items", "popitem", "copied-namespace-values"],
+    )
+    def test_namespace_methods_without_a_selector_are_rejected(self, code):
+        # ``values()``/``items()`` return the descriptors directly, so the key
+        # rules never see a selector at all.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary application dictionaries survive the same copies: they
+            # never carry the marker to begin with.
+            "base = {'a': 1}\ncopied = dict(base)\nvalue = copied[selector]",
+            "base = {'a': 1}\nmerged = {**base, 'b': 2}\nvalue = merged[selector]",
+            "base = {'a': 1}\nvalues = list(base.values())",
+            "base = {'a': 1}\nfor k, v in base.items():\n    pass",
+            # A namespace read with a statically known, non-dunder key still works.
+            "import argparse\nparsed = argparse.Namespace()\nconfig = dict(vars(parsed))\nname = config['name']",
+            "class C:\n    x = 1\n\n\nfields = sorted(vars(C).keys())",
+            "class C:\n    x = 1\n\n\ncount = len(vars(C))",
+            # The marker rides onto non-mappings, so sequence reads must stay clean.
+            "import json\n\n\nclass C:\n    x = 1\n\n\ntext = json.dumps(vars(C()))\nhead = text[:100]",
+        ],
+        ids=[
+            "plain-dict-copy",
+            "plain-dict-merge",
+            "plain-dict-values",
+            "plain-dict-items",
+            "namespace-copy-static-key",
+            "namespace-keys",
+            "namespace-length",
+            "serialized-namespace-slice",
+        ],
+    )
+    def test_ordinary_dictionary_copies_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True

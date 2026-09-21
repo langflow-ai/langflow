@@ -465,6 +465,14 @@ def _static_positional_argument_count(arguments: list[ast.expr]) -> int | None:
 # deliberate: every existing mapping rule keys off that suffix.
 _UNRESOLVED_REFLECTIVE_NAMESPACE = "<unresolved>.__dict__"
 
+# The only methods modeled on a namespace mapping. ``values()`` / ``items()``
+# return the descriptors themselves, so the key checks never see a selector at
+# all; anything not listed here fails closed rather than growing this list into
+# another bypassable denylist.
+_NAMESPACE_MAPPING_METHODS: frozenset[str] = frozenset(
+    {"get", "keys", "copy", "__getitem__", "__contains__", "__len__", "__iter__"}
+)
+
 
 def _expand_static_arguments(arguments: list[ast.expr]) -> list[ast.expr] | None:
     """Splice statically known starred tuples/lists into the argument list.
@@ -809,8 +817,41 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
                 resolved.update(self._resolved_member_names(module_names, member_name))
 
+            if not any(name.endswith(".__dict__") for name in resolved) and self._call_reaches_namespace_mapping(node):
+                # A namespace laundered through a call - ``dict(ns)``,
+                # ``ns.copy()``, ``copy.deepcopy(ns)``, or any helper this
+                # scanner cannot model - keeps the marker. Without it the copy
+                # reads as an ordinary application dictionary and every mapping
+                # rule above stops applying, which is the whole escape:
+                # ``dict(vars(type(f)))["__globals__".lower()]``. Enumerating
+                # copy spellings would be another bypassable denylist, so the
+                # marker rides the value instead.
+                resolved.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
+
             return frozenset(resolved)
+        if isinstance(node, ast.Dict):
+            # ``{**ns, ...}`` copies a namespace wholesale.
+            if any(
+                key is None and any(name.endswith(".__dict__") for name in self._resolved_assignment_value(value))
+                for key, value in zip(node.keys, node.values, strict=True)
+            ):
+                return frozenset({_UNRESOLVED_REFLECTIVE_NAMESPACE})
+            return frozenset()
         return frozenset()
+
+    def _call_reaches_namespace_mapping(self, node: ast.Call) -> bool:
+        """True if a namespace mapping is this call's receiver or one of its arguments."""
+        if isinstance(node.func, ast.Attribute) and any(
+            name.endswith(".__dict__") for name in self._resolved_assignment_value(node.func.value)
+        ):
+            return True
+        arguments: list[ast.AST] = [
+            argument.value if isinstance(argument, ast.Starred) else argument for argument in node.args
+        ]
+        arguments.extend(keyword.value for keyword in node.keywords)
+        return any(
+            name.endswith(".__dict__") for argument in arguments for name in self._resolved_assignment_value(argument)
+        )
 
     @staticmethod
     def _dangerous_callable_message(resolved_name: str) -> str | None:
@@ -1544,6 +1585,13 @@ class _SecurityChecker(ast.NodeVisitor):
             # ``vars(type)["__subclasses__"]`` slip through.
             self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
             return self.generic_visit(node)
+        if isinstance(node.slice, ast.Slice) or (
+            isinstance(node.slice, ast.Constant) and not isinstance(node.slice.value, str)
+        ):
+            # ``value[0]`` / ``value[1:2]`` is a sequence read, not a member
+            # lookup. The marker rides through unmodeled calls, so it lands on
+            # values that are not mappings at all (``json.dumps(vars(o))[:100]``).
+            return self.generic_visit(node)
         mapping_values = frozenset(
             name for name in self._resolved_assignment_value(node.value) if name.endswith(".__dict__")
         )
@@ -1626,6 +1674,7 @@ class _SecurityChecker(ast.NodeVisitor):
         self._check_attribute_call(node)
         getattr_arguments_validated = self._check_getattr_access(node)
         self._check_dunder_mapping_read(node)
+        self._check_namespace_mapping_method(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
         reflective_arguments_validated = self._check_restricted_reflection_access(node, resolved_call_names)
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
@@ -1687,6 +1736,22 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.violations.append(violation)
                 return
 
+    def _check_namespace_mapping_method(self, node: ast.Call) -> None:
+        """Reject namespace methods that yield members without presenting a selector.
+
+        ``vars(X).values()`` / ``.items()`` hand out the descriptors directly, so
+        the dunder-key and dynamic-key rules never see a key. Only the modeled
+        methods are allowed on a namespace mapping.
+        """
+        if not isinstance(node.func, ast.Attribute) or node.func.attr in _NAMESPACE_MAPPING_METHODS:
+            return
+        receiver_names = self._resolved_assignment_value(node.func.value)
+        if any(name.endswith(".__dict__") for name in receiver_names):
+            self.violations.append(
+                f"Use of '{node.func.attr}()' on a namespace mapping (vars()/__dict__) is forbidden "
+                "in components (sandbox escape)"
+            )
+
     def _check_dunder_mapping_read(self, node: ast.Call):
         """Reject ``.get()``/``__getitem__()`` reads of dangerous dunder keys.
 
@@ -1701,23 +1766,29 @@ class _SecurityChecker(ast.NodeVisitor):
         # A starred argument with no statically known size is treated like any
         # other dynamic key; only expanded arguments expose a static selector.
         arguments = _expand_static_arguments(node.args) or node.args
-        if isinstance(node.func, ast.Attribute) and node.func.attr in {"get", "__getitem__"} and arguments:
-            # Bound form: ``mapping.get(key)`` / ``mapping.__getitem__(key)``.
-            selectors.append(arguments[0])
-        if function_names & {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}:
-            # Unbound form: ``dict.get(mapping, key)`` — the mapping is args[0].
+        unbound_accessors = {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}
+        is_unbound = bool(function_names & unbound_accessors)
+        namespace_receiver = False
+        if is_unbound:
+            # Unbound form: ``dict.get(mapping, key)`` — the mapping is args[0]
+            # and the key args[1]. ``dict.get`` is itself an ``ast.Attribute``
+            # whose attr is "get", so this has to be settled before the bound
+            # form below, or the mapping gets read as the key.
             if arguments[1:]:
                 selectors.append(arguments[1])
+            namespace_receiver = bool(
+                arguments and any(name.endswith(".__dict__") for name in self._resolved_assignment_value(arguments[0]))
+            )
+        elif isinstance(node.func, ast.Attribute) and node.func.attr in {"get", "__getitem__"} and arguments:
+            # Bound form: ``mapping.get(key)`` / ``mapping.__getitem__(key)``.
+            selectors.append(arguments[0])
+            namespace_receiver = any(
+                name.endswith(".__dict__") for name in self._resolved_assignment_value(node.func.value)
+            )
         elif arguments and any(name.endswith((".__dict__.get", ".__dict__.__getitem__")) for name in function_names):
             # Aliased bound accessor: ``lookup = vars(X).get; lookup(key)``.
             selectors.append(arguments[0])
-        namespace_receiver = any(
-            name.endswith((".__dict__.get", ".__dict__.__getitem__")) for name in function_names
-        ) or (
-            isinstance(node.func, ast.Attribute)
-            and node.func.attr in {"get", "__getitem__"}
-            and any(name.endswith(".__dict__") for name in self._resolved_assignment_value(node.func.value))
-        )
+            namespace_receiver = True
         for selector in selectors:
             member_name = self._static_name(selector)
             if member_name in DANGEROUS_DUNDER_ATTRS:
