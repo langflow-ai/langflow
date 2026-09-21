@@ -1483,7 +1483,6 @@ class IndirectCommandComponent(Component):
             "import os\nmodule = os\nconsume([module for module in (object(),)])",
             "import requests\ndef expose():\n    return requests\nexpose().get('https://example.com')",
             "import os\n(module,) = (os.path,)\nmodule.join('a', 'b')",
-            "import os\ngetattr(os.path.join, '__call__')('a', 'b')",
         ],
         ids=[
             "ordinary-object-method",
@@ -1494,7 +1493,6 @@ class IndirectCommandComponent(Component):
             "comprehension-target-shadows-restricted-module",
             "returned-safe-module",
             "unpacked-safe-module-attribute",
-            "getattr-safe-callable-receiver",
         ],
     )
     def test_should_allow_safe_indirect_reference(self, code):
@@ -1571,8 +1569,10 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         ],
         ids=["direct-getattr-call", "aliased-getattr-call", "builtins-getattr-call"],
     )
-    def test_should_allow_safe_getattr_call_variants(self, code):
-        assert scan_code_security(code).is_safe is True
+    def test_should_detect_dunder_getattr_call_variants(self, code):
+        # ``.__call__`` is a dunder attribute read; all dunder attribute access
+        # is rejected (H1-3977745), even for an otherwise safe callable.
+        assert scan_code_security(code).is_safe is False
 
     @pytest.mark.parametrize(
         "code",
@@ -1587,11 +1587,13 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         assert scan_code_security(code).is_safe is False
 
     def test_should_detect_dynamic_getattr_on_ordinary_objects(self):
-        # Fail closed (H1-3980911): a runtime-built attribute name can resolve to
-        # a sandbox-escape dunder on any receiver, so it is rejected even when the
-        # receiver is an ordinary object with a default supplied.
+        # Fail closed (H1-3977745 / H1-3980911): the receiver's type cannot be
+        # proven from the AST and a runtime-built attribute name can resolve to
+        # a sandbox-escape dunder, so it is rejected on any receiver even when
+        # the receiver is an ordinary object with a default supplied.
         result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
         assert result.is_safe is False
+        assert any("Dynamic getattr()" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -1779,7 +1781,6 @@ class TestScanCodeSecurityRuntimeModuleBypass:
             pytest.param("record = {'name': 'x'}\nname = record['name']", id="subscript-safe-key"),
             pytest.param("class Record:\n    value = 1\ndata = vars(Record())", id="vars-plain-read"),
             pytest.param("import glob\nchecker = vars(glob).get('magic_check')", id="vars-module-safe-key"),
-            pytest.param("import glob\nchecker = dict.get(glob.__dict__, 'magic_check')", id="dict-get-safe-member"),
             pytest.param("d = {}\nvalue = d.get('__name__')", id="non-dangerous-dunder-key"),
             pytest.param("config = {'timeout': 5}\nvalue = config.get(*('timeout',))", id="dict-get-starred-safe-key"),
             pytest.param("d = {}\nvalue = d.get(*('__name__',))", id="starred-non-dangerous-dunder-key"),
@@ -1955,10 +1956,6 @@ for s in subs:
                 id="rebound-module-name",
             ),
             pytest.param(
-                "class Holder:\n    pass\nholder = Holder()\nholder.__getattribute__('os').system('ordinary object')",
-                id="ordinary-object-getattribute",
-            ),
-            pytest.param(
                 "import glob\nglob = object()\nvars = lambda value: {'os': value}\nvars(glob)['os'].glob('file')",
                 id="shadowed-vars",
             ),
@@ -1976,8 +1973,8 @@ for s in subs:
                 id="direct-glob-and-static-safe-getattr",
             ),
             pytest.param(
-                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
-                id="direct-glob-and-safe-dict-member",
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.glob",
+                id="direct-glob-and-safe-member",
             ),
             pytest.param(
                 "import glob\npath_class = vars(glob)['glob']",
@@ -1986,6 +1983,22 @@ for s in subs:
             pytest.param(
                 "import glob\nchecker = vars(glob).get('magic_check')",
                 id="vars-mapping-get-safe-member",
+            ),
+        ],
+    )
+    def test_should_allow_safe_reflective_os_like_access(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "class Holder:\n    pass\nholder = Holder()\nholder.__getattribute__('os').system('ordinary object')",
+                id="ordinary-object-getattribute",
+            ),
+            pytest.param(
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
+                id="direct-glob-and-safe-dict-member",
             ),
             pytest.param(
                 "import glob\npath_class = object.__getattribute__(glob, 'glob')",
@@ -2001,8 +2014,12 @@ for s in subs:
             ),
         ],
     )
-    def test_should_allow_safe_reflective_os_like_access(self, code):
-        assert scan_code_security(code).is_safe is True
+    def test_should_detect_dunder_reflective_access(self, code):
+        # Reflective access through dunder attributes (``__dict__``,
+        # ``__getattribute__``, ``__call__``) is rejected even when the member
+        # resolved is safe: all dunder attribute access is forbidden
+        # (H1-3977745). Use direct attribute access or ``vars()`` instead.
+        assert scan_code_security(code).is_safe is False
 
     @pytest.mark.parametrize(
         "code",
@@ -2235,10 +2252,6 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 "import platform\nname = platform.system()\nrelease = platform.release()", id="platform-safe-api"
             ),
             pytest.param('import json\ndata = json.loads(\'{"key": "value"}\')', id="json-loads"),
-            pytest.param(
-                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
-                id="glob-dict-safe-member",
-            ),
             # ``vars(<host>)`` resolves to the same mapping as ``<host>.__dict__``;
             # a safe member read through it stays allowed.
             pytest.param("import glob\ncheck = vars(glob)['magic_check']", id="vars-safe-member"),
@@ -2247,14 +2260,32 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 id="unknown-module-os-attribute",
             ),
             pytest.param("from example_module import os\nos.system('ordinary object')", id="unknown-module-import-os"),
+        ],
+    )
+    def test_should_allow_safe_stdlib_and_object_access(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
+                id="glob-dict-safe-member",
+            ),
             pytest.param(
                 "import requests\nsession_class = requests.__dict__.get('Session')",
                 id="third-party-dict-get-safe-member",
             ),
         ],
     )
-    def test_should_allow_safe_stdlib_and_object_access(self, code):
-        assert scan_code_security(code).is_safe is True
+    def test_should_detect_dunder_mapping_access_on_safe_hosts(self, code):
+        # Reading ``__dict__`` is itself a blocked dunder access (H1-3977745),
+        # so the safe-host carve-outs above no longer extend to the mapping
+        # spelling — even for a safe member or an ordinary object. ``vars(x)``
+        # reaches the same mapping and stays allowed.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -2617,13 +2648,21 @@ class TestScanCodeSecuritySandboxEscapeBypasses:
         [
             # Static, non-dunder attribute names remain allowed on any receiver.
             "value = getattr(self, 'field', None)",
-            "size = getattr((), '__len__')()",
+            "position = getattr((), 'index')",
             "import os\npath_module = getattr(os, 'path')",
         ],
-        ids=["static-field-with-default", "static-benign-dunder", "static-module-attr"],
+        ids=["static-field-with-default", "static-literal-receiver-attr", "static-module-attr"],
     )
     def test_should_allow_static_getattr_attribute_names(self, code):
         assert scan_code_security(code).is_safe is True
+
+    def test_should_detect_static_benign_dunder_getattr_name(self):
+        # ``getattr((), '__len__')`` was allowed as a benign dunder. Every dunder
+        # read is now rejected (H1-3977745): a denylist of "dangerous" dunders is
+        # bypassable the moment one is missed. Call the builtin instead.
+        result = scan_code_security("size = getattr((), '__len__')()")
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
 
     YAML_UNSAFE_LOADER_POC = (
         "import yaml\n"
@@ -3101,4 +3140,175 @@ class TestReflectiveNamespaceProvenance:
         ],
     )
     def test_ordinary_dictionary_copies_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityDynamicGetattrSandboxBypass:
+    """Regression for H1-3977745: AST sandbox bypass via dynamic attribute names.
+
+    The scanner only blocked sandbox-escape dunders when they appeared
+    literally, and ``__class__`` / ``__base__`` / ``__init__`` were not listed
+    at all, so ``getattr(().__class__.__base__, <dynamic name>)`` reached
+    ``object.__subclasses__()`` -> a function's ``__globals__`` -> ``__import__``
+    without a violation. All dunder attribute access, all dynamic ``getattr``
+    attribute names (regardless of receiver), and the non-dunder introspection
+    gadgets (``mro``, frame/traceback attributes, formatter sinks) are now
+    rejected, matching lfx/utils/python_repl_security.py::validate_code_safety.
+    """
+
+    def test_should_detect_reported_poc_escape_chain(self):
+        code = (
+            "base = ().__class__.__base__\n"
+            'subs = getattr(base, "__subclasses__".upper().lower())()\n'
+            'g = getattr(getattr(subs[0], "__init__"), "".join(["__globa","ls__"]))\n'
+            'g["".join(["__buil","tins__"])]["".join(["__imp","ort__"])]("subprocess").check_output(["id"])'
+        )
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert result.violations
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("x = ().__class__", id="dunder-class"),
+            pytest.param("x = ().__class__.__base__", id="dunder-base"),
+            pytest.param("def f():\n    pass\nx = f.__init__", id="dunder-init"),
+            pytest.param("class A:\n    pass\nx = A.__init__", id="class-dunder-init"),
+            pytest.param("x = object.__getattribute__", id="dunder-getattribute"),
+            pytest.param("def f():\n    pass\nx = f.__reduce__", id="dunder-reduce"),
+            pytest.param("x = ().__class__.mro()", id="non-dunder-mro"),
+            pytest.param("x = int.mro()", id="non-dunder-mro-int"),
+            pytest.param(
+                "def g():\n    yield 1\nf = g().gi_frame.f_globals",
+                id="generator-frame-globals",
+            ),
+            pytest.param(
+                "def f():\n    pass\nb = f.__globals__['__builtins__']",
+                id="func-globals-subscript",
+            ),
+        ],
+    )
+    def test_should_detect_dunder_and_introspection_attribute_access(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                'base = ().__class__.__base__\ngetattr(base, "__subclasses__".upper().lower())()',
+                id="method-transformed-name",
+            ),
+            pytest.param(
+                'getattr(object, "".join(["__subcl", "asses__"]))()',
+                id="join-assembled-name",
+            ),
+            pytest.param(
+                "getattr(object, f\"__sub{'cl'}asses__\")()",
+                id="nested-fstring-name",
+            ),
+            pytest.param(
+                "getattr(object, '__subclasses__'[:])()",
+                id="sliced-name",
+            ),
+            pytest.param(
+                "name = '__sub' + 'classes__'\nnames = name.split('l')\ngetattr(object, 'l'.join(names))()",
+                id="rebound-joined-name",
+            ),
+            pytest.param(
+                "field = 'value'\ngetattr(self, field, None)",
+                id="dynamic-name-ordinary-receiver",
+            ),
+        ],
+    )
+    def test_should_detect_dynamic_getattr_name_on_any_receiver(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert result.violations
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                'def f():\n    pass\n"{0.__globals__[__builtins__]}".format(f)',
+                id="str-format-dunder-traversal",
+            ),
+            pytest.param(
+                'def f():\n    pass\n"{0.__globals__}".format_map({})',
+                id="format-map-sink",
+            ),
+            pytest.param(
+                "import operator\noperator.attrgetter('__globals__')(f)",
+                id="attrgetter-sink",
+            ),
+            pytest.param(
+                "import operator\noperator.methodcaller('format', f)",
+                id="methodcaller-sink",
+            ),
+        ],
+    )
+    def test_should_detect_formatter_attribute_traversal(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param('v = getattr(self, "field", None)', id="static-getattr-with-default"),
+            pytest.param("v = getattr(record, 'display' + '_name', None)", id="computed-static-getattr"),
+            pytest.param("import os\ngetattr(os.path, 'join')('a', 'b')", id="static-safe-module-member"),
+            pytest.param('s = f"hello {name}"', id="f-string"),
+            pytest.param(
+                "class A:\n    def __init__(self):\n        self.x = 1",
+                id="dunder-method-definition",
+            ),
+        ],
+    )
+    def test_should_still_allow_safe_patterns(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityUnpackedGetattrArguments:
+    """Regression: starred ``getattr()`` arguments skipped selector validation.
+
+    ``getattr(*(f, "__globals__"))`` carries a single starred argument, so
+    ``node.args[1]`` did not exist and the attribute name was never checked —
+    the call returned before any rule ran. Unpacked arguments cannot be modeled
+    statically, so they now fail closed.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("def f():\n    pass\ng = getattr(*(f, '__globals__'))", id="starred-tuple-literal"),
+            pytest.param(
+                "def f():\n    pass\nargs = (f, '__globals__')\ng = getattr(*args)",
+                id="starred-name",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkw = {'name': '__globals__'}\ng = getattr(f, **kw)",
+                id="double-starred-keywords",
+            ),
+            pytest.param(
+                "import builtins\ndef f():\n    pass\ng = builtins.getattr(*(f, '__globals__'))",
+                id="qualified-getattr-starred",
+            ),
+        ],
+    )
+    def test_should_detect_unpacked_getattr_arguments(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("getattr()" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Unpacking elsewhere is untouched; only ``getattr`` is gated.
+            pytest.param("def add(a, b):\n    return a + b\nargs = (1, 2)\ntotal = add(*args)", id="ordinary-starred"),
+            pytest.param(
+                "def build(**options):\n    return options\nopts = {'a': 1}\nresult = build(**opts)",
+                id="ordinary-double-starred",
+            ),
+            pytest.param("value = getattr(self, 'field', None)", id="explicit-getattr-arguments"),
+        ],
+    )
+    def test_should_allow_unpacking_outside_getattr(self, code):
         assert scan_code_security(code).is_safe is True
