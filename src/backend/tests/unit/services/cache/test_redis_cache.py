@@ -477,24 +477,36 @@ class TestCacheSigningKeyStability:
             assert _claim_cache_signing_secret(secret_path) == winner_key
 
     def test_concurrent_first_use_agrees_on_one_key(self, tmp_path):
-        """Every worker starting at once must end with the same key."""
+        """Every worker starting at once must end with the same key.
+
+        The patch is entered once, in the main thread: ``patch`` saves and restores
+        a module attribute, so eight workers entering and exiting it concurrently
+        can restore each other's MagicMock and leave the attribute mocked for
+        later tests.
+        """
         resolved: list[str] = []
+        errors: list[BaseException] = []
         barrier = threading.Barrier(8)
 
         def worker():
-            with patch(
-                "langflow.services.deps.get_settings_service",
-                return_value=self._settings(tmp_path),
-            ):
+            try:
                 barrier.wait()
                 resolved.append(_load_or_create_cache_signing_secret())
+            except BaseException as exc:  # surfaced below, not swallowed
+                errors.append(exc)
 
-        threads = [threading.Thread(target=worker) for _ in range(8)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        with patch(
+            "langflow.services.deps.get_settings_service",
+            return_value=self._settings(tmp_path),
+        ):
+            threads = [threading.Thread(target=worker) for _ in range(8)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
 
+        assert not errors, f"worker raised: {errors[0]!r}"
+        assert len(resolved) == 8
         assert len(set(resolved)) == 1
         assert set(resolved) == {(tmp_path / "cache_secret_key").read_text(encoding="utf-8").strip()}
 
