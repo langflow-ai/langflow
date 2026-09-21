@@ -1,7 +1,9 @@
 import base64
+import importlib
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -404,3 +406,89 @@ def cleanup():
             shutil.rmtree(str(cache_dir))
         except OSError as exc:
             logger.error(f"Error cleaning up cache directory: {exc}")
+
+
+class _S3LikeStorage:
+    """Stand-in for S3StorageService: keys carry a prefix and nothing exists on local disk."""
+
+    prefix = "files/"
+
+    def __init__(self, blobs: dict[str, bytes]):
+        self.blobs = blobs
+
+    def build_full_path(self, flow_id: str, file_name: str) -> str:
+        return f"{self.prefix}{flow_id}/{file_name}"
+
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        flow_id, file_name = full_path.removeprefix(self.prefix).rsplit("/", 1)
+        return flow_id, file_name
+
+    async def get_file(self, flow_id: str, file_name: str) -> bytes:
+        try:
+            return self.blobs[f"{flow_id}/{file_name}"]
+        except KeyError as exc:
+            msg = f"{flow_id}/{file_name}"
+            raise FileNotFoundError(msg) from exc
+
+    async def get_file_size(self, flow_id: str, file_name: str) -> int:
+        return len(await self.get_file(flow_id, file_name))
+
+
+@pytest.fixture
+def s3_storage(monkeypatch):
+    storage = _S3LikeStorage({})
+    settings_service = SimpleNamespace(settings=SimpleNamespace(storage_type="s3"))
+    for module in ("lfx.schema.image", "lfx.utils.image", "lfx.base.data.storage_utils"):
+        monkeypatch.setattr(importlib.import_module(module), "get_storage_service", lambda: storage)
+    for module in ("lfx.base.data.storage_utils", "lfx.base.data.utils", "lfx.services.deps"):
+        monkeypatch.setattr(importlib.import_module(module), "get_settings_service", lambda: settings_service)
+    return storage
+
+
+def test_image_attachment_from_s3_storage_reaches_the_model(s3_storage):
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+    )
+    s3_storage.blobs["flow-1/photo.png"] = png
+
+    content = Message(text="what is it?", files=["flow-1/photo.png"]).get_file_content_dicts()
+
+    assert len(content) == 1
+    assert content[0]["type"] == "image_url"
+    assert content[0]["image_url"]["url"] == f"data:image/png;base64,{base64.b64encode(png).decode()}"
+
+
+def test_text_attachment_from_s3_storage_reaches_the_model(s3_storage):
+    s3_storage.blobs["flow-1/act.txt"] = b"Act 42: accepted"
+
+    content = Message(text="summarize", files=["flow-1/act.txt"]).get_file_content_dicts()
+
+    assert content == [{"type": "text", "text": "File 'act.txt' contents:\nAct 42: accepted"}]
+
+
+@pytest.mark.usefixtures("s3_storage")
+def test_missing_attachment_in_s3_storage_is_skipped():
+    content = Message(text="summarize", files=["flow-1/gone.txt"]).get_file_content_dicts()
+
+    assert content == []
+
+
+@pytest.mark.usefixtures("s3_storage")
+def test_absolute_local_path_attached_under_s3_storage_is_not_read(tmp_path):
+    secret = tmp_path / "server-secret.txt"
+    secret.write_text("do not leak")
+
+    content = Message(text="summarize", files=[str(secret)]).get_file_content_dicts()
+
+    assert content == []
+
+
+@pytest.mark.parametrize("relative", [False, True], ids=["absolute", "relative"])
+def test_local_file_with_image_extension_but_non_image_content_is_not_sent_as_image(tmp_path, monkeypatch, relative):
+    fake_png = tmp_path / "fake.png"
+    fake_png.write_bytes(b"not an image at all")
+    monkeypatch.chdir(tmp_path)
+
+    content = Message(text="what is it?", files=["fake.png" if relative else str(fake_png)]).get_file_content_dicts()
+
+    assert content == []

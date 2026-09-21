@@ -10,6 +10,7 @@ from lfx.base.data.storage_utils import (
     parse_storage_path,
     read_file_bytes,
     read_file_text,
+    to_storage_path,
 )
 from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
 
@@ -56,6 +57,41 @@ class TestParseStoragePath:
         """Test parsing path with special characters."""
         result = parse_storage_path("flow_abc/file-name_v2.0.txt")
         assert result == ("flow_abc", "file-name_v2.0.txt")
+
+
+class TestToStoragePath:
+    """Test to_storage_path function."""
+
+    @staticmethod
+    def _settings(storage_type: str) -> Mock:
+        settings_service = Mock()
+        settings_service.settings.storage_type = storage_type
+        return settings_service
+
+    @staticmethod
+    def _s3_like_storage() -> Mock:
+        storage = Mock()
+        storage.parse_file_path.side_effect = lambda path: tuple(path.removeprefix("files/").rsplit("/", 1))
+        return storage
+
+    def test_should_return_local_path_unchanged(self):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("local")):
+            assert to_storage_path("/data/flow_123/file.txt") == "/data/flow_123/file.txt"
+
+    def test_should_strip_backend_prefix_on_s3(self):
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("s3")),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=self._s3_like_storage()),
+        ):
+            assert to_storage_path("files/flow_123/file.txt") == "flow_123/file.txt"
+
+    def test_should_reject_absolute_path_on_s3(self):
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("s3")),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=self._s3_like_storage()),
+            pytest.raises(ValueError, match="Not a storage key"),
+        ):
+            to_storage_path("files//etc/hostname")
 
 
 @pytest.mark.asyncio
