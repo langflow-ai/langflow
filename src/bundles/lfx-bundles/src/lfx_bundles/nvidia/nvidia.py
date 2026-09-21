@@ -1,13 +1,102 @@
 from typing import Any
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.schema.dotdict import dotdict
+from lfx.utils.ssrf_requests import refuse_aiohttp_redirects, refuse_redirects
 
 DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+
+# ChatNVIDIA talks to the endpoint through transports it owns -- ``requests`` for blocking
+# calls, ``aiohttp`` for async inference and streaming -- and both follow redirects by
+# default, so there is no ``http_client`` kwarg to hand it a redirect-free transport.
+# ``requests`` and ``aiohttp`` drop the Authorization header only when a redirect crosses to
+# a different *hostname*: a same-host redirect that changes port or downgrades to http keeps
+# the API key, which would send the credential -- and the prompt body -- to a service the
+# endpoint guard below never checked. Install a redirect-refusing policy on the SDK's own
+# session factories instead.
+_REDIRECT_POLICY_INSTALLED = "_lfx_redirect_policy_installed"
+
+
+def _install_redirect_policy() -> None:
+    """Make every NVIDIA SDK session refuse redirects, before the SDK issues its first request.
+
+    Installed on the ``_NVIDIAClient`` class rather than on a constructed model, because a
+    hook applied to the returned object is already too late: ``ChatNVIDIA(base_url=..., ...)``
+    resolves ``available_models`` *during* construction whenever no model name is supplied, so
+    the ``/v1/models`` discovery request has been sent -- and may have followed a redirect to a
+    host the endpoint guard never saw -- before the caller gets the object back.
+
+    Two seams, because the SDK uses two:
+
+    * ``_create_session`` / ``_create_async_session`` are wrapped, so every request issued
+      after construction is redirect-refusing. The async one matters on its own: ``_agenerate``
+      and ``_astream`` go through ``get_async_session_fn`` (``aiohttp``), which a sync-only
+      hook leaves untouched, and an unfollowed-but-unblocked redirect there forwards the
+      prompt body to the redirect target.
+    * ``__init__`` is wrapped to pass those same wrapped creators as the ``get_session_fn`` /
+      ``get_async_session_fn`` field values. The SDK only assigns them on its *last* line, so
+      until then the fields hold their plain ``requests.Session`` / ``aiohttp.ClientSession``
+      defaults -- which is exactly what constructor-time discovery would have used. Passing
+      the bound creators in preserves the SDK's own TLS (``verify_ssl``) and connector setup;
+      the only difference from what it assigns later is the redirect refusal.
+
+    Fails closed. These attributes are private to the pinned ``langchain-nvidia-ai-endpoints``,
+    so a future release may move them; this raises rather than quietly running a client that
+    can follow a redirect with the operator's key attached.
+    """
+    try:
+        from langchain_nvidia_ai_endpoints import _common
+    except ImportError as e:
+        msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+        raise ImportError(msg) from e
+
+    client_cls = getattr(_common, "_NVIDIAClient", None)
+    if client_cls is None or getattr(client_cls, _REDIRECT_POLICY_INSTALLED, False):
+        if client_cls is None:
+            msg = (
+                "Refusing to build an NVIDIA client: langchain-nvidia-ai-endpoints no longer "
+                "exposes '_NVIDIAClient', so redirect following cannot be disabled and a "
+                "redirect from the endpoint could forward the API key and prompt to an "
+                "unvalidated destination."
+            )
+            raise ValueError(msg)
+        return
+
+    original_init = getattr(client_cls, "__init__", None)
+    original_create_session = getattr(client_cls, "_create_session", None)
+    original_create_async_session = getattr(client_cls, "_create_async_session", None)
+    if not all(callable(attr) for attr in (original_init, original_create_session, original_create_async_session)):
+        msg = (
+            "Refusing to build an NVIDIA client: langchain-nvidia-ai-endpoints no longer "
+            "exposes its session factories, so redirect following cannot be disabled and a "
+            "redirect from the endpoint could forward the API key and prompt to an "
+            "unvalidated destination."
+        )
+        raise ValueError(msg)
+
+    def create_session(self: Any) -> Any:
+        return refuse_redirects(original_create_session(self))
+
+    def create_async_session(self: Any) -> Any:
+        return refuse_aiohttp_redirects(original_create_async_session(self))
+
+    def guarded_init(self: Any, **kwargs: Any) -> None:
+        # Seed the declared fields the constructor reads before it reaches its own
+        # assignment, so constructor-time model discovery cannot follow a redirect.
+        kwargs.setdefault("get_session_fn", self._create_session)
+        kwargs.setdefault("get_async_session_fn", self._create_async_session)
+        original_init(self, **kwargs)
+
+    # The SDK's session factories are private; hardening them is the whole point here.
+    client_cls._create_session = create_session  # noqa: SLF001
+    client_cls._create_async_session = create_async_session  # noqa: SLF001
+    client_cls.__init__ = guarded_init
+    setattr(client_cls, _REDIRECT_POLICY_INSTALLED, True)
 
 
 class NVIDIAModelComponent(LCModelComponent):
@@ -79,6 +168,17 @@ class NVIDIAModelComponent(LCModelComponent):
     ]
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
+        # Note: don't include the previous model, as it may not exist in available models from the new base url
+        # The key sent below may resolve to the operator's environment-provisioned
+        # credential; refuse to forward it to a tenant-chosen endpoint.
+        ensure_credential_endpoint_allowed(
+            self.api_key or None,
+            self.base_url,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
+            # An absent key is not an absent credential: ChatNVIDIA reads NVIDIA_API_KEY
+            # from the server environment itself and sends it to whatever base URL is set.
+            sdk_env_fallback="NVIDIA_API_KEY",
+        )
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
@@ -94,17 +194,21 @@ class NVIDIAModelComponent(LCModelComponent):
         #
         # Residual: this is validate-then-connect, not connection-time pinning.
         # langchain-nvidia-ai-endpoints ~=1.0 builds its own requests.Session in
-        # _NVIDIAClient._create_session and overwrites get_session_fn with it in __init__, so
-        # there is no supported hook to dial a pre-resolved IP while keeping TLS SNI and
-        # certificate verification. A hostname whose DNS answer changes between this check
-        # and the SDK's own resolution is therefore not covered. Literal IPs - the
-        # high-value targets, cloud metadata and RFC1918 - have no DNS to rebind and are
-        # blocked outright. Deployments that need a hard guarantee should restrict
-        # destinations with the ssrf_allowed_hosts operator allowlist.
+        # _NVIDIAClient._create_session, so there is no supported hook to dial a
+        # pre-resolved IP while keeping TLS SNI and certificate verification --
+        # _install_redirect_policy below wraps that factory, which stops a redirect but does
+        # not pin an address. A hostname whose DNS answer changes between this check and the
+        # SDK's own resolution is therefore not covered. Literal IPs - the high-value
+        # targets, cloud metadata and RFC1918 - have no DNS to rebind and are blocked
+        # outright. Deployments that need a hard guarantee should restrict destinations with
+        # the ssrf_allowed_hosts operator allowlist.
         validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
 
+        # Must precede construction: this call is the model-discovery path, and ChatNVIDIA
+        # issues the /v1/models request from inside its constructor.
+        _install_redirect_policy()
         # Note: don't include the previous model, as it may not exist in available models from the new base url
-        model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
+        model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key or None)
         if tool_model_enabled:
             tool_models = [m for m in model.get_available_models() if m.supports_tools]
             return sorted(m.id for m in tool_models)
@@ -136,12 +240,18 @@ class NVIDIAModelComponent(LCModelComponent):
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        api_key = self.api_key or None
+        ensure_credential_endpoint_allowed(
+            api_key,
+            self.base_url,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
+            sdk_env_fallback="NVIDIA_API_KEY",
+        )
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
-        api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
@@ -149,6 +259,7 @@ class NVIDIAModelComponent(LCModelComponent):
         # base_url is tenant-editable and the SDK sends the operator's API key to whatever
         # host it names. Block internal/cloud-metadata destinations before connecting.
         validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
+        _install_redirect_policy()
         return ChatNVIDIA(
             max_tokens=max_tokens or None,
             model=model_name,
