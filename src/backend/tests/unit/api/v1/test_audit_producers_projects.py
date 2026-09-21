@@ -216,7 +216,7 @@ async def test_a_failed_create_leaves_neither_project_nor_mcp_server_behind(clie
     assert not [server for server in servers if name.lower().replace("-", "_") in server.name.lower().replace("-", "_")]
 
 
-async def test_a_plugin_denial_on_a_project_records_one_authz_deny(client):
+async def test_a_plugin_denial_is_not_duplicated_into_action_audit_events(client):
     from tests.unit.services.authorization._policy_double import create_user_share, install_policy_authz
 
     alice_id, alice_name = await make_user("alice")
@@ -239,11 +239,4 @@ async def test_a_plugin_denial_on_a_project_records_one_authz_deny(client):
         )
 
     assert response.status_code in {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND}
-    [denial] = await events_by_user(bob_id)
-    assert (denial.event_type, denial.result, denial.error_code, denial.resource_name) == (
-        "authz",
-        "deny",
-        "PERMISSION_DENIED",
-        project["name"],
-    )
-    assert denial.details == {"schema_version": 1, "attempted_fields": ["description"]}
+    assert await events_by_user(bob_id) == []

@@ -3,8 +3,9 @@
 ``audited_route`` opens an operation for the request: it resolves the actor while
 the user is still loaded and remembers what was attempted. Where the mutation
 happens, the route stages the succeeded event in the same transaction. A guard
-that refuses records one denial. Anything that escapes the route after
-authorization becomes one failed event, written only after the rollback.
+that refuses leaves its decision in ``authz_audit_log``. Anything that escapes
+the route after authorization becomes one failed event, written only after the
+rollback.
 
 An operation that is not yet authorized produces no action event: a request
 refused before authorization is not an operation that reached Langflow.
@@ -67,7 +68,6 @@ class AuditedOperation:
     attempted_fields: list[str] = field(default_factory=list)
     requested_flow_count: int | None = None
     authorized: bool = False
-    denied: bool = False
     committed: bool = False
 
     def identify(
@@ -102,7 +102,7 @@ class AuditedOperation:
             resource_name=self.resource_name,
             action=self.action,
             operation=self.operation,
-            event_type=AuditEventType.AUTHZ if result is AuditResult.DENY else AuditEventType.ACTION,
+            event_type=AuditEventType.ACTION,
             result=result,
             actor=self.actor,
             details=self.attempted_details(),
@@ -122,25 +122,13 @@ def mark_committed() -> None:
 
 
 async def audited_permission(check: Awaitable[None], **identity: Any) -> None:
-    """Run a guard for the current operation, recording one denial if it refuses."""
+    """Run a guard and mark the current operation authorized when it succeeds."""
     operation = _current.get()
     if operation is not None:
         operation.identify(**identity)
-    try:
-        await check
-    except HTTPException as exc:
-        if operation is not None and exc.status_code == HTTPStatus.FORBIDDEN and not operation.denied:
-            operation.denied = True
-            await record_audit_event_after_rollback(operation.draft(AuditResult.DENY, AuditErrorCode.PERMISSION_DENIED))
-        raise
+    await check
     if operation is not None:
         operation.authorized = True
-
-
-async def record_denial(operation: AuditedOperation) -> None:
-    """Record a refusal raised before any route body ran, such as in a dependency."""
-    if is_audit_enabled():
-        await record_audit_event_after_rollback(operation.draft(AuditResult.DENY, AuditErrorCode.PERMISSION_DENIED))
 
 
 def classify_failure(exc: BaseException, resource_type: AuditResourceType) -> AuditErrorCode:
@@ -293,7 +281,7 @@ def audited_route(
             try:
                 return await route(*args, **kwargs)
             except Exception as exc:
-                if audited.authorized and not audited.denied and not audited.committed:
+                if audited.authorized and not audited.committed:
                     await _release(kwargs[session_param])
                     await record_audit_event_after_rollback(
                         audited.draft(AuditResult.FAILED, classify_failure(exc, resource_type))

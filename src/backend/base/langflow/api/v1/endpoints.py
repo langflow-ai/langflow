@@ -96,7 +96,6 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
-from langflow.services.audit.runs import FlowRunTarget, audited_flow_run
 from langflow.services.auth.utils import (
     api_key_security,
     get_current_user_for_sse,
@@ -400,17 +399,6 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
             raise InvalidChatInputError(msg)
 
 
-def _run_target(arguments: dict) -> FlowRunTarget:
-    flow, user = arguments["flow"], arguments.get("api_key_user")
-    return FlowRunTarget(
-        flow_id=getattr(flow, "id", None),
-        flow_name=getattr(flow, "name", None),
-        user_id=getattr(user, "id", None),
-        trigger=arguments["execution_family"],
-    )
-
-
-@audited_flow_run(_run_target)
 async def simple_run_flow(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
