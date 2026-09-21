@@ -8,10 +8,13 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1.audit_reads import DEFAULT_PAGE_SIZE, parse_audit_query
-from langflow.services.audit.vocabulary import AuditOperation, AuditResourceType, AuditResult
+from langflow.services.audit.vocabulary import AuditEventType, AuditOperation, AuditResourceType, AuditResult
 from starlette.requests import Request
 
 PROJECT = AuditResourceType.PROJECT
+OPERATIONS = frozenset({AuditOperation.CREATE, AuditOperation.REPLACE, AuditOperation.PATCH, AuditOperation.DELETE})
+EVENT_TYPES = frozenset({AuditEventType.ACTION})
+RESULTS = frozenset({AuditResult.SUCCEEDED, AuditResult.FAILED})
 
 
 def _request(query: str) -> Request:
@@ -19,7 +22,14 @@ def _request(query: str) -> Request:
 
 
 def _parse(query: str):
-    return parse_audit_query(_request(query), resource_type=PROJECT, id_param="project_id")
+    return parse_audit_query(
+        _request(query),
+        resource_type=PROJECT,
+        id_param="project_id",
+        allowed_operations=OPERATIONS,
+        allowed_event_types=EVENT_TYPES,
+        allowed_results=RESULTS,
+    )
 
 
 def test_no_parameters_means_every_project_event_with_the_default_page():
@@ -72,9 +82,12 @@ def test_rfc3339_timestamps_are_read_as_utc(value, expected):
             "may appear once",
         ),
         ("operation=update", "Unsupported value for operation"),
+        ("operation=run", "Unsupported value for operation"),
         ("operation=create&operation=upsert", "Unsupported value for operation"),
         ("event_type=Action", "Unsupported value for event_type"),
+        ("event_type=authz", "Unsupported value for event_type"),
         ("result=denied", "Unsupported value for result"),
+        ("result=deny", "Unsupported value for result"),
         ("actor_type=apiKey", "Unsupported value for actor_type"),
         ("request_id=123", "must be a UUID"),
         ("since=2026-09-11", "RFC 3339"),

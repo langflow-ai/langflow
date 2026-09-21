@@ -197,11 +197,15 @@ async def test_with_a_plugin_the_dedicated_permission_decides(client, logged_in_
     viewer = await login(client, viewer_name)
 
     with install_policy_authz(get_settings_service()):
+        owner_one = await client.get(f"api/v1/projects/audits?project_id={target['id']}", headers=logged_in_headers)
+        owner_all = await client.get("api/v1/projects/audits", headers=logged_in_headers)
         auditor_feed = await client.get(f"api/v1/projects/audits?project_id={target['id']}", headers=auditor)
         scoped_one = await client.get(f"api/v1/projects/audits?project_id={target['id']}", headers=scoped)
         scoped_all = await client.get("api/v1/projects/audits", headers=scoped)
         viewer_feed = await client.get("api/v1/projects/audits", headers=viewer)
 
+    assert owner_one.status_code == status.HTTP_403_FORBIDDEN
+    assert owner_all.status_code == status.HTTP_403_FORBIDDEN
     assert auditor_feed.status_code == status.HTTP_200_OK
     assert [item["operation"] for item in auditor_feed.json()["items"]] == ["create"]
     assert scoped_one.status_code == status.HTTP_200_OK
