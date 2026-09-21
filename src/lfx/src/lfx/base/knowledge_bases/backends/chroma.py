@@ -48,7 +48,7 @@ from lfx.base.knowledge_bases.backends.base import (
 from lfx.base.knowledge_bases.backends.naming import resolve_storage_name
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
-from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -311,6 +311,37 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         self._resolved_api_key = await self.resolve_required_secret(cfg.get("api_key_variable") or "CHROMA_API_KEY")
         self._resolved_tenant = await self.resolve_secret(cfg.get("tenant_variable") or "CHROMA_TENANT")
         self._resolved_database = await self.resolve_secret(cfg.get("database_variable") or "CHROMA_DATABASE")
+        await self._validate_cloud_target()
+
+    async def _validate_cloud_target(self) -> None:
+        """SSRF-validate the tenant-controlled ``cloud_host`` / ``cloud_port``.
+
+        Both keys come straight from the request body's ``backend_config`` and
+        land in ``chromadb.CloudClient``, which makes server-side connections
+        whose outcome the test-connection route echoes back. Without validation
+        a tenant can probe cloud-metadata (169.254.169.254), RFC1918, or loopback
+        targets from the server's network position. Apply the same connector SSRF
+        policy every other tenant-URL sink uses; operators reach legitimate
+        internal hosts via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname``
+        blocks, so the check runs off the event loop. An absent ``cloud_host``
+        means the chromadb default (``api.trychroma.com``), a fixed public host
+        that needs no validation.
+        """
+        cfg = self.backend_config
+        cloud_host = cfg.get("cloud_host")
+        if not cloud_host:
+            return
+        host = str(cloud_host)
+        port = cfg.get("cloud_port")
+        # chromadb.CloudClient takes a bare host (https implied); keep an
+        # explicit scheme when one was supplied, else construct an https URL so
+        # the validator has a parseable target.
+        target = host if "://" in host else f"https://{host}:{int(port) if port else 443}"
+        try:
+            await asyncio.to_thread(validate_connector_url_for_ssrf, target)
+        except SSRFProtectionError as exc:
+            msg = f"Chroma Cloud host is not allowed: {exc}"
+            raise ValueError(msg) from exc
 
     # ---- client plumbing -------------------------------------------------
 
