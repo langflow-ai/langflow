@@ -5052,6 +5052,11 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "SerpingApiSearchComponent",
+      "target": "ext:serpingapi:SerpingApiSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"
