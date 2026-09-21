@@ -45,6 +45,7 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
+from lfx.base.knowledge_bases.backends.destination_policy import enforce_kb_destination
 from lfx.base.knowledge_bases.backends.naming import resolve_storage_name
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
@@ -325,7 +326,14 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         internal hosts via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname``
         blocks, so the check runs off the event loop. An absent ``cloud_host``
         means the chromadb default (``api.trychroma.com``), a fixed public host
-        that needs no validation.
+        with no tenant input, so neither gate has anything to judge.
+
+        A custom host also has to clear ``enforce_kb_destination``: chromadb builds
+        its own ``httpx`` client inside ``CloudClient`` and dials during
+        construction, so the address this check validates cannot be pinned for the
+        connection that follows. ``cloud_host`` is a testing-only knob upstream
+        (chromadb marks it so), so requiring the operator to approve it in
+        ``LANGFLOW_KB_ALLOWED_HOSTS`` leaves the ordinary Chroma Cloud path alone.
         """
         cfg = self.backend_config
         cloud_host = cfg.get("cloud_host")
@@ -337,11 +345,19 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         # explicit scheme when one was supplied, else construct an https URL so
         # the validator has a parseable target.
         target = host if "://" in host else f"https://{host}:{int(port) if port else 443}"
+        # ``cloud_host`` always arrives in the request body, so it is tenant-supplied by
+        # construction — there is no env-var provenance to consider here. chromadb builds its
+        # own httpx client (and dials during construction), so the validated address cannot be
+        # pinned; the operator has to have approved the host.
+        enforce_kb_destination(target, source="request", description="the knowledge base's cloud_host")
         try:
             await asyncio.to_thread(validate_connector_url_for_ssrf, target)
         except SSRFProtectionError as exc:
+            # Re-raised as SSRFProtectionError (a ValueError subclass, so existing config
+            # paths still catch it): test_connection echoes type(exc).__name__ back to the
+            # caller, and a blocked destination should not read as a missing credential.
             msg = f"Chroma Cloud host is not allowed: {exc}"
-            raise ValueError(msg) from exc
+            raise SSRFProtectionError(msg) from exc
 
     # ---- client plumbing -------------------------------------------------
 
@@ -353,6 +369,11 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         if self._resolved_database:
             kwargs["database"] = self._resolved_database
         if cfg.get("cloud_host"):
+            # The SSRF check on this host lives in ``_validate_cloud_target``, which
+            # ``ensure_ready`` runs before anything can reach here. It used to be
+            # repeated inline at this point too, which resolved DNS twice per client
+            # and — because ``vector_store`` builds lazily from a sync property — ran a
+            # blocking lookup on the event loop for every ingest and search.
             kwargs["cloud_host"] = cfg["cloud_host"]
         if cfg.get("cloud_port"):
             kwargs["cloud_port"] = int(cfg["cloud_port"])
@@ -460,7 +481,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         """Verify Chroma Cloud credentials and reachability via heartbeat."""
         try:
             await self._resolve_secrets()
-            client = self._get_cloud_client()
+            # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+            # connection) called from async: keep it off the event loop.
+            client = await asyncio.to_thread(self._get_cloud_client)
             client.heartbeat()
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
@@ -489,7 +512,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         """
         await self.ensure_ready()
         collection_name = self._resolve_collection_name()
-        client = self._get_cloud_client()
+        # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+        # connection) called from async: keep it off the event loop.
+        client = await asyncio.to_thread(self._get_cloud_client)
         client.delete_collection(name=collection_name)
 
     def raw_langchain_store(self) -> Chroma:

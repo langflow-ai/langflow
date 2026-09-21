@@ -530,6 +530,130 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
         result = scan_code_security('data = open("/etc/passwd").read()')
         assert result.is_safe is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: stdlib equivalents of bare open() must not bypass the scan.
+            "import io\nio.open('/etc/passwd').read()",
+            "import io\nio.open_code('/etc/passwd')",
+            "import io as io_alias\nio_alias.open('/etc/passwd').read()",
+            "from io import open\nopen('/etc/passwd').read()",
+            "from io import open_code\nopen_code('/etc/passwd')",
+            "import codecs\ncodecs.open('/etc/passwd').read()",
+            "from codecs import open\ncodec_open = open\ncodec_open('/etc/passwd')",
+            "import io\nopener = getattr(io, 'open')\nopener('/etc/passwd')",
+        ],
+        ids=[
+            "io-open",
+            "io-open-code",
+            "io-open-aliased-module",
+            "from-io-import-open",
+            "from-io-import-open-code",
+            "codecs-open",
+            "from-codecs-import-open",
+            "io-open-via-getattr",
+        ],
+    )
+    def test_should_detect_stdlib_open_equivalents(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: pathlib is the object-oriented raw filesystem API
+            # (Path.read_text/write_text/open/...). The whole module is blocked.
+            "import pathlib\npathlib.Path('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/tmp/x').write_text('payload')",
+            "from pathlib import Path\nPath('/tmp/x').open('r')",
+        ],
+        ids=[
+            "pathlib-module-read-text",
+            "pathlib-from-import-read-text",
+            "pathlib-write-text",
+            "pathlib-open",
+        ],
+    )
+    def test_should_detect_pathlib_file_access(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # io.FileIO is the raw constructor behind open(): it opens the path
+            # directly, so blocking only io.open/codecs.open left the same
+            # capability reachable. _io is the C module io re-exports from, so
+            # io.FileIO *is* _io.FileIO and both spellings must be covered.
+            "import io\ndata = io.FileIO('/etc/passwd').read()",
+            "import _io\ndata = _io.FileIO('/etc/passwd').read()",
+            "from io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from _io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "from _io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "import io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import _io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import io\nctor = io.FileIO\ndata = ctor('/etc/passwd').read()",
+            "import io\nio.FileIO('/tmp/payload', 'w').write(b'x')",
+            "import io\nio.FileIO('/tmp/payload', 'a').write(b'x')",
+            "import io\ndata = io.BufferedReader(io.FileIO('/etc/passwd')).read()",
+            "from io import *\ndata = FileIO('/etc/passwd').read()",
+            "import _io\n_io.open('/etc/passwd').read()",
+            "import _io\n_io.open_code('/etc/passwd')",
+        ],
+        ids=[
+            "io-fileio-read",
+            "underscore-io-fileio-read",
+            "from-io-import-fileio",
+            "from-underscore-io-import-fileio",
+            "from-io-import-fileio-aliased",
+            "from-underscore-io-import-fileio-aliased",
+            "io-fileio-aliased-module",
+            "underscore-io-fileio-aliased-module",
+            "io-fileio-assigned-constructor",
+            "io-fileio-write",
+            "io-fileio-append",
+            "io-fileio-buffered-wrapper",
+            "io-fileio-wildcard-import",
+            "underscore-io-open",
+            "underscore-io-open-code",
+        ],
+    )
+    def test_should_detect_raw_fileio_constructors(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # The _io canonicalization must not sweep up the in-memory types.
+            "import _io\nbuf = _io.BytesIO(b'x')",
+            "import _io\nbuf = _io.StringIO('x')",
+            "from _io import BytesIO\nbuf = BytesIO(b'x')",
+            "import io\nw = io.TextIOWrapper(io.BytesIO(b'x'))",
+            "import io\nassert isinstance(io.BytesIO(b''), io.IOBase)",
+            "import codecs\ncodecs.encode('x', 'hex')",
+            "import codecs\ncodecs.decode(b'78', 'hex')",
+        ],
+        ids=[
+            "underscore-io-bytesio",
+            "underscore-io-stringio",
+            "from-underscore-io-import-bytesio",
+            "io-textiowrapper-over-memory-buffer",
+            "io-iobase-isinstance",
+            "codecs-encode",
+            "codecs-decode",
+        ],
+    )
+    def test_should_still_allow_in_memory_and_codec_helpers(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_io_and_underscore_io_fileio_are_the_same_object(self):
+        """The canonicalization rests on a runtime fact; assert it rather than assume it."""
+        import _io
+        import io
+
+        assert io.FileIO is _io.FileIO
+        assert io.open is _io.open
+
     def test_should_detect_subclasses_sandbox_escape(self):
         result = scan_code_security("evil = ().__class__.__bases__[0].__subclasses__()")
         assert result.is_safe is False
@@ -556,6 +680,16 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
     def test_should_still_allow_getattr(self):
         # getattr is common/legit — banning it would regress real components.
         result = scan_code_security('v = getattr(self, "field", None)')
+        assert result.is_safe is True
+
+    def test_should_still_allow_in_memory_io_streams(self):
+        # io.StringIO/BytesIO are in-memory and legit; only io.open/open_code are blocked.
+        result = scan_code_security("import io\nbuf = io.BytesIO(b'data')\ntext = io.StringIO('x')")
+        assert result.is_safe is True
+
+    def test_should_still_allow_codecs_transcoding(self):
+        # codecs.encode/decode are legit; only codecs.open is blocked.
+        result = scan_code_security("import codecs\ndata = codecs.decode(b'x', 'utf-8')")
         assert result.is_safe is True
 
 
@@ -1349,7 +1483,6 @@ class IndirectCommandComponent(Component):
             "import os\nmodule = os\nconsume([module for module in (object(),)])",
             "import requests\ndef expose():\n    return requests\nexpose().get('https://example.com')",
             "import os\n(module,) = (os.path,)\nmodule.join('a', 'b')",
-            "import os\ngetattr(os.path.join, '__call__')('a', 'b')",
         ],
         ids=[
             "ordinary-object-method",
@@ -1360,7 +1493,6 @@ class IndirectCommandComponent(Component):
             "comprehension-target-shadows-restricted-module",
             "returned-safe-module",
             "unpacked-safe-module-attribute",
-            "getattr-safe-callable-receiver",
         ],
     )
     def test_should_allow_safe_indirect_reference(self, code):
@@ -1431,14 +1563,16 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     @pytest.mark.parametrize(
         "code",
         [
-            "import pathlib\npath = getattr.__call__(pathlib, 'Path')('a')",
-            "import pathlib\nreflect = getattr\npath = reflect.__call__(pathlib, 'Path')('a')",
-            "import builtins, pathlib\npath = builtins.getattr.__call__(pathlib, 'Path')('a')",
+            "import math\nresult = getattr.__call__(math, 'sqrt')(4)",
+            "import math\nreflect = getattr\nresult = reflect.__call__(math, 'sqrt')(4)",
+            "import builtins, math\nresult = builtins.getattr.__call__(math, 'sqrt')(4)",
         ],
         ids=["direct-getattr-call", "aliased-getattr-call", "builtins-getattr-call"],
     )
-    def test_should_allow_safe_getattr_call_variants(self, code):
-        assert scan_code_security(code).is_safe is True
+    def test_should_detect_dunder_getattr_call_variants(self, code):
+        # ``.__call__`` is a dunder attribute read; all dunder attribute access
+        # is rejected (H1-3977745), even for an otherwise safe callable.
+        assert scan_code_security(code).is_safe is False
 
     @pytest.mark.parametrize(
         "code",
@@ -1452,9 +1586,14 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     def test_should_detect_dangerous_getattr_call_variants(self, code):
         assert scan_code_security(code).is_safe is False
 
-    def test_should_allow_dynamic_getattr_on_ordinary_objects(self):
+    def test_should_detect_dynamic_getattr_on_ordinary_objects(self):
+        # Fail closed (H1-3977745 / H1-3980911): the receiver's type cannot be
+        # proven from the AST and a runtime-built attribute name can resolve to
+        # a sandbox-escape dunder, so it is rejected on any receiver even when
+        # the receiver is an ordinary object with a default supplied.
         result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
-        assert result.is_safe is True
+        assert result.is_safe is False
+        assert any("Dynamic getattr()" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -1557,6 +1696,37 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     @pytest.mark.parametrize(
         "code",
         [
+            pytest.param("method = vars(type)['__subclasses__']", id="vars-type-subscript"),
+            pytest.param("method = vars(type)['__sub' + 'classes__']", id="vars-type-computed-key"),
+            pytest.param("method = vars(type).get('__subclasses__')", id="vars-type-get"),
+            pytest.param("method = vars(type).__getitem__('__subclasses__')", id="vars-type-getitem"),
+            pytest.param("method = dict.get(vars(type), '__subclasses__')", id="unbound-dict-get"),
+            pytest.param("method = dict.__getitem__(vars(type), '__subclasses__')", id="unbound-dict-getitem"),
+            pytest.param("lookup = vars(type).get\nmethod = lookup('__subclasses__')", id="aliased-vars-get"),
+            pytest.param("method = vars(type).get(*('__subclasses__',))", id="vars-type-get-starred"),
+            pytest.param("method = vars(type).__getitem__(*['__subclasses__'])", id="vars-type-getitem-starred-list"),
+            pytest.param("method = vars(type).get(*('__subclasses__', None))", id="vars-type-get-starred-default"),
+            pytest.param("method = dict.get(vars(type), *('__subclasses__',))", id="unbound-dict-get-starred"),
+            pytest.param(
+                "method = dict.__getitem__(vars(type), *('__subclasses__',))", id="unbound-dict-getitem-starred"
+            ),
+            pytest.param(
+                "lookup = vars(type).get\nmethod = lookup(*('__subclasses__',))", id="aliased-vars-get-starred"
+            ),
+            pytest.param("g = vars(init).get('__globals__')", id="opaque-receiver-get-globals"),
+            pytest.param("g = namespace['__globals__']", id="opaque-receiver-subscript-globals"),
+            pytest.param("b = g['__builtins__']", id="opaque-receiver-subscript-builtins"),
+        ],
+    )
+    def test_should_detect_dangerous_dunder_mapping_reads(self, code):
+        """Dunder keys must be blocked regardless of the mapping's receiver."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("(sandbox escape)" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
             pytest.param(
                 "def helper():\n    return None\ngetattr(helper, ''.join(['__glob', 'als__']))",
                 id="join-list-getattr-globals",
@@ -1603,6 +1773,46 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         )
         result = scan_code_security(code)
         assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("config = {'timeout': 5}\nvalue = config.get('timeout')", id="dict-get-safe-key"),
+            pytest.param("record = {'name': 'x'}\nname = record['name']", id="subscript-safe-key"),
+            pytest.param("class Record:\n    value = 1\ndata = vars(Record())", id="vars-plain-read"),
+            pytest.param("import glob\nchecker = vars(glob).get('magic_check')", id="vars-module-safe-key"),
+            pytest.param("d = {}\nvalue = d.get('__name__')", id="non-dangerous-dunder-key"),
+            pytest.param("config = {'timeout': 5}\nvalue = config.get(*('timeout',))", id="dict-get-starred-safe-key"),
+            pytest.param("d = {}\nvalue = d.get(*('__name__',))", id="starred-non-dangerous-dunder-key"),
+            pytest.param("keys = ()\nconfig = {'timeout': 5}\nvalue = config.get(*keys)", id="dict-get-opaque-starred"),
+        ],
+    )
+    def test_should_allow_safe_mapping_reads(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_should_detect_vars_subclasses_subscript_rce(self):
+        """H1-3989735: vars() subscript access to __subclasses__ bypasses the scanner."""
+        code = """
+obj = type(()).mro()[1]
+method = vars(type)["__subclasses__"]
+subs = method(obj)
+for s in subs:
+    try:
+        init = vars(s).get("__init__")
+        if init:
+            g = vars(init).get("__globals__")
+            if g and "__builtins__" in g:
+                b = g["__builtins__"]
+                if isinstance(b, dict) and "__import__" in b:
+                    os_mod = b["__import__"]("os")
+                    result = os_mod.popen("id").read()
+                    break
+    except Exception:
+        pass
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("__subclasses__" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -1742,20 +1952,15 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         "code",
         [
             pytest.param(
-                "import pathlib\npathlib = object()\ngetattr(pathlib, 'os').system('ordinary object')",
+                "import glob\nglob = object()\ngetattr(glob, 'os').system('ordinary object')",
                 id="rebound-module-name",
             ),
             pytest.param(
-                "class Holder:\n    pass\nholder = Holder()\nholder.__getattribute__('os').system('ordinary object')",
-                id="ordinary-object-getattribute",
-            ),
-            pytest.param(
-                "import pathlib\npathlib = object()\nvars = lambda value: {'os': value}\n"
-                "vars(pathlib)['os'].Path('file')",
+                "import glob\nglob = object()\nvars = lambda value: {'os': value}\nvars(glob)['os'].glob('file')",
                 id="shadowed-vars",
             ),
             pytest.param(
-                "import pathlib\nos_module = getattr(pathlib, 'os')\npath = os_module.path.join('a', 'b')",
+                "import logging\nos_module = getattr(logging, 'os')\npath = os_module.path.join('a', 'b')",
                 id="safe-os-member",
             ),
             pytest.param(
@@ -1764,23 +1969,39 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="rebound-getattr-alias",
             ),
             pytest.param(
-                "import pathlib\npath = pathlib.Path('a')\nname = getattr(pathlib, f\"{'P'}ath\")('b')",
-                id="direct-pathlib-and-static-safe-getattr",
+                "import glob\nfiles = glob.glob('*.txt')\nname = getattr(glob, f\"{'g'}lob\")('b')",
+                id="direct-glob-and-static-safe-getattr",
             ),
             pytest.param(
-                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
-                id="direct-glob-and-safe-dict-member",
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.glob",
+                id="direct-glob-and-safe-member",
             ),
             pytest.param(
-                "import pathlib\npath_class = vars(pathlib)['Path']",
+                "import glob\npath_class = vars(glob)['glob']",
                 id="vars-safe-member",
             ),
             pytest.param(
                 "import glob\nchecker = vars(glob).get('magic_check')",
                 id="vars-mapping-get-safe-member",
             ),
+        ],
+    )
+    def test_should_allow_safe_reflective_os_like_access(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
             pytest.param(
-                "import pathlib\npath_class = object.__getattribute__(pathlib, 'Path')",
+                "class Holder:\n    pass\nholder = Holder()\nholder.__getattribute__('os').system('ordinary object')",
+                id="ordinary-object-getattribute",
+            ),
+            pytest.param(
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
+                id="direct-glob-and-safe-dict-member",
+            ),
+            pytest.param(
+                "import glob\npath_class = object.__getattribute__(glob, 'glob')",
                 id="object-getattribute-safe-member",
             ),
             pytest.param(
@@ -1788,13 +2009,17 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="dict-get-safe-member",
             ),
             pytest.param(
-                "import pathlib\nlookup = pathlib.__dict__.get\npath_class = lookup.__call__('Path')",
+                "import glob\nlookup = glob.__dict__.get\npath_class = lookup.__call__('glob')",
                 id="normalized-call-safe-member",
             ),
         ],
     )
-    def test_should_allow_safe_reflective_os_like_access(self, code):
-        assert scan_code_security(code).is_safe is True
+    def test_should_detect_dunder_reflective_access(self, code):
+        # Reflective access through dunder attributes (``__dict__``,
+        # ``__getattribute__``, ``__call__``) is rejected even when the member
+        # resolved is safe: all dunder attribute access is forbidden
+        # (H1-3977745). Use direct attribute access or ``vars()`` instead.
+        assert scan_code_security(code).is_safe is False
 
     @pytest.mark.parametrize(
         "code",
@@ -1913,6 +2138,178 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     )
     def test_should_allow_with_targets_to_shadow_restricted_names(self, code):
         assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityStdlibReexportBypass:
+    """Stdlib modules re-exporting os/sys/__builtins__ must not bypass the scan.
+
+    Regression tests for H1-3991551: ``platform`` (and any other stdlib module
+    with a module-level ``import os`` / ``import sys``) re-exports the real
+    restricted modules, and every imported module's ``__dict__`` carries
+    ``__builtins__``.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("import platform\nplatform.os.system('id')", id="platform-os-call"),
+            pytest.param("import platform\nsecret = platform.os.environ", id="platform-os-read"),
+            pytest.param(
+                "import platform\nplatform.sys.modules['subprocess'].Popen(['id'])", id="platform-sys-modules"
+            ),
+            pytest.param("import platform\ngetattr(platform, 'o' + 's').spawnv()", id="platform-reflective-os"),
+            pytest.param("from platform import os\nos.system('id')", id="from-platform-import-os"),
+            pytest.param(
+                "from platform import sys as runtime\nruntime.modules['os'].fork()", id="from-platform-import-sys"
+            ),
+            pytest.param("import zipfile\nzipfile.os.system('id')", id="zipfile-os-call"),
+            pytest.param("import tarfile\ntarfile.sys.modules['os'].posix_spawn()", id="tarfile-sys-modules"),
+            pytest.param("import zipfile\nzipfile.__dict__['os'].spawnv()", id="zipfile-dict-os"),
+            pytest.param("import tarfile\nvars(tarfile).get('os').fork()", id="tarfile-vars-get-os"),
+        ],
+    )
+    def test_should_detect_stdlib_module_reexports(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\nplatform.__dict__['__builtins__']['eval']('1')", id="platform-dict-builtins"
+            ),
+            pytest.param(
+                "import platform\nvars(platform)['__builtins__']['__import__']('os').system('id')",
+                id="platform-vars-builtins",
+            ),
+            pytest.param(
+                "import platform\ngetattr(platform, '__dict__')['__builtins__']['eval']('1')",
+                id="getattr-dict-builtins",
+            ),
+            pytest.param("import zipfile\nzipfile.__dict__['__builtins__']['eval']('1')", id="zipfile-dict-builtins"),
+            pytest.param(
+                "import requests\nrequests.__dict__['__builtins__']['eval']('1')", id="third-party-dict-builtins"
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__')['eval']('1')",
+                id="third-party-dict-get-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.get(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.__getitem__(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-unbound-builtins",
+            ),
+            pytest.param(
+                "import platform\nplatform.__dict__.get('__builtins__')['eval']('1')", id="platform-dict-get-builtins"
+            ),
+            pytest.param(
+                "import zipfile\nzipfile.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="zipfile-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import zipfile\ndict.get(zipfile.__dict__, '__builtins__')['eval']('1')",
+                id="zipfile-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__', {})['eval']('1')",
+                id="third-party-dict-get-default-builtins",
+            ),
+            pytest.param(
+                "import zipfile\nzipfile.__dict__['__loader__'].load_module('os').system('id')",
+                id="zipfile-dict-loader",
+            ),
+        ],
+    )
+    def test_should_detect_builtins_reflection_through_module_dict(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\ndef expose():\n    return platform\nexpose().os.system('id')",
+                id="returned-platform",
+            ),
+            pytest.param(
+                "import platform\nname = 'o' + 's'\nplatform.__dict__[name].system('id')",
+                id="platform-dict-dynamic-key",
+            ),
+        ],
+    )
+    def test_should_treat_platform_as_restricted_module(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\nname = platform.system()\nrelease = platform.release()", id="platform-safe-api"
+            ),
+            pytest.param('import json\ndata = json.loads(\'{"key": "value"}\')', id="json-loads"),
+            # ``vars(<host>)`` resolves to the same mapping as ``<host>.__dict__``;
+            # a safe member read through it stays allowed.
+            pytest.param("import glob\ncheck = vars(glob)['magic_check']", id="vars-safe-member"),
+            pytest.param(
+                "import example_module\nexample_module.os.system('ordinary object')",
+                id="unknown-module-os-attribute",
+            ),
+            pytest.param("from example_module import os\nos.system('ordinary object')", id="unknown-module-import-os"),
+        ],
+    )
+    def test_should_allow_safe_stdlib_and_object_access(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
+                id="glob-dict-safe-member",
+            ),
+            pytest.param(
+                "import requests\nsession_class = requests.__dict__.get('Session')",
+                id="third-party-dict-get-safe-member",
+            ),
+        ],
+    )
+    def test_should_detect_dunder_mapping_access_on_safe_hosts(self, code):
+        # Reading ``__dict__`` is itself a blocked dunder access (H1-3977745),
+        # so the safe-host carve-outs above no longer extend to the mapping
+        # spelling — even for a safe member or an ordinary object. ``vars(x)``
+        # reaches the same mapping and stays allowed.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "class Record:\n    value = 1\nobj = Record()\nkey = 'value'\nresult = obj.__dict__[key]",
+                id="ordinary-object-dict-dynamic",
+            ),
+            pytest.param(
+                "import requests\nname = 'Ses' + 'sion'\nsession_class = requests.__dict__.get(name)",
+                id="third-party-dict-get-dynamic-safe",
+            ),
+            # Cost of the receiver-independent static-dunder rule: a plain
+            # dictionary that happens to use a dunder string as a key is
+            # rejected too, because the receiver is not consulted.
+            pytest.param("data = {'__builtins__': 'text'}\nvalue = data['__builtins__']", id="plain-dict-dunder-key"),
+        ],
+    )
+    def test_should_detect_namespace_mapping_reads_on_safe_hosts(self, code):
+        # A ``__dict__`` mapping is a namespace whoever owns it, so a key this
+        # scanner cannot resolve fails closed even on a safe host (H1-3989735).
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
 
 
 class TestScanCodeSecurityDottedSubmoduleAccess:
@@ -2175,6 +2572,212 @@ class MyComponent:
         assert result.is_safe is True
 
 
+class TestScanCodeSecuritySandboxEscapeBypasses:
+    """Regression for H1-3980911 — bypasses of the CVE-2026-33873 remediation.
+
+    Vector A: ``getattr`` with a runtime-built (non-static) attribute name on a
+    non-module receiver walked ``().__class__.__bases__[0].__subclasses__()``
+    without a single literal dunder, reaching ``subprocess.Popen`` with
+    ``is_safe=True``. Dynamic attribute names are now rejected on any receiver.
+    Vector B: ``yaml.load(..., Loader=yaml.UnsafeLoader)`` is an arbitrary
+    constructor-invocation (deserialization RCE) primitive that was absent from
+    every deny-list.
+    """
+
+    GETATTR_DYNAMIC_DUNDER_POC = (
+        '_c = "".join(["__", "class", "__"])\n'
+        '_b = "".join(["__", "bases", "__"])\n'
+        '_s = "".join(["__sub", "classes", "__"])\n'
+        "base = getattr(getattr((), _c), _b)[0]\n"
+        "subs = getattr(base, _s)()\n"
+        "for k in subs:\n"
+        '    if getattr(k, "".join(["__na", "me__"]), "") == "Popen":\n'
+        '        k(["/bin/sh", "-c", "id"])\n'
+    )
+
+    def test_should_detect_h1_3980911_getattr_dynamic_dunder_poc(self):
+        """The verbatim Vector A PoC must not pass."""
+        result = scan_code_security(self.GETATTR_DYNAMIC_DUNDER_POC)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Runtime-built names on a literal-container receiver.
+            "subs = getattr((), chr(95) + '__subclasses_')",
+            "cls = getattr((), f'__cl{suffix}__')",
+            # Runtime-built names on an untracked local receiver.
+            "def f(k):\n    return getattr(k, name)",
+            # Runtime-built names via an aliased/qualified getattr.
+            "reflect = getattr\nsubs = reflect((), name)",
+            "import builtins\nsubs = builtins.getattr((), name)",
+        ],
+        ids=[
+            "chr-built-name",
+            "fstring-name",
+            "untracked-local-receiver",
+            "aliased-getattr",
+            "builtins-getattr",
+        ],
+    )
+    def test_should_detect_dynamic_getattr_attribute_names(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("Dynamic getattr()" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "subs = getattr((), '__sub' + 'classes__')",
+            # ``str.join`` is resolved statically (#15195), so these spellings
+            # land on the dunder guard rather than the dynamic-name rule. Either
+            # way the escape is blocked; keep them as regressions for both.
+            "subs = getattr((), ''.join(['__sub', 'classes__']))",
+            "bases = getattr(getattr((), '__class__'), ''.join(['__ba', 'ses__']))",
+        ],
+        ids=["concat-name", "join-name", "join-name-nested-receiver"],
+    )
+    def test_should_detect_statically_assembled_dunder_getattr_name(self, code):
+        # Statically resolvable escape names are still caught by the dunder guard.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Static, non-dunder attribute names remain allowed on any receiver.
+            "value = getattr(self, 'field', None)",
+            "position = getattr((), 'index')",
+            "import os\npath_module = getattr(os, 'path')",
+        ],
+        ids=["static-field-with-default", "static-literal-receiver-attr", "static-module-attr"],
+    )
+    def test_should_allow_static_getattr_attribute_names(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_should_detect_static_benign_dunder_getattr_name(self):
+        # ``getattr((), '__len__')`` was allowed as a benign dunder. Every dunder
+        # read is now rejected (H1-3977745): a denylist of "dangerous" dunders is
+        # bypassable the moment one is missed. Call the builtin instead.
+        result = scan_code_security("size = getattr((), '__len__')()")
+        assert result.is_safe is False
+        assert any("sandbox escape" in violation for violation in result.violations)
+
+    YAML_UNSAFE_LOADER_POC = (
+        "import yaml\n"
+        "def load_config(untrusted_text):\n"
+        "    return yaml.load(untrusted_text, Loader=yaml.UnsafeLoader)\n"
+    )
+
+    def test_should_detect_h1_3980911_yaml_unsafe_loader_poc(self):
+        """The verbatim Vector B PoC must not pass."""
+        result = scan_code_security(self.YAML_UNSAFE_LOADER_POC)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import yaml\nyaml.load(text, Loader=yaml.UnsafeLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.Loader)",
+            "import yaml\nyaml.load(text, Loader=yaml.FullLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.CLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.CUnsafeLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.CFullLoader)",
+            "import yaml\nyaml.unsafe_load(text)",
+            "import yaml\nyaml.unsafe_load_all(text)",
+            "import yaml\nloader = yaml.UnsafeLoader\nyaml.load(text, Loader=loader)",
+            "import yaml\ngetattr(yaml, 'UnsafeLoader')",
+            "from yaml import UnsafeLoader",
+            "from yaml import Loader",
+            "from yaml import unsafe_load\nunsafe_load(text)",
+            "from yaml import *\nunsafe_load(text)",
+            "import yaml\nyaml.__dict__['UnsafeLoader']",
+            "import yaml\nvars(yaml)['Loader']",
+            # full_load/full_load_all select FullLoader without naming it, so
+            # blocking only the Loader attributes left the wrappers reachable.
+            "import yaml\nyaml.full_load(text)",
+            "import yaml\nyaml.full_load_all(text)",
+            "from yaml import full_load\nfull_load(text)",
+            "from yaml import full_load_all\nfull_load_all(text)",
+            "from yaml import full_load as fl\nfl(text)",
+            "import yaml as y\ny.full_load(text)",
+            "import yaml\nloader = yaml.full_load\nloader(text)",
+            "import yaml\nyaml.__dict__['full_load'](text)",
+            "from yaml import *\nfull_load(text)",
+            # yaml re-exports its loaders from these submodules, so the dotted
+            # path is the same class object: yaml.loader.FullLoader is
+            # yaml.FullLoader.
+            "import yaml.loader\nyaml.load(text, yaml.loader.UnsafeLoader)",
+            "import yaml.loader\nyaml.load(text, yaml.loader.FullLoader)",
+            "import yaml.cyaml\nyaml.load(text, yaml.cyaml.CUnsafeLoader)",
+            "import yaml.loader as L\nyaml.load(text, L.UnsafeLoader)",
+        ],
+        ids=[
+            "unsafe-loader-kwarg",
+            "loader-kwarg",
+            "full-loader-kwarg",
+            "c-loader-kwarg",
+            "c-unsafe-loader-kwarg",
+            "c-full-loader-kwarg",
+            "unsafe-load-call",
+            "unsafe-load-all-call",
+            "aliased-unsafe-loader",
+            "getattr-unsafe-loader",
+            "from-import-unsafe-loader",
+            "from-import-loader",
+            "from-import-unsafe-load",
+            "wildcard-import-unsafe-load",
+            "module-dict-unsafe-loader",
+            "vars-loader",
+            "full-load-call",
+            "full-load-all-call",
+            "from-import-full-load",
+            "from-import-full-load-all",
+            "from-import-full-load-aliased",
+            "aliased-module-full-load",
+            "assigned-full-load",
+            "module-dict-full-load",
+            "wildcard-import-full-load",
+            "submodule-loader-unsafe-loader",
+            "submodule-loader-full-loader",
+            "submodule-cyaml-c-unsafe-loader",
+            "submodule-loader-aliased",
+        ],
+    )
+    def test_should_detect_yaml_unsafe_deserialization(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import yaml\nconfig = yaml.safe_load(text)",
+            "import yaml\nconfig = yaml.safe_load_all(text)",
+            "import yaml\nconfig = yaml.load(text, Loader=yaml.SafeLoader)",
+            "import yaml\nconfig = yaml.load(text, yaml.SafeLoader)",
+            "from yaml import safe_load\nconfig = safe_load(text)",
+            "import yaml\nconfig = yaml.load(text, Loader=yaml.CSafeLoader)",
+            # The submodule resolution must not sweep up the safe loaders.
+            "import yaml.loader\nconfig = yaml.load(text, yaml.loader.SafeLoader)",
+            "import yaml\nconfig = yaml.load(text, yaml.BaseLoader)",
+            "import yaml\nout = yaml.dump({'a': 1})",
+        ],
+        ids=[
+            "safe-load",
+            "safe-load-all",
+            "load-with-safe-loader",
+            "load-with-positional-safe-loader",
+            "from-import-safe-load",
+            "load-with-c-safe-loader",
+            "submodule-loader-safe-loader",
+            "base-loader",
+            "yaml-dump",
+        ],
+    )
+    def test_should_allow_yaml_safe_deserialization(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
 class TestStaticEvaluationBudget:
     """The static string evaluator must not be usable as a memory-exhaustion primitive.
 
@@ -2254,3 +2857,458 @@ class TestStaticEvaluationBudget:
         source = f'"{separator}".join(["a", "b", "c", "d", "e", "f", "g", "h"])'
         with pytest.raises(StaticEvaluationBudgetExceededError):
             _static_string_value(ast.parse(source, mode="eval").body)
+
+
+class TestStdlibReexportHostBoundary:
+    """A stdlib module handed across an opaque boundary still carries os/sys.
+
+    ``_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the
+    real ``os`` for every stdlib host, which is what closes
+    ``platform.os.system(...)``. That only runs while the host is a named value,
+    so the boundary rule has to cover the same set: passing ``zipfile`` into a
+    helper and reading ``m.os`` inside it otherwise reaches ``os`` with the
+    scanner unable to relate ``m`` back to a module.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import zipfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(zipfile)",
+            "import zipfile\n\n\ndef helper(m):\n    return m.os.system('id')\n\n\nhelper(zipfile)",
+            "import zipfile\n\n\ndef give():\n    return zipfile\n\n\nvalue = give().os.getenv('HOME')",
+            "import zipfile\n\nmodules = [zipfile]\nvalue = modules[0].os.getenv('HOME')",
+            "import zipfile\n\n\nclass C:\n    m = zipfile\n\n\nvalue = C.m.os.getenv('HOME')",
+            "import zipfile\n\n\ndef helper(m=zipfile):\n    return m.os.getenv('HOME')\n\n\nvalue = helper()",
+            "import zipfile\n\nmapping = {'z': zipfile}\nvalue = mapping['z'].os.getenv('HOME')",
+            "import tempfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(tempfile)",
+        ],
+        ids=[
+            "carrier-through-argument",
+            "carrier-through-argument-os-system",
+            "carrier-through-return",
+            "carrier-through-list",
+            "carrier-through-class-attribute",
+            "carrier-through-default-argument",
+            "carrier-through-dict-value",
+            "carrier-through-argument-tempfile",
+        ],
+    )
+    def test_stdlib_module_cannot_cross_an_opaque_boundary(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary stdlib use is unaffected: only a bare *module value*
+            # crossing a boundary is a carrier.
+            "import json\nvalue = json.dumps({'a': 1})",
+            "import zipfile\narchive = zipfile.ZipFile('x.zip')\nnames = archive.namelist()",
+            "import re\nmatch = re.match('a', 'abc')",
+            "import math\nvalue = math.sqrt(4)",
+            "import datetime\nvalue = datetime.datetime.now()",
+            # A *member* of a stdlib module is not a carrier and must stay
+            # usable as an ordinary argument.
+            "import json\nvalue = isinstance(1, json.JSONDecoder)",
+            "import json\n\ntry:\n    pass\nexcept json.JSONDecodeError:\n    pass",
+            "import functools\nimport operator\n\nadd_one = functools.partial(operator.add, 1)",
+        ],
+        ids=[
+            "json-dumps",
+            "zipfile-normal-use",
+            "re-match",
+            "math-sqrt",
+            "datetime-now",
+            "stdlib-member-as-argument",
+            "stdlib-exception-member",
+            "functools-partial-over-operator-member",
+        ],
+    )
+    def test_ordinary_stdlib_use_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_wildcard_import_of_an_untabled_module_does_not_crash_the_scan(self):
+        """Pre-existing: "tuple | set" raised TypeError out of scan_code_security.
+
+        Any ``from <module> import *`` where the module has no entry in the
+        dangerous-call table hit the tuple default and crashed the scan rather
+        than returning a result.
+        """
+        assert scan_code_security("from typing import *\nvalue = 1").is_safe is True
+        assert scan_code_security("from dataclasses import *\nvalue = 1").is_safe is True
+
+
+class TestReflectiveNamespaceDynamicKeys:
+    """A dynamically selected key into a namespace mapping is a sandbox escape.
+
+    Static-key checks cover ``vars(X)["__globals__"]``, but a runtime-built key
+    such as ``"__GLOBALS__".lower()`` resolves to the same descriptor, and a
+    second dynamically selected getter recovers function globals and the
+    builtins evaluator without a direct dunder attribute access or a getattr
+    call. The owner does not have to be nameable -- ``vars(type(f))`` is opaque
+    to this scanner -- so the mapping itself is tracked and an unresolvable
+    selector fails closed.
+
+    Every proof here is harmless: the recovered callable only evaluates 2 + 2.
+    """
+
+    # Recovers builtins.eval through two dynamically selected keys.
+    DYNAMIC_REFLECTION_POC = (
+        "def f():\n"
+        "    pass\n"
+        "\n"
+        "key = '__GLOBALS__'.lower()\n"
+        "getter_key = '__GET__'.lower()\n"
+        "builtins_key = '__BUILTINS__'.lower()\n"
+        "eval_key = 'EVAL'.lower()\n"
+        "ns = vars(type(f))\n"
+        "desc = ns[key]\n"
+        "getter = vars(type(desc))[getter_key]\n"
+        "g = getter(desc, f)\n"
+        "evaluator = g[builtins_key][eval_key]\n"
+        "result = evaluator('2 + 2')\n"
+    )
+
+    def test_dynamic_reflection_poc_is_rejected(self):
+        assert scan_code_security(self.DYNAMIC_REFLECTION_POC).is_safe is False
+
+    def test_dynamic_reflection_poc_really_recovers_an_evaluator(self):
+        """The regression is only meaningful if the payload actually works."""
+        namespace: dict = {}
+        exec(self.DYNAMIC_REFLECTION_POC, namespace)  # noqa: S102 - arithmetic only
+        assert namespace["result"] == 4
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f))[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f)).get(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = vars(type(f)).__getitem__(k)",
+            "def f():\n    pass\nlookup = vars(type(f)).get\nk = '__GLOBALS__'.lower()\nd = lookup(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nd = type(f).__dict__[k]",
+            "def f():\n    pass\nk = 'x'.join(['__glo', 'bals__'])\nd = vars(type(f))[k]",
+            "import os\nk = input()\nd = vars(os)[k]",
+        ],
+        ids=[
+            "vars-subscript-dynamic-key",
+            "vars-get-dynamic-key",
+            "vars-getitem-dynamic-key",
+            "aliased-vars-get-dynamic-key",
+            "opaque-dunder-dict-dynamic-key",
+            "dynamic-key-built-by-join",
+            "restricted-module-dynamic-key",
+        ],
+    )
+    def test_dynamic_namespace_keys_are_rejected(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary application dictionaries are untouched: only mappings
+            # that came from vars()/__dict__ are namespaces.
+            "d = {'a': 1}\nk = input()\nvalue = d[k]",
+            "d = {'a': 1}\nk = input()\nvalue = d.get(k)",
+            "items = [1, 2, 3]\nindex = 0\nvalue = items[index]",
+            "def g(**kwargs):\n    key = 'a'\n    return kwargs[key]",
+            "config = {}\nfor key in ('a', 'b'):\n    config[key] = 1",
+            # A statically known, non-dunder key into a namespace stays allowed.
+            "class C:\n    x = 1\n\n\nvalue = vars(C)['x']",
+        ],
+        ids=[
+            "plain-dict-dynamic-key",
+            "plain-dict-get-dynamic-key",
+            "list-index",
+            "kwargs-lookup",
+            "dict-assignment-in-loop",
+            "namespace-static-safe-key",
+        ],
+    )
+    def test_ordinary_mappings_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestReflectiveNamespaceProvenance:
+    """A namespace mapping must keep its marker across a copy.
+
+    The dynamic-key rule only fires on a value this scanner still recognizes as
+    a namespace. Copying or reconstructing the mapping dropped that marker, so
+    ``dict(vars(type(f)))`` and ``vars(type(f)).copy()`` read as ordinary
+    application dictionaries and every key rule stopped applying — the original
+    descriptor/evaluator chain stayed reachable. The marker now rides the value
+    through ``dict()``, ``{**ns}``, ``.copy()`` and any call this scanner cannot
+    model, and namespace methods that hand out members without presenting a key
+    are rejected outright.
+
+    Every proof here is harmless: the recovered callable only evaluates 2 + 2.
+    """
+
+    # Recovers builtins.eval through a copied namespace, so no marker survives
+    # unless provenance is preserved.
+    COPIED_NAMESPACE_POC = (
+        "f = lambda: None\n"
+        "ns = dict(vars(type(f)))\n"
+        'd = ns["__globals__".lower()]\n'
+        "getters = dict(vars(type(d)))\n"
+        'g = getters["__get__".lower()](d, f)\n'
+        'b = g["__builtins__".lower()]\n'
+        'e = b["eval"] if isinstance(b, dict) else vars(b)["eval"]\n'
+        'result = e("2 + 2")\n'
+    )
+
+    def test_copied_namespace_poc_is_rejected(self):
+        result = scan_code_security(self.COPIED_NAMESPACE_POC)
+        assert result.is_safe is False
+        assert any("(sandbox escape)" in violation for violation in result.violations)
+
+    def test_copied_namespace_poc_really_recovers_an_evaluator(self):
+        """The regression is only meaningful if the payload actually works."""
+        namespace: dict = {}
+        exec(self.COPIED_NAMESPACE_POC, namespace)  # noqa: S102 - arithmetic only
+        assert namespace["result"] == 4
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(vars(type(f)))\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = vars(type(f)).copy()\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = {**vars(type(f))}\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(**vars(type(f)))\nd = ns[k]",
+            "import copy\ndef f():\n    pass\nk = '__GLOBALS__'.lower()\nns = copy.deepcopy(vars(type(f)))\nd = ns[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\n"
+            "def passthrough(m):\n    return m\nd = passthrough(vars(type(f)))[k]",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\nns = dict(vars(type(f)))\nd = ns.get(k)",
+            "def f():\n    pass\nk = '__GLOBALS__'.lower()\ncopied = dict(vars(type(f)))\nd = dict.get(copied, k)",
+        ],
+        ids=[
+            "dict-constructor-copy",
+            "copy-method",
+            "dict-unpack",
+            "dict-keyword-unpack",
+            "copy-deepcopy",
+            "unmodeled-helper-passthrough",
+            "copied-namespace-get",
+            "copied-namespace-unbound-get",
+        ],
+    )
+    def test_provenance_survives_copies_and_conversions(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "def f():\n    pass\nvalues = list(vars(type(f)).values())",
+            "def f():\n    pass\nfor k, v in vars(type(f)).items():\n    pass",
+            "def f():\n    pass\nentry = vars(type(f)).popitem()",
+            "def f():\n    pass\nns = dict(vars(type(f)))\nvalues = list(ns.values())",
+        ],
+        ids=["values", "items", "popitem", "copied-namespace-values"],
+    )
+    def test_namespace_methods_without_a_selector_are_rejected(self, code):
+        # ``values()``/``items()`` return the descriptors directly, so the key
+        # rules never see a selector at all.
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Ordinary application dictionaries survive the same copies: they
+            # never carry the marker to begin with.
+            "base = {'a': 1}\ncopied = dict(base)\nvalue = copied[selector]",
+            "base = {'a': 1}\nmerged = {**base, 'b': 2}\nvalue = merged[selector]",
+            "base = {'a': 1}\nvalues = list(base.values())",
+            "base = {'a': 1}\nfor k, v in base.items():\n    pass",
+            # A namespace read with a statically known, non-dunder key still works.
+            "import argparse\nparsed = argparse.Namespace()\nconfig = dict(vars(parsed))\nname = config['name']",
+            "class C:\n    x = 1\n\n\nfields = sorted(vars(C).keys())",
+            "class C:\n    x = 1\n\n\ncount = len(vars(C))",
+            # The marker rides onto non-mappings, so sequence reads must stay clean.
+            "import json\n\n\nclass C:\n    x = 1\n\n\ntext = json.dumps(vars(C()))\nhead = text[:100]",
+        ],
+        ids=[
+            "plain-dict-copy",
+            "plain-dict-merge",
+            "plain-dict-values",
+            "plain-dict-items",
+            "namespace-copy-static-key",
+            "namespace-keys",
+            "namespace-length",
+            "serialized-namespace-slice",
+        ],
+    )
+    def test_ordinary_dictionary_copies_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityDynamicGetattrSandboxBypass:
+    """Regression for H1-3977745: AST sandbox bypass via dynamic attribute names.
+
+    The scanner only blocked sandbox-escape dunders when they appeared
+    literally, and ``__class__`` / ``__base__`` / ``__init__`` were not listed
+    at all, so ``getattr(().__class__.__base__, <dynamic name>)`` reached
+    ``object.__subclasses__()`` -> a function's ``__globals__`` -> ``__import__``
+    without a violation. All dunder attribute access, all dynamic ``getattr``
+    attribute names (regardless of receiver), and the non-dunder introspection
+    gadgets (``mro``, frame/traceback attributes, formatter sinks) are now
+    rejected, matching lfx/utils/python_repl_security.py::validate_code_safety.
+    """
+
+    def test_should_detect_reported_poc_escape_chain(self):
+        code = (
+            "base = ().__class__.__base__\n"
+            'subs = getattr(base, "__subclasses__".upper().lower())()\n'
+            'g = getattr(getattr(subs[0], "__init__"), "".join(["__globa","ls__"]))\n'
+            'g["".join(["__buil","tins__"])]["".join(["__imp","ort__"])]("subprocess").check_output(["id"])'
+        )
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert result.violations
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("x = ().__class__", id="dunder-class"),
+            pytest.param("x = ().__class__.__base__", id="dunder-base"),
+            pytest.param("def f():\n    pass\nx = f.__init__", id="dunder-init"),
+            pytest.param("class A:\n    pass\nx = A.__init__", id="class-dunder-init"),
+            pytest.param("x = object.__getattribute__", id="dunder-getattribute"),
+            pytest.param("def f():\n    pass\nx = f.__reduce__", id="dunder-reduce"),
+            pytest.param("x = ().__class__.mro()", id="non-dunder-mro"),
+            pytest.param("x = int.mro()", id="non-dunder-mro-int"),
+            pytest.param(
+                "def g():\n    yield 1\nf = g().gi_frame.f_globals",
+                id="generator-frame-globals",
+            ),
+            pytest.param(
+                "def f():\n    pass\nb = f.__globals__['__builtins__']",
+                id="func-globals-subscript",
+            ),
+        ],
+    )
+    def test_should_detect_dunder_and_introspection_attribute_access(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                'base = ().__class__.__base__\ngetattr(base, "__subclasses__".upper().lower())()',
+                id="method-transformed-name",
+            ),
+            pytest.param(
+                'getattr(object, "".join(["__subcl", "asses__"]))()',
+                id="join-assembled-name",
+            ),
+            pytest.param(
+                "getattr(object, f\"__sub{'cl'}asses__\")()",
+                id="nested-fstring-name",
+            ),
+            pytest.param(
+                "getattr(object, '__subclasses__'[:])()",
+                id="sliced-name",
+            ),
+            pytest.param(
+                "name = '__sub' + 'classes__'\nnames = name.split('l')\ngetattr(object, 'l'.join(names))()",
+                id="rebound-joined-name",
+            ),
+            pytest.param(
+                "field = 'value'\ngetattr(self, field, None)",
+                id="dynamic-name-ordinary-receiver",
+            ),
+        ],
+    )
+    def test_should_detect_dynamic_getattr_name_on_any_receiver(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert result.violations
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                'def f():\n    pass\n"{0.__globals__[__builtins__]}".format(f)',
+                id="str-format-dunder-traversal",
+            ),
+            pytest.param(
+                'def f():\n    pass\n"{0.__globals__}".format_map({})',
+                id="format-map-sink",
+            ),
+            pytest.param(
+                "import operator\noperator.attrgetter('__globals__')(f)",
+                id="attrgetter-sink",
+            ),
+            pytest.param(
+                "import operator\noperator.methodcaller('format', f)",
+                id="methodcaller-sink",
+            ),
+        ],
+    )
+    def test_should_detect_formatter_attribute_traversal(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param('v = getattr(self, "field", None)', id="static-getattr-with-default"),
+            pytest.param("v = getattr(record, 'display' + '_name', None)", id="computed-static-getattr"),
+            pytest.param("import os\ngetattr(os.path, 'join')('a', 'b')", id="static-safe-module-member"),
+            pytest.param('s = f"hello {name}"', id="f-string"),
+            pytest.param(
+                "class A:\n    def __init__(self):\n        self.x = 1",
+                id="dunder-method-definition",
+            ),
+        ],
+    )
+    def test_should_still_allow_safe_patterns(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityUnpackedGetattrArguments:
+    """Regression: starred ``getattr()`` arguments skipped selector validation.
+
+    ``getattr(*(f, "__globals__"))`` carries a single starred argument, so
+    ``node.args[1]`` did not exist and the attribute name was never checked —
+    the call returned before any rule ran. Unpacked arguments cannot be modeled
+    statically, so they now fail closed.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("def f():\n    pass\ng = getattr(*(f, '__globals__'))", id="starred-tuple-literal"),
+            pytest.param(
+                "def f():\n    pass\nargs = (f, '__globals__')\ng = getattr(*args)",
+                id="starred-name",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkw = {'name': '__globals__'}\ng = getattr(f, **kw)",
+                id="double-starred-keywords",
+            ),
+            pytest.param(
+                "import builtins\ndef f():\n    pass\ng = builtins.getattr(*(f, '__globals__'))",
+                id="qualified-getattr-starred",
+            ),
+        ],
+    )
+    def test_should_detect_unpacked_getattr_arguments(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("getattr()" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Unpacking elsewhere is untouched; only ``getattr`` is gated.
+            pytest.param("def add(a, b):\n    return a + b\nargs = (1, 2)\ntotal = add(*args)", id="ordinary-starred"),
+            pytest.param(
+                "def build(**options):\n    return options\nopts = {'a': 1}\nresult = build(**opts)",
+                id="ordinary-double-starred",
+            ),
+            pytest.param("value = getattr(self, 'field', None)", id="explicit-getattr-arguments"),
+        ],
+    )
+    def test_should_allow_unpacking_outside_getattr(self, code):
+        assert scan_code_security(code).is_safe is True
