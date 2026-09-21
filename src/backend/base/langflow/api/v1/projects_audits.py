@@ -20,12 +20,18 @@ from langflow.api.v1.audit_reads import (
     parse_audit_query,
     read_audit_page,
 )
-from langflow.services.audit.vocabulary import AuditResourceType
-from langflow.services.authorization import ProjectAction, ensure_project_permission
+from langflow.services.audit.vocabulary import AuditEventType, AuditOperation, AuditResourceType, AuditResult
+from langflow.services.authorization import ensure_project_audit_read_permission
 from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.folder.model import Folder
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
+_PROJECT_OPERATIONS = frozenset(
+    {AuditOperation.CREATE, AuditOperation.REPLACE, AuditOperation.PATCH, AuditOperation.DELETE}
+)
+_INITIAL_EVENT_TYPES = frozenset({AuditEventType.ACTION})
+_INITIAL_RESULTS = frozenset({AuditResult.SUCCEEDED, AuditResult.FAILED})
 
 
 class ProjectAuditEventRead(AuditEventReadBase):
@@ -57,12 +63,18 @@ async def read_project_audits(
     Requires the ``project:audit_read`` permission. Without an authorization plugin,
     a non-superuser sees events on Projects they own and events they made.
     """
-    query = parse_audit_query(request, resource_type=AuditResourceType.PROJECT, id_param="project_id")
+    query = parse_audit_query(
+        request,
+        resource_type=AuditResourceType.PROJECT,
+        id_param="project_id",
+        allowed_operations=_PROJECT_OPERATIONS,
+        allowed_event_types=_INITIAL_EVENT_TYPES,
+        allowed_results=_INITIAL_RESULTS,
+    )
     project_id = query.filters.resource_id
     project = await session.get(Folder, project_id) if project_id is not None else None
-    await ensure_project_permission(
+    await ensure_project_audit_read_permission(
         current_user,
-        ProjectAction.AUDIT_READ,
         project_id=project_id,
         project_user_id=getattr(project, "user_id", None),
         workspace_id=getattr(project, "workspace_id", None),
