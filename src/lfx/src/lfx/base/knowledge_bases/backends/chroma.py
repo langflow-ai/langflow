@@ -45,6 +45,7 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
+from lfx.base.knowledge_bases.backends.destination_policy import enforce_kb_destination
 from lfx.base.knowledge_bases.backends.naming import resolve_storage_name
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
@@ -325,7 +326,14 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         internal hosts via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname``
         blocks, so the check runs off the event loop. An absent ``cloud_host``
         means the chromadb default (``api.trychroma.com``), a fixed public host
-        that needs no validation.
+        with no tenant input, so neither gate has anything to judge.
+
+        A custom host also has to clear ``enforce_kb_destination``: chromadb builds
+        its own ``httpx`` client inside ``CloudClient`` and dials during
+        construction, so the address this check validates cannot be pinned for the
+        connection that follows. ``cloud_host`` is a testing-only knob upstream
+        (chromadb marks it so), so requiring the operator to approve it in
+        ``LANGFLOW_KB_ALLOWED_HOSTS`` leaves the ordinary Chroma Cloud path alone.
         """
         cfg = self.backend_config
         cloud_host = cfg.get("cloud_host")
@@ -337,6 +345,11 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         # explicit scheme when one was supplied, else construct an https URL so
         # the validator has a parseable target.
         target = host if "://" in host else f"https://{host}:{int(port) if port else 443}"
+        # ``cloud_host`` always arrives in the request body, so it is tenant-supplied by
+        # construction — there is no env-var provenance to consider here. chromadb builds its
+        # own httpx client (and dials during construction), so the validated address cannot be
+        # pinned; the operator has to have approved the host.
+        enforce_kb_destination(target, source="request", description="the knowledge base's cloud_host")
         try:
             await asyncio.to_thread(validate_connector_url_for_ssrf, target)
         except SSRFProtectionError as exc:
