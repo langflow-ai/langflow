@@ -86,6 +86,15 @@ def _is_blocked_attribute(attr: str) -> bool:
     return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS
 
 
+# Synthetic resolved-name token for a value that is a reflective namespace
+# mapping — the ``__dict__`` returned by ``vars(<anything>)``. It is tracked
+# like any other resolved name, so it follows aliases and assignments
+# (``ns = vars(x); ns[key]``) and bound accessors (``ns.get``). The angle
+# brackets keep it from ever colliding with a real dotted attribute name or
+# matching ``_is_blocked_attribute`` / the ``.__dict__`` suffix tests.
+_REFLECTIVE_NAMESPACE = "<reflective-namespace>"
+
+
 # Non-call attribute *reads* that are forbidden: (module, attr, message).
 # Secret/env exfiltration is the concrete threat — components must use
 # Langflow's variable/secret service, never raw process env.
@@ -498,6 +507,10 @@ class _SecurityChecker(ast.NodeVisitor):
 
             if {"vars", "builtins.vars", "__builtins__.vars"} & function_names and len(node.args) == 1:
                 resolved.update(f"{base_name}.__dict__" for base_name in self._resolved_assignment_value(node.args[0]))
+                # ``vars(x)`` is a reflective namespace even when ``x`` is opaque
+                # (``vars(type(f))``), so mark it unconditionally to keep tracking
+                # the mapping across aliases and accessors.
+                resolved.add(_REFLECTIVE_NAMESPACE)
 
             if node.args and (member_name := _static_string_value(node.args[0])) is not None:
                 for function_name in function_names:
@@ -1267,11 +1280,10 @@ class _SecurityChecker(ast.NodeVisitor):
         return self.generic_visit(node)
 
     def visit_Subscript(self, node: ast.Subscript):
-        """Reject dynamic reads from a restricted module's ``__dict__`` mapping."""
+        """Reject dunder-key and dynamic reads from reflective namespace mappings."""
+        resolved_value = self._resolved_assignment_value(node.value)
         mapping_names = frozenset(
-            name
-            for name in self._resolved_assignment_value(node.value)
-            if name.endswith(".__dict__") and _is_restricted_module_reference(name)
+            name for name in resolved_value if name.endswith(".__dict__") and _is_restricted_module_reference(name)
         )
         if mapping_names:
             member_name = _static_string_value(node.slice)
@@ -1281,6 +1293,11 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
             elif _is_blocked_attribute(member_name):
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+        elif _REFLECTIVE_NAMESPACE in resolved_value:
+            # A selector into a ``vars(<opaque>)`` namespace recovers descriptors
+            # and function globals without a dunder attribute or getattr call, so
+            # fail closed on a dynamic key and reject dunder keys on any receiver.
+            self._check_reflective_namespace_selector(node.slice)
         return self.generic_visit(node)
 
     def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
@@ -1321,6 +1338,7 @@ class _SecurityChecker(ast.NodeVisitor):
         self._check_name_call(node)
         self._check_attribute_call(node)
         getattr_arguments_validated = self._check_getattr_access(node)
+        self._check_reflective_namespace_read(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
         reflective_arguments_validated = self._check_restricted_reflection_access(node, resolved_call_names)
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
@@ -1381,6 +1399,47 @@ class _SecurityChecker(ast.NodeVisitor):
             if violation := self._dangerous_callable_message(resolved_name):
                 self.violations.append(violation)
                 return
+
+    def _check_reflective_namespace_selector(self, selector: ast.AST) -> None:
+        """Reject a dunder or non-static selector into a reflective namespace mapping.
+
+        Mirrors the ``getattr`` rule: a statically resolvable safe attribute
+        name is allowed (``vars(x)["public"]`` == ``getattr(x, "public")``),
+        but a dunder key is a sandbox escape on any object and a dynamically
+        assembled key cannot be proven safe, so both fail closed.
+        """
+        member_name = _static_string_value(selector)
+        if member_name is None:
+            self.violations.append(
+                "Dynamic selector into a reflective namespace is forbidden in components (sandbox escape)"
+            )
+        elif _is_blocked_attribute(member_name):
+            self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+
+    def _check_reflective_namespace_read(self, node: ast.Call) -> None:
+        """Reject ``.get()``/``.__getitem__()`` reads of a reflective namespace mapping.
+
+        The bound (``vars(x).get(key)``), aliased (``lookup = vars(x).get;
+        lookup(key)``) and unbound (``dict.get(vars(x), key)``) accessor forms
+        all reach the same ``__dict__`` mapping as a subscript, so the selector
+        is gated the same way — a dynamic key or a dunder key fails closed.
+        """
+        function_names = self._resolved_assignment_value(node.func)
+        selector: ast.AST | None = None
+        bound_accessors = {f"{_REFLECTIVE_NAMESPACE}.get", f"{_REFLECTIVE_NAMESPACE}.__getitem__"}
+        unbound_accessors = {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}
+        if function_names & bound_accessors and node.args:
+            # Bound / aliased: ``mapping.get(key)`` / ``mapping.__getitem__(key)``.
+            selector = node.args[0]
+        # Unbound: ``dict.get(mapping, key)`` — the mapping is args[0].
+        elif (
+            function_names & unbound_accessors
+            and node.args[1:]
+            and _REFLECTIVE_NAMESPACE in self._resolved_assignment_value(node.args[0])
+        ):
+            selector = node.args[1]
+        if selector is not None:
+            self._check_reflective_namespace_selector(selector)
 
     def _check_restricted_reflection_access(self, node: ast.Call, function_names: frozenset[str]) -> int:
         """Validate reflective access to restricted modules and return modeled positional arguments."""

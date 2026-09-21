@@ -2197,3 +2197,87 @@ class TestScanCodeSecurityDynamicGetattrSandboxBypass:
     )
     def test_should_still_allow_safe_patterns(self, code):
         assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityReflectiveNamespaceSelectorBypass:
+    """Regression: dynamic/dunder selectors into a ``vars()`` reflective namespace.
+
+    The static-key checks permitted a runtime key such as ``"__globals__".lower()``
+    in ``vars(type(f))[key]``. Because the argument to ``vars()`` is opaque, the
+    scanner modeled no mapping for it, so a dynamically selected descriptor getter
+    could recover function globals without a literal dunder attribute or a
+    ``getattr`` call. A selector into a reflective namespace now fails closed when
+    it is not a statically resolvable, non-dunder string — matching the ``getattr``
+    rule — while ordinary application dictionaries stay allowed.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "def f():\n    pass\nkey = '__GLOBALS__'.lower()\nns = vars(type(f))\ndescriptor = ns[key]",
+                id="dynamic-key-vars-type-subscript",
+            ),
+            pytest.param(
+                "def f():\n    pass\ndescriptor = vars(type(f))['__globals__'.lower()]",
+                id="dynamic-key-vars-type-inline",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkey = '__globals__'.lower()\ndescriptor = vars(type(f)).get(key)",
+                id="dynamic-key-vars-get",
+            ),
+            pytest.param(
+                "def f():\n    pass\nlookup = vars(type(f)).get\nkey = '__globals__'.lower()\ndescriptor = lookup(key)",
+                id="dynamic-key-aliased-accessor",
+            ),
+            pytest.param(
+                "def f():\n    pass\nkey = '__globals__'.lower()\ndescriptor = dict.get(vars(type(f)), key)",
+                id="dynamic-key-unbound-dict-get",
+            ),
+            pytest.param(
+                "def f():\n    pass\ndescriptor = vars(type(f)).__getitem__('__globals__'.lower())",
+                id="dynamic-key-getitem",
+            ),
+            pytest.param(
+                "obj = object()\ndescriptor = vars(obj)['__globals__']",
+                id="static-dunder-key-vars-subscript",
+            ),
+            pytest.param(
+                "obj = object()\ndescriptor = vars(obj).get('__globals__')",
+                id="static-dunder-key-vars-get",
+            ),
+        ],
+    )
+    def test_should_detect_reflective_namespace_selector(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert result.violations
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "settings = {'debug': True}\nkey = 'debug'\nvalue = settings[key]",
+                id="dict-literal-dynamic-key",
+            ),
+            pytest.param(
+                "config = {'a': 1, 'b': 2}\nvalue = config.get(user_choice)",
+                id="dict-literal-get-dynamic",
+            ),
+            pytest.param("data = dict(a=1, b=2)\nvalue = data[selector]", id="dict-constructor-dynamic-key"),
+            pytest.param(
+                "class Record:\n    value = 1\nrecord = Record()\nattr = vars(record)['value']",
+                id="vars-static-safe-member-subscript",
+            ),
+            pytest.param(
+                "class Record:\n    value = 1\nrecord = Record()\nattr = vars(record).get('value')",
+                id="vars-static-safe-member-get",
+            ),
+            pytest.param(
+                "class Record:\n    value = 1\nnamespace = vars(Record())",
+                id="vars-without-selector",
+            ),
+        ],
+    )
+    def test_should_allow_ordinary_dictionary_and_static_namespace_reads(self, code):
+        assert scan_code_security(code).is_safe is True
