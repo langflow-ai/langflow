@@ -240,13 +240,66 @@ life — the same window the Project view uses, per id and resource type, so a
 re-created Flow id never carries a previous owner's trail. A superuser reads every
 Flow event.
 
+## Read API: `GET /api/v1/audits` (unified feed)
+
+Every audit event from both stores, in one keyset-paginated feed: resource
+operations from `audit_events` and authorization, identity and governance events
+from `authz_audit_log`. The server merges the stores, so a client asks for one
+page and gets one page, whatever mix of stores and resource types it spans.
+
+**Query parameters**: `source`* (`resource`, `authz`), `kind`* (`action`,
+`check`), `resource_type`*, `resource_id`, `action`*, `exclude_action`*,
+`operation`*, `result`*, `actor_type`*, `user_id`, `actor_id`, `request_id`,
+`since`, `until`, `cursor`, `limit` (1–200, default 50), `include_total`
+(`true`/`false`, default `false`). Parsing is as strict as the resource views.
+
+**Every filter holds in both stores.** Where a filter cannot match a store, that
+store is left out of the read rather than the filter being ignored:
+
+| Filter | `audit_events` | `authz_audit_log` |
+|---|---|---|
+| `kind=check` | `event_type = authz` | `details.event = authorization_decision` |
+| `kind=action` | `event_type = action` | any other `details.event`, including untagged history |
+| `operation` | `operation` | never matches: the store is skipped |
+| `result` | `allow`, `deny`, `succeeded`, `failed` | `allow`, `deny`, `owner_override`, `skip` |
+| `actor_type=unknown` | `actor_type = unknown` | also rows written before actor attribution (`NULL`) |
+| `request_id` | `request_id` | `details.request_id` |
+
+**Paging.** Each store is read by `(timestamp DESC, id DESC)` from the cursor for
+`limit + 1` rows, and the server keeps the newest `limit` of the candidates. A
+row that belongs on a page is always within its own store's first `limit + 1`
+rows, so a page is exact across stores and timestamp ties. A cursor is bound to
+the filters that issued it. `total` is `null` unless `include_total=true`, which
+costs one `COUNT` per store.
+
+**Response items** carry `id`, `timestamp`, `source`, `kind`, `action`,
+`resource_type`, `resource_id`, `resource_name`, `result`, `user_id`,
+`actor_type`, `actor_id`, `actor`, `operation`, `error_code`, `request_id` and
+`details`. Fields only one store has are `null` on the other.
+
+**Export.** `GET /api/v1/audits/export` takes the same filters plus
+`format=csv|ndjson` and streams every match, newest first, with
+`Content-Disposition: attachment`. The window is frozen at the start (an open
+`until` becomes now), the walk runs on its own session in batches of 500, and no
+row is gathered in memory or capped. CSV starts with the columns the Admin
+Console export already used (`timestamp`, `user_id`, `actor_type`, `actor_id`,
+`action`, `resource_type`, `resource_id`, `result`, `details`), followed by
+`source`, `kind`, `resource_name`, `operation`, `error_code` and `request_id`;
+`details` is JSON with sorted keys, and a cell starting with `=`, `+`, `-` or
+`@` is prefixed with `'`.
+
+**Access.** Superuser, like `GET /api/v1/authz/audit`: both stores are read.
+A deployment that widens the authorization audit read (Enterprise does, for RBAC
+administrators) overrides the same `get_current_active_superuser` dependency
+for this path.
+
 ## Invariants
 
 1. A succeeded event and its mutation commit or roll back together.
 2. A failed event is written only after the mutation's transaction is gone.
 3. An event violating the contract is refused before any database write.
 4. Deleting a resource, user, or API key never deletes its events.
-5. A traversal returns each event at most once, in `(timestamp DESC, id DESC)` order, and never skips a row it has not yet passed. The first page fixes a cutoff and no row timestamped after it is returned. A row is timestamped when its `INSERT` runs, not when its transaction commits, so an event staged before the traversal started and committed after it can still appear on a later page. Reading the same traversal twice is not guaranteed to return the same set.
+5. A traversal returns each event at most once, in `(timestamp DESC, id DESC)` order, and never skips a row it has not yet passed. The first page fixes a cutoff and no row timestamped after it is returned. A row is timestamped when its `INSERT` runs, not when its transaction commits, so an event staged before the traversal started and committed after it can still appear on a later page. Reading the same traversal twice is not guaranteed to return the same set. This holds for the unified feed across both stores.
 6. With `lfx serve` (no database), nothing is written and nothing raises.
 7. A request that is not audited (auditing off, or a helper called outside an audited route such as startup or the assistant) writes nothing.
 8. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
