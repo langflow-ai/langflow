@@ -87,6 +87,28 @@ def parse_storage_path(path: str) -> tuple[str, str] | None:
     return parts[0], parts[1]
 
 
+def to_storage_path(file_path: str) -> str:
+    """Convert a storage backend key into the "flow_id/filename" form the helpers here expect.
+
+    ``StorageService.build_full_path`` returns backend keys (on S3 they carry the ``files/``
+    prefix), while ``parse_storage_path`` splits on the first slash and would read the prefix
+    as the flow_id. Local paths are returned unchanged.
+
+    Raises:
+        ValueError: under S3, if the path is absolute. A storage key never is, and passing one
+            on would reach the local-file escape hatch in ``get_file_size`` / ``read_file_bytes``.
+    """
+    if get_settings_service().settings.storage_type != "s3":
+        return file_path
+
+    flow_id, file_name = get_storage_service().parse_file_path(file_path)
+    storage_path = f"{flow_id}/{file_name}"
+    if Path(storage_path).is_absolute():
+        msg = f"Not a storage key: {file_path}"
+        raise ValueError(msg)
+    return storage_path
+
+
 async def read_file_bytes(
     file_path: str,
     storage_service: StorageService | None = None,
