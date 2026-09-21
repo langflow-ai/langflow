@@ -55,23 +55,29 @@ def _restore_run_manager(graph: Graph, checkpoint: GraphCheckpoint) -> None:
     graph.run_manager = manager
 
 
-def _restore_or_none(wire: dict[str, Any] | None, vertex_id: str, field: str) -> Any:
+def _restore_or_none(wire: dict[str, Any] | None, vertex_id: str, field: str, unrestorable: set[str]) -> Any:
     """``deserialize_value``, but a payload that no longer restores degrades to None.
 
     Why: a checkpoint written by an affected install can hold a model dump that does not validate
     back (langchain-core >= 1.6.1 dumps ``BaseTool.func``/``coroutine`` to their repr). Raising
     would strand those already-persisted runs forever -- the only escape is starting a brand-new
     run -- so drop the value instead and let the vertex re-derive it, exactly as for an opaque one.
+
+    The vertex id is recorded in ``unrestorable`` so the caller flags it opaque-dropped, exactly as
+    for a failed ``built_object``. A None left by a *failure* is not a restored None: leaving the
+    vertex marked built would serve that None to a consumer (``get_result`` reads ``built_result``
+    whenever ``use_result`` is set) instead of re-running the producer that regenerates it.
     """
     try:
         return deserialize_value(wire)
     except Exception:  # noqa: BLE001
         logger.warning("checkpoint: vertex %s has unrestorable %s; it will re-run on resume", vertex_id, field)
+        unrestorable.add(vertex_id)
         return None
 
 
 def _restore_vertices(graph: Graph, checkpoint: GraphCheckpoint) -> set[str]:
-    """Restore per-vertex state, returning the ids whose built_object could not be restored."""
+    """Restore per-vertex state, returning the ids whose built state could not be fully restored."""
     from lfx.graph.vertex.base import VertexStates
 
     unrestorable: set[str] = set()
@@ -84,8 +90,12 @@ def _restore_vertices(graph: Graph, checkpoint: GraphCheckpoint) -> set[str]:
         # Restore ACTIVE/INACTIVE so a branch a ConditionalRouter stopped stays stopped on resume.
         if vertex_data.state in VertexStates.__members__:
             vertex.state = VertexStates[vertex_data.state]
-        vertex.results = {k: _restore_or_none(v, vertex_id, "result") for k, v in vertex_data.results.items()}
-        vertex.artifacts = {k: _restore_or_none(v, vertex_id, "artifact") for k, v in vertex_data.artifacts.items()}
+        vertex.results = {
+            k: _restore_or_none(v, vertex_id, "result", unrestorable) for k, v in vertex_data.results.items()
+        }
+        vertex.artifacts = {
+            k: _restore_or_none(v, vertex_id, "artifact", unrestorable) for k, v in vertex_data.artifacts.items()
+        }
         if vertex_data.built_object is not None:
             try:
                 vertex.built_object = deserialize_value(vertex_data.built_object)
@@ -96,7 +106,7 @@ def _restore_vertices(graph: Graph, checkpoint: GraphCheckpoint) -> set[str]:
                 )
                 unrestorable.add(vertex_id)
         if vertex_data.built_result is not None:
-            vertex.built_result = _restore_or_none(vertex_data.built_result, vertex_id, "built_result")
+            vertex.built_result = _restore_or_none(vertex_data.built_result, vertex_id, "built_result", unrestorable)
     return unrestorable
 
 
@@ -200,8 +210,9 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
         vid for vid, vd in checkpoint.vertex_results.items() if vd.built and vd.built_object is None
     }
     _restore_run_manager(graph, checkpoint)
-    # A built_object that fails to restore is indistinguishable, downstream, from one that was
-    # dropped at write time, so it joins the same set before the fixpoint decides what to re-run.
+    # Any field that fails to restore (built_object, built_result, a result or an artifact) is
+    # indistinguishable, downstream, from one dropped at write time, so it joins the same set
+    # before the fixpoint decides what to re-run.
     graph.checkpoint_opaque_dropped_ids |= {
         vid for vid in _restore_vertices(graph, checkpoint) if checkpoint.vertex_results[vid].built
     }
