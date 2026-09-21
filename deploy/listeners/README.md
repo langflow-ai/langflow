@@ -30,6 +30,11 @@ webhook.
   subprocess mode there.
 - **The same `LANGFLOW_SECRET_KEY`.** The listener resolves and refreshes the
   same connection rows the API does, and decrypts the same token material.
+- **The same `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`**, if any connection was
+  authorized through OAuth. Refresh happens in this process, not over HTTP to
+  the API, so a listener without the registrations fails every refresh locally -
+  no request reaches the provider. It logs a warning at startup naming the
+  registrations it is missing, and the affected triggers stay armed and retry.
 - **The API started first.** The listener never runs migrations. It checks for
   the trigger tables at boot and exits with an explicit message when they are
   missing, rather than racing Alembic during a rolling upgrade.
@@ -57,6 +62,15 @@ A replica that dies has its connections taken over within two TTLs. Scale out
 when one process cannot keep up with the number of armed connections; do not
 scale out for redundancy, because failover does not require a warm standby.
 
+Adding a replica to a loaded deployment rebalances it. A lease is invisible
+until it is held, so a replica that has just started would otherwise be invisible
+to the one already holding everything, and nothing would move. Every pass
+therefore announces the replica, counts the live ones, and releases whatever it
+holds above `ceil(armed connections / live replicas)`; the peers claim the freed
+connections through the usual race. `/healthz` reports the `replicas` a process
+can see and the `fair_share` that entitles it to, which is how to tell a
+rebalance in progress from one that never started.
+
 Lease expiry is a Langflow recovery bound, not proof that a dead process closed
 its socket. Adapters are written to tolerate bounded overlap during handover.
 
@@ -73,6 +87,7 @@ its socket. Adapters are written to tolerate bounded overlap during handover.
 | `LANGFLOW_LISTENER_POLL_INTERVAL_S` | `30` | Default cadence for pull adapters |
 | `LANGFLOW_LISTENER_BACKOFF_BASE_S` / `_CAP_S` | `2` / `300` | Reconnect backoff, with jitter |
 | `LANGFLOW_LISTENER_FAILURE_THRESHOLD` | `5` | Consecutive failures before the error is shown on the trigger |
+| `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` | unset | The API's OAuth registrations; required to refresh OAuth-backed connections |
 
 ## Verifying an install before a provider is involved
 

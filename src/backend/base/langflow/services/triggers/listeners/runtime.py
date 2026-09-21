@@ -65,6 +65,55 @@ async def verify_schema() -> None:
             raise RuntimeError(msg) from exc
 
 
+async def warn_on_unrefreshable_connections() -> list[str]:
+    """Say at startup when this listener cannot refresh the tokens it will hold.
+
+    A refresh does not go out over HTTP to the API: the listener performs it
+    itself, so it needs the API's ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`` as
+    well as its database URL and secret key. Without them the failure is
+    invisible until the first access token expires - hours after the deploy,
+    with nothing in the logs from the moment the mistake was made.
+
+    A warning, not an exit. Only some connections are OAuth-backed, a
+    registration can be added to the environment while the process is running,
+    and refusing to start would take down the connections that *are* working
+    for the sake of the ones that are not.
+
+    Returns the registration ids it could not find, so the check is worth
+    something to a caller that is not reading the log.
+    """
+    from sqlmodel import col, select
+
+    from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.deps import session_scope
+    from langflow.services.triggers.listeners.supervisor import load_desired_state
+
+    try:
+        configured = set(get_oauth_settings().registration_ids())
+    except OAuthError:
+        configured = set()
+
+    async with session_scope() as session:
+        desired = await load_desired_state(session)
+        if not desired:
+            return []
+        statement = select(ConnectionOAuth).where(col(ConnectionOAuth.connection_id).in_(list(desired)))
+        bindings = (await session.exec(statement)).all()
+
+    missing = sorted({row.registration_id for row in bindings} - configured)
+    if not missing:
+        return []
+    await logger.awarning(
+        "This listener holds %s OAuth-backed connection(s) whose registrations it cannot see (%s). Their access "
+        "tokens cannot be refreshed here. Set LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS to the same value the "
+        "Langflow API runs with; until then the affected triggers stay armed and retry.",
+        sum(1 for row in bindings if row.registration_id in set(missing)),
+        ", ".join(missing),
+    )
+    return missing
+
+
 async def boot_services() -> None:
     """Bring up exactly the services a listener needs, and nothing else."""
     from langflow.services.utils import initialize_settings_service, register_all_service_factories
@@ -80,6 +129,9 @@ async def run_listeners(*, stop_event: asyncio.Event | None = None) -> None:
     mark_listener_process()
     assert_no_http_app()
     await boot_services()
+    with contextlib.suppress(Exception):
+        # Advisory only: a listener whose warning query fails still starts.
+        await warn_on_unrefreshable_connections()
 
     stopping = stop_event or asyncio.Event()
     supervisor = ListenerSupervisor()

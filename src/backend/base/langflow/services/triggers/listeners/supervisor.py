@@ -22,7 +22,15 @@ trigger.
 off with jitter, keeps the lease so the connection does not thrash between
 replicas, surfaces the error on the triggers once it is persistent, and - for
 the one failure a retry can never fix, a revoked or expired credential - moves
-the triggers to ``needs_reconnect`` and stops.
+the triggers to ``needs_reconnect`` and stops. A failure this process could fix
+by being configured correctly is not that failure: it backs off like any other.
+
+A fourth rule follows from the first. Leases spread connections armed while
+several replicas are running, but a lease is invisible until it is held, so on
+its own it never *moves* one. Every pass therefore announces this replica in
+``replicas``, counts the live ones, and releases whatever it holds above
+``ceil(total / replicas)`` - which is what makes adding a replica to a loaded
+deployment do something.
 """
 
 from __future__ import annotations
@@ -53,7 +61,7 @@ from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
 from langflow.services.triggers import ledger
 from langflow.services.triggers.constants import FAMILY_TRIGGER_LISTENER
-from langflow.services.triggers.listeners import connection_leases
+from langflow.services.triggers.listeners import connection_leases, replicas
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
     ListenerTrigger,
@@ -82,6 +90,23 @@ _NEEDS_RECONNECT_ERRORS = (
     ConnectionUnresolvedError,
     ScopeMissingError,
 )
+
+#: ...except when the failure is this process's own configuration. A listener
+#: started with a different ``LANGFLOW_SECRET_KEY`` than the API cannot decrypt
+#: a credential, and one started without the API's
+#: ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`` cannot refresh a token - in both
+#: cases without a single request reaching the provider. The consent is intact,
+#: so asking the owner to reconnect is wrong twice over: it blames the user for
+#: an operator's misconfiguration, and ``needs_reconnect`` is a state the
+#: listener never polls, so correcting the configuration would not bring the
+#: trigger back. These back off and retry like any other failure, and recover on
+#: their own the moment the process is configured correctly.
+_LOCAL_CONFIGURATION_REASONS = frozenset({"credential-undecryptable", "registration-unavailable"})
+
+
+def is_local_configuration_failure(exc: BaseException) -> bool:
+    """True when this process, not the credential, is what is broken."""
+    return isinstance(exc, ConnectionUnresolvedError) and exc.reason in _LOCAL_CONFIGURATION_REASONS
 
 
 def _now() -> datetime:
@@ -250,6 +275,17 @@ class ListenerSupervisor:
         self.last_reconcile_error: str | None = None
         self.last_renew_failure_at: datetime | None = None
         self.started_at = _now()
+        #: Replicas announcing themselves on the last pass, including this one.
+        #: One until the first reconcile proves otherwise, so a supervisor that
+        #: has not reconciled yet never behaves as if it were sharing.
+        self.live_replicas = 1
+        #: This replica's share of the armed connections on the last pass.
+        self.fair_share = 0
+        #: Connections handed back to the fleet, and the moment this replica may
+        #: claim one again. Without the pause, the replica that just released a
+        #: connection would race its peers for it on the very next pass - and
+        #: being the one already connected to that database, usually win.
+        self._handed_back: dict[UUID, datetime] = {}
 
     # ------------------------------------------------------------------ #
     # Lifecycle
@@ -284,6 +320,7 @@ class ListenerSupervisor:
         with contextlib.suppress(Exception):
             async with session_scope() as session:
                 await connection_leases.release_all(session, holder=self.holder)
+                await replicas.withdraw(session, holder=self.holder)
 
     async def _loop(self) -> None:
         settings = get_settings_service().settings
@@ -320,22 +357,75 @@ class ListenerSupervisor:
                     reason="The connection was revoked or expired. Reconnect it to resume this trigger.",
                 )
                 desired.pop(connection_id, None)
+            # Announced before it is counted, so this replica is always in its
+            # own total: a pass that failed to announce would otherwise read
+            # zero peers and conclude it is sharing with nobody.
+            await replicas.announce(session, holder=self.holder, ttl_s=settings.listener_lease_ttl_s)
+            self.live_replicas = await replicas.live_replicas(
+                session, reap_after_s=max(settings.listener_lease_ttl_s * 10, 300.0)
+            )
 
         # Connections we hold but no longer want.
         for connection_id in [cid for cid in self.workers if cid not in desired]:
             await self._drop(connection_id)
 
+        self.fair_share = replicas.fair_share(total=len(desired), replicas=self.live_replicas)
+        await self._hand_back_excess()
+
         for connection_id, triggers in desired.items():
+            # The cap applies to new claims only. Holding at the share and
+            # renewing is the steady state; refusing to renew there would drop a
+            # connection this replica is the rightful holder of.
+            if connection_id not in self.workers and len(self.workers) >= self.fair_share:
+                continue
             await self._ensure(connection_id, triggers, ttl_s=settings.listener_lease_ttl_s)
 
         self.last_reconcile_at = _now()
         self.last_reconcile_error = None
+
+    async def _hand_back_excess(self) -> None:
+        """Release whatever this replica holds above its fair share.
+
+        The newest holdings go first, because a handover costs a reconnect and
+        a bounded overlap: an adapter that has held a socket for hours is the
+        one worth disturbing last. The connection id breaks ties so a pass is
+        deterministic rather than dependent on dictionary order.
+
+        Nothing is *assigned* to a peer. A released lease is simply free, and
+        the peers take it through the same race that spreads a connection armed
+        while several replicas were already running.
+        """
+        now = _now()
+        self._handed_back = {cid: until for cid, until in self._handed_back.items() if until > now}
+        excess = len(self.workers) - self.fair_share
+        if excess <= 0:
+            return
+        ordered = sorted(
+            self.workers.values(),
+            key=lambda worker: (worker.lease_generation or self.started_at, str(worker.connection_id)),
+            reverse=True,
+        )
+        pause = max(get_settings_service().settings.listener_reconcile_interval_s * 2, 1.0)
+        for worker in ordered[:excess]:
+            await logger.ainfo(
+                "Listener handing connection %s back to the fleet: holding %s of a %s share across %s replicas",
+                worker.connection_id,
+                len(self.workers),
+                self.fair_share,
+                self.live_replicas,
+            )
+            self._handed_back[worker.connection_id] = now + timedelta(seconds=pause)
+            await self._drop(worker.connection_id)
 
     async def _ensure(self, connection_id: UUID, triggers: list[ListenerTrigger], *, ttl_s: float) -> None:
         worker = self.workers.get(connection_id)
         settings = get_settings_service().settings
 
         if worker is None:
+            resume_at = self._handed_back.get(connection_id)
+            if resume_at is not None and resume_at > _now():
+                # Handed back on a recent pass. Let a peer have it.
+                return
             async with session_scope() as session:
                 generation = await connection_leases.claim_generation(
                     session, connection_id=connection_id, holder=self.holder, ttl_s=ttl_s
@@ -453,7 +543,10 @@ class ListenerSupervisor:
         except asyncio.CancelledError:
             raise
         except _NEEDS_RECONNECT_ERRORS as exc:
-            await self._needs_reconnect(worker, exc)
+            if is_local_configuration_failure(exc):
+                await self._failed(worker, exc)
+            else:
+                await self._needs_reconnect(worker, exc)
         except Exception as exc:  # noqa: BLE001 - every adapter failure is a backoff, not a crash
             await self._failed(worker, exc)
 
@@ -578,9 +671,13 @@ class ListenerSupervisor:
 
     async def _failed(self, worker: ConnectionWorker, exc: Exception) -> None:
         settings = get_settings_service().settings
+        local_configuration = is_local_configuration_failure(exc)
         worker.consecutive_failures += 1
         worker.succeeded_since_failure = False
-        worker.last_error = type(exc).__name__
+        # The typed reason is this project's own vocabulary, so it is as safe to
+        # show an owner as the class name and says far more: "the listener is
+        # configured wrong" rather than "something was unresolved".
+        worker.last_error = str(exc.reason) if local_configuration else type(exc).__name__  # type: ignore[attr-defined]
         delay = min(
             settings.listener_backoff_base_s * (2 ** (worker.consecutive_failures - 1)),
             settings.listener_backoff_cap_s,
@@ -604,16 +701,23 @@ class ListenerSupervisor:
         if worker.consecutive_failures >= settings.listener_failure_threshold:
             # Persistent enough that the owner should see it on the trigger,
             # not only in a log the owner cannot read.
+            message = (
+                # Named precisely, because this one is fixed by an operator
+                # editing the listener's environment and by nothing the owner
+                # of the trigger can do.
+                "The listener cannot read this connection with its own configuration "
+                f"({worker.last_error}). It must run with the same LANGFLOW_SECRET_KEY and "
+                "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS as the Langflow API. The trigger stays armed and "
+                "resumes on its own once it does."
+                if local_configuration
+                else (
+                    f"The listener could not hold this connection after {worker.consecutive_failures} "
+                    f"attempts ({worker.last_error}). Retrying."
+                )
+            )
             with contextlib.suppress(Exception):
                 async with session_scope() as session:
-                    await record_listener_error(
-                        session,
-                        trigger_ids=[t.id for t in worker.triggers],
-                        message=(
-                            f"The listener could not hold this connection after {worker.consecutive_failures} "
-                            f"attempts ({worker.last_error}). Retrying."
-                        ),
-                    )
+                    await record_listener_error(session, trigger_ids=[t.id for t in worker.triggers], message=message)
 
     async def _needs_reconnect(self, worker: ConnectionWorker, exc: Exception) -> None:
         """Stop retrying: only a human re-granting consent fixes this."""
@@ -641,6 +745,11 @@ class ListenerSupervisor:
             "connections": len(self.workers),
             "healthy_connections": sum(1 for worker in self.workers.values() if worker.healthy()),
             "resting_connections": sum(1 for worker in self.workers.values() if worker.resting()),
+            # What an operator needs to answer "did adding a replica help?"
+            # without a database session: how many replicas this one can see,
+            # and how many connections that entitles it to.
+            "replicas": self.live_replicas,
+            "fair_share": self.fair_share,
             "last_reconcile_at": self.last_reconcile_at.isoformat() if self.last_reconcile_at else None,
             "last_reconcile_error": self.last_reconcile_error,
             "last_renew_failure_at": (self.last_renew_failure_at.isoformat() if self.last_renew_failure_at else None),

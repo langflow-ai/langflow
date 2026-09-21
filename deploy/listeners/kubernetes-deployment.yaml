@@ -20,6 +20,12 @@
 # over within two lease TTLs (60s at the defaults) whether or not another
 # replica was already running.
 #
+# Raising `replicas` on a loaded Deployment does rebalance: each replica
+# announces itself, works out its share as ceil(armed connections / live
+# replicas), and releases whatever it holds above it for the others to claim.
+# Expect convergence within a few reconcile intervals, and note that `Recreate`
+# below means a *rollout* still replaces pods one generation at a time.
+#
 # There is no Service and no Ingress on purpose. The listener accepts no
 # inbound traffic; the health port exists for probes only.
 apiVersion: apps/v1
@@ -67,6 +73,18 @@ spec:
                 secretKeyRef:
                   name: langflow-secrets
                   key: secret-key
+            # Required when any connection was authorized through OAuth. The
+            # listener refreshes access tokens in this process rather than
+            # calling the API, so without the API's registrations every refresh
+            # fails locally - hours after the deploy looked healthy, and without
+            # one request reaching the provider. Optional so a deployment with
+            # no OAuth connections needs no such key.
+            - name: LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-secrets
+                  key: connection-oauth-registrations
+                  optional: true
             # Probes reach the pod on its pod IP, so the health server cannot
             # stay on loopback here.
             - name: LANGFLOW_LISTENERS_HEALTH_HOST

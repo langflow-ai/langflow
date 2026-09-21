@@ -24,7 +24,7 @@ from langflow.services.triggers.listeners.adapters import (
     unregister_adapter,
 )
 from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
-from lfx.integrations.errors import AuthExpiredError
+from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError
 from sqlmodel import col, select
 
 pytestmark = pytest.mark.no_blockbuster
@@ -576,3 +576,82 @@ async def test_an_auth_failure_finishes_its_own_cleanup(make_connection, make_tr
     assert adapter.stopped is True, "adapter.stop() must run to completion, not be cut short by a cancellation"
     async with session_scope() as session:
         assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
+
+
+@pytest.mark.parametrize(
+    ("reason", "expected_error"),
+    [
+        # A listener started with a different LANGFLOW_SECRET_KEY than the API.
+        ("credential-undecryptable", "credential-undecryptable"),
+        # A listener started without the API's LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS.
+        ("registration-unavailable", "registration-unavailable"),
+    ],
+)
+async def test_a_local_configuration_failure_retries_and_leaves_the_trigger_armed(
+    make_connection, make_trigger, adapter_registry, monkeypatch, reason, expected_error
+) -> None:
+    """LE-2479 finding 2: misconfiguring the listener must not disarm the owner's triggers.
+
+    Both failures happen entirely inside this process - the credential was never
+    offered to a provider and the consent is intact. Moving the trigger to
+    ``needs_reconnect`` blamed the owner for an operator's mistake, and because
+    ``load_desired_state`` only ever looks at ``active`` triggers, correcting the
+    configuration could not bring a single one of them back: each needed a
+    manual re-enable through an API that has no UI yet.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "listener_backoff_base_s", 0.01)
+    monkeypatch.setattr(settings, "listener_backoff_cap_s", 0.02)
+    monkeypatch.setattr(settings, "listener_failure_threshold", 1)
+
+    failure = ConnectionUnresolvedError("connection:selftest/conn", provider="selftest", reason=reason)
+    adapter = adapter_registry(RecordingAdapter(fail_with=failure))
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await supervisor.reconcile()
+        await asyncio.wait_for(adapter.started.wait(), timeout=5)
+        if supervisor.workers[connection_id].task is not None:
+            await asyncio.gather(supervisor.workers[connection_id].task, return_exceptions=True)
+
+        state, last_error = await _state(trigger_id)
+        assert state == TriggerState.ACTIVE.value, "the trigger stays armed and recovers on its own"
+        assert expected_error in (last_error or "")
+        assert "LANGFLOW_SECRET_KEY" in (last_error or "")
+        assert "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS" in (last_error or "")
+
+        # The connection is still this replica's: dropping it would hand a
+        # connection nobody can hold to a peer that cannot hold it either.
+        assert connection_id in supervisor.workers
+        async with session_scope() as session:
+            assert (
+                await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) == "replica-a"
+            )
+    finally:
+        await supervisor.stop()
+
+
+async def test_an_unparseable_connection_still_asks_for_a_reconnect(
+    make_connection, make_trigger, adapter_registry
+) -> None:
+    """Only the *local* reasons are retried; the rest still stop the listener dialling."""
+    failure = ConnectionUnresolvedError("connection:selftest/conn", provider="selftest")
+    adapter = adapter_registry(RecordingAdapter(fail_with=failure))
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    await supervisor.reconcile()
+    await asyncio.wait_for(adapter.started.wait(), timeout=5)
+    for _ in range(50):
+        if connection_id not in supervisor.workers:
+            break
+        await asyncio.sleep(0.05)
+
+    assert connection_id not in supervisor.workers
+    state, _ = await _state(trigger_id)
+    assert state == TriggerState.NEEDS_RECONNECT.value

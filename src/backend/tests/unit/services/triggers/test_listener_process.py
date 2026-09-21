@@ -263,6 +263,77 @@ async def test_a_listener_resolves_its_own_connection_without_the_api(client, tr
         await supervisor.stop()
 
 
+async def test_a_listener_warns_at_startup_about_registrations_it_cannot_see(
+    client,  # noqa: ARG001
+    trigger_owner,
+    make_trigger,
+    monkeypatch,
+) -> None:
+    """LE-2479 finding 3: the mistake is made at deploy time, so say so at deploy time.
+
+    Refresh happens in this process, so a listener without the API's OAuth
+    registrations cannot renew a single token. Left to itself the failure first
+    appears when an access token expires - hours after the deploy, with nothing
+    in the log from the moment the environment was written.
+    """
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.triggers.listeners import runtime
+    from langflow.services.triggers.listeners.runtime import warn_on_unrefreshable_connections
+
+    warnings: list[str] = []
+
+    class RecordingLogger:
+        async def awarning(self, message, *args) -> None:
+            warnings.append(message % args if args else message)
+
+        def __getattr__(self, name):  # pragma: no cover - other levels are irrelevant here
+            return getattr(runtime.logger, name)
+
+    monkeypatch.setattr(runtime, "logger", RecordingLogger())
+
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", "{}")
+    async with session_scope() as session:
+        connection = Connection(
+            provider_key="google",
+            name=f"conn_{uuid4().hex[:6]}",
+            display_name="Google work",
+            ownership_mode="user",
+            owner_id=trigger_owner,
+            status="ready",
+            allow_non_interactive=True,
+        )
+        session.add(connection)
+        await session.flush()
+        connection_id = connection.id
+        session.add(
+            ConnectionOAuth(
+                connection_id=connection_id,
+                user_id=trigger_owner,
+                registration_id="google-work",
+                config_digest="d" * 64,
+                expires_at=datetime.now(timezone.utc),
+            )
+        )
+
+    await make_trigger(kind=LISTENER_FAKE_KIND, connection_id=connection_id)
+    register_builtin_adapters()
+
+    assert await warn_on_unrefreshable_connections() == ["google-work"]
+    assert len(warnings) == 1
+    assert "google-work" in warnings[0]
+    assert "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS" in warnings[0]
+
+    # Configured correctly, it says nothing at all.
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        '{"google-work": {"provider": "google", "client_id": "c", "client_secret": "s", '
+        '"redirect_uri": "https://example.test/api/v1/connections/oauth/google/callback", '
+        '"scopes": ["calendar.readonly"]}}',
+    )
+    assert await warn_on_unrefreshable_connections() == []
+    assert len(warnings) == 1, "a correctly configured listener says nothing"
+
+
 # --------------------------------------------------------------------------- #
 # A child that will not stay up, and a host that cannot renew
 # --------------------------------------------------------------------------- #
