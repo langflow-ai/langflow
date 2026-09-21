@@ -333,6 +333,13 @@ def test_sambanova_build_blocks_metadata_url_before_sdk_client():
 
 
 def test_baidu_qianfan_build_blocks_metadata_url_before_sdk_client():
+    """A metadata URL in Qianfan's "endpoint" is still refused before the SDK is built.
+
+    The message changed with the guard: this field is a model identifier the SDK
+    appends to its own API host, not a base URL, so it is rejected for being the
+    wrong shape rather than by the base-URL SSRF policy. The property under test
+    is unchanged - the URL never reaches QianfanChatEndpoint.
+    """
     pytest.importorskip("qianfan")
     try:
         from lfx_bundles.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
@@ -345,7 +352,7 @@ def test_baidu_qianfan_build_blocks_metadata_url_before_sdk_client():
 
     with (
         patch("lfx_bundles.baidu.baidu_qianfan_chat.QianfanChatEndpoint") as mock_qianfan,
-        pytest.raises(ValueError, match="SSRF Protection"),
+        pytest.raises(ValueError, match="model identifier"),
     ):
         component.build_model()
 
