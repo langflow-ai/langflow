@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 from lfx.base.mcp import util
+from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import (
     MCPSessionManager,
     MCPSseClient,
@@ -4400,3 +4401,148 @@ class TestPeriodicCleanupSurvivesUnexpectedError:
             assert len(iterations) >= 2
         finally:
             await manager.cleanup_all()
+
+
+class _NameFlow:
+    """The fields the MCP tool name is derived from."""
+
+    def __init__(self, name: str, flow_id: str, *, action_name: str | None = None):
+        self.name = name
+        self.id = flow_id
+        self.user_id = "123e4567-e89b-12d3-a456-426614174000"
+        self.is_component = False
+        self.action_name = action_name
+
+
+class _NameSession:
+    """A session whose ``exec`` answers with a fixed flow list."""
+
+    def __init__(self, flows):
+        self._flows = flows
+
+    async def exec(self, stmt):  # noqa: ARG002
+        class _Result:
+            def __init__(self, flows):
+                self._flows = flows
+
+            def all(self):
+                return self._flows
+
+        return _Result(self._flows)
+
+
+def _publish(flows, *, is_action: bool = False) -> dict[str, str]:
+    """Reproduce the names ``handle_list_tools`` puts on the wire, id by name.
+
+    Kept as a local copy of the publishing rule on purpose: these cells grade the
+    call path against what the list path emits, so deriving both from the same
+    helper would make them pass by construction and prove nothing.
+    """
+    published: dict[str, str] = {}
+    for flow in flows:
+        base_name = (
+            util.sanitize_mcp_name(flow.action_name)
+            if is_action and flow.action_name
+            else util.sanitize_mcp_name(flow.name)
+        )
+        published[util.get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, set(published))] = flow.id
+    return published
+
+
+class TestMCPToolNameResolution:
+    """A name the server publishes has to be a name the server accepts.
+
+    ``tools/list`` and ``tools/call`` are joined by the tool name and nothing
+    else: the client stores the string it was given and sends it back. Every
+    cell here calls a name that the list path really published.
+    """
+
+    USER_ID = "123e4567-e89b-12d3-a456-426614174000"
+    LONG_NAME = "Portfolio Website Code Generator"  # 32 chars: a Langflow starter template
+
+    @pytest.mark.asyncio
+    async def test_a_name_longer_than_the_limit_resolves(self):
+        flows = [_NameFlow(self.LONG_NAME, "flow-1")]
+        published = _publish(flows)
+        (name,) = published
+
+        assert len(name) == MAX_MCP_TOOL_NAME_LENGTH
+        result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows))
+
+        assert result is not None, f"the server published {name!r} and then refused it"
+        assert result.id == "flow-1"
+
+    @pytest.mark.asyncio
+    async def test_a_de_duplicated_name_resolves(self):
+        flows = [_NameFlow(self.LONG_NAME, "flow-1"), _NameFlow(self.LONG_NAME, "flow-2")]
+        published = _publish(flows)
+
+        for name, flow_id in published.items():
+            result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows))
+            assert result is not None, f"the server published {name!r} and then refused it"
+            assert result.id == flow_id
+
+    @pytest.mark.asyncio
+    async def test_a_truncated_name_does_not_resolve_to_another_flow(self):
+        """The quiet half: one flow's tool running another flow's graph.
+
+        A 32-char name is published truncated to 30. A second flow named exactly
+        those 30 chars is published with the ``_1`` suffix, so the bare name now
+        belongs to the first flow while the call path regenerates it from the
+        second and answers with it. Nothing raises.
+        """
+        flows = [_NameFlow(self.LONG_NAME, "flow-1"), _NameFlow(self.LONG_NAME[:30], "flow-2")]
+        published = _publish(flows)
+
+        for name, flow_id in published.items():
+            result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows))
+            assert result is not None, f"the server published {name!r} and then refused it"
+            assert result.id == flow_id, f"{name!r} ran {result.id}, which is not the flow it was published for"
+
+    @pytest.mark.asyncio
+    async def test_a_long_action_name_resolves(self):
+        flows = [_NameFlow("Short", "flow-1", action_name=self.LONG_NAME)]
+        published = _publish(flows, is_action=True)
+        (name,) = published
+
+        result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows), is_action=True)
+
+        assert result is not None, f"the server published {name!r} and then refused it"
+        assert result.id == "flow-1"
+
+
+class TestBuildMcpToolNameMap:
+    """The helper both MCP halves derive their names from."""
+
+    LONG_NAME = "Portfolio Website Code Generator"  # 32 chars
+
+    def test_truncates_to_the_published_limit(self):
+        name_map = util.build_mcp_tool_name_map([_NameFlow(self.LONG_NAME, "flow-1")])
+
+        assert list(name_map) == ["portfolio_website_code_generat"]
+
+    def test_de_duplicates_in_the_order_the_flows_arrive(self):
+        first = _NameFlow(self.LONG_NAME, "flow-1")
+        second = _NameFlow(self.LONG_NAME, "flow-2")
+
+        assert util.build_mcp_tool_name_map([first, second]) == {
+            "portfolio_website_code_generat": first,
+            "portfolio_website_code_gener_1": second,
+        }
+        # Reversed input, reversed suffix: both call sites order by Flow.id so that
+        # which flow holds the bare name cannot flip between a list and a call.
+        assert util.build_mcp_tool_name_map([second, first]) == {
+            "portfolio_website_code_generat": second,
+            "portfolio_website_code_gener_1": first,
+        }
+
+    def test_action_name_is_used_only_on_the_project_surface(self):
+        flow = _NameFlow("Some Flow", "flow-1", action_name="Renamed Action")
+
+        assert list(util.build_mcp_tool_name_map([flow], is_action=True)) == ["renamed_action"]
+        assert list(util.build_mcp_tool_name_map([flow])) == ["some_flow"]
+
+    def test_an_empty_action_name_falls_back_to_the_flow_name(self):
+        flow = _NameFlow("Some Flow", "flow-1", action_name=None)
+
+        assert list(util.build_mcp_tool_name_map([flow], is_action=True)) == ["some_flow"]
