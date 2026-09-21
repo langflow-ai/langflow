@@ -530,6 +530,130 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
         result = scan_code_security('data = open("/etc/passwd").read()')
         assert result.is_safe is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: stdlib equivalents of bare open() must not bypass the scan.
+            "import io\nio.open('/etc/passwd').read()",
+            "import io\nio.open_code('/etc/passwd')",
+            "import io as io_alias\nio_alias.open('/etc/passwd').read()",
+            "from io import open\nopen('/etc/passwd').read()",
+            "from io import open_code\nopen_code('/etc/passwd')",
+            "import codecs\ncodecs.open('/etc/passwd').read()",
+            "from codecs import open\ncodec_open = open\ncodec_open('/etc/passwd')",
+            "import io\nopener = getattr(io, 'open')\nopener('/etc/passwd')",
+        ],
+        ids=[
+            "io-open",
+            "io-open-code",
+            "io-open-aliased-module",
+            "from-io-import-open",
+            "from-io-import-open-code",
+            "codecs-open",
+            "from-codecs-import-open",
+            "io-open-via-getattr",
+        ],
+    )
+    def test_should_detect_stdlib_open_equivalents(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: pathlib is the object-oriented raw filesystem API
+            # (Path.read_text/write_text/open/...). The whole module is blocked.
+            "import pathlib\npathlib.Path('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/tmp/x').write_text('payload')",
+            "from pathlib import Path\nPath('/tmp/x').open('r')",
+        ],
+        ids=[
+            "pathlib-module-read-text",
+            "pathlib-from-import-read-text",
+            "pathlib-write-text",
+            "pathlib-open",
+        ],
+    )
+    def test_should_detect_pathlib_file_access(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # io.FileIO is the raw constructor behind open(): it opens the path
+            # directly, so blocking only io.open/codecs.open left the same
+            # capability reachable. _io is the C module io re-exports from, so
+            # io.FileIO *is* _io.FileIO and both spellings must be covered.
+            "import io\ndata = io.FileIO('/etc/passwd').read()",
+            "import _io\ndata = _io.FileIO('/etc/passwd').read()",
+            "from io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from _io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "from _io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "import io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import _io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import io\nctor = io.FileIO\ndata = ctor('/etc/passwd').read()",
+            "import io\nio.FileIO('/tmp/payload', 'w').write(b'x')",
+            "import io\nio.FileIO('/tmp/payload', 'a').write(b'x')",
+            "import io\ndata = io.BufferedReader(io.FileIO('/etc/passwd')).read()",
+            "from io import *\ndata = FileIO('/etc/passwd').read()",
+            "import _io\n_io.open('/etc/passwd').read()",
+            "import _io\n_io.open_code('/etc/passwd')",
+        ],
+        ids=[
+            "io-fileio-read",
+            "underscore-io-fileio-read",
+            "from-io-import-fileio",
+            "from-underscore-io-import-fileio",
+            "from-io-import-fileio-aliased",
+            "from-underscore-io-import-fileio-aliased",
+            "io-fileio-aliased-module",
+            "underscore-io-fileio-aliased-module",
+            "io-fileio-assigned-constructor",
+            "io-fileio-write",
+            "io-fileio-append",
+            "io-fileio-buffered-wrapper",
+            "io-fileio-wildcard-import",
+            "underscore-io-open",
+            "underscore-io-open-code",
+        ],
+    )
+    def test_should_detect_raw_fileio_constructors(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # The _io canonicalization must not sweep up the in-memory types.
+            "import _io\nbuf = _io.BytesIO(b'x')",
+            "import _io\nbuf = _io.StringIO('x')",
+            "from _io import BytesIO\nbuf = BytesIO(b'x')",
+            "import io\nw = io.TextIOWrapper(io.BytesIO(b'x'))",
+            "import io\nassert isinstance(io.BytesIO(b''), io.IOBase)",
+            "import codecs\ncodecs.encode('x', 'hex')",
+            "import codecs\ncodecs.decode(b'78', 'hex')",
+        ],
+        ids=[
+            "underscore-io-bytesio",
+            "underscore-io-stringio",
+            "from-underscore-io-import-bytesio",
+            "io-textiowrapper-over-memory-buffer",
+            "io-iobase-isinstance",
+            "codecs-encode",
+            "codecs-decode",
+        ],
+    )
+    def test_should_still_allow_in_memory_and_codec_helpers(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_io_and_underscore_io_fileio_are_the_same_object(self):
+        """The canonicalization rests on a runtime fact; assert it rather than assume it."""
+        import _io
+        import io
+
+        assert io.FileIO is _io.FileIO
+        assert io.open is _io.open
+
     def test_should_detect_subclasses_sandbox_escape(self):
         result = scan_code_security("evil = ().__class__.__bases__[0].__subclasses__()")
         assert result.is_safe is False
@@ -556,6 +680,16 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
     def test_should_still_allow_getattr(self):
         # getattr is common/legit — banning it would regress real components.
         result = scan_code_security('v = getattr(self, "field", None)')
+        assert result.is_safe is True
+
+    def test_should_still_allow_in_memory_io_streams(self):
+        # io.StringIO/BytesIO are in-memory and legit; only io.open/open_code are blocked.
+        result = scan_code_security("import io\nbuf = io.BytesIO(b'data')\ntext = io.StringIO('x')")
+        assert result.is_safe is True
+
+    def test_should_still_allow_codecs_transcoding(self):
+        # codecs.encode/decode are legit; only codecs.open is blocked.
+        result = scan_code_security("import codecs\ndata = codecs.decode(b'x', 'utf-8')")
         assert result.is_safe is True
 
 
@@ -1431,9 +1565,9 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     @pytest.mark.parametrize(
         "code",
         [
-            "import pathlib\npath = getattr.__call__(pathlib, 'Path')('a')",
-            "import pathlib\nreflect = getattr\npath = reflect.__call__(pathlib, 'Path')('a')",
-            "import builtins, pathlib\npath = builtins.getattr.__call__(pathlib, 'Path')('a')",
+            "import math\nresult = getattr.__call__(math, 'sqrt')(4)",
+            "import math\nreflect = getattr\nresult = reflect.__call__(math, 'sqrt')(4)",
+            "import builtins, math\nresult = builtins.getattr.__call__(math, 'sqrt')(4)",
         ],
         ids=["direct-getattr-call", "aliased-getattr-call", "builtins-getattr-call"],
     )
@@ -1742,7 +1876,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         "code",
         [
             pytest.param(
-                "import pathlib\npathlib = object()\ngetattr(pathlib, 'os').system('ordinary object')",
+                "import glob\nglob = object()\ngetattr(glob, 'os').system('ordinary object')",
                 id="rebound-module-name",
             ),
             pytest.param(
@@ -1750,12 +1884,11 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="ordinary-object-getattribute",
             ),
             pytest.param(
-                "import pathlib\npathlib = object()\nvars = lambda value: {'os': value}\n"
-                "vars(pathlib)['os'].Path('file')",
+                "import glob\nglob = object()\nvars = lambda value: {'os': value}\nvars(glob)['os'].glob('file')",
                 id="shadowed-vars",
             ),
             pytest.param(
-                "import pathlib\nos_module = getattr(pathlib, 'os')\npath = os_module.path.join('a', 'b')",
+                "import logging\nos_module = getattr(logging, 'os')\npath = os_module.path.join('a', 'b')",
                 id="safe-os-member",
             ),
             pytest.param(
@@ -1764,15 +1897,15 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="rebound-getattr-alias",
             ),
             pytest.param(
-                "import pathlib\npath = pathlib.Path('a')\nname = getattr(pathlib, f\"{'P'}ath\")('b')",
-                id="direct-pathlib-and-static-safe-getattr",
+                "import glob\nfiles = glob.glob('*.txt')\nname = getattr(glob, f\"{'g'}lob\")('b')",
+                id="direct-glob-and-static-safe-getattr",
             ),
             pytest.param(
                 "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
                 id="direct-glob-and-safe-dict-member",
             ),
             pytest.param(
-                "import pathlib\npath_class = vars(pathlib)['Path']",
+                "import glob\npath_class = vars(glob)['glob']",
                 id="vars-safe-member",
             ),
             pytest.param(
@@ -1780,7 +1913,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="vars-mapping-get-safe-member",
             ),
             pytest.param(
-                "import pathlib\npath_class = object.__getattribute__(pathlib, 'Path')",
+                "import glob\npath_class = object.__getattribute__(glob, 'glob')",
                 id="object-getattribute-safe-member",
             ),
             pytest.param(
@@ -1788,7 +1921,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="dict-get-safe-member",
             ),
             pytest.param(
-                "import pathlib\nlookup = pathlib.__dict__.get\npath_class = lookup.__call__('Path')",
+                "import glob\nlookup = glob.__dict__.get\npath_class = lookup.__call__('glob')",
                 id="normalized-call-safe-member",
             ),
         ],
