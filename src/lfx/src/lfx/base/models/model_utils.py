@@ -1063,8 +1063,11 @@ def fetch_live_opencode_go_models(user_id: UUID | str | None, model_type: str = 
     capable, so ``tool_calling`` is reported True — without it, Agent components
     (which filter on ``tool_calling=True``) would show an empty dropdown.
 
-    Returns an empty list on any failure so a transient outage degrades to the
-    static seed catalog instead of raising into the caller.
+    Returns an empty list on any failure (missing key, transport error, malformed
+    payload) rather than raising into the caller. OpenCode Go is unconditionally
+    live (see ``LIVE_MODEL_PROVIDERS``), so an empty result is not backfilled by
+    the static seed catalog: ``replace_with_live_models`` assigns it directly,
+    which empties the dropdown until the endpoint is reachable again.
     """
     from lfx.base.models.opencode_go_constants import OPENCODE_GO_MODELS_DETAILED
 

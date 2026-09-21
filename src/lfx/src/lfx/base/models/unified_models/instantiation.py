@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -34,12 +35,17 @@ if TYPE_CHECKING:
 OPENCODE_GO_SESSION_HEADER = "x-opencode-session"
 
 
+@lru_cache(maxsize=1)
 def _opencode_go_user_agent() -> str:
     """Identify Langflow to OpenCode Go.
 
     The Go docs require the client to send its own agent string rather than a
     generic SDK/HTTP-library name, so this must never fall through to the
     ``openai`` package default.
+
+    Memoized with ``lru_cache`` since installed package versions do not change
+    within a process, and this is otherwise re-resolved via ``importlib.metadata``
+    on every ``get_llm`` call for this provider.
     """
     from importlib.metadata import PackageNotFoundError, version
 

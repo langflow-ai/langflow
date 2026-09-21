@@ -18,8 +18,9 @@ returns the first hit, which keeps those names resolving to their original provi
 from .model_metadata import create_model_metadata
 
 # Seed IDs are a conservative subset of the published OpenCode Zen catalog
-# (https://opencode.ai/docs/zen/). Task 5 verifies them against the live Go
-# ``/models`` endpoint, which is authoritative for what a Go subscription grants.
+# (https://opencode.ai/docs/zen/). Verified against the live Go ``/models``
+# endpoint when a Go subscription key is available; the live catalog overrides
+# this seed at runtime.
 _SEED_MODEL_NAMES = (
     "claude-sonnet-5",
     "claude-haiku-4.5",

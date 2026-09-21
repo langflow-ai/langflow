@@ -75,6 +75,25 @@ def test_opencode_go_secret_variable_key():
     assert get_provider_secret_variable_key("OpenCode Go") == "OPENCODE_GO_API_KEY"
 
 
+def test_opencode_go_api_key_is_env_importable():
+    """Env-only installs must still enable the provider, or live discovery never fires.
+
+    ``_fetch_enabled_providers_for_user`` is DB-only, so a key that is never imported
+    from the environment into a Global Variable leaves the provider un-enabled and the
+    catalog pinned to the static seed.
+    """
+    from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
+    from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+
+    required_secrets = {
+        v["variable_key"]
+        for v in MODEL_PROVIDER_METADATA["OpenCode Go"]["variables"]
+        if v.get("required") and v.get("is_secret")
+    }
+    assert required_secrets, "provider must declare at least one required secret"
+    assert required_secrets <= set(VARIABLES_TO_GET_FROM_ENVIRONMENT)
+
+
 # ---------------------------------------------------------------------------
 # Seed catalog
 # ---------------------------------------------------------------------------
@@ -173,8 +192,8 @@ def test_fetch_live_models_marks_defaults():
 
     # Seed IDs present in the live catalog become the default set. Derived from
     # the seed module (rather than hardcoded) so this test pins the intersection
-    # *behaviour* and doesn't retroactively break when Task 5 rewrites the seed
-    # list from the real endpoint.
+    # *behaviour* and doesn't retroactively break when the seed list is later
+    # revised from the real endpoint.
     live_ids = {"claude-sonnet-5", "gpt-5.2", "big-pickle"}
     expected = {m["name"] for m in OPENCODE_GO_MODELS_DETAILED} & live_ids
     assert expected, "payload must overlap the seed for this test to be meaningful"
