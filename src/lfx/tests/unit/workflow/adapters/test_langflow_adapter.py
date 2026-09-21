@@ -147,6 +147,40 @@ class TestExposeGraphState:
         frames += list(adapter.translate("log", {"message": "internal"}))
         assert frames == []
 
+    _DATA_SINK_VERTEX = {
+        "build_data": {
+            "id": "VectorStoreSearch-p9q0r",
+            "valid": True,
+            "data": {"outputs": {"dataframe": {"message": [{"text": "INTERNAL: margin floor is 22%"}]}}},
+        },
+        "output_meta": {
+            # Terminal because nothing consumes it, but not an output component.
+            "is_terminal": True,
+            "is_output": False,
+            "component_id": "VectorStoreSearch-p9q0r",
+            "vertex_type": "VectorStoreSearch",
+            "display_name": "Vector Store Search",
+            "output_types": ["dataframe"],
+        },
+    }
+
+    def test_non_output_sink_reports_nothing(self):
+        """A dangling retriever is terminal without being the flow's answer.
+
+        ``is_terminal`` is every vertex with no successors, and
+        ``build_component_output`` puts a ``data``/``dataframe`` vertex's content
+        in the event, so without this the narrowed stream would carry the
+        component's own output and its display name.
+        """
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        assert list(adapter.translate("end_vertex", self._DATA_SINK_VERTEX)) == []
+
+    def test_non_output_sink_still_reports_with_graph_state_on(self):
+        """Sync parity is unchanged for a caller that did not opt out."""
+        adapter = get_stream_adapter("langflow", _ctx())
+        frames = list(adapter.translate("end_vertex", self._DATA_SINK_VERTEX))
+        assert [f.type for f in frames] == ["end_vertex", "output"]
+
     def test_end_vertex_is_dropped_but_the_answer_survives(self):
         """The terminal ``output`` event is the flow's answer, not graph state."""
         adapter = get_stream_adapter("langflow", self._narrowed())

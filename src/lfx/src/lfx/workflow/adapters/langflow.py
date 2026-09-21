@@ -105,14 +105,28 @@ class LangflowAdapter:
                 # produced it is not.
                 event_data = redact_component_identity(event_data)
             events.append(self._passthrough(event_type, event_data))
-        if event_type == "end_vertex":
-            # The terminal ``output`` event is the flow's answer, not graph state,
-            # so it survives the narrowed stream even though the ``end_vertex``
-            # it is built from does not.
+        if event_type == "end_vertex" and self._emits_output(event_data):
+            # The ``output`` event is the flow's answer, not graph state, so it
+            # survives the narrowed stream even though the ``end_vertex`` it is
+            # built from does not.
             output_event = self._output_event(event_data)
             if output_event is not None:
                 events.append(output_event)
         return events
+
+    def _emits_output(self, event_data: dict[str, Any]) -> bool:
+        """Whether this vertex's ``output`` event belongs on the stream.
+
+        ``is_terminal`` is every vertex with no successors, which is the set sync
+        reports, not the set the caller asked for. A dangling retriever or parser
+        is terminal without being an output, and ``build_component_output``
+        includes its content for ``data`` and ``dataframe`` types. That is the
+        component output a narrowed stream promises to withhold, so with graph
+        state off only real output components report.
+        """
+        if self.context.expose_graph_state:
+            return True
+        return bool((event_data.get("output_meta") or {}).get("is_output"))
 
     @staticmethod
     def _is_graph_state(event_type: str, event_data: dict[str, Any]) -> bool:
