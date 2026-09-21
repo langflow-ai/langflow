@@ -8,7 +8,9 @@ When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled (the default), resolved 
 must stay within the authenticated user's or executing flow's storage subdirectory under
 ``settings.config_dir``. The check is a no-op when the setting is explicitly disabled, which
 single-tenant deployments may do to keep the legacy "read any local file by absolute path"
-behavior.
+behavior. Reading the setting fails closed: if the settings service is unavailable the
+restriction is treated as enabled, because the default is on and a fail-open read would drop
+containment for every caller without an operator ever opting out.
 
 Reserved-secret denial: the storage data directory IS ``config_dir``, which also holds the
 server-managed secret files as siblings of the per-flow upload subdirectories — the Fernet
@@ -52,15 +54,23 @@ _RESERVED_SECRET_FILENAMES = frozenset({"secret_key", "private_key.pem", "public
 
 
 def is_local_file_access_restricted() -> bool:
-    """Return True if local file access is restricted to the storage directory."""
+    """Return True if local file access is restricted to the storage directory.
+
+    Fails CLOSED. ``get_settings_service()`` returns ``None`` when service creation fails, so
+    this read can raise. The setting defaults to True, so answering False there would hand back
+    the opposite of the configured default and silently drop containment for every caller
+    (``enforce_local_file_access``, the FileInput tweak path, and the sqlite/duckdb database-URL
+    and local-Git-clone checks in ``ssrf_protection``). The single-tenant opt-out is honored
+    only when the setting is actually readable.
+    """
     try:
         return bool(get_settings_service().settings.restrict_local_file_access)
-    except Exception:  # noqa: BLE001 - settings service may be unavailable; preserve legacy behavior
+    except Exception:  # noqa: BLE001 - settings service may be unavailable; fail closed to the default
         logger.warning(
             "Could not read restrict_local_file_access setting; treating local file restriction "
-            "as DISABLED (fail-open). Local-file containment is not being enforced."
+            "as ENABLED (fail-closed). Local file paths outside the storage scope are denied."
         )
-        return False
+        return True
 
 
 def _reserved_secret_paths(data_dir: Path) -> set[Path]:
@@ -257,7 +267,18 @@ def enforce_local_file_access(
     if not is_local_file_access_restricted():
         return path
 
-    data_dir = Path(get_settings_service().settings.config_dir).resolve()
+    # The restriction is in force, so an unreadable settings service must deny rather than
+    # raise an opaque AttributeError from ``None.settings``: same fail-closed reasoning as
+    # ``is_local_file_access_restricted``, and it keeps the denial on the LocalFileAccessError
+    # contract callers already map to a 400.
+    try:
+        data_dir = Path(get_settings_service().settings.config_dir).resolve()
+    except Exception as e:  # settings unavailable while the restriction is in force; deny
+        msg = (
+            "Access to local file paths is disabled because the storage directory could not be "
+            "resolved (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use an uploaded file instead."
+        )
+        raise LocalFileAccessError(msg) from e
     allowed_roots = _scope_roots(data_dir, scope_ids, allow_storage_root=allow_storage_root)
     try:
         candidate = path.resolve()

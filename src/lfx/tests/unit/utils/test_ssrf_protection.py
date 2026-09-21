@@ -514,6 +514,21 @@ class TestDatabaseURLValidation:
         ):
             validate_database_url_for_ssrf(uri)
 
+    def test_local_file_dialects_blocked_when_settings_unavailable(self):
+        """The restriction read fails closed, so an unreadable settings service still denies.
+
+        ``get_settings_service()`` returns None when service creation fails. The SSRF toggle is
+        read from the environment first, so it answers without the settings service and the
+        dialect check is still reached -- a fail-open read of ``restrict_local_file_access``
+        there would re-open ``sqlite:////etc/passwd`` without any operator opt-out.
+        """
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=None),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf("sqlite:////etc/passwd")
+
     @pytest.mark.parametrize(
         "uri",
         [
