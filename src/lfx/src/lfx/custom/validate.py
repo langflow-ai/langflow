@@ -2,6 +2,7 @@ import ast
 import contextlib
 import copy
 import importlib
+import importlib.util
 import sys
 import warnings
 from types import FunctionType, ModuleType
@@ -56,13 +57,22 @@ def validate_code(code):
     add_type_ignores()
     tree.type_ignores = []
 
-    # Evaluate the import statements
+    # Check the import statements WITHOUT importing them.
+    #
+    # Security (H1-3992099): this previously called importlib.import_module()
+    # on every import, which executes the module's top-level code during
+    # "validation". Combined with any file-write primitive, an attacker can
+    # plant a module on a writable sys.path entry and have it executed here.
+    # find_spec() only locates the module; it never executes it. Only the
+    # top-level package is resolved, because find_spec() on a dotted name
+    # imports (executes) its parent packages.
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    importlib.import_module(alias.name)
-                except ModuleNotFoundError as e:
+                    if importlib.util.find_spec(alias.name.split(".")[0]) is None:
+                        errors["imports"]["errors"].append(f"No module named '{alias.name}'")
+                except (ImportError, AttributeError, ValueError) as e:
                     errors["imports"]["errors"].append(str(e))
 
     # Validate each function definition WITHOUT executing it.
