@@ -3,12 +3,19 @@
 import hashlib
 import hmac
 import ssl
+import threading
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import fakeredis
 import pytest
-from langflow.services.cache.service import RedisCache
+from langflow.services.cache.service import (
+    RedisCache,
+    _claim_cache_signing_secret,
+    _load_or_create_cache_signing_secret,
+    _read_existing_cache_signing_secret,
+)
 from lfx.services.cache.utils import CACHE_MISS
+from pydantic import SecretStr
 
 
 @pytest.mark.asyncio
@@ -385,3 +392,204 @@ class TestRedisCacheSigningKeySeparation:
 
         assert isinstance(signing_key, bytes)
         assert len(signing_key) == hashlib.sha256().digest_size
+
+
+class TestCacheSigningKeyStability:
+    """The signing key must be the same for every process that shares the cache.
+
+    The key is not a secrecy problem here but an availability one: a worker that
+    derives a different key cannot verify entries another worker signed, so the
+    cache silently stops hitting. The first-use sequence was exists/generate/write,
+    which is not atomic, and replicas do not share a CONFIG_DIR at all.
+    """
+
+    @staticmethod
+    def _settings(config_dir, configured_key=None):
+        settings = MagicMock()
+        settings.auth_settings.CONFIG_DIR = str(config_dir)
+        settings.auth_settings.CACHE_SIGNING_KEY = (
+            SecretStr(configured_key) if configured_key is not None else SecretStr("")
+        )
+        return settings
+
+    def _load(self, config_dir, configured_key=None):
+        with patch(
+            "langflow.services.deps.get_settings_service",
+            return_value=self._settings(config_dir, configured_key),
+        ):
+            return _load_or_create_cache_signing_secret()
+
+    def test_second_caller_adopts_the_persisted_key(self, tmp_path):
+        first = self._load(tmp_path)
+        second = self._load(tmp_path)
+        assert first == second
+        assert (tmp_path / "cache_secret_key").read_text(encoding="utf-8").strip() == first
+
+    def test_check_then_act_race_returns_the_winner(self, tmp_path):
+        """Deterministic replay of the race: the file appears after the existence check.
+
+        The loser must end up with the winner's key, not the one it generated
+        before discovering it had lost.
+        """
+        secret_path = tmp_path / "cache_secret_key"
+        winner_key = "winner-key-from-the-other-worker"  # pragma: allowlist secret
+
+        calls = {"n": 0}
+        real_reader = _read_existing_cache_signing_secret
+
+        def racing_reader(path):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                # The other worker has not created the file yet at this instant.
+                return None
+            return real_reader(path)
+
+        # ... but by the time we try to create it, it exists with the winner's key.
+        secret_path.write_text(winner_key, encoding="utf-8")
+
+        with patch(
+            "langflow.services.cache.service._read_existing_cache_signing_secret",
+            side_effect=racing_reader,
+        ):
+            resolved = _claim_cache_signing_secret(secret_path)
+
+        assert resolved == winner_key
+        assert secret_path.read_text(encoding="utf-8") == winner_key
+
+    def test_file_created_but_not_yet_written_is_retried(self, tmp_path):
+        """An empty file means "the winner is mid-write", not "no key exists"."""
+        secret_path = tmp_path / "cache_secret_key"
+        secret_path.touch()
+        winner_key = "winner-key-written-a-moment-later"  # pragma: allowlist secret
+
+        reads = {"n": 0}
+
+        def finishing_writer(_path):
+            reads["n"] += 1
+            if reads["n"] < 3:
+                return None  # file present but still empty
+            return winner_key
+
+        with patch(
+            "langflow.services.cache.service._read_existing_cache_signing_secret",
+            side_effect=finishing_writer,
+        ):
+            assert _claim_cache_signing_secret(secret_path) == winner_key
+
+    def test_concurrent_first_use_agrees_on_one_key(self, tmp_path):
+        """Every worker starting at once must end with the same key."""
+        resolved: list[str] = []
+        barrier = threading.Barrier(8)
+
+        def worker():
+            with patch(
+                "langflow.services.deps.get_settings_service",
+                return_value=self._settings(tmp_path),
+            ):
+                barrier.wait()
+                resolved.append(_load_or_create_cache_signing_secret())
+
+        threads = [threading.Thread(target=worker) for _ in range(8)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        assert len(set(resolved)) == 1
+        assert set(resolved) == {(tmp_path / "cache_secret_key").read_text(encoding="utf-8").strip()}
+
+    def test_replicas_with_separate_config_dirs_diverge_without_a_shared_key(self, tmp_path):
+        """The control: this is the case LANGFLOW_CACHE_SIGNING_KEY exists to fix."""
+        replica_a = tmp_path / "replica-a"
+        replica_b = tmp_path / "replica-b"
+        replica_a.mkdir()
+        replica_b.mkdir()
+        assert self._load(replica_a) != self._load(replica_b)
+
+    def test_replicas_with_separate_config_dirs_share_a_configured_key(self, tmp_path):
+        replica_a = tmp_path / "replica-a"
+        replica_b = tmp_path / "replica-b"
+        replica_a.mkdir()
+        replica_b.mkdir()
+        shared = "deployment-wide-cache-signing-key"  # pragma: allowlist secret
+        assert self._load(replica_a, shared) == self._load(replica_b, shared) == shared
+        # The configured key wins outright: no file is consulted or created.
+        assert not (replica_a / "cache_secret_key").exists()
+
+    def test_entries_signed_by_one_instance_verify_in_another(self, tmp_path):
+        """The end-to-end property: a tag produced on replica A verifies on replica B."""
+        import dill
+
+        replica_a = tmp_path / "replica-a"
+        replica_b = tmp_path / "replica-b"
+        replica_a.mkdir()
+        replica_b.mkdir()
+        shared = "deployment-wide-cache-signing-key"  # pragma: allowlist secret
+        namespaced_key = "langflow:cache:some-key"
+        payload = dill.dumps({"value": 1})
+
+        with patch("redis.asyncio.StrictRedis"):
+            with patch(
+                "langflow.services.deps.get_settings_service",
+                return_value=self._settings(replica_a, shared),
+            ):
+                cache_a = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+                tag_a = cache_a._integrity_tag(namespaced_key, payload)
+            with patch(
+                "langflow.services.deps.get_settings_service",
+                return_value=self._settings(replica_b, shared),
+            ):
+                cache_b = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+                assert cache_b._get_signing_key() == cache_a._get_signing_key()
+                assert hmac.compare_digest(cache_b._integrity_tag(namespaced_key, payload), tag_a)
+
+    def test_separate_config_dirs_cannot_verify_each_other_without_a_shared_key(self, tmp_path):
+        """The failure mode being fixed: valid entries read as misses on the other replica."""
+        import dill
+
+        replica_a = tmp_path / "replica-a"
+        replica_b = tmp_path / "replica-b"
+        replica_a.mkdir()
+        replica_b.mkdir()
+        namespaced_key = "langflow:cache:some-key"
+        payload = dill.dumps({"value": 1})
+
+        with patch("redis.asyncio.StrictRedis"):
+            with patch(
+                "langflow.services.deps.get_settings_service",
+                return_value=self._settings(replica_a),
+            ):
+                tag_a = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)._integrity_tag(
+                    namespaced_key, payload
+                )
+            with patch(
+                "langflow.services.deps.get_settings_service",
+                return_value=self._settings(replica_b),
+            ):
+                tag_b = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)._integrity_tag(
+                    namespaced_key, payload
+                )
+
+        assert not hmac.compare_digest(tag_a, tag_b)
+
+    def test_tamper_rejection_survives_the_shared_key(self, tmp_path):
+        """Sharing the key must not weaken verification: a flipped byte still fails."""
+        import dill
+
+        shared = "deployment-wide-cache-signing-key"  # pragma: allowlist secret
+        namespaced_key = "langflow:cache:some-key"
+        payload = bytearray(dill.dumps({"value": 1}))
+
+        with (
+            patch("redis.asyncio.StrictRedis"),
+            patch(
+                "langflow.services.deps.get_settings_service",
+                return_value=self._settings(tmp_path, shared),
+            ),
+        ):
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            tag = cache._integrity_tag(namespaced_key, bytes(payload))
+            payload[-1] ^= 0xFF
+            assert not hmac.compare_digest(tag, cache._integrity_tag(namespaced_key, bytes(payload)))
+            # A tag is still bound to its key, too.
+            assert not hmac.compare_digest(tag, cache._integrity_tag("langflow:cache:other", bytes(payload)))
