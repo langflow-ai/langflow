@@ -436,3 +436,126 @@ async def test_a_hundred_concurrent_deliveries_are_acknowledged_without_calling_
     # Generous against a loaded CI machine, and still far inside the per-request
     # budget: a hundred deliveries in three seconds is thirty milliseconds each.
     assert elapsed < 3.0, f"one hundred deliveries took {elapsed:.2f}s"
+
+
+# --------------------------------------------------------------------------- #
+# Review follow-ups: bounded reads, uniform refusals, no handshake oracle
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.usefixtures("slack_registration")
+async def test_a_chunked_oversized_body_is_refused_without_being_buffered(
+    client: AsyncClient, active_user, flow
+) -> None:
+    """A chunked request declares no Content-Length.
+
+    `request.body()` would drain the whole stream into memory first, so an
+    anonymous caller could hold hundreds of megabytes per in-flight request.
+    The route reads incrementally and abandons the stream at the cap; this test
+    sends more than the cap with no declared length and asserts nothing lands.
+    """
+    from langflow.services.deps import get_settings_service
+
+    public_id = uuid4().hex
+    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+    limit = get_settings_service().settings.trigger_ingress_max_body_bytes
+    chunk = b"x" * 65536
+    sent = 0
+
+    async def _oversized():
+        nonlocal sent
+        while sent <= limit:
+            sent += len(chunk)
+            yield chunk
+
+    response = await client.post(
+        f"api/v1/triggers/ingress/slack/{public_id}",
+        content=_oversized(),
+        headers={"Content-Type": "application/json", "Transfer-Encoding": "chunked"},
+    )
+
+    assert response.status_code == 404
+    assert await _events(trigger.id) == []
+
+
+@pytest.mark.usefixtures("slack_registration")
+async def test_a_rate_limited_delivery_answers_like_every_other_refusal(
+    client: AsyncClient, active_user, flow, monkeypatch
+) -> None:
+    """429 would leak which bucket a caller landed in — that is, which ids resolve.
+
+    The two budgets have different ceilings, so a distinct status code tells a
+    prober whether a public id exists by the count at which the answer changes.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "trigger_ingress_rate_limit_per_minute", 1)
+    monkeypatch.setattr(settings, "trigger_ingress_unknown_rate_limit_per_minute", 1)
+
+    public_id = uuid4().hex
+    await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+    body = json.dumps({"type": "event_callback", "event_id": "Ev-limit"}).encode()
+
+    known = [
+        await client.post(f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body))
+        for _ in range(3)
+    ]
+    unknown = await client.post(
+        f"api/v1/triggers/ingress/slack/{uuid4().hex}", content=body, headers=_slack_headers(body)
+    )
+
+    assert {response.status_code for response in known} == {202, 404}
+    assert known[-1].status_code == 404
+    assert known[-1].text == unknown.text
+
+
+async def test_the_graph_handshake_does_not_reveal_whether_a_trigger_exists(
+    client: AsyncClient, active_user, flow
+) -> None:
+    """The one exchange with no provider proof must not depend on the id resolving."""
+    public_id = uuid4().hex
+    await _arm_trigger(flow.id, active_user.id, kind="microsoft.mail", public_id=public_id)
+
+    known = await client.post(f"api/v1/triggers/ingress/microsoft/{public_id}?validationToken=tok-1", content=b"")
+    unknown = await client.post(f"api/v1/triggers/ingress/microsoft/{uuid4().hex}?validationToken=tok-1", content=b"")
+
+    assert known.status_code == unknown.status_code == 200
+    assert known.text == unknown.text == "tok-1"
+    assert known.headers["content-type"].startswith("text/plain")
+
+
+async def test_a_slack_request_carrying_a_validation_token_is_still_verified(
+    client: AsyncClient, active_user, flow
+) -> None:
+    """The handshake short-circuit is Microsoft's alone; it is not a bypass."""
+    public_id = uuid4().hex
+    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+
+    response = await client.post(
+        f"api/v1/triggers/ingress/slack/{public_id}?validationToken=tok-1", content=b'{"type":"event_callback"}'
+    )
+
+    assert response.status_code == 404
+    assert await _events(trigger.id) == []
+
+
+async def test_an_unknown_provider_is_rate_limited_before_it_is_audited(client: AsyncClient, monkeypatch) -> None:
+    """The audit queue is bounded: garbage must not starve legitimate signal."""
+    from langflow.services.triggers.ingress import intake
+
+    audited: list[str] = []
+
+    async def _record(*, accepted, provider, public_id, target=None, reason=None, duplicate=False):  # noqa: ARG001
+        audited.append(reason or "")
+
+    monkeypatch.setattr(intake, "audit_ingress", _record)
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "trigger_ingress_unknown_rate_limit_per_minute", 2)
+
+    responses = [await client.post(f"api/v1/triggers/ingress/dropbox/{uuid4().hex}", content=b"{}") for _ in range(5)]
+
+    assert {response.status_code for response in responses} == {404}
+    # The budget stopped the audit rows well before the request flood did.
+    assert len(audited) <= 2

@@ -546,14 +546,15 @@
       "source": "api/v1/trigger_ingress.py",
       "resource": "trigger",
       "domain": "none: the caller is a provider, not a Langflow principal, and no role grants access",
-      "privacy": "every outcome - unknown trigger, wrong provider, bad signature, stale timestamp, paused trigger - answers 404 with one body, so the route is not an oracle for which trigger ids exist; the reason is recorded in the audit row instead",
+      "privacy": "every outcome - unknown trigger, wrong provider, bad signature, stale timestamp, paused trigger, oversized body, rate limited - answers 404 with one body, so the route is not an oracle for which trigger ids exist; the reason is recorded in the audit row instead. The Microsoft Graph subscription handshake is the one 200 without provider proof, and it is answered before the trigger is resolved so its response cannot depend on whether the public id exists",
       "side_effects": "appends at most one trigger_event ledger row per verified delivery and answers inside the provider's acknowledgement deadline; never executes a flow and never fetches from the provider in the request",
       "frontend": "no frontend surface: the URL is shown on the trigger, and the secret only when it is minted",
       "personas": "public_or_conditional",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_a_valid_slack_delivery_becomes_one_ledger_row",
         "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_every_rejection_looks_identical_to_the_caller",
-        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_an_unknown_public_id_is_indistinguishable_from_a_bad_signature"
+        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_an_unknown_public_id_is_indistinguishable_from_a_bad_signature",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_the_graph_handshake_does_not_reveal_whether_a_trigger_exists"
       ],
       "routes": [
         "POST|/{provider}/{public_id}|receive_provider_delivery|ingest|provider_signed"

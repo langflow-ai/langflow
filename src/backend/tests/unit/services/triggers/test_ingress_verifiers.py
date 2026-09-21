@@ -125,11 +125,37 @@ def test_the_slack_url_verification_handshake_is_echoed_not_stored() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_the_graph_validation_handshake_echoes_the_token() -> None:
+def test_the_graph_validation_handshake_is_recognised_without_a_trigger() -> None:
+    """The route answers it before resolving a trigger, so it needs no secrets."""
+    assert verifiers.validation_token("microsoft", {"validationToken": "tok-1"}) == "tok-1"
+
+
+def test_only_microsoft_requests_are_handshakes() -> None:
+    """A Slack or webhook request with the same query param is an ordinary delivery."""
+    assert verifiers.validation_token("slack", {"validationToken": "tok-1"}) is None
+    assert verifiers.validation_token("webhook", {"validationToken": "tok-1"}) is None
+    assert verifiers.validation_token("microsoft", {}) is None
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        pytest.param("x" * 4096, id="too-long"),
+        pytest.param("tok<script>", id="disallowed-characters"),
+        pytest.param("", id="empty"),
+    ],
+)
+def test_a_malformed_validation_token_is_not_echoed(token: str) -> None:
+    """The echo goes to an anonymous caller: unbounded reflection is a primitive."""
+    assert verifiers.validation_token("microsoft", {"validationToken": token}) is None
+
+
+def test_a_handshake_that_reaches_the_verifier_is_refused_as_a_bad_payload() -> None:
+    """There is one handshake answer, in the route. This path is the fallback."""
     request = IngressRequest(provider="microsoft", body=b"", headers={}, query={"validationToken": "tok-1"})
-    verified = verify(request, IngressSecrets(), tolerance_s=TOLERANCE)
-    assert verified.handshake == "tok-1"
-    assert verified.handshake_media_type == "text/plain"
+    with pytest.raises(IngressRejected) as excinfo:
+        verify(request, IngressSecrets(), tolerance_s=TOLERANCE)
+    assert excinfo.value.reason == verifiers.REASON_BAD_PAYLOAD
 
 
 def test_a_graph_notification_verifies_against_the_stored_client_state_digest() -> None:
@@ -285,3 +311,34 @@ def test_an_unknown_provider_is_refused() -> None:
     with pytest.raises(IngressRejected) as excinfo:
         verify(request, IngressSecrets(), tolerance_s=TOLERANCE)
     assert excinfo.value.reason == verifiers.REASON_UNKNOWN_PROVIDER
+
+
+# --------------------------------------------------------------------------- #
+# The ledger key
+# --------------------------------------------------------------------------- #
+
+
+def test_the_dedupe_key_uses_the_providers_own_event_identity() -> None:
+    from langflow.services.triggers.ingress.intake import dedupe_key
+
+    assert dedupe_key(provider="slack", suffix="Ev123", fallback="unused") == "ingress:slack:Ev123"
+    assert dedupe_key(provider="webhook", suffix=None, fallback="digest") == "ingress:webhook:digest"
+
+
+def test_a_long_key_is_digested_rather_than_truncated() -> None:
+    """Truncation could cut exactly where two Graph resource paths diverge.
+
+    Two distinct events collapsing into one ledger row is a silently lost run -
+    the dedupe design failing in the direction it cannot detect.
+    """
+    from langflow.services.database.models.trigger.schemas import DEDUPE_KEY_MAX_LENGTH
+    from langflow.services.triggers.ingress.intake import dedupe_key
+
+    shared = "sub-1:" + ("drive/root:/very/deep/path/" * 20)
+    first = dedupe_key(provider="microsoft", suffix=shared + "a", fallback="x")
+    second = dedupe_key(provider="microsoft", suffix=shared + "b", fallback="x")
+
+    assert len(first) <= DEDUPE_KEY_MAX_LENGTH
+    assert len(second) <= DEDUPE_KEY_MAX_LENGTH
+    assert first != second, "two distinct events must not share a ledger key"
+    assert first.startswith("ingress:microsoft:")

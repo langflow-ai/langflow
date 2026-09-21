@@ -16,15 +16,20 @@ raising, and the route renders every outcome the same way.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
-from langflow.services.database.models.trigger.schemas import TriggerState, TriggerSubscriptionState
+from langflow.services.database.models.trigger.schemas import (
+    DEDUPE_KEY_MAX_LENGTH,
+    TriggerState,
+    TriggerSubscriptionState,
+)
 from langflow.services.triggers import ledger
 from langflow.services.triggers.constants import (
     AUDIT_INGRESS_ACCEPT,
@@ -116,9 +121,18 @@ async def _slack_signing_secret(session: AsyncSession, row: Trigger) -> str | No
 
 async def _subscription_secrets(session: AsyncSession, row: Trigger) -> IngressSecrets:
     """The per-subscription secrets Microsoft and Google verify against."""
-    statement = select(TriggerSubscription).where(
-        TriggerSubscription.trigger_id == row.id,
-        TriggerSubscription.state != TriggerSubscriptionState.ERROR.value,
+    # ACTIVE only, newest first. Excluding just ERROR was wrong: a retired
+    # subscription keeps its row as EXPIRED, and re-subscribing creates a second
+    # row, so an arbitrary first() could hand back the old row's digest and
+    # reject every valid notification as bad_client_state while the trigger
+    # still reported itself healthy.
+    statement = (
+        select(TriggerSubscription)
+        .where(
+            TriggerSubscription.trigger_id == row.id,
+            TriggerSubscription.state == TriggerSubscriptionState.ACTIVE.value,
+        )
+        .order_by(col(TriggerSubscription.updated_at).desc(), col(TriggerSubscription.id).desc())
     )
     subscription = (await session.exec(statement)).first()
     if subscription is None:
@@ -174,7 +188,17 @@ def dedupe_key(*, provider: str, suffix: str | None, fallback: str) -> str:
     nothing stable, and it is a digest of the signed body, so two identical
     bodies still collapse into one run.
     """
-    return f"{INGRESS_DEDUPE_PREFIX}:{provider}:{suffix or fallback}"[:255]
+    key = f"{INGRESS_DEDUPE_PREFIX}:{provider}:{suffix or fallback}"
+    if len(key) <= DEDUPE_KEY_MAX_LENGTH:
+        return key
+    # Truncating would be worse than useless here: Graph resource paths are long
+    # and share deep prefixes, so a cut could land exactly where two events
+    # diverge and collapse them into one ledger row - a silently lost run, which
+    # is the dedupe design failing in the direction it cannot detect. A digest
+    # keeps the key unique and bounded; the readable head keeps it debuggable.
+    digest = hashlib.sha256(key.encode()).hexdigest()
+    head = f"{INGRESS_DEDUPE_PREFIX}:{provider}:"
+    return f"{head}{digest}"[:DEDUPE_KEY_MAX_LENGTH]
 
 
 async def record_event(

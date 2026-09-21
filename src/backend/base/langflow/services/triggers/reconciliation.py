@@ -256,12 +256,22 @@ async def reconcile_flow_triggers(
             session.add(row)
             touched += 1
 
+    # Imported here, not at module scope: ``subscriptions`` reaches the service
+    # registry, which imports this module back.
+    from langflow.services.triggers.subscriptions import revoke_for_trigger
+
     for node_id, row in existing.items():
         if node_id in nodes or row.state in {TriggerState.PAUSED.value, TriggerState.DEAD.value}:
             continue
         row.state = TriggerState.PAUSED.value
         row.last_error = NODE_REMOVED_ERROR
         session.add(row)
+        # Retire the provider subscription with the node, for the same reason
+        # ``TriggerService.disable`` does: a paused trigger whose subscription is
+        # still live keeps consuming the provider's per-tenant quota and keeps
+        # delivering notifications this instance will only reject. Removing the
+        # node is as much an "off" as pressing pause.
+        await revoke_for_trigger(session, trigger_id=row.id)
         touched += 1
 
     if touched:

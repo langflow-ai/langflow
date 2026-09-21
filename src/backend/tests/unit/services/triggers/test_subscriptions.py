@@ -181,14 +181,21 @@ async def test_a_provider_with_no_registered_renewer_is_not_marked_broken(make_s
     assert row.lease_owner is None
 
 
-async def test_a_failing_renewal_is_recorded_and_not_raised(make_subscription) -> None:
+async def test_a_failing_renewal_stays_claimable_and_backs_off(make_subscription) -> None:
+    """A transient provider error must not retire a subscription that still has time on it.
+
+    Retiring it would do two things at once, both silent: ``claim_due`` only
+    claims ACTIVE rows so it would never be retried, and intake only reads an
+    ACTIVE row's digest so every still-valid delivery would start failing.
+    """
+
     async def _boom(_session, _subscription):
         msg = "graph said no"
         raise RuntimeError(msg)
 
     subscriptions.register_renewer(PROVIDER, _boom)
     try:
-        _trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+        trigger_id, _connection_id, subscription_id, _external = await make_subscription()
         async with session_scope() as session:
             row = await session.get(TriggerSubscription, subscription_id)
             row.renew_after = _now() - timedelta(minutes=1)
@@ -199,8 +206,123 @@ async def test_a_failing_renewal_is_recorded_and_not_raised(make_subscription) -
         subscriptions.unregister_renewer(PROVIDER)
 
     row = await _subscription(subscription_id)
-    assert row.state == TriggerSubscriptionState.ERROR.value
+    assert row.state == TriggerSubscriptionState.ACTIVE.value, "a live subscription must stay renewable"
     assert row.lease_owner is None
+    assert row.provider_state["renew_failures"] == 1
+    # Pushed into the future by the backoff, so the next pass does not spin.
+    assert row.renew_after.replace(tzinfo=timezone.utc) > _now()
+    # One failure is not yet worth telling the owner about.
+    assert (await _trigger(trigger_id)).last_error is None
+
+
+async def test_a_transient_failure_is_retried_and_deliveries_keep_verifying(make_subscription) -> None:
+    """Fail once, succeed next pass — and the digest stays readable throughout."""
+    from langflow.services.triggers.ingress import intake
+
+    calls: list[str] = []
+
+    async def _flaky(_session, subscription):
+        calls.append(subscription.provider_subscription_id)
+        if len(calls) == 1:
+            msg = "graph said no"
+            raise RuntimeError(msg)
+        return _now() + timedelta(days=7)
+
+    subscriptions.register_renewer(PROVIDER, _flaky)
+    try:
+        trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+        async with session_scope() as session:
+            row = await session.get(TriggerSubscription, subscription_id)
+            row.renew_after = _now() - timedelta(minutes=1)
+            session.add(row)
+
+        assert await subscriptions.run_renewal_pass(owner="replica-a") == 0
+
+        # Between the failure and the retry, a delivery must still verify: the
+        # subscription has not expired, so its digest is still the right one.
+        async with session_scope() as session:
+            trigger = await session.get(Trigger, trigger_id)
+            secrets = await intake._subscription_secrets(session, trigger)
+        assert secrets.client_state_digest == state_digest("client-state")
+
+        # Bring it due again, as the backoff would.
+        async with session_scope() as session:
+            row = await session.get(TriggerSubscription, subscription_id)
+            row.renew_after = _now() - timedelta(minutes=1)
+            session.add(row)
+        assert await subscriptions.run_renewal_pass(owner="replica-a") == 1
+    finally:
+        subscriptions.unregister_renewer(PROVIDER)
+
+    assert len(calls) == 2
+    row = await _subscription(subscription_id)
+    assert row.state == TriggerSubscriptionState.ACTIVE.value
+    assert "renew_failures" not in row.provider_state, "a success must clear the failure history"
+
+
+async def test_persistent_failures_surface_on_the_trigger_and_a_success_clears_it(make_subscription) -> None:
+    from langflow.services.deps import get_settings_service
+
+    threshold = get_settings_service().settings.trigger_subscription_failure_threshold
+    succeed = False
+
+    async def _flaky(_session, _subscription):
+        if succeed:
+            return _now() + timedelta(days=7)
+        msg = "graph said no"
+        raise RuntimeError(msg)
+
+    subscriptions.register_renewer(PROVIDER, _flaky)
+    try:
+        trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+        for _ in range(threshold):
+            async with session_scope() as session:
+                row = await session.get(TriggerSubscription, subscription_id)
+                row.renew_after = _now() - timedelta(minutes=1)
+                session.add(row)
+            await subscriptions.run_renewal_pass(owner="replica-a")
+
+        failing = await _trigger(trigger_id)
+        assert "could not be renewed" in (failing.last_error or "")
+        # Still armed: a struggling provider is not an owner misconfiguration.
+        assert failing.state == TriggerState.ACTIVE.value
+
+        succeed = True
+        async with session_scope() as session:
+            row = await session.get(TriggerSubscription, subscription_id)
+            row.renew_after = _now() - timedelta(minutes=1)
+            session.add(row)
+        assert await subscriptions.run_renewal_pass(owner="replica-a") == 1
+    finally:
+        subscriptions.unregister_renewer(PROVIDER)
+
+    assert (await _trigger(trigger_id)).last_error is None
+
+
+async def test_an_expired_subscription_stops_consuming_renewal_attempts(make_subscription) -> None:
+    """Only expiry is terminal: there is nothing left to renew."""
+
+    async def _boom(_session, _subscription):
+        msg = "graph said no"
+        raise RuntimeError(msg)
+
+    subscriptions.register_renewer(PROVIDER, _boom)
+    try:
+        trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+        async with session_scope() as session:
+            row = await session.get(TriggerSubscription, subscription_id)
+            row.renew_after = _now() - timedelta(minutes=1)
+            row.expires_at = _now() - timedelta(minutes=1)
+            session.add(row)
+
+        assert await subscriptions.run_renewal_pass(owner="replica-a") == 0
+    finally:
+        subscriptions.unregister_renewer(PROVIDER)
+
+    row = await _subscription(subscription_id)
+    assert row.state == TriggerSubscriptionState.ERROR.value
+    assert row.renew_after is None
+    assert "could not be renewed" in ((await _trigger(trigger_id)).last_error or "")
 
 
 # --------------------------------------------------------------------------- #
@@ -291,3 +413,108 @@ async def test_a_retired_subscription_is_never_renewed_again(make_subscription, 
 
     assert await subscriptions.run_renewal_pass(owner="replica-a") == 0
     assert fake_renewer == []
+
+
+# --------------------------------------------------------------------------- #
+# Which subscription intake verifies against
+# --------------------------------------------------------------------------- #
+
+
+async def test_intake_reads_the_newest_active_subscription_not_a_retired_one(make_subscription) -> None:
+    """Re-subscribing leaves the old row EXPIRED beside the new one.
+
+    Handing back the retired row's digest would reject every valid notification
+    as bad_client_state while the trigger still reported itself healthy.
+    """
+    from langflow.services.triggers.ingress import intake
+
+    trigger_id, connection_id, old_subscription_id, _external = await make_subscription()
+
+    async with session_scope() as session:
+        # Retire the first subscription, then subscribe again with a new secret.
+        await subscriptions.revoke_for_trigger(session, trigger_id=trigger_id)
+        await subscriptions.upsert_subscription(
+            session,
+            trigger_id=trigger_id,
+            connection_id=connection_id,
+            provider=PROVIDER,
+            provider_subscription_id=f"sub-{uuid4().hex[:8]}",
+            client_state_digest=state_digest("new-client-state"),
+            expires_at=_now() + timedelta(days=7),
+        )
+
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        secrets = await intake._subscription_secrets(session, trigger)
+
+    assert secrets.client_state_digest == state_digest("new-client-state")
+    assert (await _subscription(old_subscription_id)).state == TriggerSubscriptionState.EXPIRED.value
+
+
+async def test_no_active_subscription_yields_no_secret_rather_than_a_stale_one(make_subscription) -> None:
+    from langflow.services.triggers.ingress import intake
+
+    trigger_id, _connection_id, _subscription_id, _external = await make_subscription()
+    async with session_scope() as session:
+        await subscriptions.revoke_for_trigger(session, trigger_id=trigger_id)
+
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        secrets = await intake._subscription_secrets(session, trigger)
+
+    assert secrets.client_state_digest is None
+
+
+async def test_a_registered_revoker_is_called_before_the_row_is_retired(make_subscription) -> None:
+    """TRG-6 registers the provider call; TRG-4 owns when it happens."""
+    called: list[str] = []
+
+    async def _revoke(_session, subscription):
+        called.append(subscription.provider_subscription_id)
+
+    subscriptions.register_revoker(PROVIDER, _revoke)
+    try:
+        trigger_id, _connection_id, _subscription_id, provider_subscription_id = await make_subscription()
+        async with session_scope() as session:
+            await subscriptions.revoke_for_trigger(session, trigger_id=trigger_id)
+    finally:
+        subscriptions.unregister_revoker(PROVIDER)
+
+    assert called == [provider_subscription_id]
+
+
+async def test_a_failing_revoker_still_retires_the_local_row(make_subscription) -> None:
+    """The owner's pause must not depend on the provider answering."""
+
+    async def _boom(_session, _subscription):
+        msg = "graph said no"
+        raise RuntimeError(msg)
+
+    subscriptions.register_revoker(PROVIDER, _boom)
+    try:
+        trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+        async with session_scope() as session:
+            assert await subscriptions.revoke_for_trigger(session, trigger_id=trigger_id) == 1
+    finally:
+        subscriptions.unregister_revoker(PROVIDER)
+
+    assert (await _subscription(subscription_id)).state == TriggerSubscriptionState.EXPIRED.value
+
+
+async def test_removing_the_canvas_node_retires_the_subscription_too(make_subscription) -> None:
+    """Removing the node is as much an 'off' as pressing pause."""
+    from langflow.services.triggers.reconciliation import reconcile_flow_triggers
+
+    trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        trigger.node_id = "MicrosoftMailTrigger-abc12"
+        session.add(trigger)
+        flow_id, owner_id = trigger.flow_id, trigger.user_id
+
+    # Save the flow with the trigger node gone.
+    async with session_scope() as session:
+        await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data={"nodes": [], "edges": []})
+
+    assert (await _trigger(trigger_id)).state == TriggerState.PAUSED.value
+    assert (await _subscription(subscription_id)).state == TriggerSubscriptionState.EXPIRED.value

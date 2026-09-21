@@ -50,6 +50,7 @@ from langflow.services.triggers.ledger import purge_events
 from langflow.services.triggers.principal import connection_preflight
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -628,7 +629,7 @@ class TriggerDispatcher:
         await self._maybe_purge()
         return dispatched
 
-    async def _maybe_renew_subscriptions(self, run_renewal_pass) -> None:
+    async def _maybe_renew_subscriptions(self, run_renewal_pass: Callable[..., Awaitable[int]]) -> None:
         """Keep provider subscriptions alive, on their own slower cadence.
 
         Renewal is leased separately from dispatch (a third independent

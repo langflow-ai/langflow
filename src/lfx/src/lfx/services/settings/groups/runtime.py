@@ -199,6 +199,23 @@ class RuntimeSettings(BaseModel):
     and a one-day rich-notification subscription renews twelve hours early."""
     trigger_subscription_renew_interval_s: float = Field(default=300.0, gt=0)
     """How often the leased renewal job scans for subscriptions coming due."""
+    trigger_subscription_max_per_poll: int = Field(default=25, gt=0)
+    """Upper bound on how many subscriptions one renewal pass claims. Separate
+    from the dispatcher's ``trigger_max_events_per_poll`` on purpose: one is an
+    event budget measured against flow execution, the other a provider-call
+    budget measured against an HTTP round trip per row, and an operator tuning
+    one should not silently change the other."""
+    trigger_subscription_retry_backoff_base_s: float = Field(default=60.0, gt=0)
+    """First delay before a failed renewal is retried. Subsequent consecutive
+    failures back off exponentially up to the cap. A renewal failure is never
+    terminal while the subscription still has time on it - only expiry is."""
+    trigger_subscription_retry_backoff_cap_s: float = Field(default=3600.0, gt=0)
+    """Ceiling on the renewal retry backoff. Well under every wave-1 provider's
+    shortest subscription lifetime (one day), so a subscription that is failing
+    still gets many attempts before it expires."""
+    trigger_subscription_failure_threshold: int = Field(default=3, gt=0)
+    """Consecutive renewal failures before the problem is surfaced on the
+    trigger the subscription feeds. A success clears it."""
 
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.

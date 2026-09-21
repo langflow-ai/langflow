@@ -62,6 +62,13 @@ _UNUSABLE_CONNECTION_STATUSES = frozenset(
     {PersistedConnectionStatus.REVOKED.value, PersistedConnectionStatus.EXPIRED.value}
 )
 
+#: Renewal failure bookkeeping, kept on ``provider_state`` so no migration is
+#: needed and a successful renewal can clear it in one assignment.
+_FAILURE_COUNT_KEY = "renew_failures"
+_FAILURE_REASON_KEY = "renew_last_error"
+_FAILURE_AT_KEY = "renew_last_failed_at"
+_FAILURE_KEYS = frozenset({_FAILURE_COUNT_KEY, _FAILURE_REASON_KEY, _FAILURE_AT_KEY})
+
 _NEEDS_RECONNECT_REASON = "The provider subscription needs to be re-authorized. Reconnect the connection."
 _REMOVED_REASON = "The provider deleted this subscription. Re-enable the trigger to subscribe again."
 
@@ -86,7 +93,25 @@ class SubscriptionRenewer(Protocol):
     async def __call__(self, session: AsyncSession, subscription: TriggerSubscription) -> datetime: ...
 
 
+class SubscriptionRevoker(Protocol):
+    """One provider's "delete this subscription" call.
+
+    Registered alongside the renewer and for the same reason: TRG-4 owns the
+    store, the schedule, and the lifecycle transitions, while the HTTP call that
+    actually deletes a Graph subscription or stops a Google channel belongs to
+    the provider ticket that created it.
+
+    Raising is not fatal. A local row is retired either way - a trigger the
+    owner paused must stop accepting deliveries immediately, whatever the
+    provider says - and the failure is logged so the remote object can be
+    reconciled later rather than blocking the owner's action now.
+    """
+
+    async def __call__(self, session: AsyncSession, subscription: TriggerSubscription) -> None: ...
+
+
 _RENEWERS: dict[str, SubscriptionRenewer] = {}
+_REVOKERS: dict[str, SubscriptionRevoker] = {}
 
 
 def register_renewer(provider: str, renewer: SubscriptionRenewer) -> None:
@@ -100,6 +125,37 @@ def unregister_renewer(provider: str) -> None:
 
 def registered_renewers() -> set[str]:
     return set(_RENEWERS)
+
+
+def register_revoker(provider: str, revoker: SubscriptionRevoker) -> None:
+    """Register a provider's deletion call. TRG-6 supplies the wave-1 ones."""
+    _REVOKERS[provider] = revoker
+
+
+def unregister_revoker(provider: str) -> None:
+    _REVOKERS.pop(provider, None)
+
+
+def registered_revokers() -> set[str]:
+    return set(_REVOKERS)
+
+
+async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> None:
+    """Ask the provider to delete the subscription, best effort.
+
+    With no registered revoker - OSS today, before TRG-6 - this is a no-op and
+    the remote object is left to expire on the provider's own schedule. That is
+    a real gap and it is named here rather than hidden: the local row is retired
+    regardless, so Langflow stops acting on the subscription immediately, but
+    the provider may keep delivering until its TTL runs out.
+    """
+    revoker = _REVOKERS.get(row.provider)
+    if revoker is None:
+        return
+    try:
+        await revoker(session, row)
+    except Exception:  # noqa: BLE001 - the owner's pause must not depend on the provider answering
+        await logger.aexception("Subscription %s could not be deleted at provider %s", row.id, row.provider)
 
 
 def renew_after_for(*, created_at: datetime, expires_at: datetime) -> datetime:
@@ -212,6 +268,7 @@ async def revoke_for_trigger(session: AsyncSession, *, trigger_id: UUID) -> int:
     )
     rows = (await session.exec(statement)).all()
     for row in rows:
+        await _revoke_remote(session, row)
         row.state = TriggerSubscriptionState.EXPIRED.value
         row.renew_after = None
         row.updated_at = _now()
@@ -239,6 +296,10 @@ async def revoke_unusable_connections(session: AsyncSession) -> int:
     )
     retired = 0
     for subscription, _connection in (await session.exec(statement)).all():
+        # Best effort only: the credential this call would need is the one the
+        # owner just revoked, so it will usually fail. The local row is retired
+        # regardless, which is what stops Langflow acting on it.
+        await _revoke_remote(session, subscription)
         subscription.state = TriggerSubscriptionState.EXPIRED.value
         subscription.renew_after = None
         subscription.updated_at = _now()
@@ -316,29 +377,109 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID) -> bool:
     try:
         expires_at = await renewer(session, row)
     except Exception as exc:  # noqa: BLE001 - a provider failure is retried, not raised
-        row.state = TriggerSubscriptionState.ERROR.value
-        row.lease_owner = None
-        row.lease_until = None
-        row.updated_at = _now()
-        session.add(row)
-        await session.flush()
-        await logger.awarning(
-            "Subscription %s renewal failed for provider %s: %s", row.id, row.provider, type(exc).__name__
-        )
-        await _audit_subscription(AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=0, result="deny")
+        await _record_renewal_failure(session, row=row, exc=exc)
         return False
 
     expires_at = _as_aware(expires_at) or _now()
     row.expires_at = expires_at
     row.renew_after = renew_after_for(created_at=_now(), expires_at=expires_at)
     row.state = TriggerSubscriptionState.ACTIVE.value
+    row.provider_state = {key: value for key, value in (row.provider_state or {}).items() if key not in _FAILURE_KEYS}
     row.lease_owner = None
     row.lease_until = None
     row.updated_at = _now()
     session.add(row)
     await session.flush()
+    await _clear_renewal_error(session, trigger_id=row.trigger_id)
     await _audit_subscription(AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=1)
     return True
+
+
+async def _record_renewal_failure(session: AsyncSession, *, row: TriggerSubscription, exc: Exception) -> None:
+    """Back off and stay claimable. Retire only once the provider has expired it.
+
+    A transient failure must not be terminal. ``claim_due`` only claims ACTIVE
+    rows and ``intake._subscription_secrets`` only reads an ACTIVE row's
+    ``client_state_digest``, so moving to ERROR on the first bad renewal would
+    do two things at once: stop the subscription ever being retried, and start
+    rejecting deliveries that are still perfectly valid - the exact silent stop
+    this module exists to prevent, arrived at from the other direction.
+
+    So the row stays ACTIVE with ``renew_after`` pushed out by an exponential
+    backoff, and only becomes ERROR once ``expires_at`` has actually passed, at
+    which point there is nothing left to renew. Consecutive failures are counted
+    on ``provider_state`` and surfaced on the trigger past the threshold, so an
+    owner sees a subscription that is struggling before it dies.
+    """
+    settings = get_settings_service().settings
+    failures = int((row.provider_state or {}).get(_FAILURE_COUNT_KEY, 0)) + 1
+    delay = min(
+        settings.trigger_subscription_retry_backoff_base_s * (2 ** (failures - 1)),
+        settings.trigger_subscription_retry_backoff_cap_s,
+    )
+    now = _now()
+    expires_at = _as_aware(row.expires_at)
+    expired = expires_at is not None and expires_at <= now
+
+    row.provider_state = {
+        **(row.provider_state or {}),
+        _FAILURE_COUNT_KEY: failures,
+        _FAILURE_REASON_KEY: type(exc).__name__,
+        _FAILURE_AT_KEY: now.isoformat(),
+    }
+    if expired:
+        # Nothing left to renew: the provider has already dropped it, and the
+        # owner has to re-subscribe. Stop spending renewal attempts on it.
+        row.state = TriggerSubscriptionState.ERROR.value
+        row.renew_after = None
+    else:
+        row.renew_after = now + timedelta(seconds=delay)
+    row.lease_owner = None
+    row.lease_until = None
+    row.updated_at = now
+    session.add(row)
+    await session.flush()
+
+    await logger.aexception(
+        "Subscription %s renewal failed for provider %s (attempt %s)", row.id, row.provider, failures
+    )
+    if expired or failures >= settings.trigger_subscription_failure_threshold:
+        await _set_trigger_error(
+            session,
+            trigger_id=row.trigger_id,
+            message=(
+                "The provider subscription behind this trigger could not be renewed after "
+                f"{failures} attempts. Reconnect the connection if this persists."
+            ),
+        )
+    await _audit_subscription(AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=0, result="deny")
+
+
+async def _set_trigger_error(session: AsyncSession, *, trigger_id: UUID, message: str) -> None:
+    """Surface a persistent renewal problem without disarming the trigger.
+
+    The state is left alone for the same reason TRG-3's listener leaves it
+    alone: a struggling provider is not an owner misconfiguration, and taking
+    the trigger out of ``active`` would stop the retry that is meant to fix it.
+    """
+    row = await session.get(Trigger, trigger_id)
+    if row is None or row.last_error == message:
+        return
+    row.last_error = message
+    row.updated_at = _now()
+    session.add(row)
+    await session.flush()
+
+
+async def _clear_renewal_error(session: AsyncSession, *, trigger_id: UUID) -> None:
+    """A successful renewal disproves the banner a failing one raised."""
+    row = await session.get(Trigger, trigger_id)
+    if row is None or not row.last_error or "could not be renewed" not in row.last_error:
+        return
+    row.last_error = None
+    row.updated_at = _now()
+    session.add(row)
+    await session.flush()
 
 
 async def run_renewal_pass(*, owner: str) -> int:
@@ -356,7 +497,7 @@ async def run_renewal_pass(*, owner: str) -> int:
         claimed = await claim_due(
             session,
             owner=owner,
-            limit=settings.trigger_max_events_per_poll,
+            limit=settings.trigger_subscription_max_per_poll,
             lease_ttl_s=settings.trigger_lease_ttl_s,
         )
 

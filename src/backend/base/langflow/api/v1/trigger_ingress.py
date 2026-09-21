@@ -22,10 +22,18 @@ three-second acknowledgement window. The dispatcher runs the flow afterwards,
 as the trigger owner, and the run does the fetching.
 
 Every failure answers ``404`` with the same body. Not ``401``, not ``403``, not
-``400``: an anonymous endpoint that distinguishes "no such trigger" from "bad
-signature" from "stale timestamp" is an oracle for which trigger ids exist and
-for how close an attacker is getting. The reason is recorded in the audit row,
-where an operator can read it and an attacker cannot.
+``400``, and not ``429``: an anonymous endpoint that distinguishes "no such
+trigger" from "bad signature" from "stale timestamp" - or that reveals, by the
+request count at which its answer changes, which of two rate-limit buckets a
+caller landed in - is an oracle for which trigger ids exist and for how close an
+attacker is getting. The reason is recorded in the audit row, where an operator
+can read it and an attacker cannot.
+
+The single exception is the Microsoft Graph subscription handshake, and it is an
+exception only because it is answered *before* any trigger is resolved: it
+echoes the caller's own ``validationToken`` and its response therefore does not
+depend on whether the public id exists. Slack's ``url_verification`` is not an
+exception - it arrives signed, so it is answered on the ordinary verified path.
 """
 
 from __future__ import annotations
@@ -45,12 +53,14 @@ from langflow.services.triggers.constants import INGRESS_PROVIDERS
 from langflow.services.triggers.ingress import intake
 from langflow.services.triggers.ingress.verifiers import (
     REASON_BODY_TOO_LARGE,
+    REASON_HANDSHAKE,
     REASON_RATE_LIMITED,
     REASON_TRIGGER_NOT_ACCEPTING,
     REASON_UNKNOWN_PROVIDER,
     REASON_UNKNOWN_TRIGGER,
     IngressRejected,
     IngressRequest,
+    validation_token,
     verify,
 )
 
@@ -78,8 +88,14 @@ async def _bounded_body(request: Request, limit: int) -> bytes | None:
     """Read at most ``limit`` bytes. None means the delivery was too large.
 
     The declared ``Content-Length`` is checked first so an oversized delivery is
-    refused without being read, and the body is measured afterwards anyway
-    because a chunked request declares no length at all.
+    refused before a single byte is read. A chunked request declares no length,
+    and that is the case this function exists for: ``request.body()`` would
+    drain the whole stream into memory before anyone could measure it, so an
+    anonymous caller could hold hundreds of megabytes per in-flight request -
+    the global ``ContentSizeLimitMiddleware`` ceiling is
+    ``max_file_size_upload`` (1024 MB by default), not this route's 1 MiB. The
+    stream is therefore read incrementally and abandoned the moment the
+    accumulated length would exceed the cap.
     """
     declared = request.headers.get("content-length")
     if declared is not None:
@@ -88,8 +104,12 @@ async def _bounded_body(request: Request, limit: int) -> bytes | None:
                 return None
         except ValueError:
             return None
-    body = await request.body()
-    return None if len(body) > limit else body
+    chunks = bytearray()
+    async for chunk in request.stream():
+        if len(chunks) + len(chunk) > limit:
+            return None
+        chunks.extend(chunk)
+    return bytes(chunks)
 
 
 @router.post("/{provider}/{public_id}")
@@ -101,36 +121,77 @@ async def receive_provider_delivery(
 ) -> Response:
     """Accept one provider delivery and append it to the trigger's ledger."""
     settings = get_settings_service().settings
+
+    def _unknown_budget_spent() -> bool:
+        """Charge this client's probing budget. True when it is exhausted."""
+        try:
+            check_rate_limit(
+                request,
+                scope=_SCOPE_INGRESS_UNKNOWN,
+                limit_per_minute=settings.trigger_ingress_unknown_rate_limit_per_minute,
+            )
+        except RateLimitExceeded:
+            return True
+        return False
+
     if not settings.trigger_ingress_enabled or provider not in INGRESS_PROVIDERS:
+        # Charged before the audit row is written: the audit queue is bounded
+        # and single-writer, so a flood of garbage-provider requests would
+        # otherwise starve the pipeline that carries legitimate audit signal.
+        # No real provider is affected - the provider set is closed, so an
+        # unrecognised one is always garbage.
+        if _unknown_budget_spent():
+            return _reject()
         await intake.audit_ingress(
             accepted=False, provider=provider, public_id=public_id, target=None, reason=REASON_UNKNOWN_PROVIDER
         )
         return _reject()
+
+    # The Microsoft Graph subscription handshake, answered before the trigger is
+    # even looked up. Graph POSTs a validationToken when a subscription is
+    # created or renewed and expects it echoed verbatim; nothing is verified,
+    # because nothing has been subscribed yet - the exchange proves the URL is
+    # ours, not that the caller is Graph. Answering it before resolution is what
+    # keeps it from being the one path on this route whose response depends on
+    # whether a public id exists.
+    handshake = validation_token(provider, request.query_params)
+    if handshake is not None:
+        if _unknown_budget_spent():
+            return _reject()
+        await intake.audit_ingress(
+            accepted=True, provider=provider, public_id=public_id, target=None, reason=REASON_HANDSHAKE
+        )
+        return PlainTextResponse(content=handshake, media_type="text/plain")
 
     target = await intake.resolve_target(session, provider=provider, public_id=public_id)
 
     # Rate-limit before verification, and on the counter that matches what we
     # found: verification is cheap but not free, and an unknown id must not be
     # able to spend a real trigger's budget.
-    try:
-        if target is None:
-            check_rate_limit(
-                request,
-                scope=_SCOPE_INGRESS_UNKNOWN,
-                limit_per_minute=settings.trigger_ingress_unknown_rate_limit_per_minute,
-            )
-        else:
+    if target is None:
+        limited = _unknown_budget_spent()
+    else:
+        try:
             check_rate_limit(
                 request,
                 scope=_SCOPE_INGRESS,
                 limit_per_minute=settings.trigger_ingress_rate_limit_per_minute,
                 key=f"trigger:{target.trigger_id}",
             )
-    except RateLimitExceeded:
+            limited = False
+        except RateLimitExceeded:
+            limited = True
+    if limited:
+        # 404, not 429. The two budgets have different ceilings, so a distinct
+        # status would tell a caller which bucket it landed in - that is, which
+        # public ids resolve - by the count at which the answer changes. The
+        # refusal is recorded in the audit row instead, where an operator can
+        # read it. A throttled provider retries, which is the behaviour a 429
+        # would have produced anyway.
         await intake.audit_ingress(
             accepted=False, provider=provider, public_id=public_id, target=target, reason=REASON_RATE_LIMITED
         )
-        return JSONResponse(status_code=status.HTTP_429_TOO_MANY_REQUESTS, content={"detail": "Too many requests"})
+        return _reject()
 
     body = await _bounded_body(request, settings.trigger_ingress_max_body_bytes)
     if body is None:

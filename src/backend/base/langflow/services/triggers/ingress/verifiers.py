@@ -66,6 +66,9 @@ REASON_UNKNOWN_TRIGGER = "unknown_trigger"
 REASON_TRIGGER_NOT_ACCEPTING = "trigger_not_accepting"
 REASON_RATE_LIMITED = "rate_limited"
 REASON_SCHEMA_MISMATCH = "schema_mismatch"
+#: Not a refusal: the audit word for a subscription handshake, which is
+#: answered without a trigger and therefore has no target to name.
+REASON_HANDSHAKE = "handshake"
 
 _SLACK_SIGNATURE_VERSION = "v0"
 _WEBHOOK_SIGNATURE_VERSION = "v1"
@@ -153,6 +156,32 @@ class Verified:
     lifecycle: tuple[tuple[str, str], ...] = ()
 
 
+#: Graph's validationToken is a short opaque string it expects echoed verbatim.
+#: Bounded and charset-checked because this is echoed to an anonymous caller
+#: before any trigger is looked up: an unbounded echo is a reflection primitive.
+_MAX_VALIDATION_TOKEN = 2048
+_VALIDATION_TOKEN_ALLOWED = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~+/= :")
+
+
+def validation_token(provider: str, query: Mapping[str, str]) -> str | None:
+    """The Graph subscription handshake token, if this request is one.
+
+    Answered by the route *before* the trigger is resolved, so that the one
+    exchange on this endpoint which carries no provider proof cannot also
+    reveal whether a public id exists. Returning None means "not a handshake";
+    a malformed token is treated the same way, so it falls through to the
+    ordinary verification path and gets the ordinary refusal.
+    """
+    if provider != PROVIDER_MICROSOFT:
+        return None
+    token = query.get("validationToken")
+    if not token or len(token) > _MAX_VALIDATION_TOKEN:
+        return None
+    if not set(token) <= _VALIDATION_TOKEN_ALLOWED:
+        return None
+    return token
+
+
 def _json_body(body: bytes) -> dict[str, Any]:
     try:
         parsed = json.loads(body or b"{}")
@@ -214,15 +243,14 @@ def verify_slack(request: IngressRequest, secrets: IngressSecrets, *, tolerance_
 
 
 def verify_microsoft(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int) -> Verified:  # noqa: ARG001
-    """The Graph validation handshake, then ``clientState`` on notifications."""
-    validation_token = request.query.get("validationToken")
-    if validation_token:
-        # Graph POSTs the token on subscription create and renew and expects it
-        # echoed verbatim as text/plain within ten seconds. Nothing is verified
-        # here because nothing has been subscribed yet - the exchange proves the
-        # URL is ours, not that the caller is Graph.
-        return Verified(handshake=validation_token)
+    """``clientState`` on every notification in the batch.
 
+    The subscription handshake is *not* handled here. It carries no proof, so
+    the route answers it with :func:`validation_token` before a trigger is
+    resolved - one answer, in one place, that cannot depend on whether a public
+    id exists. A handshake that somehow reached this function has no body and is
+    refused as a malformed payload, which is the correct fallback.
+    """
     payload = _json_body(request.body)
     notifications = payload.get("value")
     if not isinstance(notifications, list) or not notifications:
