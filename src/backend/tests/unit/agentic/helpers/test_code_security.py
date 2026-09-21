@@ -268,6 +268,42 @@ class TestScanCodeSecurityDangerousAttrCalls:
     @pytest.mark.parametrize(
         "code",
         [
+            "import tempfile\ntempfile._os.system('id')",
+            "import tempfile\nsecret = tempfile._os.environ",
+            "import tempfile\ngetattr(tempfile, '_os').spawnv('id', [], {})",
+            "from tempfile import _os\n_os.system('id')",
+            "from tempfile import _os as operating_system\noperating_system.execlpe('id')",
+            "import tempfile\ntempfile._sys.exit(1)",
+            "import tempfile\nmodules = tempfile._sys.modules",
+        ],
+        ids=[
+            "dangerous-call",
+            "dangerous-read",
+            "reflective-access",
+            "from-import",
+            "from-import-alias",
+            "sys-exit",
+            "sys-modules-read",
+        ],
+    )
+    def test_should_detect_restricted_access_through_tempfile_private_reexports(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import tempfile\ntempfile.mkdtemp()",
+            "import tempfile\nwith tempfile.NamedTemporaryFile() as handle:\n    handle.write(b'x')",
+            "from tempfile import mkdtemp\nmkdtemp()",
+        ],
+        ids=["mkdtemp", "named-temporary-file", "from-import-safe-member"],
+    )
+    def test_should_allow_legitimate_tempfile_usage(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
             "from os import *\ndef write(value):\n    return value\nwrite('ok')",
             "from os import *\nwrite = lambda value: value\nwrite('ok')",
             "from os import *\ndef run(write):\n    return write('ok')",
