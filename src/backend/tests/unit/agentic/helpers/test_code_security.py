@@ -533,6 +533,83 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
     def test_should_detect_pathlib_file_access(self, code):
         assert scan_code_security(code).is_safe is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # io.FileIO is the raw constructor behind open(): it opens the path
+            # directly, so blocking only io.open/codecs.open left the same
+            # capability reachable. _io is the C module io re-exports from, so
+            # io.FileIO *is* _io.FileIO and both spellings must be covered.
+            "import io\ndata = io.FileIO('/etc/passwd').read()",
+            "import _io\ndata = _io.FileIO('/etc/passwd').read()",
+            "from io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from _io import FileIO\ndata = FileIO('/etc/passwd').read()",
+            "from io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "from _io import FileIO as F\ndata = F('/etc/passwd').read()",
+            "import io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import _io as io_alias\ndata = io_alias.FileIO('/etc/passwd').read()",
+            "import io\nctor = io.FileIO\ndata = ctor('/etc/passwd').read()",
+            "import io\nio.FileIO('/tmp/payload', 'w').write(b'x')",
+            "import io\nio.FileIO('/tmp/payload', 'a').write(b'x')",
+            "import io\ndata = io.BufferedReader(io.FileIO('/etc/passwd')).read()",
+            "from io import *\ndata = FileIO('/etc/passwd').read()",
+            "import _io\n_io.open('/etc/passwd').read()",
+            "import _io\n_io.open_code('/etc/passwd')",
+        ],
+        ids=[
+            "io-fileio-read",
+            "underscore-io-fileio-read",
+            "from-io-import-fileio",
+            "from-underscore-io-import-fileio",
+            "from-io-import-fileio-aliased",
+            "from-underscore-io-import-fileio-aliased",
+            "io-fileio-aliased-module",
+            "underscore-io-fileio-aliased-module",
+            "io-fileio-assigned-constructor",
+            "io-fileio-write",
+            "io-fileio-append",
+            "io-fileio-buffered-wrapper",
+            "io-fileio-wildcard-import",
+            "underscore-io-open",
+            "underscore-io-open-code",
+        ],
+    )
+    def test_should_detect_raw_fileio_constructors(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # The _io canonicalization must not sweep up the in-memory types.
+            "import _io\nbuf = _io.BytesIO(b'x')",
+            "import _io\nbuf = _io.StringIO('x')",
+            "from _io import BytesIO\nbuf = BytesIO(b'x')",
+            "import io\nw = io.TextIOWrapper(io.BytesIO(b'x'))",
+            "import io\nassert isinstance(io.BytesIO(b''), io.IOBase)",
+            "import codecs\ncodecs.encode('x', 'hex')",
+            "import codecs\ncodecs.decode(b'78', 'hex')",
+        ],
+        ids=[
+            "underscore-io-bytesio",
+            "underscore-io-stringio",
+            "from-underscore-io-import-bytesio",
+            "io-textiowrapper-over-memory-buffer",
+            "io-iobase-isinstance",
+            "codecs-encode",
+            "codecs-decode",
+        ],
+    )
+    def test_should_still_allow_in_memory_and_codec_helpers(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_io_and_underscore_io_fileio_are_the_same_object(self):
+        """The canonicalization rests on a runtime fact; assert it rather than assume it."""
+        import _io
+        import io
+
+        assert io.FileIO is _io.FileIO
+        assert io.open is _io.open
+
     def test_should_detect_subclasses_sandbox_escape(self):
         result = scan_code_security("evil = ().__class__.__bases__[0].__subclasses__()")
         assert result.is_safe is False

@@ -107,6 +107,13 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("io", "open", "io.open() is forbidden in components — use Langflow's File components"),
     ("io", "open_code", "io.open_code() is forbidden in components — use Langflow's File components"),
     ("codecs", "open", "codecs.open() is forbidden in components — use Langflow's File components"),
+    # FileIO is the raw constructor behind open(): io.FileIO(path) opens the file
+    # directly - read, write or append - without going through open(). Its
+    # buffered/text wrappers (BufferedReader, TextIOWrapper, ...) take an
+    # already-open raw object rather than a path, so blocking the constructor
+    # closes those routes too. StringIO/BytesIO touch no filesystem and stay
+    # allowed, as do codecs.encode/decode.
+    ("io", "FileIO", "io.FileIO() is forbidden in components — use Langflow's File components"),
 ]
 
 # Imports that are forbidden entirely
@@ -203,7 +210,7 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
     },
     "sys": {"modules"},
     # Filesystem openers behind stdlib modules that otherwise stay importable.
-    "io": {"open", "open_code"},
+    "io": {"open", "open_code", "FileIO"},
     "codecs": {"open"},
 }
 
@@ -313,6 +320,22 @@ _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 # Known stdlib modules that expose restricted modules under their original
 # names. Keep this exact-host allowlist narrow: an arbitrary third-party
 # module's ``.os`` or ``.sys`` attribute is not necessarily the stdlib module.
+# Modules importable under a second name that yields the *same* objects. ``io``
+# is a thin Python wrapper over the C module ``_io``: ``io.FileIO is _io.FileIO``
+# is true at runtime, so a rule written for ``io`` has to cover both spellings or
+# it only blocks the obvious one. Canonicalizing at import binding keeps the
+# tables above single-sourced - every present and future ``io`` rule applies to
+# ``_io`` for free.
+_CANONICAL_MODULE_NAMES: dict[str, str] = {"_io": "io"}
+
+
+def _canonical_module(module: str) -> str:
+    """Return the public name of a module importable under two names."""
+    head, _, rest = module.partition(".")
+    canonical = _CANONICAL_MODULE_NAMES.get(head, head)
+    return f"{canonical}.{rest}" if rest else canonical
+
+
 _RESTRICTED_MODULE_REEXPORTS: dict[str, frozenset[str]] = {
     "glob": frozenset({"os", "sys"}),
     "logging": frozenset({"os"}),
@@ -375,10 +398,10 @@ def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.asname:
-                    aliases[alias.asname] = alias.name
+                    aliases[alias.asname] = _canonical_module(alias.name)
                 else:
                     top = alias.name.split(".")[0]
-                    aliases[top] = top
+                    aliases[top] = _canonical_module(top)
         elif isinstance(node, ast.ImportFrom) and node.module and any(a.name == "*" for a in node.names):
             wildcard_modules.add(node.module.split(".")[0])
         elif isinstance(node, ast.ImportFrom) and node.module:
@@ -782,11 +805,11 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
-            module = alias.name.split(".")[0]
+            module = _canonical_module(alias.name.split(".")[0])
             if module in DANGEROUS_IMPORTS or _is_dangerous_submodule(alias.name):
                 self.violations.append(f"Import of '{alias.name}' is forbidden in components")
             binding = alias.asname or module
-            imported_name = alias.name if alias.asname else module
+            imported_name = _canonical_module(alias.name if alias.asname else module)
             self._bind_name(binding, frozenset({imported_name}))
             # An import inside a class body binds a class attribute, not a local.
             self._check_escaping_binding(binding, frozenset({imported_name}))
@@ -796,7 +819,7 @@ class _SecurityChecker(ast.NodeVisitor):
         if not node.module:
             return self.generic_visit(node)
 
-        root_module = node.module.split(".")[0]
+        root_module = _canonical_module(node.module.split(".")[0])
 
         if root_module in DANGEROUS_IMPORTS or _is_dangerous_submodule(node.module):
             self.violations.append(f"Import from '{node.module}' is forbidden in components")
