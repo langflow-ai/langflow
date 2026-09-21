@@ -295,15 +295,19 @@ def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]
 
 _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 
-# Known stdlib modules that expose restricted modules under their original
-# names. Keep this exact-host allowlist narrow: an arbitrary third-party
-# module's ``.os`` or ``.sys`` attribute is not necessarily the stdlib module.
-_RESTRICTED_MODULE_REEXPORTS: dict[str, frozenset[str]] = {
-    "glob": frozenset({"os", "sys"}),
-    "logging": frozenset({"os"}),
-    "os": frozenset({"sys"}),
-    "os.path": frozenset({"os", "sys"}),
-    "pathlib": frozenset({"os", "sys"}),
+# Known stdlib modules that expose restricted modules as attributes, mapping
+# the attribute name to the canonical restricted module it resolves to. Keep
+# this exact-host allowlist narrow: an arbitrary third-party module's ``.os``
+# or ``.sys`` attribute is not necessarily the stdlib module. ``tempfile``
+# imports both under private aliases (``_os`` / ``_sys``), which are the real
+# modules at runtime.
+_RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
+    "glob": {"os": "os", "sys": "sys"},
+    "logging": {"os": "os"},
+    "os": {"sys": "sys"},
+    "os.path": {"os": "os", "sys": "sys"},
+    "pathlib": {"os": "os", "sys": "sys"},
+    "tempfile": {"_os": "os", "_sys": "sys"},
 }
 
 # Modules with a mix of allowed and forbidden members may be used directly so
@@ -367,9 +371,10 @@ def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
         elif isinstance(node, ast.ImportFrom) and node.module and any(a.name == "*" for a in node.names):
             wildcard_modules.add(node.module.split(".")[0])
         elif isinstance(node, ast.ImportFrom) and node.module:
+            reexports = _RESTRICTED_MODULE_REEXPORTS.get(node.module, {})
             for alias in node.names:
-                if alias.name in _RESTRICTED_MODULE_REEXPORTS.get(node.module, ()):
-                    aliases[alias.asname or alias.name] = alias.name
+                if alias.name in reexports:
+                    aliases[alias.asname or alias.name] = reexports[alias.name]
     return aliases, wildcard_modules
 
 
@@ -419,8 +424,8 @@ class _SecurityChecker(ast.NodeVisitor):
         for base_name in base_names:
             if member_name == "__call__":
                 resolved.add(base_name)
-            elif member_name in _RESTRICTED_MODULE_REEXPORTS.get(base_name, ()):
-                resolved.add(member_name)
+            elif (canonical := _RESTRICTED_MODULE_REEXPORTS.get(base_name, {}).get(member_name)) is not None:
+                resolved.add(canonical)
             else:
                 resolved.add(f"{base_name}.{member_name}")
         return frozenset(resolved)
@@ -805,11 +810,8 @@ class _SecurityChecker(ast.NodeVisitor):
                     self._bind_name(name, frozenset({f"{root_module}.{name}"}))
             else:
                 binding = alias.asname or alias.name
-                imported_name = (
-                    alias.name
-                    if alias.name in _RESTRICTED_MODULE_REEXPORTS.get(node.module, ())
-                    else f"{node.module}.{alias.name}"
-                )
+                reexports = _RESTRICTED_MODULE_REEXPORTS.get(node.module, {})
+                imported_name = reexports.get(alias.name, f"{node.module}.{alias.name}")
                 imported_names = frozenset({imported_name})
                 self._bind_name(binding, imported_names)
                 self._check_escaping_binding(binding, imported_names)
