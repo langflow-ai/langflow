@@ -250,8 +250,13 @@ page and gets one page, whatever mix of stores and resource types it spans.
 **Query parameters**: `source`* (`resource`, `authz`), `kind`* (`action`,
 `check`), `resource_type`*, `resource_id`, `action`*, `exclude_action`*,
 `operation`*, `result`*, `actor_type`*, `user_id`, `actor_id`, `request_id`,
-`since`, `until`, `cursor`, `limit` (1–200, default 50), `include_total`
+`since`, `until`, `q`, `cursor`, `limit` (1–200, default 50), `include_total`
 (`true`/`false`, default `false`). Parsing is as strict as the resource views.
+
+**Search.** `q` (1–200 characters) keeps rows whose action, resource type,
+actor username or details contain it, ignoring case; on `audit_events` it also
+matches `resource_name` and `operation`. `%` and `_` match themselves. It narrows
+every other filter, the total and the export, and a cursor is bound to it.
 
 **Every filter holds in both stores.** Where a filter cannot match a store, that
 store is left out of the read rather than the filter being ignored:
