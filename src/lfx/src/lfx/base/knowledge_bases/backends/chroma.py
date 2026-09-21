@@ -340,8 +340,11 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         try:
             await asyncio.to_thread(validate_connector_url_for_ssrf, target)
         except SSRFProtectionError as exc:
+            # Re-raised as SSRFProtectionError (a ValueError subclass, so existing config
+            # paths still catch it): test_connection echoes type(exc).__name__ back to the
+            # caller, and a blocked destination should not read as a missing credential.
             msg = f"Chroma Cloud host is not allowed: {exc}"
-            raise ValueError(msg) from exc
+            raise SSRFProtectionError(msg) from exc
 
     # ---- client plumbing -------------------------------------------------
 
@@ -353,17 +356,11 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         if self._resolved_database:
             kwargs["database"] = self._resolved_database
         if cfg.get("cloud_host"):
-            # ``cloud_host`` / ``cloud_port`` are tenant-controlled (they come
-            # straight from the request body's backend_config), so the server
-            # must not dial them blindly (CWE-918). Enforce the same connector
-            # SSRF policy the vector-store components use before handing the
-            # target to chromadb.CloudClient; private / link-local /
-            # cloud-metadata targets are rejected unless the operator
-            # allowlists the host via LANGFLOW_SSRF_ALLOWED_HOSTS.
-            # ``CloudClient`` speaks HTTPS by default, so the check URL uses
-            # the https scheme and the configured port (443 when unset).
-            cloud_port = int(cfg["cloud_port"]) if cfg.get("cloud_port") else 443
-            validate_connector_url_for_ssrf(f"https://{cfg['cloud_host']}:{cloud_port}")
+            # The SSRF check on this host lives in ``_validate_cloud_target``, which
+            # ``ensure_ready`` runs before anything can reach here. It used to be
+            # repeated inline at this point too, which resolved DNS twice per client
+            # and — because ``vector_store`` builds lazily from a sync property — ran a
+            # blocking lookup on the event loop for every ingest and search.
             kwargs["cloud_host"] = cfg["cloud_host"]
         if cfg.get("cloud_port"):
             kwargs["cloud_port"] = int(cfg["cloud_port"])
