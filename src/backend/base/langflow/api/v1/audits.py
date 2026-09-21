@@ -37,12 +37,13 @@ from langflow.services.audit.feed import (
     AuditKind,
     AuditSource,
     frozen_until,
-    iter_feed,
+    iter_feed_batches,
     list_feed,
 )
 from langflow.services.audit.vocabulary import AuditOperation
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.audit_event.model import as_utc
+
 # Imported at runtime: FastAPI resolves the dependency annotation below.
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
@@ -272,44 +273,45 @@ def _csv_cell(value: object) -> str:
     return f"'{text}" if first_visible and first_visible in "=+-@" else text
 
 
-def _csv_record(item: AuditFeedItem) -> list[str]:
-    values: list[object] = [
-        _timestamp_text(item.timestamp),
-        item.user_id,
-        item.actor_type,
-        item.actor_id,
-        item.action,
-        item.resource_type,
-        item.resource_id,
-        item.result,
-        _stable_json(item.details),
-        item.source.value,
-        item.kind.value,
-        item.resource_name,
-        item.operation,
-        item.error_code,
-        item.request_id,
+def _csv_values(feed_row: AuditFeedRow) -> list[object]:
+    """The CSV columns straight from the stored row; building the response model per row halves throughput."""
+    row = feed_row.row
+    is_resource = feed_row.source is AuditSource.RESOURCE
+    return [
+        _timestamp_text(row.timestamp),
+        row.user_id,
+        row.actor_type,
+        row.actor_id,
+        row.action,
+        row.resource_type,
+        row.resource_id,
+        row.result,
+        _stable_json(row.details),
+        feed_row.source.value,
+        feed_row.kind.value,
+        row.resource_name if is_resource else None,
+        row.operation if is_resource else None,
+        row.error_code if is_resource else None,
+        _request_id(feed_row),
     ]
-    return [_csv_cell(value) for value in values]
 
 
-def _csv_line(record: list[str]) -> str:
+def _csv_chunk(records: list[list[object]]) -> str:
     buffer = io.StringIO()
-    csv.writer(buffer, lineterminator="\r\n").writerow(record)
+    csv.writer(buffer, lineterminator="\r\n").writerows([_csv_cell(value) for value in record] for record in records)
     return buffer.getvalue()
 
 
-async def _export_lines(filters: AuditFeedFilters, export_format: str) -> AsyncIterator[str]:
-    """Walk the snapshot in batches on a session of its own: the request's closes before the body streams."""
+async def _export_chunks(filters: AuditFeedFilters, export_format: str) -> AsyncIterator[str]:
+    """One chunk per keyset batch, on a session of its own: the request's closes before the body streams."""
     if export_format == "csv":
-        yield _csv_line(list(CSV_COLUMNS))
+        yield _csv_chunk([list(CSV_COLUMNS)])
     async with session_scope() as session:
-        async for feed_row in iter_feed(session, filters, batch_size=_EXPORT_BATCH):
-            item = feed_item(feed_row)
+        async for batch in iter_feed_batches(session, filters, batch_size=_EXPORT_BATCH):
             if export_format == "csv":
-                yield _csv_line(_csv_record(item))
+                yield _csv_chunk([_csv_values(feed_row) for feed_row in batch])
             else:
-                yield item.model_dump_json() + "\n"
+                yield "".join(feed_item(feed_row).model_dump_json() + "\n" for feed_row in batch)
 
 
 @router.get("/export")
@@ -330,7 +332,7 @@ async def export_audits(
     filters = frozen_until(_filters(grouped))
     filename = f"langflow-audit-{datetime.now(timezone.utc).date().isoformat()}.{export_format}"
     return StreamingResponse(
-        _export_lines(filters, export_format),
+        _export_chunks(filters, export_format),
         media_type=_EXPORT_FORMATS[export_format],
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"},
     )
