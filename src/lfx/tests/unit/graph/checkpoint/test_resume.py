@@ -11,6 +11,7 @@ import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.graph.checkpoint.resume import resume_graph_with_decision
+from lfx.graph.checkpoint.schema import _WIRE_KIND
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
 
 
@@ -140,6 +141,33 @@ async def test_resume_flags_only_opaque_dropped_producers():
 
     assert "chat_input" in resumed.checkpoint_opaque_dropped_ids
     assert "chat_output" not in resumed.checkpoint_opaque_dropped_ids
+
+
+async def test_resume_survives_a_checkpoint_whose_built_object_no_longer_validates():
+    """A checkpoint written before this fix must still resume.
+
+    An affected install persisted an agent's tool with ``func``/``coroutine`` degraded to their
+    repr. Re-validating that payload raises, and raising here strands the run forever -- the only
+    escape is a brand-new run. Drop it instead and re-run the vertex, as for an opaque value.
+    """
+    _, checkpoint = await _paused_checkpoint()
+    checkpoint.vertex_results["chat_input"].built = True
+    checkpoint.vertex_results["chat_input"].built_object = {
+        _WIRE_KIND: "model",
+        "module": "lfx.base.tools.component_tool",
+        "name": "ComponentStructuredTool",
+        "value": {
+            "name": "fetch_content",
+            "description": "fetch",
+            "func": "<function build_output at 0x104f1e5c0>",
+            "coroutine": "<function build_output at 0x104f1e660>",
+        },
+    }
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert "chat_input" in resumed.checkpoint_opaque_dropped_ids
+    assert not isinstance(resumed.get_vertex("chat_input").built_object, str)
 
 
 async def _three_node_checkpoint():
