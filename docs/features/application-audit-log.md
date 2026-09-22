@@ -43,7 +43,7 @@ Off by default (`LANGFLOW_AUDIT_ENABLED=false`).
 | `event_type` | VARCHAR(16) NOT NULL | |
 | `result` | VARCHAR(16) NOT NULL | |
 | `error_code` | VARCHAR(64) NULL | Required for `deny`/`failed`, null otherwise |
-| `timestamp` | TIMESTAMPTZ NOT NULL | App-server UTC when the event is staged |
+| `timestamp` | TIMESTAMPTZ NOT NULL | Database UTC when the event is staged |
 | `request_id` | UUID NOT NULL | Server-generated per HTTP request; indexed, not unique |
 | `details` | JSON NOT NULL | See [Details contract](#details-contract) |
 
