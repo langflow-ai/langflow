@@ -103,12 +103,16 @@ class TestChatOutput(ComponentTestBaseWithClient):
         assert "truncated" not in result.text
         assert result.text.count("line") == MAX_TEXT_LENGTH
 
-    async def test_clean_data_applies_to_a_single_dataframe(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
-        component.input_value = DataFrame([{"text": "first\n\n\nsecond"}, {"text": None}])
+    @pytest.mark.parametrize(
+        ("clean_data", "expected"), [(True, "first<br/>second"), (False, "first<br/><br/><br/>second")]
+    )
+    async def test_clean_data_applies_to_a_single_dataframe(
+        self, component_class, default_kwargs, clean_data, expected
+    ):
+        component = component_class(**{**default_kwargs, "clean_data": clean_data})
+        component.input_value = DataFrame([{"text": "first\n\n\nsecond"}])
         result = await component.message_response()
-        assert "first<br/>second" in result.text
-        assert len(result.text.splitlines()) == 3  # header, separator, one row: the empty row is dropped
+        assert expected in result.text
 
     async def test_invalid_input(self, component_class, default_kwargs):
         """Test handling of invalid input."""

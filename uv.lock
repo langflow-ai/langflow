@@ -8883,7 +8883,7 @@ requires-dist = [
     { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.30.0,<2.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
-    { name = "pandas", specifier = ">=2.0.0,<3.0.0" },
+    { name = "pandas", specifier = ">=2.1.0,<3.0.0" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
     { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
     { name = "platformdirs", specifier = ">=4.3.8,<5.0.0" },
