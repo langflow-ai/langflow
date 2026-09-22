@@ -138,11 +138,16 @@ export default function ConnectionRefComponent({
                 !selectedHandle && "text-muted-foreground",
               )}
               data-testid={`value-connection-${id}`}
+              title={triggerLabel}
             >
               {triggerLabel}
             </span>
             {isDangling && (
-              <Badge variant="secondaryStatic" size="sq" className="text-xs">
+              <Badge
+                variant="secondaryStatic"
+                size="sq"
+                className="shrink-0 whitespace-nowrap text-xs"
+              >
                 {t("connections.picker.notFound")}
               </Badge>
             )}
@@ -273,12 +278,20 @@ function ConnectionOptionItem({
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate font-mono text-[13px]">
+            <span
+              className="truncate font-mono text-[13px]"
+              title={option.handle}
+            >
               {option.handle}
             </span>
             {!usable && (
-              <Badge variant="secondaryStatic" size="sq" className="text-xs">
-                {reason}
+              <Badge
+                variant="secondaryStatic"
+                size="sq"
+                className="max-w-[50%] shrink-0 whitespace-nowrap text-xs"
+                title={reason}
+              >
+                <span className="truncate">{reason}</span>
               </Badge>
             )}
           </div>
