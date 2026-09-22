@@ -35,6 +35,7 @@ const PAGE_TITLE_KEYS: Record<FlowTabType, string> = {
   deployments: "mainPage.tabDeployments",
   components: "mainPage.tabComponents",
   mcp: "mainPage.mcpServer",
+  harness: "mainPage.tabHarness",
 };
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
