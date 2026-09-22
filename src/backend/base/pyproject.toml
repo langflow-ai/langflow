@@ -38,8 +38,7 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
-    # Datetime storage is migration-sensitive; validate newer releases before widening this range.
-    "sqlmodel>=0.0.46,<0.0.47",
+    "sqlmodel~=0.0.46",
     "pydantic>=2.13.0,<2.14",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
