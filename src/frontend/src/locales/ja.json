@@ -2450,7 +2450,7 @@
   "connections.owner.other": "他のユーザー",
   "connections.owner.id": "所有者ID: {{id}}",
   "connections.add.handlePlaceholder": "work",
-  "connections.add.handleHelp": "小文字の英字と数字を使用し、単語は1つのアンダースコアで区切ってください（例: gmail_qa）。最大64文字です。",
+  "connections.add.handleHelp": "小文字の英字と数字を使用し、単語は1つのアンダースコアで区切ってください（例: gmail_qa）。最大{{max}}文字です。",
   "connections.scopes.count_one": "{{count}} 個のスコープ",
   "connections.scopes.count_other": "{{count}} 個のスコープ",
   "connections.scopes.count_many": "{{count}} 個のスコープ",

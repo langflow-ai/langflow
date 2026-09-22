@@ -4,7 +4,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
+import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import type { ConnectionRead } from "@/controllers/API/queries/connections";
 import {
   useDeleteConnectionMutation,
@@ -19,7 +19,12 @@ import CustomConnectionsTabs from "@/customization/components/custom-connections
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import AddConnectionDialog from "./components/AddConnectionDialog";
-import ConnectionsTable, { ownerKindOf } from "./components/ConnectionsTable";
+import ConnectionsTable, {
+  type ConnectionsSort,
+  ownerKindOf,
+} from "./components/ConnectionsTable";
+
+const EMPTY_CONNECTIONS: ConnectionRead[] = [];
 
 export { default as AddConnectionDialog } from "./components/AddConnectionDialog";
 export { default as ConnectionRowMenu } from "./components/ConnectionRowMenu";
@@ -35,6 +40,10 @@ export default function ConnectionsPage() {
 
   const [search, setSearch] = useState("");
   const [view, setView] = useState("mine");
+  const [sort, setSort] = useState<ConnectionsSort>({
+    column: "connection",
+    direction: "ascending",
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reauthorizing, setReauthorizing] = useState<
     ConnectionRead | undefined
@@ -63,33 +72,35 @@ export default function ConnectionsPage() {
     [integrationsQuery.data],
   );
 
-  const connections = connectionsQuery.data ?? [];
-  const matches = (connection: ConnectionRead) => {
-    const needle = search.trim().toLowerCase();
-    if (!needle) return true;
-    const account = connection.executing_identity?.account;
-    return [
-      connection.display_name,
-      `${connection.provider_key}/${connection.name}`,
-      account?.display ?? "",
-      account?.id ?? "",
-    ].some((value) => value.toLowerCase().includes(needle));
-  };
+  const connections = connectionsQuery.data ?? EMPTY_CONNECTIONS;
 
   // A superuser lists every user's connections, so "not instance-owned" is not
   // the same as "mine" for them: the rest belong to other people and are only
   // visible for administration. Other authorized rows stay under Mine for
   // regular users; ownership alone does not tell us how access was granted.
-  const viewOf = (connection: ConnectionRead) => {
-    const owner = ownerKindOf(connection, userData?.id);
-    if (owner === "instance") return "instance";
-    if (owner === "other" && isSuperuser) return "others";
-    return "mine";
-  };
-  const tabConnections = connections.filter(
-    (connection) => viewOf(connection) === view,
+  const tabConnections = useMemo(
+    () =>
+      connections.filter((connection) => {
+        const owner = ownerKindOf(connection, userData?.id);
+        if (owner === "instance") return view === "instance";
+        if (owner === "other" && isSuperuser) return view === "others";
+        return view === "mine";
+      }),
+    [connections, isSuperuser, userData?.id, view],
   );
-  const visible = tabConnections.filter(matches);
+  const visible = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return tabConnections;
+    return tabConnections.filter((connection) => {
+      const account = connection.executing_identity?.account;
+      return [
+        connection.display_name,
+        `${connection.provider_key}/${connection.name}`,
+        account?.display ?? "",
+        account?.id ?? "",
+      ].some((value) => value.toLowerCase().includes(needle));
+    });
+  }, [tabConnections, search]);
   const getEmptyMessage = () => {
     if (connections.length === 0) return t("connections.empty");
     if (tabConnections.length > 0) return t("connections.noMatches");
@@ -110,7 +121,7 @@ export default function ConnectionsPage() {
     } catch (error) {
       setErrorData({
         title: t("connections.errors.actionFailed"),
-        list: [getAxiosErrorMessage(error, t("connections.errors.generic"))],
+        list: [getAxiosErrorDetail(error, t("connections.errors.generic"))],
       });
     } finally {
       setBusyId(null);
@@ -202,6 +213,8 @@ export default function ConnectionsPage() {
       ) : (
         <ConnectionsTable
           connections={visible}
+          sort={sort}
+          onSortChange={setSort}
           providers={providers}
           currentUserId={userData?.id}
           isSuperuser={isSuperuser}

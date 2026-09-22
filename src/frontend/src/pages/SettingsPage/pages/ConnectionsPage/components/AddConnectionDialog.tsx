@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
+import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   CONNECTION_NAME_MAX_LENGTH,
   CONNECTION_NAME_PATTERN,
@@ -35,6 +35,7 @@ import {
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { uniqueNormalizedScopes } from "@/utils/connection-scopes";
+import { cn } from "@/utils/utils";
 import {
   partitionByCeiling,
   reauthorizeScopeList,
@@ -345,7 +346,7 @@ export function AddConnectionDialog({
       await beginAuthorize(row, [...selectedScopes]);
     } catch (error) {
       popupRef.current?.close();
-      setFieldError(getAxiosErrorMessage(error, t("connections.add.failed")));
+      setFieldError(getAxiosErrorDetail(error, t("connections.add.failed")));
     }
   };
 
@@ -425,6 +426,7 @@ export function AddConnectionDialog({
                   onChange={(event) => setName(event.target.value)}
                   maxLength={CONNECTION_NAME_MAX_LENGTH}
                   aria-invalid={name.length > 0 && !handleValid}
+                  className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
                   aria-describedby="connection-name-help"
                   data-testid="connection-name"
                 />
@@ -433,9 +435,14 @@ export function AddConnectionDialog({
                 </span>
                 <p
                   id="connection-name-help"
-                  className="text-xs text-muted-foreground"
+                  className={cn(
+                    "text-xs text-muted-foreground",
+                    name.length > 0 && !handleValid && "text-destructive",
+                  )}
                 >
-                  {t("connections.add.handleHelp")}
+                  {t("connections.add.handleHelp", {
+                    max: CONNECTION_NAME_MAX_LENGTH,
+                  })}
                 </p>
               </div>
               <div className="flex flex-col gap-1.5">

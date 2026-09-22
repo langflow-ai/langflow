@@ -2450,7 +2450,7 @@
   "connections.owner.other": "Anderer Benutzer",
   "connections.owner.id": "Besitzer-ID: {{id}}",
   "connections.add.handlePlaceholder": "arbeit",
-  "connections.add.handleHelp": "Verwenden Sie Kleinbuchstaben und Zahlen, getrennt durch einzelne Unterstriche (zum Beispiel gmail_qa). Maximal 64 Zeichen.",
+  "connections.add.handleHelp": "Verwenden Sie Kleinbuchstaben und Zahlen, getrennt durch einzelne Unterstriche (zum Beispiel gmail_qa). Maximal {{max}} Zeichen.",
   "connections.scopes.count_one": "{{count}} Berechtigung",
   "connections.scopes.count_other": "{{count}} Berechtigungen",
   "connections.scopes.count_many": "{{count}} Berechtigungen",

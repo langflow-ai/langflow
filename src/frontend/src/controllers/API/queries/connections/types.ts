@@ -32,7 +32,10 @@ export type ProviderRevocation =
   | "failed"
   | "not_applicable";
 
-/** Handle characters the backend accepts for the portable `provider/name`. */
+/**
+ * Keep in sync with CONNECTION_NAME_PATTERN and ConnectionRef.name in
+ * src/lfx/src/lfx/integrations/models.py (enforced by types.test.ts).
+ */
 export const CONNECTION_NAME_PATTERN = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 export const CONNECTION_NAME_MAX_LENGTH = 64;
 

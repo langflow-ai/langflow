@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -45,6 +45,11 @@ const SORT_COLUMNS = [
 ] as const;
 type SortColumn = (typeof SORT_COLUMNS)[number];
 
+export interface ConnectionsSort {
+  column: SortColumn;
+  direction: "ascending" | "descending";
+}
+
 const checkedAt = (iso: string | null): number | null => {
   if (!iso) return null;
   const time = Date.parse(
@@ -61,6 +66,8 @@ const HEALTH_DOT: Record<ConnectionRead["health"], string> = {
 
 export interface ConnectionsTableProps {
   connections: ConnectionRead[];
+  sort: ConnectionsSort;
+  onSortChange: (sort: ConnectionsSort) => void;
   providers: Map<string, IntegrationProviderRead>;
   currentUserId: string | undefined;
   isSuperuser: boolean;
@@ -100,6 +107,8 @@ function ProviderMark({
 
 export function ConnectionsTable({
   connections,
+  sort,
+  onSortChange,
   providers,
   currentUserId,
   isSuperuser,
@@ -107,10 +116,6 @@ export function ConnectionsTable({
   actions,
 }: ConnectionsTableProps) {
   const { t, i18n } = useTranslation();
-  const [sort, setSort] = useState<{
-    column: SortColumn;
-    direction: "ascending" | "descending";
-  }>({ column: "connection", direction: "ascending" });
   const sortedConnections = useMemo(() => {
     const collator = new Intl.Collator(i18n.language, { numeric: true });
     const sortValue = (connection: ConnectionRead): string | number | null => {
@@ -119,7 +124,9 @@ export function ConnectionsTable({
         case "connection":
           return connection.display_name;
         case "owner":
-          return `${t(`connections.owner.${ownerKindOf(connection, currentUserId)}`)} ${connection.owner_id ?? ""}`;
+          return t(
+            `connections.owner.${ownerKindOf(connection, currentUserId)}`,
+          );
         case "account":
           return account?.display ?? account?.id ?? "";
         case "status":
@@ -174,14 +181,13 @@ export function ConnectionsTable({
                   className="flex items-center gap-1 rounded-sm py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   data-testid={`connections-sort-${column}`}
                   onClick={() =>
-                    setSort((previous) => ({
+                    onSortChange({
                       column,
                       direction:
-                        previous.column === column &&
-                        previous.direction === "ascending"
+                        sort.column === column && sort.direction === "ascending"
                           ? "descending"
                           : "ascending",
-                    }))
+                    })
                   }
                 >
                   {t(`connections.columns.${column}`)}
@@ -239,7 +245,7 @@ export function ConnectionsTable({
                 <TableCell className="text-sm">
                   <ShadTooltip
                     content={
-                      connection.owner_id
+                      owner === "other" && connection.owner_id
                         ? t("connections.owner.id", { id: connection.owner_id })
                         : null
                     }

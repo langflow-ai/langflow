@@ -1,10 +1,15 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AxiosError } from "axios";
+import { I18nextProvider } from "react-i18next";
 import type {
   ConnectionRead,
   IntegrationProviderRead,
 } from "@/controllers/API/queries/connections";
+import i18n, { loadLanguage } from "@/i18n";
 import AddConnectionDialog from "../components/AddConnectionDialog";
+
+jest.unmock("react-i18next");
 
 const mockCreate = jest.fn();
 // Stable references, as React Query and Zustand hand back in the app. The
@@ -114,7 +119,10 @@ describe("AddConnectionDialog ownership", () => {
     } as unknown as Window);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await act(() => i18n.changeLanguage("en"));
+  });
 
   it.each([
     "gmail-qa",
@@ -214,6 +222,35 @@ describe("AddConnectionDialog ownership", () => {
     const popup = (window.open as jest.Mock).mock.results[0].value;
     expect(popup.close).toHaveBeenCalled();
   });
+
+  it.each(["Network Error", "timeout of 30000ms exceeded"])(
+    "uses the Portuguese fallback for %s",
+    async (message) => {
+      await loadLanguage("pt");
+      await act(() => i18n.changeLanguage("pt"));
+      mockCreate.mockRejectedValueOnce(new AxiosError(message));
+      const user = userEvent.setup();
+      render(
+        <I18nextProvider i18n={i18n}>
+          <AddConnectionDialog
+            open
+            onOpenChange={jest.fn()}
+            providers={[google]}
+            canCreateInstance={false}
+          />
+        </I18nextProvider>,
+      );
+      expect(screen.getByTestId("connection-name")).toHaveAccessibleDescription(
+        /Máximo de 64 caracteres/,
+      );
+      await fillDetails(user);
+      await user.click(screen.getByTestId("connection-continue"));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "A autorização não foi concluída.",
+      );
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    },
+  );
 
   it("creates an instance-owned connection when a superuser ticks the share box", async () => {
     mockCreate.mockResolvedValue(createdRow("instance"));

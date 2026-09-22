@@ -1,7 +1,12 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AxiosError } from "axios";
+import { I18nextProvider } from "react-i18next";
 import type { ConnectionRead } from "@/controllers/API/queries/connections";
+import i18n, { loadLanguage } from "@/i18n";
 import ConnectionsPage from "../index";
+
+jest.unmock("react-i18next");
 
 const SUPERUSER_ID = "user-admin";
 const REGULAR_ID = "user-regular";
@@ -9,9 +14,11 @@ const OTHER_ID = "user-bob";
 
 let mockUser: { id: string; is_superuser: boolean };
 let mockConnections: ConnectionRead[];
+const mockMutation = jest.fn();
+const mockSetErrorData = jest.fn();
 
 jest.mock("@/controllers/API/queries/connections", () => {
-  const mutation = () => ({ mutate: jest.fn(), mutateAsync: jest.fn() });
+  const mutation = () => ({ mutate: jest.fn(), mutateAsync: mockMutation });
   return {
     ...jest.requireActual("@/controllers/API/queries/connections"),
     useGetConnections: () => ({ data: mockConnections, isLoading: false }),
@@ -38,7 +45,7 @@ jest.mock("@/stores/authStore", () => ({
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: (selector: (state: unknown) => unknown) =>
-    selector({ setErrorData: jest.fn(), setSuccessData: jest.fn() }),
+    selector({ setErrorData: mockSetErrorData, setSuccessData: jest.fn() }),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -74,6 +81,15 @@ const openTab = async (name: string) => {
 };
 
 describe("ConnectionsPage tabs", () => {
+  beforeEach(() => {
+    mockMutation.mockReset();
+    mockSetErrorData.mockReset();
+  });
+
+  afterEach(async () => {
+    await act(() => i18n.changeLanguage("en"));
+  });
+
   it("shows the initial empty state only when there are no connections", () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };
     mockConnections = [];
@@ -261,5 +277,90 @@ describe("ConnectionsPage tabs", () => {
       "connection-row-bravo",
     ]);
     expect(mockConnections).toEqual(original);
+
+    await user.type(screen.getByTestId("connections-search"), "unmatched");
+    expect(screen.getByTestId("connections-empty")).toHaveTextContent(
+      "No connections match your search.",
+    );
+    await user.clear(screen.getByTestId("connections-search"));
+    expect(order()).toEqual([
+      "connection-row-alpha",
+      "connection-row-charlie",
+      "connection-row-bravo",
+    ]);
+    expect(
+      screen.getByTestId("connections-sort-lastCheck").closest("th"),
+    ).toHaveAttribute("aria-sort", "descending");
+
+    await openTab("Instance");
+    await openTab("Other users");
+    expect(order()).toEqual([
+      "connection-row-alpha",
+      "connection-row-charlie",
+      "connection-row-bravo",
+    ]);
+    expect(
+      screen.getByTestId("connections-sort-lastCheck").closest("th"),
+    ).toHaveAttribute("aria-sort", "descending");
   });
+
+  it("breaks owner-label ties by connection name instead of owner ID", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({ id: "alpha", owner_id: "user-z" }),
+      connection({ id: "bravo", owner_id: "user-a" }),
+    ];
+    const user = userEvent.setup();
+    render(<ConnectionsPage />);
+    await openTab("Other users");
+    const ownerSort = screen.getByTestId("connections-sort-owner");
+    for (const direction of ["ascending", "descending"]) {
+      await user.click(ownerSort);
+      expect(ownerSort.closest("th")).toHaveAttribute("aria-sort", direction);
+      expect(
+        screen
+          .getAllByTestId(/^connection-row-/)
+          .map((row) => row.dataset.testid),
+      ).toEqual(["connection-row-alpha", "connection-row-bravo"]);
+    }
+  });
+
+  it.each([
+    ["Test", "ready", "Network Error"],
+    ["Test", "ready", "timeout of 30000ms exceeded"],
+    ["Revoke", "ready", "Network Error"],
+    ["Revoke", "ready", "timeout of 30000ms exceeded"],
+    ["Delete", "revoked", "Network Error"],
+    ["Delete", "revoked", "timeout of 30000ms exceeded"],
+  ] as const)(
+    "shows a Portuguese fallback when %s fails with %s / %s",
+    async (action, status, message) => {
+      await loadLanguage("pt");
+      await act(() => i18n.changeLanguage("pt"));
+      mockUser = { id: REGULAR_ID, is_superuser: false };
+      mockConnections = [
+        connection({ id: "gmail", owner_id: REGULAR_ID, status }),
+      ];
+      mockMutation.mockRejectedValueOnce(new AxiosError(message));
+      const user = userEvent.setup();
+      render(
+        <I18nextProvider i18n={i18n}>
+          <ConnectionsPage />
+        </I18nextProvider>,
+      );
+      await user.click(screen.getByTestId("connection-menu-gmail"));
+      await user.click(
+        screen.getByRole("menuitem", {
+          name: i18n.t(`connections.actions.${action.toLowerCase()}`),
+        }),
+      );
+      await waitFor(() =>
+        expect(mockSetErrorData).toHaveBeenCalledWith({
+          title: "Não foi possível concluir",
+          list: ["O servidor recusou a solicitação."],
+        }),
+      );
+      expect(mockMutation).toHaveBeenCalledTimes(1);
+    },
+  );
 });
