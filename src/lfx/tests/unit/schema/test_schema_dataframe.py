@@ -19,6 +19,26 @@ def dataframe_with_metadata():
 
 
 class TestDataFrameSchema:
+    def test_to_data_list_preserves_document_text_configuration(self):
+        """Row conversion preserves the custom body column used by downstream components."""
+        frame = DataFrame({"body": ["First", "Second"], "rank": [1, 2]}, text_key="body")
+
+        rows = frame.to_data_list()
+
+        assert [row.get_text() for row in rows] == ["First", "Second"]
+        assert [row.to_lc_document() for row in rows] == frame.to_lc_documents()
+        assert rows[0].data == {"body": "First", "rank": 1}
+
+    def test_to_data_list_preserves_document_fallback(self):
+        """Rows without the configured text column retain the table's fallback."""
+        frame = DataFrame({"rank": [1]}, text_key="body", default_value="Missing content")
+
+        rows = frame.to_data_list()
+
+        assert rows[0].text_key == "body"
+        assert rows[0].get_text() == "Missing content"
+        assert rows[0].to_lc_document() == frame.to_lc_documents()[0]
+
     @pytest.mark.parametrize(
         "operation",
         [
