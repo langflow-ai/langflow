@@ -303,6 +303,8 @@ export function ConnectionsTable({
                     </span>
                   ) : (
                     <ShadTooltip
+                      avoidCollisions
+                      styleClasses="max-h-[min(20rem,calc(100dvh-2rem))] overflow-y-auto"
                       content={
                         <ul className="max-w-xs list-none space-y-0.5 whitespace-normal break-all p-0 font-mono text-xs">
                           {scopes.map((scope) => (
