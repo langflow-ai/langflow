@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
     from lfx.components.models_and_agents.agent import AgentComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
+    from lfx.components.models_and_agents.hook import HookComponent
+    from lfx.components.models_and_agents.hook_event import HookEventComponent
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
     from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
     from lfx.components.models_and_agents.memory import MemoryComponent
@@ -19,6 +21,8 @@ _dynamic_imports = {
     "A2AAgentComponent": "a2a_agent",
     "AgentComponent": "agent",
     "EmbeddingModelComponent": "embedding_model",
+    "HookComponent": "hook",
+    "HookEventComponent": "hook_event",
     "LanguageModelComponent": "language_model",
     "MCPToolsComponent": "mcp_component",
     "MemoryComponent": "memory",
@@ -30,6 +34,8 @@ __all__ = [
     "A2AAgentComponent",
     "AgentComponent",
     "EmbeddingModelComponent",
+    "HookComponent",
+    "HookEventComponent",
     "LanguageModelComponent",
     "MCPToolsComponent",
     "MemoryComponent",

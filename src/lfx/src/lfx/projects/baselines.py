@@ -32,5 +32,23 @@ def build_slot_baseline(reference: str, initial_value: str | None = None) -> dic
     """Resolve only shipped, executable baselines. References never import arbitrary code."""
     if reference == "builtin:instructions":
         return instructions_baseline(initial_value)
+    if reference == "builtin:hook":
+        return hook_baseline()
     msg = "This contract does not yet provide a working baseline."
     raise ValueError(msg)
+
+
+def hook_baseline() -> dict:
+    from lfx.components.models_and_agents.hook import HookComponent
+    from lfx.components.models_and_agents.hook_event import HookEventComponent
+    from lfx.graph.flow_builder import add_component, add_connection, empty_flow
+
+    flow = empty_flow("Hook", "Observe an invocation, then return a decision to the agent harness.")
+    event, hook = HookEventComponent(), HookComponent()
+    for component in (event, hook):
+        add_component(flow, component.name, {component.name: component.to_frontend_node()["data"]["node"]})
+    source, target = flow["data"]["nodes"]
+    source["position"], target["position"] = {"x": 150, "y": 150}, {"x": 600, "y": 150}
+    add_connection(flow, source["id"], "event", target["id"], "event")
+    flow["data"]["harness_contract"] = {"slot": "Hook", "field_name": "hooks"}
+    return flow
