@@ -1,7 +1,7 @@
 """Add the append-only audit_events table.
 
 Revision ID: df1410b1eefa
-Revises: a7d8e9f0b1c2
+Revises: 9d7e2a6c4b81
 Create Date: 2026-09-15
 
 Phase: EXPAND
@@ -17,7 +17,7 @@ from alembic import op
 from langflow.utils import migration
 
 revision = "df1410b1eefa"  # pragma: allowlist secret
-down_revision = "a7d8e9f0b1c2"  # pragma: allowlist secret
+down_revision = "9d7e2a6c4b81"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 
