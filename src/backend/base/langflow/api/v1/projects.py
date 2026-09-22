@@ -400,6 +400,7 @@ class FlowBaselineRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     initial_value: str | None = None
+    initial_config: dict | None = None
 
 
 class FlowValidationRequest(BaseModel):
@@ -424,7 +425,11 @@ async def prepare_project_flow_baseline(
     reference = field.slot_definition.default_flow_ref if field.slot_definition else None
     if not reference:
         raise HTTPException(422, "This field does not yet provide a working baseline.")
-    return {**build_slot_baseline(reference, request.initial_value), "folder_id": str(project.id)}
+    try:
+        baseline = build_slot_baseline(reference, request.initial_value, initial_config=request.initial_config)
+    except ValueError as exc:
+        raise HTTPException(422, "Check the context strategy and recent-turn count before creating its flow.") from exc
+    return {**baseline, "folder_id": str(project.id)}
 
 
 @router.post("/{project_id}/flow-outputs/validate")

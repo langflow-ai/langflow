@@ -48,6 +48,11 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     (outputConfig.method === "to_toolkit" ||
       (outputConfig.types && outputConfig.types.includes("Tool")));
 
+  // Table rows own their columns, including a column named "data".
+  const isTableOutput = outputConfig?.types?.some(
+    (outputType) => outputType === "Table" || outputType === "DataFrame",
+  );
+
   const results: OutputLogType | LogsLogType[] =
     (type === "outputs"
       ? flowPoolNode?.data?.outputs?.[outputName]
@@ -170,7 +175,8 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         <DataOutputComponent
           rows={
             Array.isArray(resultMessageMemoized)
-              ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+              ? !isTableOutput &&
+                // biome-ignore lint/suspicious/noExplicitAny: legacy
                 (resultMessageMemoized as Array<any>).every(
                   (item) => item?.data,
                 )
