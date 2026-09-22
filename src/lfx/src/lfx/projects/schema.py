@@ -14,10 +14,56 @@ file, because a flow file is the only artifact both langflow and lfx load.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
+
+
+class Cardinality(str, Enum):
+    SINGLE = "single"
+    MULTI = "multi"
+
+
+class FireTiming(str, Enum):
+    ONCE_AT_SESSION_START = "once_at_session_start"
+    ONCE_PER_RUN = "once_per_run"
+    PER_LLM_CALL = "per_llm_call"
+    ON_THRESHOLD = "on_threshold"
+    PER_TOOL_CALL = "per_tool_call"
+    ON_LLM_TOOL_CALL = "on_llm_tool_call"
+    ON_EVENT = "on_event"
+    ORCHESTRATOR = "orchestrator"
+    ON_RUN = "on_run"
+    ON_RESULT = "on_result"
+    LOAD_TIME = "load_time"
+
+
+@dataclass(frozen=True)
+class SlotDefinition:
+    """A reusable flow contract, independent of any project's form.
+
+    The same Tool contract can appear on a harness and a tool pack with different labels,
+    defaults, and write-through rules. Those belong to ``ProjectTypeField``. Timing describes
+    the contract; registering a definition does not install a runtime handler. Output types
+    are resolved when binding a flow, never by importing components during registration.
+    """
+
+    name: str
+    terminal_output_type: str
+    fire_timing: FireTiming
+    cardinality: Cardinality = Cardinality.SINGLE
+    default_flow_ref: str | None = None
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "terminal_output_type": self.terminal_output_type,
+            "fire_timing": self.fire_timing.value,
+            "cardinality": self.cardinality.value,
+            "default_flow_ref": self.default_flow_ref,
+        }
 
 
 @dataclass(frozen=True)
@@ -52,6 +98,8 @@ class ProjectTypeField:
     info: str = ""
     section: str = ""
     renders: str = ""
+    slot_definition: SlotDefinition | None = None
+    supports_flow_binding: bool = False
 
     def to_template(self) -> dict:
         """Serialise for the API, in the shape the frontend field renderer expects."""
@@ -63,6 +111,10 @@ class ProjectTypeField:
             rendered["section"] = self.section
         if self.renders:
             rendered["renders"] = self.renders
+        if self.slot_definition is not None:
+            rendered["flow_contract"] = self.slot_definition.to_dict()
+        if self.supports_flow_binding:
+            rendered["supports_flow_binding"] = True
         return rendered
 
 

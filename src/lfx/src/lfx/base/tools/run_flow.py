@@ -431,10 +431,18 @@ class RunFlowBaseComponent(Component):
         Returns:
             The resolved output.
         """
+        binding = self._instruction_binding()
+        if binding is not None and (vertex_id, output_name) != (binding.node_id, binding.output_name):
+            msg = "The Instructions output was changed on the canvas. Update the harness binding."
+            raise ValueError(msg)
         run_outputs = await self._get_cached_run_outputs(
             user_id=self.user_id,
             output_type="any",
         )
+        if binding is not None:
+            from lfx.projects.bindings import validate_instruction_result
+
+            return validate_instruction_result(getattr(self, "_last_instruction_output", None))
         if not run_outputs:
             return None
 
@@ -449,8 +457,17 @@ class RunFlowBaseComponent(Component):
             if result.artifacts and output_name in result.artifacts:
                 return result.artifacts[output_name]
             return result.results or result.artifacts or result.outputs
-
         return None
+
+    def _instruction_binding(self):
+        """Read the typed contract on a generated flow-reference node, if present."""
+        from lfx.projects.bindings import BINDING_ORIGIN, FlowBinding
+
+        vertex = getattr(self, "_vertex", None)
+        origin = vertex.data.get(BINDING_ORIGIN) if vertex is not None else None
+        if not isinstance(origin, dict) or origin.get("field_name") != "system_prompt":
+            return None
+        return FlowBinding.model_validate({key: origin[key] for key in FlowBinding.model_fields if key in origin})
 
     def __deepcopy__(self, memo: dict):
         component = super().__deepcopy__(memo)
@@ -542,7 +559,7 @@ class RunFlowBaseComponent(Component):
     ################################################################
     # Tool mode + formatting
     ################################################################
-    def _format_flow_outputs(self, graph: Graph) -> list[Output]:
+    def _format_flow_outputs(self, graph: Graph, *, selected_output: tuple[str, str] | None = None) -> list[Output]:
         """Generate Output objects from the graph's outputs.
 
         The Output objects modify the name and method of the graph's outputs.
@@ -553,11 +570,16 @@ class RunFlowBaseComponent(Component):
 
         Args:
             graph: The graph to generate outputs for.
+            selected_output: An explicitly bound leaf output, including ordinary Prompt components.
 
         Returns:
             A list of Output objects.
         """
-        output_vertices: list[Vertex] = [v for v in graph.vertices if v.is_output]
+        if selected_output is None and (binding := self._instruction_binding()) is not None:
+            selected_output = (binding.node_id, binding.output_name)
+        output_vertices: list[Vertex] = [
+            v for v in graph.vertices if (v.id == selected_output[0] if selected_output else v.is_output)
+        ]
         outputs: list[Output] = []
         vdisp_cts = Counter(v.display_name for v in output_vertices)
         for vertex in output_vertices:
@@ -566,6 +588,8 @@ class RunFlowBaseComponent(Component):
                 continue
             one_out = len(vertex.outputs) == 1
             for vertex_output in vertex.outputs:
+                if selected_output and vertex_output["name"] != selected_output[1]:
+                    continue
                 new_name = self._get_ioput_name(vertex.id, vertex_output.get("name"))
                 output = Output(**vertex_output)
                 output.name = new_name
@@ -626,7 +650,24 @@ class RunFlowBaseComponent(Component):
                 updated_at=self._cached_flow_updated_at,
             )  # may or may not want to create a deepcopy of the graph here
 
+            if binding := self._instruction_binding():
+                from lfx.projects.bindings import validate_instruction_binding
+
+                if self.flow_id_selected != binding.flow_id:
+                    msg = "The bound Instructions flow was changed on the canvas. Update the harness binding."
+                    raise ValueError(msg)
+                validate_instruction_binding(graph.raw_graph_data, binding)
+                graph.get_vertex(binding.node_id).is_output = True
+                self.status = {
+                    "flow_id": binding.flow_id,
+                    "revision": binding.revision,
+                    "version_id": binding.version_id,
+                }
+
             if tweaks := self._build_flow_tweak_data():
+                if binding is not None:
+                    msg = "Configure inputs in the Instructions flow, then update the harness binding."
+                    raise ValueError(msg)
                 from lfx.processing.process import process_tweaks_on_graph
 
                 # These tweaks are this component's own declared inputs, not a
@@ -650,6 +691,17 @@ class RunFlowBaseComponent(Component):
                 # would deny every connection inside a Run Flow node.
                 execution_principal=getattr(self.graph, "execution_principal", None),
             )
+            if binding is not None:
+                terminal = graph.get_vertex(binding.node_id)
+                if not terminal.built or terminal.custom_component is None:
+                    msg = "The bound Instructions flow did not produce its selected output."
+                    raise ValueError(msg)
+                # Read the actual edge value. Display artifacts can stringify a list
+                # or object, which must never satisfy this runtime text contract.
+                from lfx.projects.bindings import validate_instruction_result
+
+                value = terminal.custom_component.get_output(binding.output_name).value
+                self._last_instruction_output = validate_instruction_result(value)
 
         except Exception as exc:
             from lfx.exceptions.tweaks import TweakRefusedError
@@ -662,6 +714,8 @@ class RunFlowBaseComponent(Component):
             # the reason, and the caller would never learn which key was rejected.
             if isinstance(exc, TweakRefusedError):
                 raise
+            if self._instruction_binding() is not None and isinstance(exc, ValueError):
+                raise
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
 
@@ -672,6 +726,8 @@ class RunFlowBaseComponent(Component):
     ################################################################
     def _flow_cache_call(self, action: str, *args, **kwargs):
         """Call a flow cache related method."""
+        if self._instruction_binding() is not None:
+            return None
         if not self.cache_flow:
             msg = "Cache flow is disabled"
             logger.warning(msg)
@@ -864,6 +920,7 @@ class RunFlowBaseComponent(Component):
     def _pre_run_setup(self) -> None:  # Note: overrides the base pre_run_setup method
         """Reset the last run's outputs upon new flow execution."""
         self._last_run_outputs = None
+        self._last_instruction_output = None
         self._cached_flow_updated_at = self._get_selected_flow_updated_at()
         if self._cached_flow_updated_at:
             self._attributes["flow_name_selected_updated_at"] = self._cached_flow_updated_at
