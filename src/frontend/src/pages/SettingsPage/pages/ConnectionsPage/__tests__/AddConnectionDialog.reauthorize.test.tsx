@@ -26,6 +26,7 @@ const mockCreate = jest.fn();
 const mockRemove = jest.fn();
 let mockRegistrations: RegistrationsState;
 let mockTypes: APIDataType = {};
+let mockPolledConnection: ConnectionRead | undefined;
 
 jest.mock("@/controllers/API/queries/connections", () => ({
   CONNECTION_NAME_PATTERN: /^[a-z0-9][a-z0-9_-]*$/,
@@ -41,7 +42,7 @@ jest.mock("@/controllers/API/queries/connections", () => ({
   useDeleteConnectionMutation: () => ({ mutate: mockRemove }),
   useStartOAuthMutation: () => ({ mutateAsync: mockStartOAuth }),
   useOAuthRegistrationsQuery: () => mockRegistrations,
-  usePendingConnectionPoll: () => ({ data: undefined }),
+  usePendingConnectionPoll: () => ({ data: mockPolledConnection }),
 }));
 
 jest.mock("@/controllers/API/queries/flows/use-get-types", () => ({
@@ -190,6 +191,7 @@ describe("AddConnectionDialog re-authorize", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTypes = TYPES;
+    mockPolledConnection = undefined;
     popup.closed = false;
     popup.location.href = "";
     setRegistrations([registration({})]);
@@ -232,6 +234,48 @@ describe("AddConnectionDialog re-authorize", () => {
     );
     await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
   });
+
+  it.each(["create", "reauthorize"])(
+    "closes the consent window only after successful %s authorization",
+    async (mode) => {
+      const initial = connection(
+        mode === "create" ? { status: "pending", has_credentials: false } : {},
+      );
+      const reauthorize = mode === "reauthorize" ? initial : undefined;
+      mockCreate.mockResolvedValue(initial);
+      mockPolledConnection = initial;
+      const { rerender } = render(dialog(reauthorize));
+
+      if (mode === "create") {
+        await userEvent.type(screen.getByTestId("connection-name"), "work");
+        await userEvent.type(
+          screen.getByTestId("connection-display-name"),
+          "Work Google",
+        );
+        await userEvent.click(screen.getByTestId("connection-continue"));
+      } else {
+        await userEvent.click(screen.getByTestId("connection-authorize"));
+      }
+
+      await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
+      expect(popup.close).not.toHaveBeenCalled();
+      expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+
+      mockPolledConnection = connection({
+        updated_at: "2026-09-16T10:01:00",
+      });
+      rerender(dialog(reauthorize));
+
+      expect(await screen.findByText("Connected")).toBeInTheDocument();
+      expect(screen.getByText("calendar.events")).toBeInTheDocument();
+      expect(popup.close).toHaveBeenCalledTimes(1);
+      expect(mockRemove).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByTestId("connection-done"));
+      expect(popup.close).toHaveBeenCalledTimes(1);
+      expect(mockRemove).not.toHaveBeenCalled();
+    },
+  );
 
   it("opens the consent window on the click, before the start request returns", async () => {
     let resolveStart: (value: { authorization_url: string }) => void = () => {};
@@ -384,6 +428,7 @@ describe("AddConnectionDialog create flow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTypes = TYPES;
+    mockPolledConnection = undefined;
     setRegistrations([registration({})]);
   });
 

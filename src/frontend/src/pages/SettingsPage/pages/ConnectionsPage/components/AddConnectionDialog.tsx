@@ -193,11 +193,13 @@ export function AddConnectionDialog({
     if (authorize?.kind !== "waiting") return;
     if (hasConsentLanded(poll.data, baseline)) {
       const row = poll.data as ConnectionRead;
-      setAuthorize(
-        row.status === "ready" && row.has_credentials
-          ? { kind: "connected", connection: row }
-          : { kind: "failed", message: t("connections.add.failed") },
-      );
+      if (row.status === "ready" && row.has_credentials) {
+        popupRef.current?.close();
+        popupRef.current = null;
+        setAuthorize({ kind: "connected", connection: row });
+      } else {
+        setAuthorize({ kind: "failed", message: t("connections.add.failed") });
+      }
       return;
     }
     if (Date.now() - startedAt.current > CONSENT_TIMEOUT_MS) {
