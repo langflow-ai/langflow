@@ -14,6 +14,14 @@ from lfx.log.logger import logger
 MAX_ZIP_ENTRIES = 500
 MAX_ENTRY_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # 50 MB per file
 
+# Reserved zip member carrying project-level metadata (project_type, project_config).
+# Deliberately NOT a ``.json`` file. Flows are exported as ``{name}.json``, so a ``.json``
+# metadata member would collide with a flow legitimately named "project", and the collision
+# is silent: the flow and the metadata would both be lost. A non-json extension also makes
+# the member invisible to importers that predate it, because only ``.json`` entries are ever
+# read, so an older deployment ignores it instead of failing the whole upload.
+PROJECT_METADATA_FILENAME = "project.meta"
+
 
 @dataclass
 class _ZipExtractionResult:
@@ -21,6 +29,38 @@ class _ZipExtractionResult:
 
     flows: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    project_metadata: dict | None = None
+
+
+def _read_project_metadata(zf: zipfile.ZipFile, result: _ZipExtractionResult) -> None:
+    """Read the reserved metadata member, by exact name, if the archive carries one.
+
+    Matched exactly rather than by basename: only the member this exporter writes at the zip
+    root is ours. A same-named file inside a directory belongs to whoever built that archive.
+    """
+    try:
+        info = zf.getinfo(PROJECT_METADATA_FILENAME)
+    except KeyError:
+        return
+    if info.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
+        result.warnings.append(
+            f"Skipping ZIP entry '{PROJECT_METADATA_FILENAME}': uncompressed size "
+            f"{info.file_size} exceeds limit of {MAX_ENTRY_UNCOMPRESSED_BYTES} bytes"
+        )
+        return
+    raw = zf.read(PROJECT_METADATA_FILENAME)
+    if len(raw) > MAX_ENTRY_UNCOMPRESSED_BYTES:
+        result.warnings.append(f"Skipping ZIP entry '{PROJECT_METADATA_FILENAME}': actual size exceeds limit")
+        return
+    try:
+        parsed = orjson.loads(raw)
+    except orjson.JSONDecodeError:
+        result.warnings.append(f"Ignoring ZIP entry '{PROJECT_METADATA_FILENAME}': invalid JSON")
+        return
+    if isinstance(parsed, dict):
+        result.project_metadata = parsed
+    else:
+        result.warnings.append(f"Ignoring ZIP entry '{PROJECT_METADATA_FILENAME}': expected a JSON object")
 
 
 def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
@@ -38,6 +78,8 @@ def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
         raise ValueError(msg) from exc
 
     with zf:
+        _read_project_metadata(zf, result)
+
         json_entries = [info for info in zf.infolist() if info.filename.lower().endswith(".json")]
 
         if len(json_entries) > MAX_ZIP_ENTRIES:
@@ -77,9 +119,20 @@ async def extract_flows_from_zip(contents: bytes) -> list[dict]:
     Raises:
         ValueError: If the ZIP is corrupt or contains more than MAX_ZIP_ENTRIES JSON files.
     """
+    flows, _ = await extract_project_from_zip(contents)
+    return flows
+
+
+async def extract_project_from_zip(contents: bytes) -> tuple[list[dict], dict | None]:
+    """Extract flows and the optional project metadata member from a ZIP file.
+
+    Returns the flows and the parsed ``project.json`` payload, or ``None`` when the archive
+    does not carry one. Archives exported before project metadata existed simply have no such
+    member, so they return ``None`` and import exactly as before.
+    """
     result = await asyncio.to_thread(_extract_flows_sync, contents)
 
     for warning in result.warnings:
         await logger.awarning(warning)
 
-    return result.flows
+    return result.flows, result.project_metadata

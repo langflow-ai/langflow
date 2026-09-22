@@ -20,6 +20,7 @@ import zipfile
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.api.utils.zip_utils import PROJECT_METADATA_FILENAME
 from langflow.api.v1.flow_version import strip_version_data
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.utils.flow_secrets import strip_flow_secrets, strip_secret_field_values
@@ -155,9 +156,10 @@ async def test_project_download_strips_non_api_password_fields(client: AsyncClie
     assert response.status_code == status.HTTP_200_OK
 
     with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_file:
-        names = zip_file.namelist()
-        assert len(names) == 1
-        _assert_scrubbed(json.loads(zip_file.read(names[0])))
+        # The export also carries the project's own metadata member, which holds no flow data.
+        flow_names = [name for name in zip_file.namelist() if name != PROJECT_METADATA_FILENAME]
+        assert len(flow_names) == 1
+        _assert_scrubbed(json.loads(zip_file.read(flow_names[0])))
 
 
 def test_strip_version_data_strips_non_api_password_fields():
