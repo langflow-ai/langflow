@@ -2453,6 +2453,7 @@
   "connections.add.handleHelp": "小文字の英字と数字を使用し、単語は1つのアンダースコアで区切ってください（例: gmail_qa）。最大64文字です。",
   "connections.scopes.count_one": "{{count}} 個のスコープ",
   "connections.scopes.count_other": "{{count}} 個のスコープ",
+  "connections.scopes.count_many": "{{count}} 個のスコープ",
   "connections.picker.selectProvider": "{{provider}} の接続を選択",
   "connections.picker.select": "接続を選択",
   "connections.picker.notFound": "見つかりません",

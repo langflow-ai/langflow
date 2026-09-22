@@ -2452,6 +2452,7 @@
   "connections.add.handleHelp": "Use lowercase letters and numbers, separated by single underscores (for example, gmail_qa). Maximum 64 characters.",
   "connections.scopes.count_one": "{{count}} scope",
   "connections.scopes.count_other": "{{count}} scopes",
+  "connections.scopes.count_many": "{{count}} scopes",
   "connections.picker.selectProvider": "Select a {{provider}} connection",
   "connections.picker.select": "Select a connection",
   "connections.picker.notFound": "not found",

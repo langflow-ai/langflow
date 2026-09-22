@@ -2453,6 +2453,7 @@
   "connections.add.handleHelp": "Verwenden Sie Kleinbuchstaben und Zahlen, getrennt durch einzelne Unterstriche (zum Beispiel gmail_qa). Maximal 64 Zeichen.",
   "connections.scopes.count_one": "{{count}} Berechtigung",
   "connections.scopes.count_other": "{{count}} Berechtigungen",
+  "connections.scopes.count_many": "{{count}} Berechtigungen",
   "connections.picker.selectProvider": "Eine {{provider}}-Verbindung auswählen",
   "connections.picker.select": "Eine Verbindung auswählen",
   "connections.picker.notFound": "nicht gefunden",

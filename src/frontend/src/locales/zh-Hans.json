@@ -2452,6 +2452,7 @@
   "connections.add.handleHelp": "使用小写字母和数字，以单个下划线分隔（例如 gmail_qa）。最多 64 个字符。",
   "connections.scopes.count_one": "{{count}} 个权限范围",
   "connections.scopes.count_other": "{{count}} 个权限范围",
+  "connections.scopes.count_many": "{{count}} 个权限范围",
   "connections.picker.selectProvider": "选择 {{provider}} 连接",
   "connections.picker.select": "选择连接",
   "connections.picker.notFound": "未找到",

@@ -2453,6 +2453,7 @@
   "connections.add.handleHelp": "Utilisez des lettres minuscules et des chiffres séparés par un seul trait de soulignement (par exemple, gmail_qa). Maximum 64 caractères.",
   "connections.scopes.count_one": "{{count}} autorisation",
   "connections.scopes.count_other": "{{count}} autorisations",
+  "connections.scopes.count_many": "{{count}} autorisations",
   "connections.picker.selectProvider": "Sélectionner une connexion {{provider}}",
   "connections.picker.select": "Sélectionner une connexion",
   "connections.picker.notFound": "introuvable",
