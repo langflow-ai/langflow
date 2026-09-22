@@ -567,6 +567,11 @@ async def read_project(
 def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
     """Hash the normalized caller body before save helpers mutate graph data."""
     normalized = request_body.model_dump(mode="json", exclude_unset=True)
+    # An omitted (or explicitly empty) dependency declaration means the same
+    # thing as the historical request shape. Keep that digest byte-for-byte
+    # compatible while binding any non-empty opaque manifest to the operation.
+    if not request_body.dependencies:
+        normalized.pop("dependencies", None)
     canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -985,6 +990,7 @@ async def replace_project_operation(
         result = ProjectReplacementResult(
             project=FolderRead.model_validate(project, from_attributes=True, update={"auth_settings": None}),
             flows=result_flows,
+            dependencies=request_body.dependencies,
         )
         await _authorize_replacement_result(
             current_user=current_user,
@@ -994,11 +1000,17 @@ async def replace_project_operation(
             project_action=ProjectAction.READ,
             denied_detail="Project not found",
         )
+        result_json = result.model_dump(mode="json")
+        if result.dependencies is None:
+            # Keep newly written no-dependency receipts compatible with the
+            # historical JSON shape while the typed result remains backwards
+            # compatible with old rows that have no field at all.
+            result_json.pop("dependencies", None)
         receipt = ProjectReplacementOperation(
             project_id=project_id,
             operation_id=operation_id,
             request_digest=request_digest,
-            result=result.model_dump(mode="json"),
+            result=result_json,
             project_user_id=project.user_id,
             workspace_id=project.workspace_id,
         )

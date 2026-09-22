@@ -1,5 +1,6 @@
 """API schemas for durable project replacement operations."""
 
+from typing import Any
 from uuid import UUID
 
 from pydantic import ConfigDict, field_validator
@@ -18,13 +19,16 @@ class ReplacementFlowCreate(FlowCreate):
 
 
 class ProjectReplacementRequest(SQLModel):
-    """Complete target flow set and project description for one replacement."""
+    """Complete target flow set, description, and opaque dependency snapshot."""
 
     model_config = ConfigDict(extra="forbid")
 
     description: str
     flows: list[ReplacementFlowCreate]
     project_name: str | None = None
+    # The Control Plane owns dependency validation and provisioning. The serving
+    # plane stores the manifest as opaque JSON alongside the committed receipt.
+    dependencies: dict[str, Any] | None = None
 
     @field_validator("project_name")
     @classmethod
@@ -40,3 +44,5 @@ class ProjectReplacementResult(SQLModel):
 
     project: FolderRead
     flows: list[FlowRead]
+    # Optional for receipts written before dependency snapshots were introduced.
+    dependencies: dict[str, Any] | None = None

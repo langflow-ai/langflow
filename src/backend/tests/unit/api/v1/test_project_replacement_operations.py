@@ -6,8 +6,11 @@ from fastapi import HTTPException
 from httpx import AsyncClient
 from sqlmodel import select
 
+from langflow.api.v1 import projects as projects_module
+from langflow.api.v1.schemas.replacement_operations import ProjectReplacementRequest
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.deps import session_scope
 
 
@@ -58,6 +61,19 @@ async def _create_flow(active_user, project_id: str, flow_payload: dict) -> dict
         }
 
 
+def test_replacement_digest_preserves_legacy_no_dependency_shape() -> None:
+    base = ProjectReplacementRequest(description="digest", flows=[])
+    empty = ProjectReplacementRequest(description="digest", flows=[], dependencies={})
+    with_dependency = ProjectReplacementRequest(
+        description="digest",
+        flows=[],
+        dependencies={"knowledgeBases": [{"name": "kb"}]},
+    )
+
+    assert projects_module._replacement_request_digest(base) == projects_module._replacement_request_digest(empty)
+    assert projects_module._replacement_request_digest(base) != projects_module._replacement_request_digest(with_dependency)
+
+
 async def test_replacement_operation_replays_and_gets_committed_snapshot(
     client: AsyncClient, active_user, logged_in_headers: dict[str, str]
 ):
@@ -67,6 +83,10 @@ async def test_replacement_operation_replays_and_gets_committed_snapshot(
     body = {
         "description": "first replacement",
         "flows": [_flow_payload(flow_id=uuid4(), name=f"flow-{uuid4().hex[:8]}")],
+        "dependencies": {
+            "knowledgeBases": [{"name": "shared-kb", "backendType": "postgres"}],
+            "memoryBases": [],
+        },
     }
     url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
 
@@ -79,8 +99,15 @@ async def test_replacement_operation_replays_and_gets_committed_snapshot(
     assert first.json()["project"]["description"] == "first replacement"
     assert first.json()["project"]["auth_settings"] is None
     assert len(first.json()["flows"]) == 1
+    assert first.json()["dependencies"] == body["dependencies"]
 
-    changed_body = {**body, "description": "different request"}
+    changed_body = {
+        **body,
+        "dependencies": {
+            "knowledgeBases": [{"name": "different-kb", "backendType": "postgres"}],
+            "memoryBases": [],
+        },
+    }
     conflict = await client.put(url, json=changed_body, headers=logged_in_headers)
     assert conflict.status_code == 409
 
@@ -101,6 +128,40 @@ async def test_replacement_operation_replays_and_gets_committed_snapshot(
     )
     assert missing.status_code == 404
     assert missing.json()["detail"] == "Replacement operation not found"
+
+
+async def test_replacement_receipt_without_dependency_snapshot_remains_readable(
+    client: AsyncClient, active_user, logged_in_headers: dict[str, str]
+):
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    operation_id = str(uuid4())
+    url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
+    body = {
+        "description": "historical replacement",
+        "flows": [_flow_payload(flow_id=uuid4(), name=f"legacy-{uuid4().hex[:8]}")],
+    }
+
+    created = await client.put(url, json=body, headers=logged_in_headers)
+    assert created.status_code == 200, created.text
+
+    async with session_scope() as session:
+        receipt = await session.get(ProjectReplacementOperation, (UUID(project_id), UUID(operation_id)))
+        assert receipt is not None
+        assert "dependencies" not in receipt.result
+        receipt.result = {key: value for key, value in receipt.result.items() if key != "dependencies"}
+        session.add(receipt)
+        await session.commit()
+
+    replay = await client.put(url, json=body, headers=logged_in_headers)
+    recovered = await client.get(url, headers=logged_in_headers)
+
+    assert replay.status_code == 200, replay.text
+    assert recovered.status_code == 200, recovered.text
+    assert replay.json()["project"] == created.json()["project"]
+    assert recovered.json()["project"] == created.json()["project"]
+    assert replay.json().get("dependencies") is None
+    assert recovered.json().get("dependencies") is None
 
 
 async def test_restore_creates_project_and_receipt_survives_project_deletion(
