@@ -160,6 +160,12 @@ class TestEnsureCredentialEndpointAllowed:
         with pytest.raises(ValueError, match="server-provisioned API credential"):
             ensure_credential_endpoint_allowed(self.OPERATOR_KEY, self.CUSTOM_URL, default_url=DEFAULT_URL)
 
+    def test_ssrf_cidr_does_not_authorize_sending_an_operator_credential(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "172.16.0.0/12")
+
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            ensure_credential_endpoint_allowed(self.OPERATOR_KEY, "http://172.17.0.3:8080/v1")
+
     def test_should_match_secret_wrappers(self):
         from pydantic import SecretStr
 
@@ -463,6 +469,10 @@ class TestCredentialedEndpointRequiresHttps:
         monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "internal-llm.corp")
         validate_provider_base_url("http://internal-llm.corp:8000/v1", default_url=self.DEFAULT)
 
+    def test_operator_allowlisted_wildcard_may_use_http(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "*.corp")
+        validate_provider_base_url("http://internal-llm.corp:8000/v1", default_url=self.DEFAULT)
+
     def test_allowlisting_one_host_does_not_admit_another(self, monkeypatch):
         monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "other.corp")
         with pytest.raises(ValueError, match="must use https"):
@@ -472,3 +482,69 @@ class TestCredentialedEndpointRequiresHttps:
         """The check is part of the SSRF policy, not a separate always-on control."""
         monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
         validate_provider_base_url("http://api.groq.com/openai/v1", default_url=self.DEFAULT)
+
+
+@pytest.mark.parametrize(
+    "helper",
+    [
+        validate_provider_base_url,
+        provider_httpx_clients,
+        provider_httpx_client_kwargs,
+        openai_compatible_client_kwargs,
+    ],
+)
+class TestProviderCidrAllowlist:
+    """Exercise CIDR exemptions through the real SSRF validation and client builders."""
+
+    @pytest.fixture(autouse=True)
+    def _protection_on(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+
+    @pytest.mark.parametrize(
+        ("url", "allowed_hosts"),
+        [
+            ("http://172.17.0.3:8080/v1", "172.16.0.0/12,10.0.0.0/8,192.168.0.0/16"),
+            ("http://[fd12:3456::3]:8080/v1", "fd12:3456::/32"),
+        ],
+    )
+    async def test_allowlisted_ip_literal_may_use_http(self, monkeypatch, helper, url, allowed_hosts):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", allowed_hosts)
+
+        result = helper(url)
+
+        if helper is validate_provider_base_url:
+            assert result is None
+        elif helper is provider_httpx_client_kwargs:
+            assert result == ({"follow_redirects": False}, {"follow_redirects": False})
+        else:
+            assert set(result) == {"http_client", "http_async_client"}
+            try:
+                assert result["http_client"].follow_redirects is False
+                assert result["http_async_client"].follow_redirects is False
+            finally:
+                result["http_client"].close()
+                await result["http_async_client"].aclose()
+
+    @pytest.mark.parametrize(
+        ("url", "allowed_hosts", "error"),
+        [
+            ("http://172.15.255.255:8080/v1", "172.16.0.0/12", "must use https"),
+            ("http://172.32.0.1:8080/v1", "172.16.0.0/12", "must use https"),
+            ("http://10.0.0.5:8080/v1", "172.16.0.0/12", "SSRF Protection"),
+            ("http://[fd12:3457::3]:8080/v1", "fd12:3456::/32", "SSRF Protection"),
+            ("http://172.17.0.3:8080/v1", "172.16.0.0/99", "SSRF Protection"),
+        ],
+    )
+    def test_unmatched_or_invalid_cidr_does_not_allow_http(self, monkeypatch, helper, url, allowed_hosts, error):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", allowed_hosts)
+
+        with pytest.raises(ValueError, match=error):
+            helper(url)
+
+    def test_cidr_does_not_exempt_a_dns_hostname_from_https(self, monkeypatch, helper):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "172.16.0.0/12")
+        monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["172.17.0.3"])
+
+        with pytest.raises(ValueError, match="must use https"):
+            helper("http://provider.example:8080/v1")

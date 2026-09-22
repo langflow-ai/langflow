@@ -510,6 +510,23 @@ In a shared server where users you do not fully trust can build flows, set `LANG
 | `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | Boolean | `True` | When connector SSRF validation is enabled, allow literal loopback hosts (`localhost`, `127.0.0.0/8`, `::1`) so local Ollama, LM Studio, and similar services keep working. Multi-tenant deployments where a tenant must not reach the server's loopback should set this to `false`. |
 | `LANGFLOW_KB_ALLOWED_HOSTS` | List[String] | Not set | An **exclusive** allowlist of destination hosts for the network knowledge base backends (OpenSearch and Chroma Cloud). Accepts the same patterns as `LANGFLOW_SSRF_ALLOWED_HOSTS`. Unlike that variable, which is an exception list that still admits any unlisted public host, this one denies by default: a destination a user supplies is refused unless its host is listed here. A destination Langflow reads from a server environment variable is already operator-controlled and does not need an entry, so setting `OPENSEARCH_URL` on the server keeps working unchanged. Chroma Cloud's default host is also unaffected. See the note below. |
 
+#### Model provider endpoints {#provider-allowed-hosts}
+
+Custom model provider endpoints require HTTPS unless the operator explicitly permits HTTP through `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+This allowlist accepts bare hostnames, IP addresses, `*.domain` wildcards, and CIDR ranges, without schemes or ports.
+For a URL containing an IP address, a covering CIDR grants the HTTP exception: for example, `172.16.0.0/12` permits `http://172.17.0.3:8080/v1`.
+For a DNS hostname, use its name or a wildcard; the HTTPS check does not resolve hostnames to match CIDRs.
+
+An API key sourced from the server environment also requires the custom destination to be approved in `LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS`.
+That separate allowlist accepts bare hosts, `host:port`, and `*.domain` wildcards, but not CIDRs.
+Prefix an entry with `http://` to explicitly permit sending that credential over HTTP.
+For example, a trusted internal gateway at `http://172.17.0.3:8080/v1` using a server-provisioned key needs both settings:
+
+```bash
+export LANGFLOW_SSRF_ALLOWED_HOSTS=172.16.0.0/12
+export LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS=http://172.17.0.3:8080
+```
+
 #### Knowledge base destinations {#kb-allowed-hosts}
 
 The OpenSearch and Chroma Cloud knowledge base backends need a stricter rule than the other connectors.
