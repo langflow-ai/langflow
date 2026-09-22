@@ -1,5 +1,5 @@
 import "./harness-form.css";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -11,15 +11,22 @@ import { usePatchFolders } from "@/controllers/API/queries/folders/use-patch-fol
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
-import type { ProjectConfig, ProjectSaveResult } from "../../entities";
+import type {
+  FlowBinding,
+  ProjectConfig,
+  ProjectSaveResult,
+} from "../../entities";
 import {
   AgentFlowPicker,
   agentCandidates,
   defaultAgent,
 } from "./components/agent-flow-picker";
 import { HarnessSummary } from "./components/harness-summary";
+import { InstructionsFlowPicker } from "./components/instructions-flow-picker";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
+
+import { editorDraft } from "./editor-draft";
 
 interface HarnessPageProps {
   projectId: string;
@@ -83,12 +90,32 @@ const HarnessPage = ({
     if (projectType === "agent-harness" && projectConfig?.agent_flow_id) {
       defaults.agent_flow_id = projectConfig.agent_flow_id;
     }
+    if (projectConfig?.flow_bindings)
+      defaults.flow_bindings = projectConfig.flow_bindings;
     return defaults;
   }, [type, projectConfig, projectType]);
 
-  const [edits, setEdits] = useState<ProjectConfig>({});
+  const [edits, setEdits] = useState<ProjectConfig>(() =>
+    editorDraft.get(projectId),
+  );
+  useEffect(() => {
+    editorDraft.clear(projectId);
+  }, [projectId]);
+  useEffect(() => {
+    if (
+      new URLSearchParams(window.location.search).get("field") ===
+        "system_prompt" &&
+      type
+    ) {
+      document
+        .getElementById("harness-field-system_prompt")
+        ?.scrollIntoView?.({ block: "center" });
+      document.getElementById("harness-field-system_prompt")?.focus();
+    }
+  }, [type]);
   const [lastSave, setLastSave] = useState<ProjectSaveResult | null>(null);
   const values = { ...savedValues, ...edits };
+  const bindings = (values.flow_bindings ?? {}) as Record<string, FlowBinding>;
   const isDirty = Object.keys(edits).some(
     (fieldName) =>
       JSON.stringify(edits[fieldName]) !==
@@ -342,6 +369,8 @@ const HarnessPage = ({
               {fields.map(([fieldName, field]) => (
                 <div
                   key={fieldName}
+                  id={`harness-field-${fieldName}`}
+                  tabIndex={-1}
                   className="flex min-w-0 flex-col gap-2"
                   data-testid={`harness-field-${fieldName}`}
                 >
@@ -360,19 +389,43 @@ const HarnessPage = ({
 
                   {(field as { renders?: string })?.renders ===
                   LONG_TEXT_WIDGET ? (
-                    <LongTextField
-                      name={fieldName}
-                      label={field?.display_name ?? fieldName}
-                      disabled={isPending}
-                      value={String(values[fieldName] ?? "")}
-                      placeholder={field?.placeholder ?? ""}
-                      onChange={(next) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: next,
-                        }))
-                      }
-                    />
+                    <>
+                      {!bindings[fieldName] && (
+                        <LongTextField
+                          name={fieldName}
+                          label={field?.display_name ?? fieldName}
+                          disabled={isPending}
+                          value={String(values[fieldName] ?? "")}
+                          placeholder={field?.placeholder ?? ""}
+                          onChange={(next) =>
+                            setEdits((current) => ({
+                              ...current,
+                              [fieldName]: next,
+                            }))
+                          }
+                        />
+                      )}
+                      {(field as { supports_flow_binding?: boolean })
+                        .supports_flow_binding && (
+                        <InstructionsFlowPicker
+                          projectId={projectId}
+                          fieldName={fieldName}
+                          agentId={selectedAgentId}
+                          value={bindings[fieldName]}
+                          initialValue={String(values[fieldName] ?? "")}
+                          onOpen={() => editorDraft.keep(projectId, edits)}
+                          disabled={isPending}
+                          onChange={(binding) =>
+                            setEdits((current) => {
+                              const next = { ...bindings };
+                              if (binding) next[fieldName] = binding;
+                              else delete next[fieldName];
+                              return { ...current, flow_bindings: next };
+                            })
+                          }
+                        />
+                      )}
+                    </>
                   ) : (field as { renders?: string })?.renders ===
                     PROJECT_FLOWS_WIDGET ? (
                     <ProjectFlowPicker

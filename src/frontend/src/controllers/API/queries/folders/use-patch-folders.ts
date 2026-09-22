@@ -65,6 +65,7 @@ export const usePatchFolders: useMutationFunctionType<
       // too or the page keeps rendering the config it had before the save.
       queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
       queryClient.invalidateQueries({ queryKey: ["useGetProjectFlows"] });
+      queryClient.invalidateQueries({ queryKey: ["useGetProjectFlowOutputs"] });
     },
   });
 

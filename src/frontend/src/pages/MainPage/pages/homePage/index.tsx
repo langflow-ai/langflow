@@ -60,9 +60,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const navigate = useCustomNavigate();
 
   const [flowType, setFlowType] = useState<FlowTabType>(
-    (location.state as Record<string, unknown>)?.flowType === "deployments"
-      ? "deployments"
-      : type,
+    new URLSearchParams(location.search).get("tab") === "harness"
+      ? "harness"
+      : (location.state as Record<string, unknown>)?.flowType === "deployments"
+        ? "deployments"
+        : type,
   );
   useDocumentTitle(t(PAGE_TITLE_KEYS[flowType]));
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
