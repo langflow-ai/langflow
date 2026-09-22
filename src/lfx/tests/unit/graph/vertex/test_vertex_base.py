@@ -656,6 +656,45 @@ def test_process_file_field_allows_uploaded_files_in_graph_scopes(
     assert params["file_field"] == str(uploaded_path.resolve())
 
 
+@pytest.mark.parametrize("is_list", [False, True])
+def test_process_file_field_without_storage_service_still_contains(
+    mock_vertex,
+    restricted_file_access,
+    monkeypatch,
+    tmp_path,
+    is_list,
+):
+    """A missing storage service degrades to a containment decision, never an AttributeError.
+
+    ``get_storage_service`` returns ``None`` whenever no storage factory is registered --
+    standalone ``lfx`` never registers one. Dereferencing it would raise ``AttributeError``,
+    which is neither an allow nor a deny and escapes the ``LocalFileAccessError`` contract.
+    """
+    monkeypatch.setattr("lfx.graph.vertex.param_handler.get_storage_service", lambda: None)
+    handler = ParameterHandler(mock_vertex, None)
+    in_scope = restricted_file_access / "test-flow-id" / "uploaded.txt"
+    in_scope.parent.mkdir()
+    in_scope.write_text("uploaded", encoding="utf-8")
+
+    # Without a storage root to resolve against, the value is already the path to contain.
+    allowed = handler.process_file_field(
+        "file_field",
+        {"type": "file", "file_path": str(in_scope), "list": is_list},
+        {},
+    )
+    expected = str(in_scope.resolve())
+    assert allowed["file_field"] == ([expected] if is_list else expected)
+
+    outside_path = tmp_path / "server-secret.txt"
+    outside_path.write_text("secret", encoding="utf-8")
+    with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+        handler.process_file_field(
+            "file_field",
+            {"type": "file", "file_path": str(outside_path), "list": is_list},
+            {},
+        )
+
+
 def test_process_file_field_checks_every_list_item(
     parameter_handler,
     mock_storage_service,
