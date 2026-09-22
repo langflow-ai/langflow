@@ -2475,7 +2475,7 @@
   "connections.picker.loadFailed": "无法加载连接。",
   "connections.account.bot": "机器人",
   "connections.account.notSignedIn": "尚未登录",
-  "connections.account.unknown": "已登录，未提供账号",
+  "connections.account.unknown": "账号信息不可用",
   "connections.account.tenant": "租户 {{tenant}}",
   "connections.status.ready": "就绪",
   "connections.status.pending": "待处理",

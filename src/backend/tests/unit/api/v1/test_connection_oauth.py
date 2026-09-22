@@ -164,6 +164,9 @@ async def test_reauthorization_clears_an_undecryptable_error(
     assert (await callback(client, query)).status_code == 200
     async with session_scope() as session:
         secret = await session.get(ConnectionSecret, UUID(row["id"]))
+        stored = await session.get(Connection, UUID(row["id"]))
+        stored.executing_identity = {**stored.executing_identity, "account": {"id": "previous-account"}}
+        session.add(stored)
         # What a restart under a different secret key leaves behind.
         secret.encrypted_payload = Fernet(Fernet.generate_key()).encrypt(b'{"version":1}').decode()
         session.add(secret)
@@ -183,6 +186,7 @@ async def test_reauthorization_clears_an_undecryptable_error(
     async with session_scope() as session:
         stored = await session.get(Connection, UUID(row["id"]))
         assert (stored.status, stored.status_reason) == ("ready", None)
+        assert stored.executing_identity["account"] is None
         assert stored.allow_non_interactive is allow_non_interactive
     token = await get_connection_resolver_service().resolve(resolution(row))
     assert token.access_token.get_secret_value() == "access-must-not-leak"

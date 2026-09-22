@@ -2475,7 +2475,7 @@
   "connections.picker.loadFailed": "Could not load connections.",
   "connections.account.bot": "Bot",
   "connections.account.notSignedIn": "Not signed in yet",
-  "connections.account.unknown": "Signed in, account not shared",
+  "connections.account.unknown": "Account unavailable",
   "connections.account.tenant": "Tenant {{tenant}}",
   "connections.status.ready": "Ready",
   "connections.status.pending": "Pending",

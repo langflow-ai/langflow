@@ -2476,7 +2476,7 @@
   "connections.picker.loadFailed": "接続を読み込めませんでした。",
   "connections.account.bot": "ボット",
   "connections.account.notSignedIn": "未サインイン",
-  "connections.account.unknown": "サインイン済み・アカウント非公開",
+  "connections.account.unknown": "アカウント情報を取得できません",
   "connections.account.tenant": "テナント {{tenant}}",
   "connections.status.ready": "利用可能",
   "connections.status.pending": "保留中",

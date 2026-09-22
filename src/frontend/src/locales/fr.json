@@ -2476,7 +2476,7 @@
   "connections.picker.loadFailed": "Impossible de charger les connexions.",
   "connections.account.bot": "Bot",
   "connections.account.notSignedIn": "Pas encore connecté",
-  "connections.account.unknown": "Connecté, compte non communiqué",
+  "connections.account.unknown": "Compte indisponible",
   "connections.account.tenant": "Locataire {{tenant}}",
   "connections.status.ready": "Prête",
   "connections.status.pending": "En attente",

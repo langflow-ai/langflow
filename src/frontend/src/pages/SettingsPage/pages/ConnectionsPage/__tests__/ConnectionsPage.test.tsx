@@ -202,6 +202,38 @@ describe("ConnectionsPage tabs", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a captured Microsoft account and an accurate fallback for older connections", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "microsoft-new",
+        provider_key: "microsoft",
+        owner_id: SUPERUSER_ID,
+        executing_identity: {
+          identity: "user_delegated",
+          account: { id: "user-object-id", display: "user@example.com" },
+        },
+      }),
+      connection({
+        id: "microsoft-old",
+        provider_key: "microsoft",
+        owner_id: SUPERUSER_ID,
+      }),
+    ];
+    render(<ConnectionsPage />);
+
+    expect(
+      within(screen.getByTestId("connection-row-microsoft_new")).getByText(
+        "user@example.com",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("connection-row-microsoft_old")).getByText(
+        "Account unavailable",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows a denied reauthorization without hiding a still-ready credential", () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };
     mockConnections = [

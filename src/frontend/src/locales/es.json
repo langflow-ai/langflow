@@ -2476,7 +2476,7 @@
   "connections.picker.loadFailed": "No se pudieron cargar las conexiones.",
   "connections.account.bot": "Bot",
   "connections.account.notSignedIn": "Sin iniciar sesión todavía",
-  "connections.account.unknown": "Sesión iniciada, cuenta no compartida",
+  "connections.account.unknown": "Cuenta no disponible",
   "connections.account.tenant": "Inquilino {{tenant}}",
   "connections.status.ready": "Lista",
   "connections.status.pending": "Pendiente",

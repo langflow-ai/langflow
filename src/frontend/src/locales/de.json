@@ -2476,7 +2476,7 @@
   "connections.picker.loadFailed": "Verbindungen konnten nicht geladen werden.",
   "connections.account.bot": "Bot",
   "connections.account.notSignedIn": "Noch nicht angemeldet",
-  "connections.account.unknown": "Angemeldet, Konto nicht übermittelt",
+  "connections.account.unknown": "Konto nicht verfügbar",
   "connections.account.tenant": "Mandant {{tenant}}",
   "connections.status.ready": "Bereit",
   "connections.status.pending": "Ausstehend",

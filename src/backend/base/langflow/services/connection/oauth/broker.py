@@ -140,9 +140,10 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
                 "generation": str(binding.generation),
             }
             await store_tokens(session, row, payload, scopes)
-            if account:
-                row.executing_identity = {**row.executing_identity, "account": account}
-                session.add(row)
+            # A new consent may belong to a different account. Clear stale
+            # metadata when this authorization does not provide identity.
+            row.executing_identity = {**row.executing_identity, "account": account}
+            session.add(row)
     except OAuthError:
         await _record_failed_authorization(values["connection_id"], values["generation"], reason)
         raise

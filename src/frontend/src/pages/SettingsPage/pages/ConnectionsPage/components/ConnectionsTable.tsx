@@ -275,8 +275,8 @@ export function ConnectionsTable({
                         </span>
                       </ShadTooltip>
                     ) : (
-                      // Credentials with no account: signed in, but no identity
-                      // scope was granted, so the provider named nobody.
+                      // The provider may omit identity claims, or this connection
+                      // may have been authorized before account capture existed.
                       <span className="text-muted-foreground">
                         {connection.has_credentials
                           ? t("connections.account.unknown")
