@@ -1,6 +1,6 @@
 """Unit tests for timestamp validator functions in both langflow and lfx schemas."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import langflow.schema.validators as lf_validators
 import lfx.schema.validators as lfx_validators
@@ -89,6 +89,17 @@ class TestStrToTimestamp:
     def test_passthrough_for_datetime_object(self, mod):
         dt = _utc(2024, 5, 20, 12, 0, 0, 999)
         assert mod.str_to_timestamp(dt) is dt
+
+    def test_naive_datetime_is_interpreted_as_utc(self, mod):
+        timestamp = datetime(2024, 5, 20, 12, 0, 0, 999)  # noqa: DTZ001
+        assert mod.str_to_timestamp(timestamp) == _utc(2024, 5, 20, 12, 0, 0, 999)
+
+    def test_offset_datetime_is_normalized_without_changing_instant(self, mod):
+        timestamp = datetime(2024, 5, 20, 17, 30, 0, 999, tzinfo=timezone(timedelta(hours=5, minutes=30)))
+        normalized = mod.str_to_timestamp(timestamp)
+        assert normalized == _utc(2024, 5, 20, 12, 0, 0, 999)
+        assert normalized.utcoffset() == timedelta(0)
+        assert mod.timestamp_to_str(timestamp) == "2024-05-20 12:00:00.000999 UTC"
 
     def test_invalid_string_raises(self, mod):
         with pytest.raises(ValueError, match="Invalid timestamp format"):

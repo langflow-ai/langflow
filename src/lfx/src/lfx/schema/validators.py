@@ -21,6 +21,13 @@ _FORMATS_WITH_NUMERIC_TZ = {"%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z"}
 TF_WITH_TZ_AND_MICROSECONDS = "%Y-%m-%d %H:%M:%S.%f %Z"
 
 
+def ensure_utc(timestamp: datetime) -> datetime:
+    """Normalize a timestamp, interpreting legacy naive inputs as UTC."""
+    if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+        return timestamp.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(timezone.utc)
+
+
 def timestamp_to_str(timestamp: datetime | str) -> str:
     """Convert timestamp to standardized string format.
 
@@ -51,9 +58,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
         raise ValueError(msg)
 
     # Handle datetime object
-    if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=timezone.utc)
-    return timestamp.strftime(TF_WITH_TZ_AND_MICROSECONDS)
+    return ensure_utc(timestamp).strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
 
 def str_to_timestamp(timestamp: str | datetime) -> datetime:
@@ -82,7 +87,7 @@ def str_to_timestamp(timestamp: str | datetime) -> datetime:
 
         msg = f"Invalid timestamp format: {timestamp}. Expected format: YYYY-MM-DD HH:MM:SS.ffffff UTC"
         raise ValueError(msg)
-    return timestamp
+    return ensure_utc(timestamp)
 
 
 def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:

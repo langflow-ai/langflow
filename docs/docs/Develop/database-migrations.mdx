@@ -50,6 +50,27 @@ To migrate your database, do the following:
 7. If startup reports a schema mismatch, run `langflow migration` to inspect the problem and restore from backup if needed.
    For more information, see [`langflow migration` CLI](/configuration-cli#langflow-migration).
 
+## UTC timestamps in Langflow 1.13
+
+Langflow 1.13 adopts SQLModel's UTC datetime storage for previously inferred datetime fields.
+PostgreSQL converts 19 timestamp columns across users, API keys, files, flows, MCP servers, SSO user profiles, messages, transactions, vertex builds, traces, and spans to `TIMESTAMP WITH TIME ZONE`.
+The migration interprets existing values as UTC, matching Langflow's timestamp writers, and preserves microseconds and null values independently of the PostgreSQL session timezone.
+If another application wrote local times directly to these columns, reconcile those values before upgrading: their original timezone cannot be recovered from the stored timestamps.
+
+Follow the upgrade procedure above with all old backend instances, workers, and listeners stopped.
+Start one upgraded backend to run the migration before starting the remaining upgraded processes.
+This change does not support mixing older and newer application versions against the same database: older schema checks expect timestamps without timezone information.
+PostgreSQL takes exclusive locks on the affected tables and may rewrite their data and indexes, so allow a maintenance window sized for the message and tracing tables.
+
+SQLite needs no timestamp schema conversion; SQLModel now restores UTC timezone information when reading historical timestamps.
+Legacy flow and message timestamps and trace filters without an offset continue to be interpreted as UTC.
+Custom code that writes directly through SQLModel must supply aware timestamps, such as `datetime.now(timezone.utc)`; naive datetime parameters are rejected by the new SQLModel type.
+Datetime fields returned by the ORM are now aware, and API fields without a custom serializer include a UTC offset.
+
+To reverse this timestamp conversion, stop all upgraded processes and use the 1.13 migration code to downgrade revision `f2a7c9e4b681` to its parent `e6f9a2b4c8d1`.
+The downgrade converts the affected PostgreSQL values back to naive UTC, preserving the represented instants.
+This reverses only the timestamp change. Before starting an older release, follow the rollback procedures for any other intervening migrations; restoring the pre-upgrade backup is the fallback.
+
 ## Switch from SQLite to PostgreSQL
 
 Changing `LANGFLOW_DATABASE_URL` from SQLite to PostgreSQL does **not** copy existing SQLite data into PostgreSQL.
