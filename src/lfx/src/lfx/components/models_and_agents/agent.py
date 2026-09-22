@@ -223,6 +223,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         ),
         *[set_advanced_true(inp) for inp in harness_runtime_inputs() if inp.name != "max_iterations"],
         MultilineInput(
+            name="context_binding",
+            display_name="Reviewed context flow",
+            value="",
+            advanced=True,
+            show=False,
+            override_skip=True,
+            info="The reviewed ContextManager flow that prepares each model request.",
+        ),
+        MultilineInput(
             name="hook_bindings",
             display_name="Reviewed hook flows",
             value="[]",
@@ -677,7 +686,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         policy = policy.model_copy(
             update={"max_iterations": max(1, int(max_iterations if max_iterations is not None else 15))}
         )
-        if policy.context_strategy != "all" or policy.compaction != "off":
+        from lfx.projects.context import ContextFlowRunner, parse_context_binding
+
+        context_binding = parse_context_binding(getattr(self, "context_binding", ""))
+        if context_binding or policy.context_strategy != "all" or policy.compaction != "off":
             from lfx.components.models_and_agents.agent_helpers.harness_middleware import (
                 HarnessCompactionMiddleware,
                 HarnessContextMiddleware,
@@ -685,7 +697,11 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
             if policy.compaction == "summarize":
                 middleware.append(HarnessCompactionMiddleware(llm, policy))
-            middleware.append(HarnessContextMiddleware(policy))
+            middleware.append(
+                HarnessContextMiddleware(
+                    policy, context_flow=ContextFlowRunner(self, context_binding) if context_binding else None
+                )
+            )
         from lfx.components.models_and_agents.agent_helpers.permission_middleware import (
             DenyToolsMiddleware,
             ToolApprovalMiddleware,
@@ -991,6 +1007,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             getattr(self, "context_strategy", "all") != "all"
             or getattr(self, "compaction", "off") != "off"
             or getattr(self, "hook_bindings", "[]").strip() not in {"", "[]"}
+            or getattr(self, "context_binding", "").strip() not in {"", "null", "{}"}
         )
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:

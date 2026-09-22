@@ -112,13 +112,10 @@ def reject_recursive_binding(flows: list[dict], target_id: str, agent_id: str) -
             data = node.get("data", {})
             template = data.get("node", {}).get("template", {})
             if data.get("type") == "Agent":
-                hooks = json.loads(template.get("hook_bindings", {}).get("value") or "[]")
-                if not isinstance(hooks, list):
-                    msg = "Agent hook bindings must be a list."
-                    raise ValueError(msg)
-                for binding in hooks:
-                    reference = {key: binding[key] for key in FlowBinding.model_fields if key in binding}
-                    visit(FlowBinding.model_validate(reference).flow_id, active)
+                from lfx.projects.flow_slots import flow_runtime_bindings
+
+                for _, binding in flow_runtime_bindings({"nodes": [node]}):
+                    visit(binding.flow_id, active)
             if data.get("type") not in {"RunFlow", "SubFlow"}:
                 continue
             selected_id = template.get("flow_id_selected", {}).get("value")
