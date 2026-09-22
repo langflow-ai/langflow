@@ -216,8 +216,7 @@ export function ConnectionsTable({
           {sortedConnections.map((connection) => {
             const owner = ownerKindOf(connection, currentUserId);
             const account = connection.executing_identity?.account;
-            const isBot =
-              connection.executing_identity?.identity !== "user_delegated";
+            const identity = connection.executing_identity?.identity;
             const scopes = connection.granted_scopes ?? [];
 
             return (
@@ -260,31 +259,36 @@ export function ConnectionsTable({
                   </ShadTooltip>
                 </TableCell>
                 <TableCell className="text-sm">
-                  {account ? (
-                    <ShadTooltip
-                      content={
-                        account.tenant_id
-                          ? t("connections.account.tenant", {
-                              tenant: account.tenant_id,
-                            })
-                          : null
-                      }
-                    >
-                      <span className="truncate">
-                        {isBot && !account.display
-                          ? t("connections.account.bot")
-                          : (account.display ?? account.id)}
+                  <div className="flex min-w-0 flex-col">
+                    {account ? (
+                      <ShadTooltip
+                        content={
+                          account.tenant_id
+                            ? t("connections.account.tenant", {
+                                tenant: account.tenant_id,
+                              })
+                            : null
+                        }
+                      >
+                        <span className="truncate">
+                          {account.display ?? account.id}
+                        </span>
+                      </ShadTooltip>
+                    ) : (
+                      // Credentials with no account: signed in, but no identity
+                      // scope was granted, so the provider named nobody.
+                      <span className="text-muted-foreground">
+                        {connection.has_credentials
+                          ? t("connections.account.unknown")
+                          : t("connections.account.notSignedIn")}
                       </span>
-                    </ShadTooltip>
-                  ) : (
-                    // Credentials with no account: signed in, but no identity
-                    // scope was granted, so the provider named nobody.
-                    <span className="text-muted-foreground">
-                      {connection.has_credentials
-                        ? t("connections.account.unknown")
-                        : t("connections.account.notSignedIn")}
-                    </span>
-                  )}
+                    )}
+                    {identity && (
+                      <span className="text-xs text-muted-foreground">
+                        {t(`connections.identity.${identity}`)}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <ConnectionStatusBadge

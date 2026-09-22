@@ -277,6 +277,26 @@ describe("AddConnectionDialog re-authorize", () => {
     },
   );
 
+  it("reports a denied callback from the changed row even when old credentials remain ready", async () => {
+    const initial = connection();
+    mockPolledConnection = initial;
+    const { rerender } = render(dialog(initial));
+
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
+
+    mockPolledConnection = connection({
+      updated_at: "2026-09-16T10:01:00",
+      status_reason: "oauth-denied",
+    });
+    rerender(dialog(initial));
+
+    expect(
+      await screen.findByText("The provider denied authorization."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+  });
+
   it("opens the consent window on the click, before the start request returns", async () => {
     let resolveStart: (value: { authorization_url: string }) => void = () => {};
     mockStartOAuth.mockReturnValue(

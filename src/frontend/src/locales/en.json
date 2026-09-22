@@ -2532,6 +2532,7 @@
   "connections.add.waiting": "Waiting for consent in the provider's window…",
   "connections.add.connected": "Connected",
   "connections.add.failed": "Authorization did not complete.",
+  "connections.add.denied": "The provider denied authorization.",
   "connections.add.expired": "The sign-in link expired. Start again to get a new one.",
   "connections.add.cancelled": "The sign-in window closed before authorization finished.",
   "connections.add.cleanupFailed": "Connection not removed",

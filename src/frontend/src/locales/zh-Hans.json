@@ -2532,6 +2532,7 @@
   "connections.add.waiting": "正在等待在提供方窗口中完成授权…",
   "connections.add.connected": "已连接",
   "connections.add.failed": "授权未完成。",
+  "connections.add.denied": "提供方拒绝了授权。",
   "connections.add.expired": "登录链接已过期。请重新开始以获取新链接。",
   "connections.add.cancelled": "登录窗口在授权完成前被关闭。",
   "connections.add.cleanupFailed": "连接未删除",

@@ -193,7 +193,15 @@ export function AddConnectionDialog({
     if (authorize?.kind !== "waiting") return;
     if (hasConsentLanded(poll.data, baseline)) {
       const row = poll.data as ConnectionRead;
-      if (row.status === "ready" && row.has_credentials) {
+      if (row.status_reason?.startsWith("oauth-")) {
+        const message =
+          row.status_reason === "oauth-denied"
+            ? t("connections.add.denied")
+            : row.status_reason === "oauth-expired"
+              ? t("connections.add.expired")
+              : t("connections.add.failed");
+        setAuthorize({ kind: "failed", message });
+      } else if (row.status === "ready" && row.has_credentials) {
         popupRef.current?.close();
         popupRef.current = null;
         setAuthorize({ kind: "connected", connection: row });

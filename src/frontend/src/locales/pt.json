@@ -2533,6 +2533,7 @@
   "connections.add.waiting": "Aguardando o consentimento na janela do provedor…",
   "connections.add.connected": "Conectada",
   "connections.add.failed": "A autorização não foi concluída.",
+  "connections.add.denied": "O provedor recusou a autorização.",
   "connections.add.expired": "O link de login expirou. Comece novamente para obter outro.",
   "connections.add.cancelled": "A janela de login foi fechada antes de concluir a autorização.",
   "connections.add.cleanupFailed": "Conexão não removida",

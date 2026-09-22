@@ -2533,6 +2533,7 @@
   "connections.add.waiting": "プロバイダーのウィンドウでの同意を待っています…",
   "connections.add.connected": "接続しました",
   "connections.add.failed": "認可が完了しませんでした。",
+  "connections.add.denied": "プロバイダーが認可を拒否しました。",
   "connections.add.expired": "サインインのリンクが期限切れです。最初からやり直してください。",
   "connections.add.cancelled": "認可が完了する前にサインイン画面が閉じられました。",
   "connections.add.cleanupFailed": "接続を削除できません",

@@ -314,6 +314,41 @@ async def test_failed_callback_consumes_state_without_storing_credentials(
         assert await session.get(ConnectionSecret, UUID(row["id"])) is None
         state = await session.get(ConnectionOAuth, UUID(row["id"]))
         assert state.state_digest is None
+    visible = await client.get("/api/v1/connections", headers=logged_in_headers)
+    assert visible.status_code == 200, visible.text
+    updated_row = next(item for item in visible.json() if item["id"] == row["id"])
+    assert updated_row["status"] == "error"
+    assert updated_row["status_reason"] == {
+        "denied": "oauth-denied",
+        "expired_state": "oauth-expired",
+    }.get(failure, "oauth-failed")
+    assert updated_row["updated_at"] != row["updated_at"]
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_denied_reauthorization_preserves_existing_credential(client, logged_in_headers, monkeypatch):
+    row, query = await begin(client, logged_in_headers)
+    provider_double(monkeypatch, query)
+    assert (await callback(client, query)).status_code == 200
+    started = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
+    )
+    assert started.status_code == 200, started.text
+    second_query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    assert (await callback(client, second_query, error="access_denied")).status_code == 400
+
+    visible = await client.get("/api/v1/connections", headers=logged_in_headers)
+    assert visible.status_code == 200, visible.text
+    updated_row = next(item for item in visible.json() if item["id"] == row["id"])
+    assert (updated_row["status"], updated_row["status_reason"], updated_row["has_credentials"]) == (
+        "ready",
+        "oauth-denied",
+        True,
+    )
+    async with session_scope() as session:
+        assert await session.get(ConnectionSecret, UUID(row["id"])) is not None
 
 
 @pytest.mark.usefixtures("active_user", "oauth_config")

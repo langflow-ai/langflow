@@ -20,7 +20,10 @@ export type ConnectionStatus =
 
 export type ConnectionStatusReason =
   | "credential-missing"
-  | "credential-undecryptable";
+  | "credential-undecryptable"
+  | "oauth-denied"
+  | "oauth-expired"
+  | "oauth-failed";
 
 export type ConnectionHealth = "unknown" | "healthy" | "unhealthy";
 

@@ -2533,6 +2533,7 @@
   "connections.add.waiting": "Warten auf die Zustimmung im Fenster des Anbieters…",
   "connections.add.connected": "Verbunden",
   "connections.add.failed": "Die Autorisierung wurde nicht abgeschlossen.",
+  "connections.add.denied": "Der Anbieter hat die Autorisierung abgelehnt.",
   "connections.add.expired": "Der Anmeldelink ist abgelaufen. Starten Sie erneut, um einen neuen zu erhalten.",
   "connections.add.cancelled": "Das Anmeldefenster wurde vor Abschluss der Autorisierung geschlossen.",
   "connections.add.cleanupFailed": "Verbindung nicht entfernt",

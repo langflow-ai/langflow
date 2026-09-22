@@ -170,6 +170,73 @@ describe("ConnectionsPage tabs", () => {
     expect(within(panel()).queryByText("bob-slack")).not.toBeInTheDocument();
   });
 
+  it("distinguishes bot and user identities with the same provider account", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "slack-user",
+        owner_id: SUPERUSER_ID,
+        executing_identity: {
+          identity: "user_delegated",
+          account: { id: "workspace", display: "Team workspace" },
+        },
+      }),
+      connection({
+        id: "slack-bot",
+        owner_id: SUPERUSER_ID,
+        executing_identity: {
+          identity: "bot",
+          account: { id: "workspace", display: "Team workspace" },
+        },
+      }),
+    ];
+    render(<ConnectionsPage />);
+
+    expect(
+      within(screen.getByTestId("connection-row-slack_user")).getByText(
+        "The signed-in user",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("connection-row-slack_bot")).getByText("A bot"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a denied reauthorization without hiding a still-ready credential", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "slack-ready",
+        owner_id: SUPERUSER_ID,
+        status_reason: "oauth-denied",
+      }),
+    ];
+    render(<ConnectionsPage />);
+
+    const row = within(screen.getByTestId("connection-row-slack_ready"));
+    expect(row.getByText("Ready")).toBeInTheDocument();
+    expect(
+      row.getByText("The provider denied authorization."),
+    ).toBeInTheDocument();
+  });
+
+  it("can delete a failed connection that has no credential", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "slack-failed",
+        owner_id: SUPERUSER_ID,
+        status: "error",
+        status_reason: "oauth-denied",
+        has_credentials: false,
+      }),
+    ];
+    render(<ConnectionsPage />);
+
+    await userEvent.click(screen.getByTestId("connection-menu-slack_failed"));
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
+  });
+
   it("gives a regular user no Other users tab and keeps shared rows under Mine", async () => {
     mockUser = { id: REGULAR_ID, is_superuser: false };
     // A regular user only ever receives another user's row when it was shared

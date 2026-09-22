@@ -2533,6 +2533,7 @@
   "connections.add.waiting": "Esperando el consentimiento en la ventana del proveedor…",
   "connections.add.connected": "Conectada",
   "connections.add.failed": "La autorización no se completó.",
+  "connections.add.denied": "El proveedor rechazó la autorización.",
   "connections.add.expired": "El enlace de inicio de sesión caducó. Empieza de nuevo para obtener otro.",
   "connections.add.cancelled": "La ventana de inicio de sesión se cerró antes de completar la autorización.",
   "connections.add.cleanupFailed": "Conexión no eliminada",

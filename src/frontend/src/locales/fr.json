@@ -2533,6 +2533,7 @@
   "connections.add.waiting": "En attente du consentement dans la fenêtre du fournisseur…",
   "connections.add.connected": "Connectée",
   "connections.add.failed": "L'autorisation n'a pas abouti.",
+  "connections.add.denied": "Le fournisseur a refusé l'autorisation.",
   "connections.add.expired": "Le lien de connexion a expiré. Recommencez pour en obtenir un nouveau.",
   "connections.add.cancelled": "La fenêtre de connexion a été fermée avant la fin de l'autorisation.",
   "connections.add.cleanupFailed": "Connexion non supprimée",
