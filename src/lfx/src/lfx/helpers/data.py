@@ -40,8 +40,44 @@ def _serialize_data(data: Data) -> str:
     return "```json\n" + json_bytes.decode("utf-8") + "\n```"
 
 
-def safe_convert(data: Any, *, clean_data: bool = False) -> str:
-    """Safely convert input data to string."""
+def _truncate_cells(df: DataFrame, limit: int) -> DataFrame:
+    """Cap cell length before rendering a DataFrame as a markdown table.
+
+    tabulate turns every newline inside a cell into its own physical line and pads
+    each one to the full table width. A single cell holding a long multiline text
+    therefore inflates the output by orders of magnitude: a 213 KB row with a
+    4,000-line transcript and a 130k-char summary renders as 520 MB of markdown.
+    """
+
+    def truncate(value):
+        text = value if isinstance(value, str) else str(value)
+        if len(text) <= limit:
+            return value
+        return f"{text[:limit]}… [truncated, {len(text)} chars]"
+
+    return df.map(truncate)
+
+
+def _single_line_cells(df: DataFrame) -> DataFrame:
+    """Keep each cell on one line, as Table.to_message does.
+
+    Every newline left in a cell would still become its own physical line padded to the
+    full table width, so the cap alone does not bound the output.
+    """
+
+    def single_line(value):
+        text = value if isinstance(value, str) else str(value)
+        return text.replace("\n", "<br/>") if "\n" in text else value
+
+    return df.map(single_line)
+
+
+def safe_convert(data: Any, *, clean_data: bool = False, max_cell_chars: int | None = None) -> str:
+    """Safely convert input data to string.
+
+    `max_cell_chars` caps every DataFrame cell before the markdown render. Pass it only on
+    display paths: data flowing between components must reach the next one intact.
+    """
     try:
         if isinstance(data, str):
             return clean_string(data)
@@ -50,6 +86,9 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
         if isinstance(data, Data):
             return clean_string(_serialize_data(data))
         if isinstance(data, DataFrame):
+            if max_cell_chars:
+                # Cap first: the regex passes below and to_markdown both scale with cell length.
+                data = _truncate_cells(data, max_cell_chars)
             if clean_data:
                 # Remove empty rows
                 data = data.dropna(how="all")
@@ -57,6 +96,8 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
                 data = data.replace(r"^\s*$", "", regex=True)
                 # Replace multiple newlines with a single newline
                 data = data.replace(r"\n+", "\n", regex=True)
+            if max_cell_chars:
+                data = _single_line_cells(data)
 
             # Replace pipe characters to avoid markdown table issues
             processed_data = data.replace(r"\|", r"\\|", regex=True)
