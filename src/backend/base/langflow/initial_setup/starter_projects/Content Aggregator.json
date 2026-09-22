@@ -2564,11 +2564,11 @@
                   },
                   {
                     "name": "boto3",
-                    "version": "1.43.46"
+                    "version": null
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.198.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 7
