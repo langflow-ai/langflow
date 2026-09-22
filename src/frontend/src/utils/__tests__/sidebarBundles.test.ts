@@ -1,6 +1,18 @@
 import { SIDEBAR_BUNDLES } from "../styleUtils";
 
 describe("SIDEBAR_BUNDLES", () => {
+  it("classifies AnonRouter as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "AnonRouter",
+          icon: "AnonRouter",
+          name: "anonrouter",
+        }),
+      ]),
+    );
+  });
+
   it("classifies PaddleOCR as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

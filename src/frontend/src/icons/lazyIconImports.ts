@@ -11,6 +11,10 @@ export const lazyIconsMapping = {
     import("@/icons/Agiled").then((mod) => ({ default: mod.AgiledIcon })),
   Airbyte: () =>
     import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
+  AnonRouter: () =>
+    import("@/icons/AnonRouter").then((mod) => ({
+      default: mod.AnonRouterIcon,
+    })),
   Anthropic: () =>
     import("@/icons/Anthropic").then((mod) => ({ default: mod.AnthropicIcon })),
   Apify: () =>

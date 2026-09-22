@@ -31,6 +31,7 @@ dependencies = [
 agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+anonrouter = ["langchain-openai>=1.1.6"]
 apify = ["apify-client>=1.8.1"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["lfx-azure>=0.1.0,<1.0.0"]
@@ -108,6 +109,7 @@ all = [
     "lfx-bundles[agentql]",
     "lfx-bundles[aiml]",
     "lfx-bundles[altk]",
+    "lfx-bundles[anonrouter]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
@@ -182,6 +184,7 @@ all-no-torch = [
     "lfx-bundles[agentql]",
     "lfx-bundles[aiml]",
     "lfx-bundles[altk]",
+    "lfx-bundles[anonrouter]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
