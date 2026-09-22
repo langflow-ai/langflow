@@ -12,6 +12,7 @@ from PIL import Image as PILImage
 
 @pytest.fixture
 def file_image(tmp_path):
+    """Provide a PNG whose write handle is closed before the test reads it."""
     image = PILImage.new("RGB", (100, 100), (255, 0, 0))
     path = tmp_path / "image.png"
     image.save(path)
@@ -20,6 +21,7 @@ def file_image(tmp_path):
 
 @pytest.fixture
 def file_txt(tmp_path):
+    """Provide a UTF-8 text file in the pytest-managed temporary directory."""
     content = """\
 line1: This is an example text file.
 line2: It can be used for testing.
@@ -31,6 +33,7 @@ line3: End of file.
 
 
 def test_is_image_file(file_image):
+    """Recognize a real PNG created by the portable image fixture."""
     assert is_image_file(file_image) is True
 
 
