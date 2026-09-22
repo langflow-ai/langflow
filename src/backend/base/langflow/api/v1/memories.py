@@ -355,7 +355,7 @@ async def list_memory_base_messages(
                     sender=msg.sender,
                     sender_name=msg.sender_name,
                     session_id=msg.session_id,
-                    text=msg.text,
+                    text=msg.text or "",
                     content_blocks=render_v1_content_blocks(msg.content_blocks) or [],
                     job_id=mir.job_id,
                     ingested_at=mir.ingested_at,
