@@ -34,6 +34,9 @@ strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
+# Hard upper bound ``fastapi_pagination.Params`` itself puts on ``size``. Declaring it on the
+# query parameters as well keeps an out-of-range value from reaching the ``Params`` constructor.
+MAX_PARAMS_PAGE_SIZE = 100
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
@@ -425,9 +428,12 @@ def parse_value(value: Any, input_type: str) -> Any:
     return value
 
 
+# Bounds are declared here as well as enforced by ``Params``: raising ``ValidationError`` from inside
+# the dependency escapes the route's ``try/except`` and reaches the app-wide ``Exception`` handler,
+# which answers 500 and echoes the internal validation text. FastAPI rejects these earlier as 422.
 def custom_params(
-    page: int | None = Query(None),
-    size: int | None = Query(None),
+    page: Annotated[int | None, Query(ge=MIN_PAGE_SIZE)] = None,
+    size: Annotated[int | None, Query(ge=MIN_PAGE_SIZE, le=MAX_PARAMS_PAGE_SIZE)] = None,
 ):
     if page is None and size is None:
         return None
