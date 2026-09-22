@@ -23,6 +23,7 @@ from langflow.api.utils import (
     cascade_delete_flow,
     custom_params,
 )
+from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets, mcp_server_names, stage_mcp_secrets
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import _handle_unique_constraint_error, _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _new_flow, _update_existing_flow
@@ -38,11 +39,15 @@ from langflow.api.v1.projects_mcp_helpers import (
     reconcile_mcp_server_for_auth_update,
     register_mcp_servers_for_project,
 )
+from langflow.api.v1.schemas.deployment_snapshot import (
+    DeploymentSnapshot,
+    DeploymentSnapshotFlow,
+    DeploymentSnapshotProject,
+)
 from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
     ProjectReplacementResult,
 )
-from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets, mcp_server_names, stage_mcp_secrets
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
@@ -90,6 +95,13 @@ from langflow.services.database.models.folder.model import (
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.user.model import User
+from langflow.services.deployment_artifacts import (
+    EmptyProjectArtifactError,
+    ProjectArtifactError,
+    ProjectArtifactLimitError,
+    ProjectArtifactNotFoundError,
+    build_project_deployment_snapshot,
+)
 from langflow.services.deps import (
     get_authorization_service,
     get_catalog_policy_service,
@@ -385,6 +397,74 @@ async def read_projects(
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_READ_FAILED)) from e
+
+
+async def _begin_deployment_snapshot_transaction(session: DbSessionReadOnly) -> None:
+    """Start the snapshot transaction before the first serving-plane read."""
+    if session.in_transaction():
+        await session.rollback()
+    bind = session.get_bind()
+    dialect = getattr(getattr(bind, "dialect", None), "name", None)
+    if dialect == "postgresql":
+        await session.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+    elif dialect == "sqlite":
+        # SQLite's legacy transaction mode does not begin a read transaction
+        # for a SELECT. Explicit BEGIN makes every query below observe one
+        # stable database snapshot until the request-scoped session closes.
+        await session.execute(text("BEGIN"))
+    else:
+        await session.begin()
+
+
+@router.get(
+    "/{project_id}/deployment-snapshot",
+    status_code=200,
+    responses={404: {"description": "Project not found"}, 413: {"description": "Snapshot is too large"}},
+)
+async def read_project_deployment_snapshot(
+    *,
+    session: DbSessionReadOnly,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+    response: Response,
+) -> DeploymentSnapshot:
+    """Return one bounded, read-only, secret-safe serving snapshot."""
+    await _begin_deployment_snapshot_transaction(session)
+    try:
+        snapshot = await build_project_deployment_snapshot(session, current_user, project_id)
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Project not found") from exc
+    except ProjectArtifactNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ProjectArtifactLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
+    except EmptyProjectArtifactError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except ProjectArtifactError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Project snapshot could not be captured safely",
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    return DeploymentSnapshot(
+        project=DeploymentSnapshotProject(
+            id=snapshot.project_id,
+            name=snapshot.project_name,
+            description=snapshot.project_description,
+        ),
+        flows=[
+            DeploymentSnapshotFlow(
+                id=flow.flow_id,
+                name=flow.name,
+                description=flow.description,
+                data=flow.data,
+            )
+            for flow in snapshot.flows
+        ],
+        dependencies=snapshot.dependencies,
+        required_variables=list(snapshot.required_variables),
+    )
 
 
 @router.get("/{project_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
@@ -1025,6 +1105,7 @@ async def replace_project_operation(
         if newly_created_project is not None and get_settings_service().settings.add_projects_to_mcp_servers:
             from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
             from lfx.base.mcp.util import sanitize_mcp_name
+
             from langflow.api.v2.mcp import _clear_server_cache
 
             server_name = f"lf-{sanitize_mcp_name(newly_created_project.name)[: MAX_MCP_SERVER_NAME_LENGTH - 4]}"
