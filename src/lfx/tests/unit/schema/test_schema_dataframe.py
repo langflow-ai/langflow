@@ -31,6 +31,7 @@ class TestDataFrameSchema:
         ],
     )
     def test_operations_preserve_document_text_configuration(self, operation):
+        """Derived tables retain the configured document body and independent fallback."""
         frame = DataFrame(
             {"body": ["First", "Second"], "rank": [2, 1]}, text_key="body", default_value="Missing content"
         )
@@ -46,6 +47,7 @@ class TestDataFrameSchema:
         assert frame.default_value == "Missing content"
 
     def test_copy_preserves_document_fallback(self):
+        """A missing text column uses the fallback inherited from the source table."""
         frame = DataFrame({"rank": [1]}, text_key="body", default_value="Missing content")
 
         documents = frame.copy().to_lc_documents()
@@ -53,6 +55,7 @@ class TestDataFrameSchema:
         assert documents == [Document(page_content="Missing content", metadata={"rank": 1})]
 
     def test_empty_copy_preserves_text_configuration(self):
+        """Copying an empty table preserves its future document conversion settings."""
         frame = DataFrame(text_key="body", default_value="Missing content")
 
         result = frame.copy()
