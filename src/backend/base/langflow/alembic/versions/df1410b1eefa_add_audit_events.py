@@ -68,12 +68,12 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "(event_type = 'authz' AND result IN ('allow', 'deny')) "
             "OR (event_type = 'action' AND result IN ('succeeded', 'failed'))",
-            name="ck_audit_events_event_type_result",
+            name=op.f("ck_audit_events_event_type_result"),
         ),
         sa.CheckConstraint(
             "(acting_issuer IS NULL AND acting_subject IS NULL) "
             "OR (acting_issuer IS NOT NULL AND acting_subject IS NOT NULL)",
-            name="ck_audit_events_acting_pair",
+            name=op.f("ck_audit_events_acting_pair"),
         ),
     )
     for name, columns in INDEXES:

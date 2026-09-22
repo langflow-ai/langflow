@@ -15,6 +15,7 @@ import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Column, Index
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import FunctionElement
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 RESOURCE_TYPE_MAX_LENGTH = 64
@@ -69,8 +70,8 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
 
     __tablename__ = "audit_events"
     __table_args__ = (
-        CheckConstraint(EVENT_TYPE_RESULT_CHECK, name="ck_audit_events_event_type_result"),
-        CheckConstraint(ACTING_PAIR_CHECK, name="ck_audit_events_acting_pair"),
+        CheckConstraint(EVENT_TYPE_RESULT_CHECK, name=conv("ck_audit_events_event_type_result")),
+        CheckConstraint(ACTING_PAIR_CHECK, name=conv("ck_audit_events_acting_pair")),
         # Ascending keys serve (timestamp DESC, id DESC) by backward scan; DESC keys churn autogenerate.
         Index("ix_audit_events_resource_timeline", "resource_type", "resource_id", "timestamp", "id"),
         Index("ix_audit_events_type_timeline", "resource_type", "timestamp", "id"),
