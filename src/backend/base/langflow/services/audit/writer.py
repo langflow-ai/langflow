@@ -3,8 +3,8 @@
 Two entry points, because the contract gives the two outcomes opposite
 durability rules. A committed mutation stages its event in the mutation's own
 transaction, so the event cannot exist without the change and the change cannot
-commit without the event. A failure or denial is written only after the
-mutation's transaction is gone, in a transaction of its own.
+commit without the event. A failure is written only after the mutation's
+transaction is gone, in a transaction of its own.
 
 There is no update and no delete here: rows are append-only, and the only
 deletion is the retention sweep.
@@ -167,12 +167,12 @@ async def persist_audit_event_independently(
 
 
 async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
-    """Write a failure or denial in its own transaction; the caller's is gone.
+    """Write a failure in its own transaction; the caller's is gone.
 
-    Bounded to a few concurrent connections so a burst of refusals cannot drain
-    the pool its own requests need. The caller is already failing or denied, so
-    a storage outage is surfaced as an error log rather than a second exception.
-    An excluded action, denials included, is dropped before a connection is taken.
+    Bounded to a few concurrent connections so a burst of failures cannot drain
+    the pool its own requests need. The caller is already failing, so a storage
+    outage is surfaced as an error log rather than a second exception. An
+    excluded action is dropped before a connection is taken.
     """
     if not is_audit_enabled() or not is_action_audited(draft.action):
         return False
