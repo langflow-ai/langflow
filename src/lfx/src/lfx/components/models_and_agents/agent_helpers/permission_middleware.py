@@ -57,12 +57,14 @@ class ToolApprovalMiddleware(HumanInTheLoopMiddleware):
     async def aafter_model(self, state, runtime):  # noqa: ARG002
         return None
 
-    def _review(self, request):
+    def _review(self, request, *, description=None):
         config = self.interrupt_on.get(request.tool_call["name"])
         if config is None:
             return request, None, None
         action, review = self._create_action_and_config(request.tool_call, config, request.state, request.runtime)
         action["tool_call_id"] = request.tool_call["id"]
+        if description:
+            action["description"] = description
         response = interrupt({"action_requests": [action], "review_configs": [review]})
         reviewed = response.get("reviewed_action")
         if reviewed and any(reviewed.get(key) != action.get(key) for key in ("name", "args", "tool_call_id")):
