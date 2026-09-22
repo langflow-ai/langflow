@@ -94,6 +94,8 @@ describe("ConnectionsPage tabs", () => {
 
     await openTab("Other users");
     expect(within(panel()).getByText("bob-slack")).toBeInTheDocument();
+    expect(within(panel()).getByText("Other user")).toBeInTheDocument();
+    expect(within(panel()).queryByText("Shared")).not.toBeInTheDocument();
     expect(within(panel()).queryByText("admin-gmail")).not.toBeInTheDocument();
 
     await openTab("Instance");
@@ -137,5 +139,76 @@ describe("ConnectionsPage tabs", () => {
         container.ownerDocument.getElementById(controls as string),
       ).not.toBeNull();
     }
+  });
+
+  it("sorts other users' connections by status and actual health-check time using the keyboard", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "alpha",
+        owner_id: OTHER_ID,
+        status: "ready",
+        health_checked_at: "2026-09-21T09:00:00Z",
+      }),
+      connection({
+        id: "bravo",
+        owner_id: OTHER_ID,
+        status: "expired",
+        health_checked_at: null,
+      }),
+      connection({
+        id: "charlie",
+        owner_id: OTHER_ID,
+        status: "pending",
+        health_checked_at: "2026-09-21T09:30:00+02:00",
+      }),
+    ];
+    const original = [...mockConnections];
+    const user = userEvent.setup();
+    render(<ConnectionsPage />);
+    await openTab("Other users");
+    const order = () =>
+      within(panel())
+        .getAllByTestId(/^connection-row-/)
+        .map((row) => row.getAttribute("data-testid"));
+    expect(order()).toEqual([
+      "connection-row-alpha",
+      "connection-row-bravo",
+      "connection-row-charlie",
+    ]);
+
+    const status = within(panel()).getByRole("button", {
+      name: "Status",
+    });
+    status.focus();
+    await user.keyboard("{Enter}");
+    expect(order()).toEqual([
+      "connection-row-bravo",
+      "connection-row-charlie",
+      "connection-row-alpha",
+    ]);
+    expect(status.closest("th")).toHaveAttribute("aria-sort", "ascending");
+    await user.keyboard("{Enter}");
+    expect(order()).toEqual([
+      "connection-row-alpha",
+      "connection-row-charlie",
+      "connection-row-bravo",
+    ]);
+    expect(status.closest("th")).toHaveAttribute("aria-sort", "descending");
+
+    const lastCheck = within(panel()).getByTestId("connections-sort-lastCheck");
+    await user.click(lastCheck);
+    expect(order()).toEqual([
+      "connection-row-charlie",
+      "connection-row-alpha",
+      "connection-row-bravo",
+    ]);
+    await user.click(lastCheck);
+    expect(order()).toEqual([
+      "connection-row-alpha",
+      "connection-row-charlie",
+      "connection-row-bravo",
+    ]);
+    expect(mockConnections).toEqual(original);
   });
 });

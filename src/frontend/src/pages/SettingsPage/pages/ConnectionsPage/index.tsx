@@ -4,6 +4,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import type { ConnectionRead } from "@/controllers/API/queries/connections";
 import {
   useDeleteConnectionMutation,
@@ -77,12 +78,12 @@ export default function ConnectionsPage() {
 
   // A superuser lists every user's connections, so "not instance-owned" is not
   // the same as "mine" for them: the rest belong to other people and are only
-  // visible for administration. Everyone else sees another user's connection
-  // only when it was shared with them, and those stay under Mine.
+  // visible for administration. Other authorized rows stay under Mine for
+  // regular users; ownership alone does not tell us how access was granted.
   const viewOf = (connection: ConnectionRead) => {
     const owner = ownerKindOf(connection, userData?.id);
     if (owner === "instance") return "instance";
-    if (owner === "shared" && isSuperuser) return "others";
+    if (owner === "other" && isSuperuser) return "others";
     return "mine";
   };
   const visible = connections.filter(
@@ -101,10 +102,7 @@ export default function ConnectionsPage() {
     } catch (error) {
       setErrorData({
         title: t("connections.errors.actionFailed"),
-        list: [
-          (error as { response?: { data?: { detail?: string } } })?.response
-            ?.data?.detail ?? t("connections.errors.generic"),
-        ],
+        list: [getAxiosErrorMessage(error, t("connections.errors.generic"))],
       });
     } finally {
       setBusyId(null);

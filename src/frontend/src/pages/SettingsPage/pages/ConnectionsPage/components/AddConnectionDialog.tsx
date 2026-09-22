@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   CONNECTION_NAME_MAX_LENGTH,
   CONNECTION_NAME_PATTERN,
@@ -344,10 +345,7 @@ export function AddConnectionDialog({
       await beginAuthorize(row, [...selectedScopes]);
     } catch (error) {
       popupRef.current?.close();
-      setFieldError(
-        (error as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail ?? t("connections.add.failed"),
-      );
+      setFieldError(getAxiosErrorMessage(error, t("connections.add.failed")));
     }
   };
 
@@ -423,19 +421,22 @@ export function AddConnectionDialog({
                   id="connection-name"
                   value={name}
                   spellCheck={false}
-                  placeholder="work"
-                  onChange={(event) =>
-                    setName(
-                      event.target.value
-                        .toLowerCase()
-                        .replace(/[^a-z0-9_-]/g, ""),
-                    )
-                  }
+                  placeholder={t("connections.add.handlePlaceholder")}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={CONNECTION_NAME_MAX_LENGTH}
+                  aria-invalid={name.length > 0 && !handleValid}
+                  aria-describedby="connection-name-help"
                   data-testid="connection-name"
                 />
                 <span className="font-mono text-xs text-muted-foreground">
                   {providerId}/{name || "…"}
                 </span>
+                <p
+                  id="connection-name-help"
+                  className="text-xs text-muted-foreground"
+                >
+                  {t("connections.add.handleHelp")}
+                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="connection-display-name">

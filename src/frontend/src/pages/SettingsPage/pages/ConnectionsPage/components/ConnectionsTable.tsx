@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -22,7 +23,7 @@ import ConnectionRowMenu, {
 } from "./ConnectionRowMenu";
 import ConnectionStatusBadge from "./ConnectionStatusBadge";
 
-export type OwnerKind = "you" | "instance" | "shared";
+export type OwnerKind = "you" | "instance" | "other";
 
 export const ownerKindOf = (
   connection: ConnectionRead,
@@ -31,7 +32,25 @@ export const ownerKindOf = (
   if (connection.ownership_mode === "instance") return "instance";
   return connection.owner_id !== null && connection.owner_id === currentUserId
     ? "you"
-    : "shared";
+    : "other";
+};
+
+const SORT_COLUMNS = [
+  "connection",
+  "owner",
+  "account",
+  "status",
+  "scopes",
+  "lastCheck",
+] as const;
+type SortColumn = (typeof SORT_COLUMNS)[number];
+
+const checkedAt = (iso: string | null): number | null => {
+  if (!iso) return null;
+  const time = Date.parse(
+    /(?:[zZ]|[+-]\d\d:\d\d)$/.test(iso) ? iso : `${iso}Z`,
+  );
+  return Number.isNaN(time) ? null : time;
 };
 
 const HEALTH_DOT: Record<ConnectionRead["health"], string> = {
@@ -87,12 +106,51 @@ export function ConnectionsTable({
   busyId,
   actions,
 }: ConnectionsTableProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [sort, setSort] = useState<{
+    column: SortColumn;
+    direction: "ascending" | "descending";
+  }>({ column: "connection", direction: "ascending" });
+  const sortedConnections = useMemo(() => {
+    const collator = new Intl.Collator(i18n.language, { numeric: true });
+    const sortValue = (connection: ConnectionRead): string | number | null => {
+      const account = connection.executing_identity?.account;
+      switch (sort.column) {
+        case "connection":
+          return connection.display_name;
+        case "owner":
+          return `${t(`connections.owner.${ownerKindOf(connection, currentUserId)}`)} ${connection.owner_id ?? ""}`;
+        case "account":
+          return account?.display ?? account?.id ?? "";
+        case "status":
+          return t(`connections.status.${connection.status}`);
+        case "scopes":
+          return connection.granted_scopes?.length ?? 0;
+        case "lastCheck":
+          return checkedAt(connection.health_checked_at);
+      }
+    };
+    return [...connections].sort((left, right) => {
+      const a = sortValue(left);
+      const b = sortValue(right);
+      // Never-checked rows stay last in either direction.
+      if (a === null && b !== null) return 1;
+      if (b === null && a !== null) return -1;
+      const comparison =
+        typeof a === "number" && typeof b === "number"
+          ? a - b
+          : collator.compare(String(a ?? ""), String(b ?? ""));
+      return (
+        comparison * (sort.direction === "ascending" ? 1 : -1) ||
+        collator.compare(left.display_name, right.display_name) ||
+        left.id.localeCompare(right.id)
+      );
+    });
+  }, [connections, currentUserId, i18n.language, sort, t]);
 
   const lastChecked = (iso: string | null): string => {
-    if (!iso) return t("connections.health.never");
-    const then = Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}Z`);
-    if (Number.isNaN(then)) return t("connections.health.never");
+    const then = checkedAt(iso);
+    if (then === null) return t("connections.health.never");
     const minutes = Math.max(0, Math.round((Date.now() - then) / 60_000));
     if (minutes < 1) return t("connections.health.justNow");
     if (minutes < 60) return t("connections.health.minutesAgo", { minutes });
@@ -106,12 +164,41 @@ export function ConnectionsTable({
       <Table className="min-w-[880px]">
         <TableHeader>
           <TableRow>
-            <TableHead>{t("connections.columns.connection")}</TableHead>
-            <TableHead>{t("connections.columns.owner")}</TableHead>
-            <TableHead>{t("connections.columns.account")}</TableHead>
-            <TableHead>{t("connections.columns.status")}</TableHead>
-            <TableHead>{t("connections.columns.scopes")}</TableHead>
-            <TableHead>{t("connections.columns.lastCheck")}</TableHead>
+            {SORT_COLUMNS.map((column) => (
+              <TableHead
+                key={column}
+                aria-sort={sort.column === column ? sort.direction : "none"}
+              >
+                <button
+                  type="button"
+                  className="flex items-center gap-1 rounded-sm py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  data-testid={`connections-sort-${column}`}
+                  onClick={() =>
+                    setSort((previous) => ({
+                      column,
+                      direction:
+                        previous.column === column &&
+                        previous.direction === "ascending"
+                          ? "descending"
+                          : "ascending",
+                    }))
+                  }
+                >
+                  {t(`connections.columns.${column}`)}
+                  <ForwardedIconComponent
+                    name={
+                      sort.column === column
+                        ? sort.direction === "ascending"
+                          ? "ArrowUp"
+                          : "ArrowDown"
+                        : "ArrowUpDown"
+                    }
+                    className="h-3 w-3 shrink-0"
+                    aria-hidden
+                  />
+                </button>
+              </TableHead>
+            ))}
             <TableHead className="w-12">
               <span className="sr-only">
                 {t("connections.columns.actions")}
@@ -120,7 +207,7 @@ export function ConnectionsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {connections.map((connection) => {
+          {sortedConnections.map((connection) => {
             const owner = ownerKindOf(connection, currentUserId);
             const account = connection.executing_identity?.account;
             const isBot =
@@ -150,7 +237,21 @@ export function ConnectionsTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-sm">
-                  {t(`connections.owner.${owner}`)}
+                  <ShadTooltip
+                    content={
+                      connection.owner_id
+                        ? t("connections.owner.id", { id: connection.owner_id })
+                        : null
+                    }
+                  >
+                    <span
+                      tabIndex={
+                        owner === "other" && connection.owner_id ? 0 : undefined
+                      }
+                    >
+                      {t(`connections.owner.${owner}`)}
+                    </span>
+                  </ShadTooltip>
                 </TableCell>
                 <TableCell className="text-sm">
                   {account ? (
@@ -193,14 +294,14 @@ export function ConnectionsTable({
                   ) : (
                     <ShadTooltip
                       content={
-                        <ul className="max-w-xs list-none space-y-0.5 p-0 font-mono text-xs">
+                        <ul className="max-w-xs list-none space-y-0.5 whitespace-normal break-all p-0 font-mono text-xs">
                           {scopes.map((scope) => (
                             <li key={scope}>{scope}</li>
                           ))}
                         </ul>
                       }
                     >
-                      <span>
+                      <span tabIndex={0}>
                         <Badge variant="secondaryStatic" size="xq">
                           {t("connections.scopes.count", {
                             count: scopes.length,

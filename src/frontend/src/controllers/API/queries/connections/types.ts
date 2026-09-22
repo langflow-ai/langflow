@@ -33,7 +33,7 @@ export type ProviderRevocation =
   | "not_applicable";
 
 /** Handle characters the backend accepts for the portable `provider/name`. */
-export const CONNECTION_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
+export const CONNECTION_NAME_PATTERN = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 export const CONNECTION_NAME_MAX_LENGTH = 64;
 
 export interface ConnectionAccount {

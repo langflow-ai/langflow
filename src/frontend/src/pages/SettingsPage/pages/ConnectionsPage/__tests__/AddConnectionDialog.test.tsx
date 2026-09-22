@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type {
   ConnectionRead,
@@ -115,6 +115,105 @@ describe("AddConnectionDialog ownership", () => {
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+  it.each([
+    "gmail-qa",
+    "g-1",
+    "my-gmail-connection",
+    "a_b-c",
+    "gmail_",
+    "a__b",
+    "_gmail",
+    "Gmail",
+    "gmail qa",
+    "a".repeat(65),
+  ])("blocks invalid handle %s before creating a connection", async (name) => {
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[google]}
+        canCreateInstance={false}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("connection-name"), {
+      target: { value: name },
+    });
+    fireEvent.change(screen.getByTestId("connection-display-name"), {
+      target: { value: "Gmail" },
+    });
+    expect(screen.getByTestId("connection-name")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByTestId("connection-name")).toHaveAccessibleDescription(
+      /lowercase letters and numbers/,
+    );
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("connection-continue"));
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(window.open).not.toHaveBeenCalled();
+  });
+
+  it.each(["gmail_qa", "g1", "a".repeat(64)])(
+    "accepts valid handle %s",
+    (name) => {
+      render(
+        <AddConnectionDialog
+          open
+          onOpenChange={jest.fn()}
+          providers={[google]}
+          canCreateInstance={false}
+        />,
+      );
+      fireEvent.change(screen.getByTestId("connection-name"), {
+        target: { value: name },
+      });
+      fireEvent.change(screen.getByTestId("connection-display-name"), {
+        target: { value: "Gmail" },
+      });
+      expect(screen.getByTestId("connection-continue")).toBeEnabled();
+    },
+  );
+
+  it("renders a server validation error as text and keeps the dialog usable", async () => {
+    mockCreate.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          detail: [
+            {
+              type: "string_pattern_mismatch",
+              loc: ["body", "name"],
+              msg: "Invalid connection handle",
+              input: "gmail-qa",
+            },
+          ],
+        },
+      },
+    });
+    const user = userEvent.setup();
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[google]}
+        canCreateInstance={false}
+      />,
+    );
+    await fillDetails(user);
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Invalid connection handle",
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("connection-continue")).toBeEnabled();
+    expect(window.open).toHaveReturnedWith(
+      expect.objectContaining({ close: expect.any(Function) }),
+    );
+    const popup = (window.open as jest.Mock).mock.results[0].value;
+    expect(popup.close).toHaveBeenCalled();
+  });
 
   it("creates an instance-owned connection when a superuser ticks the share box", async () => {
     mockCreate.mockResolvedValue(createdRow("instance"));

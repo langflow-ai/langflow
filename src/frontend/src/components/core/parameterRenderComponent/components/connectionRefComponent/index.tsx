@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ export default function ConnectionRefComponent({
   identityKind,
   ariaLabelledBy,
 }: InputProps<string, ConnectionRefComponentType>) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -89,7 +91,9 @@ export default function ConnectionRefComponent({
   const triggerLabel =
     selectedHandle ||
     placeholder ||
-    (provider ? `Select a ${provider} connection` : "Select a connection");
+    (provider
+      ? t("connections.picker.selectProvider", { provider })
+      : t("connections.picker.select"));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -139,7 +143,7 @@ export default function ConnectionRefComponent({
             </span>
             {isDangling && (
               <Badge variant="secondaryStatic" size="sq" className="text-xs">
-                not found
+                {t("connections.picker.notFound")}
               </Badge>
             )}
           </span>
@@ -158,25 +162,26 @@ export default function ConnectionRefComponent({
         style={{ minWidth: triggerRef.current?.clientWidth ?? "260px" }}
       >
         <Command
-          label="Connections"
+          label={t("connections.title")}
           className="flex flex-col"
           onKeyDown={refocusSelectedCommandItemOnNavigate}
         >
           <CommandList className="max-h-[300px] overflow-y-auto">
             {isLoading && (
               <div className="px-3 py-3 text-xs text-muted-foreground">
-                Loading connections…
+                {t("connections.loading")}
               </div>
             )}
             {isError && !isLoading && (
               <div className="px-3 py-3 text-xs text-destructive">
-                Could not load connections.
+                {t("connections.picker.loadFailed")}
               </div>
             )}
             {!isLoading && !isError && options.length === 0 && (
               <div className="px-3 py-3 text-xs text-muted-foreground">
-                No {provider ?? "provider"} connections yet. Create one in
-                Settings, then refresh.
+                {provider
+                  ? t("connections.picker.emptyProvider", { provider })
+                  : t("connections.picker.empty")}
               </div>
             )}
             {options.map((option) => (
@@ -193,8 +198,10 @@ export default function ConnectionRefComponent({
         <div className="flex items-center justify-between gap-2 border-t border-border bg-background px-3 py-2">
           <span className="truncate text-[11px] text-muted-foreground">
             {scopes.length
-              ? `Requires ${scopes.map(shortScope).join(", ")}`
-              : "No scope required"}
+              ? t("connections.picker.requires", {
+                  scopes: scopes.map(shortScope).join(", "),
+                })
+              : t("connections.picker.noScopes")}
           </span>
           <div className="flex items-center gap-1">
             {selectedHandle && (
@@ -204,7 +211,7 @@ export default function ConnectionRefComponent({
                 data-testid={`clear-connection-${id}`}
                 onClick={() => select("")}
               >
-                Clear
+                {t("connections.picker.clear")}
               </Button>
             )}
             <Button
@@ -217,7 +224,7 @@ export default function ConnectionRefComponent({
                 name="RefreshCcw"
                 className={cn("h-3 w-3", isFetching && "animate-spin")}
               />
-              Refresh
+              {t("connections.picker.refresh")}
             </Button>
           </div>
         </div>
@@ -235,7 +242,18 @@ function ConnectionOptionItem({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
   const { connection, usable, unusableReason } = option;
+  const reason =
+    unusableReason === "status"
+      ? t(`connections.status.${connection.status}`)
+      : unusableReason === "scopes"
+        ? t("connections.picker.missingScopes", {
+            scopes: option.missingScopes.map(shortScope).join(", "),
+          })
+        : unusableReason
+          ? t(`connections.picker.${unusableReason}`)
+          : undefined;
   return (
     <CommandItem
       value={option.handle}
@@ -260,7 +278,7 @@ function ConnectionOptionItem({
             </span>
             {!usable && (
               <Badge variant="secondaryStatic" size="sq" className="text-xs">
-                {unusableReason}
+                {reason}
               </Badge>
             )}
           </div>
