@@ -564,10 +564,10 @@ async def update_settings(
     components_path: Path | None = None,
     store: bool = True,
     auto_saving: bool = True,
-    auto_saving_interval: int = 1000,
-    health_check_max_retries: int = 5,
-    max_file_size_upload: int = 100,
-    webhook_polling_interval: int = 5000,
+    auto_saving_interval: int | None = None,
+    health_check_max_retries: int | None = None,
+    max_file_size_upload: int | None = None,
+    webhook_polling_interval: int | None = None,
 ) -> None:
     """Update the settings from a config file."""
     # Check for database_url in the environment variables
