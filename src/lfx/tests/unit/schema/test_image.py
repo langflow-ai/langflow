@@ -1,4 +1,3 @@
-import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiofiles
@@ -12,24 +11,23 @@ from PIL import Image as PILImage
 
 
 @pytest.fixture
-def file_image():
+def file_image(tmp_path):
     image = PILImage.new("RGB", (100, 100), (255, 0, 0))
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as temp_file:
-        image.save(temp_file.name)
-        yield temp_file.name
+    path = tmp_path / "image.png"
+    image.save(path)
+    return str(path)
 
 
 @pytest.fixture
-def file_txt():
+def file_txt(tmp_path):
     content = """\
 line1: This is an example text file.
 line2: It can be used for testing.
 line3: End of file.
 """
-    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp_file:
-        temp_file.write(content.encode())
-        temp_file.flush()
-        yield temp_file.name
+    path = tmp_path / "file.txt"
+    path.write_text(content, encoding="utf-8")
+    return str(path)
 
 
 def test_is_image_file(file_image):
