@@ -34,8 +34,10 @@ sent rather than what the component happened to pass.
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import re
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -93,8 +95,10 @@ def _require_https_for_credentialed_endpoint(base_url: str | None) -> None:
     The one exception is a host the *operator* explicitly allowlisted via
     ``ssrf_allowed_hosts``: that is a deliberate deployment decision (a plaintext internal
     gateway on a trusted segment), not something a tenant can arrange, and the SSRF policy
-    already requires it for such a host. Provider defaults never reach here - callers skip
-    them before calling this.
+    already requires it for such a host. For an IP-literal URL, an allowlisted CIDR covering
+    that IP also grants the exception. DNS hostnames must be allowlisted by name; this
+    check does not resolve them. Provider defaults never reach here - callers skip them
+    before calling this.
 
     Raises:
         ValueError: If the endpoint uses a scheme other than https and its host is not
@@ -108,8 +112,12 @@ def _require_https_for_credentialed_endpoint(base_url: str | None) -> None:
     if parsed.scheme == "https":
         return
     hostname = parsed.hostname
-    if parsed.scheme == "http" and hostname and is_host_allowed(hostname):
-        return
+    if parsed.scheme == "http" and hostname:
+        ip_literal = None
+        with suppress(ValueError):
+            ip_literal = str(ipaddress.ip_address(hostname))
+        if is_host_allowed(hostname, ip=ip_literal):
+            return
     msg = (
         f"Provider endpoint {base_url!r} must use https. The configured provider credential "
         "is sent to this endpoint, and a plaintext connection would transmit it in the clear. "
