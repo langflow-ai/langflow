@@ -1316,6 +1316,8 @@
   "mainPage.tabHarness": "Harness",
   "harness.save": "Speichern",
   "harness.saved": "Projekt gespeichert",
+  "harness.savedToFlows_one": "Gespeichert und auf 1 Flow angewendet",
+  "harness.savedToFlows_other": "Gespeichert und auf {{count}} Flows angewendet",
   "harness.saveFailed": "Projekt konnte nicht gespeichert werden",
   "harness.loading": "Formular wird geladen...",
   "harness.noFields": "Für diesen Projekttyp gibt es nichts zu konfigurieren.",

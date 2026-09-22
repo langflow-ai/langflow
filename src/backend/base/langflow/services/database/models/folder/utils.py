@@ -9,6 +9,7 @@ from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
 from langflow.services.database.models.flow.model import Flow
 
+from .config_writer import write_project_config_to_flows  # noqa: F401 - compatibility export
 from .constants import DEFAULT_FOLDER_DESCRIPTION, DEFAULT_FOLDER_NAME
 from .model import Folder
 

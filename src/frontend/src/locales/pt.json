@@ -1316,6 +1316,8 @@
   "mainPage.tabHarness": "Harness",
   "harness.save": "Salvar",
   "harness.saved": "Projeto salvo",
+  "harness.savedToFlows_one": "Salvo e aplicado a 1 fluxo",
+  "harness.savedToFlows_other": "Salvo e aplicado a {{count}} fluxos",
   "harness.saveFailed": "Não foi possível salvar o projeto",
   "harness.loading": "Carregando o formulário...",
   "harness.noFields": "Este tipo de projeto não tem nada para configurar.",

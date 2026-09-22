@@ -30,10 +30,18 @@ export const useGetProjectFlowsQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getProjectFlowsFn = async (): Promise<FlowType[]> => {
-    const { data } = await api.get<PaginatedFolderType>(
-      `${getURL("PROJECTS")}/${projectId}?is_flow=true&page=1&size=${PAGE_SIZE}`,
-    );
-    return data?.flows?.items ?? [];
+    const flows: FlowType[] = [];
+    let page = 1;
+    let pages = 1;
+    do {
+      const { data } = await api.get<PaginatedFolderType>(
+        `${getURL("PROJECTS")}/${projectId}?is_flow=true&page=${page}&size=${PAGE_SIZE}`,
+      );
+      flows.push(...(data?.flows?.items ?? []));
+      pages = data?.flows?.pages ?? page;
+      page += 1;
+    } while (page <= pages);
+    return flows;
   };
 
   return query(["useGetProjectFlows", projectId], getProjectFlowsFn, {

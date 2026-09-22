@@ -1316,6 +1316,8 @@
   "mainPage.tabHarness": "Harness",
   "harness.save": "保存",
   "harness.saved": "项目已保存",
+  "harness.savedToFlows_one": "已保存，并应用到 1 个流程",
+  "harness.savedToFlows_other": "已保存，并应用到 {{count}} 个流程",
   "harness.saveFailed": "无法保存项目",
   "harness.loading": "正在加载表单...",
   "harness.noFields": "此项目类型没有需要配置的内容。",

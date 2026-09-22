@@ -1316,6 +1316,8 @@
   "mainPage.tabHarness": "Harness",
   "harness.save": "Enregistrer",
   "harness.saved": "Projet enregistré",
+  "harness.savedToFlows_one": "Enregistré et appliqué à 1 flux",
+  "harness.savedToFlows_other": "Enregistré et appliqué à {{count}} flux",
   "harness.saveFailed": "Impossible d'enregistrer le projet",
   "harness.loading": "Chargement du formulaire...",
   "harness.noFields": "Ce type de projet n'a rien à configurer.",

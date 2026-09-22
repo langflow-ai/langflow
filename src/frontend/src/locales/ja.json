@@ -1316,6 +1316,8 @@
   "mainPage.tabHarness": "ハーネス",
   "harness.save": "保存",
   "harness.saved": "プロジェクトを保存しました",
+  "harness.savedToFlows_one": "1 件のフローに適用して保存しました",
+  "harness.savedToFlows_other": "{{count}} 件のフローに適用して保存しました",
   "harness.saveFailed": "プロジェクトを保存できませんでした",
   "harness.loading": "フォームを読み込んでいます...",
   "harness.noFields": "このプロジェクトタイプには設定する項目がありません。",
