@@ -100,6 +100,8 @@ class ProjectTypeField:
     renders: str = ""
     slot_definition: SlotDefinition | None = None
     supports_flow_binding: bool = False
+    show_when: dict[str, str] = field(default_factory=dict)
+    option_labels: dict[str, str] = field(default_factory=dict)
 
     def to_template(self) -> dict:
         """Serialise for the API, in the shape the frontend field renderer expects."""
@@ -113,6 +115,10 @@ class ProjectTypeField:
             rendered["renders"] = self.renders
         if self.slot_definition is not None:
             rendered["flow_contract"] = self.slot_definition.to_dict()
+        if self.show_when:
+            rendered["show_when"] = dict(self.show_when)
+        if self.option_labels:
+            rendered["option_labels"] = dict(self.option_labels)
         if self.supports_flow_binding:
             rendered["supports_flow_binding"] = True
         return rendered

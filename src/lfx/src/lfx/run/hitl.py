@@ -158,7 +158,9 @@ def terminal_decision_provider(request: dict[str, Any]) -> dict[str, Any]:
 def flow_has_pausing_node(graph: Graph) -> bool:
     """True when the graph contains a node that can request a human-input pause."""
     pausing_types = {"HumanInput"}
-    return any((getattr(vertex, "data", None) or {}).get("type") in pausing_types for vertex in graph.vertices)
+    return any(
+        (getattr(vertex, "data", None) or {}).get("type") in pausing_types for vertex in graph.vertices
+    ) or flow_has_blocking_pausing_node(graph)
 
 
 NESTED_HITL_UNSUPPORTED = (
@@ -184,6 +186,8 @@ def flow_has_blocking_pausing_node(graph: Graph) -> bool:
         if data.get("type") == "HumanInput" and graph.successor_map.get(vertex.id):
             return True
         template = ((data.get("node") or {}).get("template")) or {}
+        if data.get("type") == "Agent" and (template.get("tool_policy") or {}).get("value") == "ask":
+            return True
         rows = (template.get("tools_metadata") or {}).get("value")
         if isinstance(rows, list) and any(isinstance(row, dict) and row.get("approval_actions") for row in rows):
             return True

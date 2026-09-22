@@ -8,11 +8,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
-    HumanInTheLoopMiddleware,
     ModelCallLimitMiddleware,
     ToolRetryMiddleware,
 )
-from langgraph.types import Command
 
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
     adapt_graph_events_to_executor_shape,
@@ -41,6 +39,7 @@ from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.harness import HarnessRuntimeConfig, harness_runtime_inputs
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
@@ -222,6 +221,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             advanced=True,
             show=True,
         ),
+        *[set_advanced_true(inp) for inp in harness_runtime_inputs() if inp.name != "max_iterations"],
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -596,24 +596,26 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         middleware = self._build_middleware(llm, allow_interrupts=allow_interrupts)
         checkpointer = self._build_agent_checkpointer() if allow_interrupts else None
-        return create_agent(
+        if self._gated_interrupt_on() and checkpointer is None:
+            msg = "Tool approvals require a resumable run. Run the Agent through a flow with Agent message output."
+            raise ValueError(msg)
+        runnable = create_agent(
             model=llm,
             tools=tools,
             system_prompt=self.system_prompt or "",
             middleware=middleware or None,
             checkpointer=checkpointer,
         )
+        # Middleware contributes graph nodes too. Keep the scheduler guard above the
+        # actual call limiter, including future before/after hooks.
+        self._agent_steps_per_call = max(4, len(runnable.get_graph().nodes)) if hasattr(runnable, "get_graph") else 6
+        return runnable
 
     def _compute_recursion_limit(self) -> int:
-        """Derive the LangGraph recursion_limit from the user-set max_iterations.
-
-        Mirrors the clamp in `_build_middleware` (max(1, max_iterations)) so a
-        saved 0 or negative value cannot under-cap the graph below one full
-        iteration. The +5 buffer covers start/end/router overhead.
-        """
+        """Budget graph steps from the compiled graph; the model-call middleware owns the cap."""
         raw = getattr(self, "max_iterations", None)
         run_limit = max(1, int(raw)) if raw is not None else 15
-        return run_limit * 2 + 5
+        return run_limit * getattr(self, "_agent_steps_per_call", 6) + 5
 
     def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
@@ -655,11 +657,39 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if is_watsonx_model(llm):
             middleware.append(SingleToolCallMiddleware())
             middleware.append(WatsonXPlaceholderMiddleware())
-        # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed
-        # (the structured-output path disables them), keeping ungated flows unchanged.
-        interrupt_on = self._gated_interrupt_on() if allow_interrupts else {}
+        policy = HarnessRuntimeConfig.model_validate(
+            {
+                name: getattr(self, name, field.default)
+                for name, field in HarnessRuntimeConfig.model_fields.items()
+                if name != "max_iterations"
+            }
+        )
+        # Preserve legacy clamping for old Agent flows while validating new controls strictly.
+        policy = policy.model_copy(
+            update={"max_iterations": max(1, int(max_iterations if max_iterations is not None else 15))}
+        )
+        if policy.context_strategy != "all" or policy.compaction != "off":
+            from lfx.components.models_and_agents.agent_helpers.harness_middleware import (
+                HarnessCompactionMiddleware,
+                HarnessContextMiddleware,
+            )
+
+            if policy.compaction == "summarize":
+                middleware.append(HarnessCompactionMiddleware(llm, policy))
+            middleware.append(HarnessContextMiddleware(policy))
+        from lfx.components.models_and_agents.agent_helpers.permission_middleware import (
+            DenyToolsMiddleware,
+            ToolApprovalMiddleware,
+        )
+
+        if policy.tool_policy == "deny" and self.tools:
+            middleware.append(DenyToolsMiddleware())
+        interrupt_on = self._gated_interrupt_on()
         if interrupt_on:
-            middleware.append(HumanInTheLoopMiddleware(interrupt_on=interrupt_on))
+            if not allow_interrupts:
+                msg = "Tool approvals are unavailable with structured output. Use Agent message output to review calls."
+                raise ValueError(msg)
+            middleware.append(ToolApprovalMiddleware(interrupt_on, policy=policy.tool_policy))
         return middleware
 
     async def run_agent(self, agent) -> Message:
@@ -690,8 +720,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # middleware cap (ModelCallLimitMiddleware) is what bounds the loop —
         # not LangGraph's default 25-step guard, which fires at ~12 model+tool
         # iterations and raises a raw GraphRecursionError (QA UI-009/UI-010).
-        # Each iteration is ~2 graph steps (model node + tools node); add 5
-        # for start/end overhead.
+        # The compiled graph includes middleware before/after nodes as well.
         recursion_limit = self._compute_recursion_limit()
 
         agent_config: dict[str, Any] = {
@@ -713,16 +742,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if interrupts_enabled and thread_id and self._gated_interrupt_on():
             agent_config["configurable"] = {"thread_id": thread_id}
             get_pending_interrupt = self._pending_interrupt_getter(agent, agent_config)
-            if self._has_candidate_decision(thread_id):
-                # The injected decision must match the pending interrupt's nonce, so read
-                # the interrupt first; a matched decision resumes the checkpointed thread.
-                value, interrupt_id = await self._read_pending_interrupt(agent, agent_config)
-                decision = self._injected_agent_decision(thread_id, interrupt_id)
-                if decision is not None:
-                    action_requests = (value or {}).get("action_requests") or []
-                    stream_input = Command(
-                        resume={"decisions": self._build_resume_decisions(decision, action_requests)}
-                    )
+            stream_input = await self._agent_stream_input(agent, agent_config, input_dict)
         stream = adapt_graph_events_to_executor_shape(
             agent.astream_events(stream_input, config=agent_config, version="v2")
         )
@@ -949,6 +969,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         format_instructions = getattr(self, "format_instructions", "") or ""
         output_schema = getattr(self, "output_schema", None) or []
         has_tools = bool(self.tools)
+        uses_context_middleware = (
+            getattr(self, "context_strategy", "all") != "all" or getattr(self, "compaction", "off") != "off"
+        )
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:
             first_attempt = True
@@ -966,7 +989,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     input_value=self.input_value,
                     system_prompt=augmented_prompt,
                 )
-                # Structured output cannot suspend mid-parse: disable tool-approval interrupts.
+                # Structured output cannot suspend mid-parse. Gated tools fail before execution.
                 agent_runnable = self.create_agent_runnable(allow_interrupts=False)
                 return await self.run_agent(agent_runnable)
 
@@ -982,7 +1005,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 format_instructions=format_instructions,
                 input_value=_extract_text_content(self.input_value),
                 run_prompt_fallback=_run_agent_for_fallback,
-                prefer_native=not has_tools,
+                prefer_native=not (has_tools or uses_context_middleware),
             )
         except (
             ExceptionWithMessageError,

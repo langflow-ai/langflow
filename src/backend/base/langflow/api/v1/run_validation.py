@@ -29,6 +29,8 @@ def flow_requires_hitl(graph_data: dict) -> bool:
         if node_data.get("type") == _HUMAN_INPUT_TYPE and node_id in edge_sources:
             return True
         template = (node_data.get("node") or {}).get("template") or {}
+        if node_data.get("type") == "Agent" and (template.get("tool_policy") or {}).get("value") == "ask":
+            return True
         rows = (template.get("tools_metadata") or {}).get("value")
         if isinstance(rows, list) and any(isinstance(row, dict) and row.get("approval_actions") for row in rows):
             return True
