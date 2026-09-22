@@ -103,6 +103,13 @@ class TestChatOutput(ComponentTestBaseWithClient):
         assert "truncated" not in result.text
         assert result.text.count("line") == MAX_TEXT_LENGTH
 
+    async def test_clean_data_applies_to_a_single_dataframe(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
+        component.input_value = DataFrame([{"text": "first\n\n\nsecond"}, {"text": None}])
+        result = await component.message_response()
+        assert "first<br/>second" in result.text
+        assert len(result.text.splitlines()) == 3  # header, separator, one row: the empty row is dropped
+
     async def test_invalid_input(self, component_class, default_kwargs):
         """Test handling of invalid input."""
         component = component_class(**default_kwargs)

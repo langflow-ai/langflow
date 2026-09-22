@@ -206,14 +206,14 @@ class ChatOutput(ChatComponent):
         """Convert input data to string with proper error handling."""
         self._validate_input()
         max_cell_chars = self._table_cell_limit()
+        clean_data: bool = getattr(self, "clean_data", False)
         if isinstance(self.input_value, list):
-            clean_data: bool = getattr(self, "clean_data", False)
             return "\n".join(
                 [safe_convert(item, clean_data=clean_data, max_cell_chars=max_cell_chars) for item in self.input_value]
             )
         if isinstance(self.input_value, Generator):
             return self.input_value
-        return safe_convert(self.input_value, max_cell_chars=max_cell_chars)
+        return safe_convert(self.input_value, clean_data=clean_data, max_cell_chars=max_cell_chars)
 
     def _table_cell_limit(self) -> int | None:
         """Same limit the UI truncates serialized text by, so raising it applies here too."""
