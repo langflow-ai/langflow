@@ -4,7 +4,7 @@ This module provides the Table class (formerly DataFrame) as the base type for t
 DataFrame is maintained as an alias for backwards compatibility.
 """
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import pandas as pd
 from langchain_core.documents import Document
@@ -44,6 +44,8 @@ class Table(pandas_DataFrame):
         >>> # From dictionary of lists
         >>> dataset = Table({"name": ["John", "Jane"], "age": [30, 25]})
     """
+
+    _metadata: ClassVar[list[str]] = ["_text_key", "_default_value"]
 
     def __init__(
         self,
