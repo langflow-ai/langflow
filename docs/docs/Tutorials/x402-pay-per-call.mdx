@@ -63,11 +63,11 @@ In Langflow, a custom component is a Python class that inherits from the
    is configured.
 
 ```python
-from typing import Optional
-
 import httpx
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
+
+from x402_client import complete_payment  # from the reference client below
 
 
 class PaidApiCaller(Component):
@@ -77,7 +77,7 @@ class PaidApiCaller(Component):
 
     inputs = [
         MessageTextInput(name="url", display_name="Endpoint URL"),
-        MessageTextInput(name="payer", display_name="Payer (optional)", info="A configured payer that can authorize the payment."),
+        MessageTextInput(name="payer", display_name="Payer (optional)", info="A configured payer reference (credential or signer id) that can authorize the payment."),
     ]
 
     outputs = [
@@ -90,24 +90,26 @@ class PaidApiCaller(Component):
         if resp.status_code != 402:
             return resp.text
 
-        # 402: read the payment requirements.
-        accepts = resp.json().get("accepts", [])
+        # 402: read the payment requirements. x402 carries them in the body's
+        # `accepts` array for v1; a v2 server may use a PAYMENT-REQUIRED header.
+        body = resp.json()
+        accepts = body.get("accepts", [])
         if not accepts or not self.payer:
             # No valid payment envelope and no payer: fail cleanly.
             return f"Payment required. Accepts: {accepts}"
 
-        # Complete the payment for the first accepted method, then retry.
-        # The authorize() call is a thin wrapper around the x402 handshake;
-        # see the reference client linked below.
-        authorization = self.payer.authorize(accepts[0])
-        resp = httpx.get(
-            self.url,
-            headers={"Authorization": authorization},
+        # Complete the payment for the first accepted method, then retry. The
+        # reference client builds the versioned request and sets the correct
+        # header (v1 X-PAYMENT / v2 PAYMENT-SIGNATURE) on the caller's behalf.
+        retried = complete_payment(
+            url=self.url,
+            requirement=accepts[0],
+            payer_ref=self.payer,
         )
-        return resp.text
+        return retried
 ```
 
-This component is intentionally small. The `payer.authorize(...)` call wraps the
+This component is intentionally small. The `complete_payment(...)` call wraps the
 payment handshake — choosing one of the `accepts[]` methods, creating the
 payment, and waiting for confirmation before the retry.
 
@@ -117,8 +119,8 @@ The payment handshake itself is a solved problem with a MIT-licensed reference
 client you can reuse instead of writing it from scratch. The
 [`openai-agents-nano-x402`](https://github.com/PANDeveloper001/openai-agents-nano-x402)
 adapter turns any `402` response into a payment for an OpenAI Agents SDK agent;
-its single-file handshake logic ports directly into the `payer.authorize()`
-method above.
+its single-file handshake logic ports directly into the `complete_payment()`
+function above.
 
 x402 is rail-agnostic — the `accepts[]` envelope names a scheme, network and
 asset. A feeless, instant rail like Nano (XNO) keeps sub-cent per-call payments
