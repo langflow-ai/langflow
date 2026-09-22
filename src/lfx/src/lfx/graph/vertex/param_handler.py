@@ -378,6 +378,27 @@ class ParameterHandler:
         enforce_storage_key_scope(file_path, self._file_access_scopes())
         return file_path
 
+    def _resolve_storage_key(self, file_path: str) -> str:
+        """Validate a FileInput value's namespace, then resolve it against the storage root.
+
+        ``get_storage_service`` returns ``None`` whenever no storage factory is registered --
+        standalone ``lfx`` never registers one, and ``get_service`` also degrades to ``None``
+        when resolution fails. There is then no storage root to resolve against, so the value
+        is already the path the component should see. Dereferencing the missing service
+        instead would raise ``AttributeError``, which is neither a denial nor a read: it
+        escapes the ``LocalFileAccessError`` contract that callers map to a 400, and it would
+        break every FileInput in an lfx-only run.
+
+        Skipping *resolution* never skips *containment*: the namespace check above still runs,
+        and ``_enforce_file_paths`` still pins the result to the executing graph's scopes --
+        it already treats a missing storage service as local storage.
+        """
+        storage_key = self._scoped_storage_key(file_path)
+        storage_service = self.storage_service
+        if storage_service is None:
+            return storage_key
+        return storage_service.resolve_component_path(storage_key)
+
     def process_file_value(self, file_path: str | list[str], *, is_list: bool) -> str | list[str]:
         """Resolve a FileInput value and enforce the configured storage boundary."""
         try:
@@ -386,14 +407,12 @@ class ParameterHandler:
                 if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
                     msg = "FileInput values must be file path strings."
                     raise LocalFileAccessError(msg)
-                full_path: str | list[str] = [
-                    self.storage_service.resolve_component_path(self._scoped_storage_key(path)) for path in paths
-                ]
+                full_path: str | list[str] = [self._resolve_storage_key(path) for path in paths]
             else:
                 if not isinstance(file_path, str):
                     msg = "FileInput values must be file path strings."
                     raise LocalFileAccessError(msg)
-                full_path = self.storage_service.resolve_component_path(self._scoped_storage_key(file_path))
+                full_path = self._resolve_storage_key(file_path)
         except StorageNamespaceError:
             # A namespace denial must never be downgraded. It is a ValueError subclass, so the
             # broad handler below would otherwise decide its fate by substring-matching an
