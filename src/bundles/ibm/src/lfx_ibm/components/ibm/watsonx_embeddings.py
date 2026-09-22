@@ -4,6 +4,7 @@ from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.model_utils import get_watsonx_embedding_models
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from lfx.log.logger import logger
@@ -133,6 +134,12 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         if bool(self.space_id) == bool(self.project_id):
             msg = "Exactly one of Project_ID or Space_ID must be selected"
             raise ValueError(msg)
+
+        # url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. The dropdown's canonical watsonx region endpoints are server-chosen;
+        # block internal/cloud-metadata destinations for anything else before connecting.
+        if self.url not in WatsonxEmbeddingsComponent._urls:
+            validate_provider_base_url(self.url)
 
         return WatsonxEmbeddings(
             apikey=api_key_value,

@@ -10,6 +10,15 @@ from lfx.services.cache.utils import CacheMiss
 from tests.base import ComponentTestBaseWithoutClient
 
 
+@pytest.fixture(autouse=True)
+def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise SQL execution against a local sqlite fixture, not SSRF containment."""
+    monkeypatch.setattr(
+        "lfx.utils.ssrf_protection.is_local_file_access_restricted",
+        lambda: False,
+    )
+
+
 class FakeSharedComponentCache:
     def __init__(self, values=None):
         self.values = values or {}

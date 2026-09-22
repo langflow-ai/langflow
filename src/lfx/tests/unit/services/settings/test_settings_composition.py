@@ -140,6 +140,8 @@ EXPECTED_FIELDS = {
     "ssrf_allowed_hosts",
     "connector_ssrf_validation_enabled",
     "connector_ssrf_allow_loopback",
+    "provider_credential_allowed_hosts",
+    "kb_allowed_hosts",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
@@ -337,7 +339,7 @@ def test_critical_defaults_unchanged():
     assert settings.allow_custom_components is True
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
-    assert settings.restrict_local_file_access is False
+    assert settings.restrict_local_file_access is True
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
     assert settings.mcp_server_allowed_packages is None
