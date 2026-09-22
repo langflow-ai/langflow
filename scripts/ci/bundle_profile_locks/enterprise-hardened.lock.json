@@ -2,14 +2,14 @@
   "application": {
     "distribution": "langflow",
     "requested": ">=1.12.0,<1.13.0",
-    "requirement": "langflow==1.12.2",
-    "resolved_version": "1.12.2"
+    "requirement": "langflow==1.12.3",
+    "resolved_version": "1.12.3"
   },
   "bundle_api": {
     "distribution": "lfx",
     "requested": ">=1.12.0.dev0,<1.13.0",
-    "requirement": "lfx==1.12.2",
-    "resolved_version": "1.12.2"
+    "requirement": "lfx==1.12.3",
+    "resolved_version": "1.12.3"
   },
   "bundles": [
     {
@@ -78,9 +78,9 @@
       "providers": [
         "lfx-google"
       ],
-      "requested": ">=0.1.2,<1.0.0",
-      "requirement": "lfx-google==0.1.2",
-      "resolved_version": "0.1.2"
+      "requested": ">=0.2.2,<1.0.0",
+      "requirement": "lfx-google==0.2.2",
+      "resolved_version": "0.2.2"
     },
     {
       "distribution": "lfx-ibm",
@@ -88,9 +88,9 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.2.4,<1.0.0",
-      "requirement": "lfx-ibm==0.2.4",
-      "resolved_version": "0.2.4"
+      "requested": ">=0.2.5,<1.0.0",
+      "requirement": "lfx-ibm==0.2.5",
+      "resolved_version": "0.2.5"
     },
     {
       "distribution": "lfx-ollama",
@@ -108,9 +108,9 @@
       "providers": [
         "lfx-openai"
       ],
-      "requested": ">=0.1.4,<1.0.0",
-      "requirement": "lfx-openai==0.1.4",
-      "resolved_version": "0.1.4"
+      "requested": ">=0.1.5,<1.0.0",
+      "requirement": "lfx-openai==0.1.5",
+      "resolved_version": "0.1.5"
     },
     {
       "distribution": "lfx-openai-compatible",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:637c840524644e60",
+  "profile_digest": "sha256:2a5058c86f0e5bb8",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

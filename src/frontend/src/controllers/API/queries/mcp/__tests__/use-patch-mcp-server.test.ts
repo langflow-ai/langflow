@@ -39,6 +39,7 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
   })),
 }));
 
+import { McpServerNotFoundError } from "../mcp-server-not-found-error";
 import { usePatchMCPServer } from "../use-patch-mcp-server";
 
 describe("usePatchMCPServer", () => {
@@ -88,6 +89,43 @@ describe("usePatchMCPServer", () => {
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["useGetMCPServer", "my-server"],
     });
+  });
+
+  it("raises a not-found error and refreshes the stale list when the server was deleted", async () => {
+    mockApiPatch.mockRejectedValue(
+      Object.assign(new Error("Request failed with status code 404"), {
+        isAxiosError: true,
+        response: { status: 404, data: { detail: "Server not found." } },
+      }),
+    );
+
+    const mutation = usePatchMCPServer();
+    const result = mutation.mutate({
+      name: "deleted-server",
+      url: "http://host/sse",
+    });
+
+    await expect(result).rejects.toBeInstanceOf(McpServerNotFoundError);
+    expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetMCPServers"],
+    });
+    expect(mockQueryClient.setQueryData).not.toHaveBeenCalled();
+  });
+
+  it("keeps the API detail message for errors other than not found", async () => {
+    mockApiPatch.mockRejectedValue(
+      Object.assign(new Error("Request failed with status code 403"), {
+        isAxiosError: true,
+        response: { status: 403, data: { detail: "MCP server is locked." } },
+      }),
+    );
+
+    const mutation = usePatchMCPServer();
+
+    await expect(
+      mutation.mutate({ name: "my-server", url: "http://host/sse" }),
+    ).rejects.toThrow("MCP server is locked.");
+    expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled();
   });
 
   it("clears cached error and mode in the optimistic update so a stuck error state refreshes", async () => {

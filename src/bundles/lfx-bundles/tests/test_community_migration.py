@@ -121,7 +121,12 @@ def test_cloudflare_embeddings_remain_picklable():
     assert restored._inference_url == embeddings._inference_url
 
 
-def test_chroma_persists_filtered_metadata_without_community(tmp_path):
+def test_chroma_persists_filtered_metadata_without_community(tmp_path, monkeypatch):
+    # Exercises metadata filtering against tmp_path, not containment; opt out of local-file restriction.
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
     component = ChromaVectorStoreComponent().set(
         collection_name="migration-test",
         persist_directory=str(tmp_path),
