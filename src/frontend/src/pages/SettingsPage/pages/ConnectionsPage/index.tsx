@@ -86,9 +86,17 @@ export default function ConnectionsPage() {
     if (owner === "other" && isSuperuser) return "others";
     return "mine";
   };
-  const visible = connections.filter(
-    (connection) => matches(connection) && viewOf(connection) === view,
+  const tabConnections = connections.filter(
+    (connection) => viewOf(connection) === view,
   );
+  const visible = tabConnections.filter(matches);
+  const getEmptyMessage = () => {
+    if (connections.length === 0) return t("connections.empty");
+    if (tabConnections.length > 0) return t("connections.noMatches");
+    if (view === "instance") return t("connections.emptyInstance");
+    if (view === "others") return t("connections.emptyOthers");
+    return t("connections.emptyTab");
+  };
 
   const run = async (
     connection: ConnectionRead,
@@ -189,7 +197,7 @@ export default function ConnectionsPage() {
           className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground"
           data-testid="connections-empty"
         >
-          {t("connections.empty")}
+          {getEmptyMessage()}
         </div>
       ) : (
         <ConnectionsTable

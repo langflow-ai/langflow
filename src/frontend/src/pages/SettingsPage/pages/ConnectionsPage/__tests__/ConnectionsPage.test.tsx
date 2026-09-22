@@ -74,6 +74,57 @@ const openTab = async (name: string) => {
 };
 
 describe("ConnectionsPage tabs", () => {
+  it("shows the initial empty state only when there are no connections", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [];
+    render(<ConnectionsPage />);
+
+    expect(screen.getByTestId("connections-empty")).toHaveTextContent(
+      "No connections yet.",
+    );
+  });
+
+  it.each([
+    ["Mine", "No connections in this tab yet.", "instance"],
+    ["Instance", "No instance connections yet.", "user"],
+    ["Other users", "No connections from other users yet.", "user"],
+  ] as const)("describes an empty %s tab", async (tab, message, ownership) => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "existing",
+        owner_id: SUPERUSER_ID,
+        ownership_mode: ownership,
+      }),
+    ];
+    render(<ConnectionsPage />);
+    await openTab(tab);
+
+    expect(screen.getByTestId("connections-empty")).toHaveTextContent(message);
+  });
+
+  it("distinguishes search misses from an empty tab and restores rows when cleared", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [connection({ id: "my-gmail", owner_id: SUPERUSER_ID })];
+    const user = userEvent.setup();
+    render(<ConnectionsPage />);
+
+    await user.type(screen.getByTestId("connections-search"), "unmatched");
+    expect(screen.getByTestId("connections-empty")).toHaveTextContent(
+      "No connections match your search.",
+    );
+
+    await openTab("Instance");
+    expect(screen.getByTestId("connections-empty")).toHaveTextContent(
+      "No instance connections yet.",
+    );
+
+    await openTab("Mine");
+    await user.clear(screen.getByTestId("connections-search"));
+    expect(within(panel()).getByText("my-gmail")).toBeInTheDocument();
+    expect(screen.queryByTestId("connections-empty")).not.toBeInTheDocument();
+  });
+
   it("keeps other users' private connections out of a superuser's Mine tab", async () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };
     mockConnections = [
