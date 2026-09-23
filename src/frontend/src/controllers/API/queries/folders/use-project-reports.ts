@@ -41,6 +41,7 @@ export type AgentConfiguration = {
     return_direct: boolean;
     approval_actions: string[];
     tool_pack: ToolPackBinding | null;
+    local_flow?: import("@/pages/MainPage/entities").LocalToolBinding | null;
   }[];
   flow_bindings: Record<
     string,

@@ -21,6 +21,12 @@ from lfx.projects.flow_slots import (
     flow_runtime_bindings,
     validate_project_binding,
 )
+from lfx.projects.local_tools import (
+    LocalToolBinding,
+    local_tool_bindings,
+    local_tool_definition,
+    validate_local_tool_source,
+)
 from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_manifest, tool_pack_references
 from lfx.projects.tools import TOOL_ORIGIN, tool_node_revision
 
@@ -152,6 +158,12 @@ class CompositionGraph:
                 raise ValueError(msg)
             for flow_id in tools:
                 self.local_source(project_id, flow_id)
+            for binding in local_tool_bindings(config.get("tool_bindings", {})).values():
+                if binding.flow_id not in tools:
+                    msg = "An archived local tool binding is not selected by its harness."
+                    raise ValueError(msg)
+                validate_local_tool_source(self.local_source(project_id, binding.flow_id), binding)
+                validate_binding_dependencies(binding, list(self.flows.values()))
             for reference in tool_pack_references(config.get("tool_packs", [])):
                 if reference != self.manifest(str(reference.project_id)).reference:
                     msg = "A Tool Pack changed. Review and save its reference before exporting."
@@ -192,6 +204,13 @@ class CompositionGraph:
                         if str(binding.tool.flow_id) != target:
                             msg = "An archived tool targets a different flow from its reviewed export."
                             raise ValueError(msg)
+                    elif origin.get("local_tool"):
+                        binding = LocalToolBinding.model_validate(origin["local_tool"])
+                        if binding.flow_id != target:
+                            msg = "An archived local tool targets a different reviewed flow."
+                            raise ValueError(msg)
+                        validate_local_tool_source(self.source(target), binding)
+                        validate_binding_dependencies(binding, list(self.flows.values()))
 
     def relocate(
         self,
@@ -246,6 +265,15 @@ class CompositionGraph:
                 updated.append(binding.model_dump())
             return updated if isinstance(value, list) else updated[0] if updated else None
 
+        def local_binding(value):
+            original_id = LocalToolBinding.model_validate(value).flow_id
+            visit(original_id)
+            binding = local_tool_definition(target.flows[original_id], list(target.flows.values()))
+            binding.version_id = version_ids[original_id]
+            for dependency in binding.dependencies:
+                dependency.version_id = version_ids[original_flow_ids[dependency.flow_id]]
+            return binding.model_dump(mode="json")
+
         def visit(flow_id):
             if flow_id in active:
                 msg = "The composition contains recursive flow or Tool Pack dependencies."
@@ -294,6 +322,8 @@ class CompositionGraph:
                     instruction.update(project_id=project_id, **value)
                 if isinstance(origin, dict):
                     origin.update(project_id=project_id, flow_id=flow_ids[selected])
+                    if origin.get("local_tool"):
+                        origin["local_tool"] = local_binding(origin["local_tool"])
                     if origin.get("tool_pack"):
                         original_binding = ToolPackToolBinding.model_validate(origin["tool_pack"])
                         manifest = pack(str(original_binding.reference.project_id))
@@ -337,6 +367,10 @@ class CompositionGraph:
                     config["flow_bindings"] = {
                         field_name: binding_value(field_name, value)
                         for field_name, value in config["flow_bindings"].items()
+                    }
+                if "tool_bindings" in config:
+                    config["tool_bindings"] = {
+                        flow_ids[key]: local_binding(value) for key, value in config["tool_bindings"].items()
                     }
                 if isinstance(config.get("_applied"), dict):
                     config["_applied"] = {

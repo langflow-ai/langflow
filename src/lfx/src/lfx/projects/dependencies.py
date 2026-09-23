@@ -27,6 +27,15 @@ def flow_references(data: dict) -> tuple[FlowReference, ...]:
         name = template.get("flow_name_selected", template.get("flow_name", {})).get("value")
         origin = node_data.get(BINDING_ORIGIN) or {}
         pack_tool = (node_data.get("_harness_tool") or {}).get("tool_pack")
+        local_tool = (node_data.get("_harness_tool") or {}).get("local_tool")
+        if local_tool:
+            from lfx.projects.local_tools import LocalToolBinding
+
+            reviewed = LocalToolBinding.model_validate(local_tool)
+            if reviewed.flow_id != flow_id:
+                msg = "A nested local tool adapter points to a different reviewed flow."
+                raise ValueError(msg)
+            origin = reviewed.model_dump()
         if pack_tool:
             reviewed_tool = pack_tool["tool"]
             if str(reviewed_tool["flow_id"]) != flow_id:

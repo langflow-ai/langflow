@@ -61,13 +61,19 @@ async def get_harness_flow(*, user_id: str, binding, field_name: str, require_cu
     from langflow.services.database.models.user.model import User
 
     value = binding.model_dump()
-    parsed = ProjectFlowBindings.model_validate({field_name: [value] if field_name == "hooks" else value})
+    if field_name == "tools":
+        from lfx.projects.local_tools import LocalToolBinding
+
+        parsed_binding = LocalToolBinding.model_validate(value)
+    else:
+        parsed = ProjectFlowBindings.model_validate({field_name: [value] if field_name == "hooks" else value})
+        parsed_binding = parsed.entries()[0][1]
     async with session_scope() as session:
         user = await session.get(User, UUID(user_id))
         if user is None:
             raise HTTPException(404, "Harness flow not found")
         return await resolve_binding_snapshot(
-            session, user, parsed.entries()[0][1], field_name, require_current=require_current
+            session, user, parsed_binding, field_name, require_current=require_current
         )
 
 

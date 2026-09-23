@@ -6,10 +6,12 @@ export function FlowBindingDependencies({
   dependencies = [],
   reviewed,
   onOpen,
+  title,
 }: {
   dependencies?: BoundFlowDependency[];
   reviewed?: BoundFlowDependency[];
   onOpen?: () => void;
+  title?: string;
 }) {
   const { t } = useTranslation();
   const records = [
@@ -23,7 +25,7 @@ export function FlowBindingDependencies({
   return (
     <details className="rounded-md border border-border p-3 text-xs">
       <summary className="cursor-pointer font-medium">
-        {t("toolPacks.nestedDependencies")} · {records.length}
+        {title ?? t("toolPacks.nestedDependencies")} · {records.length}
       </summary>
       <ul className="mt-3 space-y-3">
         {records.map((item) => {
