@@ -30,6 +30,10 @@ export type AgentConfiguration = {
     parameters: Record<string, unknown>;
   };
   system_prompt: string;
+  skills?: {
+    packs: import("@/pages/MainPage/pages/harnessPage/skills").SkillPackManifest[];
+    global_tool_pack_ids: string[];
+  } | null;
   runtime: Record<string, string | number>;
   history_messages: number;
   loaded_history_messages: number;

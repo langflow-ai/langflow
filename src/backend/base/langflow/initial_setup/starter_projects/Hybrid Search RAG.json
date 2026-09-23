@@ -3366,6 +3366,36 @@
                 "type": "str",
                 "value": ""
               },
+              "skill_bindings": {
+                "_input_type": "MultilineInput",
+                "advanced": true,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Reviewed skills",
+                "dynamic": false,
+                "info": "Reviewed Skill Pack content and tool scopes managed by the harness.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "skill_bindings",
+                "override_skip": true,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
               "stream": {
                 "_input_type": "BoolInput",
                 "advanced": true,
@@ -3465,36 +3495,6 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "other",
-                "value": ""
-              },
-              "skill_bindings": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "ai_enabled": false,
-                "api_editable": false,
-                "copy_field": false,
-                "display_name": "Reviewed skills",
-                "dynamic": false,
-                "info": "Reviewed Skill Pack content and tool scopes managed by the harness.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "skill_bindings",
-                "override_skip": true,
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
                 "value": ""
               }
             },
