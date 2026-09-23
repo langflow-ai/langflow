@@ -10,8 +10,9 @@ Google Workspace, Microsoft 365, and Slack components can re-use **Connections**
 
 ## Prerequisite
 
-* Configure the provider's OAuth registration. 
+* Configure a provider's OAuth registration.
   To configure OAuth, see [Configure connection OAuth](./connection-oauth).
+* Logged into Langflow server as superuser to create connections
 
 ## Add a connection
 
@@ -26,48 +27,50 @@ To add a connection, do the following:
 7. If you're connecting Slack, select whether the connection acts as the signed-in user, or as a Slackbot.
    Google Workspace and Microsoft 365 connections always act as the signed-in user.
 8. In **Scopes to request**, select the permissions your flows require, and clear the rest.
-   Components that perform actions through connections require specific scopes. For example, the Google component requires the `Gmail: Send Email` scope to send emails.
+   Components that perform actions through connections require specific scopes. For example, the Gmail component requires the `gmail.send` scope to send emails.
 9. Click **Continue**, and complete consent in the OAuth provider window.
    If **Continue** is unavailable and Langflow reports that no OAuth registration is configured for the provider, you have to first configure the OAuth connection, or ask your server administrator to configure it.
    For more information, see [Configure connection OAuth](./connection-oauth).
 
 ## Use a connection in a flow
 
-1. Add a component that takes a connection, such as **Gmail: Send Email**, a Microsoft 365 component, or a Slack component.
-2. In the component's connection field, select the connection.
+To use a connection in a flow, do the following:
 
-   The field is **Google Connection**, **Microsoft Connection**, or **Slack Connection**, depending on the component.
-   It stores the handle, such as `google/work`. The token never appears in the flow.
+1. Add a component that uses a connection, such as [**Gmail: Send Email**](./bundles-google), a [Microsoft 365 component](./bundles-microsoft), or a [Slack component](./bundles-slack).
+2. In the component's connection field, select the connection you want to use.
+   The connection field displays which Scope is required. For example, **Gmail: Send Gmail** requires `gmail.send`.
+   A connection stores the handle, such as `google/work`, and the OAuth token never appears in the flow.
 
-For the actions each provider offers, see [Google components](../Components/bundles-google.mdx), [Microsoft 365 components](../Components/bundles-microsoft.mdx), and [Slack](../Components/bundles-slack.mdx).
+## Share a connection with other users
 
-## Find a connection
+If you're logged in as a Langflow superuser, the **Add connection** pane includes an additional **Share with the whole instance** checkbox.
+Enable this box to share the connection with all users on the Langflow server.
+The connection appears in users' **Instance** tab.
 
-**Settings**, then **Connections**, lists the connections you can use.
-The page subtitle is the rule for what you see: tokens stay on the server, and only metadata is shown.
+## Include connections with exported flows
 
-| Tab | What it lists |
-| --- | --- |
-| **Mine** | Connections you own, and connections shared with you. |
-| **Instance** | Connections shared with the whole instance. |
-| **Other users** | Other people's connections. This tab is visible to superusers. |
+An exported flow keeps each connection field as its handle, such as `google/work`.
+The file does not include the token, account, or scopes.
 
-**Search name, handle, or account** filters the current tab.
+To transfer a flow connection from one server to another, do the following:
 
-Each row shows the display name, handle, owner, signed-in account, status, granted scopes, and the last credential check.
+1. Export the flow.
+   On the **Projects** page, click <Icon name="Ellipsis" aria-hidden="true" /> **More** on the flow, and then select **Export**.
+   Langflow downloads a JSON file. Each connection field in the JSON file includes the connection handle.
 
-| Status | Meaning |
-| --- | --- |
-| **Ready** | Authorized and usable. |
-| **Pending** | Created, and consent is not finished. |
-| **Expired** | The credential expired. Reconnect the connection. |
-| **Revoked** | Authorization was removed locally. |
-| **Error** | The stored credential cannot be used. |
+2. Import the flow on the other Langflow server.
+   On the new server's **Projects** page, click <Icon name="Upload" aria-hidden="true" /> **Upload a flow**, and then select the JSON file.
 
-**Not signed in yet** means consent has not completed.
-**Signed in, account not shared** means a credential exists, but the provider did not return an account name.
+3. On the new server, create a connection with the same provider and handle.
+   For example, for a connection with the handle `google/work`, select **Google Workspace** and enter the handle `work`.
 
-## Manage a connection
+4. Complete the OAuth consent, and request the scopes the flow's components need.
+   For more information, see [Add a connection](#add-a-connection).
+
+5. Run the flow.
+   The flow uses the saved handle.
+
+## Manage connections
 
 Open <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the row.
 
@@ -82,21 +85,4 @@ Revoking a Google or Slack connection also asks the provider to revoke the token
 Microsoft Entra has no per-grant revocation endpoint for this flow, so an administrator removes the app's consent in Entra when upstream revocation is required.
 For the provider differences, see [Provider revocation and token rotation](./connection-oauth.mdx#provider-revocation-and-token-rotation).
 
-## Share a connection with the instance
 
-A superuser can select **Share with the whole instance** in **Add connection**.
-That connection appears on the **Instance** tab.
-Creating or changing an instance connection is limited to superusers.
-
-A connection you create without that option stays under **Mine**.
-
-## Move a flow to another Langflow deployment
-
-Exporting a flow keeps each connection field as its handle.
-The export does not include the token, the account, or the granted scopes.
-
-Importing the flow keeps the component and the handle unchanged.
-Langflow does not substitute a different provider, action, or connection.
-If the target deployment has no connection with that handle, the run fails with `connection-unresolved` until you create one with the same provider and handle, or you select a different connection on the component.
-
-For the other failure codes, see [Move a flow between deployments](./connection-oauth.mdx#move-a-flow-between-deployments).
