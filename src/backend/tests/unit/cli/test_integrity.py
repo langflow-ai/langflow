@@ -279,3 +279,59 @@ class TestAuthorization:
 
         assert check.status == "ok"
         assert "no compiled policy" in check.summary
+
+
+class TestLivePgvector:
+    """Against a real pgvector: a reachable store passes, and a short one is caught.
+
+    Opt-in, like the other live pgvector tests: set
+    ``LANGFLOW_RUN_PGVECTOR_INTEGRATION_TESTS=1`` and ``PGVECTOR_CONNECTION_STRING``.
+    """
+
+    @pytest.fixture
+    async def pg_kb(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        import os
+
+        if os.getenv("LANGFLOW_RUN_PGVECTOR_INTEGRATION_TESTS") != "1" or not os.getenv("PGVECTOR_CONNECTION_STRING"):
+            pytest.skip("Set LANGFLOW_RUN_PGVECTOR_INTEGRATION_TESTS=1 and PGVECTOR_CONNECTION_STRING")
+        from langchain_core.documents import Document
+        from langchain_core.embeddings import DeterministicFakeEmbedding
+
+        name = f"kb-pg-{uuid.uuid4().hex[:6]}"
+        # Same owner and name the check will use, so both address the same table.
+        backend = create_backend(
+            "postgres",
+            kb_name=name,
+            kb_path=kb_root,
+            backend_config={},
+            embedding_function=DeterministicFakeEmbedding(size=8),
+            user_id=active_user.id,
+        )
+        await backend.ensure_ready()
+        connection = await backend.test_connection()
+        if not connection.ok:
+            pytest.skip(f"pgvector not reachable: {connection.message}")
+        await backend.add_documents([Document(page_content=f"chunk {i}") for i in range(4)])
+        try:
+            yield active_user, name
+        finally:
+            await backend.delete_collection()
+            await backend.teardown()
+
+    async def test_a_reachable_store_whose_count_matches_passes(self, pg_kb):
+        user, name = pg_kb
+        await _add(KnowledgeBaseRecord(name=name, user_id=user.id, backend_type="postgres", chunks=4))
+
+        report = await check_instance()
+
+        assert _check(report, "knowledge bases").status == "ok"
+        assert _check(report, "vector counts").status == "ok"
+
+    async def test_a_store_holding_fewer_vectors_than_its_row_is_reported(self, pg_kb):
+        user, name = pg_kb
+        await _add(KnowledgeBaseRecord(name=name, user_id=user.id, backend_type="postgres", chunks=6))
+
+        counts = _check(await check_instance(), "vector counts")
+
+        assert counts.status == "fail"
+        assert "store holds 4, row records 6" in counts.problems[0]
