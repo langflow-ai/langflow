@@ -38,8 +38,7 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
-    # SQLModel 0.0.45 changes inferred datetime storage; adopt it with a schema migration.
-    "sqlmodel>=0.0.37,<0.0.45",
+    "sqlmodel~=0.0.46",
     "pydantic>=2.13.0,<2.14",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
