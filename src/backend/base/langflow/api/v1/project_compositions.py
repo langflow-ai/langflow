@@ -187,6 +187,7 @@ async def export_composition(
                     binding = ToolPackToolBinding.model_validate(pack)
                     versions.append(binding)
                     versions.extend(binding.dependency_versions)
+    versions.extend(dependency for binding in list(versions) for dependency in getattr(binding, "dependencies", []))
     checked = set()
     for binding in versions:
         if not binding.version_id:

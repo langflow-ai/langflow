@@ -258,6 +258,28 @@ class RunFlowBaseComponent(Component):
                 graph.frozen_tool_flows = self.graph.frozen_tool_flows
                 graph.description = frozen.get("description")
                 return graph
+            if instruction := self._instruction_binding():
+                from lfx.projects.bindings import validate_instruction_binding
+                from lfx.projects.invocation import reviewed_flow_source
+
+                if instruction.flow_id != str(flow_id_selected):
+                    msg = "The bound Instructions flow was changed on the canvas. Update the harness binding."
+                    raise ValueError(msg)
+                key = (getattr(self.graph, "_run_id", None), instruction.model_dump_json())
+                if getattr(self, "_instruction_snapshot_key", None) != key:
+                    self._instruction_snapshot = await reviewed_flow_source(
+                        self, instruction, field_name="system_prompt", validate=validate_instruction_binding
+                    )
+                    self._instruction_snapshot_key = key
+                snapshot = self._instruction_snapshot
+                graph = Graph.from_payload(
+                    deepcopy(snapshot["data"]),
+                    flow_id=instruction.flow_id,
+                    flow_name=snapshot.get("name"),
+                    user_id=self.user_id,
+                )
+                graph.frozen_tool_flows = snapshot.get("dependencies")
+                return graph
             if binding is not None:
                 run_id = getattr(getattr(self, "graph", None), "run_id", None)
                 key = (run_id, binding)
@@ -508,6 +530,9 @@ class RunFlowBaseComponent(Component):
             from lfx.projects.bindings import validate_instruction_result
 
             return validate_instruction_result(getattr(self, "_last_instruction_output", None))
+        values = getattr(self, "_last_flow_outputs", {})
+        if (vertex_id, output_name) in values:
+            return values[vertex_id, output_name]
         if not run_outputs:
             return None
 
@@ -768,6 +793,18 @@ class RunFlowBaseComponent(Component):
                 # would deny every connection inside a Run Flow node.
                 execution_principal=getattr(self.graph, "execution_principal", None),
             )
+            from lfx.template.field.base import UNDEFINED
+
+            # The transport result may replace values with display artifacts (for
+            # example {repr, raw, type} for text). A flow edge needs the actual
+            # declared value, just like an edge within the child graph.
+            self._last_flow_outputs = {
+                (vertex.id, name): output.value
+                for vertex in graph.vertices
+                if vertex.built and vertex.custom_component is not None
+                for name, output in vertex.custom_component.get_outputs_map().items()
+                if output.value is not UNDEFINED
+            }
             if binding is not None:
                 terminal = graph.get_vertex(binding.node_id)
                 if not terminal.built or terminal.custom_component is None:

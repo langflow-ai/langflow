@@ -335,16 +335,23 @@ async def upload_project_flows(
             ) from exc
     has_bindings = new_project.project_type == "agent-harness" and bool(bindings)
     if has_bindings:
+        from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
+
         id_map = {str(flow.id): str(uuid4()) for flow in flow_list.flows if flow.id is not None}
         by_original_id = {str(flow.id): flow for flow in flow_list.flows}
         if len(id_map) != len(flow_list.flows):
             raise HTTPException(422, "Every bound project flow must have a unique ID in the archive.")
         by_original_name = {name: flow_id for flow_id, name in original_names.items()}
         config = config_from_request(new_project.project_config) or {}
+        original_definitions = [
+            {"id": key, "name": original_names[key], "description": flow.description or "", "data": flow.data or {}}
+            for key, flow in by_original_id.items()
+        ]
         for field_name, reviewed in parsed_bindings.entries():
             try:
                 source = by_original_id[reviewed.flow_id]
                 validate_project_binding(field_name, source.data or {}, reviewed)
+                validate_binding_dependencies(reviewed, original_definitions)
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(
                     422, f"The imported {BINDING_LABELS[field_name]} binding is invalid: {exc}"
@@ -353,6 +360,7 @@ async def upload_project_flows(
             for flow in flow_list.flows:
                 for field_name, binding in flow_runtime_bindings(flow.data or {}):
                     validate_project_binding(field_name, by_original_id[binding.flow_id].data or {}, binding)
+                    validate_binding_dependencies(binding, original_definitions)
         except (ValueError, KeyError, TypeError) as exc:
             raise HTTPException(422, "An imported Agent has an invalid or unavailable runtime binding.") from exc
         if config.get("agent_flow_id") in id_map:
@@ -389,7 +397,10 @@ async def upload_project_flows(
                             origin.pop("version_id", None)
         try:
             remap_runtime_bindings(
-                {flow_id: flow.data or {} for flow_id, flow in by_original_id.items()}, id_map, str(new_project.id)
+                {flow_id: flow.data or {} for flow_id, flow in by_original_id.items()},
+                id_map,
+                str(new_project.id),
+                flow_names={key: flow.name for key, flow in by_original_id.items()},
             )
         except (ValueError, KeyError, TypeError) as exc:
             raise HTTPException(422, "Could not remap the imported harness bindings.") from exc
@@ -398,6 +409,18 @@ async def upload_project_flows(
             binding.flow_id = id_map[binding.flow_id]
             binding.revision = flow_revision(source.data or {})
             binding.version_id = None
+            binding.dependencies = binding_dependencies(
+                binding.flow_id,
+                [
+                    {
+                        "id": str(flow.id),
+                        "name": flow.name,
+                        "description": flow.description or "",
+                        "data": flow.data or {},
+                    }
+                    for flow in flow_list.flows
+                ],
+            )
         config["flow_bindings"] = parsed_bindings.model_dump(exclude_unset=True, exclude_none=True)
         new_project.project_config = config
     created = await create_flows(session=session, flow_list=flow_list, current_user=current_user)
