@@ -5,6 +5,11 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { extractApiErrorMessage } from "../../helpers/extract-api-error-message";
 import { UseRequestProcessor } from "../../services/request-processor";
+import {
+  isNotFoundResponse,
+  McpServerNotFoundError,
+  refreshMcpServerList,
+} from "./mcp-server-not-found-error";
 import type { getMCPServersResponse } from "./use-get-mcp-servers";
 
 interface PatchMCPServerResponse {
@@ -60,6 +65,10 @@ export const usePatchMCPServer: useMutationFunctionType<
         message: res.data?.message || "MCP Server patched successfully",
       };
     } catch (error: unknown) {
+      if (isNotFoundResponse(error)) {
+        refreshMcpServerList(queryClient);
+        throw new McpServerNotFoundError(body.name);
+      }
       throw new Error(
         extractApiErrorMessage(
           error as Parameters<typeof extractApiErrorMessage>[0],

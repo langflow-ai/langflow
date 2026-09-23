@@ -9,6 +9,7 @@ from lfx.io import Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.utils.jq_security import validate_jq_program
 
 
 class ParseJSONDataComponent(Component):
@@ -91,6 +92,7 @@ class ParseJSONDataComponent(Component):
             msg = "jq is required for Parse JSON. Install with: pip install jq"
             raise ImportError(msg) from None
 
+        validate_jq_program(self.query)
         results = jq.compile(self.query).input_text(full_filter_str).all()
         logger.info("results: %s", results)
         return [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]
