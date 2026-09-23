@@ -11,7 +11,9 @@ from the environment, so they prove the property whether or not langflow happens
 
 import builtins
 import importlib
+import json
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -91,3 +93,38 @@ def test_get_graph_runs_without_the_langflow_provider_policy():
     # An async context manager that yields and does nothing.
     assert hasattr(policy, "__aenter__")
     assert hasattr(policy, "__aexit__")
+
+
+@pytest.mark.usefixtures("langflow_blocked")
+async def test_standalone_caller_has_no_admin_exemption():
+    module = importlib.import_module("lfx.base.tools.run_flow")
+
+    assert await module.get_user_is_superuser("11111111-1111-1111-1111-111111111111") is False
+
+
+@pytest.mark.usefixtures("langflow_blocked")
+async def test_standalone_sibling_graph_still_passes_component_policy(tmp_path, monkeypatch):
+    from lfx.graph.graph.base import Graph
+    from lfx.utils.flow_validation import CustomComponentValidationError
+
+    module = importlib.import_module("lfx.base.tools.run_flow")
+    (tmp_path / "child.json").write_text(json.dumps({"data": {"nodes": [], "edges": []}}))
+    component = module.RunFlowBaseComponent()
+    component.cache_flow = False
+    parent = Graph()
+    parent.context["project_dir"] = str(tmp_path)
+    component._vertex = SimpleNamespace(graph=parent)
+
+    graph = await component.get_graph(flow_name_selected="child")
+    assert isinstance(graph, Graph)
+
+    async def deny_build(payload, *, is_superuser):
+        assert payload == {"nodes": [], "edges": []}
+        assert is_superuser is False
+        msg = "restricted by component policy"
+        raise CustomComponentValidationError(msg)
+
+    monkeypatch.setattr(module, "custom_component_admin_only_enabled", lambda: True)
+    monkeypatch.setattr(module, "prepare_flow_build_for_user", deny_build)
+    with pytest.raises(CustomComponentValidationError, match="restricted by component policy"):
+        await component.get_graph(flow_name_selected="child")
