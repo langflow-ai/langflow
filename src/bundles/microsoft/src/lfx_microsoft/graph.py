@@ -128,6 +128,25 @@ def graph_error_code(payload: Any) -> str:
     return _graph_error_field(payload, "code")
 
 
+def _mailbox_unavailable_error(status: int) -> InvalidRequestError:
+    return InvalidRequestError(
+        "Microsoft Graph cannot reach this user's mailbox.",
+        hint=(
+            "Assign the user a Microsoft 365 license that includes Exchange Online; "
+            "mailboxes that are inactive or hosted on-premises are not supported."
+        ),
+        provider=PROVIDER_ID,
+        http_status=status,
+    )
+
+
+def _is_mailbox_request(url: str) -> bool:
+    path = httpx.URL(url).path.casefold()
+    return path in {"/v1.0/me/messages", "/v1.0/me/sendmail"} or (
+        path.startswith("/v1.0/me/mailfolders/") and path.endswith("/messages")
+    )
+
+
 def _setup_error(status: int, code: str, message: str) -> InvalidRequestError | None:
     """Recognize rejections caused by the tenant's Microsoft 365 setup.
 
@@ -137,15 +156,7 @@ def _setup_error(status: int, code: str, message: str) -> InvalidRequestError | 
     is never forwarded: the error carries fixed, sanitized text.
     """
     if code == _MAILBOX_UNAVAILABLE_CODE:
-        return InvalidRequestError(
-            "Microsoft Graph cannot reach this user's mailbox.",
-            hint=(
-                "Assign the user a Microsoft 365 license that includes Exchange Online; "
-                "mailboxes that are inactive or hosted on-premises are not supported."
-            ),
-            provider=PROVIDER_ID,
-            http_status=status,
-        )
+        return _mailbox_unavailable_error(status)
     if status == HTTP_BAD_REQUEST and "license" in message:
         return InvalidRequestError(
             "The Microsoft 365 tenant or user has no license for this service.",
@@ -325,14 +336,28 @@ class GraphClient:
             raise error
 
         # Exactly one reactive re-resolve; the lease refuses a second.
-        token = await self._lease.get_token_after_auth_error(error, rejected_token=token)
+        refreshed_token = await self._lease.get_token_after_auth_error(error, rejected_token=token)
         try:
-            response = await self._send(method, url, token=token, params=params, json_body=json_body, headers=headers)
+            response = await self._send(
+                method, url, token=refreshed_token, params=params, json_body=json_body, headers=headers
+            )
         except httpx.TransportError as exc:
             raise ProviderUnavailableError(provider=PROVIDER_ID) from exc
         if response.status_code in _REDIRECT_STATUSES and allow_redirect:
             return response
         if not HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT:
+            # Some mailbox-less guest accounts receive a body-free 401 even
+            # after Graph has rejected one token and the lease refreshed it.
+            # Only infer mailbox setup for Outlook paths with a different token;
+            # explicit token errors and other Graph actions keep auth semantics.
+            if (
+                response.status_code == HTTP_UNAUTHORIZED
+                and not response.content
+                and refreshed_token != token
+                and _is_mailbox_request(url)
+                and "error=" not in response.headers.get("www-authenticate", "").casefold()
+            ):
+                raise _mailbox_unavailable_error(response.status_code)
             raise integration_error_for_response(response)
         return response
 
