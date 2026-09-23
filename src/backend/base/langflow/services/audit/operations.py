@@ -39,6 +39,7 @@ from langflow.services.audit.writer import (
     record_audit_event_after_rollback,
     stage_audit_event,
 )
+from langflow.services.authorization.refusal import is_authorization_refusal
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
@@ -247,7 +248,7 @@ def audited_route(
     operation: AuditOperation,
     *,
     resource_id_param: str | None = None,
-    session_param: str = "session",
+    session_param: str | None = "session",
     user_param: str = "current_user",
     describe: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
     authorized: bool = False,
@@ -281,8 +282,13 @@ def audited_route(
             try:
                 return await route(*args, **kwargs)
             except Exception as exc:
-                if audited.authorized and not audited.committed:
-                    await _release(kwargs[session_param])
+                # A guard that refuses records its decision in authz_audit_log;
+                # recording it here too would read as an operation that failed.
+                if audited.authorized and not audited.committed and not is_authorization_refusal(exc):
+                    # A route that owns its session has already left it; the
+                    # failure event opens its own transaction either way.
+                    if session_param is not None:
+                        await _release(kwargs[session_param])
                     await record_audit_event_after_rollback(
                         audited.draft(AuditResult.FAILED, classify_failure(exc, resource_type))
                     )
