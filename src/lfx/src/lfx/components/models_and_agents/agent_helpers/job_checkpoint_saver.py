@@ -7,10 +7,10 @@ hold raw messages; writes hold Interrupt tuples), so each value is encoded with 
 saver's own serde (``dumps_typed`` → ``('msgpack', bytes)``) and base64'd into the
 JSON blob — ``json.dumps``/``dumpd`` would lose the Interrupt.
 
-Only the latest checkpoint is kept (resume loads the latest), matching the observed
-contract: ``aput(ckpt)`` then ``aput_writes(__interrupt__)`` then ``aget_tuple`` →
-that checkpoint + the interrupt write. The store handle is INJECTED (two async
-callables) so lfx never imports langflow.
+Only the latest checkpoint is kept (resume loads the latest). Async task writes can
+arrive BEFORE their checkpoint; retain them by checkpoint ID until that snapshot
+lands. Otherwise a later ``aput`` can erase a pending approval. The store handle is
+INJECTED (two async callables) so lfx never imports langflow.
 """
 
 from __future__ import annotations
@@ -63,8 +63,12 @@ class JobCheckpointSaver(BaseCheckpointSaver):
     async def aput(self, config, checkpoint, metadata, new_versions) -> dict[str, Any]:  # noqa: ARG002
         configurable = config.get("configurable", {})
         async with self._lock:
-            # A new checkpoint supersedes the prior step; its writes start empty and
-            # accumulate via aput_writes (the interrupt write lands here next).
+            previous = await self._read()
+            checkpoint_id = checkpoint["id"]
+            pending = previous.get("pending_writes", {})
+            writes = pending.pop(checkpoint_id, [])
+            if previous.get("checkpoint_id") == checkpoint_id:
+                writes = previous.get("writes", []) + writes
             blob = {
                 "v": 1,
                 "thread_id": configurable.get("thread_id"),
@@ -72,7 +76,10 @@ class JobCheckpointSaver(BaseCheckpointSaver):
                 "checkpoint_id": checkpoint["id"],
                 "checkpoint": self._encode(checkpoint),
                 "metadata": self._encode(metadata),
-                "writes": [],
+                "writes": writes,
+                # LangGraph checkpoint IDs are monotonically increasing. Earlier
+                # task results are already represented by this newer snapshot.
+                "pending_writes": {key: value for key, value in pending.items() if key > checkpoint_id},
             }
             await self._save_blob(self._job_id, _KIND, json.dumps(blob))
         return self._result_config(blob)
@@ -80,9 +87,15 @@ class JobCheckpointSaver(BaseCheckpointSaver):
     async def aput_writes(self, config, writes: Sequence[tuple[str, Any]], task_id: str, task_path: str = "") -> None:  # noqa: ARG002
         async with self._lock:
             blob = await self._read()
-            if not blob:
+            checkpoint_id = config["configurable"]["checkpoint_id"]
+            latest_id = blob.get("checkpoint_id")
+            if latest_id is not None and checkpoint_id < latest_id:
                 return
-            stored = blob.setdefault("writes", [])
+            stored = (
+                blob.setdefault("writes", [])
+                if checkpoint_id == latest_id
+                else blob.setdefault("pending_writes", {}).setdefault(checkpoint_id, [])
+            )
             for channel, value in writes:
                 stored.append([task_id, channel, *self._encode(value)])
             await self._save_blob(self._job_id, _KIND, json.dumps(blob))

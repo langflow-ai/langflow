@@ -87,7 +87,14 @@ def _reshape_chain_end(event: dict[str, Any]) -> dict[str, Any]:
             final_text = msg.content if isinstance(msg.content, str) else _extract_text(msg.content)
             break
 
-    return {**event, "data": {**data, "output": AgentFinish(return_values={"output": final_text}, log="")}}
+    return_values: dict[str, Any] = {"output": final_text}
+    if evidence := output.get("harness_source_evidence"):
+        from lfx.projects.artifacts import AgentRunResult, CollectedEvidence
+
+        return_values["agent_run_result"] = AgentRunResult(
+            answer=final_text, evidence=CollectedEvidence.model_validate(evidence)
+        ).model_dump(mode="json")
+    return {**event, "data": {**data, "output": AgentFinish(return_values=return_values, log="")}}
 
 
 def _extract_text(content: object) -> str:
