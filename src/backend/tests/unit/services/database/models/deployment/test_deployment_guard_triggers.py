@@ -38,8 +38,8 @@ if TYPE_CHECKING:
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
 
 
-def _utcnow_naive() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _create_sqlite_engine() -> AsyncEngine:
@@ -76,7 +76,7 @@ async def db_fixture(db_engine):
 
 @pytest.fixture
 async def user(db: AsyncSession) -> User:
-    now = _utcnow_naive()
+    now = _utcnow()
     row = User(username="testuser", password=_TEST_PASSWORD, is_active=True, create_at=now, updated_at=now)
     db.add(row)
     await db.commit()
@@ -109,7 +109,7 @@ async def flow(db: AsyncSession, user: User, source_project: Folder) -> Flow:
         user_id=user.id,
         folder_id=source_project.id,
         data={"nodes": [], "edges": []},
-        updated_at=_utcnow_naive(),
+        updated_at=_utcnow(),
     )
     db.add(row)
     await db.commit()
@@ -245,7 +245,7 @@ async def test_flow_moves_guard_blocks_when_any_group_has_deployed_flow(
         user_id=user.id,
         folder_id=other_source_project.id,
         data={"nodes": [], "edges": []},
-        updated_at=_utcnow_naive(),
+        updated_at=_utcnow(),
     )
     db.add(undeployed_flow)
     await db.commit()

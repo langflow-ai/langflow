@@ -1,6 +1,6 @@
 [project]
 name = "lfx-microsoft"
-version = "0.1.0"
+version = "0.1.1"
 description = "Microsoft 365 and Teams actions backed by delegated Microsoft Graph permissions."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

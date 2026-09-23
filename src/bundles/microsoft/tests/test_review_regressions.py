@@ -127,9 +127,11 @@ async def test_outlook_attachments_obey_storage_containment(resolver_factory, tm
         assert recorder.requests == []
 
 
-async def test_attachment_read_is_bounded_even_when_stat_understates_the_size(resolver_factory, tmp_path, monkeypatch):
+async def test_attachment_read_is_bounded_even_when_stat_understates_the_size(
+    resolver_factory, user_storage_dir, monkeypatch
+):
     resolver_factory(credential(scopes={"Mail.Send"}))
-    path = tmp_path / "growing.txt"
+    path = user_storage_dir / "growing.txt"
     path.touch()
     monkeypatch.setattr(outlook_send, "MAX_ATTACHMENT_BYTES", 4)
     reads = []
@@ -150,6 +152,7 @@ async def test_attachment_read_is_bounded_even_when_stat_understates_the_size(re
         body="Attached",
         attachments=[str(path)],
     )
+    component._user_id = user_storage_dir.name
     with pytest.raises(ValueError, match="exceed"):
         await component.send_mail()
     assert reads == [5]

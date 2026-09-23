@@ -211,7 +211,7 @@ def test_published_images_pin_hardened_package_managers() -> None:
         ("IP_ADDRESS_VERSION", "10.3.1", "ip-address", '"ip-address": "10.3.1"'),
         ("BRACE_EXPANSION_VERSION", "5.0.9", "brace-expansion", '"brace-expansion": "5.0.9"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
-        ("UNDICI_VERSION", "6.28.0", "undici", 'undici: "6.28.0"'),
+        ("UNDICI_VERSION", "6.28.1", "undici", 'undici: "6.28.1"'),
     ):
         assert f'{variable}="{version}"' in install_script
         assert f'"{package}@${{{variable}}}"' in install_script

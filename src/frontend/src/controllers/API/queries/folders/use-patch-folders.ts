@@ -60,6 +60,9 @@ export const usePatchFolders: useMutationFunctionType<
       // The open project is read through its own query, so a saved form has to invalidate it
       // too or the page keeps rendering the config it had before the save.
       queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+      // A rename re-registers the project's MCP server under a new name, so the MCP tab
+      // would otherwise keep showing the old one.
+      queryClient.invalidateQueries({ queryKey: ["useGetFlowsMCP"] });
     },
   });
 
