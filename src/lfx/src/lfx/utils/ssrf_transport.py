@@ -19,6 +19,18 @@ from httpx._config import create_ssl_context
 from lfx.logging import logger
 
 
+def pin_host_for_url(url: str) -> str:
+    """Return the host key a DNS pin map must use for ``url``.
+
+    httpx/httpcore connect using the IDNA/punycode ``raw_host`` (e.g. ``xn--exmple-cua.com``),
+    not the Unicode ``urlparse(url).hostname`` / ``httpx.URL(url).host`` (``exämple.com``).
+    Pin-map keys must use this exact representation, or for an IDN host the pin is stored
+    under a key the transport never looks up and is silently bypassed (DNS rebinding for IDN
+    hosts).
+    """
+    return httpx.URL(url).raw_host.decode("ascii")
+
+
 class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
     """Network backend that pins DNS resolution to validated IP addresses.
 
@@ -33,14 +45,24 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
     4. This prevents DNS rebinding while maintaining full HTTPS compatibility
     """
 
-    def __init__(self, pinned_ips: dict[str, list[str]], backend: httpcore.AsyncNetworkBackend | None = None):
+    def __init__(
+        self,
+        pinned_ips: dict[str, list[str]],
+        backend: httpcore.AsyncNetworkBackend | None = None,
+        fail_closed: bool = True,  # noqa: FBT001, FBT002
+    ):
         """Initialize the DNS pinning backend.
 
         Args:
             pinned_ips: Dictionary mapping hostnames to list of validated IP addresses
             backend: Underlying network backend (defaults to AnyIOBackend for asyncio)
+            fail_closed: When True (default), a non-empty ``pinned_ips`` map makes any
+                connection to a host not in the map raise instead of falling through to
+                ordinary DNS. A miss fallthrough is the IDN pin-bypass vector, so only set
+                False where an off-map host is a deliberate, documented case.
         """
         self.pinned_ips = pinned_ips
+        self.fail_closed = fail_closed
         # Use httpcore's default async backend (AnyIOBackend) if none provided
         # This is the public API recommended in httpcore documentation
         if backend is None:
@@ -108,7 +130,15 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
                 raise RuntimeError(msg)
             raise last_error
 
-        # No pinned IP, use normal connection
+        # Security: a non-empty pin map means this connection was expected to be pinned.
+        # Falling through to ordinary DNS on a miss re-resolves the host unpinned and is
+        # exactly the IDN pin-bypass vector (pin key Unicode, connect host punycode).
+        if self.pinned_ips and self.fail_closed:
+            msg = f"DNS pinning: Host {host} is not in the pin map; refusing unpinned connection"
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        # Empty pin map (protection disabled / allowlisted host): pass through deliberately.
         return await self._backend.connect_tcp(
             host=host,
             port=port,
@@ -138,8 +168,14 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
 class DNSPinningSyncNetworkBackend(httpcore.NetworkBackend):
     """Synchronous network backend that pins DNS resolution to validated IP addresses."""
 
-    def __init__(self, pinned_ips: dict[str, list[str]], backend: httpcore.NetworkBackend | None = None):
+    def __init__(
+        self,
+        pinned_ips: dict[str, list[str]],
+        backend: httpcore.NetworkBackend | None = None,
+        fail_closed: bool = True,  # noqa: FBT001, FBT002
+    ):
         self.pinned_ips = pinned_ips
+        self.fail_closed = fail_closed
         if backend is None:
             backend = httpcore.SyncBackend()
         self._backend = backend
@@ -185,6 +221,15 @@ class DNSPinningSyncNetworkBackend(httpcore.NetworkBackend):
                 raise RuntimeError(msg)
             raise last_error
 
+        # Security: a non-empty pin map means this connection was expected to be pinned.
+        # Falling through to ordinary DNS on a miss re-resolves the host unpinned and is
+        # exactly the IDN pin-bypass vector (pin key Unicode, connect host punycode).
+        if self.pinned_ips and self.fail_closed:
+            msg = f"DNS pinning: Host {host} is not in the pin map; refusing unpinned connection"
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        # Empty pin map (protection disabled / allowlisted host): pass through deliberately.
         return self._backend.connect_tcp(
             host=host,
             port=port,
@@ -244,6 +289,7 @@ class SSRFProtectedTransport(httpx.AsyncHTTPTransport):
         local_address: str | None = None,
         retries: int = 0,
         socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+        fail_closed: bool = True,  # noqa: FBT001, FBT002
     ):
         """Initialize transport with pinned DNS mappings.
 
@@ -261,9 +307,12 @@ class SSRFProtectedTransport(httpx.AsyncHTTPTransport):
             local_address: Local address to bind to
             retries: Number of retries
             socket_options: Socket options
+            fail_closed: When True (default), a non-empty ``pinned_ips`` map makes
+                connections to unmapped hosts raise instead of falling through to
+                ordinary DNS
         """
         # Create custom network backend with DNS pinning
-        network_backend = DNSPinningNetworkBackend(pinned_ips=pinned_ips)
+        network_backend = DNSPinningNetworkBackend(pinned_ips=pinned_ips, fail_closed=fail_closed)
 
         # Create SSL context (same as parent class)
         ssl_context = create_ssl_context(verify=verify, cert=cert, trust_env=trust_env)
@@ -315,8 +364,9 @@ class SSRFProtectedSyncTransport(httpx.HTTPTransport):
         local_address: str | None = None,
         retries: int = 0,
         socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+        fail_closed: bool = True,  # noqa: FBT001, FBT002
     ):
-        network_backend = DNSPinningSyncNetworkBackend(pinned_ips=pinned_ips)
+        network_backend = DNSPinningSyncNetworkBackend(pinned_ips=pinned_ips, fail_closed=fail_closed)
         ssl_context = create_ssl_context(verify=verify, cert=cert, trust_env=trust_env)
 
         if proxy is not None:
@@ -345,7 +395,10 @@ class SSRFProtectedSyncTransport(httpx.HTTPTransport):
 
 
 def create_ssrf_protected_client(
-    hostname: str, validated_ips: list[str] | tuple[str, ...], **client_kwargs
+    hostname: str,
+    validated_ips: list[str] | tuple[str, ...],
+    fail_closed: bool = True,  # noqa: FBT001, FBT002
+    **client_kwargs,
 ) -> httpx.AsyncClient:
     """Create an httpx client with DNS pinning for SSRF protection.
 
@@ -353,6 +406,7 @@ def create_ssrf_protected_client(
         hostname: The hostname to pin
         validated_ips: List of validated IP addresses to use for this hostname.
                       IPs will be tried in order for dual-stack/load-balanced hosts.
+        fail_closed: When True (default), connections to hosts not in the pin map raise
         **client_kwargs: Additional arguments for AsyncClient (e.g., timeout, headers)
 
     Returns:
@@ -360,14 +414,17 @@ def create_ssrf_protected_client(
     """
     # Convert to list if tuple
     ip_list = list(validated_ips) if isinstance(validated_ips, tuple) else validated_ips
-    transport = SSRFProtectedTransport(pinned_ips={hostname: ip_list})
+    transport = SSRFProtectedTransport(pinned_ips={hostname: ip_list}, fail_closed=fail_closed)
     return httpx.AsyncClient(transport=transport, **client_kwargs)
 
 
 def create_ssrf_protected_sync_client(
-    hostname: str, validated_ips: list[str] | tuple[str, ...], **client_kwargs
+    hostname: str,
+    validated_ips: list[str] | tuple[str, ...],
+    fail_closed: bool = True,  # noqa: FBT001, FBT002
+    **client_kwargs,
 ) -> httpx.Client:
     """Create a synchronous httpx client with DNS pinning for SSRF protection."""
     ip_list = list(validated_ips) if isinstance(validated_ips, tuple) else validated_ips
-    transport = SSRFProtectedSyncTransport(pinned_ips={hostname: ip_list})
+    transport = SSRFProtectedSyncTransport(pinned_ips={hostname: ip_list}, fail_closed=fail_closed)
     return httpx.Client(transport=transport, **client_kwargs)
