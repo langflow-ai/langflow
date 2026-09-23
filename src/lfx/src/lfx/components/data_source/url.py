@@ -16,7 +16,7 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.request_utils import get_user_agent
 from lfx.utils.ssrf_protection import SSRFProtectionError, is_ssrf_protection_enabled, validate_and_resolve_url
-from lfx.utils.ssrf_transport import create_ssrf_protected_client
+from lfx.utils.ssrf_transport import create_ssrf_protected_client, pin_host_for_url
 
 # Constants
 DEFAULT_TIMEOUT = 30
@@ -391,7 +391,7 @@ class URLComponent(Component):
             httpx.AsyncClient: A client with DNS pinning when SSRF protection is enabled
         """
         if is_ssrf_protection_enabled() and validated_ips:
-            hostname = urlparse(url).hostname
+            hostname = pin_host_for_url(url)
             if hostname:
                 return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
         return httpx.AsyncClient()
