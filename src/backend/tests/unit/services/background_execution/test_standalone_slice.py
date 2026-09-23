@@ -62,3 +62,48 @@ def test_redis_request_degrades_to_in_process_without_scaled_modules(monkeypatch
 
     assert service._backend is None
     assert service._scaled is False
+
+
+def test_degraded_redis_request_labels_job_metrics_default(monkeypatch):
+    """The metrics ``backend`` label names where jobs run, not what the settings asked for.
+
+    ``background_backend_is_scaled`` only reports that ``job_queue_type=redis`` was
+    configured. On this branch that request degrades to the in-process executor, so
+    labelling its jobs ``backend="scaled"`` would describe a fleet that does not exist.
+    """
+    from langflow.services import deps
+    from langflow.services.background_execution.metrics import current_backend
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "job_queue_type", "redis")
+    service = BackgroundExecutionService(settings_service)
+    monkeypatch.setattr(deps, "get_background_execution_service", lambda: service)
+
+    assert settings_service.settings.background_backend_is_scaled is True
+    assert current_backend() == "default"
+
+
+def test_wired_scaled_backend_labels_job_metrics_scaled(monkeypatch):
+    """The label follows the wired backend, so it stays correct once one really ships."""
+    from langflow.services import deps
+    from langflow.services.background_execution.metrics import current_backend
+
+    service = BackgroundExecutionService(get_settings_service(), backend=object())
+    monkeypatch.setattr(deps, "get_background_execution_service", lambda: service)
+
+    assert service.is_scaled is True
+    assert current_backend() == "scaled"
+
+
+def test_backend_label_defaults_when_the_service_is_unavailable(monkeypatch):
+    """A tick must still label its series when the service lookup fails."""
+    from langflow.services import deps
+    from langflow.services.background_execution.metrics import current_backend
+
+    def _unavailable():
+        msg = "service manager torn down"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(deps, "get_background_execution_service", _unavailable)
+
+    assert current_backend() == "default"
