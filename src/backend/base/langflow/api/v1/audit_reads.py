@@ -17,7 +17,9 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel, field_serializer
-from sqlmodel import col, or_
+from sqlalchemy import func
+from sqlalchemy.orm import aliased
+from sqlmodel import and_, col, or_, select
 
 from langflow.services.audit.query import MAX_PAGE_SIZE, AuditCursorError, AuditEventFilters, list_audit_events
 from langflow.services.audit.vocabulary import AuditActorType, AuditEventType, AuditOperation, AuditResult
@@ -74,7 +76,7 @@ def _timestamp(name: str, value: str) -> datetime:
     fraction = f".{match['fraction'].ljust(6, '0')}" if match["fraction"] else ""
     try:
         return datetime.fromisoformat(f"{match['base'].replace('t', 'T')}{fraction}{offset}").astimezone(timezone.utc)
-    except ValueError as exc:
+    except (OverflowError, ValueError) as exc:
         msg = f"{name} is not a valid timestamp"
         raise _bad_request(msg) from exc
 
@@ -82,10 +84,16 @@ def _timestamp(name: str, value: str) -> datetime:
 def _limit(value: str | None) -> int:
     if value is None:
         return DEFAULT_PAGE_SIZE
-    if not (value.isascii() and value.isdigit()) or not 1 <= int(value) <= MAX_PAGE_SIZE:
-        msg = f"limit must be an integer from 1 through {MAX_PAGE_SIZE}"
+    msg = f"limit must be an integer from 1 through {MAX_PAGE_SIZE}"
+    if not (value.isascii() and value.isdigit()):
         raise _bad_request(msg)
-    return int(value)
+    try:
+        parsed = int(value)
+    except ValueError as exc:  # More digits than int() will convert.
+        raise _bad_request(msg) from exc
+    if not 1 <= parsed <= MAX_PAGE_SIZE:
+        raise _bad_request(msg)
+    return parsed
 
 
 @dataclass(frozen=True)
@@ -95,9 +103,15 @@ class AuditReadQuery:
     limit: int
 
 
+#: Authentication, not filtering: ``APIKeyQuery`` reads this from the query string.
+_AUTH_PARAMS = frozenset({"x-api-key"})
+
+
 def _grouped(request: Request, allowed: set[str]) -> dict[str, list[str]]:
     grouped: dict[str, list[str]] = {}
     for key, value in request.query_params.multi_items():
+        if key in _AUTH_PARAMS:
+            continue
         if key not in allowed:
             msg = f"Unknown query parameter: {key}"
             raise _bad_request(msg)
@@ -196,15 +210,36 @@ async def plugin_decides_visibility() -> bool:
     return bool(await authz.supports_cross_user_fetch() and await authz.is_enabled())
 
 
+# The same table read from the caller's side, so the window can be correlated.
+_OwnEvent = aliased(AuditEvent)
+
+
 async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement[bool] | None:
-    """The OSS floor: events on resources the caller owns, and events the caller made.
+    """The OSS floor: events the caller made, and events on what they own since they owned it.
 
     Superusers read everything, and so does a caller a plugin authorized, because
     then the plugin, not ownership, decides what is visible.
+
+    Ownership is of a UUID, and a UUID can be reused: ``PUT /flows/{id}`` and
+    ``PUT /projects/{id}`` create at an id the caller chooses, and a delete frees
+    that id. Owning the id today therefore cannot grant the whole history of the
+    id, or re-creating a deleted resource would hand the previous owner's trail to
+    whoever asks for it. The window opens at the caller's own first event on that
+    resource; a resource they own but never acted on carries no history for them,
+    which is the safe direction to be wrong in.
     """
     if user.is_superuser or await plugin_decides_visibility():
         return None
-    return or_(col(AuditEvent.resource_id).in_(owned_resource_ids), col(AuditEvent.user_id) == user.id)
+    first_touched = (
+        select(func.min(col(_OwnEvent.timestamp)))
+        .where(col(_OwnEvent.resource_id) == col(AuditEvent.resource_id), col(_OwnEvent.user_id) == user.id)
+        .scalar_subquery()
+    )
+    owned_since_acquired = and_(
+        col(AuditEvent.resource_id).in_(owned_resource_ids),
+        col(AuditEvent.timestamp) >= first_touched,
+    )
+    return or_(owned_since_acquired, col(AuditEvent.user_id) == user.id)
 
 
 class AuditActorRead(BaseModel):
