@@ -324,6 +324,8 @@ Exporting these authentication variables in your shell alone does not forward th
 
 ## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
 
+If your existing instance uses auto-login, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before switching to an image that requires authentication. Setting `LANGFLOW_SUPERUSER_PASSWORD` alone does not reset an existing account's non-legacy password.
+
 To upgrade a Langflow Docker deployment without losing your database or flows, do the following:
 
 1. Keep data on persistent volumes, so when you upgrade Langflow, you will replace only the container image.

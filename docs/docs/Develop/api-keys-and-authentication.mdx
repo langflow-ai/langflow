@@ -171,6 +171,20 @@ Official tags point to a release-only commit that disables auto-login, so GitHub
 For trusted local development with a release package or Docker image, explicitly set `LANGFLOW_AUTO_LOGIN=True` to enable automatic login.
 For more information about containers, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
+#### Upgrade an existing auto-login installation {#upgrade-from-auto-login}
+
+Before installing a release that disables auto-login, prepare the existing account for password sign-in. Keep the same database, configuration directory, encryption key, and superuser username so that your flows and stored credentials remain available.
+
+1. Back up the database and configuration directory. Keep the instance restricted to trusted local access during the transition.
+2. While signed in to the existing installation, identify the current account with the authenticated [Get current user API](/api-users#get-current-user). If you already know its password, verify that password with `POST /api/v1/login` and continue to step 4.
+3. If the account uses an unknown generated bootstrap password, use an existing administrator session or API key with `PATCH /api/v1/users/{user_id}` to set a strong password on **that same account**. Send only the `password` field, as described in [Update user](/api-users#update-user), then verify password sign-in. The self-service `reset-password` endpoint requires the old password and is not suitable for an unknown bootstrap password.
+4. Set `LANGFLOW_AUTO_LOGIN=false`, set `LANGFLOW_SUPERUSER` to the existing account's username, and set `LANGFLOW_SUPERUSER_PASSWORD` before restarting or upgrading. Startup requires this setting, but it does **not** overwrite a non-legacy password on an existing account. Use the password established in the previous steps.
+5. Start the new release with the existing database and configuration directory. In a fresh browser session, sign in with the established password and verify that your existing flows are present.
+
+Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you upgraded before preparing the account, use an existing administrator credential to update that account's password; if none is available, complete the preparation on a backed-up previous installation restricted to local access before upgrading again.
+
+An explicit `LANGFLOW_AUTO_LOGIN=true` in an existing environment or `.env` file takes precedence over the new default. Remove that override or set it to `false` as part of the transition. Disabling auto-login prevents new anonymous sessions; it does not revoke previously issued sessions or API keys.
+
 #### LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 
 When `LANGFLOW_AUTO_LOGIN=true`, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` to also skip API key authentication for API requests.

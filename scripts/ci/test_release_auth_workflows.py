@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
         ("release.yml", "build-lfx", "Build project for distribution"),
         ("release_nightly.yml", "build-nightly-lfx", "Build LFX for distribution"),
         ("release-lfx.yml", "release-lfx", "Build distribution"),
+        ("cross-platform-test.yml", "build-if-needed", "Build LFX package"),
     ],
 )
 def test_official_release_builds_prepare_and_verify_wheels(workflow_name: str, job_name: str, build_step: str) -> None:

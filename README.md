@@ -72,11 +72,14 @@ make run_cli
 For more information, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ### Docker
-Start a Langflow container with default settings:
+Set and export a strong password before starting the container (Bash):
 ```shell
+read -rsp "Langflow administrator password: " LANGFLOW_SUPERUSER_PASSWORD; echo
+export LANGFLOW_SUPERUSER_PASSWORD
 docker run -p 7860:7860 -e LANGFLOW_SUPERUSER_PASSWORD langflowai/langflow:latest
 ```
-Langflow is available at http://localhost:7860/.
+Langflow is available at http://localhost:7860/. Sign in as `langflow` with the password you entered. Official Docker images require authentication by default.
+If you already have an auto-login installation, follow the [upgrade instructions](https://docs.langflow.org/api-keys-and-authentication#upgrade-from-auto-login) before switching defaults.
 For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
 ## 🛡️ Security
