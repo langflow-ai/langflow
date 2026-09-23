@@ -1,11 +1,14 @@
 from lfx.base.models.groq_constants import GROQ_MODELS
 from lfx.base.models.groq_model_discovery import get_groq_models
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.log.logger import logger
 from pydantic.v1 import SecretStr
+
+DEFAULT_GROQ_API_BASE = "https://api.groq.com"
 
 
 class GroqModel(LCModelComponent):
@@ -140,4 +143,5 @@ class GroqModel(LCModelComponent):
             n=self.n or 1,
             api_key=SecretStr(self.api_key).get_secret_value(),
             streaming=self.stream,
+            **openai_compatible_client_kwargs(self.base_url, default_url=DEFAULT_GROQ_API_BASE),
         )

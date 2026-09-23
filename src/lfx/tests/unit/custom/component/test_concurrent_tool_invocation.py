@@ -9,8 +9,14 @@ import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from types import MethodType
 
-from lfx.base.tools.component_tool import ComponentToolkit, send_message_noop
+from lfx.base.tools.component_tool import (
+    ComponentToolkit,
+    _build_output_async_function,
+    _build_output_function,
+    send_message_noop,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
@@ -416,3 +422,63 @@ def test_deepcopy_with_non_deepcopyable_output_value():
 
     assert clone is not component
     assert clone._outputs_map["result"].value is undeepcopyable
+
+
+class RuntimeOutputComponent(Component):
+    """Component whose output method is registered on the instance, not the class.
+
+    Run Flow does this: ``_register_flow_output_method`` writes one resolver per
+    selected-flow output onto the instance it is asked for tools on.
+    """
+
+    display_name = "Runtime Output"
+    description = "Answers with the value the invocation was given."
+    name = "RuntimeOutputComponent"
+
+    inputs = [MessageTextInput(name="input_value", display_name="Input", value="original", tool_mode=True)]
+    outputs = [Output(display_name="Result", name="result", method="declared_output")]
+
+    def declared_output(self) -> str:
+        return self.input_value
+
+
+def _with_runtime_output(component: Component, *, is_async: bool):
+    """Register an output method on the instance and hand back the captured method."""
+    if is_async:
+
+        async def runtime_output(self) -> str:
+            return self.input_value
+    else:
+
+        def runtime_output(self) -> str:
+            return self.input_value
+
+    # The name the method answers to is the closure's, not the attribute's, which
+    # is why the wrapper's `getattr(copy, output_method.__name__)` misses it.
+    component.resolve_runtime_output = MethodType(runtime_output, component)
+    return component.resolve_runtime_output
+
+
+def test_runtime_registered_output_runs_on_the_invocation_copy():
+    """#15034: an output method missing from the copy must not run on the original.
+
+    The wrapper copies the component so concurrent calls do not share state
+    (#8791), sets the call's arguments on that copy, then resolves the output
+    method against it. An instance-registered method is not on the copy, and the
+    fallback used to be the method bound to the component the toolkit was built
+    from -- which never saw the arguments.
+    """
+    component = RuntimeOutputComponent()
+    output_function = _build_output_function(component, _with_runtime_output(component, is_async=False))
+
+    assert output_function(input_value="tool input") == "tool input"
+    assert component.input_value == "original"
+
+
+async def test_runtime_registered_async_output_runs_on_the_invocation_copy():
+    """The async wrapper, which is the one Run Flow's resolvers go through."""
+    component = RuntimeOutputComponent()
+    output_function = _build_output_async_function(component, _with_runtime_output(component, is_async=True))
+
+    assert await output_function(input_value="tool input") == "tool input"
+    assert component.input_value == "original"

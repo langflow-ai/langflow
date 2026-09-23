@@ -111,7 +111,7 @@ otel = [
 #
 # Documented as a headless/serverless deployment footnote, not a
 # getting-started headline.  There is intentionally NO ``lfx[all]``.
-bundles = ["lfx-bundles[all]>=1.1.26,<2.0"]
+bundles = ["lfx-bundles[all]>=1.1.27,<2.0"]
 
 [project.scripts]
 lfx = "lfx.__main__:main"
