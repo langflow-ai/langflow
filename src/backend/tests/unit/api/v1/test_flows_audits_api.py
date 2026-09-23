@@ -141,6 +141,33 @@ async def test_recreating_a_deleted_flow_id_does_not_hand_over_its_history(clien
     assert all(item["flow_name"] != victim["name"] for item in feed["items"])
 
 
+async def test_a_flow_id_that_changed_hands_twice_shows_only_its_current_life(client, logged_in_headers):
+    """A → B → A: the same rule the Project feed follows (#15088)."""
+    shared_id = str(uuid4())
+    body = {"name": f"a1-{uuid4().hex[:8]}", "data": GRAPH}
+    await client.put(f"api/v1/flows/{shared_id}", json=body, headers=logged_in_headers)
+    await client.delete(f"api/v1/flows/{shared_id}", headers=logged_in_headers)
+
+    other_id, other_name = await make_user("flow-intervening")
+    other_headers = await login(client, other_name)
+    await client.put(
+        f"api/v1/flows/{shared_id}", json={"name": f"b-{uuid4().hex[:8]}", "data": GRAPH}, headers=other_headers
+    )
+    between = f"b-renamed-{uuid4().hex[:8]}"
+    await client.patch(f"api/v1/flows/{shared_id}", json={"name": between}, headers=other_headers)
+    await client.delete(f"api/v1/flows/{shared_id}", headers=other_headers)
+
+    retaken = await client.put(
+        f"api/v1/flows/{shared_id}", json={"name": f"a2-{uuid4().hex[:8]}", "data": GRAPH}, headers=logged_in_headers
+    )
+    assert retaken.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, retaken.text
+
+    feed = await _audits(client, logged_in_headers, f"?flow_id={shared_id}&limit=200")
+
+    assert between not in {item["flow_name"] for item in feed["items"]}
+    assert all(item["actor"]["user_id"] != str(other_id) for item in feed["items"])
+
+
 async def test_a_superuser_reads_every_flow(client, logged_in_headers, logged_in_headers_super_user):
     theirs = await _flow(client, logged_in_headers)
 
