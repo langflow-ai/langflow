@@ -81,6 +81,15 @@ export type FlowBinding = {
   output_name: string;
   revision: string;
   version_id?: string | null;
+  dependencies?: BoundFlowDependency[];
+};
+
+export type BoundFlowDependency = {
+  flow_id: string;
+  name: string;
+  description?: string;
+  revision: string;
+  version_id?: string | null;
 };
 
 export type FlowOutputChoice = FlowBinding & {

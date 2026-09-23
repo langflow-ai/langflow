@@ -14,6 +14,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
+from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
 from lfx.projects.flow_slots import (
     _RUNTIME_FIELDS,
     ProjectFlowBindings,
@@ -121,6 +122,7 @@ class CompositionGraph:
         """Check reviewed definitions before any credential stripping or ID changes."""
 
         def validate_binding(field_name, data, binding):
+            validate_binding_dependencies(binding, list(self.flows.values()))
             if not allow_missing_secrets:
                 validate_project_binding(field_name, data, binding)
                 return
@@ -238,6 +240,9 @@ class CompositionGraph:
                 binding.flow_id = flow_ids[original_id]
                 binding.revision = flow_revision(target.flows[original_id]["data"])
                 binding.version_id = version_ids[original_id]
+                binding.dependencies = binding_dependencies(binding.flow_id, list(target.flows.values()))
+                for dependency in binding.dependencies:
+                    dependency.version_id = version_ids[original_flow_ids[dependency.flow_id]]
                 updated.append(binding.model_dump())
             return updated if isinstance(value, list) else updated[0] if updated else None
 
@@ -282,12 +287,11 @@ class CompositionGraph:
                             runtime_origin[origin_key] = binding_value(field_name, runtime_origin[origin_key])
                 instruction = data.get(BINDING_ORIGIN)
                 if isinstance(instruction, dict):
-                    instruction.update(
-                        project_id=project_id,
-                        flow_id=flow_ids[selected],
-                        revision=flow_revision(target.flows[selected]["data"]),
-                        version_id=version_ids[selected],
+                    value = binding_value(
+                        "system_prompt",
+                        {key: value for key, value in instruction.items() if key not in {"project_id", "field_name"}},
                     )
+                    instruction.update(project_id=project_id, **value)
                 if isinstance(origin, dict):
                     origin.update(project_id=project_id, flow_id=flow_ids[selected])
                     if origin.get("tool_pack"):

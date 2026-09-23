@@ -3,6 +3,7 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
 }));
 
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { AgentConfiguration } from "@/controllers/API/queries/folders/use-project-reports";
 import { ReportConfigurations } from "../components/report-configurations";
 import { selectOption } from "./select-option";
@@ -79,4 +80,43 @@ it("does not substitute current settings for a legacy report without provenance"
   ).toBeInTheDocument();
   expect(screen.queryByText("Inspect configuration")).not.toBeInTheDocument();
   expect(screen.queryByText("reviewed-model")).not.toBeInTheDocument();
+});
+
+it("shows the nested definition and snapshot retained with a recorded binding", () => {
+  const onOpen = jest.fn();
+  const dependency = {
+    flow_id: "nested-rules",
+    name: "Reviewed rules",
+    revision: "a".repeat(64),
+    version_id: "nested-snapshot",
+  };
+  const saved = {
+    ...record,
+    flow_bindings: {
+      system_prompt: {
+        ...record.flow_bindings.system_prompt,
+        flow_id: "instructions",
+        node_id: "Instructions-output",
+        output_name: "text",
+        revision: "d".repeat(64),
+        dependencies: [dependency],
+      },
+    },
+  };
+  render(
+    <MemoryRouter>
+      <ReportConfigurations configurations={[saved]} onOpen={onOpen} />
+    </MemoryRouter>,
+  );
+  fireEvent.click(screen.getByText("Inspect configuration"));
+  fireEvent.click(screen.getByText(/Nested flow dependencies/));
+  expect(
+    screen.getByText("nested-snapshot", { exact: true }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Reviewed rules" })).toHaveAttribute(
+    "href",
+    "/flow/nested-rules",
+  );
+  fireEvent.click(screen.getByRole("link", { name: "Reviewed rules" }));
+  expect(onOpen).toHaveBeenCalledTimes(1);
 });

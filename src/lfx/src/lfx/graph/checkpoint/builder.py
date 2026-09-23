@@ -56,6 +56,7 @@ def build_checkpoint(graph: Graph) -> GraphCheckpoint:
         job_id=graph.job_id,
         flow_payload=flow_payload,
         reviewed_tool_packs=graph.reviewed_tool_packs,
+        reviewed_harness_flows=graph.reviewed_harness_flows,
         run_map={k: list(v) for k, v in run_state["run_map"].items()},
         run_predecessors={k: list(v) for k, v in run_state["run_predecessors"].items()},
         vertices_to_run=set(run_state["vertices_to_run"]),

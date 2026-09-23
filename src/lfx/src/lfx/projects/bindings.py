@@ -6,9 +6,35 @@ import hashlib
 import json
 from copy import deepcopy
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 BINDING_ORIGIN = "_harness_binding"
+
+
+class FlowSourceChangedError(ValueError):
+    """A reviewed root or nested definition changed; explicit review is required."""
+
+
+class BoundFlowDependency(BaseModel):
+    """A reviewed nested definition, with its server-assigned executable version."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    flow_id: str = Field(min_length=1)
+    name: str
+    description: str = ""
+    revision: str = Field(min_length=1)
+    version_id: str | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        value = handler(self)
+        if self.version_id is None:
+            value.pop("version_id", None)
+        return value
+
+    def definition(self) -> dict:
+        return self.model_dump(exclude={"version_id"})
 
 
 class FlowBinding(BaseModel):
@@ -19,6 +45,15 @@ class FlowBinding(BaseModel):
     output_name: str = Field(min_length=1)
     revision: str = Field(min_length=1)
     version_id: str | None = None
+    dependencies: list[BoundFlowDependency] = Field(default_factory=list)
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        value = handler(self)
+        # Existing flat bindings must keep their serialized shape and graph revision.
+        if not self.dependencies:
+            value.pop("dependencies", None)
+        return value
 
 
 def compose_single_binding(
