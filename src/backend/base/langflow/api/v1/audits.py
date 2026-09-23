@@ -38,7 +38,7 @@ from langflow.services.audit.feed import (
     AuditKind,
     AuditSource,
     frozen_until,
-    iter_feed_batches,
+    iter_feed_batches_per_session,
     list_feed,
 )
 from langflow.services.audit.vocabulary import AuditOperation
@@ -317,15 +317,18 @@ def _csv_chunk(records: list[list[object]]) -> str:
 
 
 async def _export_chunks(filters: AuditFeedFilters, export_format: str) -> AsyncIterator[str]:
-    """One chunk per keyset batch, on a session of its own: the request's closes before the body streams."""
+    """One chunk per keyset batch, each read on its own short session.
+
+    The connection goes back to the pool before the chunk is handed to the client,
+    so a slow or stalled download never holds one open for the whole stream.
+    """
     if export_format == "csv":
         yield _csv_chunk([list(CSV_COLUMNS)])
-    async with session_scope() as session:
-        async for batch in iter_feed_batches(session, filters, batch_size=_EXPORT_BATCH):
-            if export_format == "csv":
-                yield _csv_chunk([_csv_values(feed_row) for feed_row in batch])
-            else:
-                yield "".join(feed_item(feed_row).model_dump_json() + "\n" for feed_row in batch)
+    async for batch in iter_feed_batches_per_session(filters, batch_size=_EXPORT_BATCH):
+        if export_format == "csv":
+            yield _csv_chunk([_csv_values(feed_row) for feed_row in batch])
+        else:
+            yield "".join(feed_item(feed_row).model_dump_json() + "\n" for feed_row in batch)
 
 
 @router.get("/export")

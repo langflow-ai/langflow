@@ -287,8 +287,9 @@ costs one `COUNT` per store.
 `Content-Disposition: attachment`. The window is frozen at the start: an open
 `until` becomes the **database** clock, the same clock that stamps the rows, so
 an application clock running behind it cannot drop rows the feed returns. The
-walk runs on its own session in batches of 500, and no row is gathered in memory
-or capped. The frozen window makes the export repeatable rather than
+walk reads one batch of 500 per short session, so the connection returns to the
+pool before the chunk is handed to the client and a slow download never holds one
+open for the whole stream; no row is gathered in memory or capped. The frozen window makes the export repeatable rather than
 transactional: batches run under READ COMMITTED, so a row committed during the
 walk with a timestamp inside the window is included, and one the retention sweep
 deletes during the walk is not. CSV starts with the columns the Admin
