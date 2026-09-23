@@ -491,18 +491,29 @@ async def astore_message(
         raise ValueError(msg)
     flow_id, user_id = _write_message_scope(flow_id, user_id)
     if hasattr(message, "id") and message.id:
-        # if message has an id and exist in the database, update it
-        # if not raise an error and add the message to the database
+        # An existing ID may come from a nested flow's Chat Output. Its parent
+        # must get a fresh row, while the child row remains untouched.
         try:
             return await aupdate_messages([message])
         except ValueError as e:
             await logger.aerror(e)
             from lfx.memory.flow_context import has_current_flow_scope
 
-            # A foreign row is deliberately indistinguishable from a missing ID
-            # in a graph run. Neither case may turn into a new message write.
             if has_current_flow_scope():
-                raise
+                # Only an existing row owned by this graph's message principal
+                # in another scoped flow may be copied. Unknown IDs and rows
+                # belonging to another owner produce the same not-found error.
+                if str(e) != f"Message with id {message.id} not found":
+                    raise
+                async with session_scope() as session:
+                    original = await session.get(MessageTable, UUID(str(message.id)))
+                    if (
+                        original is None
+                        or original.flow_id is None
+                        or original.flow_id == flow_id
+                        or original.user_id != user_id
+                    ):
+                        raise
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id, run_id=run_id, user_id=user_id)

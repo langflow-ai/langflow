@@ -110,7 +110,13 @@ async def get_instance_results(
     # nested graphs built with Graph.from_payload (Run Flow, Sub Flow, Flow as
     # Tool, A2A) default persist_messages=True and would otherwise overwrite the
     # outer run's no-persist decision.
-    persist_token = set_messages_persist(should_persist_messages() and bool(getattr(graph, "persist_messages", True)))
+    # A graph built in memory without a valid flow ID can still produce chat
+    # output, but it cannot safely persist a row that memory can later scope.
+    persist_token = set_messages_persist(
+        should_persist_messages()
+        and bool(getattr(graph, "persist_messages", True))
+        and coerce_flow_id(flow_id) is not None
+    )
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)

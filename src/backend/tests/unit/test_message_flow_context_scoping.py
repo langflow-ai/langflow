@@ -198,6 +198,24 @@ async def test_graph_without_flow_id_shadows_outer_scope(client):  # noqa: ARG00
     assert "hello from B" not in text
 
 
+async def test_graph_without_flow_id_keeps_chat_input_ephemeral(client):  # noqa: ARG001
+    """Ad hoc graphs can render Chat Input without creating unscoped history."""
+    session_id = "ad-hoc-chat-input"
+    user_id = uuid4()
+    chat_input = ChatInput(_id="ad_hoc_input")
+    chat_input.set(input_value="ad hoc hello", session_id=session_id)
+    chat_output = ChatOutput(_id="ad_hoc_output")
+    chat_output.set(input_value=chat_input.message_response, session_id=session_id)
+    graph = Graph(chat_input, chat_output, user_id=str(user_id))
+
+    async for _ in graph.async_start():
+        pass
+
+    rendered = chat_output.get_output_by_method(chat_output.message_response).value
+    assert rendered.text == "ad hoc hello"
+    assert await aget_messages(session_id=session_id) == []
+
+
 async def test_graph_execution_binds_flow_scope_end_to_end(client):  # noqa: ARG001
     """End-to-end: running Flow B's graph must not surface Flow A's message via unscoped frozen code.
 
@@ -382,6 +400,45 @@ async def test_deactivated_message_store_fills_missing_owner_from_graph(client):
     assert [row.text for row in stored] == ["alice deactivated text"]
 
 
+@pytest.mark.parametrize("frozen", [False, True])
+async def test_nested_chat_output_copies_child_message_into_parent_scope(client, frozen):  # noqa: ARG001
+    """Saved Chat Output source overwrites flow_id but keeps the child row's ID."""
+    child_flow, parent_flow, owner_id = uuid4(), uuid4(), uuid4()
+    session_id = f"nested-output-{frozen}"
+    child = (
+        await aadd_messages(
+            Message(text="child reply", sender="Machine", sender_name="AI", session_id=session_id),
+            flow_id=child_flow,
+            user_id=owner_id,
+        )
+    )[0]
+
+    if frozen:
+        index = json.loads(files("lfx").joinpath("_assets/component_index.json").read_text())
+        code = next(
+            entries["ChatOutput"]["template"]["code"]["value"]
+            for _, entries in index["entries"]
+            if "ChatOutput" in entries
+        )
+        assert "message.flow_id = self.graph.flow_id" in code
+        output_class = eval_custom_component_code(code)
+    else:
+        code = None
+        output_class = ChatOutput
+
+    output = output_class(_id=f"parent_output_{frozen}", _code=code)
+    output.set(input_value=child, session_id=session_id)
+    graph = Graph(output, output, flow_id=str(parent_flow), user_id=str(owner_id))
+    async for _ in graph.async_start():
+        pass
+
+    child_rows = await aget_messages(session_id=session_id, flow_id=child_flow, user_id=owner_id)
+    parent_rows = await aget_messages(session_id=session_id, flow_id=parent_flow, user_id=owner_id)
+    assert [(row.id, row.text) for row in child_rows] == [(child.id, "child reply")]
+    assert [row.text for row in parent_rows] == ["child reply"]
+    assert parent_rows[0].id != child.id
+
+
 async def test_graph_write_rejects_foreign_flow_and_owner(client):  # noqa: ARG001
     flow_id, executor_id, owner_id = uuid4(), uuid4(), uuid4()
     message = Message(text="blocked", sender="User", sender_name="User", session_id="foreign-write")
@@ -429,8 +486,17 @@ async def test_graph_id_operations_cannot_modify_foreign_messages(client, foreig
         foreign.text = "overwritten"
         with pytest.raises(ValueError, match="not found"):
             await aupdate_messages(foreign)
+        if foreign_dimension == "flow":
+            copied = await astore_message(foreign, flow_id=own_flow, user_id=own_owner)
+            assert len(copied) == 1
+            assert copied[0].id != foreign.id
+        else:
+            with pytest.raises(ValueError, match="not found"):
+                await astore_message(foreign, flow_id=own_flow, user_id=own_owner)
+        unknown = Message(text="unknown", sender="User", sender_name="User", session_id=session_id)
+        unknown.id = uuid4()
         with pytest.raises(ValueError, match="not found"):
-            await astore_message(foreign, flow_id=own_flow, user_id=own_owner)
+            await astore_message(unknown, flow_id=own_flow, user_id=own_owner)
         await delete_message(str(foreign.id))
 
         own.flow_id = uuid4()
@@ -447,5 +513,5 @@ async def test_graph_id_operations_cannot_modify_foreign_messages(client, foreig
 
     own_rows = await aget_messages(session_id=session_id, flow_id=own_flow, user_id=own_owner)
     foreign_rows = await aget_messages(session_id=session_id, flow_id=foreign_flow, user_id=foreign_owner)
-    assert own_rows == []
+    assert [message.text for message in own_rows] == (["overwritten"] if foreign_dimension == "flow" else [])
     assert [message.text for message in foreign_rows] == ["foreign"]
