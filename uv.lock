@@ -9945,7 +9945,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-microsoft"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/microsoft" }
 dependencies = [
     { name = "lfx" },
