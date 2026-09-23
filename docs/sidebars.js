@@ -331,6 +331,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-trigger-webhooks",
+          label: "Receive provider events with trigger webhooks",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
