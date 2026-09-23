@@ -399,30 +399,84 @@ async def migrate_orphaned_mcp_servers_config(
         return True
 
 
+async def _rows_owned_by(session: AsyncSession, user_id) -> dict[str, int]:
+    """How many rows each table holds for this user, across every table that references ``user.id``."""
+    from sqlalchemy import func
+    from sqlmodel import SQLModel
+
+    import langflow.services.database.models  # noqa: F401 - importing registers every table on the metadata
+
+    owned: dict[str, int] = {}
+    for table in SQLModel.metadata.sorted_tables:
+        for foreign_key in table.foreign_keys:
+            if foreign_key.column.table.name != "user" or foreign_key.column.name != "id":
+                continue
+            count = (
+                await session.exec(select(func.count()).select_from(table).where(foreign_key.parent == user_id))
+            ).one()
+            if count:
+                owned[table.name] = owned.get(table.name, 0) + count
+    return owned
+
+
 async def teardown_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
-    """Remove the default superuser when AUTO_LOGIN is disabled and it was never used to sign in.
+    """Retire the default superuser when AUTO_LOGIN is disabled and it was never used to sign in.
 
-    If the default account has ``last_login_at`` set, it is kept. Deletion can still fail with
-    an integrity error when the user owns rows (e.g. flows) without ORM cascade — callers see
-    ``RuntimeError`` so startup or shutdown does not silently ignore the problem.
+    The account is what AUTO_LOGIN leaves behind, and with AUTO_LOGIN off it must not stay
+    usable. Its data is another matter: an instance used only through the API, or adopted
+    into a new deployment, can hold all of its work under this account, and deleting the
+    row cascades to every flow and project it owns. So:
+
+    - it owns nothing: delete it, as before;
+    - the configured superuser is this same account: keep it, with the configured password;
+    - otherwise: keep it and its data, and replace its password with a random one. Another
+      superuser can set a new one from the Admin page.
+
+    An account that has signed in (``last_login_at`` set) is left alone.
     """
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if unused.")
-        try:
-            username = DEFAULT_SUPERUSER
-            from langflow.services.database.models.user.model import User
+    if settings_service.auth_settings.AUTO_LOGIN:
+        return
+    try:
+        from langflow.services.database.models.user.model import User
 
-            stmt = select(User).where(User.username == username)
-            result = await session.exec(stmt)
-            user = result.first()
+        user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+        if not user or user.is_superuser is not True or user.last_login_at:
+            return
 
-            if user and user.is_superuser is True and not user.last_login_at:
-                await session.delete(user)
-                await logger.adebug("Default superuser removed successfully.")
-        except Exception as exc:
-            await logger.aexception("Could not remove default superuser.")
-            msg = "Could not remove default superuser."
-            raise RuntimeError(msg) from exc
+        owned = await _rows_owned_by(session, user.id)
+        if not owned:
+            await session.delete(user)
+            await logger.adebug("Default superuser removed successfully.")
+            return
+
+        auth = get_auth_service()
+        if settings_service.auth_settings.SUPERUSER == DEFAULT_SUPERUSER:
+            # The operator asked for this account. A random password here would lock out the
+            # only superuser. The password is scrubbed from settings after startup, so at
+            # shutdown there is nothing to set and the account is left as startup made it.
+            password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
+            if password and password != LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+                user.password = auth.get_password_hash(password)
+                session.add(user)
+                await logger.awarning(
+                    f"Kept the default superuser '{DEFAULT_SUPERUSER}', which owns {owned}, "
+                    "and set its password to the configured LANGFLOW_SUPERUSER_PASSWORD."
+                )
+            return
+
+        # ponytail: re-randomised on every startup and shutdown until someone signs in with it,
+        # so a password an admin set is replaced if the service restarts before that first sign-in.
+        user.password = auth.get_password_hash(token_urlsafe(32))
+        session.add(user)
+        await logger.awarning(
+            f"AUTO_LOGIN is off, so the default superuser '{DEFAULT_SUPERUSER}' can no longer sign in "
+            f"with its old password. It owns {owned}, so it was kept rather than deleted. Another "
+            f"superuser can set a new password for it from the Admin page or PATCH /api/v1/users/{user.id}."
+        )
+    except Exception as exc:
+        await logger.aexception("Could not retire default superuser.")
+        msg = "Could not retire default superuser."
+        raise RuntimeError(msg) from exc
 
 
 async def teardown_services() -> None:
