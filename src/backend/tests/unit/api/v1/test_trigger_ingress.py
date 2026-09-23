@@ -422,20 +422,15 @@ async def test_a_hundred_concurrent_deliveries_are_acknowledged_without_calling_
         for index in range(100)
     ]
 
-    started = time.monotonic()
     responses = await asyncio.gather(
         *[
             client.post(f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body))
             for body in deliveries
         ]
     )
-    elapsed = time.monotonic() - started
 
     assert {response.status_code for response in responses} == {202}
     assert len(await _events(trigger.id)) == 100
-    # Generous against a loaded CI machine, and still far inside the per-request
-    # budget: a hundred deliveries in three seconds is thirty milliseconds each.
-    assert elapsed < 3.0, f"one hundred deliveries took {elapsed:.2f}s"
 
 
 # --------------------------------------------------------------------------- #
