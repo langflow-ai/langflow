@@ -220,3 +220,42 @@ async def events_for(trigger_id):
 
     async with session_scope() as session:
         return list((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all())
+
+
+APP_TOKEN = "xapp-1-A0APP00001-1111-testtoken"  # noqa: S105 - test fixture  # pragma: allowlist secret
+
+
+async def make_app_token_connection(
+    owner_id,
+    *,
+    token: str = APP_TOKEN,
+    status: str = "ready",
+    allow_non_interactive: bool = True,
+    name: str | None = None,
+):
+    """A manually entered app-level token connection, as Socket Mode needs."""
+    import json as _json
+    from uuid import uuid4
+
+    from langflow.services.auth.utils import encrypt_api_key
+    from langflow.services.database.models.connection.model import Connection, ConnectionSecret
+    from langflow.services.deps import session_scope
+
+    payload = _json.dumps({"version": 1, "access_token": token, "token_type": "Bearer"})
+    async with session_scope() as session:
+        row = Connection(
+            provider_key="slack",
+            name=name or f"slack_app_{uuid4().hex[:8]}",
+            display_name="Slack app-level token",
+            ownership_mode="user",
+            owner_id=owner_id,
+            status=status,
+            allow_non_interactive=allow_non_interactive,
+            granted_scopes=["connections:write"],
+            executing_identity={"identity": "bot"},
+        )
+        session.add(row)
+        await session.flush()
+        session.add(ConnectionSecret(connection_id=row.id, encrypted_payload=encrypt_api_key(payload)))
+        await session.flush()
+        return row.id

@@ -28,6 +28,7 @@ from __future__ import annotations
 import abc
 import asyncio
 import contextlib
+import json
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -39,6 +40,8 @@ from langflow.services.triggers.constants import (
     LISTENER_FAKE_DEDUPE_PREFIX,
     LISTENER_FAKE_KIND,
     LISTENER_FAKE_MECHANISM,
+    MECHANISM_SLACK_SOCKET_MODE,
+    SLACK_TRIGGER_KINDS,
     TRANSPORT_POLL,
     TRANSPORT_SOCKET,
 )
@@ -84,6 +87,11 @@ class ListenerContext:
     save_cursor: Callable[..., Awaitable[None]]
     resolve_credential: Callable[..., Awaitable[Any]]
     stopping: asyncio.Event
+    #: Report a working connection that has not delivered anything yet. A
+    #: socket source proves itself when the provider accepts it (Slack's
+    #: ``hello``), long before a quiet workspace sends an event, and without
+    #: this a recovered connection would keep its failure banner until then.
+    mark_connected: Callable[[], Awaitable[None]] | None = None
 
 
 @runtime_checkable
@@ -174,24 +182,42 @@ class SelfTestAdapter(PollingListenerAdapter):
 #: build the adapter that will hold its connection.
 AdapterFactory: TypeAlias = "Callable[[ListenerTrigger], ListenerAdapter]"
 
-#: ``(kind, mechanism_id)`` -> factory. ``mechanism_id`` of ``None`` is the
+
+@dataclass(frozen=True)
+class _Registration:
+    factory: AdapterFactory
+    rebuild_on_config_change: bool = True
+
+
+#: ``(kind, mechanism_id)`` -> registration. ``mechanism_id`` of ``None`` is the
 #: wildcard for a kind that has exactly one transport.
-_REGISTRY: dict[tuple[str, str | None], AdapterFactory] = {}
+_REGISTRY: dict[tuple[str, str | None], _Registration] = {}
 
 
-def register_adapter(*, kind: str, mechanism: str | None, factory: AdapterFactory) -> None:
+def register_adapter(
+    *,
+    kind: str,
+    mechanism: str | None,
+    factory: AdapterFactory,
+    rebuild_on_config_change: bool = True,
+) -> None:
     """Register an adapter factory for a trigger kind (and optional mechanism).
 
     Registration is by ``(kind, mechanism_id)`` because a provider trigger names
     its transport in ``config.mechanism_id`` (``trigger-contract.md`` section 1):
     one Slack ``message`` kind is the Events API on hosted and Socket Mode on a
     firewalled instance, and only the mechanism tells them apart.
+
+    ``rebuild_on_config_change=False`` is for an adapter that reads each
+    trigger's configuration per event from ``ctx.triggers`` (which the
+    supervisor refreshes in place) rather than once at construction: editing a
+    filter must not tear down and re-open a socket for it.
     """
     key = (kind, mechanism)
     if key in _REGISTRY:
         msg = f"A listener adapter is already registered for {key!r}."
         raise ValueError(msg)
-    _REGISTRY[key] = factory
+    _REGISTRY[key] = _Registration(factory=factory, rebuild_on_config_change=rebuild_on_config_change)
 
 
 def unregister_adapter(*, kind: str, mechanism: str | None) -> None:
@@ -203,6 +229,10 @@ def registered_adapter_keys() -> set[tuple[str, str | None]]:
     return set(_REGISTRY)
 
 
+def _registration(trigger: ListenerTrigger) -> _Registration | None:
+    return _REGISTRY.get((trigger.kind, trigger.mechanism_id)) or _REGISTRY.get((trigger.kind, None))
+
+
 def build_adapter(trigger: ListenerTrigger) -> ListenerAdapter | None:
     """The adapter this trigger needs, or None when it is not a Track B source.
 
@@ -210,15 +240,32 @@ def build_adapter(trigger: ListenerTrigger) -> ListenerAdapter | None:
     TRG-4 push trigger both live in the same table, and the listener must walk
     past them silently rather than logging an error once every reconcile.
     """
-    factory = _REGISTRY.get((trigger.kind, trigger.mechanism_id)) or _REGISTRY.get((trigger.kind, None))
-    if factory is None:
-        return None
-    return factory(trigger)
+    registration = _registration(trigger)
+    return registration.factory(trigger) if registration is not None else None
 
 
 def is_listener_kind(trigger: ListenerTrigger) -> bool:
     """True when some registered adapter claims this trigger."""
-    return (trigger.kind, trigger.mechanism_id) in _REGISTRY or (trigger.kind, None) in _REGISTRY
+    return _registration(trigger) is not None
+
+
+def adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
+    """What an adapter built from ``trigger`` depends on, as a comparable value.
+
+    The factory rather than the kind, so two kinds served by one adapter (a
+    Slack message trigger and a reaction trigger on one socket) never force a
+    rebuild when the connection's first trigger changes kind; and the
+    configuration only for adapters that read it once at construction.
+    """
+    registration = _registration(trigger)
+    if registration is None:
+        return (trigger.kind, trigger.mechanism_id, "")
+    factory = registration.factory
+    identity = f"{getattr(factory, '__module__', '')}.{getattr(factory, '__qualname__', repr(factory))}"
+    config = (
+        json.dumps(trigger.config or {}, sort_keys=True, default=str) if registration.rebuild_on_config_change else ""
+    )
+    return (identity, trigger.mechanism_id, config)
 
 
 def _selftest_factory(trigger: ListenerTrigger) -> ListenerAdapter:
@@ -233,11 +280,30 @@ def _selftest_factory(trigger: ListenerTrigger) -> ListenerAdapter:
     return SelfTestAdapter(interval_s=max(interval, 1.0))
 
 
+def _slack_socket_mode_factory(_trigger: ListenerTrigger) -> ListenerAdapter:
+    # Imported here so an API process that registers adapters never loads the
+    # WebSocket client it will not use.
+    from langflow.services.deps import get_settings_service
+    from langflow.services.triggers.providers.slack.socket_mode import SlackSocketModeAdapter
+
+    settings = get_settings_service().settings
+    return SlackSocketModeAdapter(max_connections=settings.trigger_slack_socket_max_connections)
+
+
 def register_builtin_adapters() -> None:
     """Register the adapters langflow-base owns. Idempotent."""
-    if (LISTENER_FAKE_KIND, None) in _REGISTRY:
-        return
-    register_adapter(kind=LISTENER_FAKE_KIND, mechanism=None, factory=_selftest_factory)
+    if (LISTENER_FAKE_KIND, None) not in _REGISTRY:
+        register_adapter(kind=LISTENER_FAKE_KIND, mechanism=None, factory=_selftest_factory)
+    # One factory for both Slack kinds: a message trigger and a reaction trigger
+    # on one app-level-token connection share one socket.
+    for kind in sorted(SLACK_TRIGGER_KINDS):
+        if (kind, MECHANISM_SLACK_SOCKET_MODE) not in _REGISTRY:
+            register_adapter(
+                kind=kind,
+                mechanism=MECHANISM_SLACK_SOCKET_MODE,
+                factory=_slack_socket_mode_factory,
+                rebuild_on_config_change=False,
+            )
 
 
 __all__ = [
@@ -249,6 +315,7 @@ __all__ = [
     "ListenerTrigger",
     "PollingListenerAdapter",
     "SelfTestAdapter",
+    "adapter_spec",
     "build_adapter",
     "is_listener_kind",
     "register_adapter",

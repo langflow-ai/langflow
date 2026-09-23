@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -64,6 +63,7 @@ from langflow.services.triggers.listeners import connection_leases, replicas
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
     ListenerTrigger,
+    adapter_spec,
     build_adapter,
     is_listener_kind,
 )
@@ -229,9 +229,10 @@ def _adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
     later edit to that trigger - a new mechanism, a new poll interval - cannot
     reach a socket that is already open. Comparing this spec is how the
     supervisor notices and rebuilds instead of running yesterday's config
-    forever.
+    forever. An adapter registered as reading its configuration per event
+    leaves the configuration out, so editing a filter never re-opens a socket.
     """
-    return (trigger.kind, trigger.mechanism_id, json.dumps(trigger.config or {}, sort_keys=True, default=str))
+    return adapter_spec(trigger)
 
 
 @dataclass
@@ -651,6 +652,11 @@ class ListenerSupervisor:
                 raise ConnectionUnresolvedError(handle, provider=row.provider_key) from exc
             return await get_connection_resolver_service().resolve(request)
 
+        async def mark_connected() -> None:
+            """The provider accepted the connection: clear a stale failure banner."""
+            if not worker.succeeded_since_failure:
+                await self._succeeded(worker)
+
         return ListenerContext(
             connection_id=worker.connection_id,
             triggers=worker.triggers,
@@ -658,6 +664,7 @@ class ListenerSupervisor:
             save_cursor=save_cursor,
             resolve_credential=resolve_credential,
             stopping=worker.stopping,
+            mark_connected=mark_connected,
         )
 
     # ------------------------------------------------------------------ #
