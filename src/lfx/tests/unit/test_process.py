@@ -13,8 +13,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.vertex.base import ParameterHandler, Vertex
-from lfx.processing.process import apply_tweaks
+from lfx.processing.process import apply_tweaks, process_tweaks, process_tweaks_on_graph
 from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES, CODE_EXECUTION_FIELD_NAMES
 
 
@@ -23,6 +24,17 @@ def _template_node(template: dict, *, node_type: str | None = None) -> dict:
     if node_type is not None:
         data["type"] = node_type
     return {"id": "n", "data": data}
+
+
+_BING_NODE_TYPES = (
+    "BingSearchAPI",
+    "BingSearchAPIComponent",
+    "Bing Search API",
+    "ext:bing:BingSearchAPIComponent@official",
+    "ext:bing:BingSearchAPIComponent@official-pre-a",
+    "lfx.components.bing.bing_search_api.BingSearchAPIComponent",
+    "lfx.components.bing.BingSearchAPIComponent",
+)
 
 
 def test_apply_tweaks_applies_ordinary_field():
@@ -61,6 +73,52 @@ def test_apply_tweaks_blocks_sql_connection_and_query():
         call("Security: refusing to override protected field 'database_url' via tweaks."),
         call("Security: refusing to override protected field 'query' via tweaks."),
     ]
+
+
+@pytest.mark.parametrize("node_type", _BING_NODE_TYPES)
+def test_process_tweaks_cannot_redirect_bing_credential(node_type: str):
+    """An execution caller cannot redirect the flow author's stored Bing key."""
+    node = _template_node(
+        {
+            "bing_search_url": {"value": "https://api.bing.microsoft.com/v7.0/search", "type": "str"},
+            "bing_subscription_key": {"value": "stored-key", "type": "str", "load_from_db": True},
+            "k": {"value": 4, "type": "int"},
+        },
+        node_type=node_type,
+    )
+    graph_data = {"nodes": [node]}
+
+    with pytest.raises(TweakRefusedError, match="bing_search_url"):
+        process_tweaks(graph_data, {"n": {"bing_search_url": "https://attacker.example/search", "k": 1}})
+
+    template = node["data"]["node"]["template"]
+    assert template["bing_search_url"]["value"] == "https://api.bing.microsoft.com/v7.0/search"
+    assert template["bing_subscription_key"]["value"] == "stored-key"
+    assert template["k"]["value"] == 4  # refusal is atomic
+
+    process_tweaks(graph_data, {"n": {"k": 1}})
+    assert template["k"]["value"] == 1
+
+
+@pytest.mark.parametrize("node_type", _BING_NODE_TYPES)
+def test_graph_tweaks_cannot_redirect_bing_credential(node_type: str):
+    """Streaming runs enforce the same destination boundary on a built graph."""
+    vertex = MagicMock(spec=Vertex)
+    vertex.id = "BingSearchAPI-1"
+    vertex.data = {
+        "type": node_type,
+        "node": {
+            "template": {"bing_search_url": {"value": "https://api.bing.microsoft.com/v7.0/search", "type": "str"}}
+        },
+    }
+    graph = MagicMock()
+    graph.vertices = [vertex]
+
+    with pytest.raises(TweakRefusedError, match="bing_search_url"):
+        process_tweaks_on_graph(graph, {vertex.id: {"bing_search_url": "https://attacker.example/search"}})
+
+    assert vertex.data["node"]["template"]["bing_search_url"]["value"] == "https://api.bing.microsoft.com/v7.0/search"
+    vertex.update_raw_params.assert_not_called()
 
 
 def test_apply_tweaks_blocks_code_named_field():
