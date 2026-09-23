@@ -61,7 +61,19 @@ async def test_the_harness_form_renders_with_canvas_widgets(client, logged_in_he
     """Each field must arrive in the shape the frontend's field renderer already reads."""
     harness = await harness_from_api(client, logged_in_headers)
 
-    assert list(harness["template"]) == ["system_prompt", "model", "tools", "n_messages", "compaction"]
+    assert list(harness["template"]) == [
+        "system_prompt",
+        "model",
+        "tools",
+        "n_messages",
+        "tool_policy",
+        "context_strategy",
+        "context_turns",
+        "compaction",
+        "compaction_trigger_tokens",
+        "compaction_keep_messages",
+        "max_iterations",
+    ]
     for name, field in harness["template"].items():
         assert field["name"] == name
         assert field["type"], f"{name} has no widget type"
@@ -73,7 +85,7 @@ async def test_the_form_carries_the_sections_it_should_be_grouped_into(client, l
     harness = await harness_from_api(client, logged_in_headers)
 
     sections = [field["section"] for field in harness["template"].values()]
-    assert sections == ["Instructions", "Model", "Tools", "Runtime", "Runtime"]
+    assert sections == ["Instructions", "Model", "Tools", *(["Runtime"] * 8)]
 
 
 async def test_the_form_exposes_shared_contracts_without_changing_config_keys(

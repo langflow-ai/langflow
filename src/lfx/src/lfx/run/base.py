@@ -534,7 +534,7 @@ async def run_flow(
         # fall through to os.environ on miss instead of erroring the build).
         fallback_to_env_vars = resolve_fallback_to_env_vars()
 
-        from lfx.run.hitl import flow_has_pausing_node
+        from lfx.run.hitl import flow_has_blocking_pausing_node, flow_has_pausing_node
 
         # None auto-enables only for a known pausing node on an interactive terminal.
         hitl_active = human_input if human_input is not None else (flow_has_pausing_node(graph) and sys.stdin.isatty())
@@ -556,6 +556,12 @@ async def run_flow(
                     sys.stderr = captured_stderr
             result_count = len(results)
         else:
+            if flow_has_blocking_pausing_node(graph):
+                msg = (
+                    "This flow requires human approval and cannot run non-interactively. "
+                    "Use --human-input in a terminal or the resumable workflows API."
+                )
+                raise ValueError(msg)
             if flow_has_pausing_node(graph):
                 # Real stderr: the captured one is swallowed at default verbosity, and this must be loud.
                 original_stderr.write(
