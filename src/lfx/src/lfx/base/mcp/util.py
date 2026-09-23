@@ -1977,7 +1977,7 @@ class MCPStdioClient:
         """Connect to MCP server using stdio transport (SDK style)."""
         return await asyncio.wait_for(
             self._connect_to_server(command_str, env, current_user_id=current_user_id, headers=headers),
-            timeout=get_settings_service().settings.mcp_server_timeout,
+            timeout=get_session_init_timeout(),
         )
 
     def set_session_context(self, context_id: str):
@@ -2293,7 +2293,7 @@ class MCPStreamableHttpClient:
             self._connect_to_server(
                 url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
             ),
-            timeout=get_settings_service().settings.mcp_server_timeout,
+            timeout=get_session_init_timeout(),
         )
 
     def set_session_context(self, context_id: str):
