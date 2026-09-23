@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   CONNECTION_NAME_MAX_LENGTH,
   CONNECTION_NAME_PATTERN,
@@ -34,6 +35,7 @@ import {
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { uniqueNormalizedScopes } from "@/utils/connection-scopes";
+import { cn } from "@/utils/utils";
 import {
   partitionByCeiling,
   reauthorizeScopeList,
@@ -191,11 +193,21 @@ export function AddConnectionDialog({
     if (authorize?.kind !== "waiting") return;
     if (hasConsentLanded(poll.data, baseline)) {
       const row = poll.data as ConnectionRead;
-      setAuthorize(
-        row.status === "ready" && row.has_credentials
-          ? { kind: "connected", connection: row }
-          : { kind: "failed", message: t("connections.add.failed") },
-      );
+      if (row.status_reason?.startsWith("oauth-")) {
+        const message =
+          row.status_reason === "oauth-denied"
+            ? t("connections.add.denied")
+            : row.status_reason === "oauth-expired"
+              ? t("connections.add.expired")
+              : t("connections.add.failed");
+        setAuthorize({ kind: "failed", message });
+      } else if (row.status === "ready" && row.has_credentials) {
+        popupRef.current?.close();
+        popupRef.current = null;
+        setAuthorize({ kind: "connected", connection: row });
+      } else {
+        setAuthorize({ kind: "failed", message: t("connections.add.failed") });
+      }
       return;
     }
     if (Date.now() - startedAt.current > CONSENT_TIMEOUT_MS) {
@@ -344,10 +356,7 @@ export function AddConnectionDialog({
       await beginAuthorize(row, [...selectedScopes]);
     } catch (error) {
       popupRef.current?.close();
-      setFieldError(
-        (error as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail ?? t("connections.add.failed"),
-      );
+      setFieldError(getAxiosErrorDetail(error, t("connections.add.failed")));
     }
   };
 
@@ -423,19 +432,28 @@ export function AddConnectionDialog({
                   id="connection-name"
                   value={name}
                   spellCheck={false}
-                  placeholder="work"
-                  onChange={(event) =>
-                    setName(
-                      event.target.value
-                        .toLowerCase()
-                        .replace(/[^a-z0-9_-]/g, ""),
-                    )
-                  }
+                  placeholder={t("connections.add.handlePlaceholder")}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={CONNECTION_NAME_MAX_LENGTH}
+                  aria-invalid={name.length > 0 && !handleValid}
+                  className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
+                  aria-describedby="connection-name-help"
                   data-testid="connection-name"
                 />
                 <span className="font-mono text-xs text-muted-foreground">
                   {providerId}/{name || "…"}
                 </span>
+                <p
+                  id="connection-name-help"
+                  className={cn(
+                    "text-xs text-muted-foreground",
+                    name.length > 0 && !handleValid && "text-destructive",
+                  )}
+                >
+                  {t("connections.add.handleHelp", {
+                    max: CONNECTION_NAME_MAX_LENGTH,
+                  })}
+                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="connection-display-name">

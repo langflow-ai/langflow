@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji
 from lfx.log.logger import logger
+from lfx.schema.validators import ensure_utc
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Boolean, Text, UniqueConstraint, false, text
 from sqlalchemy import Enum as SQLEnum
@@ -212,10 +213,7 @@ class FlowBase(SQLModel):
     def validate_dt(cls, v):
         if v is None:
             return v
-        if isinstance(v, datetime):
-            return v
-
-        return datetime.fromisoformat(v)
+        return ensure_utc(v if isinstance(v, datetime) else datetime.fromisoformat(v))
 
 
 class Flow(FlowBase, table=True):  # type: ignore[call-arg]
