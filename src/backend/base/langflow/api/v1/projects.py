@@ -108,14 +108,16 @@ _escape_like = escape_like_pattern
 
 
 async def _write_config_through(
-    session: DbSession, project: Folder, *, previous_config: dict | None = None
+    session: DbSession, project: Folder, *, current_user: User, previous_config: dict | None = None
 ) -> ProjectConfigWrite:
     """Apply the project's form to its flows, and keep any file-backed copy in step.
 
     A flow with an ``fs_path`` is also a file on disk, and that file is what lfx loads. Leaving
     it behind would defeat the point of writing through at all.
     """
-    changed = await write_project_config_to_flows(session, project, previous_config=previous_config)
+    changed = await write_project_config_to_flows(
+        session, project, current_user=current_user, previous_config=previous_config
+    )
     if changed.flows:
         storage_service = get_storage_service()
         for flow in changed.flows:
@@ -304,7 +306,7 @@ async def _new_project(
     else:
         await _move_flows_into_project()
 
-    flows_updated = await _write_config_through(session, new_project)
+    flows_updated = await _write_config_through(session, new_project, current_user=current_user)
 
     # Convert to FolderRead while session is still active to avoid detached instance errors
     saved = FolderSaveRead.model_validate(new_project, from_attributes=True)
@@ -1026,7 +1028,9 @@ async def _apply_project_update(
     # Last, after the flow moves, so whatever set of flows the project ends this request with
     # is the set the form is written into.
     flows_updated = (
-        await _write_config_through(session, existing_project, previous_config=previous_config)
+        await _write_config_through(
+            session, existing_project, current_user=current_user, previous_config=previous_config
+        )
         if "project_config" in project.model_fields_set
         else ProjectConfigWrite()
     )

@@ -39,6 +39,19 @@ SORT_DISPATCHER = {
 }
 
 
+async def get_tool_pack_flow(*, user_id: str, binding) -> Data:
+    from lfx.projects.tool_packs import ToolPackToolBinding
+
+    from langflow.services.database.models.folder.tool_packs import resolve_tool_pack_snapshot
+    from langflow.services.database.models.user.model import User
+
+    async with session_scope() as session:
+        user = await session.get(User, UUID(user_id))
+        if user is None:
+            raise HTTPException(404, "Tool pack not found")
+        return await resolve_tool_pack_snapshot(session, user, ToolPackToolBinding.model_validate(binding))
+
+
 def _safe_function_argument_names(inputs: list[Vertex]) -> list[str]:
     """Return unique Python identifiers for flow-tool input arguments."""
     names: list[str] = []
