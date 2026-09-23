@@ -9,12 +9,20 @@ from lfx.custom import Component
 from lfx.inputs import BoolInput, DropdownInput, HandleInput, IntInput
 from lfx.schema import Data
 from lfx.template import Output
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 disable_component_in_astra_cloud_msg = (
     "Video processing is not supported in Astra cloud environment. "
     "Video components require local file system access for processing. "
     "Please use local storage mode or process videos locally before uploading."
+)
+
+# FFmpeg probes file contents, not just the suffix. Playlist demuxers such as HLS,
+# DASH, and concat can open another tenant's local files after the top-level path
+# has passed its scope check. Allow only standalone media demuxers for both reads.
+LOCAL_VIDEO_DEMUXERS = (
+    "mov,matroska,webm,avi,flv,asf,mpeg,mpegts,mpegtsraw,mpegvideo,mxf,dv,ogg,rm,rawvideo,yuv4mpegpipe"
 )
 
 
@@ -73,18 +81,37 @@ class SplitVideoComponent(Component):
         ),
     ]
 
-    def get_video_duration(self, video_path: str) -> float:
-        """Get video duration using FFmpeg."""
+    def _resolve_video_file(self, video_path: str) -> str:
+        """Resolve an authorized local file before handing its path to FFmpeg."""
+        if not isinstance(video_path, str) or not video_path or "://" in video_path:
+            msg = "Invalid video path: expected a local file"
+            raise ValueError(msg)
+
+        path = enforce_local_file_access(video_path, scope_ids=component_file_access_scopes(self))
         try:
-            # Validate video path to prevent shell injection
-            if not isinstance(video_path, str) or any(c in video_path for c in ";&|`$(){}[]<>*?!#~"):
-                error_msg = "Invalid video path"
-                raise ValueError(error_msg)
+            path = path.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            msg = "Invalid video path: file not found"
+            raise ValueError(msg) from exc
+        if not path.is_file():
+            msg = "Invalid video path: expected a regular file"
+            raise ValueError(msg)
+        # An absolute path cannot be interpreted as a leading option or protocol by FFmpeg.
+        return str(path)
+
+    def get_video_duration(self, video_path: str) -> float:
+        """Get video duration using FFprobe."""
+        try:
+            video_path = self._resolve_video_file(video_path)
 
             cmd = [
                 "ffprobe",
                 "-v",
                 "error",
+                "-protocol_whitelist",
+                "file",
+                "-format_whitelist",
+                LOCAL_VIDEO_DEMUXERS,
                 "-show_entries",
                 "format=duration",
                 "-of",
@@ -129,6 +156,7 @@ class SplitVideoComponent(Component):
     def process_video(self, video_path: str, clip_duration: int, *, include_original: bool) -> list[Data]:
         """Process video and split it into clips using FFmpeg."""
         try:
+            video_path = self._resolve_video_file(video_path)
             # Get video duration
             total_duration = self.get_video_duration(video_path)
 
@@ -199,6 +227,10 @@ class SplitVideoComponent(Component):
                     # Use FFmpeg to split the video
                     cmd = [
                         "ffmpeg",
+                        "-protocol_whitelist",
+                        "file",
+                        "-format_whitelist",
+                        LOCAL_VIDEO_DEMUXERS,
                         "-i",
                         video_path,
                         "-ss",
@@ -283,15 +315,7 @@ class SplitVideoComponent(Component):
                 error_msg = "Please provide exactly one video"
                 raise ValueError(error_msg)
 
-            video_path = self.videodata[0].data.get("text")
-            if not video_path or not Path(video_path).exists():
-                error_msg = "Invalid video path"
-                raise ValueError(error_msg)
-
-            # Validate video path to prevent shell injection
-            if not isinstance(video_path, str) or any(c in video_path for c in ";&|`$(){}[]<>*?!#~"):
-                error_msg = "Invalid video path contains unsafe characters"
-                raise ValueError(error_msg)
+            video_path = self._resolve_video_file(self.videodata[0].data.get("text"))
 
             # Process the video
             return self.process_video(video_path, self.clip_duration, include_original=self.include_original)
