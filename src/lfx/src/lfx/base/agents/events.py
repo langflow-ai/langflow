@@ -550,6 +550,9 @@ async def process_agent_events(
                     "permission_failed": "Tool permission failed",
                     "hook_completed": "Hook completed",
                     "hook_failed": "Hook failed",
+                    "skill_activated": "Skill activated",
+                    "skill_finished": "Skill finished",
+                    "skill_tool_blocked": "Skill tool blocked",
                 }.get(kind)
                 if title:
                     if agent_message.content_blocks is None:

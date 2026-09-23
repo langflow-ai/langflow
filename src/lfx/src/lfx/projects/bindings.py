@@ -61,7 +61,7 @@ def compose_single_binding(
     *,
     project_id: str,
     agent_id: str,
-    binding: FlowBinding | None,
+    binding: BaseModel | None,
     input_name: str,
     origin_name: str,
     label: str,
@@ -95,7 +95,7 @@ def compose_single_binding(
             f"Restore the saved {label.lower()} configuration before changing its binding."
         )
         raise ValueError(msg)
-    value = binding.model_dump() if binding else None
+    value = binding.model_dump(mode="json") if binding else None
     entry["value"] = json.dumps(value) if binding else ""
     entry["override_skip"] = True
     if binding:
