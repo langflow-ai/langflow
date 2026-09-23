@@ -11,9 +11,23 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+#: The one reason worth telling apart. ``registration-unavailable`` means this
+#: process cannot see a usable registration for a connection - unparsable or
+#: absent ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS``, a registration that does
+#: not validate, one that belongs to another deployment context. The
+#: authorization is intact; the process is configured wrong, so a caller that
+#: would otherwise disarm the work (a listener holding a trigger) should retry
+#: instead. Every other OAuthError describes the authorization itself and does
+#: need a human to reconnect.
+OAuthErrorReason = Literal["registration-unavailable"]
+
 
 class OAuthError(ValueError):
     """A deliberately credential-free error safe for API responses."""
+
+    def __init__(self, message: str, *, reason: OAuthErrorReason | None = None) -> None:
+        super().__init__(message)
+        self.reason: OAuthErrorReason | None = reason
 
 
 class OAuthRegistration(BaseModel):
@@ -32,6 +46,11 @@ class OAuthRegistration(BaseModel):
     scopes: list[str] = Field(min_length=1, max_length=512)
     tenant: str | None = None
     allowed_tenants: list[str] = Field(default_factory=list)
+    # TRG-4. Slack signs every Events API delivery with an app-level secret that
+    # is not the OAuth client secret and is not per user, so it belongs to the
+    # registration rather than to a connection or a trigger. It is optional
+    # because a registration used only for actions never receives an event.
+    signing_secret: SecretStr | None = None
 
     @model_validator(mode="after")
     def validate_registration(self) -> OAuthRegistration:
@@ -73,6 +92,13 @@ class OAuthRegistration(BaseModel):
         if self.profile == "bot" and (self.provider != "slack" or self.client_type == "public"):
             msg = "Only confidential Slack clients support the bot profile"
             raise OAuthError(msg)
+        if self.signing_secret is not None and self.provider != "slack":
+            # Microsoft and Google authenticate their notifications with a
+            # per-subscription secret Langflow mints (clientState, channel
+            # token), so a registration-level signing secret would be a second,
+            # weaker path to the same trust decision.
+            msg = "Only Slack registrations carry a signing secret"
+            raise OAuthError(msg)
         if not self.scopes or any(not s or any(c.isspace() or c == "," for c in s) for s in self.scopes):
             msg = "OAuth scopes must be nonempty individual scope names"
             raise OAuthError(msg)
@@ -96,7 +122,7 @@ class OAuthRegistration(BaseModel):
     def fingerprint(self) -> str:
         # Exclude rotatable secrets, but bind consent and existing grants to their
         # provider, client, tenant, profile, redirect and configured scope ceiling.
-        value = self.model_dump(exclude={"client_secret", "private_key", "certificate_thumbprint"})
+        value = self.model_dump(exclude={"client_secret", "private_key", "certificate_thumbprint", "signing_secret"})
         return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
@@ -145,26 +171,26 @@ class OAuthSettings(BaseSettings):
             configs = json.loads(self.registrations.get_secret_value())
         except ValueError:
             msg = "OAuth registrations must contain valid JSON."
-            raise OAuthError(msg) from None
+            raise OAuthError(msg, reason="registration-unavailable") from None
         if not isinstance(configs, dict):
             msg = "OAuth registrations must be a JSON object keyed by registration ID."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         if registration_id not in configs:
             msg = "OAuth registration ID is not configured."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         try:
             registration = OAuthRegistration.model_validate(configs[registration_id])
         except ValidationError as exc:
-            raise OAuthError(_registration_validation_message(exc)) from None
+            raise OAuthError(_registration_validation_message(exc), reason="registration-unavailable") from None
         except (ValueError, TypeError):
             msg = "OAuth registration is not configured correctly."
-            raise OAuthError(msg) from None
+            raise OAuthError(msg, reason="registration-unavailable") from None
         if registration.context != self.context:
             msg = "OAuth registration is unavailable in this deployment context."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         if registration.owner == "langflow" and registration.context == "hosted" and not self.hosted_enabled:
             msg = "Hosted OAuth registrations are disabled."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="registration-unavailable")
         return registration
 
 
@@ -173,4 +199,4 @@ def get_oauth_settings() -> OAuthSettings:
         return OAuthSettings()
     except ValueError:
         msg = "OAuth instance configuration is invalid."
-        raise OAuthError(msg) from None
+        raise OAuthError(msg, reason="registration-unavailable") from None

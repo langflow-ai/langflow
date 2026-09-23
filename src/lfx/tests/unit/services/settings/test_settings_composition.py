@@ -140,6 +140,8 @@ EXPECTED_FIELDS = {
     "ssrf_allowed_hosts",
     "connector_ssrf_validation_enabled",
     "connector_ssrf_allow_loopback",
+    "provider_credential_allowed_hosts",
+    "kb_allowed_hosts",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
@@ -263,6 +265,30 @@ EXPECTED_FIELDS = {
     "trigger_replay_window_days",
     "trigger_event_retention_days",
     "trigger_purge_interval_s",
+    # Triggers (TRG-3): the listener process
+    "listeners_mode",
+    "listeners_health_host",
+    "listeners_health_port",
+    "listener_lease_ttl_s",
+    "listener_heartbeat_interval_s",
+    "listener_reconcile_interval_s",
+    "listener_poll_interval_s",
+    "listener_backoff_base_s",
+    "listener_backoff_cap_s",
+    "listener_failure_threshold",
+    # Triggers (TRG-4): provider push ingress and subscription renewal.
+    "trigger_ingress_enabled",
+    "trigger_ingress_max_body_bytes",
+    "trigger_ingress_rate_limit_per_minute",
+    "trigger_ingress_unknown_rate_limit_per_minute",
+    "trigger_ingress_signature_tolerance_s",
+    "trigger_subscription_renew_fraction",
+    "trigger_subscription_renew_lead_cap_s",
+    "trigger_subscription_renew_interval_s",
+    "trigger_subscription_max_per_poll",
+    "trigger_subscription_retry_backoff_base_s",
+    "trigger_subscription_retry_backoff_cap_s",
+    "trigger_subscription_failure_threshold",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
@@ -326,7 +352,7 @@ def test_critical_defaults_unchanged():
     assert settings.allow_custom_components is True
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
-    assert settings.restrict_local_file_access is False
+    assert settings.restrict_local_file_access is True
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
     assert settings.mcp_server_allowed_packages is None

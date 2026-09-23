@@ -1,6 +1,6 @@
 [project]
 name = "lfx-google"
-version = "0.2.1"
+version = "0.3.0"
 description = "Google and Gemini components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

@@ -6,6 +6,7 @@ import httpx
 import pytest
 from lfx.integrations.errors import (
     ActionUnsupportedError,
+    AuthExpiredError,
     InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
@@ -86,3 +87,49 @@ async def test_a_client_request_to_an_unlicensed_tenant_raises_the_setup_error()
         with pytest.raises(InvalidRequestError, match="license"):
             await client.get_json("/me/drive")
     assert len(recorder.requests) == 1
+
+
+@pytest.mark.parametrize("path", ["/me/messages", "/me/mailFolders/inbox/messages", "/me/sendMail"])
+async def test_empty_mailbox_401_after_refresh_reports_mailbox_setup(path: str) -> None:
+    resolver = RecordingResolver([credential("old"), credential("new")])
+    recorder = TransportRecorder(lambda _request: httpx.Response(401))
+
+    async with GraphClient(lease_for(resolver), transport=recorder.transport) as client:
+        with pytest.raises(InvalidRequestError, match="cannot reach this user's mailbox") as raised:
+            await client.request("POST" if path.endswith("sendMail") else "GET", path)
+
+    assert raised.value.http_status == 401
+    assert "Exchange Online" in (raised.value.hint or "")
+    assert [request.headers["authorization"] for request in recorder.requests] == ["Bearer old", "Bearer new"]
+    assert resolver.calls == 2
+
+
+async def test_empty_drive_401_after_refresh_remains_an_auth_error() -> None:
+    resolver = RecordingResolver([credential("old"), credential("new")])
+    recorder = TransportRecorder(lambda _request: httpx.Response(401))
+
+    async with GraphClient(lease_for(resolver), transport=recorder.transport) as client:
+        with pytest.raises(AuthExpiredError):
+            await client.get_json("/me/drive")
+
+    assert len(recorder.requests) == 2
+
+
+@pytest.mark.parametrize(
+    ("second_token", "headers"),
+    [
+        ("old", {}),
+        ("new", {"WWW-Authenticate": 'Bearer error="invalid_token"'}),
+    ],
+)
+async def test_mailbox_401_with_an_unresolved_token_error_remains_an_auth_error(
+    second_token: str, headers: dict[str, str]
+) -> None:
+    resolver = RecordingResolver([credential("old"), credential(second_token)])
+    recorder = TransportRecorder(lambda _request: httpx.Response(401, headers=headers))
+
+    async with GraphClient(lease_for(resolver), transport=recorder.transport) as client:
+        with pytest.raises(AuthExpiredError):
+            await client.get_json("/me/messages")
+
+    assert len(recorder.requests) == 2

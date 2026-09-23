@@ -21,6 +21,7 @@ describe("buildWorkflowRunRequest", () => {
       input_value: "hello",
       mode: "stream",
       stream_protocol: "agui",
+      expose_graph_state: true,
     });
   });
 
@@ -60,6 +61,21 @@ describe("buildWorkflowRunRequest", () => {
 
     expect(body.mode).toBe("stream");
     expect(body.stream_protocol).toBe("agui");
+  });
+
+  it("asks for graph state so the canvas keeps rendering node status", () => {
+    const body = buildWorkflowRunRequest({ flowId: "flow-1" });
+
+    expect(body.expose_graph_state).toBe(true);
+  });
+
+  it("omits graph state on the public endpoint, whose schema forbids the field", () => {
+    const body = buildWorkflowRunRequest({
+      flowId: "flow-1",
+      usePublicEndpoint: true,
+    });
+
+    expect(body).not.toHaveProperty("expose_graph_state");
   });
 
   it("maps tweaks, partial-run ids, flowData and files into native keys", () => {
@@ -280,6 +296,7 @@ describe("createWorkflowAgent wire body", () => {
         mode: "stream",
         stream_protocol: "agui",
         session_id: "session-abc",
+        expose_graph_state: true,
       });
     } finally {
       fetchSpy.mockRestore();
