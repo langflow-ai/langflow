@@ -222,6 +222,22 @@ async def test_context_discovery_baseline_and_draft_validation_are_scoped(client
     assert foreign.status_code == 404
 
 
+async def test_context_baseline_uses_the_form_settings_and_rejects_invalid_turns(client, logged_in_headers):
+    project = await create_project(client, logged_in_headers, name="Context baseline")
+    endpoint = f"api/v1/projects/{project}/flow-baseline?field_name=context_strategy"
+    response = await client.post(
+        endpoint,
+        headers=logged_in_headers,
+        json={"initial_config": {"context_strategy": "recent_turns", "context_turns": 3}},
+    )
+    assert response.status_code == 200, response.text
+    template = response.json()["data"]["nodes"][-1]["data"]["node"]["template"]
+    assert template["strategy"]["value"] == "recent_turns"
+    assert template["turns"]["value"] == 3
+    invalid = await client.post(endpoint, headers=logged_in_headers, json={"initial_config": {"context_turns": 0}})
+    assert invalid.status_code == 422, invalid.text
+
+
 async def test_context_archive_preserves_all_three_contracts_with_original_project_present(
     client,
     logged_in_headers,

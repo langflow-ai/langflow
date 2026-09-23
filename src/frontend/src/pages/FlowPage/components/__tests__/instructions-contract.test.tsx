@@ -132,3 +132,39 @@ it("uses explicit return context for an unmarked flow and discards previous-slot
     "Decision output needs attention",
   );
 });
+
+it.each([true, false])(
+  "validates Context from its marker or return URL (marker=%s)",
+  async (marked) => {
+    state.currentFlow = {
+      id: "context",
+      folder_id: "project",
+      data: marked ? { harness_contract: { slot: "ContextManager" } } : {},
+    };
+    searchParams = new URLSearchParams(
+      marked ? "" : "harnessField=context_strategy",
+    );
+    post.mockResolvedValue({ data: { valid: true, outputs: [{}] } });
+    const { rerender } = render(<HarnessFlowContract />);
+    await tick();
+    expect(post).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({ params: { field_name: "context_strategy" } }),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Message output ready",
+    );
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/all/folder/project?tab=harness&field=context_strategy",
+    );
+    state.edges = [{ invalid: true }];
+    post.mockResolvedValue({ data: { valid: false, outputs: [] } });
+    rerender(<HarnessFlowContract />);
+    await tick();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Message output needs attention",
+    );
+  },
+);

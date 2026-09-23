@@ -22,6 +22,12 @@ const instructionsBinding = {
   output_name: "instructions",
   revision: "reviewed",
 };
+const contextBinding = {
+  ...instructionsBinding,
+  flow_id: "context-source",
+  output_name: "context",
+  timeout_seconds: 5,
+};
 const hookBinding: HookBinding = {
   flow_id: "hook-source",
   node_id: "hook",
@@ -63,20 +69,56 @@ jest.mock("../components/hook-flow-picker", () => ({
 }));
 
 jest.mock("../components/instructions-flow-picker", () => ({
-  InstructionsFlowPicker: ({
+  HarnessFlowPicker: ({
     value,
     onChange,
+    fieldName,
+    onOpen,
+    initialConfig,
   }: {
     value?: unknown;
     onChange: (value: unknown) => void;
+    fieldName: string;
+    onOpen?: () => void;
+    initialConfig?: unknown;
   }) => (
-    <button
-      type="button"
-      data-testid="bind-instructions"
-      onClick={() => onChange(value ? undefined : instructionsBinding)}
-    >
-      {value ? "Unbind" : "Bind"}
-    </button>
+    <>
+      <button
+        type="button"
+        data-testid={
+          fieldName === "context_strategy"
+            ? "bind-context"
+            : "bind-instructions"
+        }
+        data-initial-config={JSON.stringify(initialConfig)}
+        onClick={() =>
+          onChange(
+            value
+              ? undefined
+              : fieldName === "context_strategy"
+                ? contextBinding
+                : instructionsBinding,
+          )
+        }
+      >
+        {value ? "Unbind" : "Bind"}
+      </button>
+      {fieldName === "context_strategy" && (
+        <>
+          <button data-testid="open-context" onClick={onOpen}>
+            Open context
+          </button>
+          <button
+            data-testid="invalidate-context"
+            onClick={() =>
+              onChange({ ...contextBinding, timeout_seconds: NaN })
+            }
+          >
+            Invalid context timeout
+          </button>
+        </>
+      )}
+    </>
   ),
 }));
 
@@ -768,6 +810,105 @@ it("blocks a save with an invalid Hook timeout and recovers when it is removed",
   expect(mockPatch).not.toHaveBeenCalled();
   fireEvent.click(screen.getByTestId("remove-hooks"));
   expect(screen.getByTestId("harness-save-btn")).toBeEnabled();
+});
+
+const enableContextFields = () => {
+  enableHookFields();
+  const type = projectTypes![0];
+  projectTypes = [
+    {
+      ...type,
+      template: {
+        ...type.template,
+        context_strategy: {
+          name: "context_strategy",
+          display_name: "Context preparation",
+          section: "Runtime",
+          value: "recent_turns",
+          option_labels: {
+            all: "All loaded messages",
+            recent_turns: "Recent complete turns",
+          },
+          supports_flow_binding: true,
+        },
+        context_turns: {
+          name: "context_turns",
+          display_name: "Recent turns",
+          section: "Runtime",
+          value: 3,
+          type: "int",
+          show_when: { context_strategy: "recent_turns" },
+        },
+      },
+    },
+  ];
+  projectFlows!.push({
+    id: "context-source",
+    name: "Evidence context",
+    description: "",
+  } as FlowType);
+};
+
+it("replaces scalar Context controls, retains their values, and names the flow in the summary", () => {
+  enableContextFields();
+  renderPage();
+  expect(screen.getByTestId("bind-context")).toHaveAttribute(
+    "data-initial-config",
+    JSON.stringify({ context_strategy: "recent_turns", context_turns: 3 }),
+  );
+  fireEvent.click(screen.getByTestId("bind-context"));
+  expect(screen.queryByTestId("input-context_turns")).not.toBeInTheDocument();
+  expect(
+    screen.getByTestId("harness-summary-detail-context_strategy"),
+  ).toHaveTextContent("Evidence context · flow");
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    context_strategy: "recent_turns",
+    context_turns: 3,
+    flow_bindings: { context_strategy: contextBinding },
+  });
+  fireEvent.click(screen.getByTestId("bind-context"));
+  expect(screen.getByTestId("input-context_turns")).toHaveValue("3");
+});
+
+it("keeps all three binding kinds and other edits through the Context canvas round trip", () => {
+  enableContextFields();
+  const projectConfig = {
+    flow_bindings: { system_prompt: instructionsBinding, hooks: [hookBinding] },
+  };
+  const first = renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("bind-context"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  fireEvent.click(screen.getByTestId("open-context"));
+  first.unmount();
+  renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    n_messages: "27",
+    flow_bindings: {
+      system_prompt: instructionsBinding,
+      hooks: [hookBinding],
+      context_strategy: contextBinding,
+    },
+  });
+});
+
+it("blocks an invalid Context timeout without discarding other bindings", () => {
+  enableContextFields();
+  renderPage({ projectConfig: { flow_bindings: { hooks: [hookBinding] } } });
+  fireEvent.click(screen.getByTestId("invalidate-context"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  expect(screen.getByTestId("harness-save-btn")).toBeDisabled();
+  fireEvent.click(screen.getByTestId("bind-context"));
+  expect(screen.getByTestId("harness-save-btn")).toBeEnabled();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config.flow_bindings).toEqual({
+    hooks: [hookBinding],
+  });
 });
 
 it("reveals mode settings and preserves them when a mode is turned off", () => {
