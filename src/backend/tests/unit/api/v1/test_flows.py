@@ -1702,6 +1702,103 @@ async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+async def test_upload_flow_default_dedupes_name_conflict(client: AsyncClient, logged_in_headers):
+    """Without strict=true, a create-path name collision is silently renamed (long-standing behavior)."""
+    import json
+
+    name = f"dedupe-default-{uuid.uuid4()}"
+    first = await client.post("api/v1/flows/", json={"name": name, "data": {}}, headers=logged_in_headers)
+    assert first.status_code == status.HTTP_201_CREATED, first.text
+
+    file_content = json.dumps({"flows": [{"name": name, "data": {}}]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()[0]["name"] == f"{name} (1)"
+
+
+async def test_upload_flow_strict_fails_on_name_conflict(client: AsyncClient, logged_in_headers):
+    """strict=true rejects a create-path name collision instead of renaming it."""
+    import json
+
+    name = f"dedupe-strict-{uuid.uuid4()}"
+    first = await client.post("api/v1/flows/", json={"name": name, "data": {}}, headers=logged_in_headers)
+    assert first.status_code == status.HTTP_201_CREATED, first.text
+
+    file_content = json.dumps({"flows": [{"name": name, "data": {}}]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        params={"strict": "true"},
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "unique" in response.json()["detail"].lower()
+
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    assert sum(1 for flow in listed.json() if flow["name"].startswith(name)) == 1
+
+
+async def test_upload_flow_strict_fails_on_foreign_id(client: AsyncClient, logged_in_headers):
+    """strict=true rejects a stable ID owned by another user instead of silently minting a new one."""
+    import json
+
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import session_scope
+
+    other_user_id = uuid.uuid4()
+    username = f"other_user_for_upload_strict_{uuid.uuid4()}"
+    async with session_scope() as session:
+        other_user = User(
+            id=other_user_id,
+            username=username,
+            password=get_password_hash("testpassword"),  # pragma: allowlist secret
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(other_user)
+        await session.commit()
+
+    login_response = await client.post(
+        "api/v1/login", data={"username": username, "password": "testpassword"}
+    )  # pragma: allowlist secret
+    assert login_response.status_code == status.HTTP_200_OK, login_response.text
+    other_user_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    create_response = await client.post(
+        "api/v1/flows/", json={"name": "foreign-owned-flow", "data": {}}, headers=other_user_headers
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    foreign_flow_id = create_response.json()["id"]
+
+    file_content = json.dumps({"flows": [{"id": foreign_flow_id, "name": "stolen-name", "data": {}}]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        params={"strict": "true"},
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert foreign_flow_id in response.json()["detail"]
+
+    untouched = await client.get(f"api/v1/flows/{foreign_flow_id}", headers=other_user_headers)
+    assert untouched.status_code == status.HTTP_200_OK
+    assert untouched.json()["name"] == "foreign-owned-flow"
+
+    async with session_scope() as session:
+        user = await session.get(User, other_user_id)
+        if user:
+            await session.delete(user)
+            await session.commit()
+
+
 # PUT endpoint tests (upsert)
 
 

@@ -202,10 +202,19 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
         raise HTTPException(status_code=500, detail=f"Failed to write flow to filesystem: {e}") from e
 
 
-async def _deduplicate_flow_name(session: AsyncSession, name: str, user_id: UUID) -> str:
-    """Return a unique flow name for *user_id*, appending ``(N)`` if needed."""
+async def _deduplicate_flow_name(
+    session: AsyncSession, name: str, user_id: UUID, *, fail_on_conflict: bool = False
+) -> str:
+    """Return a unique flow name for *user_id*, appending ``(N)`` if needed.
+
+    Raises :class:`HTTPException` 409 when *fail_on_conflict* is ``True`` and the name
+    already exists, instead of silently renaming it.
+    """
     if not (await session.exec(select(Flow).where(Flow.name == name).where(Flow.user_id == user_id))).first():
         return name
+
+    if fail_on_conflict:
+        raise HTTPException(status_code=409, detail="Name must be unique")
 
     flows = (
         await session.exec(
@@ -443,6 +452,7 @@ async def _new_flow(
     storage_service: StorageService,
     flow_id: UUID | None = None,
     fail_on_endpoint_conflict: bool = False,
+    fail_on_name_conflict: bool = False,
     validate_folder: bool = False,
     widen_for_authz: bool = False,
     propagate_unhandled_errors: bool = False,
@@ -458,6 +468,9 @@ async def _new_flow(
         storage_service: Service for filesystem operations.
         flow_id: Allows PUT upsert to create flows with a specific ID for syncing between instances.
         fail_on_endpoint_conflict: PUT should fail predictably on conflicts rather than silently renaming.
+        fail_on_name_conflict: Fail predictably on a flow-name conflict rather than silently
+            appending "(N)" -- callers relying on the name they requested (e.g. a batch upsert
+            that reports success back to a caller-visible name) need to know it didn't land.
         validate_folder: Validates folder_id under the active authorization fetch mode for external upserts.
         widen_for_authz: Preserve a cross-user destination that the route already authorized.
         propagate_unhandled_errors: Let the caller own retry and sanitization of unexpected failures.
@@ -489,7 +502,7 @@ async def _new_flow(
 
         # Set user_id (ignore any user_id from body for security)
         flow.user_id = owner_id
-        flow.name = await _deduplicate_flow_name(session, flow.name, owner_id)
+        flow.name = await _deduplicate_flow_name(session, flow.name, owner_id, fail_on_conflict=fail_on_name_conflict)
 
         if flow.endpoint_name:
             flow.endpoint_name = await _deduplicate_endpoint_name(
