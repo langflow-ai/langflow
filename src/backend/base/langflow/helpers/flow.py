@@ -255,6 +255,26 @@ async def get_flow_by_id_or_name(
         raise ValueError(msg) from e
 
 
+async def get_user_is_superuser(user_id: str | UUID | None) -> bool:
+    """Return whether the given user id belongs to a superuser.
+
+    Nested graph loaders hold only the caller's id, while the caller-aware
+    component policy needs the requesting identity's superuser flag. Fails
+    closed (``False``) when the user cannot be resolved.
+    """
+    from langflow.services.database.models.user.model import User
+
+    if not user_id:
+        return False
+    try:
+        uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+    except (ValueError, AttributeError, TypeError):
+        return False
+    async with session_scope() as session:
+        user = await session.get(User, uuid_user_id)
+        return bool(user and user.is_superuser)
+
+
 async def _build_graph_from_authorized_flow(
     *,
     flow: Flow,
@@ -264,6 +284,7 @@ async def _build_graph_from_authorized_flow(
 ) -> Graph:
     """Build a Graph from an already-authorized target flow row."""
     from lfx.graph.graph.base import Graph
+    from lfx.utils.flow_validation import prepare_flow_build_for_user
 
     from langflow.processing.process import process_tweaks
 
@@ -271,6 +292,17 @@ async def _build_graph_from_authorized_flow(
     if not graph_data:
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)
+    # The stored graph is caller-controlled: a regular user can persist component
+    # source through the flow-write API and reach this seam through Sub Flow,
+    # Flow as Tool, internal A2A flow loading, or CustomComponent.load_flow.
+    # Apply the same caller-aware policy the top-level run path applies so
+    # ``custom_component_admin_only`` holds across the nested-flow boundary.
+    sanitized_graph_data = await prepare_flow_build_for_user(
+        graph_data,
+        is_superuser=await get_user_is_superuser(user_id),
+    )
+    if sanitized_graph_data is not None:
+        graph_data = sanitized_graph_data
     if tweaks:
         # Component-side, not caller-side. The only routes here are the generated
         # flow-as-tool function below and ``CustomComponent.run_flow``, both of

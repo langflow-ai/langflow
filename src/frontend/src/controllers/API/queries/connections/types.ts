@@ -20,7 +20,10 @@ export type ConnectionStatus =
 
 export type ConnectionStatusReason =
   | "credential-missing"
-  | "credential-undecryptable";
+  | "credential-undecryptable"
+  | "oauth-denied"
+  | "oauth-expired"
+  | "oauth-failed";
 
 export type ConnectionHealth = "unknown" | "healthy" | "unhealthy";
 
@@ -32,8 +35,11 @@ export type ProviderRevocation =
   | "failed"
   | "not_applicable";
 
-/** Handle characters the backend accepts for the portable `provider/name`. */
-export const CONNECTION_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
+/**
+ * Keep in sync with CONNECTION_NAME_PATTERN and ConnectionRef.name in
+ * src/lfx/src/lfx/integrations/models.py (enforced by types.test.ts).
+ */
+export const CONNECTION_NAME_PATTERN = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 export const CONNECTION_NAME_MAX_LENGTH = 64;
 
 export interface ConnectionAccount {

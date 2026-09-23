@@ -23,6 +23,11 @@ from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_shared_component_cache_service
 from lfx.template.field.base import Output
+from lfx.utils.flow_validation import (
+    admin_only_build_required,
+    custom_component_admin_only_enabled,
+    prepare_flow_build_for_user,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -68,6 +73,17 @@ def _model_provider_policy(user_id, flow_id, flow_name):
     except ImportError:
         return nullcontext()
     return scoped_model_provider_policy_for_target_flow(user_id=user_id, flow_id=flow_id, flow_name=flow_name)
+
+
+async def get_user_is_superuser(user_id: str | None) -> bool:
+    """Resolve Langflow privileges lazily; standalone callers get no admin exemption."""
+    try:
+        from langflow.helpers.flow import get_user_is_superuser as resolve_superuser
+    except ModuleNotFoundError as exc:
+        if exc.name == "langflow" or (exc.name and exc.name.startswith("langflow.")):
+            return False
+        raise
+    return await resolve_superuser(user_id)
 
 
 class RunFlowBaseComponent(Component):
@@ -255,9 +271,25 @@ class RunFlowBaseComponent(Component):
             flow_id=frozen["id"] if frozen else flow_id_selected,
             flow_name=flow_name_selected,
         ):
+            # The stored child payload is caller-controlled: a regular user can persist
+            # component source through the flow-write API and this trusted component then
+            # hands it to Graph.from_payload. Apply the same caller-aware policy the
+            # top-level run path applies so LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY holds
+            # across the nested-flow boundary. Resolve the caller's superuser flag only
+            # when the policy is configured on (or unreadable, failing closed): with the
+            # policy off the flag cannot change the outcome, and the per-call user lookup
+            # would hit the database even on cache hits.
+            if custom_component_admin_only_enabled() is False:
+                is_superuser = False
+                admin_only = False
+            else:
+                is_superuser = await get_user_is_superuser(self.user_id)
+                admin_only = admin_only_build_required(is_superuser=is_superuser)
             if frozen is not None:
+                payload = deepcopy(frozen["data"])
+                sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
                 graph = Graph.from_payload(
-                    payload=deepcopy(frozen["data"]),
+                    payload=sanitized_payload if sanitized_payload is not None else payload,
                     flow_id=frozen["id"],
                     flow_name=frozen["name"],
                     user_id=self.user_id,
@@ -325,8 +357,10 @@ class RunFlowBaseComponent(Component):
                         self.graph.reviewed_tool_packs[str(binding.tool.flow_id)] = binding_value
                 # A fresh graph per invocation prevents tool arguments and build state
                 # leaking between calls. Its definition is fixed for this compiled run.
+                payload = deepcopy(self._pack_snapshot["data"])
+                sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
                 graph = Graph.from_payload(
-                    payload=deepcopy(self._pack_snapshot["data"]),
+                    payload=sanitized_payload if sanitized_payload is not None else payload,
                     flow_id=str(binding.tool.flow_id),
                     flow_name=binding.tool.name,
                     user_id=self.user_id,
@@ -334,7 +368,7 @@ class RunFlowBaseComponent(Component):
                 graph.description = binding.tool.description
                 graph.frozen_tool_flows = self._pack_snapshot.get("dependencies")
                 return graph
-            if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
+            if not admin_only and flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
                 if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
                     self._flow_cache_call("delete", flow_id=flow_id_selected)
                 elif self._is_cached_flow_up_to_date(flow, updated_at):
@@ -348,8 +382,10 @@ class RunFlowBaseComponent(Component):
                 msg = "Flow not found"
                 raise ValueError(msg)
 
+            payload = flow.data.get("data", {})
+            sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
             graph = Graph.from_payload(
-                payload=flow.data.get("data", {}),
+                payload=sanitized_payload if sanitized_payload is not None else payload,
                 flow_id=flow_id_selected or flow.data.get("id"),
                 flow_name=flow_name_selected,
                 user_id=self.user_id,
@@ -357,7 +393,11 @@ class RunFlowBaseComponent(Component):
             graph.description = flow.data.get("description", None)
             graph.updated_at = flow.data.get("updated_at", None)
 
-            self._flow_cache_call("set", flow=graph)
+            # A cached graph carries no policy generation: under admin-only mode it may
+            # have been compiled from unchecked caller source, so it is neither served
+            # nor stored while the policy applies to this caller.
+            if not admin_only:
+                self._flow_cache_call("set", flow=graph)
 
             return graph
 
@@ -605,17 +645,30 @@ class RunFlowBaseComponent(Component):
         return LocalToolBinding.model_validate(binding) if binding is not None else None
 
     def __deepcopy__(self, memo: dict):
-        component = super().__deepcopy__(memo)
-        # The base copy reconstructs declared inputs/outputs, but these methods
-        # are registered on the instance after loading the selected flow.
-        component._ensure_flow_output_methods()  # noqa: SLF001
+        """Let the copy resolve every output it carries, and reuse the graph cache.
+
+        ``_register_flow_output_method`` writes one resolver per selected-flow
+        output onto the *instance*, and ``Component.__deepcopy__`` rebuilds the
+        component through ``type(self)(**kwargs)`` rather than copying
+        ``__dict__``. A tool-mode node's saved outputs are only the
+        ``component_as_tool`` handle, so the rebuilt component registers nothing
+        from its vertex, while ``_outputs_map`` is copied over naming resolvers
+        it does not have. What makes the tool call run on the copy at all is
+        ``component_tool._resolve_local_method``; this keeps the copy able to
+        resolve any output it advertises.
+        """
+        new_component = super().__deepcopy__(memo)
+        # _pre_run_setup only runs on the vertex-built component, so hand the
+        # timestamp over; without it the copy reads every cached graph as stale.
+        new_component._cached_flow_updated_at = self._cached_flow_updated_at  # noqa: SLF001
+        new_component._ensure_flow_output_methods()  # noqa: SLF001
         if hasattr(self, "_pack_snapshot_key"):
-            component._pack_snapshot_key = self._pack_snapshot_key  # noqa: SLF001
-            component._pack_snapshot = deepcopy(self._pack_snapshot)  # noqa: SLF001
+            new_component._pack_snapshot_key = self._pack_snapshot_key  # noqa: SLF001
+            new_component._pack_snapshot = deepcopy(self._pack_snapshot)  # noqa: SLF001
         if hasattr(self, "_local_snapshot_key"):
-            component._local_snapshot_key = self._local_snapshot_key  # noqa: SLF001
-            component._local_snapshot = deepcopy(self._local_snapshot)  # noqa: SLF001
-        return component
+            new_component._local_snapshot_key = self._local_snapshot_key  # noqa: SLF001
+            new_component._local_snapshot = deepcopy(self._local_snapshot)  # noqa: SLF001
+        return new_component
 
     def _clear_dynamic_flow_output_methods(self) -> None:
         for method_name in self._flow_output_methods:
@@ -859,6 +912,7 @@ class RunFlowBaseComponent(Component):
         except Exception as exc:
             from lfx.exceptions.tweaks import TweakRefusedError
             from lfx.run.hitl import NestedHITLUnsupportedError
+            from lfx.utils.flow_validation import CustomComponentValidationError
 
             if isinstance(exc, NestedHITLUnsupportedError):
                 raise
@@ -866,6 +920,10 @@ class RunFlowBaseComponent(Component):
             # into a generic RuntimeError would discard the refused field names and
             # the reason, and the caller would never learn which key was rejected.
             if isinstance(exc, TweakRefusedError):
+                raise
+            # A component-policy refusal is also a caller-facing rejection: collapsing
+            # it into RuntimeError would hide the reason and the HTTP 400 mapping.
+            if isinstance(exc, CustomComponentValidationError):
                 raise
             if self._instruction_binding() is not None and isinstance(exc, ValueError):
                 raise
