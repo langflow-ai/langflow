@@ -139,6 +139,16 @@ def restricted_file_access(config_dir):
         yield
 
 
+@pytest.fixture
+def flow_storage_dir(tmp_path):
+    """Keep attachment contract tests inside the executing flow's storage scope."""
+    config_dir = tmp_path / "storage"
+    scope_dir = config_dir / FLOW_ID
+    scope_dir.mkdir(parents=True)
+    with restricted_file_access(config_dir):
+        yield scope_dir
+
+
 def _authorization(recorded_request) -> str:
     """Return the Authorization header of one recorded httplib2 request."""
     headers = recorded_request[3] or {}
@@ -262,8 +272,8 @@ async def test_gmail_thread_requires_the_original_message_id_before_sending() ->
 
 
 @pytest.mark.usefixtures("resolver")
-async def test_gmail_attachment_reply_preserves_reference_headers(tmp_path) -> None:
-    attachment = tmp_path / "report.txt"
+async def test_gmail_attachment_reply_preserves_reference_headers(flow_storage_dir) -> None:
+    attachment = flow_storage_dir / "report.txt"
     attachment.write_text("Report", encoding="utf-8")
     component = gmail_send_component(
         thread_id="thread-0001",
@@ -306,8 +316,8 @@ async def test_gmail_send_html_body_is_multipart_alternative() -> None:
 
 
 @pytest.mark.usefixtures("resolver")
-async def test_gmail_send_with_attachments_uses_the_upload_endpoint(tmp_path) -> None:
-    attachment = tmp_path / "report.txt"
+async def test_gmail_send_with_attachments_uses_the_upload_endpoint(flow_storage_dir) -> None:
+    attachment = flow_storage_dir / "report.txt"
     attachment.write_text("quarterly numbers", encoding="utf-8")
     component = gmail_send_component(attachments=[str(attachment)])
     http = wire(component, [json_response("gmail_send_response")])
@@ -864,11 +874,13 @@ async def test_gmail_mime_and_attachment_work_runs_off_the_event_loop(monkeypatc
 
 
 @pytest.mark.parametrize("sizes", [(129,), (80, 80)])
-async def test_oversized_attachments_are_rejected_before_reading_past_the_limit(tmp_path, monkeypatch, sizes) -> None:
+async def test_oversized_attachments_are_rejected_before_reading_past_the_limit(
+    flow_storage_dir, monkeypatch, sizes
+) -> None:
     from lfx_google.components.google import gmail_send
 
     monkeypatch.setattr(gmail_send, "UPLOAD_SEND_LIMIT_BYTES", 128)
-    paths = [tmp_path / f"attachment-{index}.bin" for index in range(len(sizes))]
+    paths = [flow_storage_dir / f"attachment-{index}.bin" for index in range(len(sizes))]
     for path, size in zip(paths, sizes, strict=True):
         path.write_bytes(b"x" * size)
     original_open = Path.open
