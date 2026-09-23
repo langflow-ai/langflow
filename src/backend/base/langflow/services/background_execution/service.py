@@ -32,7 +32,7 @@ from lfx.log.logger import logger
 
 from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
-from langflow.services.background_execution.runner import JobRunner
+from langflow.services.background_execution.runner import JobRunner, execution_timeout
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
@@ -139,6 +139,7 @@ class BackgroundExecutionService(Service):
         self._bus = InMemoryLiveBus()
         self._frame_source_factory = frame_source_factory
         self._deadline_task: asyncio.Task | None = None
+        self._evaluation_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
@@ -164,19 +165,42 @@ class BackgroundExecutionService(Service):
         # process owns execution. The input-deadline watchdog still runs here:
         # it is a pure-DB sweep, and the worker fleet does not run it.
         if self._scaled:
+            self._start_evaluation_coordinator()
             self._start_deadline_watchdog()
             return
         await self._executor.start()
+        self._start_evaluation_coordinator()
         self._start_deadline_watchdog()
 
     async def stop(self) -> None:
-        if self._deadline_task is not None:
-            self._deadline_task.cancel()
-            task, self._deadline_task = self._deadline_task, None
-            await asyncio.gather(task, return_exceptions=True)
+        watchdogs = [task for task in (self._deadline_task, self._evaluation_task) if task is not None]
+        for task in watchdogs:
+            task.cancel()
+        self._deadline_task = None
+        self._evaluation_task = None
+        if watchdogs:
+            await asyncio.gather(*watchdogs, return_exceptions=True)
         # Mirror start(): scaled mode never started the executor.
         if not self._scaled:
             await self._executor.stop()
+
+    def _start_evaluation_coordinator(self) -> None:
+        if self._evaluation_task is not None:
+            return
+
+        async def _loop():
+            from langflow.services.evaluations.runner import advance_evaluations
+
+            while True:
+                try:
+                    await advance_evaluations(self)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:  # noqa: BLE001 -- transient storage failures retry on the next tick
+                    await logger.aexception("Evaluation coordination failed")
+                await asyncio.sleep(0.25)
+
+        self._evaluation_task = asyncio.create_task(_loop())
 
     def _start_deadline_watchdog(self) -> None:
         """Run the input-deadline sweep on the watchdog interval (only when the budget is set).
@@ -274,6 +298,7 @@ class BackgroundExecutionService(Service):
         user: UserRead,
         job_id: UUID | None = None,
         runtime_candidate=None,
+        parent_update=None,
     ) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
         # lifespan called start() first. start() is idempotent.
@@ -303,6 +328,7 @@ class BackgroundExecutionService(Service):
                 # _user_stub(job.user_id) still fetches the SID-owned flow on re-enqueue.
                 end_user_id=request.get("end_user_id"),
                 initial_metadata=initial_metadata,
+                parent_update=parent_update,
                 **candidate_kwargs,
             )
         except DuplicateJobError:
@@ -316,15 +342,31 @@ class BackgroundExecutionService(Service):
             raise
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
-        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=request.get("session_id"))
-        if self._scaled:
-            # Scaled mode: the QUEUED row persisted above IS the enqueue — the
-            # job table is the queue and a worker lease-claims it off the shared
-            # DB. The API does NOT run the flow; the worker hydrates the request
-            # from the job row. backend.enqueue is the (no-op) hook for that.
-            await self._backend.enqueue(str(job_id))
-        else:
-            await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
+        try:
+            await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=request.get("session_id"))
+            if self._scaled:
+                await self._backend.enqueue(str(job_id))
+            else:
+                await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
+        except Exception:
+            if parent_update is not None:
+                # The parent already points at this child. A dispatch failure must
+                # become visible there, rather than stranding it until a restart.
+                heartbeat = datetime.now(timezone.utc).isoformat()
+                if await job_service.claim_queued_lease(
+                    job_id,
+                    owner=self._owner,
+                    heartbeat_at=heartbeat,
+                    lease_ttl_s=self._settings.background_lease_ttl_s,
+                ):
+                    await job_service.fail_queued_job(
+                        job_id,
+                        owner=self._owner,
+                        heartbeat_at=heartbeat,
+                        error={"type": "submission_failed"},
+                        event_type="run_failed",
+                    )
+            raise
         return job_id
 
     @staticmethod
@@ -593,9 +635,17 @@ class BackgroundExecutionService(Service):
             row = result.first()
             return row.job_id if row is not None else None
 
-    async def _enqueue(self, *, job_id: UUID, flow_id: UUID, request: dict[str, Any], user: UserRead | None) -> None:
+    async def _enqueue(
+        self, *, job_id: UUID, flow_id: UUID, request: dict[str, Any], user: UserRead | None, resuming: bool = False
+    ) -> None:
         """Build a runner for the job and submit it to the in-process executor."""
         job_service = get_job_service()
+        if self._frame_source_factory is None:
+            # Startup recovery runs before any HTTP execution endpoint has wired
+            # the host. Hydrate the same runner here for already-queued jobs.
+            from langflow.api.v2.workflow import _default_frame_source_factory
+
+            self._frame_source_factory = _default_frame_source_factory
         adapter = self._build_adapter(request, job_id, flow_id)
         source = self._frame_source_factory(request=request, flow_id=flow_id, user=user, adapter=adapter)
         runner = JobRunner(
@@ -603,13 +653,22 @@ class BackgroundExecutionService(Service):
             live_bus=self._bus,
             adapter=adapter,
             frame_source=source,
-            job_timeout=self._settings.background_job_timeout,
+            job_timeout=execution_timeout(request, self._settings.background_job_timeout),
             owner=self._owner,
             heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
             input_deadline_s=self._settings.background_input_deadline_s,
         )
 
         async def _coro() -> None:
+            # Recovery can find a job that is also waiting in another process's
+            # local queue. Only one evaluation child may begin execution. Resume
+            # already won the separate SUSPENDED claim at the decision endpoint.
+            if (
+                request.get("evaluation_timeout_s") is not None
+                and not resuming
+                and not await job_service.claim_queued_job(job_id, owner=self._owner)
+            ):
+                return
             # job_id reaches the frame source via source_kwargs so the default
             # build-loop source can tag its memory-base hook with the run's job.
             await runner.run(job_id=job_id, source_kwargs={"job_id": job_id})
@@ -761,6 +820,7 @@ class BackgroundExecutionService(Service):
                     flow_id=job.flow_id,
                     request=request,
                     user=self._user_stub(job.user_id),
+                    resuming=True,
                 )
         except Exception:
             # Why: claim already flipped SUSPENDED→IN_PROGRESS; a failed enqueue would strand the job
@@ -810,9 +870,9 @@ class BackgroundExecutionService(Service):
         reconstructed request. Best-effort per job so one bad row can't block the
         rest. The scaled backend reconciles via its worker-side watchdog.
         """
+        await self.start()
         if self._is_scaled_configured:
             return
-        await self.start()
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the

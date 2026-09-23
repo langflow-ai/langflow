@@ -17,6 +17,10 @@ on:
       - 'src/backend/base/langflow/services/job_queue/**'
       - 'src/backend/tests/unit/background_execution/**'
       - 'src/backend/tests/unit/services/database/models/flow_version/**'
+      - 'src/backend/tests/unit/services/background_execution/**'
+      - 'src/backend/base/langflow/services/evaluations/**'
+      - 'src/backend/base/langflow/api/v1/project_evaluations.py'
+      - 'src/backend/tests/unit/api/v1/*eval*'
 
 jobs:
   model-migration-consistency:
@@ -136,7 +140,10 @@ jobs:
           LANGFLOW_TEST_HARD_TIMEOUT: "200"
         run: |
           uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v --timeout=180
+          uv run pytest src/backend/tests/unit/services/background_execution -m real_services -x -v --timeout=180
           uv run pytest src/backend/tests/unit/api/v2/test_workflow_candidates.py -k postgres -x -v
+          uv run pytest src/backend/tests/unit/api/v1/test_eval_durability.py -k postgres -x -v
+          uv run pytest src/backend/tests/unit/api/v1/test_eval_scaled.py src/backend/tests/unit/api/v1/test_eval_scaled_process.py -k postgres -x -v --timeout=180
 
   validate-migration:
     name: Migration Pattern Validation

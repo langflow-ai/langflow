@@ -44,7 +44,7 @@ export default function HumanInputCard({
   submitted = false,
 }: {
   content: InteractiveContent;
-  onSubmit?: (decision: HumanInputDecision) => void;
+  onSubmit?: (decision: HumanInputDecision) => void | Promise<void>;
   submitted?: boolean;
 }) {
   const { t } = useTranslation();
@@ -113,13 +113,22 @@ export default function HumanInputCard({
     );
   };
 
-  const handleDecision = (actionId: string) => {
+  const handleDecision = async (actionId: string) => {
     if (isSubmitted || isPending) return;
     setLocalChosen(actionId);
-    markHumanInputSubmitted(content.request_id, actionId);
     const decision = { action_id: actionId, values };
-    if (onSubmit) onSubmit(decision);
-    else resumeRun(decision);
+    if (onSubmit) {
+      try {
+        await onSubmit(decision);
+        markHumanInputSubmitted(content.request_id, actionId);
+      } catch {
+        // The parent presents the error. Keep typed fields for an explicit retry.
+        setLocalChosen(null);
+      }
+    } else {
+      markHumanInputSubmitted(content.request_id, actionId);
+      resumeRun(decision);
+    }
   };
 
   return (

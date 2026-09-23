@@ -91,7 +91,7 @@ test.each([
   ["Minimum score (0–1)", "2", "0.8", /score from 0 to 1/i],
   ["Minimum score (0–1)", "", "0.8", /score from 0 to 1/i],
   [
-    "Latency budget (ms, optional)",
+    "Elapsed budget (ms, including queue and approval)",
     "1.5",
     "2000",
     /whole number from 1 to 3,600,000/i,
@@ -400,6 +400,7 @@ test("only compares complete runs with identical evaluation requirements and sco
   }
   render(
     <EvalRuns
+      projectId="suite"
       runs={[first, record("second", { suite_revision: "different" })]}
     />,
   );

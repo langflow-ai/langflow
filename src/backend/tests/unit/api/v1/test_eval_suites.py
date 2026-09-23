@@ -66,7 +66,7 @@ async def evaluation(client, logged_in_headers, active_user, workflow_harness, m
 async def execute(client, headers, suite, *, run_id=None):
     config = await client.get(f"/api/v1/projects/{suite}/evaluations", headers=headers)
     assert config.status_code == 200, config.text
-    return await client.post(
+    response = await client.post(
         f"/api/v1/projects/{suite}/evaluations/runs",
         headers=headers,
         json={
@@ -75,6 +75,16 @@ async def execute(client, headers, suite, *, run_id=None):
             "expected_candidate_digest": config.json()["config"]["candidate_digest"],
         },
     )
+
+    if response.status_code != 202:
+        return response
+    identity = response.json()["id"]
+    for _ in range(400):
+        response = await client.get(f"/api/v1/projects/{suite}/evaluations/runs/{identity}", headers=headers)
+        if response.json()["status"] not in {"queued", "in_progress"}:
+            return response
+        await asyncio.sleep(0.05)
+    pytest.fail(f"Evaluation did not finish: {response.text}")
 
 
 async def test_evaluation_keeps_candidate_scorer_and_results(client, logged_in_headers, evaluation):
@@ -200,26 +210,6 @@ async def test_timeout_leaves_incomplete_record_and_retry_does_not_execute(
     assert model.seen == []
 
 
-async def test_approval_candidate_rejected_before_provider_execution(
-    client,
-    logged_in_headers,
-    evaluation,
-    workflow_harness,  # noqa: F811
-    monkeypatch,
-    tmp_path,
-):
-    suite, root, _, config, _, model = evaluation
-    project, _, _, _, harness_config, _ = workflow_harness
-    await save_config(client, logged_in_headers, project, {**harness_config, "tool_policy": "ask"})
-    candidate = await mount(client, logged_in_headers, project, root, monkeypatch, tmp_path)
-    config["candidate_digest"] = candidate.digest
-    await save_config(client, logged_in_headers, suite, config)
-    response = await execute(client, logged_in_headers, suite)
-    assert response.status_code == 409, response.text
-    assert response.json()["detail"]["code"] == "HARNESS_CANDIDATE_NOT_READY"
-    assert model.seen == []
-
-
 async def test_evaluation_and_scorer_are_private(client, logged_in_headers, evaluation, user_two_api_key):
     suite, _, _, _, _, model = evaluation
     context = (await client.get(f"/api/v1/projects/{suite}/evaluations", headers=logged_in_headers)).json()
@@ -317,3 +307,14 @@ async def test_generic_archive_cannot_copy_unreviewed_eval_bindings(client, logg
     )
     assert imported.status_code == 422, imported.text
     assert "Eval Suite import" in imported.text
+
+
+async def test_redis_event_queue_does_not_select_scaled_evaluation_execution(
+    client, logged_in_headers, evaluation, monkeypatch
+):
+    suite, _, _, _, _, model = evaluation
+    monkeypatch.setattr(get_settings_service().settings, "job_queue_type", "redis")
+    response = await execute(client, logged_in_headers, suite)
+    assert response.status_code == 200, response.text
+    assert response.json()["passed"]
+    assert model.seen
