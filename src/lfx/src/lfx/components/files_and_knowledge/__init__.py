@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from lfx.components.files_and_knowledge.memory_retrieval import MemoryBaseComponent
     from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
     from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
+    from lfx.components.files_and_knowledge.sourced_report import SourcedReportComponent
 
 
 _dynamic_imports = {
@@ -24,6 +25,7 @@ _dynamic_imports = {
     "KnowledgeBaseComponent": "retrieval",
     "MemoryBaseComponent": "memory_retrieval",
     "SaveToFileComponent": "save_file",
+    "SourcedReportComponent": "sourced_report",
 }
 
 __all__ = [
@@ -35,6 +37,7 @@ __all__ = [
     "KnowledgeIngestionComponent",
     "MemoryBaseComponent",
     "SaveToFileComponent",
+    "SourcedReportComponent",
 ]
 
 

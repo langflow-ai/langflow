@@ -665,6 +665,11 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # so either recovery path can return the error to the model instead of
         # crashing the flow.
         if self.tools:
+            from lfx.components.models_and_agents.agent_helpers.source_evidence import SourceEvidenceMiddleware
+
+            # Retain completed source results before compaction mutates message state.
+            # The same state is checkpointed when an approval suspends this run.
+            middleware.append(SourceEvidenceMiddleware())
             middleware.append(ToolCallIDMiddleware())
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations is not None:
