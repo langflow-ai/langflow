@@ -124,6 +124,21 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
         "pickle_compat",
         "pandas.compat.pickle_compat is forbidden — unsafe pickle deserialization",
     ),
+    ("pandas.io", "pickle", "pandas.io.pickle is forbidden — unsafe pickle deserialization"),
+    # NumPy's array modules re-export the stdlib pickle module while also
+    # exposing safe readers. Deny the re-export without blocking those readers.
+    ("numpy.lib.format", "pickle", "numpy.lib.format.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "numpy.lib._format_impl",
+        "pickle",
+        "numpy.lib._format_impl.pickle is forbidden — unsafe pickle deserialization",
+    ),
+    ("numpy.lib.npyio", "pickle", "numpy.lib.npyio.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "numpy.lib._npyio_impl",
+        "pickle",
+        "numpy.lib._npyio_impl.pickle is forbidden — unsafe pickle deserialization",
+    ),
 ]
 
 # Dangerous attribute calls: (module, method, violation_message)
@@ -284,6 +299,9 @@ DANGEROUS_SUBMODULES: tuple[str, ...] = (
     "urllib.error",
     "http.client",
     "http.server",
+    # All useful members of this module are pickle entry points or re-exports
+    # of pickle / pandas.compat.pickle_compat, not just read_pickle().
+    "pandas.io.pickle",
     # This compatibility module exposes several pickle entry points, including
     # Unpickler and the underlying pickle module. Block its whole namespace.
     "pandas.compat.pickle_compat",
@@ -1253,7 +1271,11 @@ class _SecurityChecker(ast.NodeVisitor):
         if root_module in DANGEROUS_IMPORTS or _is_dangerous_submodule(node.module):
             self.violations.append(f"Import from '{node.module}' is forbidden in components")
         else:
-            restricted = RESTRICTED_IMPORT_NAMES.get(root_module, set())
+            restricted = (
+                RESTRICTED_IMPORT_NAMES.get(root_module, set())
+                | _DANGEROUS_READ_MEMBERS.get(node.module, set())
+                | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
+            )
             for alias in node.names:
                 if alias.name in restricted:
                     self.violations.append(f"Import of '{root_module}.{alias.name}' is forbidden in components")
