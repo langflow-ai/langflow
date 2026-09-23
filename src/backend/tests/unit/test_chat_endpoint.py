@@ -42,7 +42,7 @@ async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
 
 @pytest.mark.benchmark
-async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
+async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers, active_user):
     """Test building a flow from request data."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
@@ -58,7 +58,7 @@ async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, 
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
-    await check_messages(flow_id)
+    await check_messages(flow_id, active_user.id)
 
 
 async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
@@ -119,7 +119,7 @@ async def test_build_flow_enforces_current_catalog_policy_and_recovers_when_clea
     assert "job_id" in allowed_response.json()
 
 
-async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
+async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers, active_user):
     """Test building a flow with a frozen path."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
@@ -145,13 +145,13 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
-    await check_messages(flow_id)
+    await check_messages(flow_id, active_user.id)
 
 
-async def check_messages(flow_id):
+async def check_messages(flow_id, owner_id):
     if isinstance(flow_id, str):
         flow_id = UUID(flow_id)
-    messages = await aget_messages(flow_id=flow_id, order="ASC")
+    messages = await aget_messages(flow_id=flow_id, user_id=owner_id, order="ASC")
     flow_id_str = str(flow_id)
     assert len(messages) == 2
     assert messages[0].session_id == flow_id_str
@@ -1656,7 +1656,7 @@ async def test_build_public_tmp_authenticated_namespace_uses_user_id(
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
-    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+    client, json_memory_chatbot_no_llm, logged_in_headers, active_user, monkeypatch
 ):
     """End-to-end proof that namespacing prevents Memory query collision.
 
@@ -1681,8 +1681,9 @@ async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
     await aadd_messages(
         Message(text="victim-secret", sender="User", sender_name="User", session_id=victim_session),
         flow_id=flow_id,
+        user_id=active_user.id,
     )
-    seeded = await aget_messages(session_id=victim_session)
+    seeded = await aget_messages(session_id=victim_session, flow_id=flow_id, user_id=active_user.id)
     assert any(m.text == "victim-secret" for m in seeded)
 
     captured: dict = {}
@@ -1699,10 +1700,10 @@ async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
     namespaced_session = captured["inputs"].session
     assert namespaced_session != victim_session
 
-    leaked = await aget_messages(session_id=namespaced_session)
+    leaked = await aget_messages(session_id=namespaced_session, flow_id=flow_id, user_id=active_user.id)
     assert all(m.text != "victim-secret" for m in leaked)
 
-    still_seeded = await aget_messages(session_id=victim_session)
+    still_seeded = await aget_messages(session_id=victim_session, flow_id=flow_id, user_id=active_user.id)
     assert any(m.text == "victim-secret" for m in still_seeded)
 
 

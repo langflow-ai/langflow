@@ -13,10 +13,13 @@ import pytest
 from langflow.api.v2.workflow import _parse_persisted_workflow_request
 from langflow.memory import aget_messages, astore_message
 from langflow.schema.message import Message
+from langflow.services.database.models.message.model import MessageTable
+from langflow.services.deps import session_scope
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.graph.base import Graph
 from lfx.memory.flow_context import reset_messages_persist, set_messages_persist
 from lfx.schema.workflow import WorkflowRunRequest
+from sqlmodel import select
 
 
 def _msg(session_id: str) -> Message:
@@ -25,32 +28,35 @@ def _msg(session_id: str) -> Message:
 
 async def test_astore_message_persists_by_default(client):  # noqa: ARG001
     session_id = f"persist-{uuid4()}"
-    await astore_message(_msg(session_id))
-    stored = await aget_messages(session_id=session_id)
+    flow_id, owner_id = uuid4(), uuid4()
+    await astore_message(_msg(session_id), flow_id=flow_id, user_id=owner_id)
+    stored = await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id)
     assert [m.text for m in stored] == ["remember me"]
 
 
 async def test_astore_message_skips_write_when_not_persisting(client):  # noqa: ARG001
     session_id = f"ephemeral-{uuid4()}"
+    flow_id, owner_id = uuid4(), uuid4()
     token = set_messages_persist(persist=False)
     try:
-        returned = await astore_message(_msg(session_id))
+        returned = await astore_message(_msg(session_id), flow_id=flow_id, user_id=owner_id)
     finally:
         reset_messages_persist(token)
 
     # The caller still gets its message back (in-run behavior unchanged)...
     assert [m.text for m in returned] == ["remember me"]
     # ...but nothing was persisted.
-    assert await aget_messages(session_id=session_id) == []
+    assert await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id) == []
 
 
 async def test_flag_resets_after_run(client):  # noqa: ARG001
     session_id = f"reset-{uuid4()}"
+    flow_id, owner_id = uuid4(), uuid4()
     token = set_messages_persist(persist=False)
     reset_messages_persist(token)
     # Back to the default: persistence works again.
-    await astore_message(_msg(session_id))
-    assert len(await aget_messages(session_id=session_id)) == 1
+    await astore_message(_msg(session_id), flow_id=flow_id, user_id=owner_id)
+    assert len(await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id)) == 1
 
 
 async def test_anonymous_graph_run_persists_nothing_end_to_end(client):  # noqa: ARG001
@@ -61,7 +67,8 @@ async def test_anonymous_graph_run_persists_nothing_end_to_end(client):  # noqa:
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response)
 
-    graph = Graph(chat_input, chat_output, flow_id=str(uuid4()))
+    flow_id, owner_id = uuid4(), uuid4()
+    graph = Graph(chat_input, chat_output, flow_id=str(flow_id), user_id=str(owner_id))
     graph.session_id = session_id
     graph.persist_messages = False  # anonymous / ephemeral
 
@@ -70,7 +77,7 @@ async def test_anonymous_graph_run_persists_nothing_end_to_end(client):  # noqa:
 
     # ChatInput/ChatOutput default should_store_message=True, but the ephemeral
     # flag must have suppressed every write.
-    assert await aget_messages(session_id=session_id) == []
+    assert await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id) == []
 
 
 async def test_nested_default_graph_cannot_reenable_persistence(client):  # noqa: ARG001
@@ -87,7 +94,8 @@ async def test_nested_default_graph_cannot_reenable_persistence(client):  # noqa
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response)
 
-    graph = Graph(chat_input, chat_output, flow_id=str(uuid4()))
+    flow_id, owner_id = uuid4(), uuid4()
+    graph = Graph(chat_input, chat_output, flow_id=str(flow_id), user_id=str(owner_id))
     graph.session_id = session_id
     # NOTE: graph.persist_messages stays at its True default, like a nested
     # Graph.from_payload graph inside an anonymous outer run.
@@ -99,7 +107,7 @@ async def test_nested_default_graph_cannot_reenable_persistence(client):  # noqa
     finally:
         reset_messages_persist(token)
 
-    assert await aget_messages(session_id=session_id) == []
+    assert await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id) == []
 
 
 async def test_memory_component_store_does_not_crash_on_ephemeral_run(client):  # noqa: ARG001
@@ -128,7 +136,9 @@ async def test_memory_component_store_does_not_crash_on_ephemeral_run(client):  
         reset_messages_persist(token)
 
     assert stored.text == "remember me"
-    assert await aget_messages(session_id=session_id) == []
+    async with session_scope() as session:
+        rows = await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))
+        assert rows.all() == []
 
 
 async def test_update_stored_message_is_noop_on_ephemeral_run(client):  # noqa: ARG001
@@ -239,14 +249,15 @@ async def test_identified_graph_run_persists_end_to_end(client):  # noqa: ARG001
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response)
 
-    graph = Graph(chat_input, chat_output, flow_id=str(uuid4()))
+    flow_id, owner_id = uuid4(), uuid4()
+    graph = Graph(chat_input, chat_output, flow_id=str(flow_id), user_id=str(owner_id))
     graph.session_id = session_id
     # persist_messages defaults True
 
     async for _ in graph.async_start():
         pass
 
-    assert len(await aget_messages(session_id=session_id)) >= 1
+    assert len(await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id)) >= 1
 
 
 async def test_identified_run_stamps_message_owner_with_end_user(client):  # noqa: ARG001
@@ -263,15 +274,16 @@ async def test_identified_run_stamps_message_owner_with_end_user(client):  # noq
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response)
 
-    graph = Graph(chat_input, chat_output, flow_id=str(uuid4()), user_id=str(sid))
+    flow_id = uuid4()
+    graph = Graph(chat_input, chat_output, flow_id=str(flow_id), user_id=str(sid))
     graph.session_id = session_id
     graph.end_user_id = str(uid)  # serving-plane end user wins over the SID
 
     async for _ in graph.async_start():
         pass
 
-    assert len(await aget_messages(session_id=session_id, user_id=uid)) >= 1
-    assert await aget_messages(session_id=session_id, user_id=sid) == []
+    assert len(await aget_messages(session_id=session_id, flow_id=flow_id, user_id=uid)) >= 1
+    assert await aget_messages(session_id=session_id, flow_id=flow_id, user_id=sid) == []
 
 
 async def test_non_uuid_end_user_stamps_derived_owner_end_to_end(client):  # noqa: ARG001
@@ -290,12 +302,16 @@ async def test_non_uuid_end_user_stamps_derived_owner_end_to_end(client):  # noq
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response)
 
-    graph = Graph(chat_input, chat_output, flow_id=str(uuid4()), user_id=str(sid))
+    flow_id = uuid4()
+    graph = Graph(chat_input, chat_output, flow_id=str(flow_id), user_id=str(sid))
     graph.session_id = session_id
     graph.end_user_id = "alice"  # opaque, non-UUID gateway id
 
     async for _ in graph.async_start():
         pass
 
-    assert len(await aget_messages(session_id=session_id, user_id=derive_message_owner_uuid("alice"))) >= 1
-    assert await aget_messages(session_id=session_id, user_id=sid) == []
+    assert (
+        len(await aget_messages(session_id=session_id, flow_id=flow_id, user_id=derive_message_owner_uuid("alice")))
+        >= 1
+    )
+    assert await aget_messages(session_id=session_id, flow_id=flow_id, user_id=sid) == []

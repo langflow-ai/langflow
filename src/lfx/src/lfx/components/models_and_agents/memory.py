@@ -28,10 +28,8 @@ def _coerce_flow_id_to_uuid(flow_id: str | UUID | None) -> UUID | None:
     """Coerce a graph flow_id (typically str) to UUID for DB filtering.
 
     Returns ``None`` when ``flow_id`` is missing or cannot be parsed. The
-    caller then falls back to the previous **unscoped** retrieval, which
-    re-introduces the cross-flow leak that motivated PR #13087. We emit a
-    structured ``error`` log on that path (rather than ``warning``) so
-    observability can alert on it — see issue #13059 / PR #13087.
+    caller's backend retrieval fails closed. We emit a structured ``error``
+    log so observability can alert on invalid flow context.
     """
     if flow_id is None or flow_id == "":
         return None
@@ -45,9 +43,7 @@ def _coerce_flow_id_to_uuid(flow_id: str | UUID | None) -> UUID | None:
         # was created to close. Anything matching this event is a candidate
         # for an observability alert.
         logger.error(
-            "memory_flow_id_unscoped: flow_id %r is not a valid UUID; "
-            "chat history will NOT be scoped by flow_id. This re-enables "
-            "cross-flow leakage (issue #13059) for this request.",
+            "memory_flow_id_unscoped: flow_id %r is not a valid UUID; chat history retrieval will return no messages.",
             flow_id,
             extra={"event": "memory_flow_id_unscoped", "flow_id_repr": repr(flow_id)},
         )
@@ -61,7 +57,7 @@ def _safe_graph_flow_id(component: Component) -> str | UUID | None:
     when a MemoryComponent is constructed ad-hoc (e.g. by the Agent component
     via ``MemoryComponent(**self.get_base_args())``), ``_vertex`` is ``None`` and
     accessing the property raises ``AttributeError``. Swallow that here so
-    retrieval falls back to the previous unscoped behavior rather than crashing.
+    backend retrieval fails closed rather than crashing.
     """
     try:
         graph = component.graph
@@ -77,8 +73,8 @@ def _safe_graph_user_id(component: Component) -> str | UUID | None:
     the shared :func:`resolve_message_owner_id` so the retrieval predicate matches the
     owner the write path (``Component._store_message``) stamped. Returns ``None`` when
     the graph is unavailable or carries no real id (PlaceholderGraph stores ``user_id``
-    as ``str(...)``, so the literal "None" is treated as no owner), letting retrieval
-    fall back to the previous unscoped behavior rather than crashing or over-filtering.
+    as ``str(...)``, so the literal "None" is treated as no owner), letting backend
+    retrieval fail closed rather than crashing.
     """
     try:
         graph = component.graph

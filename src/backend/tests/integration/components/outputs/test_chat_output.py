@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from langflow.memory import aget_messages
 from lfx.components.input_output import ChatOutput
 from lfx.schema.message import Message
@@ -23,19 +25,28 @@ async def test_message():
 
 async def test_do_not_store_message():
     session_id = "test-session-id"
+    flow_id, user_id = str(uuid4()), str(uuid4())
     outputs = await run_single_component(
-        ChatOutput, inputs={"input_value": Message(text="hello"), "should_store_message": True}, session_id=session_id
+        ChatOutput,
+        inputs={"input_value": Message(text="hello"), "should_store_message": True},
+        session_id=session_id,
+        flow_id=flow_id,
+        user_id=user_id,
     )
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
 
-    assert len(await aget_messages(session_id=session_id)) == 1
+    assert len(await aget_messages(session_id=session_id, flow_id=flow_id, user_id=user_id)) == 1
     session_id = "test-session-id-another"
 
     outputs = await run_single_component(
-        ChatOutput, inputs={"input_value": Message(text="hello"), "should_store_message": False}, session_id=session_id
+        ChatOutput,
+        inputs={"input_value": Message(text="hello"), "should_store_message": False},
+        session_id=session_id,
+        flow_id=flow_id,
+        user_id=user_id,
     )
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
 
-    assert len(await aget_messages(session_id=session_id)) == 0
+    assert len(await aget_messages(session_id=session_id, flow_id=flow_id, user_id=user_id)) == 0

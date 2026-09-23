@@ -82,9 +82,15 @@ async def get_instance_results(
         fallback_to_env_vars=fallback_to_env_vars,
     )
     from lfx.memory.flow_context import (
+        coerce_flow_id,
         reset_current_flow_id,
+        reset_current_message_executor_id,
+        reset_current_message_owner_id,
         reset_messages_persist,
+        resolve_message_owner_id,
         set_current_flow_id,
+        set_current_message_executor_id,
+        set_current_message_owner_id,
         set_messages_persist,
         should_persist_messages,
     )
@@ -92,8 +98,10 @@ async def get_instance_results(
     graph = getattr(vertex, "graph", None)
     flow_id = getattr(graph, "flow_id", None)
     # Always bind — including None — so a graph without flow_id shadows any outer
-    # flow scope instead of inheriting it (nested runs must stay legacy-unscoped).
+    # flow scope instead of inheriting it (nested runs without a flow fail closed).
     flow_scope_token = set_current_flow_id(flow_id)
+    owner_scope_token = set_current_message_owner_id(resolve_message_owner_id(graph))
+    executor_scope_token = set_current_message_executor_id(coerce_flow_id(getattr(graph, "user_id", None)))
     # Bind the run's message-persistence flag here too (defaults True) so
     # astore_message can skip the DB write for an anonymous serving run. Reading it
     # off the graph and binding in the component's own task sidesteps any
@@ -114,6 +122,8 @@ async def get_instance_results(
             raise ValueError(msg)
     finally:
         reset_current_flow_id(flow_scope_token)
+        reset_current_message_owner_id(owner_scope_token)
+        reset_current_message_executor_id(executor_scope_token)
         reset_messages_persist(persist_token)
 
 
