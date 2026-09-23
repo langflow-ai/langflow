@@ -5,13 +5,15 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.triggers.inbound_webhook_trigger import InboundWebhookTriggerComponent
     from lfx.components.triggers.schedule_trigger import ScheduleTriggerComponent
 
 _dynamic_imports = {
+    "InboundWebhookTriggerComponent": "inbound_webhook_trigger",
     "ScheduleTriggerComponent": "schedule_trigger",
 }
 
-__all__ = ["ScheduleTriggerComponent"]
+__all__ = ["InboundWebhookTriggerComponent", "ScheduleTriggerComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:

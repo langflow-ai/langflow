@@ -59,16 +59,22 @@ class TestParseTextFileToDataS3Mode:
     """
 
     def test_should_read_existing_local_file_when_storage_type_is_s3(self, tmp_path):
-        """A real local file on disk must be read locally even when storage_type is s3."""
+        """A real local file on disk must be read locally even when storage_type is s3.
+
+        Local reads outside the storage scope require the operator opt-out
+        (``restrict_local_file_access=False``), which is the default only before 1.12.3.
+        """
         local_file = tmp_path / "_importing.py"
         local_file.write_text("x = 1\n", encoding="utf-8")
 
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.restrict_local_file_access = False
 
         with (
             patch("lfx.base.data.utils.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
         ):
             result = parse_text_file_to_data(str(local_file), silent_errors=False)
 

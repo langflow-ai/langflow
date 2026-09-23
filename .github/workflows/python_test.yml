@@ -58,6 +58,10 @@ jobs:
   build:
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    env:
+      # Do not let a matching runner-system Python (notably Ubuntu's 3.12.3)
+      # bypass the current patch release supplied by uv.
+      UV_MANAGED_PYTHON: "true"
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
@@ -94,7 +98,11 @@ jobs:
         with:
           timeout_minutes: 50
           max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=pyproject.toml --cov-report=xml --cov-report=html"
+          # Only Python 3.10 publishes coverage below. Avoid tracing the same
+          # suite on every compatibility job, which exhausts the nightly time limit.
+          command: >-
+            make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --durations=20
+            ${{ matrix.python-version == '3.10' && '--cov --cov-config=pyproject.toml --cov-report=xml --cov-report=html' || '--no-cov' }}"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7

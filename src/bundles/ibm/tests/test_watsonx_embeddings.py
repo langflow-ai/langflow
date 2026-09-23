@@ -520,3 +520,21 @@ class TestWatsonxEmbeddingsComponent:
 
             call_kwargs = mock_watsonx_embeddings.call_args[1]
             assert call_kwargs["url"] == url
+
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    def test_build_embeddings_blocks_metadata_url(self, mock_watsonx_embeddings, wx_embeddings_component, monkeypatch):
+        """The endpoint URL is tenant-editable; SSRF policy must block internal/cloud-metadata hosts."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        wx_embeddings_component.api_key = "test-api-key"  # pragma: allowlist secret
+        wx_embeddings_component.url = "http://169.254.169.254/latest/meta-data"
+        wx_embeddings_component.project_id = "test-project-id"
+        wx_embeddings_component.space_id = None
+        wx_embeddings_component.model_name = "ibm/slate-125m-english-rtrvr-v2"
+        wx_embeddings_component.truncate_input_tokens = 200
+        wx_embeddings_component.input_text = True
+
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            wx_embeddings_component.build_embeddings()
+
+        mock_watsonx_embeddings.assert_not_called()

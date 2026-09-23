@@ -55,12 +55,17 @@ async def test_project_download_uses_resolved_owner_namespace():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    response = await download_project_flows(
-        session=session,
-        project_id=project_id,
-        current_user=SimpleNamespace(id=actor_id),
-        project_owner_id=owner_id,
-    )
+    with patch(
+        "langflow.api.v1.projects_files._export_variable_names",
+        new_callable=AsyncMock,
+        return_value=frozenset(),
+    ) as export_variable_names:
+        response = await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=actor_id),
+            project_owner_id=owner_id,
+        )
 
     assert response.status_code == 200
     project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
@@ -68,6 +73,8 @@ async def test_project_download_uses_resolved_owner_namespace():
     assert owner_id.hex in project_sql
     assert owner_id.hex in flows_sql
     assert actor_id.hex not in project_sql
+    # Exported bindings are checked against the project owner's variables, not the actor's.
+    export_variable_names.assert_awaited_once_with(session, owner_id)
 
 
 async def test_shared_project_download_filters_flows_by_read_permission():
@@ -87,12 +94,19 @@ async def test_shared_project_download_filters_flows_by_read_permission():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    with patch(
-        "langflow.api.v1.projects_files.filter_visible_resources",
-        new_callable=AsyncMock,
-        create=True,
-        return_value=[allowed_flow],
-    ) as filter_visible:
+    with (
+        patch(
+            "langflow.api.v1.projects_files.filter_visible_resources",
+            new_callable=AsyncMock,
+            create=True,
+            return_value=[allowed_flow],
+        ) as filter_visible,
+        patch(
+            "langflow.api.v1.projects_files._export_variable_names",
+            new_callable=AsyncMock,
+            return_value=frozenset(),
+        ),
+    ):
         response = await download_project_flows(
             session=session,
             project_id=project_id,
@@ -3038,3 +3052,98 @@ async def test_zip_import_ignores_malformed_project_config(client, logged_in_hea
     imported = [p for p in projects if p["name"].startswith("badcfg")]
     assert imported, f"no imported project in {[p['name'] for p in projects]}"
     assert imported[0]["project_config"] is None
+
+
+class TestProjectNameValidation:
+    """Names the MCP server name cannot be derived from are refused instead of collapsing."""
+
+    async def test_create_project_with_emoji_name_is_rejected(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/projects/", json={"name": "\U0001f680 rockets", "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "emoji" in response.text
+
+    async def test_rename_project_to_emoji_name_is_rejected(self, client: AsyncClient, logged_in_headers, basic_case):
+        created = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        project_id = created.json()["id"]
+
+        response = await client.patch(
+            f"api/v1/projects/{project_id}", json={"name": "\U0001f389\U0001f389"}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        stored = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+        assert stored.json()["name"] == basic_case["name"]
+
+    async def test_cjk_and_symbol_names_are_still_accepted(self, client: AsyncClient, logged_in_headers):
+        # The GB18030 test string, including a Kangxi radical and 4-byte characters
+        name = "P\u3023\u51c9\u55c0\u9f75\u9f6c\U00024ac9\U0002b1ed\U0002b7a9\U0002ce26\U00020d4d\u2fd5"
+        response = await client.post(
+            "api/v1/projects/", json={"name": name, "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["name"] == name
+
+    @pytest.mark.parametrize("name", ["\u2b50", "!!!", "   "])
+    async def test_names_without_a_letter_or_number_are_rejected(self, client: AsyncClient, logged_in_headers, name):
+        response = await client.post(
+            "api/v1/projects/", json={"name": name, "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "at least one letter or number" in response.text
+
+    async def test_importing_a_project_with_an_emoji_name_is_a_422_not_a_500(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        payload = json.dumps({"folder_name": "\U0001f680 rockets", "folder_description": "", "flows": []}).encode()
+
+        response = await client.post(
+            "api/v1/projects/upload/",
+            files={"file": ("rockets.json", payload, "application/json")},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json()["detail"] == "Project names cannot contain emoji"
+
+
+class TestCjkProjectsRegisterDistinctMcpServers:
+    """The reported bug: a second all-CJK project used to 409 on the shared lf-unnamed name."""
+
+    async def test_two_cjk_projects_and_a_cjk_rename_do_not_conflict(self, client: AsyncClient, logged_in_headers):
+        with patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = True
+            mock_get_settings.return_value = mock_settings
+
+            first = await client.post(
+                "api/v1/projects/",
+                json={"name": "\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848", "description": ""},
+                headers=logged_in_headers,
+            )
+            second = await client.post(
+                "api/v1/projects/",
+                json={"name": "\u7b80\u4f53\u4e2d\u6587\u9879\u76ee", "description": ""},
+                headers=logged_in_headers,
+            )
+            assert first.status_code == status.HTTP_201_CREATED
+            assert second.status_code == status.HTTP_201_CREATED
+
+            renamed = await client.patch(
+                f"api/v1/projects/{second.json()['id']}",
+                json={"name": "\u65e5\u672c\u8a9e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8"},
+                headers=logged_in_headers,
+            )
+            assert renamed.status_code == status.HTTP_200_OK
+
+        servers = await client.get("api/v2/mcp/servers", headers=logged_in_headers)
+        names = {server["name"] for server in servers.json()}
+        assert "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848" in names
+        assert "lf-\u65e5\u672c\u8a9e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8" in names
+        assert "lf-\u7b80\u4f53\u4e2d\u6587\u9879\u76ee" not in names
+        assert "lf-unnamed" not in names

@@ -190,10 +190,24 @@ class CustomComponent(BaseComponent):
         per-user / per-flow storage directory, so it is validated against the executing graph's
         own scopes before the storage service is asked to build a path for it. Without that
         check a caller could address another user's uploads by their storage key.
+
+        ``get_storage_service`` returns ``None`` whenever no storage factory is registered --
+        standalone ``lfx`` never registers one, and ``get_service`` also degrades to ``None``
+        when resolution fails. There is then no storage root to build against, so the key is
+        already the path the caller should see; this mirrors
+        ``ParameterHandler._resolve_storage_key``. Dereferencing the missing service instead
+        raised ``AttributeError``, which both call sites in ``base_file`` / ``file`` had to
+        catch and retry as a plain local path -- the same value this now returns directly,
+        but reached through an exception that hid every real ``AttributeError`` behind it.
+
+        Skipping *resolution* never skips *containment*: ``validate_storage_key`` runs first
+        either way, and callers still pin the result with ``enforce_local_file_access``.
         """
-        storage_svc: StorageService = get_storage_service()
+        storage_svc: StorageService | None = get_storage_service()
 
         flow_id, file_name = validate_storage_key(self, path)
+        if storage_svc is None:
+            return path
         return storage_svc.build_full_path(flow_id, file_name)
 
     @property
