@@ -317,15 +317,13 @@ class MemoryComponent(Component):
             # the read half degrades gracefully. See PR #13087 review I1.
             flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
             user_id_scope = _safe_graph_user_id(self)
-            await astore_message(message, flow_id=flow_id_scope, user_id=user_id_scope)
-            from lfx.memory.flow_context import should_persist_messages
+            stored_messages = await astore_message(message, flow_id=flow_id_scope, user_id=user_id_scope)
+            from lfx.memory.flow_context import has_current_flow_scope, should_persist_messages
 
-            if not should_persist_messages():
-                # Ephemeral (anonymous serving) run: astore_message deliberately
-                # skipped the DB write, so the read-back below would come up empty
-                # and the "nothing stored" guard would crash the flow. The in-run
-                # message itself is the result.
-                stored_messages = [message]
+            if not should_persist_messages() or (has_current_flow_scope() and flow_id_scope is None):
+                # Anonymous serving and ad hoc graphs without a valid flow ID
+                # have no persisted row to read back. Return the in-run message.
+                stored_messages = stored_messages or [message]
             else:
                 stored_messages = (
                     await aget_messages(

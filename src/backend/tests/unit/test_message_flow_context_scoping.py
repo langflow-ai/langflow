@@ -216,6 +216,31 @@ async def test_graph_without_flow_id_keeps_chat_input_ephemeral(client):  # noqa
     assert await aget_messages(session_id=session_id) == []
 
 
+async def test_graph_without_flow_id_keeps_memory_store_ephemeral(client):  # noqa: ARG001
+    """Message History Store returns its input when graph scope cannot persist it."""
+    session_id = "ad-hoc-memory-store"
+    chat_input = ChatInput(_id="ad_hoc_memory_input")
+    chat_input.set(input_value="ad hoc memory", should_store_message=False)
+    memory = MemoryComponent(_id="ad_hoc_memory_store")
+    memory.outputs = memory.update_outputs({"outputs": []}, "mode", "Store")["outputs"]
+    memory._outputs_map.clear()
+    memory.map_outputs()
+    memory.set(
+        mode="Store",
+        message=chat_input.message_response,
+        session_id=session_id,
+        sender="User",
+        sender_name="User",
+    )
+    graph = Graph(chat_input, memory, user_id=str(uuid4()))
+
+    async for _ in graph.async_start():
+        pass
+
+    assert memory.status == "ad hoc memory"
+    assert await aget_messages(session_id=session_id) == []
+
+
 async def test_graph_execution_binds_flow_scope_end_to_end(client):  # noqa: ARG001
     """End-to-end: running Flow B's graph must not surface Flow A's message via unscoped frozen code.
 
