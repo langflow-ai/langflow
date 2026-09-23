@@ -2,7 +2,7 @@
 
 Phase: CONTRACT
 Revision ID: f2a7c9e4b681
-Revises: e6f9a2b4c8d1
+Revises: 9d7e2a6c4b81
 
 SQLModel 0.0.45 changed inferred datetime columns to UTCDateTime. Freeze the
 affected columns here rather than importing models that may change later.
@@ -20,7 +20,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "f2a7c9e4b681"  # pragma: allowlist secret
-down_revision = "e6f9a2b4c8d1"  # pragma: allowlist secret
+down_revision = "9d7e2a6c4b81"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 

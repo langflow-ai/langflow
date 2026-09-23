@@ -400,3 +400,54 @@ class TestBoundedGet:
             body = ssrf_httpx.ssrf_safe_httpx_get_bounded("http://ok.test/", max_bytes=4096)
 
         assert body == chunk * 2
+
+
+class TestSSRFProtectionErrorIsNotFlattened:
+    """The UI-facing wrappers keep ``SSRFProtectionError`` instead of a bare ``ValueError``.
+
+    These helpers used to catch ``SSRFProtectionError`` and re-raise ``ValueError``.
+    ``SSRFProtectionError`` subclasses ``ValueError``, so nothing that catches
+    ``ValueError`` is affected, but flattening meant a component stacking two
+    guards reported a *different exception type* depending on which one happened
+    to fire first — which is how the NVIDIA and SambaNova components ended up with
+    two test files asserting mutually exclusive types for the same blocked URL.
+    """
+
+    @staticmethod
+    def _strict_env(monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    def test_strict_validator_raises_the_typed_error(self, monkeypatch: pytest.MonkeyPatch):
+        from lfx.utils.ssrf_httpx import validate_strict_url_for_ssrf_or_raise
+
+        self._strict_env(monkeypatch)
+        with pytest.raises(SSRFProtectionError, match="SSRF Protection"):
+            validate_strict_url_for_ssrf_or_raise("http://169.254.169.254/latest/meta-data/")
+
+    def test_connector_validator_raises_the_typed_error(self, monkeypatch: pytest.MonkeyPatch):
+        from lfx.utils.ssrf_httpx import validate_url_for_ssrf_or_raise
+
+        self._strict_env(monkeypatch)
+        with pytest.raises(SSRFProtectionError, match="SSRF Protection"):
+            validate_url_for_ssrf_or_raise("http://169.254.169.254/latest/meta-data/")
+
+    def test_existing_value_error_callers_still_catch_it(self, monkeypatch: pytest.MonkeyPatch):
+        """The compatibility half: every `except ValueError` site keeps working."""
+        from lfx.utils.ssrf_httpx import validate_strict_url_for_ssrf_or_raise
+
+        self._strict_env(monkeypatch)
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            validate_strict_url_for_ssrf_or_raise("http://169.254.169.254/latest/meta-data/")
+
+    def test_client_kwargs_helpers_raise_the_typed_error(self, monkeypatch: pytest.MonkeyPatch):
+        from lfx.utils.ssrf_httpx import (
+            ssrf_protected_strict_httpx_client_kwargs_for_url,
+        )
+
+        self._strict_env(monkeypatch)
+        with pytest.raises(SSRFProtectionError, match="SSRF Protection"):
+            ssrf_protected_strict_httpx_client_kwargs_for_url("http://169.254.169.254/v1")
+        with pytest.raises(SSRFProtectionError, match="SSRF Protection"):
+            ssrf_protected_httpx_client_kwargs_for_url("http://169.254.169.254/v1")
