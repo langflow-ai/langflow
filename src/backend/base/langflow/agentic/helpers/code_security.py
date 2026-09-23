@@ -190,7 +190,17 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     # constructor-invocation surface reachable through a plain function call.
     ("yaml", "full_load", "yaml.full_load() is forbidden — use yaml.safe_load()"),
     ("yaml", "full_load_all", "yaml.full_load_all() is forbidden — use yaml.safe_load_all()"),
+    # pandas.read_pickle delegates to pickle.load, so it can invoke a callable
+    # while the generated component is being validated in the backend process.
+    ("pandas", "read_pickle", "pandas.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
 ]
+
+# numpy.load is safe by default, but allow_pickle=True re-enables arbitrary
+# object constructors. Preserve ordinary array loads and reject calls whose
+# effective allow_pickle value cannot be proven false from the AST.
+_NUMPY_LOAD_NAMES = frozenset({"numpy.load", "numpy.lib.npyio.load", "numpy.lib._npyio_impl.load"})
+_NUMPY_ALLOW_PICKLE_ARG_INDEX = 2
 
 # Imports that are forbidden entirely
 DANGEROUS_IMPORTS: set[str] = {
@@ -203,6 +213,11 @@ DANGEROUS_IMPORTS: set[str] = {
     "cffi",
     "_cffi_backend",
     "pickle",
+    # These loaders also deserialize pickle objects; blocking their imports is
+    # safer than trying to enumerate each package's load/loads aliases.
+    "joblib",
+    "dill",
+    "cloudpickle",
     "shelve",
     "marshal",
     "code",
@@ -302,6 +317,7 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "full_load",
         "full_load_all",
     },
+    "pandas": {"read_pickle"},
 }
 
 
@@ -1745,6 +1761,7 @@ class _SecurityChecker(ast.NodeVisitor):
         self._check_dunder_mapping_read(node)
         self._check_namespace_mapping_method(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
+        self._check_numpy_pickle_load(node, resolved_call_names)
         reflective_arguments_validated = self._check_restricted_reflection_access(node, resolved_call_names)
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
         if vars_names & resolved_call_names and _static_positional_argument_count(node.args) != 1:
@@ -1772,6 +1789,22 @@ class _SecurityChecker(ast.NodeVisitor):
         for argument in (*node.args[exempt_arguments:], *(keyword.value for keyword in node.keywords)):
             self._check_opaque_reference(argument)
         self.generic_visit(node)
+
+    def _check_numpy_pickle_load(self, node: ast.Call, resolved_call_names: frozenset[str]) -> None:
+        if not resolved_call_names & _NUMPY_LOAD_NAMES:
+            return
+        positional = _expand_static_arguments(node.args)
+        if positional is None or any(keyword.arg is None for keyword in node.keywords):
+            self.violations.append("numpy.load() with dynamic arguments may enable unsafe pickle deserialization")
+            return
+        keyword_value = next((keyword.value for keyword in node.keywords if keyword.arg == "allow_pickle"), None)
+        allow_pickle = keyword_value
+        if allow_pickle is None and len(positional) > _NUMPY_ALLOW_PICKLE_ARG_INDEX:
+            allow_pickle = positional[_NUMPY_ALLOW_PICKLE_ARG_INDEX]
+        if allow_pickle is not None and not (isinstance(allow_pickle, ast.Constant) and allow_pickle.value is False):
+            self.violations.append(
+                "numpy.load() with allow_pickle enabled is forbidden — unsafe pickle deserialization"
+            )
 
     def _check_name_call(self, node: ast.Call):
         """Check bare-name calls: builtins (exec) and wildcard-imported members.

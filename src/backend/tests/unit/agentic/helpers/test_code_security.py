@@ -3312,3 +3312,67 @@ class TestScanCodeSecurityUnpackedGetattrArguments:
     )
     def test_should_allow_unpacking_outside_getattr(self, code):
         assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityUnsafeDeserialization:
+    """Generated code must not reach pickle through permitted data libraries."""
+
+    @pytest.mark.parametrize(
+        ("code", "module"),
+        [
+            ("import pandas as pd\npd.read_pickle(payload)", "pandas"),
+            ("import pandas as pd\nloader = pd.read_pickle\nloader(payload)", "pandas"),
+            ("import pandas as pd\ngetattr(pd, 'read_pickle')(payload)", "pandas"),
+            ("from pandas import read_pickle as load\nload(payload)", "pandas"),
+            ("from pandas import read_pickle", "pandas"),
+            ("import pandas.io.pickle as io_pickle\nio_pickle.read_pickle(payload)", "pandas"),
+            ("from pandas.io import pickle as io_pickle\nio_pickle.read_pickle(payload)", "pandas"),
+            ("from pandas.io.pickle import read_pickle\nread_pickle(payload)", "pandas"),
+            ("from pandas import *\nread_pickle(payload)", "pandas"),
+            ("import joblib\njoblib.load(payload)", "joblib"),
+            ("from dill import loads\nloads(payload)", "dill"),
+            ("import cloudpickle\ncloudpickle.loads(payload)", "cloudpickle"),
+        ],
+    )
+    def test_rejects_pickle_deserialization_paths(self, code, module):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any(module in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pandas as pd\npd.read_csv(path)",
+            "from pandas import DataFrame\nframe = DataFrame(data)",
+        ],
+    )
+    def test_preserves_non_pickle_pandas_operations(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy as np\nnp.load(payload, allow_pickle=True)",
+            "import numpy as np\nreader = np.load\nreader(payload, allow_pickle=True)",
+            "import numpy as np\ngetattr(np, 'load')(payload, allow_pickle=True)",
+            "from numpy import load as reader\nreader(payload, allow_pickle=True)",
+            "import numpy as np\nnp.load(payload, None, True)",
+            "import numpy as np\nnp.load(payload, allow_pickle=flag)",
+            "import numpy as np\nnp.load(payload, **options)",
+        ],
+    )
+    def test_rejects_numpy_load_when_pickle_may_be_enabled(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("numpy.load" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy as np\nnp.load(payload)",
+            "import numpy as np\nnp.load(payload, allow_pickle=False)",
+            "from numpy import load\nload(payload, None, False)",
+        ],
+    )
+    def test_preserves_numpy_load_with_pickle_disabled(self, code):
+        assert scan_code_security(code).is_safe is True
