@@ -1203,6 +1203,16 @@ class TestBundleSeparationOrchestrate:
         result = generate_requirements_from_flow(_make_flow(node), pin_versions=False)
         assert "langchain-openai" in result
 
+    def test_requesty_resolves_to_langchain_openai(self):
+        """Requesty is unified-selectable and routes through ChatOpenAI like OpenRouter."""
+        node = _make_node(
+            "LanguageModel",
+            "from lfx.base.models.model import LCModelComponent",
+            template_extra={"model": {"value": [{"provider": "Requesty", "name": "x"}]}},
+        )
+        result = generate_requirements_from_flow(_make_flow(node), pin_versions=False)
+        assert "langchain-openai" in result
+
     def test_ibm_watsonx_catalog_casing_resolves(self):
         """The catalog persists ``provider="IBM WatsonX"`` (not the legacy ``IBM watsonx.ai``).
 
