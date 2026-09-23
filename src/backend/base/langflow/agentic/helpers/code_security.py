@@ -196,12 +196,20 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
 ]
 
-# numpy.load is safe by default, but allow_pickle=True re-enables arbitrary
-# object constructors. Preserve ordinary array loads and reject calls whose
-# effective allow_pickle value cannot be proven false from the AST.
-_NUMPY_LOAD_NAMES = frozenset({"numpy.load", "numpy.lib.npyio.load", "numpy.lib._npyio_impl.load"})
-_NUMPY_ALLOW_PICKLE_ARG_INDEX = 2
-_NUMPY_OPAQUE_LOAD_MESSAGE = "Indirect numpy.load() references are forbidden — allow_pickle cannot be verified"
+# NumPy's array readers are safe by default, but allow_pickle=True enables
+# object constructors. The value's positional index differs between APIs.
+_NUMPY_PICKLE_LOAD_ARG_INDEX = {
+    "numpy.load": 2,
+    "numpy.lib.npyio.load": 2,
+    "numpy.lib._npyio_impl.load": 2,
+    "numpy.lib.format.read_array": 1,
+}
+_NUMPY_WILDCARD_LOADS = {
+    "numpy": ("load", "numpy.load"),
+    "numpy.lib.npyio": ("load", "numpy.lib.npyio.load"),
+    "numpy.lib._npyio_impl": ("load", "numpy.lib._npyio_impl.load"),
+    "numpy.lib.format": ("read_array", "numpy.lib.format.read_array"),
+}
 
 # Imports that are forbidden entirely
 DANGEROUS_IMPORTS: set[str] = {
@@ -990,8 +998,8 @@ class _SecurityChecker(ast.NodeVisitor):
 
         resolved_names = self._resolved_assignment_value(node)
         for resolved_name in resolved_names:
-            if resolved_name in _NUMPY_LOAD_NAMES:
-                return _NUMPY_OPAQUE_LOAD_MESSAGE
+            if resolved_name in _NUMPY_PICKLE_LOAD_ARG_INDEX:
+                return f"Indirect {resolved_name}() reference is forbidden — allow_pickle cannot be verified"
             if _is_restricted_module_reference(resolved_name):
                 return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
             if _is_restricted_reflective_capability(resolved_name):
@@ -1105,8 +1113,8 @@ class _SecurityChecker(ast.NodeVisitor):
         if not self._binding_escapes(name):
             return
         for value in sorted(values):
-            if value in _NUMPY_LOAD_NAMES:
-                self.violations.append(_NUMPY_OPAQUE_LOAD_MESSAGE)
+            if value in _NUMPY_PICKLE_LOAD_ARG_INDEX:
+                self.violations.append(f"Indirect {value}() reference is forbidden — allow_pickle cannot be verified")
                 return
             if _is_restricted_module_reference(value):
                 self.violations.append(f"Indirect reference to restricted module '{value}' is forbidden in components")
@@ -1249,6 +1257,8 @@ class _SecurityChecker(ast.NodeVisitor):
                     root_module, set()
                 ):
                     self._bind_name(name, frozenset({f"{root_module}.{name}"}))
+                if wildcard_loader := _NUMPY_WILDCARD_LOADS.get(node.module):
+                    self._bind_name(wildcard_loader[0], frozenset({wildcard_loader[1]}))
             else:
                 binding = alias.asname or alias.name
                 imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
@@ -1797,20 +1807,28 @@ class _SecurityChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _check_numpy_pickle_load(self, node: ast.Call, resolved_call_names: frozenset[str]) -> None:
-        if not resolved_call_names & _NUMPY_LOAD_NAMES:
+        loader_names = resolved_call_names.intersection(_NUMPY_PICKLE_LOAD_ARG_INDEX)
+        if not loader_names:
             return
         positional = _expand_static_arguments(node.args)
-        if positional is None or any(keyword.arg is None for keyword in node.keywords):
-            self.violations.append("numpy.load() with dynamic arguments may enable unsafe pickle deserialization")
-            return
         keyword_value = next((keyword.value for keyword in node.keywords if keyword.arg == "allow_pickle"), None)
-        allow_pickle = keyword_value
-        if allow_pickle is None and len(positional) > _NUMPY_ALLOW_PICKLE_ARG_INDEX:
-            allow_pickle = positional[_NUMPY_ALLOW_PICKLE_ARG_INDEX]
-        if allow_pickle is not None and not (isinstance(allow_pickle, ast.Constant) and allow_pickle.value is False):
-            self.violations.append(
-                "numpy.load() with allow_pickle enabled is forbidden — unsafe pickle deserialization"
-            )
+        for loader_name in sorted(loader_names):
+            if positional is None or any(keyword.arg is None for keyword in node.keywords):
+                self.violations.append(
+                    f"{loader_name}() with dynamic arguments may enable unsafe pickle deserialization"
+                )
+                return
+            allow_pickle = keyword_value
+            allow_pickle_arg_index = _NUMPY_PICKLE_LOAD_ARG_INDEX[loader_name]
+            if allow_pickle is None and len(positional) > allow_pickle_arg_index:
+                allow_pickle = positional[allow_pickle_arg_index]
+            if allow_pickle is not None and not (
+                isinstance(allow_pickle, ast.Constant) and allow_pickle.value is False
+            ):
+                self.violations.append(
+                    f"{loader_name}() with allow_pickle enabled is forbidden — unsafe pickle deserialization"
+                )
+                return
 
     def _check_name_call(self, node: ast.Call):
         """Check bare-name calls: builtins (exec) and wildcard-imported members.

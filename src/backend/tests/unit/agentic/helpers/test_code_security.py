@@ -3359,6 +3359,8 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "    def run(self):\n        return self.reader(payload, allow_pickle=True)",
             "import numpy as np\ngetattr(np, 'load')(payload, allow_pickle=True)",
             "from numpy import load as reader\nreader(payload, allow_pickle=True)",
+            "from numpy import *\nload(payload, allow_pickle=True)",
+            "from numpy.lib.npyio import *\nload(payload, allow_pickle=True)",
             "import numpy as np\nnp.load(payload, None, True)",
             "import numpy as np\nnp.load(payload, allow_pickle=flag)",
             "import numpy as np\nnp.load(payload, **options)",
@@ -3367,7 +3369,7 @@ class TestScanCodeSecurityUnsafeDeserialization:
     def test_rejects_numpy_load_when_pickle_may_be_enabled(self, code):
         result = scan_code_security(code)
         assert result.is_safe is False
-        assert any("numpy.load" in violation for violation in result.violations)
+        assert any("numpy" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -3375,7 +3377,33 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "import numpy as np\nnp.load(payload)",
             "import numpy as np\nnp.load(payload, allow_pickle=False)",
             "from numpy import load\nload(payload, None, False)",
+            "from numpy import *\nload(payload, allow_pickle=False)",
+            "from numpy.lib.npyio import *\nload(payload)",
         ],
     )
     def test_preserves_numpy_load_with_pickle_disabled(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy.lib.format as fmt\nfmt.read_array(payload, allow_pickle=True)",
+            "from numpy.lib.format import read_array as reader\nreader(payload, allow_pickle=True)",
+            "from numpy.lib.format import *\nread_array(payload, allow_pickle=True)",
+            "import numpy.lib.format as fmt\nfmt.read_array(payload, flag)",
+        ],
+    )
+    def test_rejects_numpy_read_array_when_pickle_may_be_enabled(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("numpy.lib.format.read_array" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy.lib.format as fmt\nfmt.read_array(payload)",
+            "from numpy.lib.format import *\nread_array(payload, allow_pickle=False)",
+        ],
+    )
+    def test_preserves_numpy_read_array_with_pickle_disabled(self, code):
         assert scan_code_security(code).is_safe is True
