@@ -321,7 +321,7 @@ def test_yes_flag_allowed_for_safe_commands():
     with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
         validate_mcp_stdio_config("docker", ["run", "-y", "img"], {})
 
-    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+    with pytest.raises(MCPStdioSecurityError, match=r"Node[.]js runtime options"):
         validate_mcp_stdio_config("node", ["--yes", "script.js"], {})
 
 
@@ -543,6 +543,40 @@ def test_interpreter_hardening_rejects_late_shell_exec_flag(command, args):
 def test_interpreter_default_preserves_legacy_single_tenant_config():
     validate_mcp_stdio_config("python", ["custom_server.py"], {}, interpreter_hardening=False)
     validate_mcp_stdio_config("node", ["custom_server.js"], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--import", "data:text/javascript,console.log%281%29", "--interactive"],
+        ["--import=data:text/javascript,console.log%281%29", "--interactive"],
+        ["--require", "./preload.js", "server.js"],
+        ["-r", "./preload.js", "server.js"],
+        ["--experimental-loader", "./loader.mjs", "server.js"],
+        ["--run", "mcp-server"],
+        ["--interactive"],
+        ["-"],
+    ],
+)
+def test_node_runtime_options_cannot_load_code_before_mcp_script(args):
+    with pytest.raises(MCPStdioSecurityError, match=r"Node[.]js runtime options"):
+        validate_mcp_stdio_config("node", args, {}, interpreter_hardening=False)
+
+
+def test_node_script_arguments_are_not_interpreted_as_runtime_options():
+    validate_mcp_stdio_config("node", ["server.js", "--import=log-only"], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("sh", ["-c", "node --import=data:text/javascript,console.log%281%29"]),
+        ("cmd", ["/c", "node", "--import=data:text/javascript,console.log%281%29"]),
+    ],
+)
+def test_node_runtime_options_remain_blocked_through_shell_wrappers(command, args):
+    with pytest.raises(MCPStdioSecurityError, match=r"Node[.]js runtime options"):
+        validate_mcp_stdio_config(command, args, {}, interpreter_hardening=False)
 
 
 def test_configured_package_allowlist_is_enforced_at_validation_sink(monkeypatch):

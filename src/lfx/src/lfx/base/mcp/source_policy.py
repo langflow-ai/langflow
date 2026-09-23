@@ -565,6 +565,14 @@ def _validate_allowed_package(base_command: str, args: list[str], allowed_packag
 
 
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
+    # Node interprets options before the script operand. A tenant can use --import,
+    # --require, --run, or future runtime options to execute code without supplying
+    # a script path. Keep ordinary `node server.js [server args]` configurations,
+    # but never let a runtime option occupy the entrypoint position, even when the
+    # optional interpreter-hardening policy is disabled.
+    if base_command == "node" and args and args[0].startswith("-"):
+        msg = "Node.js runtime options are not allowed before an MCP server script"
+        raise ValueError(msg)
     if not hardened:
         return
     if base_command in {"sh", "bash", "cmd"}:

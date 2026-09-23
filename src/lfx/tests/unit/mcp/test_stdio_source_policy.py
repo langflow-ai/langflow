@@ -325,6 +325,15 @@ def test_interpreter_hardening_preserves_authenticated_agentic_module():
     )
 
 
+def test_node_source_policy_rejects_runtime_options_without_optional_hardening():
+    with pytest.raises(ValueError, match=r"Node[.]js runtime options"):
+        validate_mcp_stdio_source_policy(
+            "node",
+            ["--import=data:text/javascript,console.log%281%29"],
+            interpreter_hardening=False,
+        )
+
+
 def test_windows_forward_slash_executable_path_preserves_source_policy():
     with pytest.raises(ValueError, match=r"not allowed"):
         validate_mcp_stdio_config(
