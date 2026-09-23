@@ -14,16 +14,12 @@ import pytest
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import session_scope
-from langflow.services.triggers.constants import MECHANISM_SLACK_SOCKET_MODE, SLACK_TRIGGER_KINDS
-from langflow.services.triggers.listeners import adapters, connection_leases
+from langflow.services.triggers.constants import MECHANISM_SLACK_SOCKET_MODE
+from langflow.services.triggers.listeners import connection_leases
 from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
-from langflow.services.triggers.providers.slack.socket_mode import (
-    PROVIDER_STATE_APP_ID,
-    SlackSocketModeAdapter,
-)
+from langflow.services.triggers.providers.slack.socket_mode import PROVIDER_STATE_APP_ID
 
 from tests.unit.services.triggers import slack_fixtures as fx
-from tests.unit.services.triggers.fake_slack_socket import API_BASE_URL, FakeSlackSocketMode, local_socket_url
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -31,50 +27,8 @@ SOCKET = MECHANISM_SLACK_SOCKET_MODE
 
 
 @pytest.fixture(autouse=True)
-def _listener_process(trigger_owner, monkeypatch):  # noqa: ARG001 - the API app must exist before the flag is set
+def _in_the_listener(listener_process):
     """These tests play the listener process: the only one an app-level token resolves in."""
-    from langflow.services.triggers.listeners import guard
-
-    monkeypatch.setattr(guard, "_IS_LISTENER_PROCESS", True)
-
-
-@pytest.fixture
-async def slack():
-    async with FakeSlackSocketMode() as fake:
-        yield fake
-
-
-@pytest.fixture
-def socket_adapters(slack, monkeypatch):
-    """Point the Socket Mode registration at the fake, and restore it afterwards."""
-    from langflow.services.deps import get_settings_service
-
-    settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "listener_backoff_base_s", 0.05)
-    monkeypatch.setattr(settings, "listener_backoff_cap_s", 0.1)
-    created: list[SlackSocketModeAdapter] = []
-
-    def factory(_trigger):
-        adapter = SlackSocketModeAdapter(
-            max_connections=10,
-            api_base_url=API_BASE_URL,
-            http_transport=slack.transport(),
-            url_allowed=local_socket_url,
-            open_timeout_s=5.0,
-            drain_timeout_s=0.3,
-        )
-        created.append(adapter)
-        return adapter
-
-    saved = {key: adapters._REGISTRY.pop(key) for key in list(adapters._REGISTRY) if key[1] == SOCKET}
-    for kind in SLACK_TRIGGER_KINDS:
-        adapters.register_adapter(kind=kind, mechanism=SOCKET, factory=factory, rebuild_on_config_change=False)
-    try:
-        yield created
-    finally:
-        for kind in SLACK_TRIGGER_KINDS:
-            adapters.unregister_adapter(kind=kind, mechanism=SOCKET)
-        adapters._REGISTRY.update(saved)
 
 
 @pytest.fixture
