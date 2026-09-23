@@ -86,23 +86,27 @@ jobs:
             echo "need_fe=$need_fe"
           } >> "$GITHUB_OUTPUT"
 
-          # Multiline outputs for the comment body.
+          # Keep PR-controlled filenames out of workflow outputs: GitHub Actions
+          # substitutes step outputs into shell scripts before bash parses them.
+          PY_SRC_FILE="$(mktemp)"
+          FE_SRC_FILE="$(mktemp)"
+          printf '%s\n' "$PY_SRC" > "$PY_SRC_FILE"
+          printf '%s\n' "$FE_SRC" > "$FE_SRC_FILE"
           {
-            echo "py_src<<EOF"
-            echo "$PY_SRC"
-            echo "EOF"
-            echo "fe_src<<EOF"
-            echo "$FE_SRC"
-            echo "EOF"
+            echo "py_src_file=$PY_SRC_FILE"
+            echo "fe_src_file=$FE_SRC_FILE"
           } >> "$GITHUB_OUTPUT"
 
       - name: Build advisory message
         id: msg
         shell: bash
+        env:
+          NEED_BE: ${{ steps.detect.outputs.need_be }}
+          NEED_FE: ${{ steps.detect.outputs.need_fe }}
+          PY_SRC_FILE: ${{ steps.detect.outputs.py_src_file }}
+          FE_SRC_FILE: ${{ steps.detect.outputs.fe_src_file }}
         run: |
           set -euo pipefail
-          NEED_BE="${{ steps.detect.outputs.need_be }}"
-          NEED_FE="${{ steps.detect.outputs.need_fe }}"
 
           BODY_FILE="$(mktemp)"
           echo '<!-- test-coverage-advisor -->' > "$BODY_FILE"
@@ -126,17 +130,20 @@ jobs:
             } >> "$BODY_FILE"
             if [ "$NEED_BE" = "true" ]; then
               {
+                # The backticks are literal Markdown, not shell substitutions.
+                # shellcheck disable=SC2016
                 echo '#### Backend (Python) — no `test_*.py` / `tests/` change found'
                 echo '```'
-                echo '${{ steps.detect.outputs.py_src }}'
+                cat -- "$PY_SRC_FILE"
                 echo '```'
               } >> "$BODY_FILE"
             fi
             if [ "$NEED_FE" = "true" ]; then
               {
+                # shellcheck disable=SC2016
                 echo '#### Frontend (TS/TSX) — no `*.test.*` / `*.spec.*` / `tests/` change found'
                 echo '```'
-                echo '${{ steps.detect.outputs.fe_src }}'
+                cat -- "$FE_SRC_FILE"
                 echo '```'
               } >> "$BODY_FILE"
             fi
