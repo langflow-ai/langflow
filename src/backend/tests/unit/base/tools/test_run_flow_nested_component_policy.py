@@ -462,3 +462,72 @@ async def test_frozen_dependency_denial_stops_graph_construction(nested_env, mon
         await component.get_graph(flow_id_selected=flow_id)
 
     constructor.assert_not_called()
+
+
+@pytest.fixture
+def reviewed_snapshot_env(monkeypatch):
+    from lfx.projects import invocation
+    from lfx.projects.bindings import FlowBinding
+
+    component = _component()
+    parent = Graph()
+    parent.set_run_id()
+    component._vertex = SimpleNamespace(graph=parent, data={})
+    binding = FlowBinding(flow_id=str(uuid4()), node_id="prompt", output_name="message", revision="a" * 64)
+    monkeypatch.setattr(component, "_instruction_binding", lambda: binding)
+    source = {"name": "Reviewed instructions", **_child_flow_data("# reviewed caller source").data}
+    loader = AsyncMock(return_value=source)
+    monkeypatch.setattr(invocation, "reviewed_flow_source", loader)
+    return SimpleNamespace(component=component, binding=binding, source=source, loader=loader)
+
+
+@pytest.mark.parametrize("is_superuser", [False, True])
+async def test_reviewed_snapshot_rechecks_caller_policy(nested_env, reviewed_snapshot_env, monkeypatch, is_superuser):
+    from lfx.base.tools import run_flow as run_flow_module
+
+    env = reviewed_snapshot_env
+    nested_env.get_user_is_superuser.return_value = is_superuser
+    original = deepcopy(env.source)
+    sanitized = {"nodes": [], "edges": []}
+    prepare = AsyncMock(return_value=sanitized)
+    constructor = Mock(side_effect=[MagicMock(spec=Graph), MagicMock(spec=Graph)])
+    monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
+    monkeypatch.setattr(run_flow_module.Graph, "from_payload", constructor)
+
+    first = await env.component.get_graph(flow_id_selected=env.binding.flow_id)
+    second = await env.component.get_graph(flow_id_selected=env.binding.flow_id)
+
+    assert first is not second
+    env.loader.assert_awaited_once()
+    assert prepare.await_count == 2
+    for call in prepare.await_args_list:
+        assert call.args[0] == original["data"]
+        assert call.kwargs["is_superuser"] is is_superuser
+    assert all(call.kwargs["payload"] is sanitized for call in constructor.call_args_list)
+    assert env.source == original
+
+
+@pytest.mark.parametrize("warm_definition", [False, True])
+@pytest.mark.usefixtures("nested_env")
+async def test_reviewed_snapshot_denial_stops_graph_construction(
+    reviewed_snapshot_env,
+    monkeypatch,
+    warm_definition,
+):
+    from lfx.base.tools import run_flow as run_flow_module
+
+    env = reviewed_snapshot_env
+    prepare = AsyncMock(return_value=None)
+    constructor = Mock(return_value=MagicMock(spec=Graph))
+    monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
+    monkeypatch.setattr(run_flow_module.Graph, "from_payload", constructor)
+    if warm_definition:
+        await env.component.get_graph(flow_id_selected=env.binding.flow_id)
+        constructor.reset_mock()
+    prepare.side_effect = CustomComponentValidationError("custom components are restricted to administrators")
+
+    with pytest.raises(CustomComponentValidationError, match="restricted to administrators"):
+        await env.component.get_graph(flow_id_selected=env.binding.flow_id)
+
+    constructor.assert_not_called()
+    env.loader.assert_awaited_once()
