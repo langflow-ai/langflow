@@ -251,7 +251,6 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
     assert 30.0 not in observed
 
 
-
 @pytest.mark.parametrize(
     ("client_class", "args"),
     [
@@ -277,5 +276,6 @@ async def test_connect_to_server_gives_a_non_positive_server_timeout_the_fallbac
         assert await client.connect_to_server(*args) == []
 
     assert observed == [60.0]
+
 
 # Made with Bob
