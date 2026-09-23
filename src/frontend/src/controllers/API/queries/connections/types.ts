@@ -149,6 +149,8 @@ export interface IntegrationProviderRead {
 
 export interface IntegrationListRead {
   providers: IntegrationProviderRead[];
+  /** Which deployment this is; hosted has no Slack Socket Mode, Desktop no Events API. */
+  deployment_context?: "self_managed" | "hosted" | "desktop";
 }
 
 /** What the caller may use, and whether a plugin owns the decision. */

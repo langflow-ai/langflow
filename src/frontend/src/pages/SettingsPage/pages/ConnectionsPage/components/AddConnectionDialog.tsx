@@ -44,7 +44,9 @@ import {
   shortScope,
   uniqueScopes,
 } from "../helpers/scopes";
+import { offersSlackToken, slackTokenKind } from "../helpers/slack-token";
 import ScopeChecklist from "./ScopeChecklist";
+import SlackTokenFields from "./SlackTokenFields";
 
 /** Consent can take a while; stop waiting rather than polling forever. */
 const CONSENT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -55,6 +57,12 @@ const openBlankConsentWindow = (): Window | null =>
 
 /** Re-authorizing starts at `scopes`: the handle and identity already exist. */
 type Step = "details" | "scopes" | "authorize";
+
+/** Sign in through the provider, or paste a token (Slack only). */
+type Method = "oauth" | "token";
+
+/** The auth profile a Slack bot token stands in for. */
+const SLACK_BOT_PROFILE = "slack-bot-install";
 
 type AuthorizeState =
   | { kind: "waiting" }
@@ -69,6 +77,8 @@ export interface AddConnectionDialogProps {
   canCreateInstance: boolean;
   /** Re-authorizing an existing connection instead of creating one. */
   reauthorize?: ConnectionRead;
+  /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
+  deploymentContext?: string;
 }
 
 export function AddConnectionDialog({
@@ -77,6 +87,7 @@ export function AddConnectionDialog({
   providers,
   canCreateInstance,
   reauthorize,
+  deploymentContext,
 }: AddConnectionDialogProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -99,6 +110,12 @@ export function AddConnectionDialog({
   const [authorize, setAuthorize] = useState<AuthorizeState | null>(null);
   const [baseline, setBaseline] = useState<ConnectionPollBaseline | null>(null);
   const [pendingRow, setPendingRow] = useState<ConnectionRead | null>(null);
+  const [method, setMethod] = useState<Method>("oauth");
+  const [token, setToken] = useState("");
+  const [tokenScopes, setTokenScopes] = useState<Set<string>>(new Set());
+  // Consent to unattended use is explicit and off by default: pasting a token
+  // is not the same as allowing a trigger to run with it.
+  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
   const popupRef = useRef<Window | null>(null);
   const startedAt = useRef(0);
   // What the last authorization asked for, so "Try again" repeats it exactly
@@ -155,6 +172,28 @@ export function AddConnectionDialog({
     () => scopeRequirements(provider?.capabilities ?? [], typesData),
     [provider, typesData],
   );
+
+  const offersToken =
+    !reauthorize && offersSlackToken(providerId, deploymentContext);
+  const usesToken = offersToken && method === "token";
+  const tokenKind = slackTokenKind(token);
+  // What a pasted bot token is for: the actions that run as the app's bot.
+  const botTokenScopes = useMemo(
+    () =>
+      uniqueScopes(
+        scopeRequirements(
+          (provider?.capabilities ?? []).filter(
+            (capability) => capability.auth_profile_id === SLACK_BOT_PROFILE,
+          ),
+          typesData,
+        ),
+      ),
+    [provider, typesData],
+  );
+
+  useEffect(() => {
+    setTokenScopes(new Set(botTokenScopes));
+  }, [botTokenScopes]);
   const ceiling = candidates.find(
     ({ id }) => id === resolvedRegistration,
   )?.scopes;
@@ -348,11 +387,37 @@ export function AddConnectionDialog({
     !!provider &&
     handleValid &&
     displayName.trim().length > 0 &&
-    !noRegistration;
+    (usesToken ? tokenKind !== null : !noRegistration);
+
+  /** A pasted token is stored as-is: no consent window, nothing to wait for. */
+  const onCreateWithToken = async () => {
+    if (!provider || tokenKind === null) return;
+    try {
+      const row = await create.mutateAsync({
+        provider_key: provider.provider_id,
+        name,
+        display_name: displayName.trim(),
+        ownership_mode: "user",
+        executing_identity: { identity: "bot" },
+        // An app-level token's scope is recorded by the server, never claimed.
+        granted_scopes: tokenKind === "bot" ? [...tokenScopes] : [],
+        allow_non_interactive: allowBackgroundRuns,
+        credentials: { access_token: token.trim() },
+      });
+      setStep("authorize");
+      setAuthorize({ kind: "connected", connection: row });
+    } catch (error) {
+      setFieldError(getAxiosErrorDetail(error, t("connections.add.failed")));
+    }
+  };
 
   const onContinue = async () => {
     if (!provider || !canContinue) return;
     setFieldError(null);
+    if (usesToken) {
+      await onCreateWithToken();
+      return;
+    }
     // Open on the click itself so popup blockers treat it as user-initiated.
     popupRef.current = openBlankConsentWindow();
     try {
@@ -396,6 +461,9 @@ export function AddConnectionDialog({
     setName("");
     setDisplayName("");
     setFieldError(null);
+    setMethod("oauth");
+    setToken("");
+    setAllowBackgroundRuns(false);
     onOpenChange(false);
   };
 
@@ -432,6 +500,31 @@ export function AddConnectionDialog({
                 ))}
               </select>
             </div>
+
+            {offersToken && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="connection-method">
+                  {t("connections.add.method")}
+                </Label>
+                <select
+                  id="connection-method"
+                  className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                  value={method}
+                  onChange={(event) => {
+                    setMethod(event.target.value as Method);
+                    setFieldError(null);
+                  }}
+                  data-testid="connection-method"
+                >
+                  <option value="oauth">
+                    {t("connections.add.methodOauth")}
+                  </option>
+                  <option value="token">
+                    {t("connections.add.methodToken")}
+                  </option>
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
@@ -478,7 +571,36 @@ export function AddConnectionDialog({
               </div>
             </div>
 
-            {identities.length > 1 && (
+            {usesToken && (
+              <SlackTokenFields
+                token={token}
+                onTokenChange={setToken}
+                allowBackgroundRuns={allowBackgroundRuns}
+                onAllowBackgroundRunsChange={setAllowBackgroundRuns}
+              />
+            )}
+
+            {usesToken && tokenKind === "bot" && (
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium">
+                  {t("connections.add.tokenScopes")}
+                </span>
+                <ScopeChecklist
+                  scopes={botTokenScopes}
+                  selected={tokenScopes}
+                  onToggle={(scope, checked) =>
+                    setTokenScopes((current) => {
+                      const next = new Set(current);
+                      if (checked) next.add(scope);
+                      else next.delete(scope);
+                      return next;
+                    })
+                  }
+                />
+              </div>
+            )}
+
+            {!usesToken && identities.length > 1 && (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="connection-identity">
                   {t("connections.add.identity")}
@@ -501,9 +623,9 @@ export function AddConnectionDialog({
               </div>
             )}
 
-            {registrationSelect}
+            {!usesToken && registrationSelect}
 
-            {canCreateInstance && (
+            {!usesToken && canCreateInstance && (
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={ownership === "instance"}
@@ -516,30 +638,32 @@ export function AddConnectionDialog({
               </label>
             )}
 
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">
-                {t("connections.add.scopes")}
-              </span>
-              {requestable.length === 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {t("connections.add.noScopes")}
+            {!usesToken && (
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium">
+                  {t("connections.add.scopes")}
                 </span>
-              )}
-              <ScopeChecklist
-                scopes={requestable}
-                selected={selectedScopes}
-                onToggle={toggleScope}
-              />
-              {unavailable.length > 0 && (
-                <span className="text-xs text-warning-foreground">
-                  {t("connections.add.scopesOutsideCeiling", {
-                    scopes: unavailable.map(shortScope).join(", "),
-                  })}
-                </span>
-              )}
-            </div>
+                {requestable.length === 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {t("connections.add.noScopes")}
+                  </span>
+                )}
+                <ScopeChecklist
+                  scopes={requestable}
+                  selected={selectedScopes}
+                  onToggle={toggleScope}
+                />
+                {unavailable.length > 0 && (
+                  <span className="text-xs text-warning-foreground">
+                    {t("connections.add.scopesOutsideCeiling", {
+                      scopes: unavailable.map(shortScope).join(", "),
+                    })}
+                  </span>
+                )}
+              </div>
+            )}
 
-            {noRegistration && (
+            {!usesToken && noRegistration && (
               <p className="text-xs text-destructive" role="alert">
                 {t("connections.add.noRegistration")}
               </p>
