@@ -2628,5 +2628,8 @@
   "runConfig.help": "Werte des laufenden Agenten. Zugangsdaten des Modells und Verbindungsobjekte werden ausgelassen.",
   "runConfig.prompt": "Aufgelöste Anweisungen",
   "runConfig.record": "Konfiguration {{number}}",
-  "runConfig.history": "Limit für Verlaufsnachrichten"
+  "runConfig.history": "Limit für Verlaufsnachrichten",
+  "projectStarters.research.description": "Agent Harness mit separatem Tool Pack für Suche, Quellenlektüre und einen Bericht mit Quellenangaben.",
+  "projectStarters.research.title": "Recherche mit Quellen",
+  "projectStarters.label": "Vorlagen"
 }

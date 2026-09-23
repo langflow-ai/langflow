@@ -2628,5 +2628,8 @@
   "runConfig.parameters": "Detalhes do modelo",
   "runConfig.prompt": "Instruções resolvidas",
   "runConfig.loadedHistory": "Mensagens do histórico carregadas",
-  "runConfig.record": "Configuração {{number}}"
+  "runConfig.record": "Configuração {{number}}",
+  "projectStarters.label": "Modelos iniciais",
+  "projectStarters.research.description": "Agent Harness com um Tool Pack separado para busca, leitura de fontes e um relatório com citações.",
+  "projectStarters.research.title": "Pesquisa com fontes"
 }

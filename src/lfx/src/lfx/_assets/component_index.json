@@ -4235,7 +4235,7 @@
           "is_output": true,
           "legacy": false,
           "metadata": {
-            "code_hash": "65f843bd492c",
+            "code_hash": "10e4ce08eb16",
             "dependencies": {
               "dependencies": [
                 {
@@ -4306,7 +4306,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "from lfx.custom import Component\nfrom lfx.io import BoolInput, MessageTextInput, Output, StrInput\nfrom lfx.projects.artifacts import SOURCE_EVIDENCE_KIND, SourceRecord\nfrom lfx.schema.data import Data\n\n\nclass RecordSourceComponent(Component):\n    display_name = \"Record Source\"\n    description = (\n        \"Keep retrieved text with a stable citation ID. Connect the original source content before summarizing.\"\n    )\n    icon = \"BookOpenCheck\"\n    name = \"RecordSource\"\n\n    inputs = [\n        StrInput(name=\"uri\", display_name=\"Source Location\", required=True),\n        StrInput(name=\"title\", display_name=\"Source Title\", required=True),\n        MessageTextInput(name=\"content\", display_name=\"Retrieved Text\", value=\"\"),\n        BoolInput(name=\"available\", display_name=\"Evidence Available\", value=True, advanced=True),\n        StrInput(name=\"unavailable_reason\", display_name=\"Unavailable Reason\", value=\"\", advanced=True),\n    ]\n    outputs = [Output(name=\"source\", display_name=\"Source Evidence\", method=\"record_source\")]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.is_output = True\n\n    def record_source(self) -> Data:\n        source = SourceRecord(\n            uri=self.uri,\n            title=self.title,\n            content=self.content,\n            availability=\"available\" if self.available else \"unavailable\",\n            unavailable_reason=self.unavailable_reason,\n        )\n        result = Data(\n            data={\n                \"kind\": SOURCE_EVIDENCE_KIND,\n                \"source\": source.model_dump(mode=\"json\"),\n                \"text\": (\n                    f\"Citation: [@{source.id}]\\nTitle: {source.title}\\nSource: {source.uri}\\n\\n\"\n                    + (source.content if self.available else f\"Evidence unavailable: {source.unavailable_reason}\")\n                ),\n            }\n        )\n        self.status = result.data\n        return result\n"
+              "value": "from lfx.custom import Component\nfrom lfx.io import BoolInput, MessageTextInput, Output, StrInput\nfrom lfx.projects.artifacts import SOURCE_EVIDENCE_KIND, SourceRecord\nfrom lfx.schema.data import Data\n\n\nclass RecordSourceComponent(Component):\n    display_name = \"Record Source\"\n    description = (\n        \"Keep retrieved text with a stable citation ID. Connect the original source content before summarizing.\"\n    )\n    icon = \"BookOpenCheck\"\n    name = \"RecordSource\"\n\n    inputs = [\n        MessageTextInput(name=\"uri\", display_name=\"Source Location\", required=True),\n        MessageTextInput(name=\"title\", display_name=\"Source Title\", required=True),\n        MessageTextInput(name=\"content\", display_name=\"Retrieved Text\", value=\"\"),\n        BoolInput(name=\"available\", display_name=\"Evidence Available\", value=True, advanced=True),\n        StrInput(name=\"unavailable_reason\", display_name=\"Unavailable Reason\", value=\"\", advanced=True),\n    ]\n    outputs = [Output(name=\"source\", display_name=\"Source Evidence\", method=\"record_source\")]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.is_output = True\n\n    def record_source(self) -> Data:\n        source = SourceRecord(\n            uri=self.uri,\n            title=self.title,\n            content=self.content,\n            availability=\"available\" if self.available else \"unavailable\",\n            unavailable_reason=self.unavailable_reason,\n        )\n        result = Data(\n            data={\n                \"kind\": SOURCE_EVIDENCE_KIND,\n                \"source\": source.model_dump(mode=\"json\"),\n                \"text\": (\n                    f\"Citation: [@{source.id}]\\nTitle: {source.title}\\nSource: {source.uri}\\n\\n\"\n                    + (source.content if self.available else f\"Evidence unavailable: {source.unavailable_reason}\")\n                ),\n            }\n        )\n        self.status = result.data\n        return result\n"
             },
             "content": {
               "_input_type": "MessageTextInput",
@@ -4335,12 +4335,15 @@
               "value": ""
             },
             "title": {
-              "_input_type": "StrInput",
+              "_input_type": "MessageTextInput",
               "advanced": false,
               "api_editable": false,
               "display_name": "Source Title",
               "dynamic": false,
               "info": "",
+              "input_types": [
+                "Message"
+              ],
               "list": false,
               "list_add_label": "Add More",
               "load_from_db": false,
@@ -4351,6 +4354,7 @@
               "show": true,
               "title_case": false,
               "tool_mode": false,
+              "trace_as_input": true,
               "trace_as_metadata": true,
               "track_in_telemetry": false,
               "type": "str",
@@ -4379,12 +4383,15 @@
               "value": ""
             },
             "uri": {
-              "_input_type": "StrInput",
+              "_input_type": "MessageTextInput",
               "advanced": false,
               "api_editable": false,
               "display_name": "Source Location",
               "dynamic": false,
               "info": "",
+              "input_types": [
+                "Message"
+              ],
               "list": false,
               "list_add_label": "Add More",
               "load_from_db": false,
@@ -4395,6 +4402,7 @@
               "show": true,
               "title_case": false,
               "tool_mode": false,
+              "trace_as_input": true,
               "trace_as_metadata": true,
               "track_in_telemetry": false,
               "type": "str",
@@ -34071,6 +34079,6 @@
     "num_components": 139,
     "num_modules": 17
   },
-  "sha256": "67a553ab098c66b0962910ff67087c8ccd8a49ceca8b4c3baf607dee47c20c62",
+  "sha256": "cc798de926c8eca681292807b7a51ae6e4a7b8bccf02f87c2218605305fdbcd9",
   "version": "1.13.0"
 }
