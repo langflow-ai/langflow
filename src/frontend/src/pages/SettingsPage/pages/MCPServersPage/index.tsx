@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Loading from "@/components/ui/loading";
+import { McpServerNotFoundError } from "@/controllers/API/queries/mcp/mcp-server-not-found-error";
 import { useDeleteMCPServer } from "@/controllers/API/queries/mcp/use-delete-mcp-server";
 import { useGetMCPServer } from "@/controllers/API/queries/mcp/use-get-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
@@ -38,13 +39,15 @@ export default function MCPServersPage() {
       const data = await getServer({ name });
       setEditInitialData(data);
       setEditOpen(true);
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } catch (e: any) {
+    } catch (e: unknown) {
+      if (e instanceof McpServerNotFoundError) {
+        setErrorData({ title: t("mcp.servers.errorNoLongerExists") });
+        return;
+      }
       setErrorData({
         title: t("mcp.servers.errorFetching"),
-        list: [e.message],
+        list: [e instanceof Error ? e.message : String(e)],
       });
-    } finally {
     }
   };
 
