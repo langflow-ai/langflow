@@ -98,9 +98,12 @@ def provider(monkeypatch, flow, *, probe_scope=True):
     return model
 
 
-@pytest.mark.parametrize(("mode", "protocol"), [("sync", "langflow"), ("stream", "langflow"), ("stream", "agui")])
+@pytest.mark.parametrize(
+    ("mode", "protocol", "expose_graph_state"),
+    [("sync", "langflow", None), ("stream", "langflow", None), ("stream", "agui", None), ("stream", "agui", True)],
+)
 async def test_workflows_execute_imported_skill_composition(
-    client, logged_in_headers, created_api_key, workflow_harness, monkeypatch, mode, protocol
+    client, logged_in_headers, created_api_key, workflow_harness, monkeypatch, mode, protocol, expose_graph_state
 ):
     project, _, _, _, _, _ = workflow_harness
     archive = await client.get(f"/api/v1/projects/download/{project}", headers=logged_in_headers)
@@ -121,6 +124,7 @@ async def test_workflows_execute_imported_skill_composition(
             "input_value": "Research this question",
             "mode": mode,
             "stream_protocol": protocol,
+            "expose_graph_state": expose_graph_state,
         },
     )
     assert response.status_code == 200, response.text
@@ -135,7 +139,8 @@ async def test_workflows_execute_imported_skill_composition(
     if mode == "sync":
         assert "Research complete" in response.json()["output"]["text"]
     else:
-        assert "Skill activated" in response.text
+        # AG-UI now hides graph diagnostics by default; the canvas opts in.
+        assert ("Skill activated" in response.text) is (protocol != "agui" or expose_graph_state is True)
         if protocol == "agui":
             assert "RUN_FINISHED" in response.text
 
