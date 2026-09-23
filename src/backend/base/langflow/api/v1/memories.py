@@ -28,6 +28,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError
 from lfx.schema.legacy_render import render_v1_content_blocks
 from lfx.services.model_provider_policy import ModelProviderPolicyError
 from pydantic import BaseModel
@@ -162,6 +163,8 @@ async def create_memory_base(
         raise HTTPException(status_code=404, detail="Model provider not found") from exc
     except (PreprocessingValidationError, EmbeddingProviderValidationError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except StorageRoutingNotAllowedError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except BackendProvisioningError as exc:
         # Bad remote vector-store config (unreachable / wrong credentials) —
         # rejected up front so we don't create a silently-dead Memory Base.
