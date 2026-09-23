@@ -21,14 +21,19 @@ class TestCeleryConfigAcceptContent:
     def test_accept_content_configuration(self):
         """Test that accept_content is set to the expected values."""
         # This should be consistent regardless of environment
-        expected_content = ["json", "pickle"]
+        expected_content = ["json"]
         assert celeryconfig.accept_content == expected_content
 
     def test_accept_content_types(self):
         """Test that accept_content contains the expected content types."""
         assert "json" in celeryconfig.accept_content
-        assert "pickle" in celeryconfig.accept_content
-        assert len(celeryconfig.accept_content) == 2
+        assert "pickle" not in celeryconfig.accept_content
+        assert len(celeryconfig.accept_content) == 1
+
+    def test_task_and_result_serialization_is_json_only(self):
+        assert celeryconfig.task_serializer == "json"
+        assert celeryconfig.result_serializer == "json"
+        assert celeryconfig.result_accept_content == ["json"]
 
     def test_accept_content_is_list(self):
         """Test that accept_content is a list type."""
@@ -38,6 +43,23 @@ class TestCeleryConfigAcceptContent:
         """Test that accept_content contains only string values."""
         for content_type in celeryconfig.accept_content:
             assert isinstance(content_type, str)
+
+    def test_celery_rejects_pickle_before_decoding(self):
+        """Both the task consumer and result reader reject untrusted pickle content."""
+        pytest.importorskip("celery")
+        from kombu.exceptions import ContentDisallowed
+        from kombu.serialization import loads, prepare_accept_content
+        from langflow.core.celery_app import make_celery
+
+        app = make_celery("test", "langflow.core.celeryconfig")
+        for accepted in (app.conf.accept_content, app.conf.result_accept_content):
+            with pytest.raises(ContentDisallowed):
+                loads(
+                    b"not-a-pickle",
+                    content_type="application/x-python-serialize",
+                    content_encoding="binary",
+                    accept=prepare_accept_content(accepted),
+                )
 
 
 class TestCeleryConfigVariables:

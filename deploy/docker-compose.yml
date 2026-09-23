@@ -125,8 +125,6 @@ services:
     image: redis:6.2.5
     env_file:
       - .env
-    ports:
-      - 6379:6379
     healthcheck:
       test: "exit 0"
 
