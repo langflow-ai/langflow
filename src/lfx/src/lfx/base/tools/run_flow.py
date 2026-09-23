@@ -308,8 +308,13 @@ class RunFlowBaseComponent(Component):
                     )
                     self._local_snapshot_key = key
                 snapshot = self._local_snapshot
+                payload = deepcopy(snapshot["data"])
+                sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
                 graph = Graph.from_payload(
-                    deepcopy(snapshot["data"]), flow_id=local.flow_id, flow_name=local.name, user_id=self.user_id
+                    payload=sanitized_payload if sanitized_payload is not None else payload,
+                    flow_id=local.flow_id,
+                    flow_name=local.name,
+                    user_id=self.user_id,
                 )
                 graph.frozen_tool_flows = snapshot.get("dependencies")
                 graph.description = local.description
