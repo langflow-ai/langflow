@@ -786,7 +786,20 @@ class JobService(Service):
         dispatcher records its outcome: ``reconcile_dispatched`` reads that
         outcome by joining the job, so purging the job first would leave the
         ledger row DISPATCHED forever. A later sweep purges it once reconciled.
+
+        Both arguments must be positive. A zero window makes every terminal job
+        eligible and a negative one dates the cutoff in the future, and SQLite
+        reads a negative ``LIMIT`` as unbounded, so either would turn a
+        retention pass into a wholesale delete. The sweep never passes them
+        (retention is off at 0), but this method is public, so it guards itself.
         """
+        if older_than_days <= 0:
+            msg = f"older_than_days must be positive, got {older_than_days!r}"
+            raise ValueError(msg)
+        if limit <= 0:
+            msg = f"limit must be positive, got {limit!r}"
+            raise ValueError(msg)
+
         from sqlalchemy import exists
         from sqlmodel import delete
 

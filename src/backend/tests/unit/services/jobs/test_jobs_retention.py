@@ -108,6 +108,36 @@ async def test_purge_respects_its_batch_limit():
     assert [jid for jid in job_ids if await service.get_job_by_job_id(jid) is not None] == []
 
 
+@pytest.mark.parametrize("older_than_days", [0, -1, -0.5])
+async def test_purge_rejects_a_non_positive_window_and_deletes_nothing(older_than_days):
+    """A zero window makes every terminal job eligible; a negative one dates the cutoff in the future.
+
+    The retention loop never passes either (it is off at 0 and the setting is
+    ``ge=0``), but the method is public, so it refuses on its own rather than
+    trusting every caller to gate.
+    """
+    service = JobService()
+    job_id = await _aged_job(service, status=JobStatus.COMPLETED, age_days=0.01, with_children=True)
+
+    with pytest.raises(ValueError, match="older_than_days"):
+        await service.purge_terminal_jobs(older_than_days=older_than_days, limit=100)
+
+    assert await service.get_job_by_job_id(job_id) is not None
+    assert await _child_counts(service, job_id) == (1, 1, 1)
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+async def test_purge_rejects_a_non_positive_batch_limit(limit):
+    """SQLite reads a negative LIMIT as "no limit", which would turn one chunk into the whole backlog."""
+    service = JobService()
+    job_id = await _aged_job(service, status=JobStatus.COMPLETED, age_days=60)
+
+    with pytest.raises(ValueError, match="limit"):
+        await service.purge_terminal_jobs(older_than_days=30, limit=limit)
+
+    assert await service.get_job_by_job_id(job_id) is not None
+
+
 async def test_purge_is_a_noop_when_nothing_is_old_enough():
     service = JobService()
     await _aged_job(service, status=JobStatus.COMPLETED, age_days=1)
