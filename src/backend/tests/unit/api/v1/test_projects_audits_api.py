@@ -157,9 +157,7 @@ async def test_recreating_a_deleted_id_does_not_hand_over_its_history(client, lo
 async def test_an_id_that_changed_hands_twice_shows_only_its_current_life(client, logged_in_headers):
     """A → B → A: coming back must not open what B did in between."""
     shared_id = str(uuid4())
-    await client.put(
-        f"api/v1/projects/{shared_id}", json={"name": f"a1-{uuid4().hex[:8]}"}, headers=logged_in_headers
-    )
+    await client.put(f"api/v1/projects/{shared_id}", json={"name": f"a1-{uuid4().hex[:8]}"}, headers=logged_in_headers)
     await client.delete(f"api/v1/projects/{shared_id}", headers=logged_in_headers)
 
     _other_id, other_name = await make_user("intervening")
