@@ -86,6 +86,7 @@ ConnectionUnresolvedReason = Literal[
     "invalid-expiry",
     "invalid-credential",
     "credential-undecryptable",
+    "registration-unavailable",
 ]
 
 _CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
@@ -109,6 +110,15 @@ _CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
     "credential-undecryptable": (
         "The stored credential could not be decrypted. Reconnect the integration; if many connections "
         "report this, check whether the server's secret key changed."
+    ),
+    # Distinct from ``auth-expired`` on purpose: the credential is intact and
+    # reconnecting would not help. This process cannot see the OAuth
+    # registration the connection was authorized under, which is a property of
+    # how *it* is configured - so a listener or worker that hits this should
+    # retry rather than disarm the work that depends on the connection.
+    "registration-unavailable": (
+        "This process has no usable OAuth registration for this connection. Configure the same OAuth "
+        "registrations the API is running with, then retry."
     ),
 }
 

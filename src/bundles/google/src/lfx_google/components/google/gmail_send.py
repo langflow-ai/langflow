@@ -105,7 +105,7 @@ class GmailSendComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="Message", name="message", method="send_message")]
+    outputs = [Output(display_name="Message", name="message", method="send_email")]
 
     def _build_mime_message(self) -> EmailMessage:
         message = EmailMessage()
@@ -166,7 +166,7 @@ class GmailSendComponent(Component):
             message.add_attachment(payload, maintype=maintype, subtype=subtype or "octet-stream", filename=path.name)
         return message
 
-    async def send_message(self) -> Data:
+    async def send_email(self) -> Data:
         """Send one message and return the ``users.messages.send`` response."""
         raw_bytes = await asyncio.to_thread(lambda: self._build_mime_message().as_bytes())
         has_attachments = bool(_attachment_paths(self.attachments))

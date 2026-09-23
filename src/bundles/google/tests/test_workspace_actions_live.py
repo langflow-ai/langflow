@@ -181,7 +181,7 @@ async def test_live_gmail_send(headless) -> None:
         )
     )
 
-    result = await component.send_message()
+    result = await component.send_email()
 
     assert result.data["id"]
     assert "SENT" in result.data.get("labelIds", [])

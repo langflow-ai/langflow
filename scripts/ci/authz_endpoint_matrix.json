@@ -442,7 +442,7 @@
       "source": "api/v1/connections.py",
       "resource": "connection",
       "domain": "caller-global owner or explicit share scope",
-      "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only",
+      "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only. /oauth/registrations returns operator-configured registration metadata filtered by the caller's integration policy and never a client secret, private key, or connection identifier",
       "side_effects": "authorize before credential decryption, health checks, metadata updates, revocation, or deletion; instance connections change only by superuser; only the owner enables non-interactive use",
       "frontend": "connection pickers list only owned, instance, or explicitly shared metadata and never receive token material",
       "personas": "canonical_v1",
@@ -452,7 +452,10 @@
         "src/backend/tests/unit/api/v1/test_connections.py::test_only_the_owner_may_enable_non_interactive_use",
         "src/backend/tests/unit/api/v1/test_connections.py::test_instance_connections_are_changed_only_by_superusers",
         "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_callback_pkce_storage_replay_and_revoke",
-        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_browser_binding_and_pending_callback_revocation"
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_browser_binding_and_pending_callback_revocation",
+        "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_requires_authentication",
+        "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_never_returns_client_credentials",
+        "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_omits_providers_outside_the_integration_policy"
       ],
       "routes": [
         "GET||list_connections|read|authenticated",
@@ -463,6 +466,7 @@
         "POST|/{connection_id}/revoke|revoke_connection|write|authenticated",
         "DELETE|/{connection_id}|delete_connection|delete|authenticated",
         "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
+        "GET|/oauth/registrations|list_oauth_registrations|read|authenticated",
         "GET|/oauth/{provider}/callback|complete_connection_oauth|write|conditional"
       ]
     },
@@ -503,6 +507,35 @@
       ],
       "routes": [
         "POST||execute_public_workflow|execute|conditional"
+      ]
+    },
+    {
+      "family": "triggers",
+      "source": "api/v1/triggers.py",
+      "resource": "flow",
+      "domain": "the workspace/project domain of the flow the trigger fires",
+      "privacy": "a trigger whose flow the caller cannot read is 404, never 403; ledger rows are addressed through their trigger, never by id alone",
+      "side_effects": "management mutates the trigger row; replay and test append ledger rows that the dispatcher will execute as the trigger owner",
+      "frontend": "the triggers surface lists only triggers on flows the caller can read and hides management controls without flow write",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_a_trigger_on_someone_elses_flow_is_invisible",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_owner_can_manage_a_trigger_end_to_end",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_pin_requires_a_version_of_the_same_flow",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_test_and_replay_write_linked_ledger_rows"
+      ],
+      "routes": [
+        "GET||list_triggers|read|authenticated",
+        "POST||create_trigger|write|authenticated",
+        "GET|/{trigger_id}|get_trigger|read|authenticated",
+        "PATCH|/{trigger_id}|update_trigger|write|authenticated",
+        "DELETE|/{trigger_id}|delete_trigger|write|authenticated",
+        "POST|/{trigger_id}/enable|enable_trigger|write|authenticated",
+        "POST|/{trigger_id}/disable|disable_trigger|write|authenticated",
+        "POST|/{trigger_id}/pin|pin_trigger|write|authenticated",
+        "GET|/{trigger_id}/events|list_trigger_events|read|authenticated",
+        "POST|/{trigger_id}/replay|replay_trigger_event|execute|authenticated",
+        "POST|/{trigger_id}/test|test_trigger|execute|authenticated"
       ]
     }
   ]

@@ -22,9 +22,9 @@ export function isToolModeEnabled(template: InputFieldType) {
 }
 
 /**
- * `connection_ref` fields have no renderer until INT-8 ships, so they would
- * show a label with an empty control. Keep them off the canvas and out of the
- * Inspector Panel while ENABLE_INTEGRATIONS is OFF.
+ * With ENABLE_INTEGRATIONS OFF there is no connection picker, so a
+ * `connection_ref` field would show a label with an empty control. Keep those
+ * fields off the canvas and out of the Inspector Panel in that case.
  */
 function isUnrenderedConnectionRef(template: InputFieldType | undefined) {
   return !ENABLE_INTEGRATIONS && isConnectionRefField(template);

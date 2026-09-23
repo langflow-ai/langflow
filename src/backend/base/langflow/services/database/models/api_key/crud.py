@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+from langflow.services.database.models.api_key.policy import check_api_key_issuance
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 
@@ -95,6 +96,11 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
         if get_current_external_access_context() is not None:
             msg = "API key creation is disabled for externally authenticated users"
             raise PermissionError(msg)
+
+    # Every route that mints a key reaches this function, including the MCP
+    # ones that mint implicitly, so a deployment's sign-in policy is asked here
+    # rather than route by route.
+    await check_api_key_issuance(session, user_id)
 
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"

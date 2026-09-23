@@ -325,6 +325,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-trigger-listeners",
+          label: "Deploy Langflow trigger listeners",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
@@ -577,6 +582,7 @@ module.exports = {
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
+            "Components/bundles-serpingapi",
             "Components/bundles-serply",
             "Components/bundles-slack",
             "Components/bundles-supabase",

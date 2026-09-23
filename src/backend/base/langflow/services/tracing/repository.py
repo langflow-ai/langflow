@@ -11,6 +11,7 @@ import math
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
+from lfx.schema.validators import ensure_utc
 from lfx.utils.util_strings import escape_like_pattern
 from sqlmodel import col, func, select
 
@@ -177,9 +178,9 @@ async def fetch_traces(
                     )
                 )
             if start_time:
-                filters.append(TraceTable.start_time >= start_time)
+                filters.append(TraceTable.start_time >= ensure_utc(start_time))
             if end_time:
-                filters.append(TraceTable.start_time <= end_time)
+                filters.append(TraceTable.start_time <= ensure_utc(end_time))
 
             for f in filters:
                 stmt = stmt.where(f)

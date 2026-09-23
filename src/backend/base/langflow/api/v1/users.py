@@ -750,10 +750,15 @@ async def delete_user(
         ) from exc
 
     # IMPORTANT:
-    # This endpoint intentionally performs a DB-cascade delete only and does
+    # This endpoint intentionally performs database cleanup only and does
     # not issue provider-side teardown across all user deployments.
     # The trade-off is to avoid destructive bulk deletion of external
     # deployment resources during user deletion.
+    from langflow.services.database.models.trigger.model import Trigger
+    from langflow.services.triggers.cleanup import delete_triggers
+
+    trigger_ids = (await session.exec(select(Trigger.id).where(Trigger.user_id == user_db.id))).all()
+    await delete_triggers(session, trigger_ids=trigger_ids)
     await session.delete(user_db)
     await session.flush()
     await stage_identity_mutation(authorization_service, session, lifecycle_mutation)

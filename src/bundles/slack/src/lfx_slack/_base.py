@@ -23,7 +23,7 @@ Slack's ``not_allowed_token_type`` cannot be the backstop, because
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from lfx.custom.custom_component.component import Component
 from lfx.integrations.errors import ConnectionNotAuthorizedError, IntegrationError
@@ -108,6 +108,7 @@ def _connection_input(
     capability: str,
     required_scopes: list[str],
     conditional_scopes: list[dict[str, Any]] | None,
+    identity_kind: Literal["user", "instance"],
     info: str,
 ) -> ConnectionRefInput:
     return ConnectionRefInput(
@@ -117,7 +118,7 @@ def _connection_input(
         auth_profile_id=auth_profile_id,
         required_scopes=required_scopes,
         conditional_scopes=conditional_scopes or [],
-        identity_kind="any",
+        identity_kind=identity_kind,
         capabilities=[capability],
         required=True,
         info=info,
@@ -136,6 +137,7 @@ def user_connection_input(
         capability=capability,
         required_scopes=required_scopes,
         conditional_scopes=conditional_scopes,
+        identity_kind="user",
         info="A Slack connection authorized with user token scopes. The action runs as that Slack user.",
     )
 
@@ -152,6 +154,9 @@ def bot_connection_input(
         capability=capability,
         required_scopes=required_scopes,
         conditional_scopes=conditional_scopes,
+        # The picker's vocabulary, which maps bot and service identities to
+        # "instance" (see lfx_microsoft.manifest._IDENTITY_KIND).
+        identity_kind="instance",
         info=(
             "A Slack connection created from a workspace installation (bot token). "
             "The action runs as the app's bot user, which must be a member of the channel."

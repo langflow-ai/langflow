@@ -40,6 +40,7 @@ from lfx.integrations import (
     ResourceNotFoundError,
     ScopeMissingError,
 )
+from lfx.schema.properties import Source
 from lfx.utils.file_path_security import LocalFileAccessError
 from lfx_google.components.google import (
     GmailSendComponent,
@@ -76,6 +77,49 @@ def test_no_input_shadows_a_component_attribute() -> None:
     assert shadowed == set()
 
 
+def test_no_output_method_shadows_a_component_attribute() -> None:
+    """No bundle output method may be named after an attribute of the Component base class.
+
+    An output method is an ordinary method on the subclass, so it replaces the
+    base-class attribute of the same name for every caller, the framework
+    included. Gmail Send once named its output method ``send_message``:
+    ``send_error`` then called it with the error message, and the run failed with
+    a TypeError that hid the provider error it was reporting.
+    """
+    reserved = set(dir(Component))
+    shadowed = {
+        f"{name}.{output.method}"
+        for name in google_bundle.__all__
+        for output in getattr(getattr(google_bundle, name), "outputs", [])
+        if output.method in reserved
+    }
+    assert shadowed == set()
+
+
+async def test_gmail_send_failure_reaches_the_framework_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed send surfaces its own error rather than a TypeError from the error path."""
+    sent = []
+
+    async def record(self, message, id_=None, *, skip_db_update=False):  # noqa: ARG001
+        sent.append(message)
+        return message
+
+    monkeypatch.setattr(Component, "send_message", record)
+    component = gmail_send_component()
+    wire(component, [])
+    error = ScopeMissingError(frozenset({GMAIL_SEND_SCOPE}), provider="google")
+
+    await component.send_error(
+        exception=error,
+        session_id="session-1",
+        trace_name="Gmail",
+        source=Source(id="gmail-send", display_name="Gmail", source="Gmail"),
+    )
+
+    assert len(sent) == 1
+    assert "does not grant every scope" in sent[0].text
+
+
 def query_of(uri: str) -> dict[str, list[str]]:
     return parse_qs(urlparse(uri).query)
 
@@ -93,6 +137,16 @@ def restricted_file_access(config_dir):
         settings.settings.database_url = ""
         mock_get.return_value = settings
         yield
+
+
+@pytest.fixture
+def flow_storage_dir(tmp_path):
+    """Keep attachment contract tests inside the executing flow's storage scope."""
+    config_dir = tmp_path / "storage"
+    scope_dir = config_dir / FLOW_ID
+    scope_dir.mkdir(parents=True)
+    with restricted_file_access(config_dir):
+        yield scope_dir
 
 
 def _authorization(recorded_request) -> str:
@@ -192,7 +246,7 @@ async def test_gmail_send_posts_a_base64url_rfc2822_message() -> None:
     )
     http = wire(component, [json_response("gmail_send_response")])
 
-    result = await component.send_message()
+    result = await component.send_email()
 
     uri, method, body, _headers = http.request_sequence[0]
     assert method == "POST"
@@ -213,13 +267,13 @@ async def test_gmail_thread_requires_the_original_message_id_before_sending() ->
     component = gmail_send_component(thread_id="thread-0001")
     http = wire(component, [])
     with pytest.raises(ValueError, match="In Reply To"):
-        await component.send_message()
+        await component.send_email()
     assert http.request_sequence == []
 
 
 @pytest.mark.usefixtures("resolver")
-async def test_gmail_attachment_reply_preserves_reference_headers(tmp_path) -> None:
-    attachment = tmp_path / "report.txt"
+async def test_gmail_attachment_reply_preserves_reference_headers(flow_storage_dir) -> None:
+    attachment = flow_storage_dir / "report.txt"
     attachment.write_text("Report", encoding="utf-8")
     component = gmail_send_component(
         thread_id="thread-0001",
@@ -228,7 +282,7 @@ async def test_gmail_attachment_reply_preserves_reference_headers(tmp_path) -> N
         attachments=[str(attachment)],
     )
     http = wire(component, [json_response("gmail_send_response")])
-    await component.send_message()
+    await component.send_email()
     payload = http.request_sequence[0][2]
     if isinstance(payload, str):
         payload = payload.encode()
@@ -241,7 +295,7 @@ async def test_gmail_send_requests_only_the_send_scope(resolver) -> None:
     component = gmail_send_component()
     wire(component, [json_response("gmail_send_response")])
 
-    await component.send_message()
+    await component.send_email()
 
     assert resolver.requests[0].required_scopes == frozenset({GMAIL_SEND_SCOPE})
     assert resolver.requests[0].ref.to_handle() == "google/work"
@@ -252,7 +306,7 @@ async def test_gmail_send_html_body_is_multipart_alternative() -> None:
     component = gmail_send_component(body="<p>Hi</p>", body_is_html=True)
     http = wire(component, [json_response("gmail_send_response")])
 
-    await component.send_message()
+    await component.send_email()
 
     payload = json.loads(http.request_sequence[0][2])
     message = email.message_from_bytes(base64.urlsafe_b64decode(payload["raw"]))
@@ -262,13 +316,13 @@ async def test_gmail_send_html_body_is_multipart_alternative() -> None:
 
 
 @pytest.mark.usefixtures("resolver")
-async def test_gmail_send_with_attachments_uses_the_upload_endpoint(tmp_path) -> None:
-    attachment = tmp_path / "report.txt"
+async def test_gmail_send_with_attachments_uses_the_upload_endpoint(flow_storage_dir) -> None:
+    attachment = flow_storage_dir / "report.txt"
     attachment.write_text("quarterly numbers", encoding="utf-8")
     component = gmail_send_component(attachments=[str(attachment)])
     http = wire(component, [json_response("gmail_send_response")])
 
-    await component.send_message()
+    await component.send_email()
 
     uri, method, body, _headers = http.request_sequence[0]
     assert method == "POST"
@@ -296,7 +350,7 @@ async def test_gmail_send_attachment_outside_the_storage_scope_is_denied(tmp_pat
     wire(component, [json_response("gmail_send_response")])
 
     with restricted_file_access(config_dir), pytest.raises(LocalFileAccessError):
-        await component.send_message()
+        await component.send_email()
 
 
 @pytest.mark.usefixtures("resolver")
@@ -311,7 +365,7 @@ async def test_gmail_send_attaches_a_file_inside_the_storage_scope(tmp_path) -> 
     http = wire(component, [json_response("gmail_send_response")])
 
     with restricted_file_access(config_dir):
-        await component.send_message()
+        await component.send_email()
 
     wire_bytes = http.request_sequence[0][2]
     wire_bytes = wire_bytes if isinstance(wire_bytes, bytes) else wire_bytes.encode()
@@ -324,7 +378,7 @@ async def test_gmail_send_rejects_an_empty_recipient_list() -> None:
     wire(component, [json_response("gmail_send_response")])
 
     with pytest.raises(ValueError, match="At least one recipient"):
-        await component.send_message()
+        await component.send_email()
 
 
 # --------------------------------------------------------------------------
@@ -740,7 +794,7 @@ async def test_no_access_token_reaches_component_output_or_status() -> None:
     component = gmail_send_component()
     wire(component, [json_response("gmail_send_response")])
 
-    result = await component.send_message()
+    result = await component.send_email()
 
     rendered = json.dumps(result.data)
     assert FAKE_ACCESS_TOKEN not in rendered
@@ -814,17 +868,19 @@ async def test_gmail_mime_and_attachment_work_runs_off_the_event_loop(monkeypatc
         return build()
 
     monkeypatch.setattr(component, "_build_mime_message", record_thread)
-    await component.send_message()
+    await component.send_email()
     assert worker_threads
     assert loop_thread not in worker_threads
 
 
 @pytest.mark.parametrize("sizes", [(129,), (80, 80)])
-async def test_oversized_attachments_are_rejected_before_reading_past_the_limit(tmp_path, monkeypatch, sizes) -> None:
+async def test_oversized_attachments_are_rejected_before_reading_past_the_limit(
+    flow_storage_dir, monkeypatch, sizes
+) -> None:
     from lfx_google.components.google import gmail_send
 
     monkeypatch.setattr(gmail_send, "UPLOAD_SEND_LIMIT_BYTES", 128)
-    paths = [tmp_path / f"attachment-{index}.bin" for index in range(len(sizes))]
+    paths = [flow_storage_dir / f"attachment-{index}.bin" for index in range(len(sizes))]
     for path, size in zip(paths, sizes, strict=True):
         path.write_bytes(b"x" * size)
     original_open = Path.open
@@ -838,7 +894,7 @@ async def test_oversized_attachments_are_rejected_before_reading_past_the_limit(
     wire(component, [])
     monkeypatch.setattr(Path, "open", refuse_oversized_read)
     with pytest.raises(ValueError, match="upload size limit"):
-        await component.send_message()
+        await component.send_email()
 
 
 @pytest.mark.usefixtures("resolver")

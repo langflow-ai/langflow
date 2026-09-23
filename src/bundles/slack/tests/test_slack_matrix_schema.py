@@ -19,6 +19,7 @@ from pathlib import Path
 
 import lfx_slack
 import pytest
+from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import ConnectionRefInput
 
 MATRIX_PATH = Path(__file__).resolve().parents[4] / "design" / "dedicated-integrations" / "matrices" / "slack.json"
@@ -85,3 +86,20 @@ def test_component_outputs_match_the_frozen_matrix() -> None:
             expected = (expected - set(matrix_names)) | {shipped_name}
         assert shipped == expected, capability["id"]
     assert not unused, f"stale output deviations: {sorted(unused)}"
+
+
+def test_no_output_method_shadows_a_component_attribute() -> None:
+    """An output method named after a Component attribute replaces it for the framework too.
+
+    ``send_error`` calls ``self.send_message(error)``, so an output method named
+    ``send_message`` turns every failure into a TypeError that hides the real one
+    (Gmail Send shipped with exactly that).
+    """
+    reserved = set(dir(Component))
+    shadowed = {
+        f"{capability['component_ref']}.{output.method}"
+        for capability in _capabilities()
+        for output in getattr(lfx_slack, capability["component_ref"]).outputs
+        if output.method in reserved
+    }
+    assert shadowed == set()

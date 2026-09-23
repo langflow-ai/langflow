@@ -355,6 +355,11 @@ export const SIDEBAR_CATEGORIES = [
     icon: "ArrowRightLeft",
   },
   {
+    display_name: "sidebar.category.triggers",
+    name: "triggers",
+    icon: "Clock",
+  },
+  {
     display_name: "sidebar.category.utilities",
     name: "utilities",
     icon: "Wand2",
@@ -513,6 +518,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
   { display_name: "Serper", name: "serper", icon: "Serper" },
+  { display_name: "Serping API", name: "serpingapi", icon: "Search" },
   { display_name: "Serply", name: "serply", icon: "Search" },
   { display_name: "Slack", name: "slack", icon: "Slack" },
   { display_name: "Spider", name: "spider", icon: "Spider" },
@@ -564,6 +570,7 @@ export const categoryIcons: Record<string, string> = {
   textsplitters: "Scissors",
   toolkits: "Package2",
   tools: "Hammer",
+  triggers: "Clock",
   custom: "Edit",
   custom_components: "GradientInfinity",
 };
@@ -591,6 +598,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   textsplitters: "Scissors",
   toolkits: "Package2",
   tools: "Hammer",
+  triggers: "Clock",
   custom_components: "GradientInfinity",
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.deps import get_integration_policy_service
 from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
@@ -19,8 +19,17 @@ from pydantic import BaseModel, Field
 from langflow.api.utils import CurrentActiveUser, DbSessionReadOnly
 from langflow.api.v1.connections import ConnectionService
 from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
+from langflow.services.rate_limit import check_rate_limit, get_metadata_read_limit, get_user_limiter_key
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
+
+# Counter namespace shared by the catalog reads; distinct from the connections
+# buckets so browsing the catalog cannot consume mutation/OAuth budget.
+# Catalog and policy reads carry no credential material and make no outbound
+# call, so they share the connections metadata-read budget rather than the
+# login budget: the connections UI loads both on every page open. Both routes
+# are authenticated, so they count per user like the connections routes.
+_SCOPE_INTEGRATIONS = "integrations"
 
 
 class IntegrationCapabilityRead(BaseModel):
@@ -84,6 +93,7 @@ class EffectiveIntegrationPolicyRead(BaseModel):
 @router.get("", response_model=IntegrationListRead)
 @router.get("/", response_model=IntegrationListRead, include_in_schema=False)
 async def list_integrations(
+    request: Request,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
@@ -101,6 +111,12 @@ async def list_integrations(
     is (``/api/v1/all``, starter projects, basic examples): the deny decision is
     operator information, not something a plain caller may enumerate.
     """
+    check_rate_limit(
+        request,
+        scope=_SCOPE_INTEGRATIONS,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     if include_blocked and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -109,7 +125,7 @@ async def list_integrations(
 
     manifests = {
         integration.provider_id: integration.capability_manifest
-        for integration in _loaded_integrations()
+        for integration in loaded_integrations()
         if provider is None or integration.provider_id == provider
     }
     if not manifests:
@@ -173,11 +189,18 @@ async def list_integrations(
 
 @router.get("/policy/effective", response_model=EffectiveIntegrationPolicyRead)
 async def read_effective_integration_policy(
+    request: Request,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
 ) -> EffectiveIntegrationPolicyRead:
     """Return the integration decision set that applies to this caller."""
-    loaded_provider_ids = frozenset(integration.provider_id for integration in _loaded_integrations())
+    check_rate_limit(
+        request,
+        scope=_SCOPE_INTEGRATIONS,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    loaded_provider_ids = frozenset(integration.provider_id for integration in loaded_integrations())
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
         provider_ids=loaded_provider_ids,
@@ -198,8 +221,12 @@ async def read_effective_integration_policy(
     )
 
 
-def _loaded_integrations():
-    """Return every integration the bundle registry has loaded in this process."""
+def loaded_integrations():
+    """Return every integration the bundle registry has loaded in this process.
+
+    Shared with the policy-bundle write path, which checks newly blocked action
+    keys against the capabilities these integrations declare.
+    """
     from lfx.extension.bundle_registry import get_default_registry
 
     return get_default_registry().list_integrations()
@@ -210,5 +237,6 @@ __all__ = [
     "IntegrationCapabilityRead",
     "IntegrationListRead",
     "IntegrationProviderRead",
+    "loaded_integrations",
     "router",
 ]
