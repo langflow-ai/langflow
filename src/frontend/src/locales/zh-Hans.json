@@ -2638,5 +2638,8 @@
   "toolPacks.callCount_one": "{{count}} 次已完成调用",
   "toolPacks.snapshot": "已存储的流程快照",
   "toolPacks.listError": "无法加载可用项目。",
-  "toolPacks.changedSinceRun": "此工具包在本次运行后已更改"
+  "toolPacks.changedSinceRun": "此工具包在本次运行后已更改",
+  "toolPacks.nestedDependencies": "嵌套流程依赖",
+  "toolPacks.nestedRecordedHelp": "此工具可用的已审核定义。本次运行可能只使用其中部分流程。",
+  "toolPacks.nestedReviewHelp": "更改这些流程也会更改已审核工具的修订版本。"
 }

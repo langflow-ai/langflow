@@ -2639,5 +2639,8 @@
   "toolPacks.review": "Revisar exportações",
   "toolPacks.saveHint": "Salve o harness para aplicar esta seleção.",
   "toolPacks.empty": "Crie um projeto do tipo Tool Pack e selecione os fluxos exportados para reutilizar ferramentas aqui.",
-  "toolPacks.updated": "Alterado"
+  "toolPacks.updated": "Alterado",
+  "toolPacks.nestedReviewHelp": "Alterações nestes fluxos também alteram a revisão da ferramenta.",
+  "toolPacks.nestedDependencies": "Dependências de fluxos aninhados",
+  "toolPacks.nestedRecordedHelp": "Definições revisadas disponíveis para esta ferramenta. A execução pode usar apenas alguns destes fluxos."
 }

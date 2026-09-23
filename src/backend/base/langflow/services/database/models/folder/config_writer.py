@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.log.logger import logger
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
@@ -21,7 +21,7 @@ from lfx.projects.context import compose_context
 from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
 from lfx.projects.hooks import compose_hooks
 from lfx.projects.permissions import compose_permission
-from lfx.projects.tool_packs import ToolPackToolBinding, tool_pack_references
+from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
 from lfx.projects.tools import agent_node_ids, compose_tools
 from sqlmodel import col, select
 
@@ -30,7 +30,7 @@ from langflow.services.database.models.flow.guards import LockedFlowError, ensur
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.folder.tool_packs import describe_tool_pack, resolve_tool_pack
+from langflow.services.database.models.folder.tool_packs import resolve_tool_pack
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -195,7 +195,11 @@ async def write_project_config_to_flows(
     config = deepcopy(project.project_config or {})
     if project_type.name == "tool-pack":
         try:
-            manifest = describe_tool_pack(project, flows)
+            manifest, _ = await resolve_tool_pack(session, current_user, project.id)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_409_CONFLICT:
+                raise HTTPException(422, exc.detail) from exc
+            raise
         except (ValueError, KeyError, TypeError) as exc:
             raise HTTPException(422, f"Could not export the selected tools: {exc}") from exc
         config["tools"] = [str(tool.flow_id) for tool in manifest.tools]
@@ -263,7 +267,23 @@ async def write_project_config_to_flows(
                 except ValueError as exc:
                     raise HTTPException(422, str(exc)) from exc
                 version_id = await _binding_version(session, source, "Tool Pack")
-                binding = ToolPackToolBinding(reference=manifest.reference, tool=export, version_id=UUID(version_id))
+                dependency_versions = tuple(
+                    [
+                        FlowDependencyVersion(
+                            flow=dependency,
+                            version_id=UUID(
+                                await _binding_version(session, exports[dependency.flow_id], "Tool Pack dependency")
+                            ),
+                        )
+                        for dependency in export.dependencies
+                    ]
+                )
+                binding = ToolPackToolBinding(
+                    reference=manifest.reference,
+                    tool=export,
+                    version_id=UUID(version_id),
+                    dependency_versions=dependency_versions,
+                )
                 pack_targets.append(
                     {
                         "id": str(source.id),

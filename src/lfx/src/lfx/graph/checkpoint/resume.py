@@ -181,6 +181,7 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     if not graph._prepared:  # noqa: SLF001
         graph.prepare()
     graph.set_run_id(checkpoint.run_id)
+    graph.reviewed_tool_packs = dict(checkpoint.reviewed_tool_packs)
     if checkpoint.session_id:
         graph.session_id = checkpoint.session_id
     # Continue under the starting identity; else self.user_id (via graph.user_id) is None
