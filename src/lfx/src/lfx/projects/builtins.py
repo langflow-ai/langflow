@@ -10,7 +10,7 @@ from __future__ import annotations
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.harness import harness_runtime_inputs
 from lfx.inputs.inputs import IntInput, ModelInput, MultilineInput, StrInput
-from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, INSTRUCTIONS, PERMISSION_GATE, TOOL
+from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, HOOK, INSTRUCTIONS, PERMISSION_GATE, TOOL
 from lfx.projects.registry import register_project_type
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
 
@@ -96,6 +96,23 @@ AGENT_HARNESS = register_project_type(
                     display_name="History messages",
                     info="Past messages loaded from memory. Context preparation selects what reaches each model call.",
                     value=100,
+                ),
+            ),
+            ProjectTypeField(
+                name="hooks",
+                section="Runtime",
+                slot_definition=HOOK,
+                supports_flow_binding=True,
+                renders="hook_flows",
+                # The next UI slice supplies the ordered binding editor. The field
+                # already owns its contract and baseline for scoped API clients.
+                input=StrInput(
+                    name="hooks",
+                    display_name="Hooks",
+                    list=True,
+                    value=[],
+                    show=False,
+                    info="Ordered flows that observe or control model and tool calls.",
                 ),
             ),
             *(

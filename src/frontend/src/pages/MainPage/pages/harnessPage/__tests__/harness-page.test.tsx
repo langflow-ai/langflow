@@ -180,6 +180,29 @@ const HARNESS: ProjectTypeType = {
   },
 };
 
+it("keeps unpublished contract controls out of the form and summary", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        hooks: {
+          name: "hooks",
+          display_name: "Hooks",
+          type: "str",
+          section: "Runtime",
+          show: false,
+          value: [],
+          renders: "hook_flows",
+        },
+      },
+    },
+  ];
+  render(<HarnessPage {...defaultProps} />);
+  expect(screen.queryByTestId("harness-field-hooks")).not.toBeInTheDocument();
+  expect(screen.queryByText("Hooks")).not.toBeInTheDocument();
+});
+
 const FLOWS: ProjectTypeType = {
   name: "flows",
   display_name: "Flows",
