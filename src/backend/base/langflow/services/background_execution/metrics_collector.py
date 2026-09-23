@@ -29,7 +29,7 @@ from sqlalchemy import case
 from sqlmodel import col, func, select
 
 from langflow.services.background_execution.metrics import current_backend
-from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus
+from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus, JobType
 from langflow.services.deps import get_telemetry_service, session_scope
 
 if TYPE_CHECKING:
@@ -60,11 +60,12 @@ def _has_job_events():
 async def count_nonterminal_jobs(session) -> dict[str, int]:
     """Return counts of non-terminal background jobs keyed by status string.
 
-    ``{"queued": 3, "in_progress": 1}``. QUEUED is bg-only (run jobs are never
-    queued), so it counts as-is. IN_PROGRESS adds the EXISTS(job_events) filter
-    because a run job is briefly IN_PROGRESS with no events — without the filter
-    it would inflate the in_progress count. A status with zero rows is omitted
-    (the collector loop fills in the canonical set with 0 when it sets gauges).
+    ``{"queued": 3, "in_progress": 1}``. Only workflow jobs belong to this
+    background runner. Queued workflow jobs count as-is (run jobs are never
+    queued). IN_PROGRESS adds the EXISTS(job_events) filter because a run job is
+    briefly IN_PROGRESS with no events — without the filter it would inflate the
+    in_progress count. A status with zero rows is omitted (the collector loop
+    fills in the canonical set with 0 when it sets gauges).
     """
     # One grouped scan rather than one per status. This runs every tick against a table
     # with no retention, so the number of passes over it is the cost that matters.
@@ -72,10 +73,11 @@ async def count_nonterminal_jobs(session) -> dict[str, int]:
     # QUEUED is exempt from the events filter and the others are not, which is why the
     # predicate is a disjunction rather than a plain WHERE: a queued background job has not
     # emitted anything yet, while a run job is briefly IN_PROGRESS with no events and would
-    # otherwise inflate that count.
+    # otherwise inflate that count. Restrict to workflows because other job types can queue.
     stmt = (
         select(Job.status, func.count())
         .where(col(Job.status).in_(NONTERMINAL_STATUSES))
+        .where(Job.type == JobType.WORKFLOW)
         .where((Job.status == JobStatus.QUEUED) | _has_job_events())
         .group_by(Job.status)
     )
@@ -84,12 +86,16 @@ async def count_nonterminal_jobs(session) -> dict[str, int]:
 
 
 async def oldest_queued_seconds(session, now: datetime) -> float:
-    """Age in seconds of the oldest QUEUED job: ``now - min(created_timestamp)``.
+    """Age in seconds of the oldest queued workflow job: ``now - min(created_timestamp)``.
 
     Returns ``0.0`` when nothing is queued. ``now`` is injected (aware UTC) for
     determinism.
     """
-    stmt = select(func.min(Job.created_timestamp)).where(Job.status == JobStatus.QUEUED)
+    stmt = (
+        select(func.min(Job.created_timestamp))
+        .where(Job.status == JobStatus.QUEUED)
+        .where(Job.type == JobType.WORKFLOW)
+    )
     result = await session.exec(stmt)
     oldest = result.first()
     if oldest is None:

@@ -26,7 +26,7 @@ from langflow.services.background_execution.metrics_collector import (
     oldest_queued_seconds,
     terminal_counts,
 )
-from langflow.services.database.models.jobs.model import JobStatus
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import get_telemetry_service, session_scope
 from langflow.services.jobs.service import JobService
 
@@ -62,6 +62,42 @@ async def test_count_nonterminal_jobs_excludes_terminal():
         counts = await count_nonterminal_jobs(session)
 
     assert counts == {"queued": 2, "in_progress": 1}
+
+
+async def test_queued_metrics_exclude_non_workflow_jobs():
+    """Ingestion jobs do not affect workflow counts or oldest queue age."""
+    service = JobService()
+    workflow_queued = uuid4()
+    workflow_running = uuid4()
+    ingestion_queued = uuid4()
+    ingestion_running = uuid4()
+
+    await service.create_job(job_id=workflow_queued, flow_id=uuid4())
+    await service.create_job(job_id=workflow_running, flow_id=uuid4())
+    await service.append_event(workflow_running, "run_started", {})
+    await service.update_job_status(workflow_running, JobStatus.IN_PROGRESS)
+
+    await service.create_job(job_id=ingestion_queued, flow_id=uuid4(), job_type=JobType.INGESTION)
+    await service.create_job(job_id=ingestion_running, flow_id=uuid4(), job_type=JobType.INGESTION)
+    await service.append_event(ingestion_running, "run_started", {})
+    await service.update_job_status(ingestion_running, JobStatus.IN_PROGRESS)
+
+    now = datetime.now(timezone.utc)
+    async with session_scope() as session:
+        workflow = await session.get(Job, workflow_queued)
+        ingestion = await session.get(Job, ingestion_queued)
+        workflow.created_timestamp = now - timedelta(seconds=42)
+        ingestion.created_timestamp = now - timedelta(hours=1)
+        session.add(workflow)
+        session.add(ingestion)
+        await session.flush()
+
+    async with session_scope() as session:
+        counts = await count_nonterminal_jobs(session)
+        age = await oldest_queued_seconds(session, now)
+
+    assert counts == {"queued": 1, "in_progress": 1}
+    assert age == pytest.approx(42.0)
 
 
 async def test_oldest_queued_seconds_uses_injected_now():
