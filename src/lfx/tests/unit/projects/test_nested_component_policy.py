@@ -3,6 +3,7 @@
 import json
 from contextlib import asynccontextmanager
 from copy import deepcopy
+from importlib import import_module
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -23,9 +24,9 @@ async def _authorized_scope(**_kwargs):
 
 @pytest.fixture
 def reviewed_hook(tmp_path, monkeypatch):
-    from lfx.base.tools import run_flow as run_flow_module
     from lfx.utils import flow_validation
 
+    run_flow_module = import_module("lfx.base.tools.run_flow")
     flow = build_slot_baseline("builtin:hook")
     flow["id"] = str(uuid4())
     path = tmp_path / "hook.json"
