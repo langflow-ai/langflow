@@ -30,10 +30,10 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerUpdate,
 )
 from langflow.services.triggers.cleanup import delete_triggers
-from langflow.services.triggers.constants import CANVAS_ONLY_KINDS
+from langflow.services.triggers.constants import CANVAS_ONLY_KINDS, SLACK_TRIGGER_KINDS
 from langflow.services.triggers.errors import TriggerNotFoundError
 from langflow.services.triggers.ownership import require_owned_connection
-from langflow.services.triggers.reconciliation import apply_schedule_verdict
+from langflow.services.triggers.reconciliation import apply_config_verdict
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
 if TYPE_CHECKING:
@@ -82,6 +82,26 @@ def _reject_mechanism(config: dict | None) -> None:
     if config and "mechanism_id" in config:
         msg = "mechanism_id is derived from the trigger's connection and cannot be set."
         raise ValueError(msg)
+
+
+async def _arm_slack(session: AsyncSession, row: Trigger) -> None:
+    """Re-derive a Slack trigger's connection and transport, and check it may run unattended.
+
+    Re-derived rather than trusted: the connection can change between the save
+    that recorded it and this enable (reinstalled, swapped for an app-level
+    token, its background-runs consent withdrawn). Raises a ``ValueError`` with
+    the owner-facing reason, which the route answers with 409.
+    """
+    from langflow.services.connection.oauth.config import deployment_context
+    from langflow.services.triggers.providers.slack.arming import check_ready_to_arm, resolve_arming
+
+    config = row.config or {}
+    arming = await resolve_arming(session, owner_id=row.user_id, config=config, context=deployment_context())
+    await check_ready_to_arm(session, kind=row.kind, config=config, arming=arming)
+    if row.connection_id != arming.connection_id or config.get("mechanism_id") != arming.mechanism_id:
+        row.connection_id = arming.connection_id
+        row.config = {**config, "mechanism_id": arming.mechanism_id}
+        session.add(row)
 
 
 class TriggerService(Service):
@@ -194,7 +214,7 @@ class TriggerService(Service):
             if schedule_timing_changed(row.config or {}, changes["config"]):
                 row.next_fire_at = None
             # A schedule that validates clears the error a broken one left.
-            apply_schedule_verdict(row, None)
+            apply_config_verdict(row, None)
         for field, value in changes.items():
             setattr(row, field, value.value if hasattr(value, "value") else value)
         row.updated_at = datetime.now(timezone.utc)
@@ -219,6 +239,8 @@ class TriggerService(Service):
             raise ValueError(msg)
         if row.kind == "schedule":
             validate_schedule_config(row.config or {})
+        if row.kind in SLACK_TRIGGER_KINDS:
+            await _arm_slack(session, row)
         # Re-arming starts from now rather than replaying paused ticks. An
         # idempotent enable on an active trigger must preserve its due tick.
         if row.state != TriggerState.ACTIVE.value:

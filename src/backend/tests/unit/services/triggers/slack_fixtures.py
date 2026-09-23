@@ -61,6 +61,17 @@ def thread_replies(count: int) -> list[dict[str, Any]]:
 # Database helpers: Slack connections and armed Slack triggers
 # --------------------------------------------------------------------------- #
 
+#: The bot scopes a full installation of the Langflow Slack app grants.
+INSTALLATION_SCOPES = (
+    "chat:write",
+    "reactions:write",
+    "channels:history",
+    "groups:history",
+    "im:history",
+    "mpim:history",
+    "reactions:read",
+    "app_mentions:read",
+)
 SIGNING_SECRET = "slack-signing-secret"  # noqa: S105 - test fixture  # pragma: allowlist secret
 REGISTRATION_ID = "slack-app"
 
@@ -154,7 +165,7 @@ async def make_oauth_connection(
             owner_id=None if ownership_mode == "instance" else owner_id,
             status=status,
             allow_non_interactive=True,
-            granted_scopes=["chat:write", "channels:history"],
+            granted_scopes=list(INSTALLATION_SCOPES),
             executing_identity={"identity": "bot", "account": {"id": BOT_USER_ID, "tenant_id": team_id}},
         )
         session.add(row)

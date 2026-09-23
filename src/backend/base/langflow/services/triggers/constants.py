@@ -120,6 +120,11 @@ SLACK_TRIGGER_KINDS = frozenset({KIND_SLACK_MESSAGE, KIND_SLACK_REACTION})
 MECHANISM_SLACK_EVENTS_API = "slack.events_api"
 MECHANISM_SLACK_SOCKET_MODE = "slack.socket_mode"
 
+#: Mechanisms a provider pushes to Langflow's ingress (Track A). A run started
+#: by one executes as the ``trigger_push`` family; everything else a trigger
+#: runs - listener sources and the schedule - as ``trigger_listener``.
+PUSH_MECHANISMS = frozenset({MECHANISM_SLACK_EVENTS_API})
+
 #: Kinds whose configuration, connection and mechanism are owned by a canvas
 #: node and written only by flow-save reconciliation. The owner API never
 #: creates them or edits those fields: that is the one writer who normalizes
