@@ -274,6 +274,9 @@ EXPECTED_FIELDS = {
     "listener_backoff_base_s",
     "listener_backoff_cap_s",
     "listener_failure_threshold",
+    "background_backend",
+    "background_poll_interval_s",
+    "background_claim_candidates",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",

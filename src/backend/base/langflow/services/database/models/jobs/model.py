@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Column, DateTime, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -92,6 +92,12 @@ class JobBase(SQLModel):
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "job"
+    # The scaled backend's claim poll (claim_next_queued_lease) filters on
+    # status + type and sorts by created_timestamp on every worker poll; the
+    # watchdog scans status + type on its interval. The job table has no
+    # retention, so without this composite the hottest query degrades into an
+    # ever-growing scan+sort over terminal rows.
+    __table_args__ = (Index("ix_job_claim_scan", "status", "type", "created_timestamp"),)
 
 
 class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]
