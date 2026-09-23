@@ -16,7 +16,6 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -38,6 +37,7 @@ from langflow.services.database.models.user.model import User
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from datetime import datetime
 
     from sqlalchemy.sql.elements import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -386,9 +386,20 @@ async def iter_feed(
             yield row
 
 
-def frozen_until(filters: AuditFeedFilters) -> AuditFeedFilters:
-    """Pin an open-ended window at now, so an export is a consistent snapshot."""
-    return filters if filters.until is not None else filters.with_until(datetime.now(timezone.utc))
+async def frozen_until(session: AsyncSession, filters: AuditFeedFilters) -> AuditFeedFilters:
+    """Pin an open-ended window at the database clock, which stamps the rows.
+
+    Read from the database rather than this process: a row is timestamped by the
+    database, so an application clock running behind it would silently drop rows
+    the feed already returns. The bound makes the export repeatable — it always
+    describes the same window — but it is not a transactional snapshot: the walk
+    runs in batches under READ COMMITTED, so a row committed mid-walk with a
+    timestamp inside the window is included, and one deleted by retention
+    mid-walk is not.
+    """
+    if filters.until is not None:
+        return filters
+    return filters.with_until(await _database_cutoff(session))
 
 
 __all__ = [

@@ -268,7 +268,7 @@ store is left out of the read rather than the filter being ignored:
 | `operation` | `operation` | never matches: the store is skipped |
 | `result` | `allow`, `deny`, `succeeded`, `failed` | `allow`, `deny`, `owner_override`, `skip` |
 | `actor_type=unknown` | `actor_type = unknown` | also rows written before actor attribution (`NULL`) |
-| `request_id` | `request_id` | `details.request_id` |
+| `request_id` | `request_id` | `details.request_id`, written from the same server-generated id |
 
 **Paging.** Each store is read by `(timestamp DESC, id DESC)` from the cursor for
 `limit + 1` rows, and the server keeps the newest `limit` of the candidates. A
@@ -284,9 +284,14 @@ costs one `COUNT` per store.
 
 **Export.** `GET /api/v1/audits/export` takes the same filters plus
 `format=csv|ndjson` and streams every match, newest first, with
-`Content-Disposition: attachment`. The window is frozen at the start (an open
-`until` becomes now), the walk runs on its own session in batches of 500, and no
-row is gathered in memory or capped. CSV starts with the columns the Admin
+`Content-Disposition: attachment`. The window is frozen at the start: an open
+`until` becomes the **database** clock, the same clock that stamps the rows, so
+an application clock running behind it cannot drop rows the feed returns. The
+walk runs on its own session in batches of 500, and no row is gathered in memory
+or capped. The frozen window makes the export repeatable rather than
+transactional: batches run under READ COMMITTED, so a row committed during the
+walk with a timestamp inside the window is included, and one the retention sweep
+deletes during the walk is not. CSV starts with the columns the Admin
 Console export already used (`timestamp`, `user_id`, `actor_type`, `actor_id`,
 `action`, `resource_type`, `resource_id`, `result`, `details`), followed by
 `source`, `kind`, `resource_name`, `operation`, `error_code` and `request_id`;
