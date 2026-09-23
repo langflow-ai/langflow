@@ -20,6 +20,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import strip_flow_secrets
 from langflow.api.v1.flows import create_flows
+from langflow.api.v1.flows_helpers import _export_variable_names
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
@@ -144,11 +145,17 @@ async def export_composition(
             raise ValueError(msg)
     # Strip credentials before calculating the portable revisions. Archive version IDs are
     # deterministic placeholders; the importer always replaces them with server-owned IDs.
+    variable_names_by_owner = {
+        owner_id: await _export_variable_names(session, owner_id)
+        for owner_id in {flow.user_id for flow in rows.values()}
+    }
     sanitized = composition.model_copy(deep=True)
     for project in sanitized.projects:
         project.project_config = strip_structured_secret_values(project.project_config)
         for index, flow in enumerate(project.flows):
-            clean = strip_flow_secrets(flow)
+            clean = strip_flow_secrets(
+                flow, known_variable_names=variable_names_by_owner[rows[str(flow["id"])].user_id]
+            )
             for original_node, clean_node in zip(
                 flow["data"].get("nodes", []), clean["data"].get("nodes", []), strict=True
             ):

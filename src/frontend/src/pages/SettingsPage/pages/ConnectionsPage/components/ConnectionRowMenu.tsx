@@ -38,7 +38,10 @@ export function ConnectionRowMenu({
   const { t } = useTranslation();
   const { status } = connection;
   // Delete only once the credential is gone, so nothing is orphaned at the provider.
-  const canDelete = status === "pending" || status === "revoked";
+  const canDelete =
+    status === "pending" ||
+    status === "revoked" ||
+    (status === "error" && !connection.has_credentials);
   const canRevoke = connection.has_credentials && status !== "revoked";
 
   return (
