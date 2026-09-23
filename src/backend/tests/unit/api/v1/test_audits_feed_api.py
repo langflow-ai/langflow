@@ -360,9 +360,7 @@ async def test_a_real_authorization_decision_shares_the_request_id(client, logge
     assert event is not None, "the create should have been audited"
 
     # Not the fixed test window: this event is at "now".
-    response = await client.get(
-        f"api/v1/audits?request_id={event.request_id}", headers=logged_in_headers_super_user
-    )
+    response = await client.get(f"api/v1/audits?request_id={event.request_id}", headers=logged_in_headers_super_user)
     assert response.status_code == status.HTTP_200_OK, response.text
 
     sources = {item["source"] for item in response.json()["items"]}
