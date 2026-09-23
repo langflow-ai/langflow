@@ -121,6 +121,51 @@ export function partitionByCeiling(
   };
 }
 
+/** Offer every scope the selected registration permits, including scopes used
+ * by OAuth itself rather than a component. Keep the registration's spelling:
+ * `oauth/start` checks the submitted strings against its ceiling exactly.
+ */
+export function scopesForRegistration(
+  provider: string,
+  componentScopes: string[],
+  ceiling: string[] | undefined,
+): { requestable: string[]; unavailable: string[] } {
+  if (!ceiling) return partitionByCeiling(componentScopes, ceiling);
+
+  const key = (scope: string) => normalizeScope(provider, scope);
+  const allowed = new Map(ceiling.map((scope) => [key(scope), scope]));
+  return {
+    requestable: uniqueNormalizedScopes(provider, [
+      ...componentScopes.flatMap((scope) => {
+        const registered = allowed.get(key(scope));
+        return registered ? [registered] : [];
+      }),
+      ...ceiling,
+    ]),
+    unavailable: componentScopes.filter((scope) => !allowed.has(key(scope))),
+  };
+}
+
+/** Request component scopes and the identity/refresh scopes that make an OAuth
+ * connection recognizable and renewable. Other registration scopes stay opt-in.
+ */
+export function defaultScopesForNewConnection(
+  provider: string,
+  componentScopes: string[],
+  requestable: string[],
+): string[] {
+  const defaults = new Set([
+    ...componentScopes.map((scope) => normalizeScope(provider, scope)),
+    "openid",
+    "email",
+    "profile",
+    "offline_access",
+  ]);
+  return requestable.filter((scope) =>
+    defaults.has(normalizeScope(provider, scope)),
+  );
+}
+
 export interface ReauthorizeScopeList {
   /** Every scope the dialog offers, spelled as the registration lists it. */
   options: string[];
