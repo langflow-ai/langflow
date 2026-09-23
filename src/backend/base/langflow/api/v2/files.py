@@ -29,6 +29,19 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Set the static name of the MCP servers file
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
+_UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f<>:"|?*]')
+_WINDOWS_DEVICE_NAME = re.compile(
+    r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?=[ .]|$)",
+    re.IGNORECASE,
+)
+
+
+def _safe_archive_member_name(name: str) -> str:
+    """Return a single portable ZIP member name, including for legacy display names."""
+    safe_name = _UNSAFE_ARCHIVE_NAME_CHARS.sub("_", name).replace("..", "_").strip(" .")
+    if _WINDOWS_DEVICE_NAME.match(safe_name):
+        safe_name = f"_{safe_name}"
+    return safe_name or "file"
 
 
 def is_permanent_storage_failure(error: Exception) -> bool:
@@ -671,6 +684,7 @@ async def download_files_batch(
 
         # Create a ZIP file. Each file is read from its owner's storage
         # namespace, not the actor's.
+        used_names: set[str] = set()
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for file in files:
                 file_content = await storage_service.get_file(flow_id=str(file.user_id), file_name=Path(file.path).name)
@@ -678,7 +692,14 @@ async def download_files_batch(
                 # Get the file extension from the original filename
                 file_extension = Path(file.path).suffix
                 # Create the filename with extension
-                filename_with_extension = f"{file.name}{file_extension}"
+                filename_with_extension = _safe_archive_member_name(f"{file.name}{file_extension}")
+                duplicate = 0
+                while filename_with_extension.casefold() in used_names:
+                    duplicate += 1
+                    filename_with_extension = _safe_archive_member_name(
+                        f"{file.name}_{file.id}_{duplicate}{file_extension}"
+                    )
+                used_names.add(filename_with_extension.casefold())
 
                 # Write the file to the ZIP with the proper extension
                 zip_file.writestr(filename_with_extension, file_content)
@@ -841,6 +862,11 @@ async def edit_file_name(
             )
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
+
+        # Display names become ZIP entries in batch downloads. Reject unsafe
+        # names here and sanitize again on export for rows saved before this fix.
+        if name != _safe_archive_member_name(name):
+            raise HTTPException(status_code=422, detail="File name must be a safe single filename")
 
         # Update the file name
         file.name = name

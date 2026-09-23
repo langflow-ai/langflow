@@ -1,9 +1,11 @@
 import asyncio
 import contextlib
+import io
 import json
 import os
 import tempfile
 import uuid
+import zipfile
 from contextlib import suppress
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -305,6 +307,72 @@ async def test_edit_file(files_client, files_created_api_key):
     assert response.status_code == 200
     file = response.json()
     assert file["name"] == "potato.txt"
+
+
+async def test_edit_file_rejects_unsafe_archive_names(files_client, files_created_api_key):
+    headers = {"x-api-key": files_created_api_key.api_key}
+    upload = await files_client.post("api/v2/files", files={"file": ("safe.txt", b"content")}, headers=headers)
+    assert upload.status_code == 201, upload.text
+    file_id = upload.json()["id"]
+
+    for name in (
+        "../escape",
+        "..\\escape",
+        "/absolute",
+        "C:\\Windows\\file",
+        "CON",
+        "CONIN$",
+        "CONOUT$",
+        "COM¹",
+        "LPT²",
+        "CON .txt",
+        "a\x00b",
+        "a..b",
+    ):
+        response = await files_client.put(f"api/v2/files/{file_id}", params={"name": name}, headers=headers)
+        assert response.status_code == 422, name
+
+    response = await files_client.put(f"api/v2/files/{file_id}", params={"name": "safe_name"}, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["name"] == "safe_name"
+
+
+async def test_batch_download_sanitizes_legacy_file_names(files_client, files_created_api_key):
+    from langflow.services.database.models.file.model import File as UserFile
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+    file_ids = []
+    for filename, content in (
+        ("safe.txt", b"first"),
+        ("other.txt", b"second"),
+        ("third.txt", b"third"),
+        ("fourth.txt", b"fourth"),
+    ):
+        upload = await files_client.post("api/v2/files", files={"file": (filename, content)}, headers=headers)
+        assert upload.status_code == 201, upload.text
+        file_ids.append(upload.json()["id"])
+
+    # Legacy rows may predate rename validation. They must be safe in new ZIPs.
+    async with session_scope() as session:
+        legacy_names = ("../../escape", "..\\..\\escape", "Foo", "foo")
+        for file_id, legacy_name in zip(file_ids, legacy_names, strict=True):
+            stored = await session.get(UserFile, uuid.UUID(file_id))
+            assert stored is not None
+            stored.name = legacy_name
+            session.add(stored)
+        await session.commit()
+
+    response = await files_client.post("api/v2/files/batch/", json=file_ids, headers=headers)
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert len(archive.namelist()) == 4
+        assert len({entry.casefold() for entry in archive.namelist()}) == 4
+        for entry in archive.namelist():
+            assert entry.endswith(".txt")
+            assert "/" not in entry
+            assert "\\" not in entry
+            assert ".." not in entry
+        assert {archive.read(entry) for entry in archive.namelist()} == {b"first", b"second", b"third", b"fourth"}
 
 
 async def test_upload_list_delete_and_validate_files(files_client, files_created_api_key):
