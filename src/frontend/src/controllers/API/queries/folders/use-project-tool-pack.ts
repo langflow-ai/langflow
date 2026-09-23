@@ -9,11 +9,16 @@ export type ToolPackReference = {
   revision: string;
 };
 
-export type ToolExport = {
+export type FlowDependency = {
   flow_id: string;
   name: string;
-  description: string;
+  description?: string;
   revision: string;
+};
+
+export type ToolExport = FlowDependency & {
+  description: string;
+  dependencies?: FlowDependency[];
 };
 
 export type ToolPackManifest = {
@@ -26,6 +31,7 @@ export type ToolPackBinding = {
   reference: ToolPackReference;
   tool: ToolExport;
   version_id: string;
+  dependency_versions?: { flow: FlowDependency; version_id: string }[];
 };
 
 export type ToolDependencyUse = {

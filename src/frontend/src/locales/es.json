@@ -2609,5 +2609,8 @@
   "toolPacks.unchanged": "Sin cambios",
   "toolPacks.added": "Añadido",
   "toolPacks.unavailable": "Este paquete no está disponible o sus exportaciones no son válidas. Reintenta, revisa el proyecto o elimina la referencia.",
-  "toolPacks.selectedCount_one": "{{count}} paquete de herramientas"
+  "toolPacks.selectedCount_one": "{{count}} paquete de herramientas",
+  "toolPacks.nestedDependencies": "Dependencias de flujos anidados",
+  "toolPacks.nestedRecordedHelp": "Definiciones revisadas disponibles para esta herramienta. La ejecución puede usar solo algunos de estos flujos.",
+  "toolPacks.nestedReviewHelp": "Los cambios en estos flujos también cambian la revisión de la herramienta."
 }

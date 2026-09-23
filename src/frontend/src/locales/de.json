@@ -2609,5 +2609,8 @@
   "toolPacks.recordedRevisions": "Aufgezeichnete Revisionen und Aufrufe",
   "toolPacks.usedHelp": "Aufgezeichnete Revisionen bleiben in diesem Bericht erhalten, auch wenn sich das Quellprojekt ändert.",
   "toolPacks.reviewHelp": "Die Tools prüfen, die dieses Paket bereitstellt. Diese Revision wird beim Speichern des Harness angewendet.",
-  "toolPacks.changedSinceRun": "Paket seit diesem Lauf geändert"
+  "toolPacks.changedSinceRun": "Paket seit diesem Lauf geändert",
+  "toolPacks.nestedRecordedHelp": "Geprüfte Definitionen, die diesem Tool zur Verfügung stehen. Der Lauf verwendet möglicherweise nur einige dieser Flows.",
+  "toolPacks.nestedDependencies": "Abhängigkeiten verschachtelter Flows",
+  "toolPacks.nestedReviewHelp": "Änderungen an diesen Flows ändern auch die geprüfte Tool-Revision."
 }

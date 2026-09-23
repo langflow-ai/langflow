@@ -2771,5 +2771,8 @@
   "toolPacks.reviewHelp": "Check the tools this pack will supply. Updating a reference applies this revision when you save the harness.",
   "toolPacks.selectedCount_one": "{{count}} tool pack",
   "toolPacks.usedTitle": "Tools used in this run",
-  "toolPacks.callCount_other": "{{count}} completed calls"
+  "toolPacks.callCount_other": "{{count}} completed calls",
+  "toolPacks.nestedRecordedHelp": "Reviewed definitions available to this tool. The run may use only some of these flows.",
+  "toolPacks.nestedDependencies": "Nested flow dependencies",
+  "toolPacks.nestedReviewHelp": "Changes to these flows also change the reviewed tool revision."
 }

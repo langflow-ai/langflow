@@ -26,6 +26,7 @@ export function ReportDependencies({
       tool.flow_id,
       tool.revision,
       version_id,
+      use.binding.dependency_versions ?? [],
     ]);
     groups.set(key, [...(groups.get(key) ?? []), use]);
   }
@@ -64,7 +65,12 @@ function UsedTool({
 }) {
   const { t } = useTranslation();
   const navigate = useCustomNavigate();
-  const { reference, tool, version_id } = uses[0].binding;
+  const {
+    reference,
+    tool,
+    version_id,
+    dependency_versions = [],
+  } = uses[0].binding;
   const current = useProjectToolPack({ projectId: reference.project_id });
   return (
     <div className="space-y-2 rounded-md border border-border p-3">
@@ -102,6 +108,51 @@ function UsedTool({
             </div>
           ))}
         </dl>
+        {dependency_versions.length > 0 && (
+          <div className="mt-4 space-y-2 border-t border-border pt-3">
+            <h4 className="font-medium">{t("toolPacks.nestedDependencies")}</h4>
+            <p className="text-muted-foreground">
+              {t("toolPacks.nestedRecordedHelp")}
+            </p>
+            <ul className="divide-y divide-border">
+              {dependency_versions.map(({ flow, version_id: snapshot }) => (
+                <li key={flow.flow_id} className="space-y-2 py-3">
+                  <p className="break-words font-medium">{flow.name}</p>
+                  {flow.description && (
+                    <p className="break-words text-muted-foreground">
+                      {flow.description}
+                    </p>
+                  )}
+                  <dl className="space-y-2">
+                    <div>
+                      <dt className="text-muted-foreground">
+                        {t("toolPacks.flowRevision")}
+                      </dt>
+                      <dd className="break-all font-mono">{flow.revision}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">
+                        {t("toolPacks.snapshot")}
+                      </dt>
+                      <dd className="break-all font-mono">{snapshot}</dd>
+                    </div>
+                  </dl>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    aria-label={`${t("toolPacks.openFlow")}: ${flow.name}`}
+                    onClick={() => {
+                      onOpen?.();
+                      navigate(`/flow/${encodeURIComponent(flow.flow_id)}`);
+                    }}
+                  >
+                    {t("toolPacks.openFlow")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <ul className="mt-3 space-y-1 break-all font-mono text-muted-foreground">
           {uses.map((use) => (
             <li key={use.tool_call_id}>

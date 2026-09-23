@@ -2609,5 +2609,8 @@
   "toolPacks.retry": "再試行",
   "toolPacks.selectedCount_one": "ツールパック {{count}} 件",
   "toolPacks.pending": "確認済み · 保存して適用",
-  "toolPacks.empty": "Tool Pack プロジェクトを作成し、エクスポートするフローを選択すると、ここでツールを再利用できます。"
+  "toolPacks.empty": "Tool Pack プロジェクトを作成し、エクスポートするフローを選択すると、ここでツールを再利用できます。",
+  "toolPacks.nestedDependencies": "ネストされたフローの依存関係",
+  "toolPacks.nestedRecordedHelp": "このツールで利用できる確認済みの定義です。実行時には一部のフローのみが使われる場合があります。",
+  "toolPacks.nestedReviewHelp": "これらのフローを変更すると、確認済みツールのリビジョンも変わります。"
 }

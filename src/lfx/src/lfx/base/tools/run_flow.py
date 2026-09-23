@@ -204,6 +204,8 @@ class RunFlowBaseComponent(Component):
 
     async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data:
         """Get a flow's data by name or id."""
+        if (frozen := self._frozen_flow(flow_id_selected, flow_name_selected)) is not None:
+            return Data(data=deepcopy(frozen))
         if (sibling := self._sibling_flow(flow_name_selected, flow_id_selected)) is not None:
             return sibling
         flow = await get_flow_by_id_or_name(
@@ -212,6 +214,19 @@ class RunFlowBaseComponent(Component):
             flow_name=flow_name_selected,
         )
         return flow or Data(data={})
+
+    def _frozen_flow(self, flow_id, flow_name):
+        definitions = getattr(self.graph, "frozen_tool_flows", None) if self.graph is not None else None
+        if definitions is None:
+            return None
+        source = definitions.get(str(flow_id)) if flow_id else None
+        if not flow_id:
+            matches = [item for item in definitions.values() if item["name"] == flow_name]
+            source = matches[0] if len(matches) == 1 else None
+        if source is None:
+            msg = "This flow was not included in the reviewed tool dependency snapshots. Review the Tool Pack again."
+            raise ValueError(msg)
+        return source
 
     async def get_graph(
         self,
@@ -227,18 +242,41 @@ class RunFlowBaseComponent(Component):
         if binding is not None and str(binding.tool.flow_id) != str(flow_id_selected):
             msg = "The Tool Pack adapter points to a different flow. Restore its reviewed reference."
             raise ValueError(msg)
+        frozen = self._frozen_flow(flow_id_selected, flow_name_selected)
         async with _model_provider_policy(
             user_id=self.user_id,
-            flow_id=flow_id_selected,
+            flow_id=frozen["id"] if frozen else flow_id_selected,
             flow_name=flow_name_selected,
         ):
+            if frozen is not None:
+                graph = Graph.from_payload(
+                    payload=deepcopy(frozen["data"]),
+                    flow_id=frozen["id"],
+                    flow_name=frozen["name"],
+                    user_id=self.user_id,
+                )
+                graph.frozen_tool_flows = self.graph.frozen_tool_flows
+                graph.description = frozen.get("description")
+                return graph
             if binding is not None:
                 run_id = getattr(getattr(self, "graph", None), "run_id", None)
                 key = (run_id, binding)
                 if getattr(self, "_pack_snapshot_key", None) != key:
-                    snapshot = await get_tool_pack_flow(user_id=self.user_id, binding=binding)
+                    recorded = getattr(self.graph, "reviewed_tool_packs", {})
+                    binding_value = binding.model_dump(mode="json")
+                    if recorded.get(str(binding.tool.flow_id)) == binding_value:
+                        snapshot = await get_tool_pack_flow(
+                            user_id=self.user_id, binding=binding, require_current=False
+                        )
+                    else:
+                        snapshot = await get_tool_pack_flow(user_id=self.user_id, binding=binding)
+                    if binding.tool.dependencies and not snapshot.data.get("dependencies"):
+                        msg = "The reviewed tool dependency snapshots are unavailable. Review the Tool Pack again."
+                        raise ValueError(msg)
                     self._pack_snapshot = deepcopy(snapshot.data)
                     self._pack_snapshot_key = key
+                    if self.graph is not None:
+                        self.graph.reviewed_tool_packs[str(binding.tool.flow_id)] = binding_value
                 # A fresh graph per invocation prevents tool arguments and build state
                 # leaking between calls. Its definition is fixed for this compiled run.
                 graph = Graph.from_payload(
@@ -248,6 +286,7 @@ class RunFlowBaseComponent(Component):
                     user_id=self.user_id,
                 )
                 graph.description = binding.tool.description
+                graph.frozen_tool_flows = self._pack_snapshot.get("dependencies")
                 return graph
             if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
                 if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):

@@ -2609,5 +2609,8 @@
   "toolPacks.usedHelp": "Les révisions enregistrées restent dans ce rapport, même si le projet source change.",
   "toolPacks.removed": "Retiré",
   "toolPacks.current": "Correspond à la révision vérifiée",
-  "toolPacks.snapshot": "Instantané du flux enregistré"
+  "toolPacks.snapshot": "Instantané du flux enregistré",
+  "toolPacks.nestedDependencies": "Dépendances des flux imbriqués",
+  "toolPacks.nestedRecordedHelp": "Définitions vérifiées disponibles pour cet outil. L’exécution peut n’utiliser que certains de ces flux.",
+  "toolPacks.nestedReviewHelp": "Les modifications de ces flux changent aussi la révision de l’outil."
 }
