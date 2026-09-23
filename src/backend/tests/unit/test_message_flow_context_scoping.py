@@ -17,7 +17,15 @@ from typing import cast
 from uuid import uuid4
 
 import pytest
-from langflow.memory import LCBuiltinChatMemory, aadd_messages, adelete_messages, aget_messages, astore_message
+from langflow.memory import (
+    LCBuiltinChatMemory,
+    aadd_messages,
+    adelete_messages,
+    aget_messages,
+    astore_message,
+    aupdate_messages,
+    delete_message,
+)
 from langflow.schema.message import Message
 from lfx.components.deactivated.store_message import StoreMessageComponent
 from lfx.components.input_output import ChatInput, ChatOutput
@@ -391,3 +399,53 @@ async def test_graph_write_rejects_foreign_flow_and_owner(client):  # noqa: ARG0
         reset_current_message_executor_id(executor_token)
 
     assert await aget_messages(session_id="foreign-write", flow_id=flow_id, user_id=owner_id) == []
+
+
+@pytest.mark.parametrize("foreign_dimension", ["flow", "owner"])
+async def test_graph_id_operations_cannot_modify_foreign_messages(client, foreign_dimension):  # noqa: ARG001
+    own_flow, own_owner = uuid4(), uuid4()
+    foreign_flow = uuid4() if foreign_dimension == "flow" else own_flow
+    foreign_owner = uuid4() if foreign_dimension == "owner" else own_owner
+    session_id = f"id-scope-{foreign_dimension}"
+
+    own = (
+        await aadd_messages(
+            Message(text="own", sender="User", sender_name="User", session_id=session_id),
+            flow_id=own_flow,
+            user_id=own_owner,
+        )
+    )[0]
+    foreign = (
+        await aadd_messages(
+            Message(text="foreign", sender="User", sender_name="User", session_id=session_id),
+            flow_id=foreign_flow,
+            user_id=foreign_owner,
+        )
+    )[0]
+
+    flow_token = set_current_flow_id(own_flow)
+    owner_token = set_current_message_owner_id(own_owner)
+    try:
+        foreign.text = "overwritten"
+        with pytest.raises(ValueError, match="not found"):
+            await aupdate_messages(foreign)
+        with pytest.raises(ValueError, match="not found"):
+            await astore_message(foreign, flow_id=own_flow, user_id=own_owner)
+        await delete_message(str(foreign.id))
+
+        own.flow_id = uuid4()
+        with pytest.raises(ValueError, match="Message scope does not match"):
+            await aupdate_messages(own)
+        own.flow_id = own_flow
+        own.text = "updated own"
+        updated = await aupdate_messages(own)
+        assert [message.text for message in updated] == ["updated own"]
+        await delete_message(str(own.id))
+    finally:
+        reset_current_flow_id(flow_token)
+        reset_current_message_owner_id(owner_token)
+
+    own_rows = await aget_messages(session_id=session_id, flow_id=own_flow, user_id=own_owner)
+    foreign_rows = await aget_messages(session_id=session_id, flow_id=foreign_flow, user_id=foreign_owner)
+    assert own_rows == []
+    assert [message.text for message in foreign_rows] == ["foreign"]

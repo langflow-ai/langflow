@@ -73,6 +73,19 @@ def _write_message_scope(
     return trusted_flow, trusted_owner
 
 
+def _bound_message_scope() -> tuple[UUID, UUID] | None:
+    """Return the graph's required scope, or None for a trusted non-graph caller."""
+    from lfx.memory.flow_context import has_current_flow_scope
+
+    if not has_current_flow_scope():
+        return None
+    flow_id, user_id = _message_scope(None, None)
+    if flow_id is None or user_id is None:
+        msg = "A valid flow and message owner are required for graph message operations."
+        raise ValueError(msg)
+    return flow_id, user_id
+
+
 def _get_variable_query(
     sender: str | None = None,
     sender_name: str | None = None,
@@ -253,13 +266,30 @@ async def aadd_messages(
 async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
     if not isinstance(messages, list):
         messages = [messages]
+    graph_scope = _bound_message_scope()
 
     async with session_scope() as session:
         updated_messages: list[MessageTable] = []
         for message in messages:
-            msg = await session.get(MessageTable, message.id)
+            if graph_scope is None:
+                msg = await session.get(MessageTable, message.id)
+            else:
+                stmt = select(MessageTable).where(
+                    MessageTable.id == UUID(str(message.id)),
+                    MessageTable.flow_id == graph_scope[0],
+                    MessageTable.user_id == graph_scope[1],
+                )
+                msg = (await session.exec(stmt)).first()
             if msg:
-                msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                updates = message.model_dump(exclude_unset=True, exclude_none=True)
+                if graph_scope is not None:
+                    # Refuse scope changes and preserve the selected row's owner.
+                    if _message_scope(updates.get("flow_id"), updates.get("user_id")) != graph_scope:
+                        msg = "Message scope does not match the executing graph."
+                        raise ValueError(msg)
+                    updates.pop("flow_id", None)
+                    updates.pop("user_id", None)
+                msg = msg.sqlmodel_update(updates)
                 # Convert flow_id to UUID if it's a string preventing error when saving to database
                 if msg.flow_id and isinstance(msg.flow_id, str):
                     msg.flow_id = UUID(msg.flow_id)
@@ -378,8 +408,17 @@ async def delete_message(id_: str) -> None:
     Args:
         id_ (str): The ID of the message to delete.
     """
+    graph_scope = _bound_message_scope()
     async with session_scope() as session:
-        message = await session.get(MessageTable, id_)
+        if graph_scope is None:
+            message = await session.get(MessageTable, id_)
+        else:
+            stmt = select(MessageTable).where(
+                MessageTable.id == UUID(str(id_)),
+                MessageTable.flow_id == graph_scope[0],
+                MessageTable.user_id == graph_scope[1],
+            )
+            message = (await session.exec(stmt)).first()
         if message:
             await session.delete(message)
 
@@ -458,6 +497,12 @@ async def astore_message(
             return await aupdate_messages([message])
         except ValueError as e:
             await logger.aerror(e)
+            from lfx.memory.flow_context import has_current_flow_scope
+
+            # A foreign row is deliberately indistinguishable from a missing ID
+            # in a graph run. Neither case may turn into a new message write.
+            if has_current_flow_scope():
+                raise
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id, run_id=run_id, user_id=user_id)
