@@ -98,23 +98,6 @@ AGENT_HARNESS = register_project_type(
                     value=100,
                 ),
             ),
-            ProjectTypeField(
-                name="hooks",
-                section="Runtime",
-                slot_definition=HOOK,
-                supports_flow_binding=True,
-                renders="hook_flows",
-                # The next UI slice supplies the ordered binding editor. The field
-                # already owns its contract and baseline for scoped API clients.
-                input=StrInput(
-                    name="hooks",
-                    display_name="Hooks",
-                    list=True,
-                    value=[],
-                    show=False,
-                    info="Ordered flows that observe or control model and tool calls.",
-                ),
-            ),
             *(
                 ProjectTypeField(
                     name=inp.name,
@@ -142,6 +125,20 @@ AGENT_HARNESS = register_project_type(
                     }.get(inp.name),
                 )
                 for inp in harness_runtime_inputs()
+            ),
+            ProjectTypeField(
+                name="hooks",
+                section="Hooks",
+                slot_definition=HOOK,
+                supports_flow_binding=True,
+                renders="hook_flows",
+                input=StrInput(
+                    name="hooks",
+                    display_name="Hooks",
+                    list=True,
+                    value=[],
+                    info="Ordered flows that observe or control model and tool calls.",
+                ),
             ),
         ),
     )
