@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/ci/**"
       - ".github/workflows/ci-scripts-test.yml"
+      - ".github/workflows/test-coverage-advisor.yml"
       - ".github/workflows/release.yml"
       - "pyproject.toml"
       - "src/bundles/*/pyproject.toml"
@@ -46,7 +47,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install orjson packaging pytest requests
+        run: pip install orjson packaging pytest pyyaml requests
 
       - name: Run CI script tests
         run: python -m pytest scripts/ci/ -v
