@@ -325,6 +325,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-trigger-listeners",
+          label: "Deploy Langflow trigger listeners",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },

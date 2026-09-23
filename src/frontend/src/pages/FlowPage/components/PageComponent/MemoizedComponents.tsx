@@ -7,6 +7,7 @@ import CanvasControlButton from "@/components/core/canvasControlsComponent/Canva
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
@@ -30,12 +31,18 @@ export const MemoizedCanvasControls = memo(
   }: MemoizedCanvasControlsProps) => {
     const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
     const isLocked = currentFlow?.locked ?? false;
-    const effectiveLocked = isLocked || isAgentWorking || isReadOnly;
+    const isAssistantProcessing = useAssistantManagerStore(
+      (state) => state.isAssistantProcessing,
+    );
+    // Only the assistant's own run may lock editing without locking its panel.
+    const assistantLocked = Boolean(isLocked || isAgentWorking || isReadOnly);
+    const effectiveLocked = assistantLocked || isAssistantProcessing;
 
     return (
       <CanvasControls
         selectedNode={selectedNode}
         effectiveLocked={effectiveLocked}
+        assistantLocked={assistantLocked}
       />
     );
   },

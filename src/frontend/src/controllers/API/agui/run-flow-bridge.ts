@@ -518,7 +518,7 @@ export async function runFlowAGUI(
 }
 
 /** Background-run body (mode="background"); HITL needs the durable substrate. */
-function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
+export function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
   const body: Record<string, unknown> = {
     flow_id: opts.flowId,
     input_value: opts.message ?? "",
@@ -531,6 +531,12 @@ function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
   if (opts.stopComponentId) body.stop_component_id = opts.stopComponentId;
   if (opts.flowData) body.data = opts.flowData;
   if (opts.files && opts.files.length > 0) body.files = opts.files;
+  // Same reason as buildWorkflowRunRequest: `agui` withholds graph state unless
+  // asked, and the canvas renders node status from STATE_DELTA and the
+  // playground renders chat from the `langflow.event` mirror, which is gated on
+  // the same flag. A flow that can suspend runs through here, so without this a
+  // Human Input flow would run with no node lighting up and no messages.
+  body.expose_graph_state = opts.exposeGraphState ?? true;
   return body;
 }
 

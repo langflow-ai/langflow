@@ -236,6 +236,10 @@ def get_lifespan(*, fix_migration=False, version=None):
         # Started per worker below when trigger_dispatcher_enabled; the loops it
         # owns are DB-leased singletons, so every replica may run one.
         trigger_dispatcher = None
+        # The listener child, in subprocess mode only. Exactly one API worker
+        # hosts it (a named lease elects which), because the API defaults to
+        # several workers and N listeners would fight over every connection.
+        trigger_listeners = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -284,6 +288,16 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await initialize_environment_variables()
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+
+            # Surface the custom-component execution posture. Component code is exec()'d on
+            # the server at flow-build time (the feature); in multi-user mode with the
+            # permissive defaults every active non-admin user can therefore run arbitrary
+            # code. Warn once so operators discover the two lockdown settings rather than
+            # learning about the exposure from a report. No-op for the single-user default
+            # and for any deployment that already restricted this. Never raises.
+            from langflow.utils.security_posture import log_custom_component_execution_posture
+
+            await log_custom_component_execution_posture(get_settings_service())
 
             # Surface env-driven pgVector so operators can confirm the deployment
             # snap-configured to Postgres as the default Knowledge Base vector store.
@@ -576,6 +590,16 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 trigger_dispatcher = start_dispatcher_if_enabled()
 
+            # Track B listeners. Off unless LANGFLOW_LISTENERS_MODE=subprocess:
+            # the supported multi-replica shape is a separate `langflow
+            # listeners` service, which the API neither starts nor knows about.
+            with suppress(Exception):
+                from langflow.services.triggers.listeners.subprocess_host import (
+                    start_listener_subprocess_if_enabled,
+                )
+
+                trigger_listeners = start_listener_subprocess_if_enabled()
+
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
@@ -815,6 +839,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if warm_registry_task and not warm_registry_task.done():
                         warm_registry_task.cancel()
                         tasks_to_cancel.append(warm_registry_task)
+                    # SIGTERM the listener child and wait for it, so its
+                    # connection leases are released rather than left to expire.
+                    if trigger_listeners is not None:
+                        with suppress(Exception):
+                            await trigger_listeners.stop()
                     # Stops the loop AND hands the lease back, so another
                     # replica takes over without waiting out the TTL.
                     if trigger_dispatcher is not None:
@@ -886,6 +915,18 @@ def get_lifespan(*, fix_migration=False, version=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
+    from langflow.services.triggers.listeners.guard import is_listener_process
+
+    if is_listener_process():
+        # decisions/process-model.md: "The boot path asserts that no FastAPI app
+        # is created in the listener process, so the two never converge again by
+        # accident." Both prior trigger attempts converged here.
+        msg = (
+            "This process is a Langflow trigger listener and must not host the API. "
+            "Run the API and 'langflow listeners' as separate processes."
+        )
+        raise RuntimeError(msg)
+
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]

@@ -15,6 +15,14 @@ export function ConnectionStatusBadge({
 }: ConnectionStatusBadgeProps) {
   const { t } = useTranslation();
   const { status } = connection;
+  const oauthReason =
+    connection.status_reason === "oauth-denied"
+      ? t("connections.add.denied")
+      : connection.status_reason === "oauth-expired"
+        ? t("connections.add.expired")
+        : connection.status_reason === "oauth-failed"
+          ? t("connections.add.failed")
+          : null;
 
   const action = (label: string) =>
     onAuthorize ? (
@@ -30,9 +38,16 @@ export function ConnectionStatusBadge({
 
   if (status === "ready") {
     return (
-      <Badge variant="successStatic" size="xq">
-        {t("connections.status.ready")}
-      </Badge>
+      <div className="flex flex-col gap-1">
+        <Badge variant="successStatic" size="xq" className="w-fit">
+          {t("connections.status.ready")}
+        </Badge>
+        {oauthReason && (
+          <span className="max-w-[16rem] text-xs text-muted-foreground">
+            {oauthReason}
+          </span>
+        )}
+      </div>
     );
   }
 
@@ -80,7 +95,7 @@ export function ConnectionStatusBadge({
       ? t("connections.status.reasonMissing")
       : connection.status_reason === "credential-undecryptable"
         ? t("connections.status.reasonUndecryptable")
-        : null;
+        : oauthReason;
 
   return (
     <div className="flex flex-col gap-1">
