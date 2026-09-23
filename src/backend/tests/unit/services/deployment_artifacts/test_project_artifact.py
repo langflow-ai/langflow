@@ -446,6 +446,45 @@ async def test_build_project_artifact_scrubs_secret_fields_without_resolving_ref
 
 
 @pytest.mark.asyncio
+async def test_strict_snapshot_refuses_graph_changes_from_secret_scrubbing() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Strict snapshot", description="Captured", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "password": {"name": "password", "password": True, "value": "literal-secret"},
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    ordinary, *_ = await _build_authorized(session=_session_with_flows([flow]), user=user, project=project)
+    assert b"literal-secret" not in ordinary.content
+
+    with (
+        patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
+        patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
+        pytest.raises(ProjectArtifactError, match="cannot be safely captured"),
+    ):
+        await build_project_artifact(
+            _session_with_flows([flow]),
+            user,
+            project_id,
+            strict_snapshot=True,
+        )
+
+
+@pytest.mark.asyncio
 async def test_build_project_artifact_preserves_variable_references_and_lists_required_variables() -> None:
     actor_id = uuid4()
     project_id = uuid4()
