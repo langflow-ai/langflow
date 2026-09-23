@@ -6,6 +6,7 @@ file upload, download, deletion, and listing operations.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import os
 from http import HTTPStatus
@@ -58,7 +59,10 @@ class S3StorageService(StorageService):
 
         # Create session - AWS credentials are picked up from environment variables
         self.session = get_session()
-        self._client = None
+        # One client per event loop. A client is bound to the loop that made it, and
+        # the service is reached from more than one: components running a loop of
+        # their own, CLI paths behind asyncio.run.
+        self._clients: dict[asyncio.AbstractEventLoop, tuple[contextlib.AsyncExitStack, Any]] = {}
 
         self.set_ready()
         logger.info(
@@ -165,9 +169,28 @@ class S3StorageService(StorageService):
         """
         return logical_path
 
-    def _get_client(self):
-        """Get or create an S3 client using the async context manager."""
-        return self.session.create_client("s3")
+    @contextlib.asynccontextmanager
+    async def _get_client(self) -> AsyncIterator[Any]:
+        """Yield this event loop's S3 client, building it on first use.
+
+        Building a client per call costs a client and a TLS handshake for every
+        operation. The client stays open until ``teardown``, so leaving the block
+        does not close it.
+        """
+        loop = asyncio.get_running_loop()
+        # A loop that has closed cannot use or close its client, so drop it.
+        # ponytail: its connections are only released when garbage collected.
+        for closed in [other for other in self._clients if other.is_closed()]:
+            del self._clients[closed]
+        if loop not in self._clients:
+            stack = contextlib.AsyncExitStack()
+            client = await stack.enter_async_context(self.session.create_client("s3"))
+            if loop in self._clients:
+                # Another coroutine on this loop built one while this one awaited.
+                await stack.aclose()
+            else:
+                self._clients[loop] = (stack, client)
+        yield self._clients[loop][1]
 
     async def check_readiness(self) -> StorageReadiness:
         """Verify S3 credentials resolve and the configured bucket is reachable.
@@ -453,9 +476,13 @@ class S3StorageService(StorageService):
             return file_size
 
     async def teardown(self) -> None:
-        """Perform any cleanup operations when the service is being torn down.
+        """Close the clients this service built.
 
-        For S3, we don't need to do anything as aiobotocore handles cleanup
-        via context managers.
+        Only the current loop's client can be closed from here. A client on another
+        loop is dropped, since closing it needs its own loop.
         """
+        loop = asyncio.get_running_loop()
+        clients, self._clients = self._clients, {}
+        if (current := clients.get(loop)) is not None:
+            await current[0].aclose()
         logger.info("S3 storage service teardown complete")

@@ -8,7 +8,7 @@ the S3 backend with untrusted identifiers.
 Regression for GHSA-rcjh-r59h-gq37 (defense in depth at the S3 backend).
 """
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from langflow.services.storage.s3 import S3StorageService
@@ -47,15 +47,23 @@ def s3_service_offline(mock_session_service, mock_settings_service, monkeypatch)
     return service
 
 
-def test_get_client_uses_aiobotocore_create_client(mock_session_service, mock_settings_service):
+async def test_get_client_builds_one_aiobotocore_client_per_loop(mock_session_service, mock_settings_service):
     service = S3StorageService(mock_session_service, mock_settings_service)
     session = Mock()
+    client = object()
+    session.create_client.return_value.__aenter__ = AsyncMock(return_value=client)
+    session.create_client.return_value.__aexit__ = AsyncMock(return_value=None)
     service.session = session
 
-    client_context = service._get_client()
+    async with service._get_client() as first, service._get_client() as second:
+        pass
 
     session.create_client.assert_called_once_with("s3")
-    assert client_context is session.create_client.return_value
+    assert first is second is client
+    # Leaving the block does not close it; teardown does.
+    session.create_client.return_value.__aexit__.assert_not_called()
+    await service.teardown()
+    session.create_client.return_value.__aexit__.assert_called_once()
 
 
 _MALICIOUS_FLOW_IDS = [
