@@ -99,6 +99,24 @@ class TestRunAssistantToolRegistration:
 
 
 class TestRunAssistantAndPersist:
+    async def test_should_reject_non_admin_before_creating_flow_when_admin_only(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        session = _session_mock()
+        session.get = AsyncMock(return_value=SimpleNamespace(is_superuser=False))
+        with (
+            patch(
+                f"{RUNNER_MODULE}.get_settings_service",
+                return_value=SimpleNamespace(settings=SimpleNamespace(custom_component_admin_only=True)),
+            ),
+            patch(f"{RUNNER_MODULE}._ensure_flow", new_callable=AsyncMock) as ensure_flow,
+            pytest.raises(HTTPException) as exc,
+        ):
+            await run_assistant_and_persist(session=session, user_id=uuid4(), instruction="Build a component")
+
+        assert exc.value.status_code == 403
+        ensure_flow.assert_not_awaited()
+
     @pytest.mark.asyncio
     async def test_should_create_a_new_flow_when_no_flow_id_is_given(self):
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist

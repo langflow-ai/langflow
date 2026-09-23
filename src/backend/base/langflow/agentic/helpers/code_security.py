@@ -209,6 +209,15 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    # These profiling helpers execute source strings, bypassing AST checks on
+    # the outer component (profilers, tracers, debuggers, and doctest runners).
+    "timeit",
+    "profile",
+    "cProfile",
+    "trace",
+    "bdb",
+    "pdb",
+    "doctest",
     # Direct process-spawning modules. ``asyncio`` itself remains allowed, but
     # its subprocess entry points are blocked in DANGEROUS_ATTR_CALLS above.
     "multiprocessing",

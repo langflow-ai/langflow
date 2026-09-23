@@ -18,6 +18,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import get_working_flow
+from lfx.services.deps import get_settings_service
 
 from langflow.agentic.api.router import _resolve_assistant_context
 from langflow.agentic.api.schemas import AssistantRequest
@@ -199,6 +200,14 @@ async def run_assistant_and_persist(
     ``link``, ``result`` (assistant reply text), ``flow_changed``,
     ``session_id``, ``provider`` and ``model_name``.
     """
+    # The legacy standalone MCP server calls this runner directly, without the
+    # HTTP assistant route's caller-aware dependency. Check before _ensure_flow
+    # creates a row or the assistant loads any provider credentials.
+    acting_user = await session.get(User, user_id)
+    is_superuser = bool(getattr(acting_user, "is_superuser", False))
+    if getattr(get_settings_service().settings, "custom_component_admin_only", False) is True and not is_superuser:
+        raise HTTPException(status_code=403, detail="Assistant code execution is restricted to administrators.")
+
     flow, created_new = await _ensure_flow(session, user_id, flow_id)
     if not created_new:
         # Fail before invoking the model. Locked flows are read-only to the
@@ -213,11 +222,8 @@ async def run_assistant_and_persist(
         session_id=session_id,
         max_retries=None,
     )
-    # raw_cause on SSE error details is superuser-only; headless MCP callers
-    # authenticate as a real user, so read the flag from the DB row before the
-    # long-running stream releases this transaction.
-    acting_user = await session.get(User, user_id)
-    is_superuser = bool(getattr(acting_user, "is_superuser", False))
+    # raw_cause on SSE error details is superuser-only; use the authenticated
+    # actor's DB role read above before the long-running stream releases this transaction.
     with scoped_model_provider_policy_for_flow(
         flow,
         user_id=user_id,
