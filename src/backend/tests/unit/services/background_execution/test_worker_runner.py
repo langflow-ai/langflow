@@ -72,3 +72,22 @@ async def test_worker_runner_runs_durable_job_to_completion(active_user):
     assert "build_start" in types
     assert "end_vertex" in types
     assert bus.closed == [str(job_id)]
+
+
+def test_worker_adapter_honors_expose_graph_state():
+    """A scaled worker must narrow the stream exactly like the API process does.
+
+    The v2 route persists ``expose_graph_state`` into the submit request, and the
+    facade passes it to the adapter. The worker builds its own adapter, so when it
+    dropped the flag the context fell back to its ``True`` default: the same run
+    hid graph state in default mode and exposed it in scaled mode.
+    """
+    from langflow.services.background_execution.worker import WorkerJobRunner
+
+    request = {"stream_protocol": "langflow", "expose_graph_state": False}
+    adapter = WorkerJobRunner._build_adapter(request, uuid.uuid4(), uuid.uuid4())
+    assert adapter.context.expose_graph_state is False
+
+    # Absent (legacy rows written before the field existed) keeps today's behavior.
+    legacy = WorkerJobRunner._build_adapter({"stream_protocol": "langflow"}, uuid.uuid4(), uuid.uuid4())
+    assert legacy.context.expose_graph_state is True

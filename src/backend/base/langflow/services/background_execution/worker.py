@@ -111,6 +111,12 @@ class WorkerJobRunner:
             StreamAdapterContext(
                 run_id=str(job_id),
                 thread_id=request.get("session_id") or str(flow_id),
+                # ``submit`` persists the whole request body, so a worker narrows
+                # the replayed stream exactly like the API process does. Legacy
+                # rows written before the field existed default to today's
+                # behavior. Without this the same run hides graph state in
+                # default mode and exposes it in scaled mode.
+                expose_graph_state=request.get("expose_graph_state", True),
             ),
         )
 
