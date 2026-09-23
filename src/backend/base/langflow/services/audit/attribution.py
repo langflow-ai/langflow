@@ -68,6 +68,11 @@ def resolve_audit_actor(user_id: UUID | None) -> AuditActor:
     return AuditActor(user_id=user_id, actor_type=AuditActorType.USER, actor_id=user_id)
 
 
+def audit_request_id() -> UUID | None:
+    """This request's correlation id, or None outside an HTTP request."""
+    return _request_id.get()
+
+
 def current_request_id() -> UUID:
     """The correlation id every event of this request shares.
 

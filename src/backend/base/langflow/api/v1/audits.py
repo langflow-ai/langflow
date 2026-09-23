@@ -343,7 +343,8 @@ async def export_audits(
     if export_format not in _EXPORT_FORMATS:
         msg = "format must be csv or ndjson"
         raise bad_request(msg)
-    filters = frozen_until(_filters(grouped))
+    async with session_scope() as session:
+        filters = await frozen_until(session, _filters(grouped))
     filename = f"langflow-audit-{datetime.now(timezone.utc).date().isoformat()}.{export_format}"
     return StreamingResponse(
         _export_chunks(filters, export_format),
