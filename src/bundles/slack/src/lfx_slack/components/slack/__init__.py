@@ -8,6 +8,8 @@ from here by name.
 from .slack_add_reaction import SlackAddReactionComponent
 from .slack_canvas import SlackCanvasComponent
 from .slack_list_channel_members import SlackListChannelMembersComponent
+from .slack_on_message import SlackOnMessageTriggerComponent
+from .slack_on_reaction import SlackOnReactionTriggerComponent
 from .slack_post_as_app import SlackPostAsAppComponent
 from .slack_read_thread import SlackReadThreadComponent
 from .slack_search import SlackSearchComponent
@@ -17,6 +19,8 @@ __all__ = [
     "SlackAddReactionComponent",
     "SlackCanvasComponent",
     "SlackListChannelMembersComponent",
+    "SlackOnMessageTriggerComponent",
+    "SlackOnReactionTriggerComponent",
     "SlackPostAsAppComponent",
     "SlackReadThreadComponent",
     "SlackSearchComponent",

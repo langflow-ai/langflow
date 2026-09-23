@@ -61,6 +61,14 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
+### Triggers
+
+| Symbol | Source |
+| --- | --- |
+| `BaseTriggerComponent` (`trigger_kind`, `provider`, `needs_connection`, `trigger_config()`, `build_event()`) | `lfx.base.triggers.base` |
+| `TRIGGER_EVENT_FIELD` (the input the server writes the firing event into) | `lfx.base.triggers.base` |
+| `TriggerDefinition` | `lfx.base.triggers.base` |
+
 ### Preset MCP components
 
 | Symbol | Source |
@@ -225,6 +233,12 @@ the deserialize half is covered by
   everywhere else, including in a triggered run, and a component is told to
   choose a different connection. The error code and HTTP 403 status are
   unchanged. This is additive; `BUNDLE_API_VERSION` remains `1`.
+- `lfx.base.triggers` joins the surface: `lfx-slack` 0.2.0 subclasses
+  `BaseTriggerComponent` for its `Slack: On Message` and `Slack: On Reaction`
+  nodes, so the base class, `TRIGGER_EVENT_FIELD` and `TriggerDefinition` are
+  now a bundle contract and `check_bundle_api_changelog.py` guards the module.
+  Every lfx 1.13.0 release ships it; only 1.13 nightlies built before it
+  landed do not, and `lfx-slack` 0.2.0 does not import against those.
 
 ### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
 

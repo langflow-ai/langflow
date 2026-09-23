@@ -1,6 +1,6 @@
 [project]
 name = "lfx-slack"
-version = "0.1.1"
+version = "0.2.0"
 description = "Slack Web API actions (user-identity and bot-identity) as a standalone Langflow Extension Bundle backed by connections."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -16,15 +16,15 @@ keywords = ["langflow", "lfx", "extension", "bundle", "slack", "integrations", "
 # ``slack_sdk`` is the substrate chosen by
 # design/dedicated-integrations/matrices/slack.json (every included action's
 # ``substrate_notes`` says "via slack_sdk") and by the INT-12 release-owner
-# decision: one SDK for the seven Web API actions, reused later by the Socket
-# Mode listener (TRG-5).
+# decision: one SDK for the seven Web API actions. The two trigger components
+# need neither: they are declarations, and the Socket Mode client that serves
+# them lives in the langflow listener process (langflow-base), not here.
 #
 # ``aiohttp`` is declared explicitly even though ``slack_sdk`` does not require
 # it: ``slack_sdk.web.async_client.AsyncWebClient`` imports aiohttp at module
 # import time, and .github/workflows/cross-bundle-test.yml installs only the
 # bundle's *declared* dependencies, so an undeclared aiohttp fails the import
-# smoke rather than degrading. It is also the transport TRG-5's Socket Mode
-# client needs.
+# smoke rather than degrading.
 #
 # lfx is floored at the current major.minor line and capped below the next lfx
 # major; the floor is read from src/lfx/pyproject.toml at port time and
