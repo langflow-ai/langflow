@@ -731,3 +731,29 @@ async def test_resolving_an_unparseable_connection_handle_raises_a_typed_error(
         assert adapter.error.provider == "selftest"
     finally:
         await supervisor.stop()
+
+
+@pytest.mark.parametrize("shape", ["someone_else", "instance"])
+async def test_a_trigger_on_a_connection_its_owner_does_not_own_is_never_dialled(
+    make_connection, make_trigger, adapter_registry, shape
+) -> None:
+    """However the row was written, the listener only dials the owner's own connections."""
+    from langflow.services.database.models.user.model import User
+    from langflow.services.triggers.listeners.supervisor import load_desired_state
+
+    adapter_registry(RecordingAdapter())
+    if shape == "instance":
+        connection_id = await make_connection(ownership_mode="instance", owner_id=None)
+    else:
+        async with session_scope() as session:
+            colleague = User(username=f"colleague-{uuid4().hex[:8]}", password="x", is_active=True)  # noqa: S106  # pragma: allowlist secret
+            session.add(colleague)
+            await session.flush()
+            colleague_id = colleague.id
+        connection_id = await make_connection(owner_id=colleague_id)
+    await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    async with session_scope() as session:
+        desired = await load_desired_state(session)
+
+    assert connection_id not in desired

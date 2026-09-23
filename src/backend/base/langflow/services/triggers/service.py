@@ -30,7 +30,9 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerUpdate,
 )
 from langflow.services.triggers.cleanup import delete_triggers
+from langflow.services.triggers.constants import CANVAS_ONLY_KINDS
 from langflow.services.triggers.errors import TriggerNotFoundError
+from langflow.services.triggers.ownership import require_owned_connection
 from langflow.services.triggers.reconciliation import apply_schedule_verdict
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
@@ -68,6 +70,18 @@ _ENABLEABLE_STATES = frozenset(
         TriggerState.NEEDS_RECONNECT.value,
     }
 )
+
+
+def _reject_mechanism(config: dict | None) -> None:
+    """``config.mechanism_id`` is derived by the server, never chosen by a client.
+
+    It decides which transport and which verifier a trigger is armed against, so
+    accepting it from a request would let a caller point a trigger at a
+    mechanism its connection cannot prove.
+    """
+    if config and "mechanism_id" in config:
+        msg = "mechanism_id is derived from the trigger's connection and cannot be set."
+        raise ValueError(msg)
 
 
 class TriggerService(Service):
@@ -125,7 +139,13 @@ class TriggerService(Service):
         return (await session.exec(statement)).first()
 
     async def create(self, session: AsyncSession, *, payload: TriggerCreate, owner_id: UUID) -> Trigger:
+        if payload.kind in CANVAS_ONLY_KINDS:
+            msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
+            raise ValueError(msg)
+        _reject_mechanism(payload.config)
         await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
+        if payload.connection_id is not None:
+            await require_owned_connection(session, connection_id=payload.connection_id, owner_id=owner_id)
         config = payload.config
         if payload.kind == "schedule" and (config or payload.state is TriggerState.ACTIVE):
             config = validate_schedule_config(config)
@@ -160,6 +180,13 @@ class TriggerService(Service):
         an explicit null, without every other omitted field being nulled too.
         """
         changes = payload.model_dump(exclude_unset=True)
+        if row.kind in CANVAS_ONLY_KINDS and ({"config", "connection_id"} & changes.keys()):
+            msg = "This trigger's configuration and connection are set on its component in the flow."
+            raise ValueError(msg)
+        if "config" in changes:
+            _reject_mechanism(changes["config"])
+        if changes.get("connection_id") is not None:
+            await require_owned_connection(session, connection_id=changes["connection_id"], owner_id=row.user_id)
         if "flow_version_id" in changes:
             await self._validate_flow_version(session, flow_id=row.flow_id, flow_version_id=payload.flow_version_id)
         if "config" in changes and row.kind == "schedule":

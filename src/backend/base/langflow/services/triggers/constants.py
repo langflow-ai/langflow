@@ -98,3 +98,16 @@ AUDIT_INGRESS_ACCEPT = "trigger_ingress:accept"
 AUDIT_INGRESS_REJECT = "trigger_ingress:reject"
 AUDIT_SUBSCRIPTION_RENEW = "trigger_subscription:renew"
 AUDIT_SUBSCRIPTION_REVOKE = "trigger_subscription:revoke"
+
+#: Slack trigger kinds (TRG-5). Each runs on either Slack mechanism; which one is
+#: decided per trigger from the connection it resolves and recorded as
+#: ``config.mechanism_id``, never named by the flow.
+KIND_SLACK_MESSAGE = "slack.message"
+KIND_SLACK_REACTION = "slack.reaction"
+SLACK_TRIGGER_KINDS = frozenset({KIND_SLACK_MESSAGE, KIND_SLACK_REACTION})
+
+#: Kinds whose configuration, connection and mechanism are owned by a canvas
+#: node and written only by flow-save reconciliation. The owner API never
+#: creates them or edits those fields: that is the one writer who normalizes
+#: the configuration and proves the connection belongs to the trigger owner.
+CANVAS_ONLY_KINDS = SLACK_TRIGGER_KINDS

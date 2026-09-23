@@ -68,6 +68,7 @@ from langflow.services.triggers.listeners.adapters import (
     build_adapter,
     is_listener_kind,
 )
+from langflow.services.triggers.ownership import owned_by_trigger_owner
 from langflow.services.triggers.principal import trigger_execution_principal
 
 if TYPE_CHECKING:
@@ -143,9 +144,13 @@ async def load_desired_state(session: AsyncSession) -> dict[UUID, list[ListenerT
     """
     statement = (
         select(Trigger)
+        # Only through a connection the trigger's owner owns: a row that names a
+        # colleague's or an instance connection is never dialled, however it was
+        # written (``ownership.py``).
+        .join(Connection, col(Connection.id) == col(Trigger.connection_id))
         .where(
             Trigger.state == TriggerState.ACTIVE.value,
-            col(Trigger.connection_id).is_not(None),
+            owned_by_trigger_owner(),
         )
         # Ordered so the *first* trigger on a connection is the same row on
         # every pass: it is the one ``build_adapter`` is given, so an unordered
