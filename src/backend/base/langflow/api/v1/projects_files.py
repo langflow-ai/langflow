@@ -391,6 +391,8 @@ async def upload_project_flows(
         new_project.project_config = config
     created = await create_flows(session=session, flow_list=flow_list, current_user=current_user)
     if has_bindings:
-        await write_project_config_to_flows(session, new_project, previous_config=deepcopy(new_project.project_config))
+        await write_project_config_to_flows(
+            session, new_project, current_user=current_user, previous_config=deepcopy(new_project.project_config)
+        )
         created = [FlowRead.model_validate(await session.get(Flow, flow.id), from_attributes=True) for flow in created]
     return created

@@ -18,6 +18,7 @@ from lfx.components.models_and_agents.agent_helpers.source_evidence import EVIDE
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
 from lfx.graph.graph.base import Graph
 from lfx.projects.artifacts import AgentRunResult, CollectedEvidence, SourcedReport
+from lfx.projects.tool_packs import ToolExport, ToolPackReference, ToolPackToolBinding
 from lfx.schema.message import Message
 from lfx.schema.properties import Properties
 from pydantic import Field
@@ -275,3 +276,28 @@ async def test_incomplete_and_failed_agent_outputs_are_not_saved(properties):
 
 def test_unconfigured_message_properties_keep_their_existing_serialized_shape():
     assert "agent_run_result" not in Properties().model_dump()
+
+
+def test_dependency_evidence_uses_registered_tools_and_does_not_relabel_checkpointed_calls():
+    binding = ToolPackToolBinding(
+        reference=ToolPackReference(project_id=uuid4(), revision="a" * 64),
+        tool=ToolExport(flow_id=uuid4(), name="Lookup", revision="b" * 64),
+        version_id=uuid4(),
+    )
+    messages = [
+        ToolMessage(content="done", name="lookup", tool_call_id="success"),
+        ToolMessage(content="failed", name="lookup", tool_call_id="error", status="error"),
+        ToolMessage(
+            content="",
+            name="unrelated",
+            tool_call_id="forged",
+            artifact={"harness_tool_pack": binding.model_dump(mode="json")},
+        ),
+    ]
+    result = collect_tool_evidence(messages, CollectedEvidence(), tool_bindings={"lookup": binding})
+    assert [use.tool_call_id for use in result.tool_dependencies] == ["success"]
+    assert not result.sources
+    restored = CollectedEvidence.model_validate_json(result.model_dump_json())
+    changed = binding.model_copy(update={"version_id": uuid4()})
+    assert collect_tool_evidence(messages, restored, tool_bindings={"lookup": changed}) == result
+    assert collect_tool_evidence([], restored, tool_bindings={"lookup": changed}) == result

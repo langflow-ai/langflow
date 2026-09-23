@@ -11,6 +11,7 @@ policy gate on ``RunFlowBaseComponent.get_graph``.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
@@ -340,3 +341,60 @@ async def test_real_policy_lets_superuser_load_the_same_child_through_run_flow(
     assert nodes[0]["data"]["node"]["template"]["code"]["value"] == CALLER_AUTHORED_SOURCE
 
     await client.delete(f"api/v1/flows/{child_id}", headers=logged_in_headers_super_user)
+
+
+@pytest.mark.parametrize("is_superuser", [False, True])
+async def test_tool_pack_rechecks_policy_on_cached_definition(nested_env, monkeypatch, is_superuser):
+    from lfx.base.tools import run_flow as run_flow_module
+
+    nested_env.get_user_is_superuser.return_value = is_superuser
+    component = _component()
+    binding = SimpleNamespace(tool=SimpleNamespace(flow_id=str(uuid4()), name="Reviewed tool", description="Tool"))
+    source = _child_flow_data("# reviewed caller source")
+    original = deepcopy(source.data)
+    loader = AsyncMock(return_value=source)
+    prepared = {"nodes": [], "edges": []}
+    prepare = AsyncMock(return_value=prepared)
+    first, second = MagicMock(spec=Graph), MagicMock(spec=Graph)
+    constructor = Mock(side_effect=[first, second])
+    monkeypatch.setattr(component, "_tool_pack_binding", lambda: binding)
+    monkeypatch.setattr(run_flow_module, "get_tool_pack_flow", loader)
+    monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
+    monkeypatch.setattr(run_flow_module.Graph, "from_payload", constructor)
+
+    assert await component.get_graph(flow_id_selected=binding.tool.flow_id) is first
+    assert await component.get_graph(flow_id_selected=binding.tool.flow_id) is second
+
+    loader.assert_awaited_once_with(user_id=component.user_id, binding=binding)
+    assert prepare.await_count == 2
+    for call in prepare.await_args_list:
+        assert call.args[0] == original["data"]
+        assert call.kwargs["is_superuser"] is is_superuser
+    assert all(call.kwargs["payload"] is prepared for call in constructor.call_args_list)
+    assert source.data == original
+    assert component._pack_snapshot == original
+
+
+@pytest.mark.parametrize("warm_definition", [False, True])
+async def test_tool_pack_policy_denial_stops_graph_construction(nested_env, monkeypatch, warm_definition):  # noqa: ARG001
+    from lfx.base.tools import run_flow as run_flow_module
+
+    component = _component()
+    binding = SimpleNamespace(tool=SimpleNamespace(flow_id=str(uuid4()), name="Reviewed tool", description="Tool"))
+    loader = AsyncMock(return_value=_child_flow_data("# reviewed caller source"))
+    prepare = AsyncMock(return_value=None)
+    constructor = Mock(return_value=MagicMock(spec=Graph))
+    monkeypatch.setattr(component, "_tool_pack_binding", lambda: binding)
+    monkeypatch.setattr(run_flow_module, "get_tool_pack_flow", loader)
+    monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
+    monkeypatch.setattr(run_flow_module.Graph, "from_payload", constructor)
+    if warm_definition:
+        await component.get_graph(flow_id_selected=binding.tool.flow_id)
+        constructor.reset_mock()
+    prepare.side_effect = CustomComponentValidationError("custom components are restricted to administrators")
+
+    with pytest.raises(CustomComponentValidationError, match="restricted to administrators"):
+        await component.get_graph(flow_id_selected=binding.tool.flow_id)
+
+    constructor.assert_not_called()
+    loader.assert_awaited_once()

@@ -8,6 +8,7 @@ import pytest
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_job_service, session_scope
 from lfx.components.data_source.record_source import RecordSourceComponent
@@ -101,8 +102,9 @@ def registry():
 
 
 @pytest.mark.parametrize("gated", [False, True])
+@pytest.mark.parametrize("use_pack", [False, True])
 async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
-    client, logged_in_headers, active_user, gated
+    client, logged_in_headers, active_user, gated, use_pack
 ):
     project_id = await create_project(client, logged_in_headers, name="Offline evidence harness")
     components = registry()
@@ -121,7 +123,14 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
     )
     add_connection(source_flow, "ChatInput-query", "message", "OfflineSourceFixture-lookup", "query")
     add_connection(source_flow, "OfflineSourceFixture-lookup", "text", "RecordSource-capture", "content")
-    source_id = await create_flow(active_user, folder_id=project_id, data=source_flow["data"], name="offline-sources")
+    pack_id = (
+        await create_project(client, logged_in_headers, name="Offline evidence tools", project_type="tool-pack")
+        if use_pack
+        else None
+    )
+    source_id = await create_flow(
+        active_user, folder_id=pack_id or project_id, data=source_flow["data"], name="offline-sources"
+    )
     main = empty_flow("Evidence Agent")
     add_component(main, "Agent", components, component_id="Agent-research")
     configure_component(
@@ -139,7 +148,12 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
     add_connection(main, "Agent-research", "response", "ChatOutput-answer", "input_value")
     add_connection(main, "Agent-research", "response", "SourcedReport-save", "report")
     agent_id = await create_flow(active_user, folder_id=project_id, data=main["data"], name="Evidence Agent")
-    await save_config(client, logged_in_headers, project_id, {"agent_flow_id": agent_id, "tools": [source_id]})
+    config = {"agent_flow_id": agent_id, "tools": [source_id]}
+    if use_pack:
+        await save_config(client, logged_in_headers, pack_id, {"tools": [source_id]})
+        manifest = (await client.get(f"/api/v1/projects/{pack_id}/tool-pack", headers=logged_in_headers)).json()
+        config.update(tools=[], tool_packs=[manifest["reference"]])
+    await save_config(client, logged_in_headers, project_id, config)
     job_id = uuid4()
     jobs = get_job_service()
     await jobs.create_job(job_id=job_id, flow_id=UUID(agent_id), user_id=active_user.id)
@@ -184,6 +198,14 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
     assert all(len(source.content.encode()) > 128_000 for source in report.sources)
     assert {use.tool_call_id for use in report.source_uses} == {"call-alpha", "call-beta"}
     assert all(use.tool_name == model.tool_name for use in report.source_uses)
+    if use_pack:
+        assert {use.tool_call_id for use in report.tool_dependencies} == {"call-alpha", "call-beta"}
+        assert all(
+            use.binding.reference.model_dump(mode="json") == manifest["reference"] for use in report.tool_dependencies
+        )
+        assert all(str(use.binding.tool.flow_id) == source_id for use in report.tool_dependencies)
+    else:
+        assert report.tool_dependencies == ()
     assert report.claim_support == "not_evaluated"
     assert "Reading original" not in report.markdown
     report.require_resolved_citations()
@@ -196,6 +218,7 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
         run = AgentRunResult.model_validate(completed[-1].properties["agent_run_result"])
         assert run.evidence.sources == report.sources
         assert run.evidence.uses == report.source_uses
+        assert run.evidence.tool_dependencies == report.tool_dependencies
         assert run.answer == report.markdown
     for path in output["files"]:
         response = await client.get(f"api/v1/files/download/{path}", headers=logged_in_headers)
@@ -204,3 +227,43 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
             assert SourcedReport.model_validate_json(response.content) == report
         else:
             assert response.text == report.render_markdown()
+
+    if use_pack and not gated:
+        # The model can call a prepared tool more than once while its author edits
+        # the source. Each invocation must use the same reviewed definition.
+        async with session_scope() as session:
+            source = await session.get(Flow, UUID(source_id))
+            changed = deepcopy(source.data)
+            lookup = next(node for node in changed["nodes"] if node["id"] == "OfflineSourceFixture-lookup")
+            code = lookup["data"]["node"]["template"]["code"]
+            code["value"] = code["value"].replace("three observations", "unreviewed observations")
+            source.data = changed
+            session.add(source)
+        tool = graph.get_vertex("Agent-research").custom_component.tools[0]
+        result = await tool.ainvoke(
+            {
+                "type": "tool_call",
+                "id": "call-after-edit",
+                "name": tool.name,
+                "args": {"flow_tweak_data": {"ChatInput-query~input_value": "alpha"}},
+            }
+        )
+        assert result.status == "success"
+        assert "three observations" in str(result.artifact)
+        assert "unreviewed observations" not in str(result.artifact)
+        # A new run must explicitly review the changed pack, even if a previous
+        # Run Flow graph remains cached in the process.
+        fresh, _ = await build()
+        with pytest.raises(Exception, match="tool pack changed"):
+            await execute_until_pause(fresh)
+        manifest = (await client.get(f"/api/v1/projects/{pack_id}/tool-pack", headers=logged_in_headers)).json()
+        await save_config(client, logged_in_headers, project_id, {**config, "tool_packs": [manifest["reference"]]})
+        reviewed, _ = await build()
+        await execute_until_pause(reviewed)
+        revised_output = reviewed.get_vertex("SourcedReport-save").custom_component.get_output("artifact").value.data
+        revised = SourcedReport.model_validate(revised_output["artifact"])
+        assert all("unreviewed observations" in source.content for source in revised.sources)
+        assert all(
+            use.binding.reference.revision == manifest["reference"]["revision"] for use in revised.tool_dependencies
+        )
+        assert revised.tool_dependencies[0].binding.version_id != report.tool_dependencies[0].binding.version_id

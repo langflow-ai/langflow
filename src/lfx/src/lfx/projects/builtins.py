@@ -88,6 +88,19 @@ AGENT_HARNESS = register_project_type(
                 ),
             ),
             ProjectTypeField(
+                name="tool_packs",
+                section="Tools",
+                renders="project_refs",
+                input=StrInput(
+                    name="tool_packs",
+                    display_name="Tool packs",
+                    info="Reviewed tools from reusable Tool Pack projects.",
+                    list=True,
+                    value=[],
+                    show=False,
+                ),
+            ),
+            ProjectTypeField(
                 name="n_messages",
                 section="Runtime",
                 writes_to=FieldTarget("Agent", "n_messages"),
@@ -145,4 +158,28 @@ AGENT_HARNESS = register_project_type(
     )
 )
 
-__all__ = ["AGENT_HARNESS", "DEFAULT_PROJECT_TYPE", "FLOWS"]
+TOOL_PACK = register_project_type(
+    ProjectType(
+        name="tool-pack",
+        display_name="Tool Pack",
+        icon="Package",
+        description="Reusable tools supplied by the flows you select in this project.",
+        fields=(
+            ProjectTypeField(
+                name="tools",
+                section="Exported tools",
+                renders="project_flows",
+                slot_definition=TOOL,
+                input=StrInput(
+                    name="tools",
+                    display_name="Exported tools",
+                    info="Choose the flows other projects can use as tools. MCP publication is configured separately.",
+                    list=True,
+                    value=[],
+                ),
+            ),
+        ),
+    )
+)
+
+__all__ = ["AGENT_HARNESS", "DEFAULT_PROJECT_TYPE", "FLOWS", "TOOL_PACK"]
