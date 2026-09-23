@@ -32,8 +32,13 @@ can read it and an attacker cannot.
 The single exception is the Microsoft Graph subscription handshake, and it is an
 exception only because it is answered *before* any trigger is resolved: it
 echoes the caller's own ``validationToken`` and its response therefore does not
-depend on whether the public id exists. Slack's ``url_verification`` is not an
-exception - it arrives signed, so it is answered on the ordinary verified path.
+depend on whether the public id exists.
+
+Slack has its own route, ``/slack/apps/{registration_id}``, because a Slack app
+has exactly one Request URL for every workspace it is installed in: a delivery
+names an app and a workspace, never a trigger, and fans out to every trigger it
+matches. Its ``url_verification`` arrives signed, so it is answered on the
+verified path - and, since it names no trigger, before a single trigger exists.
 """
 
 from __future__ import annotations
@@ -49,7 +54,7 @@ from slowapi.errors import RateLimitExceeded
 from langflow.api.utils import DbSession
 from langflow.services.deps import get_settings_service
 from langflow.services.rate_limit.service import check_rate_limit
-from langflow.services.triggers.constants import INGRESS_PROVIDERS
+from langflow.services.triggers.constants import INGRESS_PROVIDERS, PROVIDER_SLACK
 from langflow.services.triggers.ingress import intake
 from langflow.services.triggers.ingress.verifiers import (
     REASON_BODY_TOO_LARGE,
@@ -60,9 +65,12 @@ from langflow.services.triggers.ingress.verifiers import (
     REASON_UNKNOWN_TRIGGER,
     IngressRejected,
     IngressRequest,
+    IngressSecrets,
     validation_token,
     verify,
 )
+from langflow.services.triggers.providers.slack import ingress as slack_ingress
+from langflow.services.triggers.providers.slack.events import SlackControl, normalize
 
 router = APIRouter(prefix="/triggers/ingress", tags=["Triggers"])
 
@@ -72,6 +80,8 @@ router = APIRouter(prefix="/triggers/ingress", tags=["Triggers"])
 _SCOPE_INGRESS = "trigger_ingress"
 _SCOPE_INGRESS_UNKNOWN = "trigger_ingress_unknown"
 _SCOPE_INGRESS_HANDSHAKE = "trigger_ingress_handshake"
+_SCOPE_SLACK_APP = "trigger_ingress_slack_app"
+_SCOPE_SLACK_TEAM = "trigger_ingress_slack_team"
 
 #: The one answer every rejection gets.
 _NOT_FOUND = {"detail": "Not found"}
@@ -80,10 +90,32 @@ _NOT_FOUND = {"detail": "Not found"}
 #: in the path so a malformed request never reaches a database query.
 _PUBLIC_ID = Annotated[str, Path(min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")]
 _PROVIDER = Annotated[str, Path(min_length=1, max_length=32, pattern=r"^[a-z][a-z0-9_]*$")]
+#: An OAuth registration id, as the operator named it in
+#: ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS``. Not a secret - the signing
+#: secret is what authenticates a delivery - but still bounded, so a malformed
+#: path never reaches the registration lookup.
+_REGISTRATION_ID = Annotated[str, Path(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")]
 
 
 def _reject() -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=_NOT_FOUND)
+
+
+def _unknown_budget_spent(request: Request, limit_per_minute: int) -> bool:
+    """Charge this client's probing budget. True when it is exhausted."""
+    try:
+        check_rate_limit(request, scope=_SCOPE_INGRESS_UNKNOWN, limit_per_minute=limit_per_minute)
+    except RateLimitExceeded:
+        return True
+    return False
+
+
+def _within_budget(request: Request, *, scope: str, limit_per_minute: int, key: str) -> bool:
+    try:
+        check_rate_limit(request, scope=scope, limit_per_minute=limit_per_minute, key=key)
+    except RateLimitExceeded:
+        return False
+    return True
 
 
 async def _bounded_body(request: Request, limit: int) -> bytes | None:
@@ -123,18 +155,7 @@ async def receive_provider_delivery(
 ) -> Response:
     """Accept one provider delivery and append it to the trigger's ledger."""
     settings = get_settings_service().settings
-
-    def _unknown_budget_spent() -> bool:
-        """Charge this client's probing budget. True when it is exhausted."""
-        try:
-            check_rate_limit(
-                request,
-                scope=_SCOPE_INGRESS_UNKNOWN,
-                limit_per_minute=settings.trigger_ingress_unknown_rate_limit_per_minute,
-            )
-        except RateLimitExceeded:
-            return True
-        return False
+    unknown_limit = settings.trigger_ingress_unknown_rate_limit_per_minute
 
     if not settings.trigger_ingress_enabled or provider not in INGRESS_PROVIDERS:
         # Charged before the audit row is written: the audit queue is bounded
@@ -142,7 +163,7 @@ async def receive_provider_delivery(
         # otherwise starve the pipeline that carries legitimate audit signal.
         # No real provider is affected - the provider set is closed, so an
         # unrecognised one is always garbage.
-        if _unknown_budget_spent():
+        if _unknown_budget_spent(request, unknown_limit):
             return _reject()
         await intake.audit_ingress(
             accepted=False, provider=provider, public_id=public_id, target=None, reason=REASON_UNKNOWN_PROVIDER
@@ -181,7 +202,7 @@ async def receive_provider_delivery(
     # found: verification is cheap but not free, and an unknown id must not be
     # able to spend a real trigger's budget.
     if target is None:
-        limited = _unknown_budget_spent()
+        limited = _unknown_budget_spent(request, unknown_limit)
     else:
         try:
             check_rate_limit(
@@ -292,4 +313,109 @@ async def receive_provider_delivery(
         await logger.adebug("Trigger %s: ingress redelivery collapsed by the ledger", target.trigger_id)
     # 2xx for a duplicate too. Answering an error would teach the provider that
     # its retry failed, and it would keep retrying.
+    return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.post("/slack/apps/{registration_id}")
+async def receive_slack_app_delivery(
+    request: Request,
+    session: DbSession,
+    registration_id: _REGISTRATION_ID,
+) -> Response:
+    """Accept one Slack Events API delivery and fan it out to the triggers it fires.
+
+    The same pipeline as the per-trigger route, with the app in place of the
+    trigger: resolve the registration, rate-limit, read a bounded body, verify
+    Slack's signature with the registration's signing secret, and only then
+    touch the database. Every refusal is the same ``404``.
+    """
+    settings = get_settings_service().settings
+    app = slack_ingress.resolve_app(registration_id) if settings.trigger_ingress_enabled else None
+    if app is None:
+        if _unknown_budget_spent(request, settings.trigger_ingress_unknown_rate_limit_per_minute):
+            return _reject()
+        await slack_ingress.audit_delivery(
+            accepted=False, registration_id=registration_id, reason=slack_ingress.REASON_UNKNOWN_APP
+        )
+        return _reject()
+
+    if not _within_budget(
+        request,
+        scope=_SCOPE_SLACK_APP,
+        limit_per_minute=settings.trigger_ingress_slack_app_rate_limit_per_minute,
+        key=f"slack-app:{registration_id}",
+    ):
+        await slack_ingress.audit_delivery(accepted=False, registration_id=registration_id, reason=REASON_RATE_LIMITED)
+        return _reject()
+
+    body = await _bounded_body(request, settings.trigger_ingress_max_body_bytes)
+    if body is None:
+        await slack_ingress.audit_delivery(
+            accepted=False, registration_id=registration_id, reason=REASON_BODY_TOO_LARGE
+        )
+        return _reject()
+
+    try:
+        verified = verify(
+            IngressRequest(provider=PROVIDER_SLACK, body=body, headers=request.headers, query=request.query_params),
+            IngressSecrets(signing_secret=app.signing_secret),
+            tolerance_s=settings.trigger_ingress_signature_tolerance_s,
+        )
+    except IngressRejected as rejection:
+        await slack_ingress.audit_delivery(accepted=False, registration_id=registration_id, reason=rejection.reason)
+        return _reject()
+
+    retry = {
+        "retry_num": request.headers.get("X-Slack-Retry-Num"),
+        "retry_reason": request.headers.get("X-Slack-Retry-Reason"),
+    }
+    if verified.handshake is not None:
+        # The Request URL handshake. It names no trigger, so it succeeds for an
+        # app with none armed yet - which is exactly when an operator saves the
+        # URL in the Slack app configuration.
+        await slack_ingress.audit_delivery(accepted=True, registration_id=registration_id, reason=REASON_HANDSHAKE)
+        return PlainTextResponse(content=verified.handshake, media_type=verified.handshake_media_type)
+
+    event = normalize(verified.payload)
+    if isinstance(event, SlackControl):
+        # ``app_rate_limited``: Slack stopped delivering this workspace's events
+        # for the rest of the minute. Nothing to run; the audit row is how an
+        # operator learns why a workspace went quiet.
+        await slack_ingress.audit_delivery(
+            accepted=True,
+            registration_id=registration_id,
+            reason=slack_ingress.REASON_APP_RATE_LIMITED,
+            team_id=event.team_id,
+            **retry,
+        )
+        return Response(status_code=status.HTTP_200_OK)
+    if event is None:
+        # A type no trigger subscribes to. Acknowledged, so Slack does not retry it.
+        await slack_ingress.audit_delivery(
+            accepted=True, registration_id=registration_id, reason=slack_ingress.REASON_IGNORED, **retry
+        )
+        return Response(status_code=status.HTTP_200_OK)
+
+    # Per workspace, after verification: the workspace is only known from the
+    # signed body, and only a leaked signing secret can reach this ceiling.
+    if not _within_budget(
+        request,
+        scope=_SCOPE_SLACK_TEAM,
+        limit_per_minute=settings.trigger_ingress_slack_team_rate_limit_per_minute,
+        key=f"slack-team:{registration_id}:{event.payload['team_id']}",
+    ):
+        await slack_ingress.audit_delivery(
+            accepted=False, registration_id=registration_id, reason=REASON_RATE_LIMITED, event=event, **retry
+        )
+        return _reject()
+
+    fanout = await slack_ingress.fan_out(session, registration_id=registration_id, event=event)
+    # One commit for the whole delivery, and the acknowledgement only after it:
+    # a slow commit answers Slack late and Slack retries, which the ledger's
+    # (trigger, event_id) key collapses. Answering before the commit is the
+    # only order that could lose an event, so it is the one this never does.
+    await session.commit()
+    await slack_ingress.audit_delivery(
+        accepted=True, registration_id=registration_id, event=event, fanout=fanout, **retry
+    )
     return Response(status_code=status.HTTP_202_ACCEPTED)

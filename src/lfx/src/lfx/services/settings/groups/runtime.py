@@ -263,6 +263,25 @@ class RuntimeSettings(BaseModel):
     """Consecutive renewal failures before the problem is surfaced on the
     trigger the subscription feeds. A success clears it."""
 
+    # Slack sources (TRG-5). One Events API Request URL serves every workspace
+    # the app is installed in, so its budgets are per app and per workspace
+    # rather than per trigger; Socket Mode is bounded by Slack's per-app cap.
+    trigger_ingress_slack_app_rate_limit_per_minute: int = Field(default=20_000, gt=0)
+    """Ceiling on deliveries to one Slack app's Request URL, counted before the
+    signature is checked. A flood guard, not a quota: it sits well above what a
+    hosted app installed in many workspaces receives, because a verified Slack
+    delivery that is refused is retried, and one that keeps being refused gets
+    the app's event delivery disabled by Slack."""
+    trigger_ingress_slack_team_rate_limit_per_minute: int = Field(default=1_000, gt=0)
+    """Ceiling on verified deliveries for one workspace of one Slack app. Twice
+    Slack's own delivery cap (30,000 per workspace per app per hour), so only a
+    leaked signing secret replaying forged events ever reaches it."""
+    trigger_slack_socket_max_connections: int = Field(default=10, gt=0, le=10)
+    """Slack Socket Mode connections one app may hold open, as Slack counts
+    them. Slack allows ten per app; a listener whose new socket would take the
+    app past this closes it and backs off, leaving the sockets already open to
+    carry the app's events."""
+
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.
 

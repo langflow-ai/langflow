@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import and_
 
 from langflow.services.database.models.connection.model import Connection
-from langflow.services.database.models.connection.schemas import ConnectionOwnershipMode
+from langflow.services.database.models.connection.schemas import ConnectionOwnershipMode, PersistedConnectionStatus
 from langflow.services.database.models.trigger.model import Trigger
 
 if TYPE_CHECKING:
@@ -35,6 +35,13 @@ if TYPE_CHECKING:
 
     from sqlalchemy.sql.elements import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+#: Connection statuses no amount of retrying fixes: the owner has to re-consent.
+#: A trigger on one of these is neither dialled nor fanned out to.
+UNUSABLE_CONNECTION_STATUSES = frozenset(
+    {PersistedConnectionStatus.REVOKED.value, PersistedConnectionStatus.EXPIRED.value}
+)
 
 
 class TriggerConnectionNotOwnedError(ValueError):

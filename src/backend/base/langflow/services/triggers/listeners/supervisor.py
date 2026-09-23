@@ -55,7 +55,6 @@ from pydantic import ValidationError
 from sqlmodel import col, select, update
 
 from langflow.services.database.models.connection.model import Connection
-from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
@@ -68,7 +67,7 @@ from langflow.services.triggers.listeners.adapters import (
     build_adapter,
     is_listener_kind,
 )
-from langflow.services.triggers.ownership import owned_by_trigger_owner
+from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, owned_by_trigger_owner
 from langflow.services.triggers.principal import trigger_execution_principal
 
 if TYPE_CHECKING:
@@ -80,9 +79,7 @@ if TYPE_CHECKING:
 
 #: Connection statuses that no amount of retrying fixes. The owner has to
 #: re-consent, so the triggers say so and the listener stops dialling.
-_UNUSABLE_CONNECTION_STATUSES = frozenset(
-    {PersistedConnectionStatus.REVOKED.value, PersistedConnectionStatus.EXPIRED.value}
-)
+_UNUSABLE_CONNECTION_STATUSES = UNUSABLE_CONNECTION_STATUSES
 
 #: Adapter failures that mean the same thing.
 _NEEDS_RECONNECT_ERRORS = (

@@ -77,14 +77,16 @@ LISTENER_FAKE_MECHANISM = "selftest.tick"
 #: name their transport through ``config.mechanism_id``.
 KIND_INBOUND_WEBHOOK = "inbound_webhook"
 
-#: Providers the ingress route accepts a delivery for. ``webhook`` is the
-#: generic-HMAC pseudo-provider for ``inbound_webhook`` triggers; the other
-#: three are the wave-1 providers frozen by the gate.
+#: Providers the per-trigger ingress route accepts a delivery for. ``webhook``
+#: is the generic-HMAC pseudo-provider for ``inbound_webhook`` triggers.
+#: Slack is deliberately absent: a Slack app has exactly one Request URL for
+#: every workspace it is installed in, so its deliveries arrive on the per-app
+#: route and fan out to triggers there, rather than naming one trigger each.
 PROVIDER_WEBHOOK = "webhook"
 PROVIDER_SLACK = "slack"
 PROVIDER_MICROSOFT = "microsoft"
 PROVIDER_GOOGLE = "google"
-INGRESS_PROVIDERS = frozenset({PROVIDER_WEBHOOK, PROVIDER_SLACK, PROVIDER_MICROSOFT, PROVIDER_GOOGLE})
+INGRESS_PROVIDERS = frozenset({PROVIDER_WEBHOOK, PROVIDER_MICROSOFT, PROVIDER_GOOGLE})
 
 #: Ledger dedupe-key prefix for a Slack event, from either Slack mechanism. The
 #: one prefix named for a provider rather than a producer, on purpose: Slack's
@@ -112,6 +114,11 @@ AUDIT_SUBSCRIPTION_REVOKE = "trigger_subscription:revoke"
 KIND_SLACK_MESSAGE = "slack.message"
 KIND_SLACK_REACTION = "slack.reaction"
 SLACK_TRIGGER_KINDS = frozenset({KIND_SLACK_MESSAGE, KIND_SLACK_REACTION})
+
+#: ``config.mechanism_id`` values for Slack, equal to the ``mechanism_id`` rows
+#: of design/dedicated-integrations-triggers/matrices/slack-events.json.
+MECHANISM_SLACK_EVENTS_API = "slack.events_api"
+MECHANISM_SLACK_SOCKET_MODE = "slack.socket_mode"
 
 #: Kinds whose configuration, connection and mechanism are owned by a canvas
 #: node and written only by flow-save reconciliation. The owner API never
