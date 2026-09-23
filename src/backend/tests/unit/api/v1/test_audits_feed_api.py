@@ -318,6 +318,27 @@ async def test_an_export_rejects_an_unknown_format(client, logged_in_headers_sup
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+async def test_the_export_releases_its_connection_between_batches(client, logged_in_headers_super_user):  # noqa: ARG001
+    """A slow reader must not hold a pooled connection for the whole download."""
+    from langflow.services.audit.feed import AuditFeedFilters, iter_feed_batches_per_session
+    from sqlalchemy import inspect as sa_inspect
+
+    await seed(*(resource_event(minute) for minute in range(6)))
+    filters = AuditFeedFilters(
+        since=datetime(2021, 3, 4, tzinfo=timezone.utc), until=datetime(2021, 3, 5, tzinfo=timezone.utc)
+    )
+
+    batches = 0
+    async for batch in iter_feed_batches_per_session(filters, batch_size=2):
+        batches += 1
+        # Handed over detached: the session that read them is already closed, so
+        # the connection is back in the pool while the client consumes the chunk.
+        assert all(sa_inspect(feed_row.row).session is None for feed_row in batch)
+        assert all(feed_row.row.action for feed_row in batch), "the rows are still readable"
+
+    assert batches >= 3, "the walk should span several batches"
+
+
 async def test_an_export_spanning_many_batches_keeps_every_row_once_in_order(client, logged_in_headers_super_user):
     rows = [resource_event(index / 60) if index % 3 else authz_event(index / 60) for index in range(1203)]
     await seed(*rows)

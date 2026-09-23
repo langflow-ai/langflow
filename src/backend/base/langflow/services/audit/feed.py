@@ -34,6 +34,7 @@ from langflow.services.audit.query import (
 from langflow.services.database.models.audit_event.model import AuditDatabaseClock, AuditEvent, as_utc
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.user.model import User
+from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -374,6 +375,39 @@ async def iter_feed_batches(
         session.expunge_all()
 
 
+async def iter_feed_batches_per_session(
+    filters: AuditFeedFilters,
+    *,
+    batch_size: int = 500,
+) -> AsyncIterator[list[AuditFeedRow]]:
+    """Every matching row, newest first, on a session that lives for one batch.
+
+    A streamed export hands each batch to a client that may read it slowly. Holding
+    one pooled connection and its transaction open for the whole download would let
+    a single stalled download starve the pool, and an idle-transaction timeout would
+    break the file after the response already promised 200. The keyset cursor and
+    the frozen cutoff carry the walk from one session to the next, so the connection
+    is back in the pool while the client reads.
+    """
+    state: CursorState | None = None
+    cutoff: datetime | None = None
+    fingerprint = filters.fingerprint()
+    while True:
+        async with session_scope() as session:
+            if cutoff is None:
+                cutoff = await _database_cutoff(session)
+            rows = await _merged_window(session, filters, state, cutoff, batch_size)
+            # Detach before the scope closes, so the rows outlive the session that
+            # read them and the caller never touches a closed one.
+            session.expunge_all()
+        if rows:
+            yield rows
+        if len(rows) < batch_size:
+            return
+        timestamp, event_id = rows[-1].key
+        state = CursorState(fingerprint=fingerprint, cutoff=cutoff, timestamp=timestamp, event_id=event_id)
+
+
 async def iter_feed(
     session: AsyncSession,
     filters: AuditFeedFilters,
@@ -417,5 +451,6 @@ __all__ = [
     "frozen_until",
     "iter_feed",
     "iter_feed_batches",
+    "iter_feed_batches_per_session",
     "list_feed",
 ]
