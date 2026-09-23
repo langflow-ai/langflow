@@ -536,7 +536,12 @@ async def services_on(request, monkeypatch, tmp_path):
             admin_engine.dispose()
 
 
-async def _default_superuser_owning_work(*, owns_work: bool = True, logged_in: bool = False):
+async def _default_superuser_owning_work(
+    *,
+    owns_work: bool = True,
+    logged_in: bool = False,
+    password: str = "old-password",  # noqa: S107  # pragma: allowlist secret
+):
     """The account an AUTO_LOGIN instance leaves behind, as it looks after a migration."""
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.folder.model import Folder
@@ -545,7 +550,7 @@ async def _default_superuser_owning_work(*, owns_work: bool = True, logged_in: b
     async with session_scope() as session:
         user = User(
             username=DEFAULT_SUPERUSER,
-            password=get_auth_service().get_password_hash("old-password"),
+            password=get_auth_service().get_password_hash(password),
             is_superuser=True,
             is_active=True,
             last_login_at=datetime.now(timezone.utc) if logged_in else None,
@@ -584,8 +589,8 @@ async def _default_superuser():
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
 async def test_default_superuser_that_owns_work_is_kept_and_locked(services_on):  # noqa: ARG001
-    """Another superuser is configured, so the old account keeps its data and loses its password."""
-    user_id = await _default_superuser_owning_work()
+    """Another superuser is configured, so the old account keeps its data and loses its default password."""
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     async with session_scope() as session:
         await teardown_superuser(get_settings_service(), session)
@@ -594,8 +599,27 @@ async def test_default_superuser_that_owns_work_is_kept_and_locked(services_on):
     assert kept is not None
     assert kept.id == user_id
     assert await _work_owned_by(user_id) == (1, 1, 1)
-    for guess in ("old-password", LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(), "admin-password"):
+    for guess in ("", LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(), "admin-password"):
         assert not verify_password(guess, kept.password)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_a_password_an_admin_set_survives_the_next_teardown(services_on):  # noqa: ARG001
+    """An admin resets the locked account; a restart before its first sign-in must not undo that."""
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    async with session_scope() as session:
+        user = await session.get(User, user_id)
+        user.password = get_auth_service().get_password_hash("set-by-an-admin")
+        session.add(user)
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    assert verify_password("set-by-an-admin", (await _default_superuser()).password)
 
 
 @pytest.mark.asyncio

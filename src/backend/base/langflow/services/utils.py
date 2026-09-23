@@ -429,8 +429,9 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
 
     - it owns nothing: delete it, as before;
     - the configured superuser is this same account: keep it, with the configured password;
-    - otherwise: keep it and its data, and replace its password with a random one. Another
-      superuser can set a new one from the Admin page.
+    - otherwise: keep it and its data, and replace an empty or legacy default password with a
+      random one. Another superuser can set a new one from the Admin page, and that password
+      is kept on later restarts.
 
     An account that has signed in (``last_login_at`` set) is left alone.
     """
@@ -464,8 +465,13 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
                 )
             return
 
-        # ponytail: re-randomised on every startup and shutdown until someone signs in with it,
-        # so a password an admin set is replaced if the service restarts before that first sign-in.
+        # Only a default password makes this account usable by anyone who knows the defaults.
+        # Any other password was set on purpose, e.g. by an admin after the last teardown, and a
+        # restart before its first sign-in must not undo that.
+        defaults = ("", LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+        if user.password and not any(auth.verify_password(default, user.password) for default in defaults):
+            await logger.adebug("Default superuser owns data and has a non-default password; left as is.")
+            return
         user.password = auth.get_password_hash(token_urlsafe(32))
         session.add(user)
         await logger.awarning(
