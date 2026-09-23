@@ -57,16 +57,29 @@ class AuditEventCleanupWorker(AuditLogCleanupWorker):
     it gates on and what it deletes.
     """
 
+    label = "audit_events"
+
     async def start(self) -> None:
         if self._task is not None:
+            await logger.awarning("%s cleanup worker is already running", self.label)
             return
         settings_service = get_settings_service()
-        settings = settings_service.settings
-        if not settings.audit_enabled or int(settings.audit_retention_days) <= 0:
+        retention_days = int(settings_service.settings.audit_retention_days)
+        # The window, not the write switch: rows written before production was
+        # turned off still have to age out, and the startup sweep alone only
+        # prunes what was already expired at boot.
+        if retention_days <= 0:
+            await logger.adebug("%s cleanup worker not started: retention disabled", self.label)
             return
         self._interval = self._resolve_interval(settings_service.auth_settings)
         self._stop_event.clear()
         self._task = asyncio.create_task(self._run(), name="audit-events-cleanup")
+        await logger.adebug(
+            "Started %s cleanup worker (interval=%ss, retention=%sd)",
+            self.label,
+            self._interval,
+            retention_days,
+        )
 
     async def _run_once(self) -> int:
         try:

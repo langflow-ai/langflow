@@ -61,7 +61,9 @@ def resolve_audit_actor(user_id: UUID | None) -> AuditActor:
     if user_id is None:
         return AuditActor(user_id=None, actor_type=AuditActorType.UNKNOWN, actor_id=None)
     context = get_current_auth_context()
-    if context is not None and context.method == AUTH_METHOD_API_KEY and context.api_key_id is not None:
+    if context is not None and context.method == AUTH_METHOD_API_KEY:
+        # An environment-sourced key authenticates without a key record, so the
+        # credential is still an API key and simply has no id to name.
         return AuditActor(user_id=user_id, actor_type=AuditActorType.API_KEY, actor_id=context.api_key_id)
     return AuditActor(user_id=user_id, actor_type=AuditActorType.USER, actor_id=user_id)
 

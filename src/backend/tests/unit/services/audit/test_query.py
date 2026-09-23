@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -40,8 +42,8 @@ async def _insert(session, *, at: datetime, **overrides):
     return event
 
 
-async def _walk(session, filters, limit):
-    seen, cursor = [], None
+async def _walk(session, filters, limit, cursor=None):
+    seen = []
     while True:
         page = await list_audit_events(session, filters, limit=limit, cursor=cursor)
         seen.extend(page.items)
@@ -59,7 +61,7 @@ async def test_a_traversal_returns_every_event_once_newest_first_even_on_timesta
     assert [event.id for event in walked] == [event.id for event in expected]
 
 
-async def test_events_inserted_after_the_first_page_do_not_appear_midway(audit_session):
+async def test_rows_timestamped_after_the_traversal_started_are_never_returned(audit_session):
     for index in range(6):
         await _insert(audit_session, at=datetime.now(timezone.utc) - timedelta(minutes=10 - index))
     filters = AuditEventFilters(resource_type=PROJECTS)
@@ -188,6 +190,44 @@ async def test_a_cursor_cannot_be_replayed_with_different_filters(audit_session)
             limit=1,
             cursor=page.next_cursor,
         )
+
+
+async def test_a_late_commit_with_an_earlier_timestamp_is_reached_on_a_later_page(audit_session):
+    """Invariant 5: the cutoff bounds timestamps, not commits.
+
+    A row is timestamped when its INSERT runs, so an event staged before the
+    first page and committed after it keeps a timestamp the walk has not passed
+    and is returned later. Each row is still returned once, newest first.
+    """
+    now = datetime.now(timezone.utc)
+    early = [await _insert(audit_session, at=now - timedelta(minutes=10 - index)) for index in range(6)]
+    filters = AuditEventFilters(resource_type=PROJECTS)
+    first = await list_audit_events(audit_session, filters, limit=3)
+
+    # Older than every row page one returned, so it lies ahead of the cursor.
+    staged_earlier = await _insert(audit_session, at=first.items[-1].timestamp - timedelta(seconds=1))
+    rest = await _walk(audit_session, filters, limit=3, cursor=first.next_cursor)
+
+    walked = [*first.items, *rest]
+    assert staged_earlier.id in {event.id for event in walked}
+    assert len(walked) == len(early) + 1
+    assert len({event.id for event in walked}) == len(walked)
+    assert [event.timestamp for event in walked] == sorted((event.timestamp for event in walked), reverse=True)
+
+
+async def test_a_cursor_with_an_out_of_range_datetime_is_refused(audit_session):
+    """Astimezone raises OverflowError near datetime.min, which is not a ValueError."""
+    payload = {
+        "v": 2,
+        "f": "x",
+        "c": "0001-01-01T00:00:00+01:00",
+        "t": "2026-01-01T00:00:00",
+        "i": str(uuid4()),
+    }
+    cursor = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+
+    with pytest.raises(AuditCursorError):
+        await list_audit_events(audit_session, AuditEventFilters(resource_type=PROJECTS), limit=1, cursor=cursor)
 
 
 @pytest.mark.parametrize("cursor", ["not-a-cursor", "", "e30", "eyJ2IjoxfQ", "%%%"])

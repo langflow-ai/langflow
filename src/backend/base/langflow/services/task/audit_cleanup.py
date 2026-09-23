@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from lfx.log.logger import logger
 
@@ -36,6 +36,9 @@ DEFAULT_CLEANUP_INTERVAL_SECONDS = 86400
 class AuditLogCleanupWorker:
     """Periodically prune ``authz_audit_log`` rows past the retention window.
 
+    Subclasses sweep another store and set :attr:`label`, so start and stop name
+    the worker that actually ran.
+
     The worker is a no-op unless ``AUTHZ_AUDIT_ENABLED`` is True and
     ``AUTHZ_AUDIT_RETENTION_DAYS`` is greater than 0 — both gates are evaluated
     in :meth:`start`, so a disabled deployment never schedules a task. The
@@ -49,6 +52,9 @@ class AuditLogCleanupWorker:
             Primarily a testing seam so the schedule can be exercised quickly
             without mutating global settings.
     """
+
+    #: The store this worker sweeps; it names the worker in its own logs.
+    label: ClassVar[str] = "authz_audit_log"
 
     def __init__(self, *, interval: float | None = None) -> None:
         self._interval_override = interval
@@ -70,7 +76,7 @@ class AuditLogCleanupWorker:
     async def start(self) -> None:
         """Start the periodic cleanup task, honouring the audit/retention gates."""
         if self._task is not None:
-            await logger.awarning("Audit-log cleanup worker is already running")
+            await logger.awarning("%s cleanup worker is already running", self.label)
             return
 
         auth_settings = get_settings_service().auth_settings
@@ -94,7 +100,8 @@ class AuditLogCleanupWorker:
         self._stop_event.clear()
         self._task = asyncio.create_task(self._run(), name="authz-audit-cleanup")
         await logger.adebug(
-            "Started authz_audit_log cleanup worker (interval=%ss, retention=%sd)",
+            "Started %s cleanup worker (interval=%ss, retention=%sd)",
+            self.label,
             self._interval,
             retention_days,
         )
@@ -103,15 +110,15 @@ class AuditLogCleanupWorker:
         """Stop the cleanup task gracefully, waiting for the current sweep to end."""
         if self._task is None:
             # Common path when auditing is disabled — nothing was ever scheduled.
-            await logger.adebug("Audit-log cleanup worker is not running")
+            await logger.adebug("%s cleanup worker is not running", self.label)
             return
 
-        await logger.adebug("Stopping authz_audit_log cleanup worker...")
+        await logger.adebug("Stopping %s cleanup worker...", self.label)
         self._stop_event.set()
         with contextlib.suppress(asyncio.CancelledError):
             await self._task
         self._task = None
-        await logger.adebug("authz_audit_log cleanup worker stopped")
+        await logger.adebug("%s cleanup worker stopped", self.label)
 
     async def _run(self) -> None:
         """Prune the audit log every interval until stopped.
