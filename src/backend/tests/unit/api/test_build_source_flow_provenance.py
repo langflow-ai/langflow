@@ -105,6 +105,13 @@ async def test_generate_flow_events_maps_rejected_file_tweaks_to_bad_request(mon
     monkeypatch.setattr(build_module, "get_telemetry_service", lambda: telemetry_service)
     monkeypatch.setattr(build_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(build_module, "build_graph_from_db", AsyncMock(return_value=graph))
+    # The tweak-validation pass only needs to reach the mocked update_raw_params, which
+    # supplies the containment rejection; opt out of the restricted default so the
+    # stand-in vertex (no graph scopes or storage service) takes the unrestricted path.
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
     unexpected_log = AsyncMock()
     monkeypatch.setattr(build_module.logger, "aexception", unexpected_log)
 

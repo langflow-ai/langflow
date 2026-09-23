@@ -839,9 +839,12 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         return ConnectionRead.model_validate(
             {
                 **row.model_dump(),
-                # A reason explains only the error status, so a writer that
-                # restores another status cannot leave a stale cause visible.
-                "status_reason": row.status_reason if row.status == PersistedConnectionStatus.ERROR.value else None,
+                # A failed reauthorization can leave existing credentials
+                # usable. Keep that attempt's outcome visible to the dialog.
+                "status_reason": row.status_reason
+                if row.status == PersistedConnectionStatus.ERROR.value
+                or row.status_reason in {"oauth-denied", "oauth-expired", "oauth-failed"}
+                else None,
                 "has_credentials": has_credentials,
             }
         )
