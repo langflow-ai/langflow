@@ -314,6 +314,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 "lfx.components.files_and_knowledge.save_file.get_settings_service",
                 return_value=settings_service_mock,
             ),
+            patch(
+                "lfx.utils.file_path_security.get_settings_service",
+                return_value=settings_service_mock,
+            ),
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db
@@ -375,6 +379,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 ) as mock_get_user,
                 patch(
                     "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
                     return_value=settings_service_mock,
                 ),
             ):
@@ -617,6 +625,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 ) as mock_get_user,
                 patch(
                     "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
                     return_value=settings_service_mock,
                 ),
             ):
