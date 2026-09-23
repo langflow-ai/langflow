@@ -235,12 +235,8 @@ async def test_global_scope_combines_reserved_project_and_resource_exclusions(as
         owned_excepted_flow.id,
         concrete_flow.id,
     }
-    assert resource_visible_in_scope(
-        resource_id=ordinary_flow.id, project_id=ordinary_project_id, visibility=scope
-    )
-    assert not resource_visible_in_scope(
-        resource_id=reserved_flow.id, project_id=reserved_project_id, visibility=scope
-    )
+    assert resource_visible_in_scope(resource_id=ordinary_flow.id, project_id=ordinary_project_id, visibility=scope)
+    assert not resource_visible_in_scope(resource_id=reserved_flow.id, project_id=reserved_project_id, visibility=scope)
     assert not resource_visible_in_scope(
         resource_id=excepted_ordinary_flow.id, project_id=ordinary_project_id, visibility=scope
     )
@@ -251,9 +247,7 @@ async def test_global_scope_combines_reserved_project_and_resource_exclusions(as
     assert not resource_visible_in_scope(
         resource_id=owned_excepted_flow.id, project_id=reserved_project_id, visibility=scope
     )
-    assert resource_visible_in_scope(
-        resource_id=concrete_flow.id, project_id=reserved_project_id, visibility=scope
-    )
+    assert resource_visible_in_scope(resource_id=concrete_flow.id, project_id=reserved_project_id, visibility=scope)
     assert not resource_visible_in_scope(
         resource_id=concrete_excepted_flow.id, project_id=reserved_project_id, visibility=scope
     )
