@@ -6,7 +6,15 @@ Two independent classes cover the two Chroma deployment modes:
   directory at ``kb_path``.  No credentials needed.
 * ``ChromaCloudBackend`` — ``chromadb.CloudClient`` connecting to Chroma Cloud.
   Credentials (API key; optionally tenant / database) are resolved through
-  Langflow's variable service or env vars.
+  Langflow's variable service or env vars. Users who resolve to the same tenant
+  and database share one namespace, so the collection is owner-scoped (the same
+  ``lf_<sha256[:24]>`` name pgvector gives the KB's table) rather than named
+  after the KB, whose name is only unique per user. ``backend_config`` may set
+  ``collection_name`` to use an existing collection instead; Alembic revision
+  ``386662af02e9`` pins KBs created before owner scoping to their ``kb_name``
+  collection that way, or records ``legacy_shared_collection`` when KBs of
+  several owners already used that collection. Only a superuser may persist
+  ``collection_name`` (see ``naming.ensure_storage_routing_allowed``).
 
 ``create_backend()`` in the registry dispatches to the right class based on
 ``backend_config["mode"]``; call sites never instantiate these directly.
@@ -18,6 +26,7 @@ backend handle.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import gc
 import uuid
@@ -36,8 +45,11 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
+from lfx.base.knowledge_bases.backends.destination_policy import enforce_kb_destination
+from lfx.base.knowledge_bases.backends.naming import resolve_storage_name
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -46,6 +58,13 @@ if TYPE_CHECKING:
     from chromadb.api import ClientAPI
     from langchain_core.embeddings import Embeddings
     from langchain_core.vectorstores import VectorStore
+
+
+# ``backend_config`` keys for Chroma Cloud collection routing. The origin and
+# shared markers are written by alembic revision ``386662af02e9``.
+COLLECTION_NAME_KEY = "collection_name"
+COLLECTION_NAME_ORIGIN_KEY = "collection_name_origin"
+LEGACY_SHARED_COLLECTION_KEY = "legacy_shared_collection"
 
 
 # ---------------------------------------------------------------------------
@@ -293,6 +312,52 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         self._resolved_api_key = await self.resolve_required_secret(cfg.get("api_key_variable") or "CHROMA_API_KEY")
         self._resolved_tenant = await self.resolve_secret(cfg.get("tenant_variable") or "CHROMA_TENANT")
         self._resolved_database = await self.resolve_secret(cfg.get("database_variable") or "CHROMA_DATABASE")
+        await self._validate_cloud_target()
+
+    async def _validate_cloud_target(self) -> None:
+        """SSRF-validate the tenant-controlled ``cloud_host`` / ``cloud_port``.
+
+        Both keys come straight from the request body's ``backend_config`` and
+        land in ``chromadb.CloudClient``, which makes server-side connections
+        whose outcome the test-connection route echoes back. Without validation
+        a tenant can probe cloud-metadata (169.254.169.254), RFC1918, or loopback
+        targets from the server's network position. Apply the same connector SSRF
+        policy every other tenant-URL sink uses; operators reach legitimate
+        internal hosts via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname``
+        blocks, so the check runs off the event loop. An absent ``cloud_host``
+        means the chromadb default (``api.trychroma.com``), a fixed public host
+        with no tenant input, so neither gate has anything to judge.
+
+        A custom host also has to clear ``enforce_kb_destination``: chromadb builds
+        its own ``httpx`` client inside ``CloudClient`` and dials during
+        construction, so the address this check validates cannot be pinned for the
+        connection that follows. ``cloud_host`` is a testing-only knob upstream
+        (chromadb marks it so), so requiring the operator to approve it in
+        ``LANGFLOW_KB_ALLOWED_HOSTS`` leaves the ordinary Chroma Cloud path alone.
+        """
+        cfg = self.backend_config
+        cloud_host = cfg.get("cloud_host")
+        if not cloud_host:
+            return
+        host = str(cloud_host)
+        port = cfg.get("cloud_port")
+        # chromadb.CloudClient takes a bare host (https implied); keep an
+        # explicit scheme when one was supplied, else construct an https URL so
+        # the validator has a parseable target.
+        target = host if "://" in host else f"https://{host}:{int(port) if port else 443}"
+        # ``cloud_host`` always arrives in the request body, so it is tenant-supplied by
+        # construction — there is no env-var provenance to consider here. chromadb builds its
+        # own httpx client (and dials during construction), so the validated address cannot be
+        # pinned; the operator has to have approved the host.
+        enforce_kb_destination(target, source="request", description="the knowledge base's cloud_host")
+        try:
+            await asyncio.to_thread(validate_connector_url_for_ssrf, target)
+        except SSRFProtectionError as exc:
+            # Re-raised as SSRFProtectionError (a ValueError subclass, so existing config
+            # paths still catch it): test_connection echoes type(exc).__name__ back to the
+            # caller, and a blocked destination should not read as a missing credential.
+            msg = f"Chroma Cloud host is not allowed: {exc}"
+            raise SSRFProtectionError(msg) from exc
 
     # ---- client plumbing -------------------------------------------------
 
@@ -304,6 +369,11 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         if self._resolved_database:
             kwargs["database"] = self._resolved_database
         if cfg.get("cloud_host"):
+            # The SSRF check on this host lives in ``_validate_cloud_target``, which
+            # ``ensure_ready`` runs before anything can reach here. It used to be
+            # repeated inline at this point too, which resolved DNS twice per client
+            # and — because ``vector_store`` builds lazily from a sync property — ran a
+            # blocking lookup on the event loop for every ingest and search.
             kwargs["cloud_host"] = cfg["cloud_host"]
         if cfg.get("cloud_port"):
             kwargs["cloud_port"] = int(cfg["cloud_port"])
@@ -311,11 +381,39 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         # accept a region parameter directly.
         return chromadb.CloudClient(**kwargs)
 
+    def _resolve_collection_name(self) -> str:
+        """Resolve this KB's collection in the resolved tenant and database.
+
+        Unlike local Chroma, which isolates each owner under its own directory,
+        every user whose credentials resolve to the same tenant and database
+        shares one collection namespace.
+        """
+        return resolve_storage_name(
+            kb_name=self.kb_name,
+            owner_id=self._coerce_user_uuid(),
+            override=self.backend_config.get(COLLECTION_NAME_KEY),
+            override_key=COLLECTION_NAME_KEY,
+            backend="ChromaCloudBackend",
+            storage="collection",
+        )
+
     def _build_vector_store(self) -> VectorStore:
+        collection_name = self._resolve_collection_name()
+        shared_legacy_collection = self.backend_config.get(LEGACY_SHARED_COLLECTION_KEY)
+        if shared_legacy_collection and collection_name != shared_legacy_collection:
+            logger.warning(
+                "Knowledge base %s no longer uses Chroma Cloud collection %s: another user's knowledge base used "
+                "the same collection, or the name is reserved for owner-scoped collections. Its earlier chunks "
+                "were left in %s, and it now uses its own collection %s. Re-ingest its sources to restore them.",
+                self.kb_name,
+                shared_legacy_collection,
+                shared_legacy_collection,
+                collection_name,
+            )
         self._client = self._get_cloud_client()
         return Chroma(
             client=self._client,
-            collection_name=self.kb_name,
+            collection_name=collection_name,
             embedding_function=self.embedding_function,
             **chroma_langchain_collection_kwargs(),
         )
@@ -383,7 +481,9 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         """Verify Chroma Cloud credentials and reachability via heartbeat."""
         try:
             await self._resolve_secrets()
-            client = self._get_cloud_client()
+            # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+            # connection) called from async: keep it off the event loop.
+            client = await asyncio.to_thread(self._get_cloud_client)
             client.heartbeat()
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
@@ -411,8 +511,11 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         while still completing local storage and DB-row cleanup.
         """
         await self.ensure_ready()
-        client = self._get_cloud_client()
-        client.delete_collection(name=self.kb_name)
+        collection_name = self._resolve_collection_name()
+        # Sync construction (SSRF validation resolves DNS, CloudClient opens a
+        # connection) called from async: keep it off the event loop.
+        client = await asyncio.to_thread(self._get_cloud_client)
+        client.delete_collection(name=collection_name)
 
     def raw_langchain_store(self) -> Chroma:
         """Expose the underlying LangChain Chroma instance."""
