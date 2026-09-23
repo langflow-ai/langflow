@@ -92,12 +92,20 @@ class JobBase(SQLModel):
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "job"
-    # The scaled backend's claim poll (claim_next_queued_lease) filters on
-    # status + type and sorts by created_timestamp on every worker poll; the
-    # watchdog scans status + type on its interval. The job table has no
-    # retention, so without this composite the hottest query degrades into an
-    # ever-growing scan+sort over terminal rows.
-    __table_args__ = (Index("ix_job_claim_scan", "status", "type", "created_timestamp"),)
+    # Two hot paths share this table. The scaled backend's claim poll
+    # (claim_next_queued_lease) filters on status + type and sorts by
+    # created_timestamp on every worker poll, and the watchdog scans status +
+    # type on its interval. The metrics collector filters the same status +
+    # type and takes a MIN over created_timestamp for the oldest queued job, so
+    # ix_job_claim_scan serves both and a separate (status, created_timestamp)
+    # index would be redundant. The duration window ranges over
+    # finished_timestamp instead, which needs its own index. This table has no
+    # retention, so without these each tick's cost grows with the whole job
+    # history rather than with the work in flight.
+    __table_args__ = (
+        Index("ix_job_claim_scan", "status", "type", "created_timestamp"),
+        Index("ix_job_finished_timestamp", "finished_timestamp"),
+    )
 
 
 class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]
