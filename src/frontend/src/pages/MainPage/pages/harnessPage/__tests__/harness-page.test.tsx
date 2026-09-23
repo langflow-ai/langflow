@@ -6,6 +6,9 @@ import { editorDraft } from "../editor-draft";
 import HarnessPage from "../harness-page";
 
 const mockPatch = jest.fn();
+jest.mock("../components/local-tool-review", () => ({
+  LocalToolReview: () => null,
+}));
 const packReference = {
   project_id: "pack",
   expected_type: "tool-pack",

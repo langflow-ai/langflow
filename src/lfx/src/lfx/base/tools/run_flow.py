@@ -240,7 +240,10 @@ class RunFlowBaseComponent(Component):
             matches = [item for item in definitions.values() if item["name"] == flow_name]
             source = matches[0] if len(matches) == 1 else None
         if source is None:
-            msg = "This flow was not included in the reviewed tool dependency snapshots. Review the Tool Pack again."
+            msg = (
+                "This flow was not included in the reviewed dependency snapshots. "
+                "Review and save its containing flow or Tool Pack."
+            )
             raise ValueError(msg)
         return source
 
@@ -255,8 +258,12 @@ class RunFlowBaseComponent(Component):
             msg = "Flow name or id is required"
             raise ValueError(msg)
         binding = self._tool_pack_binding()
+        local = self._local_tool_binding()
         if binding is not None and str(binding.tool.flow_id) != str(flow_id_selected):
             msg = "The Tool Pack adapter points to a different flow. Restore its reviewed reference."
+            raise ValueError(msg)
+        if local is not None and local.flow_id != str(flow_id_selected):
+            msg = "The local tool adapter points to another flow. Restore its reviewed selection."
             raise ValueError(msg)
         frozen = self._frozen_flow(flow_id_selected, flow_name_selected)
         async with _model_provider_policy(
@@ -289,6 +296,28 @@ class RunFlowBaseComponent(Component):
                 )
                 graph.frozen_tool_flows = self.graph.frozen_tool_flows
                 graph.description = frozen.get("description")
+                return graph
+            if local is not None:
+                from lfx.projects.invocation import reviewed_flow_source
+                from lfx.projects.local_tools import validate_local_tool_source
+
+                key = (getattr(self.graph, "_run_id", None), local.model_dump_json())
+                if getattr(self, "_local_snapshot_key", None) != key:
+                    self._local_snapshot = await reviewed_flow_source(
+                        self, local, field_name="tools", validate=validate_local_tool_source
+                    )
+                    self._local_snapshot_key = key
+                snapshot = self._local_snapshot
+                payload = deepcopy(snapshot["data"])
+                sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
+                graph = Graph.from_payload(
+                    payload=sanitized_payload if sanitized_payload is not None else payload,
+                    flow_id=local.flow_id,
+                    flow_name=local.name,
+                    user_id=self.user_id,
+                )
+                graph.frozen_tool_flows = snapshot.get("dependencies")
+                graph.description = local.description
                 return graph
             if instruction := self._instruction_binding():
                 from lfx.projects.bindings import validate_instruction_binding
@@ -528,6 +557,9 @@ class RunFlowBaseComponent(Component):
         if (binding := self._tool_pack_binding()) is not None:
             for tool in tools:
                 tool.metadata = {**(tool.metadata or {}), "harness_tool_pack": binding.model_dump(mode="json")}
+        if (binding := self._local_tool_binding()) is not None:
+            for tool in tools:
+                tool.metadata = {**(tool.metadata or {}), "harness_local_tool": binding.model_dump(mode="json")}
         return tools
 
     ################################################################
@@ -610,6 +642,15 @@ class RunFlowBaseComponent(Component):
             return None
         return FlowBinding.model_validate({key: origin[key] for key in FlowBinding.model_fields if key in origin})
 
+    def _local_tool_binding(self):
+        from lfx.projects.local_tools import LocalToolBinding
+        from lfx.projects.tools import TOOL_ORIGIN
+
+        vertex = getattr(self, "_vertex", None)
+        origin = vertex.data.get(TOOL_ORIGIN) if vertex is not None else None
+        binding = origin.get("local_tool") if isinstance(origin, dict) else None
+        return LocalToolBinding.model_validate(binding) if binding is not None else None
+
     def __deepcopy__(self, memo: dict):
         """Let the copy resolve every output it carries, and reuse the graph cache.
 
@@ -631,6 +672,9 @@ class RunFlowBaseComponent(Component):
         if hasattr(self, "_pack_snapshot_key"):
             new_component._pack_snapshot_key = self._pack_snapshot_key  # noqa: SLF001
             new_component._pack_snapshot = deepcopy(self._pack_snapshot)  # noqa: SLF001
+        if hasattr(self, "_local_snapshot_key"):
+            new_component._local_snapshot_key = self._local_snapshot_key  # noqa: SLF001
+            new_component._local_snapshot = deepcopy(self._local_snapshot)  # noqa: SLF001
         return new_component
 
     def _clear_dynamic_flow_output_methods(self) -> None:

@@ -159,6 +159,9 @@ async def export_composition(
     versions = []
     for project in composition.projects:
         if project.project_type == "agent-harness":
+            from lfx.projects.local_tools import local_tool_bindings
+
+            versions.extend(local_tool_bindings((project.project_config or {}).get("tool_bindings", {})).values())
             versions.extend(
                 binding
                 for _, binding in ProjectFlowBindings.model_validate(
@@ -184,6 +187,11 @@ async def export_composition(
                         ).entries()
                     )
                 pack = data.get(TOOL_ORIGIN, {}).get("tool_pack")
+                local = data.get(TOOL_ORIGIN, {}).get("local_tool")
+                if local:
+                    from lfx.projects.local_tools import LocalToolBinding
+
+                    versions.append(LocalToolBinding.model_validate(local))
                 if pack:
                     binding = ToolPackToolBinding.model_validate(pack)
                     versions.append(binding)

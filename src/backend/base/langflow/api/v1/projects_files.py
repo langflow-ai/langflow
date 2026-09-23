@@ -343,9 +343,16 @@ async def upload_project_flows(
             raise HTTPException(
                 422, "Imported flow bindings must contain Instructions, Context, Compaction, or Hook selections."
             ) from exc
-    has_bindings = new_project.project_type == "agent-harness" and bool(bindings)
+    local_bindings_value = (new_project.project_config or {}).get("tool_bindings", {})
+    has_bindings = new_project.project_type == "agent-harness" and bool(bindings or local_bindings_value)
     if has_bindings:
         from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
+        from lfx.projects.local_tools import (
+            LocalToolBinding,
+            local_tool_bindings,
+            local_tool_definition,
+            validate_local_tool_source,
+        )
 
         id_map = {str(flow.id): str(uuid4()) for flow in flow_list.flows if flow.id is not None}
         by_original_id = {str(flow.id): flow for flow in flow_list.flows}
@@ -357,6 +364,24 @@ async def upload_project_flows(
             {"id": key, "name": original_names[key], "description": flow.description or "", "data": flow.data or {}}
             for key, flow in by_original_id.items()
         ]
+        try:
+            local_bindings = local_tool_bindings(local_bindings_value)
+            for binding in local_bindings.values():
+                source = next(flow for flow in original_definitions if flow["id"] == binding.flow_id)
+                validate_local_tool_source(source, binding)
+                validate_binding_dependencies(binding, original_definitions)
+            for flow in original_definitions:
+                for node in flow["data"].get("nodes", []):
+                    local = (node.get("data", {}).get(TOOL_ORIGIN) or {}).get("local_tool")
+                    if local:
+                        binding = LocalToolBinding.model_validate(local)
+                        source = next(flow for flow in original_definitions if flow["id"] == binding.flow_id)
+                        validate_local_tool_source(source, binding)
+                        validate_binding_dependencies(binding, original_definitions)
+        except (ValueError, KeyError, TypeError, StopIteration) as exc:
+            raise HTTPException(
+                422, "An imported local tool has an invalid or unavailable reviewed definition."
+            ) from exc
         for field_name, reviewed in parsed_bindings.entries():
             try:
                 source = by_original_id[reviewed.flow_id]
@@ -432,6 +457,17 @@ async def upload_project_flows(
                 ],
             )
         config["flow_bindings"] = parsed_bindings.model_dump(exclude_unset=True, exclude_none=True)
+        if local_bindings_value:
+            relocated = [
+                {"id": str(flow.id), "name": flow.name, "description": flow.description or "", "data": flow.data or {}}
+                for flow in flow_list.flows
+            ]
+            config["tool_bindings"] = {
+                id_map[key]: local_tool_definition(
+                    next(flow for flow in relocated if flow["id"] == id_map[key]), relocated
+                ).model_dump(mode="json")
+                for key in local_bindings
+            }
         new_project.project_config = config
     created = await create_flows(session=session, flow_list=flow_list, current_user=current_user)
     if has_bindings:

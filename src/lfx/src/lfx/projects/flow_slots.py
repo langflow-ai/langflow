@@ -183,6 +183,17 @@ def remap_runtime_bindings(
                 if selected in original_ids:
                     target = original_ids[selected]
                     visit(target, active | {flow_id})
+                    tool_origin = node_data.get("_harness_tool") or {}
+                    if tool_origin.get("local_tool"):
+                        from lfx.projects.local_tools import LocalToolBinding
+
+                        local = LocalToolBinding.model_validate(tool_origin["local_tool"])
+                        local.flow_id = id_map[target]
+                        local.name = (flow_names or {}).get(target, local.name)
+                        local.revision = flow_revision(flows[target])
+                        local.version_id = None
+                        local.dependencies = remap_dependencies(local.dependencies)
+                        tool_origin["local_tool"] = local.model_dump(mode="json")
                     instruction = node_data.get("_harness_binding")
                     if isinstance(instruction, dict):
                         instruction["revision"] = flow_revision(flows[target])

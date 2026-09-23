@@ -8,11 +8,12 @@ import re
 from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, SecretBytes, SecretStr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretBytes, SecretStr, model_serializer, model_validator
 
 from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
 from lfx.projects.flow_slots import ProjectFlowBindings
+from lfx.projects.local_tools import LocalToolBinding
 from lfx.projects.tool_packs import ToolPackToolBinding
 from lfx.utils.url_redaction import redact_urls_in_text
 
@@ -63,6 +64,15 @@ class ToolConfiguration(BaseModel):
     return_direct: bool = False
     approval_actions: tuple[str, ...] = ()
     tool_pack: ToolPackToolBinding | None = None
+    local_flow: LocalToolBinding | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        value = handler(self)
+        # Older report configuration hashes must remain valid.
+        if self.local_flow is None:
+            value.pop("local_flow", None)
+        return value
 
 
 class AgentConfiguration(BaseModel):
@@ -148,6 +158,9 @@ def capture_agent_configuration(component, model, policy: HarnessRuntimeConfig) 
                 approval_actions=tuple(metadata.get("approval_actions") or ()),
                 tool_pack=ToolPackToolBinding.model_validate(metadata["harness_tool_pack"])
                 if metadata.get("harness_tool_pack")
+                else None,
+                local_flow=LocalToolBinding.model_validate(metadata["harness_local_tool"])
+                if metadata.get("harness_local_tool")
                 else None,
             )
         )

@@ -464,8 +464,8 @@ async def test_frozen_dependency_denial_stops_graph_construction(nested_env, mon
     constructor.assert_not_called()
 
 
-@pytest.fixture
-def reviewed_snapshot_env(monkeypatch):
+@pytest.fixture(params=["instructions", "local"])
+def reviewed_snapshot_env(monkeypatch, request):
     from lfx.projects import invocation
     from lfx.projects.bindings import FlowBinding
 
@@ -473,8 +473,14 @@ def reviewed_snapshot_env(monkeypatch):
     parent = Graph()
     parent.set_run_id()
     component._vertex = SimpleNamespace(graph=parent, data={})
-    binding = FlowBinding(flow_id=str(uuid4()), node_id="prompt", output_name="message", revision="a" * 64)
-    monkeypatch.setattr(component, "_instruction_binding", lambda: binding)
+    if request.param == "instructions":
+        binding = FlowBinding(flow_id=str(uuid4()), node_id="prompt", output_name="message", revision="a" * 64)
+        monkeypatch.setattr(component, "_instruction_binding", lambda: binding)
+    else:
+        from lfx.projects.local_tools import LocalToolBinding
+
+        binding = LocalToolBinding(flow_id=str(uuid4()), name="Reviewed local tool", revision="a" * 64)
+        monkeypatch.setattr(component, "_local_tool_binding", lambda: binding)
     source = {"name": "Reviewed instructions", **_child_flow_data("# reviewed caller source").data}
     loader = AsyncMock(return_value=source)
     monkeypatch.setattr(invocation, "reviewed_flow_source", loader)
