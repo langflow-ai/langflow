@@ -382,6 +382,15 @@ class Graph:
         self._is_cyclic = None
         self._graph_data = process_flow(self.raw_graph_data)
 
+        # Group proxies may replace child template fields while process_flow expands the graph.
+        # Re-check the effective anonymous graph before initialize instantiates those children.
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        if str(self.user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID):
+            from lfx.utils.flow_validation import revalidate_public_executable_flow
+
+            revalidate_public_executable_flow(self._graph_data)
+
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self._cycle_vertices = None

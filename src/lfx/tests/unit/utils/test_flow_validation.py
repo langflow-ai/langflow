@@ -784,6 +784,40 @@ def _public_lookup_snapshot(type_to_code: dict[str, str]) -> tuple[dict[str, str
     }
 
 
+def _group_with_proxy(child: dict, field_name: str, value: object) -> dict:
+    """Expose a child field through a group template, as process_flow does at build time."""
+    child["data"]["node"]["template"].setdefault(
+        field_name,
+        {"name": field_name, "show": True, "advanced": False, "value": None},
+    )
+    child_field = child["data"]["node"]["template"][field_name]
+    child_field.setdefault("name", field_name)
+    child_field.setdefault("show", True)
+    child_field.setdefault("advanced", False)
+    return {
+        "nodes": [
+            {
+                "id": "group",
+                "data": {
+                    "id": "group",
+                    "type": "GroupNode",
+                    "node": {
+                        "template": {
+                            "exposed": {
+                                "name": "exposed",
+                                "value": value,
+                                "proxy": {"id": child["id"], "field": field_name},
+                            }
+                        },
+                        "flow": {"data": {"nodes": [child], "edges": []}},
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
 def test_collect_component_code_lookups_maps_type_and_aliases():
     """Each component's canonical name and display-name alias map to its trusted code."""
     lookups = collect_component_code_lookups(_server_components())
@@ -884,6 +918,132 @@ async def test_prepare_public_flow_build_substitutes_trusted_code(monkeypatch):
     assert sanitized["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "# trusted"
     # the caller's original flow data is not mutated
     assert flow["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "stored old code"
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_resanitizes_code_after_group_proxy(monkeypatch):
+    """A group proxy cannot replace trusted child code after public validation."""
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    injected = "import os; os.system('unexpected')"
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": trusted})),
+    )
+    raw = _group_with_proxy(_node("child", "ChatInput", trusted), "code", injected)
+    fv.validate_public_flow_no_code_execution(raw)  # The pre-ungroup check sees only trusted code.
+
+    prepared = await fv.prepare_public_flow_build(raw)
+
+    assert [node["id"] for node in prepared["nodes"]] == ["child"]
+    assert prepared["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted
+    assert raw["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == injected
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_preserves_safe_group_proxy_value(monkeypatch):
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": "# trusted"})),
+    )
+    raw = _group_with_proxy(_node("child", "ChatInput", "# stored"), "input_value", "hello")
+
+    prepared = await fv.prepare_public_flow_build(raw)
+
+    assert prepared["nodes"][0]["data"]["node"]["template"]["input_value"]["value"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_rejects_group_proxy_mcp_stdio(monkeypatch):
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"MCPTools": "# trusted MCP code"})),
+    )
+    raw = _group_with_proxy(
+        _mcp_node({"name": "remote", "config": {"url": "https://example.com"}}),
+        "mcp_server",
+        {"command": "python"},
+    )
+    fv.validate_public_flow_no_code_execution(raw)
+
+    with pytest.raises(PublicFlowValidationError, match="MCP server process"):
+        await fv.prepare_public_flow_build(raw)
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_opt_in_checks_group_proxy(monkeypatch):
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _public_settings(allow_custom=True, allow_public_custom=True),
+    )
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+    raw = _group_with_proxy(
+        _mcp_node({"name": "remote", "config": {"url": "https://example.com"}}),
+        "mcp_server",
+        {"command": "python"},
+    )
+
+    with pytest.raises(PublicFlowValidationError, match="MCP server process"):
+        await fv.prepare_public_flow_build(raw)
+
+
+def test_public_graph_replaces_proxy_code_before_initialization(monkeypatch):
+    """The last graph gate sees proxy changes even if a caller skips route preparation."""
+    from lfx.graph.graph.base import Graph
+    from lfx.interface.components import component_cache
+    from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    trusted = "# trusted ChatInput code"
+    injected = "import os; os.system('unexpected')"
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(component_cache, "all_types_dict", {"inputs": {}})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "type_to_code", {"ChatInput": trusted})
+    monkeypatch.setattr(component_cache, "type_to_current_hash", _public_lookup_snapshot({"ChatInput": trusted})[1])
+    initialized = []
+    monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
+    raw = _group_with_proxy(_node("child", "ChatInput", trusted), "code", injected)
+
+    graph = Graph(user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID), instantiate_components=False)
+    graph.add_nodes_and_edges(raw["nodes"], raw["edges"])
+
+    assert initialized == [graph]
+    assert graph._vertices[0]["data"]["node"]["template"]["code"]["value"] == trusted
+
+
+def test_public_graph_rejects_proxy_mcp_stdio_before_initialization(monkeypatch):
+    from lfx.graph.graph.base import Graph
+    from lfx.interface.components import component_cache
+    from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    trusted = "# trusted MCP code"
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(component_cache, "all_types_dict", {"tools": {}})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "type_to_code", {"MCPTools": trusted})
+    monkeypatch.setattr(component_cache, "type_to_current_hash", _public_lookup_snapshot({"MCPTools": trusted})[1])
+    initialized = []
+    monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
+    raw = _group_with_proxy(_mcp_node({"url": "https://example.com"}), "mcp_server", {"command": "python"})
+    graph = Graph(user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID), instantiate_components=False)
+
+    with pytest.raises(PublicFlowValidationError, match="MCP server process"):
+        graph.add_nodes_and_edges(raw["nodes"], raw["edges"])
+
+    assert initialized == []
 
 
 @pytest.mark.asyncio
@@ -1097,7 +1257,7 @@ async def test_prepare_public_flow_build_neutralizes_relabelled_code(monkeypatch
 
 @pytest.mark.asyncio
 async def test_prepare_public_flow_build_opt_in_honors_global(monkeypatch):
-    """allow_public_custom_components=True returns None (DB-loaded build) and runs standard validation."""
+    """Public custom-code opt-in preserves source while still flattening the checked graph."""
     from lfx.utils import flow_validation as fv
 
     monkeypatch.setattr(
@@ -1108,8 +1268,10 @@ async def test_prepare_public_flow_build_opt_in_honors_global(monkeypatch):
     monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda target: seen.setdefault("target", target))
 
     flow = {"nodes": [_node("x", "MyCustom", "import os")], "edges": []}
-    assert await fv.prepare_public_flow_build(flow) is None
-    assert seen.get("target") == flow
+    prepared = await fv.prepare_public_flow_build(flow)
+    assert prepared is not flow
+    assert prepared == flow
+    assert seen.get("target") == prepared
 
 
 @pytest.mark.asyncio
@@ -1505,6 +1667,18 @@ def test_public_flow_blocks_mcp_stdio_under_relabelled_field_name():
     """The check follows the config shape, not just the canonical ``mcp_server`` field key."""
     flow = _mcp_flow({"name": "srv", "config": dict(STDIO_CONFIG)}, field_name="renamed_field")
     with pytest.raises(PublicFlowValidationError):
+        validate_public_flow_no_code_execution(flow)
+
+
+def test_public_flow_blocks_mcp_stdio_in_list_valued_field():
+    """An MCP selection list cannot hide a subprocess-spawning entry."""
+    flow = _mcp_flow(
+        [
+            {"name": "remote", "config": {"url": "https://example.com/mcp"}},
+            {"name": "local", "config": dict(STDIO_CONFIG)},
+        ]
+    )
+    with pytest.raises(PublicFlowValidationError, match="MCP server process"):
         validate_public_flow_no_code_execution(flow)
 
 

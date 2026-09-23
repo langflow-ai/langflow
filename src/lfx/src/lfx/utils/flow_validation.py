@@ -1486,10 +1486,9 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     graph dict for the caller to build from.
 
     Opt-in (``allow_public_custom_components`` is True): preserves stored custom code only when
-    the global custom-component policy is also permissive; that combination validates public
-    code-execution surfaces and returns ``None`` so the caller builds from the database. When the
-    global policy is restricted, this helper mirrors its trusted-code substitution on a copy,
-    validates the effective graph, and returns it for the caller to build.
+    the global custom-component policy is also permissive. When the global policy is restricted,
+    this helper mirrors its trusted-code substitution. Both paths validate and return the
+    expanded graph, so group proxies cannot change a checked field later.
 
     The code-execution check is intentionally repeated after default-mode substitution. A
     namespaced extension identity may not itself appear in the public blocklist, while its
@@ -1497,8 +1496,7 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     let stale code evade the hash check and become blocked code during trusted substitution.
 
     Returns:
-        The sanitized graph dict to build from, or ``None`` to fall back to the default
-        database-loaded build (fully permissive opt-in, or no flow data to sanitize).
+        The sanitized graph dict to build from, or ``None`` if there is no graph to sanitize.
 
     Raises:
         CustomComponentValidationError: if the flow contains an unrecognized custom component, or
@@ -1506,8 +1504,7 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
         PublicFlowValidationError: if the executable graph contains a code-execution or
             flow-invoking component.
     """
-    import copy
-
+    from lfx.graph.graph.utils import process_flow
     from lfx.services.deps import get_settings_service
 
     settings_service = get_settings_service()
@@ -1515,13 +1512,6 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
     settings = settings_service.settings
-
-    # Fully permissive opt-in: honor the global custom-component policy and build from the
-    # database as before. No later trusted-code substitution can change what is checked here.
-    if settings.allow_public_custom_components and settings.allow_custom_components:
-        validate_flow_for_current_settings(target)
-        validate_public_flow_no_code_execution(target)
-        return None
 
     normalized_flow_data = _extract_flow_data(target)
     if normalized_flow_data is None:
@@ -1538,17 +1528,26 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     if not isinstance(nodes, list) or not nodes:
         return None
 
+    # Group proxies overwrite child template fields during Graph.add_nodes_and_edges. Expand
+    # those groups first, then validate and sanitize the exact executable graph. Returning the
+    # flattened copy also keeps Graph construction from applying the same proxy a second time.
+    sanitized = process_flow(normalized_flow_data)
+
+    if settings.allow_public_custom_components and settings.allow_custom_components:
+        validate_flow_for_current_settings(sanitized)
+        validate_public_flow_no_code_execution(sanitized)
+        return sanitized
+
     type_to_code, type_to_current_hash = await _ensure_public_component_lookup_snapshot(settings_service)
     if not type_to_code or not type_to_current_hash:
         # Templates unavailable — do not let unverified code through.
         raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
-    sanitized = copy.deepcopy(normalized_flow_data)
     if settings.allow_public_custom_components:
         # Public custom-code opt-in does not override the global restricted-mode policy. Mirror
         # the substitution Graph.from_payload would otherwise perform later, then return this
         # effective graph so the public code-execution check covers the bytes that will run.
-        validate_flow_for_current_settings(target)
+        validate_flow_for_current_settings(sanitized)
         if getattr(settings, "substitute_outdated_component_code", True):
             substitutable_types = SubstitutableComponentTypes(type_to_current_hash, type_to_code)
             swapped = _substitute_outdated_node_code(sanitized.get("nodes", []), type_to_code, substitutable_types)
@@ -1576,6 +1575,45 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     # resume callers alike.
     validate_public_flow_no_code_execution(sanitized, type_to_current_hash=type_to_current_hash)
     return sanitized
+
+
+def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
+    """Enforce anonymous-build policy on the graph after all group proxies are applied.
+
+    This is the last synchronous gate before Graph.initialize instantiates component code.
+    The route-level preparation rejects bad flows before queuing a job, while this check
+    covers direct Graph construction, extension migration, and registry reloads after that
+    preparation. The default policy replaces any proxy-injected code with a fresh trusted
+    registry copy; explicit public-custom opt-in preserves only what its global policy allows.
+    """
+    from lfx.interface.components import component_cache
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+    settings = settings_service.settings
+
+    type_to_current_hash = None
+    if not settings.allow_public_custom_components:
+        with component_cache.state_lock:
+            type_to_code = get_component_code_lookups_for_validation()
+            type_to_current_hash = get_component_hash_lookups_for_validation()
+        if not type_to_code or not type_to_current_hash:
+            raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
+        blocked = _substitute_trusted_node_code(flow_data.get("nodes", []), type_to_code)
+        if blocked:
+            blocked_names = ", ".join(blocked)
+            message = (
+                "Public flows cannot be built without authentication when they contain custom components: "
+                f"{blocked_names}"
+            )
+            raise CustomComponentValidationError(message)
+    else:
+        substitute_outdated_component_code_in_place(flow_data, validate_public_execution=True)
+        validate_flow_for_current_settings(flow_data)
+
+    validate_public_flow_no_code_execution(flow_data, type_to_current_hash=type_to_current_hash)
 
 
 def _node_code_hash(node_info: Any) -> str | None:
@@ -1687,15 +1725,20 @@ def _selects_mcp_stdio_transport(config: Any) -> bool:
 
 def _mcp_configs_in_field_value(value: Any) -> list[Any]:
     """Return the MCP server configurations reachable from one template field value."""
-    if not isinstance(value, Mapping):
-        return []
-    # ``McpInput`` stores ``{"name": ..., "config": {...}}``; a raw config may also be stored
-    # directly, and an imported ``mcpServers`` map carries one config per server name.
-    configs: list[Any] = [value, value.get("config")]
-    servers = value.get("mcpServers")
-    if isinstance(servers, Mapping):
-        configs.extend(servers.values())
-    return configs
+    # A selection can be a raw config, a named ``McpInput`` selection, an imported
+    # ``mcpServers`` map, or a list of selections. Walk each shape so an array cannot
+    # conceal a subprocess-spawning selection from the public-flow gate.
+    if isinstance(value, Mapping):
+        configs = [value]
+        configs.extend(_mcp_configs_in_field_value(value.get("config")))
+        servers = value.get("mcpServers")
+        if isinstance(servers, Mapping):
+            for server in servers.values():
+                configs.extend(_mcp_configs_in_field_value(server))
+        return configs
+    if isinstance(value, list):
+        return [config for item in value for config in _mcp_configs_in_field_value(item)]
+    return []
 
 
 def _is_mcp_server_field(field_name: Any, field: Mapping[str, Any]) -> bool:
