@@ -194,21 +194,39 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     # while the generated component is being validated in the backend process.
     ("pandas", "read_pickle", "pandas.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas.io.api", "read_pickle", "pandas.io.api.read_pickle() is forbidden — unsafe pickle deserialization"),
+    (
+        "pandas.compat.pickle_compat",
+        "load",
+        "pandas.compat.pickle_compat.load() is forbidden — unsafe pickle deserialization",
+    ),
+    (
+        "pandas.compat.pickle_compat",
+        "loads",
+        "pandas.compat.pickle_compat.loads() is forbidden — unsafe pickle deserialization",
+    ),
 ]
 
 # NumPy's array readers are safe by default, but allow_pickle=True enables
 # object constructors. The value's positional index differs between APIs.
-_NUMPY_PICKLE_LOAD_ARG_INDEX = {
+_NUMPY_PICKLE_READER_ARG_INDEX = {
     "numpy.load": 2,
     "numpy.lib.npyio.load": 2,
     "numpy.lib._npyio_impl.load": 2,
     "numpy.lib.format.read_array": 1,
+    "numpy.lib._format_impl.read_array": 1,
+    "numpy.lib.npyio.NpzFile": 2,
+    "numpy.lib._npyio_impl.NpzFile": 2,
 }
-_NUMPY_WILDCARD_LOADS = {
-    "numpy": ("load", "numpy.load"),
-    "numpy.lib.npyio": ("load", "numpy.lib.npyio.load"),
-    "numpy.lib._npyio_impl": ("load", "numpy.lib._npyio_impl.load"),
-    "numpy.lib.format": ("read_array", "numpy.lib.format.read_array"),
+_NUMPY_WILDCARD_READERS = {
+    "numpy": (("load", "numpy.load"),),
+    "numpy.lib.npyio": (("load", "numpy.lib.npyio.load"), ("NpzFile", "numpy.lib.npyio.NpzFile")),
+    "numpy.lib._npyio_impl": (
+        ("load", "numpy.lib._npyio_impl.load"),
+        ("NpzFile", "numpy.lib._npyio_impl.NpzFile"),
+    ),
+    "numpy.lib.format": (("read_array", "numpy.lib.format.read_array"),),
+    "numpy.lib._format_impl": (("read_array", "numpy.lib._format_impl.read_array"),),
 }
 
 # Imports that are forbidden entirely
@@ -998,7 +1016,7 @@ class _SecurityChecker(ast.NodeVisitor):
 
         resolved_names = self._resolved_assignment_value(node)
         for resolved_name in resolved_names:
-            if resolved_name in _NUMPY_PICKLE_LOAD_ARG_INDEX:
+            if resolved_name in _NUMPY_PICKLE_READER_ARG_INDEX:
                 return f"Indirect {resolved_name}() reference is forbidden — allow_pickle cannot be verified"
             if _is_restricted_module_reference(resolved_name):
                 return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
@@ -1113,7 +1131,7 @@ class _SecurityChecker(ast.NodeVisitor):
         if not self._binding_escapes(name):
             return
         for value in sorted(values):
-            if value in _NUMPY_PICKLE_LOAD_ARG_INDEX:
+            if value in _NUMPY_PICKLE_READER_ARG_INDEX:
                 self.violations.append(f"Indirect {value}() reference is forbidden — allow_pickle cannot be verified")
                 return
             if _is_restricted_module_reference(value):
@@ -1253,12 +1271,15 @@ class _SecurityChecker(ast.NodeVisitor):
                 # Both defaults must be sets: "tuple | set" is a TypeError, so a
                 # wildcard import from any module absent from the call table
                 # (``from typing import *``) crashed the scan out to the caller.
-                for name in _DANGEROUS_CALL_MEMBERS.get(root_module, set()) | _DANGEROUS_READ_MEMBERS.get(
-                    root_module, set()
+                for name in (
+                    _DANGEROUS_CALL_MEMBERS.get(root_module, set())
+                    | _DANGEROUS_READ_MEMBERS.get(root_module, set())
+                    | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
+                    | _DANGEROUS_READ_MEMBERS.get(node.module, set())
                 ):
-                    self._bind_name(name, frozenset({f"{root_module}.{name}"}))
-                if wildcard_loader := _NUMPY_WILDCARD_LOADS.get(node.module):
-                    self._bind_name(wildcard_loader[0], frozenset({wildcard_loader[1]}))
+                    self._bind_name(name, frozenset({f"{node.module}.{name}"}))
+                for reader_name, reader_path in _NUMPY_WILDCARD_READERS.get(node.module, ()):
+                    self._bind_name(reader_name, frozenset({reader_path}))
             else:
                 binding = alias.asname or alias.name
                 imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
@@ -1807,7 +1828,7 @@ class _SecurityChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _check_numpy_pickle_load(self, node: ast.Call, resolved_call_names: frozenset[str]) -> None:
-        loader_names = resolved_call_names.intersection(_NUMPY_PICKLE_LOAD_ARG_INDEX)
+        loader_names = resolved_call_names.intersection(_NUMPY_PICKLE_READER_ARG_INDEX)
         if not loader_names:
             return
         positional = _expand_static_arguments(node.args)
@@ -1819,7 +1840,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
                 return
             allow_pickle = keyword_value
-            allow_pickle_arg_index = _NUMPY_PICKLE_LOAD_ARG_INDEX[loader_name]
+            allow_pickle_arg_index = _NUMPY_PICKLE_READER_ARG_INDEX[loader_name]
             if allow_pickle is None and len(positional) > allow_pickle_arg_index:
                 allow_pickle = positional[allow_pickle_arg_index]
             if allow_pickle is not None and not (

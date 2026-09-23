@@ -3328,6 +3328,11 @@ class TestScanCodeSecurityUnsafeDeserialization:
             ("import pandas.io.pickle as io_pickle\nio_pickle.read_pickle(payload)", "pandas"),
             ("from pandas.io import pickle as io_pickle\nio_pickle.read_pickle(payload)", "pandas"),
             ("from pandas.io.pickle import read_pickle\nread_pickle(payload)", "pandas"),
+            ("import pandas.io.api as pio\npio.read_pickle(payload)", "pandas"),
+            ("from pandas.io.api import *\nread_pickle(payload)", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.load(payload)", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.loads(payload)", "pandas"),
+            ("from pandas.compat.pickle_compat import *\nloads(payload)", "pandas"),
             ("from pandas import *\nread_pickle(payload)", "pandas"),
             ("import joblib\njoblib.load(payload)", "joblib"),
             ("from dill import loads\nloads(payload)", "dill"),
@@ -3361,6 +3366,10 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "from numpy import load as reader\nreader(payload, allow_pickle=True)",
             "from numpy import *\nload(payload, allow_pickle=True)",
             "from numpy.lib.npyio import *\nload(payload, allow_pickle=True)",
+            "from numpy.lib._npyio_impl import NpzFile\nNpzFile(payload, allow_pickle=True)['arr_0']",
+            "import numpy.lib._npyio_impl as npio\nnpio.NpzFile(payload, allow_pickle=True)['arr_0']",
+            "import numpy.lib.npyio as npio\nnpio.NpzFile(payload, allow_pickle=True)['arr_0']",
+            "from numpy.lib._npyio_impl import NpzFile as Reader\nReader(payload, allow_pickle=flag)['arr_0']",
             "import numpy as np\nnp.load(payload, None, True)",
             "import numpy as np\nnp.load(payload, allow_pickle=flag)",
             "import numpy as np\nnp.load(payload, **options)",
@@ -3379,6 +3388,8 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "from numpy import load\nload(payload, None, False)",
             "from numpy import *\nload(payload, allow_pickle=False)",
             "from numpy.lib.npyio import *\nload(payload)",
+            "from numpy.lib._npyio_impl import NpzFile\nNpzFile(payload)['arr_0']",
+            "import numpy.lib._npyio_impl as npio\nnpio.NpzFile(payload, allow_pickle=False)['arr_0']",
         ],
     )
     def test_preserves_numpy_load_with_pickle_disabled(self, code):
@@ -3391,18 +3402,21 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "from numpy.lib.format import read_array as reader\nreader(payload, allow_pickle=True)",
             "from numpy.lib.format import *\nread_array(payload, allow_pickle=True)",
             "import numpy.lib.format as fmt\nfmt.read_array(payload, flag)",
+            "import numpy.lib._format_impl as fmt\nfmt.read_array(payload, allow_pickle=True)",
+            "from numpy.lib._format_impl import *\nread_array(payload, allow_pickle=True)",
         ],
     )
     def test_rejects_numpy_read_array_when_pickle_may_be_enabled(self, code):
         result = scan_code_security(code)
         assert result.is_safe is False
-        assert any("numpy.lib.format.read_array" in violation for violation in result.violations)
+        assert any("numpy.lib." in violation and "read_array" in violation for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
         [
             "import numpy.lib.format as fmt\nfmt.read_array(payload)",
             "from numpy.lib.format import *\nread_array(payload, allow_pickle=False)",
+            "import numpy.lib._format_impl as fmt\nfmt.read_array(payload)",
         ],
     )
     def test_preserves_numpy_read_array_with_pickle_disabled(self, code):
