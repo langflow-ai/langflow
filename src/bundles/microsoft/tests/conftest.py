@@ -7,16 +7,34 @@ import mode.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
 from lfx.services.connection.base import BaseConnectionResolverService
 from lfx.services.manager import get_service_manager
 from lfx.services.schema import ServiceType
+from lfx.utils import file_path_security
 from microsoft_testkit import RecordingResolver, credential
 
 if TYPE_CHECKING:
     from lfx.integrations.models import ResolvedCredential
+
+
+@pytest.fixture
+def user_storage_dir(tmp_path, monkeypatch):
+    """Keep attachment contract tests inside an authenticated user's storage scope."""
+    storage = tmp_path / "storage"
+    user_dir = storage / "user-1"
+    user_dir.mkdir(parents=True)
+    monkeypatch.setattr(
+        file_path_security,
+        "get_settings_service",
+        lambda: SimpleNamespace(
+            settings=SimpleNamespace(config_dir=storage, restrict_local_file_access=True, database_url="")
+        ),
+    )
+    return user_dir
 
 
 @pytest.fixture

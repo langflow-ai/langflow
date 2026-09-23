@@ -246,6 +246,86 @@ async def test_google_restriction_verifies_signed_tenant_and_audience(monkeypatc
         await providers._google_account(registration, wrong_audience)
 
 
+async def test_google_account_is_shown_without_a_tenant_restriction(monkeypatch):
+    import time
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key()))
+    public_jwk["kid"] = "google-key"
+    original_client = httpx.AsyncClient
+    transport = httpx.MockTransport(lambda _request: httpx.Response(200, json={"keys": [public_jwk]}))
+    monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+    registration = config(scopes=["openid", "email"])
+    token = jwt.encode(
+        {
+            "sub": "google-user",
+            "email": "google@example.com",
+            "aud": registration.client_id,
+            "iss": "https://accounts.google.com",
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 300,
+        },
+        key,
+        algorithm="RS256",
+        headers={"kid": "google-key"},
+    )
+
+    async def request(_url, _data, **_kwargs):
+        return {"access_token": "secret-access", "scope": "openid email", "id_token": token}
+
+    monkeypatch.setattr(providers, "_request", request)
+    payload, _, account = await providers.exchange(registration, code="code", previous_scopes=registration.scopes)
+    assert account == {"id": "google-user", "tenant_id": None, "display": "google@example.com"}
+    assert "id_token" not in payload
+
+
+async def test_microsoft_account_is_verified_and_exposed_as_metadata(monkeypatch):
+    import time
+
+    tenant = "12345678-1234-1234-1234-123456789abc"
+    registration = config(
+        provider="microsoft",
+        tenant=tenant,
+        scopes=["openid", "email", "profile"],
+        redirect_uri="http://localhost/api/v1/connections/oauth/microsoft/callback",
+    )
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key()))
+    public_jwk.update(kid="microsoft-key", issuer=f"https://login.microsoftonline.com/{tenant}/v2.0")
+    original_client = httpx.AsyncClient
+    transport = httpx.MockTransport(lambda _request: httpx.Response(200, json={"keys": [public_jwk]}))
+    monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+    claims = {
+        "sub": "pairwise-user",
+        "oid": "user-object-id",
+        "tid": tenant,
+        "preferred_username": "user@example.com",
+        "aud": registration.client_id,
+        "iss": f"https://login.microsoftonline.com/{tenant}/v2.0",
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 300,
+    }
+
+    async def exchange_with(token):
+        async def request(_url, _data, **_kwargs):
+            return {"access_token": "secret-access", "scope": "openid email profile", "id_token": token}
+
+        monkeypatch.setattr(providers, "_request", request)
+        return await providers.exchange(registration, code="code", previous_scopes=registration.scopes)
+
+    token = jwt.encode(claims, key, algorithm="RS256", headers={"kid": "microsoft-key"})
+    payload, _, account = await exchange_with(token)
+    assert account == {"id": "user-object-id", "tenant_id": tenant, "display": "user@example.com"}
+    assert "id_token" not in payload
+    for changed in ({"aud": "other-client"}, {"tid": "other-tenant"}, {"iss": "https://evil.example"}):
+        invalid = jwt.encode({**claims, **changed}, key, algorithm="RS256", headers={"kid": "microsoft-key"})
+        with pytest.raises(OAuthError, match="invalid account identity"):
+            await exchange_with(invalid)
+    unsigned = jwt.encode(claims, key="", algorithm="none")
+    with pytest.raises(OAuthError, match="invalid account identity"):
+        await exchange_with(unsigned)
+
+
 def test_slack_bundle_manifest_pins_the_same_endpoints_as_the_broker():
     """The lfx-slack auth profiles and the broker must not drift apart.
 

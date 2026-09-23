@@ -128,6 +128,21 @@ To configure these providers, go to **Settings → DB Providers**.
 The selected provider applies to all new knowledge bases and memory bases you create.
 Existing knowledge bases and memory bases continue to use the provider that was active when they were created.
 
+With Chroma Cloud and OpenSearch, each knowledge base and memory base stores its chunks in its own collection or index, named `lf_` followed by 24 hexadecimal characters derived from its owner and name.
+Users who share a Chroma Cloud database or OpenSearch cluster can create knowledge bases with the same name without sharing chunks.
+Only a superuser can create a knowledge base that uses a specific existing collection or index, by setting `collection_name` or `index_name` in its `backend_config`.
+
+:::warning Upgrade note: Chroma Cloud and OpenSearch knowledge bases created by earlier versions
+Earlier versions named each Chroma Cloud collection and OpenSearch index after the knowledge base name alone, so knowledge bases with the same name that belonged to different users shared storage when their credentials pointed at the same Chroma Cloud database or OpenSearch cluster.
+When you upgrade, the database migration keeps existing data available without changing anything in Chroma Cloud or OpenSearch:
+
+* If only one user has a knowledge base with a given name, it keeps using its existing collection or index. The migration records that name in its `backend_config` as `collection_name` (Chroma Cloud) or `index_name` (OpenSearch), with `collection_name_origin` or `index_name_origin` set to `legacy_kb_name`. No action is needed.
+* If knowledge bases that belong to different users have the same name, their chunks might be mixed and can't be separated by owner. Those knowledge bases start with their own empty collection or index, and the old one isn't changed or deleted. The same applies to a knowledge base whose old collection or index name is `lf_` followed by 24 hexadecimal characters, because that name format is reserved. Their `backend_config` records the old name as `legacy_shared_collection` or `legacy_shared_index`, and Langflow logs a warning each time they are used.
+
+To restore a knowledge base in the second case, ingest its sources again, and then delete the old collection or index once no other knowledge base needs it.
+The migration can't tell which Chroma Cloud database or OpenSearch cluster each user's credentials point at, so it also takes this path when the users have separate accounts and their data was never mixed. In that case, restore each knowledge base without re-ingesting by setting `collection_name` or `index_name` back to the old name in its `backend_config` in the `knowledge_base` table.
+:::
+
 #### Chroma (default)
 
 By default, knowledge bases use [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) as a local vector store, with no additional setup required.
@@ -169,6 +184,11 @@ To use [Chroma Cloud](https://docs.trychroma.com/docs/overview/introduction) as 
 
     The Chroma Cloud database is now connected to Langflow as a knowledge base provider.
     To create a knowledge base using this provider, see [Create a knowledge base](#create-a-knowledge-base).
+
+    :::tip
+    Each knowledge base stores its chunks in its own Chroma Cloud collection, named `lf_` followed by 24 hexadecimal characters derived from the knowledge base's owner and name.
+    Users who use the same tenant and database can create knowledge bases with the same name without sharing chunks.
+    :::
 
 #### OpenSearch
 
@@ -225,14 +245,16 @@ This example uses an OpenSearch container running locally, but you can also use 
     - **Cluster URL**: Enter `http://localhost:9200`.
     - **Username**: Leave blank if security is disabled. Otherwise, enter your basic auth username.
     - **Password**: Leave blank if security is disabled. Otherwise, enter your basic auth password.
-    - **Default Index name**: Enter `langflow_knowledge`. The OpenSearch index to write and read from. This index is created in the later ingestion step, so it isn't immediately available.
+    - **Default index name (optional)**: Leave blank. Knowledge bases don't use this value because each knowledge base gets its own index.
     - **Vector field**: Enter `vector_field`. The document field for storing the embedding vector.
     - **Text field**: Enter `text`. The document field for storing the chunk text.
     - **Use TLS (HTTPS)**: Turn off. Enable if your cluster uses HTTPS.
     - **Verify TLS certificate**: Turn off. Enable if your cluster uses CA-signed certificates.
 
     :::tip
-    The knowledge base name doesn't need to match the OpenSearch index name — it is the internal label used to scope searches within the shared OpenSearch index.
+    Each knowledge base stores its chunks in its own OpenSearch index, named `lf_` followed by 24 hexadecimal characters derived from the knowledge base's owner and name.
+    Users can create knowledge bases with the same name without sharing chunks.
+    The index is created when the knowledge base first ingests data.
     :::
 
 6. Click **Save and Use OpenSearch**.
