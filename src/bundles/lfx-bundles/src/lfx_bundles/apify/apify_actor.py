@@ -3,7 +3,6 @@ import string
 from typing import Any, cast
 
 from apify_client import ApifyClient
-from langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader
 from langchain_core.tools import BaseTool
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing import Tool
@@ -284,13 +283,11 @@ class ApifyActorsComponent(Component):
 
         dataset_id = self._get_run_dataset_id(run_id)
 
-        loader = ApifyDatasetLoader(
-            dataset_id=dataset_id,
-            dataset_mapping_function=lambda item: item
-            if not fields
-            else {k.replace(".", "_"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},
-        )
-        return loader.load()
+        items = client.dataset(dataset_id).list_items(clean=True).items
+        return [
+            item if not fields else {k.replace(".", "_"): self.get_nested_value(item, k) for k in fields}
+            for item in items
+        ]
 
     @staticmethod
     def get_nested_value(data: dict[str, Any], key: str) -> Any:

@@ -261,7 +261,13 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
     return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
 
 
-def delete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
+def delete_messages(
+    session_id: str | None = None,
+    context_id: str | None = None,
+    *,
+    flow_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
+) -> None:
     """DEPRECATED - Delete messages from the monitor service based on the provided session ID.
 
     DEPRECATED: Use `adelete_messages` instead.
@@ -269,16 +275,26 @@ def delete_messages(session_id: str | None = None, context_id: str | None = None
     Args:
         session_id (str): The session ID associated with the messages to delete.
         context_id (str): The context ID associated with the messages to delete.
+        flow_id: Restrict deletion to this flow when supplied.
+        user_id: Restrict deletion to this message owner when supplied.
     """
-    return run_until_complete(adelete_messages(session_id, context_id))
+    return run_until_complete(adelete_messages(session_id, context_id, flow_id=flow_id, user_id=user_id))
 
 
-async def adelete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
+async def adelete_messages(
+    session_id: str | None = None,
+    context_id: str | None = None,
+    *,
+    flow_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
+) -> None:
     """Delete messages from the monitor service based on the provided session ID.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
         context_id (str): The context ID associated with the messages to delete.
+        flow_id: Restrict deletion to this flow when supplied.
+        user_id: Restrict deletion to this message owner when supplied.
     """
     async with session_scope() as session:
         if not session_id and not context_id:
@@ -294,6 +310,10 @@ async def adelete_messages(session_id: str | None = None, context_id: str | None
             .where(col(filter_column) == filter_value)
             .execution_options(synchronize_session="fetch")
         )
+        if flow_id is not None:
+            stmt = stmt.where(MessageTable.flow_id == UUID(str(flow_id)))
+        if user_id is not None:
+            stmt = stmt.where(MessageTable.user_id == UUID(str(user_id)))
         await session.exec(stmt)
 
 
@@ -395,16 +415,20 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         flow_id: str,
         session_id: str,
         context_id: str | None = None,
+        user_id: str | UUID | None = None,
     ) -> None:
-        self.flow_id = flow_id
+        self.flow_id = UUID(str(flow_id))
         self.session_id = session_id
         self.context_id = context_id
+        self.user_id = user_id
 
     @property
     def messages(self) -> list[BaseMessage]:
         messages = get_messages(
             session_id=self.session_id,
             context_id=self.context_id,
+            flow_id=self.flow_id,
+            user_id=self.user_id,
         )
         return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
@@ -412,6 +436,8 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         messages = await aget_messages(
             session_id=self.session_id,
             context_id=self.context_id,
+            flow_id=self.flow_id,
+            user_id=self.user_id,
         )
         return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
@@ -420,17 +446,17 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
             message = Message.from_lc_message(lc_message)
             message.session_id = self.session_id
             message.context_id = self.context_id
-            store_message(message, flow_id=self.flow_id)
+            store_message(message, flow_id=self.flow_id, user_id=self.user_id)
 
     async def aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
         for lc_message in messages:
             message = Message.from_lc_message(lc_message)
             message.session_id = self.session_id
             message.context_id = self.context_id
-            await astore_message(message, flow_id=self.flow_id)
+            await astore_message(message, flow_id=self.flow_id, user_id=self.user_id)
 
     def clear(self) -> None:
-        delete_messages(self.session_id, self.context_id)
+        delete_messages(self.session_id, self.context_id, flow_id=self.flow_id, user_id=self.user_id)
 
     async def aclear(self) -> None:
-        await adelete_messages(self.session_id, self.context_id)
+        await adelete_messages(self.session_id, self.context_id, flow_id=self.flow_id, user_id=self.user_id)

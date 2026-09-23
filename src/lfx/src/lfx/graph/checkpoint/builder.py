@@ -65,6 +65,10 @@ def build_checkpoint(graph: Graph) -> GraphCheckpoint:
         vertices_layers=[list(layer) for layer in graph.vertices_layers],
         first_layer=list(graph._first_layer),  # noqa: SLF001
         inactivated_vertices={str(v) for v in graph.inactivated_vertices},
+        branch_inactivation_sources={
+            str(source): {str(vertex) for vertex in vertices}
+            for source, vertices in graph.branch_inactivation_sources.items()
+        },
         conditionally_excluded_vertices={str(v) for v in graph.conditionally_excluded_vertices},
         activated_vertices=list(graph.activated_vertices),
         vertex_results={vertex.id: _vertex_data(vertex) for vertex in graph.vertices},

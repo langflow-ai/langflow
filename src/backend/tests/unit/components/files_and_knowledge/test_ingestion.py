@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock, patch
+import hashlib
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
@@ -87,6 +88,12 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # This is a new component, so it doesn't exist in older versions
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe_output": "embeds the rows with a live embedding provider",
+        }
+
     def test_validate_column_config_valid(self, component_class, default_kwargs):
         """Test column configuration validation with valid config."""
         component = component_class(**default_kwargs)
@@ -161,6 +168,109 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert len(metadata["columns"]) == 3
         assert "text" in metadata["summary"]["vectorized_columns"]
         assert "category" in metadata["summary"]["identifier_columns"]
+
+    # Column Configuration cells hold real booleans when toggled, but a typed
+    # cell (or a flow saved before the cell rendered as a toggle) keeps the raw
+    # string, so every spelling the table can store must read the same way.
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            (True, True),
+            ("True", True),
+            ("true", True),
+            ("TRUE", True),
+            (" true ", True),
+            ("1", True),
+            ("yes", True),
+            (False, False),
+            ("False", False),
+            ("false", False),
+            ("0", False),
+            ("no", False),
+            ("", False),
+            (None, False),
+        ],
+    )
+    def test_build_column_metadata_reads_string_flags(self, component_class, default_kwargs, raw, expected):
+        component = component_class(**default_kwargs)
+        data_df = default_kwargs["input_df"]
+        config_list = [{"column_name": "text", "vectorize": raw, "identifier": raw}]
+
+        metadata = component._build_column_metadata(config_list, data_df)
+
+        assert metadata["columns"] == [{"name": "text", "vectorize": expected, "identifier": expected}]
+        assert metadata["summary"] == {
+            "vectorized_columns": ["text"] if expected else [],
+            "identifier_columns": ["text"] if expected else [],
+        }
+
+    async def test_typed_vectorize_flag_reaches_the_embedding(self, component_class, default_kwargs):
+        """A Vectorize cell typed as ``"true"`` contributes to page content instead of flat metadata."""
+        data_df = DataFrame(
+            {
+                "question": ["What is Langflow?"],
+                "answer": ["A visual framework for building AI workflows"],
+                "category": ["general"],
+                "language": ["en"],
+            }
+        )
+        # The saved-flow shape: untouched cells stay booleans, typed cells are strings.
+        default_kwargs["input_df"] = data_df
+        default_kwargs["column_config"] = [
+            {"column_name": "question", "vectorize": True, "identifier": "true"},
+            {"column_name": "answer", "vectorize": "true", "identifier": "false"},
+        ]
+        component = component_class(**default_kwargs)
+
+        config_list = component._validate_column_config(data_df)
+        metadata = component._build_column_metadata(config_list, data_df)
+        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
+            mock_chroma.return_value.get.return_value = {"metadatas": []}
+            [data_obj] = await component._convert_df_to_data_objects(data_df, config_list)
+
+        assert metadata["summary"] == {
+            "vectorized_columns": ["question", "answer"],
+            "identifier_columns": ["question"],
+        }
+        assert data_obj.data["text"] == "What is Langflow? A visual framework for building AI workflows"
+        assert "answer" not in data_obj.data
+        assert data_obj.data["category"] == "general"
+        assert data_obj.data["language"] == "en"
+        # The identifier column alone keys the row.
+        assert data_obj.data["_id"] == hashlib.sha256(b"What is Langflow?").hexdigest()
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_new_kb_record_persists_boolean_column_flags(
+        self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """The KB row stores canonical booleans, so later readers never re-parse typed strings."""
+        from langflow.api.utils import knowledge_base_service
+
+        default_kwargs["column_config"] = [
+            {"column_name": "question", "vectorize": True, "identifier": "true"},
+            {"column_name": "answer", "vectorize": "true", "identifier": "false"},
+        ]
+        component = component_class(**default_kwargs)
+        mock_get_embeddings.return_value.embed_query.return_value = [0.1, 0.2, 0.3]
+        field_value = {
+            "01_new_kb_name": "typed_flags_kb",
+            "02_embedding_model": [
+                {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
+            ],
+            "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
+        }
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
+
+        await component.update_build_config(build_config, field_value, "knowledge_base")
+
+        record = await knowledge_base_service.get_by_user_and_name(default_kwargs["_user_id"], "typed_flags_kb")
+        assert record is not None
+        assert record.column_config == [
+            {"column_name": "question", "vectorize": True, "identifier": True},
+            {"column_name": "answer", "vectorize": True, "identifier": False},
+        ]
+        # The component's own input is left untouched.
+        assert component.column_config[1]["vectorize"] == "true"
 
     async def test_convert_df_to_data_objects(self, component_class, default_kwargs):
         """Test converting DataFrame to Data objects."""
@@ -300,8 +410,35 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert mock_create_record.call_args.kwargs["backend_config"] == {}
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
-    async def test_update_build_config_new_kb_persists_backend_selection(
+    async def test_update_build_config_new_kb_rejects_storage_routing_for_regular_users(
         self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """A regular user cannot point a component-created KB at a named index."""
+        from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError
+
+        component = component_class(**default_kwargs)
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
+        field_value = {
+            "01_new_kb_name": "opensearch_test_kb",
+            "02_embedding_model": [{"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace"}],
+            "03_knowledge_backend": {
+                "backend_type": "opensearch",
+                "backend_config": {"url_variable": "OPENSEARCH_URL", "index_name": "kb-index"},
+            },
+        }
+
+        with (
+            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
+            pytest.raises(StorageRoutingNotAllowedError, match="index_name"),
+        ):
+            await component.update_build_config(build_config, field_value, "knowledge_base")
+
+        mock_create_record.assert_not_called()
+        mock_get_embeddings.assert_not_called()
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_update_build_config_new_kb_persists_backend_selection(
+        self, mock_get_embeddings, component_class, default_kwargs, active_user
     ):
         """Test creating knowledge from the component dialog preserves the selected backend."""
         component = component_class(**default_kwargs)
@@ -328,7 +465,15 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
         mock_get_embeddings.return_value = mock_embeddings
 
-        with patch.object(component, "_create_knowledge_base_record") as mock_create_record:
+        # Only a superuser may name the index a KB uses.
+        superuser = MagicMock(username=active_user.username, is_superuser=True)
+        with (
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                new=AsyncMock(return_value=superuser),
+            ),
+            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
+        ):
             await component.update_build_config(build_config, field_value, "knowledge_base")
 
         assert mock_create_record.call_args.kwargs["backend_type"] == "opensearch"

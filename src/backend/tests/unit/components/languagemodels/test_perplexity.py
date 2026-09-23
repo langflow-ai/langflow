@@ -40,6 +40,12 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
         # No historical version snapshots to validate this component against.
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "text_output": "sends the prompt to a live LLM",
+        }
+
     def test_initialization(self, component_class):
         component = component_class()
         assert component.display_name == "Perplexity"

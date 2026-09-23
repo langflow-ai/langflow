@@ -179,7 +179,10 @@ def build_a2a_client(
             pinned_ips[pin_host] = off_origin_ips
 
     return httpx.AsyncClient(
-        transport=SSRFProtectedTransport(pinned_ips=pinned_ips),
+        # fail_closed=False: this component deliberately shares one mutable pin map across
+        # origins and lets explicitly allowlisted off-origin hosts connect unpinned, so a
+        # pin-map miss there is intentional rather than a pin bypass.
+        transport=SSRFProtectedTransport(pinned_ips=pinned_ips, fail_closed=False),
         timeout=timeout,
         headers={"x-api-key": api_key} if api_key else None,
         follow_redirects=False,
@@ -581,6 +584,10 @@ class A2AAgentComponent(Component):
                 user_id=str(self.user_id),
                 session_id=self._isolated_sub_session(flow_id),
                 output_type="chat",
+                # A nested agent run stays inside this execution: it inherits the
+                # caller graph's principal instead of the fail-closed ``unknown()``
+                # a freshly loaded target graph carries.
+                execution_principal=getattr(self.graph, "execution_principal", None),
             )
 
         if var_child_runnable_config is None:

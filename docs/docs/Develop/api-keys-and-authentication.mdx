@@ -503,6 +503,8 @@ For A2A, `auth_type=none` applies this contract to both the direct agent card an
 The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
 When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
 
+The connection and integration endpoints count requests per signed-in user instead of per IP address, so users who reach Langflow through the same NAT or proxy do not share a limit. The unauthenticated OAuth callback is the exception and is still counted per IP address.
+
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting on the `/login` and `/api/v2/workflows/public` endpoints. Set to False to disable those limits (not recommended in production). |
@@ -510,6 +512,8 @@ When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` h
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
 | `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows consume resources under an isolated anonymous principal, so they are rate-limited separately from the `/login` endpoint. |
+| `LANGFLOW_CONNECTION_METADATA_RATE_LIMIT_PER_MINUTE` | Integer | `60` | Maximum number of connection and integration metadata reads allowed per minute for each signed-in user. These endpoints return no credential material and make no outbound provider call, and the Connections UI polls the connection listing every two seconds while an OAuth consent is pending, so they are limited separately from and more generously than the `/login` endpoint. Connection writes have their own limit, and credential tests, health checks, and the OAuth endpoints keep their own tighter buckets. |
+| `LANGFLOW_CONNECTION_WRITE_RATE_LIMIT_PER_MINUTE` | Integer | `30` | Maximum number of connection creates, updates, revokes, and deletes allowed per minute for each signed-in user. The four operations share one limit, sized for someone managing connections in the Connections UI rather than for login attempts. Credential tests, health checks, and starting an OAuth consent use `LANGFLOW_RATE_LIMIT_PER_MINUTE`, each with its own counter. |
 
 ### LANGFLOW_SSRF_* and LANGFLOW_CONNECTOR_SSRF_* {#ssrf-protection}
 
@@ -524,6 +528,50 @@ In a shared server where users you do not fully trust can build flows, set `LANG
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 | `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` | Boolean | `True` | Apply SSRF host validation to connector components that take a tenant-controlled host or URL. Uses `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS` for the host policy. Set to `false`, or allowlist specific hosts, only when a trusted single-tenant deployment intentionally connects to private-network services. |
 | `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | Boolean | `True` | When connector SSRF validation is enabled, allow literal loopback hosts (`localhost`, `127.0.0.0/8`, `::1`) so local Ollama, LM Studio, and similar services keep working. Multi-tenant deployments where a tenant must not reach the server's loopback should set this to `false`. |
+| `LANGFLOW_KB_ALLOWED_HOSTS` | List[String] | Not set | An **exclusive** allowlist of destination hosts for the network knowledge base backends (OpenSearch and Chroma Cloud). Accepts the same patterns as `LANGFLOW_SSRF_ALLOWED_HOSTS`. Unlike that variable, which is an exception list that still admits any unlisted public host, this one denies by default: a destination a user supplies is refused unless its host is listed here. A destination Langflow reads from a server environment variable is already operator-controlled and does not need an entry, so setting `OPENSEARCH_URL` on the server keeps working unchanged. Chroma Cloud's default host is also unaffected. See the note below. |
+
+#### Model provider endpoints {#provider-allowed-hosts}
+
+Custom model provider endpoints require HTTPS unless the operator explicitly permits HTTP through `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+This allowlist accepts bare hostnames, IP addresses, `*.domain` wildcards, and CIDR ranges, without schemes or ports.
+For a URL containing an IP address, a covering CIDR grants the HTTP exception: for example, `172.16.0.0/12` permits `http://172.17.0.3:8080/v1`.
+For a DNS hostname, use its name or a wildcard; the HTTPS check does not resolve hostnames to match CIDRs.
+
+An API key sourced from the server environment also requires the custom destination to be approved in `LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS`.
+That separate allowlist accepts bare hosts, `host:port`, and `*.domain` wildcards, but not CIDRs.
+Prefix an entry with `http://` to explicitly permit sending that credential over HTTP.
+For example, a trusted internal gateway at `http://172.17.0.3:8080/v1` using a server-provisioned key needs both settings:
+
+```bash
+export LANGFLOW_SSRF_ALLOWED_HOSTS=172.16.0.0/12
+export LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS=http://172.17.0.3:8080
+```
+
+#### Knowledge base destinations {#kb-allowed-hosts}
+
+The OpenSearch and Chroma Cloud knowledge base backends need a stricter rule than the other connectors.
+
+The SSRF variables above validate a hostname and then hand the original URL to a vendor SDK, which resolves DNS again when it connects.
+For the **API Request** component Langflow closes that gap by pinning the validated IP address, but neither knowledge base SDK exposes a place to do that: `chromadb` builds its own HTTP client inside `CloudClient` and connects while the client is still being constructed, and `OpenSearchVectorSearch` passes one set of arguments to both its synchronous and asynchronous clients, so a single pinned transport cannot serve both.
+A hostname whose DNS answer changes between validation and connection can therefore still reach an internal address.
+
+`LANGFLOW_KB_ALLOWED_HOSTS` closes that by requiring the destination to be one you chose:
+
+```bash
+export LANGFLOW_KB_ALLOWED_HOSTS=search.corp.example,*.opensearch.internal
+```
+
+A destination is permitted when either of the following is true:
+
+* Langflow read it from a server environment variable, such as `OPENSEARCH_URL` set on the server process. Only an operator can set one, so no allowlist entry is needed.
+* Its host appears in `LANGFLOW_KB_ALLOWED_HOSTS`.
+
+Everything else is refused, including hosts that resolve to ordinary public addresses.
+A cluster URL a user saved as a Langflow variable in the UI, and a `cloud_host` sent in a request body, both need an entry.
+Chroma Cloud's fixed default host, `api.trychroma.com`, takes no user input and is always permitted.
+
+This is a second check rather than a replacement: an approved host must still satisfy `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS`, so an environment variable pointing at a cloud metadata address is still refused.
+Both checks share the `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` switch.
 
 ### Component hardening for untrusted users {#multi-tenant-component-hardening}
 
@@ -534,7 +582,7 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of any flow containing a built-in arbitrary-code-execution component, including the [**Python Interpreter**](/python-interpreter), Python REPL/Code tools, [**Smart Transform**](/smart-transform), [**CSV Agent**](/bundles-langchain#csv-agent), and code-running agents such as [**CodeAct**](/bundles-codeagents#codeact-agent-smolagents), [**CUGA**](/bundles-cuga), and [**OpenDsStar**](/bundles-codeagents#opendstar-agent). |
-| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. |
+| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `True` | By default, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. **Security warning:** setting this to `false` allows any user who can build flows to read arbitrary files on the server (including Langflow's own secret keys) through file components and `sqlite:////path` database URLs. Set it to `false` only in single-tenant deployments where reading local server files by absolute path is an intentional feature. |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
 | `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which component fields a run request may set through `tweaks`. For more information, see [Restrict API tweaks](./deployment-tweaks-policy). |
 
@@ -547,7 +595,7 @@ To enable these flags, set the following:
 
 * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`: blocks user-authored component code and registered built-in code-execution components. See [Block custom components](/deployment-block-custom-components).
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
-* `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
+* `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox. This is the default; keep it enabled when untrusted users can build flows.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.
 * `LANGFLOW_TWEAKS_POLICY=declared` or `off`: limits which component fields an API caller can override at run time. See [Restrict API tweaks](./deployment-tweaks-policy).
 

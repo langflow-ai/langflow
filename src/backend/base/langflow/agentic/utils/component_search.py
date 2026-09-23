@@ -10,6 +10,41 @@ from lfx.utils.component_aliases import build_component_identity_index
 from langflow.services.deps import get_catalog_policy_service
 
 
+def _filter_components_by_integration_policy(all_types_dict: dict[str, dict[str, dict]]) -> dict[str, dict[str, dict]]:
+    """Mirror the palette's integration filter for agentic component search.
+
+    Search runs inside a request that already bound the policy context, so the
+    decision is resolved from that context rather than a user argument.
+    """
+    from lfx.services.integration_policy import (
+        IntegrationPolicyPurpose,
+        resolve_integration_policy_for_current_context,
+    )
+
+    from langflow.services.integration_policy_discovery import (
+        build_integration_capability_index,
+        candidate_provider_ids,
+        component_is_allowed,
+    )
+
+    provider_ids = candidate_provider_ids(all_types_dict)
+    if not provider_ids:
+        return all_types_dict
+    policy = resolve_integration_policy_for_current_context(
+        provider_ids=provider_ids,
+        purpose=IntegrationPolicyPurpose.DISCOVER,
+    )
+    index = build_integration_capability_index()
+    return {
+        category: {
+            component_name: component
+            for component_name, component in components.items()
+            if component_is_allowed(component, policy=policy, index=index)
+        }
+        for category, components in all_types_dict.items()
+    }
+
+
 def _filter_components_by_catalog_policy(all_types_dict: dict[str, dict[str, dict]]) -> dict[str, dict[str, dict]]:
     """Return request-local category copies without catalog-blocked components."""
     blocked_component_keys = get_catalog_policy_service().snapshot.blocked_component_keys
@@ -74,7 +109,9 @@ async def list_all_components(
 
     try:
         # Get all components from cache
-        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        all_types_dict = _filter_components_by_integration_policy(
+            _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        )
         results = []
 
         # Iterate through component types
@@ -155,7 +192,9 @@ async def get_component_by_name(
         settings_service = get_settings_service()
 
     try:
-        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        all_types_dict = _filter_components_by_integration_policy(
+            _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        )
 
         # If component_type specified, search only that type
         if component_type:
@@ -218,7 +257,9 @@ async def get_all_component_types(settings_service: SettingsService | None = Non
         settings_service = get_settings_service()
 
     try:
-        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        all_types_dict = _filter_components_by_integration_policy(
+            _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        )
         return sorted(all_types_dict.keys())
 
     except Exception as e:  # noqa: BLE001
@@ -253,7 +294,9 @@ async def get_components_count(
         settings_service = get_settings_service()
 
     try:
-        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        all_types_dict = _filter_components_by_integration_policy(
+            _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
+        )
 
         if component_type:
             components = all_types_dict.get(component_type, {})

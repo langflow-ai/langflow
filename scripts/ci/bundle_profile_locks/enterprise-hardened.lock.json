@@ -48,9 +48,9 @@
       "providers": [
         "lfx-cohere"
       ],
-      "requested": ">=0.1.3,<1.0.0",
-      "requirement": "lfx-cohere==0.1.3",
-      "resolved_version": "0.1.3"
+      "requested": ">=0.1.4,<1.0.0",
+      "requirement": "lfx-cohere==0.1.4",
+      "resolved_version": "0.1.4"
     },
     {
       "distribution": "lfx-datastax",
@@ -68,9 +68,9 @@
       "providers": [
         "lfx-docling"
       ],
-      "requested": ">=0.1.6,<1.0.0",
-      "requirement": "lfx-docling==0.1.6",
-      "resolved_version": "0.1.6"
+      "requested": ">=0.1.7,<1.0.0",
+      "requirement": "lfx-docling==0.1.7",
+      "resolved_version": "0.1.7"
     },
     {
       "distribution": "lfx-google",
@@ -78,9 +78,9 @@
       "providers": [
         "lfx-google"
       ],
-      "requested": ">=0.1.1,<1.0.0",
-      "requirement": "lfx-google==0.1.1",
-      "resolved_version": "0.1.1"
+      "requested": ">=0.3.0,<1.0.0",
+      "requirement": "lfx-google==0.3.0",
+      "resolved_version": "0.3.0"
     },
     {
       "distribution": "lfx-ibm",
@@ -88,9 +88,19 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.2.3,<1.0.0",
-      "requirement": "lfx-ibm==0.2.3",
-      "resolved_version": "0.2.3"
+      "requested": ">=0.2.5,<1.0.0",
+      "requirement": "lfx-ibm==0.2.5",
+      "resolved_version": "0.2.5"
+    },
+    {
+      "distribution": "lfx-microsoft",
+      "extras": [],
+      "providers": [
+        "lfx-microsoft"
+      ],
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-microsoft==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-ollama",
@@ -108,9 +118,9 @@
       "providers": [
         "lfx-openai"
       ],
-      "requested": ">=0.1.4,<1.0.0",
-      "requirement": "lfx-openai==0.1.4",
-      "resolved_version": "0.1.4"
+      "requested": ">=0.1.5,<1.0.0",
+      "requirement": "lfx-openai==0.1.5",
+      "resolved_version": "0.1.5"
     },
     {
       "distribution": "lfx-openai-compatible",
@@ -128,9 +138,19 @@
       "providers": [
         "lfx-oracle"
       ],
-      "requested": ">=0.1.3,<1.0.0",
-      "requirement": "lfx-oracle==0.1.3",
-      "resolved_version": "0.1.3"
+      "requested": ">=0.1.4,<1.0.0",
+      "requirement": "lfx-oracle==0.1.4",
+      "resolved_version": "0.1.4"
+    },
+    {
+      "distribution": "lfx-slack",
+      "extras": [],
+      "providers": [
+        "lfx-slack"
+      ],
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-slack==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-toolguard",
@@ -160,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:aa975b1600906a98",
+  "profile_digest": "sha256:fae4b6618a6fa6cb",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -170,10 +190,12 @@
     "lfx-docling",
     "lfx-google",
     "lfx-ibm",
+    "lfx-microsoft",
     "lfx-ollama",
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
+    "lfx-slack",
     "lfx-toolguard",
     "lfx-vllm"
   ],

@@ -40,11 +40,25 @@ from lfx.observability import execution_protocol, extract_trace_link, queued_tra
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
-from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_terminal_output_event
-from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
+from lfx.workflow.adapters.langflow import (
+    WORKFLOW_OUTPUT_CAPTURE_EVENT,
+    WORKFLOW_STOP_CHECKPOINT_EVENT,
+    build_terminal_output_event,
+)
+from lfx.workflow.converters import (
+    ParsedWorkflowRun,
+    create_error_response,
+    redact_component_identity,
+    run_response_to_workflow_response,
+)
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
+from langflow.api.utils.execution_principal import (
+    FAMILY_WORKFLOW_V2,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
@@ -231,6 +245,10 @@ async def _stream_event_frames(
     # Required, not defaulted: a default is how an unwired caller gets a confidently wrong
     # label, which is the one thing the absent-rather-than-"unknown" rule exists to prevent.
     protocol: str,
+    # Same rule as ``protocol``, for a stronger reason: this one is an authorization
+    # input, so it is required rather than defaulted. ``protocol`` is telemetry;
+    # ``execution_family`` decides whose connections the run may resolve.
+    execution_family: str,
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
     execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
@@ -337,6 +355,7 @@ async def _stream_event_frames(
                         # and background paths silently drop request tweaks.
                         tweaks=parsed.tweaks,
                         expose_error_details=expose_error_details,
+                        execution_family=execution_family,
                         # Anonymous serving runs are ephemeral: thread the no-persist
                         # decision onto the graph so astore_message skips the DB write.
                         persist_messages=parsed.persist_messages,
@@ -375,7 +394,15 @@ async def _stream_event_frames(
     # The AG-UI playground's chat-view consumes the v1 message payload via a
     # side-channel ``CustomEvent``; emitted only when the wire protocol is
     # AG-UI. A follow-up retires this once chat-view consumes AG-UI primitives.
-    emit_side_channel = adapter.name == "agui"
+    # It is raw EventManager payloads, so a caller that asked for the narrowed
+    # stream does not get it: such a client reads the AG-UI TEXT_MESSAGE_*
+    # primitives, which carry the same conversation without the internals. The
+    # public playground is the exception and sets it independently.
+    emit_side_channel = adapter.name == "agui" and parsed.emit_v1_side_channel
+    # Only for a background run (the runner is the only consumer) whose per-vertex
+    # frames are suppressed; with graph state on those frames are durable and the
+    # runner already polls on them.
+    emit_stop_checkpoint = emit_output_capture and not parsed.expose_graph_state
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False
@@ -390,6 +417,10 @@ async def _stream_event_frames(
         for event in adapter.initial_events():
             yield _frame(event, seq)
             seq += 1
+        if parsed.component_substitution_warning:
+            for event in adapter.translate("warning", {"message": parsed.component_substitution_warning}):
+                yield _frame(event, seq)
+                seq += 1
         while True:
             _, value, _ = await queue.get()
             if value is None:
@@ -398,12 +429,19 @@ async def _stream_event_frames(
             event_type = payload.get("event", "")
             event_data = payload.get("data") or {}
             if emit_side_channel and event_type in side_channel_events:
+                # The mirror forwards EventManager payloads verbatim, and a message
+                # names the component that produced it (an LLM's ``source.source``
+                # is the model name). A run without graph state must not leak that
+                # through the side door the playground uses.
+                mirrored = event_data
+                if not parsed.expose_graph_state and event_type in {"add_message", "error"}:
+                    mirrored = redact_component_identity(event_data)
                 yield _frame(
                     StreamEvent(
                         type="CUSTOM",
                         data_json=CustomEvent(
                             name="langflow.event",
-                            value={"event_type": event_type, "data": event_data},
+                            value={"event_type": event_type, "data": mirrored},
                         ).model_dump_json(by_alias=True, exclude_none=True),
                     ),
                     seq,
@@ -428,6 +466,16 @@ async def _stream_event_frames(
                         seq,
                     )
                     seq += 1
+
+            if emit_stop_checkpoint and event_type == "end_vertex":
+                # Carries no payload: its only job is to give the runner a
+                # vertex boundary to poll STOP on, now that the frames it used
+                # to poll on are suppressed.
+                yield _frame(
+                    StreamEvent(type=WORKFLOW_STOP_CHECKPOINT_EVENT, data_json="{}"),
+                    seq,
+                )
+                seq += 1
 
             for event in adapter.translate(event_type, event_data):
                 if terminal_error_type is not None and event.type == terminal_error_type:
@@ -527,6 +575,7 @@ def _execute_streaming_workflow(
             # The live v2 stream. Which client sent it is a separate attribute, read from the
             # X-Langflow-Client header, because the playground calls this same public endpoint.
             protocol="v2",
+            execution_family=FAMILY_WORKFLOW_V2,
             expose_error_details=caller_owns_flow(flow, current_user),
         ):
             yield frame
@@ -547,6 +596,7 @@ async def execute_sync_workflow_with_timeout(
     checkpoint_store: CheckpointStore | None = None,
     *,
     expose_error_details: bool | None = None,
+    execution_family: str = FAMILY_WORKFLOW_V2,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -560,6 +610,8 @@ async def execute_sync_workflow_with_timeout(
         checkpoint_store: When provided, enables HITL checkpointing so a flow that
             pauses for human input returns a ``suspended`` response instead of failing.
         expose_error_details: Override the owner-derived client error policy.
+        execution_family: Matrix family for connection resolution, forwarded to
+            ``execute_sync_workflow``.
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -579,6 +631,7 @@ async def execute_sync_workflow_with_timeout(
                 http_request=http_request,
                 checkpoint_store=checkpoint_store,
                 expose_error_details=expose_error_details,
+                execution_family=execution_family,
             ),
             timeout=_resolve_execution_timeout(),
         )
@@ -633,6 +686,7 @@ async def execute_sync_workflow(
     checkpoint_store: CheckpointStore | None = None,
     *,
     expose_error_details: bool | None = None,
+    execution_family: str = FAMILY_WORKFLOW_V2,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -663,6 +717,11 @@ async def execute_sync_workflow(
             returns a ``suspended`` response (carrying the human-input request) instead of
             running through. Off by default, so non-HITL callers are unchanged.
         expose_error_details: Override the owner-derived client error policy.
+        execution_family: The matrix family this run belongs to (workflow_v2, or
+            ``a2a`` when the A2A surface borrows this executor). It selects the
+            identity the graph resolves connections under; A2A callers admitted
+            through the public grant arrive as the anonymous execution user and
+            resolve no user connection at all.
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -703,6 +762,15 @@ async def execute_sync_workflow(
         # component policy. It must win over ``flow.data``, and it must bypass the warm
         # template — which is built from the unsanitized stored row.
         sanitized_flow_data = parsed.data
+        # ``getattr``: the same tolerance ``caller_owns_flow`` above applies, since
+        # this executor is also driven with partial flow objects (A2A's prepared
+        # public flow, and the job-runner stubs).
+        execution_principal = execution_principal_for(
+            execution_family,
+            user=current_user,
+            flow_owner_id=getattr(flow, "user_id", None),
+            end_user_id=parsed.end_user_id,
+        )
         # Opt-in warm fast-path: serve a deepcopy of the pre-built template
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
@@ -719,6 +787,7 @@ async def execute_sync_workflow(
                     user_id=user_id,
                     session_id=session_id,
                     stream=False,
+                    execution_principal=execution_principal,
                 )
             if graph is None:
                 # Use deepcopy to prevent mutation of the original flow.data
@@ -734,6 +803,7 @@ async def execute_sync_workflow(
                     flow_name=flow.name,
                     context=context,
                 )
+        stamp_execution_principal(graph, execution_principal)
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
@@ -769,10 +839,17 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
+    warning = parsed.component_substitution_warning
+    warnings = [warning] if warning else []
     # user_id stays the executing service account (flow fetch / resume rely on it); the end
     # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
     await job_service.create_job(
-        job_id=job_id, flow_id=flow_id_str, user_id=current_user.id, end_user_id=parsed.end_user_id
+        job_id=job_id,
+        flow_id=flow_id_str,
+        user_id=current_user.id,
+        end_user_id=parsed.end_user_id,
+        # Keep the notice available to GET status even when sync result caching is off.
+        initial_metadata={"component_substitution_warning": warning} if warning else None,
     )
     _sync_run_paused = False
     _sync_run_success = False
@@ -828,6 +905,8 @@ async def execute_sync_workflow(
             effective_globals=request_variables,
             selected_ids=parsed.output_ids,
         )
+        if warnings:
+            workflow_response.warnings = warnings
         # Optionally cache the completed run's outputs + request to the job row so a
         # later GET status returns the same response. Off by default: sync callers
         # already hold the full response inline, so this is an opt-in per-request
@@ -861,6 +940,7 @@ async def execute_sync_workflow(
             job_id=str(job_id),
             status=JobStatus.SUSPENDED,
             human_request=exc.data or {},
+            warnings=warnings,
         )
         _sync_run_paused = True
         return suspended_response
@@ -876,13 +956,16 @@ async def execute_sync_workflow(
         # Component execution errors - return in response body with HTTP 200
         # This allows partial results and detailed error information per component
         _sync_run_error = str(exc)
-        return create_error_response(
+        error_response = create_error_response(
             flow_id=parsed.flow_id,
             job_id=job_id,
             inputs=parsed.tweaks,
             error=error_for_client(exc, expose_details=expose_error_details),
             effective_globals=request_variables,
         )
+        if warnings:
+            error_response.warnings = warnings
+        return error_response
     finally:
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Scarf telemetry pipeline both see every v2 sync workflow run.

@@ -66,6 +66,16 @@ class AuthSettings(BaseSettings):
         default=JWTAlgorithm.HS256,
         description="JWT signing algorithm. Use RS256 or RS512 for asymmetric signing (recommended for production).",
     )
+    CACHE_SIGNING_KEY: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Shared secret used to sign external cache payloads (Redis). Set this to the same value on every "
+            "worker and replica that shares a cache backend; entries signed by one instance are otherwise "
+            "unverifiable by another. When unset, a per-deployment key is generated in CONFIG_DIR, which only "
+            "covers processes that share that directory."
+        ),
+        frozen=False,
+    )
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60  # 1 hour
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
 

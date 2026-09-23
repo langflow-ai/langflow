@@ -72,6 +72,10 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
             {"version": "1.2.0", "module": "data", "file_name": "url"},
         ]
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return dict.fromkeys(["page_results", "raw_results"], "crawls the live URLs in default_kwargs")
+
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("disable_ssrf")
     async def test_url_component_basic_functionality(self, monkeypatch):

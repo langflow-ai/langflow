@@ -22,6 +22,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
+from sqlmodel import select
 
 CYRILLIC_NAME = "Новый проект"
 CYRILLIC_DESC = "Описание проекта с кириллицей"  # noqa: RUF001
@@ -54,12 +55,17 @@ async def test_project_download_uses_resolved_owner_namespace():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    response = await download_project_flows(
-        session=session,
-        project_id=project_id,
-        current_user=SimpleNamespace(id=actor_id),
-        project_owner_id=owner_id,
-    )
+    with patch(
+        "langflow.api.v1.projects_files._export_variable_names",
+        new_callable=AsyncMock,
+        return_value=frozenset(),
+    ) as export_variable_names:
+        response = await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=actor_id),
+            project_owner_id=owner_id,
+        )
 
     assert response.status_code == 200
     project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
@@ -67,6 +73,8 @@ async def test_project_download_uses_resolved_owner_namespace():
     assert owner_id.hex in project_sql
     assert owner_id.hex in flows_sql
     assert actor_id.hex not in project_sql
+    # Exported bindings are checked against the project owner's variables, not the actor's.
+    export_variable_names.assert_awaited_once_with(session, owner_id)
 
 
 async def test_shared_project_download_filters_flows_by_read_permission():
@@ -86,12 +94,19 @@ async def test_shared_project_download_filters_flows_by_read_permission():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    with patch(
-        "langflow.api.v1.projects_files.filter_visible_resources",
-        new_callable=AsyncMock,
-        create=True,
-        return_value=[allowed_flow],
-    ) as filter_visible:
+    with (
+        patch(
+            "langflow.api.v1.projects_files.filter_visible_resources",
+            new_callable=AsyncMock,
+            create=True,
+            return_value=[allowed_flow],
+        ) as filter_visible,
+        patch(
+            "langflow.api.v1.projects_files._export_variable_names",
+            new_callable=AsyncMock,
+            return_value=frozenset(),
+        ),
+    ):
         response = await download_project_flows(
             session=session,
             project_id=project_id,
@@ -427,6 +442,145 @@ async def test_delete_project_recovers_from_concurrent_write_lock(
 
     get_resp = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_project_retry_does_not_leak_stale_memory_base_handle(
+    client: AsyncClient, active_user, logged_in_headers, basic_case, monkeypatch
+):
+    """A retry that finds the project already gone must not carry a stale cleanup handle.
+
+    Regression for: attempt 0 populates ``memory_base_cleanups`` with a handle for
+    flow F1's Memory Base, then hits lock contention and its DB transaction rolls
+    back — but the in-memory ``memory_base_cleanups`` list is a plain Python list
+    the rollback never touches. Before the retry, a concurrent request moves F1
+    out of the project and deletes the (now-empty) project. The retry's
+    ``_load_project()`` returns None so ``_delete_attempt`` returns early, BEFORE
+    the ``.clear()`` inside ``_delete_project_operation`` (which never runs on
+    this attempt) would have reset the list. Without the fix,
+    ``finalize_flow_memory_base_cleanup`` is then called with F1's now-stale
+    handle even though F1 survived — only moved — dropping its live collection.
+
+    Uses the REAL ``run_with_lock_retry``. On the first attempt a competing
+    connection commits the flow move + project delete, then the attempt raises a
+    genuine SQLite "database is locked" error (the same wrapped-``OperationalError``
+    shape ``test_delete_project_does_not_leak_sql_on_database_error`` uses) so the
+    real retry logic rolls back and re-runs — deterministically, without relying
+    on SQLite snapshot-conflict timing. Only ``cascade_delete_flow`` is stubbed,
+    to record the handle into the list without taking the writer lock.
+    """
+    import sqlite3
+
+    from langflow.api.v1 import projects as projects_module
+    from langflow.services.database.models.flow.model import Flow as FlowModel
+    from langflow.services.database.models.memory_base.model import MemoryBase
+    from langflow.services.memory_base import flow_cleanup as flow_cleanup_module
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup
+    from sqlalchemy.exc import OperationalError
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = UUID(create_resp.json()["id"])
+    owner_id = active_user.id
+
+    flow_payload = FlowCreate(name=f"MB Flow {uuid4()}", description="d", data={}, folder_id=project_id)
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload.model_dump(mode="json"), headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = UUID(flow_resp.json()["id"])
+
+    kb_name = f"kb_{uuid4().hex[:8]}"
+    async with session_scope() as db:
+        db.add(MemoryBase(name=f"mb-{uuid4().hex[:6]}", flow_id=flow_id, user_id=owner_id, kb_name=kb_name))
+
+    async with session_scope() as db:
+        other_project = Folder(name=f"other-project-{uuid4()}", user_id=owner_id)
+        db.add(other_project)
+        await db.flush()
+        other_project_id = other_project.id
+
+    recorded_handles: list[list] = []
+
+    async def _record_finalize(handles):
+        recorded_handles.append(list(handles))
+
+    monkeypatch.setattr(flow_cleanup_module, "finalize_flow_memory_base_cleanup", _record_finalize)
+
+    # Stub cascade_delete_flow to populate the cleanup list WITHOUT taking the
+    # writer lock, so the competing commit below is free to land. The handle it
+    # records is the one that must NOT survive into the retry.
+    async def _fake_cascade_delete_flow(session, target_flow_id, *, memory_base_cleanups):  # noqa: ARG001
+        memory_base_cleanups.append(
+            FlowMemoryBaseCleanup(
+                kb_name=kb_name,
+                user_id=owner_id,
+                kb_username="activeuser",
+                backend_type="chroma",
+                backend_config={},
+            )
+        )
+        return True
+
+    monkeypatch.setattr(projects_module, "cascade_delete_flow", _fake_cascade_delete_flow)
+
+    # Wrap the REAL run_with_lock_retry so we can prove a second attempt ran.
+    # (attempts on the check hook alone can't prove it: the retry returns early
+    # at `target is None` before check_project_has_deployments is reached.)
+    real_run_with_lock_retry = projects_module.run_with_lock_retry
+    op_attempts = {"max": 0}
+
+    async def counting_run_with_lock_retry(operation, **kwargs):
+        async def counting_operation(attempt):
+            op_attempts["max"] = max(op_attempts["max"], attempt + 1)
+            return await operation(attempt)
+
+        return await real_run_with_lock_retry(counting_operation, **kwargs)
+
+    monkeypatch.setattr(projects_module, "run_with_lock_retry", counting_run_with_lock_retry)
+
+    original_check = projects_module.check_project_has_deployments
+    attempts = {"count": 0}
+
+    async def check_with_flow_moved_and_project_deleted(session, *, project_id):
+        # First attempt only: a genuinely separate request moves F1 to another
+        # project and deletes the (now-empty) original project, committed on its
+        # own connection. Then raise a real SQLite lock error so the REAL
+        # run_with_lock_retry rolls back attempt 0's transaction and retries —
+        # while memory_base_cleanups (a plain Python list) keeps F1's handle.
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                flow_row = await competing_session.get(FlowModel, flow_id)
+                flow_row.folder_id = other_project_id
+                competing_session.add(flow_row)
+                folder_row = await competing_session.get(Folder, project_id)
+                await competing_session.delete(folder_row)
+            lock_statement = "UPDATE ..."
+            raise OperationalError(lock_statement, {}, sqlite3.OperationalError("database is locked"))
+        return await original_check(session, project_id=project_id)
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", check_with_flow_moved_and_project_deleted)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT, delete_resp.text
+    assert op_attempts["max"] >= 2, "a retry attempt never ran — the test no longer exercises the bug path"
+    assert attempts["count"] == 1, "the lock error was injected on exactly the first attempt"
+
+    # The finalizer must have been called, but with NO handle for the surviving
+    # flow's Memory Base — the fix clears the list at the top of the retry.
+    assert recorded_handles, "finalize_flow_memory_base_cleanup was never called"
+    leaked_kb_names = {h.kb_name for handles in recorded_handles for h in handles}
+    assert kb_name not in leaked_kb_names, (
+        f"stale handle for surviving flow's Memory Base ({kb_name}) leaked into finalize: {recorded_handles}"
+    )
+
+    # F1 itself survived (moved, not deleted) and its Memory Base row is intact.
+    async with session_scope() as db:
+        surviving_flow = await db.get(FlowModel, flow_id)
+        surviving_mb = (await db.exec(select(MemoryBase).where(MemoryBase.flow_id == flow_id))).first()
+    assert surviving_flow is not None
+    assert surviving_flow.folder_id == other_project_id
+    assert surviving_mb is not None
+    assert surviving_mb.kb_name == kb_name
 
 
 async def test_delete_project_does_not_leak_sql_on_database_error(
@@ -2564,3 +2718,98 @@ async def test_upsert_project_update_rejects_flows_list(client: AsyncClient, log
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
     assert "flows_list" in response.json()["detail"]
+
+
+class TestProjectNameValidation:
+    """Names the MCP server name cannot be derived from are refused instead of collapsing."""
+
+    async def test_create_project_with_emoji_name_is_rejected(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/projects/", json={"name": "\U0001f680 rockets", "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "emoji" in response.text
+
+    async def test_rename_project_to_emoji_name_is_rejected(self, client: AsyncClient, logged_in_headers, basic_case):
+        created = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        project_id = created.json()["id"]
+
+        response = await client.patch(
+            f"api/v1/projects/{project_id}", json={"name": "\U0001f389\U0001f389"}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        stored = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+        assert stored.json()["name"] == basic_case["name"]
+
+    async def test_cjk_and_symbol_names_are_still_accepted(self, client: AsyncClient, logged_in_headers):
+        # The GB18030 test string, including a Kangxi radical and 4-byte characters
+        name = "P\u3023\u51c9\u55c0\u9f75\u9f6c\U00024ac9\U0002b1ed\U0002b7a9\U0002ce26\U00020d4d\u2fd5"
+        response = await client.post(
+            "api/v1/projects/", json={"name": name, "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["name"] == name
+
+    @pytest.mark.parametrize("name", ["\u2b50", "!!!", "   "])
+    async def test_names_without_a_letter_or_number_are_rejected(self, client: AsyncClient, logged_in_headers, name):
+        response = await client.post(
+            "api/v1/projects/", json={"name": name, "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "at least one letter or number" in response.text
+
+    async def test_importing_a_project_with_an_emoji_name_is_a_422_not_a_500(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        payload = json.dumps({"folder_name": "\U0001f680 rockets", "folder_description": "", "flows": []}).encode()
+
+        response = await client.post(
+            "api/v1/projects/upload/",
+            files={"file": ("rockets.json", payload, "application/json")},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json()["detail"] == "Project names cannot contain emoji"
+
+
+class TestCjkProjectsRegisterDistinctMcpServers:
+    """The reported bug: a second all-CJK project used to 409 on the shared lf-unnamed name."""
+
+    async def test_two_cjk_projects_and_a_cjk_rename_do_not_conflict(self, client: AsyncClient, logged_in_headers):
+        with patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = True
+            mock_get_settings.return_value = mock_settings
+
+            first = await client.post(
+                "api/v1/projects/",
+                json={"name": "\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848", "description": ""},
+                headers=logged_in_headers,
+            )
+            second = await client.post(
+                "api/v1/projects/",
+                json={"name": "\u7b80\u4f53\u4e2d\u6587\u9879\u76ee", "description": ""},
+                headers=logged_in_headers,
+            )
+            assert first.status_code == status.HTTP_201_CREATED
+            assert second.status_code == status.HTTP_201_CREATED
+
+            renamed = await client.patch(
+                f"api/v1/projects/{second.json()['id']}",
+                json={"name": "\u65e5\u672c\u8a9e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8"},
+                headers=logged_in_headers,
+            )
+            assert renamed.status_code == status.HTTP_200_OK
+
+        servers = await client.get("api/v2/mcp/servers", headers=logged_in_headers)
+        names = {server["name"] for server in servers.json()}
+        assert "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848" in names
+        assert "lf-\u65e5\u672c\u8a9e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8" in names
+        assert "lf-\u7b80\u4f53\u4e2d\u6587\u9879\u76ee" not in names
+        assert "lf-unnamed" not in names

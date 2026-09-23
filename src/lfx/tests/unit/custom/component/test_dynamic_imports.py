@@ -263,30 +263,13 @@ class TestComponentDynamicImports:
 
     def test_type_checking_imports(self):
         """Test that TYPE_CHECKING imports work correctly with dynamic loading."""
-        # This test ensures that imports in TYPE_CHECKING blocks
-        # work correctly with the dynamic import system
-        import importlib.util
-
-        # Use a core (non-bundled) category so this runs in the isolated lfx
-        # environment. FakeEmbeddingsComponent imports langchain_community at
-        # module-import time, exercising the same optional-dependency path.
         import lfx.components.langchain_utilities as langchain_utilities_components
 
-        # Components should be available for dynamic loading
         assert "FakeEmbeddingsComponent" in langchain_utilities_components.__all__
         assert "FakeEmbeddingsComponent" in langchain_utilities_components._dynamic_imports
-
-        # FakeEmbeddingsComponent imports from langchain_community at module-import
-        # time. If that package is present in this environment, the dynamic import
-        # should succeed; otherwise it should raise AttributeError wrapping the
-        # ImportError.
-        if importlib.util.find_spec("langchain_community") is not None:
-            component = langchain_utilities_components.FakeEmbeddingsComponent
-            assert component is not None
-            assert hasattr(component, "__init__")
-        else:
-            with pytest.raises(AttributeError, match=r"Could not import.*FakeEmbeddingsComponent"):
-                _ = langchain_utilities_components.FakeEmbeddingsComponent
+        component = langchain_utilities_components.FakeEmbeddingsComponent
+        embeddings = component().build_embeddings()
+        assert len(embeddings.embed_query("test")) == 5
 
 
 class TestPerformanceCharacteristics:

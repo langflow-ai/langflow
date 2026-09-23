@@ -13,6 +13,7 @@ import orjson
 from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import (
@@ -25,13 +26,18 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.flows_helpers import _sanitize_flow_filename
+from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import FlowAction, filter_visible_resources
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.creation_hooks import (
+    RESOURCE_PROJECT,
+    PreCreationContext,
+    enforce_pre_creation,
+)
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import (
@@ -75,7 +81,12 @@ async def download_project_flows(
 
         # Strip secret field values then normalise for git-friendly export
         # (sorted keys, volatile fields removed, code fields as line arrays).
-        normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
+        # Bindings survive only when they name one of the owner's global variables.
+        known_variable_names = await _export_variable_names(session, owner_id)
+        normalised_flows = [
+            normalize_flow_for_export(strip_flow_secrets(flow.model_dump(), known_variable_names=known_variable_names))
+            for flow in flows
+        ]
         zip_stream = io.BytesIO()
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
@@ -169,7 +180,23 @@ async def upload_project_flows(
 
     data["folder_name"] = project_name
 
-    project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+    try:
+        project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+    except ValidationError as e:
+        # The imported name is validated like a typed one; report why rather than 500
+        raise HTTPException(status_code=422, detail=e.errors()[0]["msg"]) from e
+
+    # The one project-creation route that does not go through ``projects._new_project``: it
+    # builds the Folder itself, so it runs the same hooks through the same helper. Without
+    # this call a project limit would be bypassable by uploading a project export.
+    await enforce_pre_creation(
+        PreCreationContext(
+            resource=RESOURCE_PROJECT,
+            session=session,
+            actor_user_id=current_user.id,
+            requested_name=project.name,
+        )
+    )
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None

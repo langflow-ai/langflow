@@ -223,6 +223,12 @@ DEFAULT_REDACT_KEYS: frozenset[str] = frozenset(
         "token",
         "access_token",
         "refresh_token",
+        "client_secret",
+        "client_assertion",
+        "private_key",
+        "code_verifier",
+        "encrypted_verifier",
+        "registrations",
         "authorization",
         "auth",
         "cookie",
@@ -1101,8 +1107,8 @@ def configure(
     # dropping the exception or rendering its repr. ConsoleRenderer formats
     # exc_info itself, so we don't add a tracebacks processor on that path.
     #
-    # `show_locals` is OFF by default in JSON output because frame locals can
-    # leak secrets (API keys, env, request bodies). Opt in with
+    # `show_locals` is OFF by default in JSON and pretty console output because frame
+    # locals can leak secrets (API keys, env, request bodies). Opt in with
     # LANGFLOW_LOG_TRACE_LOCALS=true when you need it for local debugging.
     show_locals = os.getenv("LANGFLOW_LOG_TRACE_LOCALS", "false").lower() == "true"
     json_traceback = structlog.processors.ExceptionRenderer(
@@ -1172,7 +1178,14 @@ def configure(
                 processors.append(structlog.processors.format_exc_info)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
-                processors.append(structlog.dev.ConsoleRenderer(colors=True))
+                # structlog's default rich formatter renders frame locals, so pass the
+                # same opt-in gate as the JSON tracebacks above.
+                processors.append(
+                    structlog.dev.ConsoleRenderer(
+                        colors=True,
+                        exception_formatter=structlog.dev.RichTracebackFormatter(show_locals=show_locals),
+                    )
+                )
         else:
             _append_json_tail()
 

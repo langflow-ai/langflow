@@ -4,6 +4,7 @@ import {
   useGetAuthSession,
   useGetAutoLogin,
 } from "@/controllers/API/queries/auth";
+import { canSessionProbeClearAuth } from "@/controllers/API/queries/auth/session-probe";
 import { LoadingPage } from "@/pages/LoadingPage";
 import useAuthStore from "@/stores/authStore";
 import type { Users } from "@/types/api";
@@ -43,7 +44,11 @@ export function PlaygroundAuthGate({
       if (sessionData.store_api_key) {
         storeApiKey(sessionData.store_api_key);
       }
-    } else if (sessionData && !sessionData.authenticated) {
+    } else if (
+      sessionData &&
+      !sessionData.authenticated &&
+      canSessionProbeClearAuth()
+    ) {
       setIsAuthenticated(false);
     }
     setSessionProcessed(true);
