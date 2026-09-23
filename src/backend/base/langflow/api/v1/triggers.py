@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.flows_helpers import _read_flow
@@ -28,16 +28,18 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerBindingTarget,
     TriggerCreate,
     TriggerEventRead,
+    TriggerIngressRead,
     TriggerPinRequest,
     TriggerRead,
     TriggerReplayRequest,
+    TriggerSigningSecretRead,
     TriggerState,
     TriggerTestRequest,
     TriggerUpdate,
 )
 from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.triggers import ledger
-from langflow.services.triggers.constants import TEST_DEDUPE_PREFIX
+from langflow.services.triggers.constants import KIND_INBOUND_WEBHOOK, PROVIDER_WEBHOOK, TEST_DEDUPE_PREFIX
 from langflow.services.triggers.errors import (
     ReplayWindowExpiredError,
     TriggerEventNotFoundError,
@@ -59,6 +61,38 @@ TriggerServiceDep = Annotated[TriggerService, Depends(_service)]
 
 def _not_found() -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trigger not found")
+
+
+def _require_ingress_kind(row: Trigger) -> None:
+    """Only the generic signed webhook owns a secret the owner can rotate.
+
+    Slack signs with a registration-level secret and Microsoft and Google verify
+    against a secret Langflow mints per subscription, so offering an owner a
+    rotate button for those would be a control that changes nothing.
+    """
+    if row.kind != KIND_INBOUND_WEBHOOK:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only inbound webhook triggers have an owner-managed signing secret.",
+        )
+
+
+def _ingress_read(row: Trigger, request: Request) -> TriggerIngressRead:
+    """The public address of a trigger, built from the request's own origin.
+
+    Derived from the request rather than from a configured base URL because the
+    URL an owner needs is the one their deployment is actually reachable at, and
+    a single instance is often reachable at more than one.
+    """
+    url = None
+    if row.public_id:
+        url = str(request.url_for("receive_provider_delivery", provider=PROVIDER_WEBHOOK, public_id=row.public_id))
+    return TriggerIngressRead(
+        trigger_id=row.id,
+        public_id=row.public_id,
+        ingress_url=url,
+        has_signing_secret=bool(row.signing_secret_encrypted),
+    )
 
 
 async def _authorized_flow(session, user: CurrentActiveUser, flow_id: UUID, action: FlowAction) -> Flow:
@@ -358,3 +392,53 @@ async def test_trigger(
         payload={**payload.payload, "test": True},
     )
     return TriggerEventRead.model_validate(event)
+
+
+@router.get("/{trigger_id}/ingress", response_model=TriggerIngressRead)
+async def get_trigger_ingress(
+    trigger_id: UUID,
+    request: Request,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    service: TriggerServiceDep,
+) -> TriggerIngressRead:
+    """Where a caller posts to this trigger, and whether a secret is set.
+
+    Never the secret itself. A signing secret is shown exactly once, by the
+    route that mints it; a GET that returned it would put it in every browser
+    history, proxy log, and screen share that touches the triggers page.
+    """
+    row = await _authorized_trigger(
+        service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
+    )
+    _require_ingress_kind(row)
+    return _ingress_read(row, request)
+
+
+@router.post("/{trigger_id}/signing-secret", response_model=TriggerSigningSecretRead)
+async def rotate_trigger_signing_secret(
+    trigger_id: UUID,
+    request: Request,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    service: TriggerServiceDep,
+) -> TriggerSigningSecretRead:
+    """Mint this trigger's ingress address and signing secret, or rotate them.
+
+    Rotation replaces the stored secret, so the previous one stops verifying on
+    the next delivery: there is no grace window, deliberately. A webhook secret
+    is rotated because it leaked, and a grace window is exactly the period the
+    leak is still useful.
+
+    The address (``public_id``) is minted once and kept across rotations, so
+    rotating a secret does not require reconfiguring the caller's URL.
+    """
+    row = await _authorized_trigger(
+        service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
+    )
+    _require_ingress_kind(row)
+    secret = await service.rotate_signing_secret(session, row=row)
+    return TriggerSigningSecretRead(
+        **_ingress_read(row, request).model_dump(),
+        signing_secret=secret,
+    )

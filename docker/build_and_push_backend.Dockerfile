@@ -7,7 +7,7 @@
 
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=22.23.2
+ARG NODE_VERSION=24.21.0
 
 ################################
 # BUILDER

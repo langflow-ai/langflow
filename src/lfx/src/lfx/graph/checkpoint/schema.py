@@ -69,6 +69,10 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
     a checkpoint must still be writable when one vertex holds e.g. a client
     handle, and resume re-derives such objects from the rebuilt component.
 
+    A model is only encoded when its JSON dump validates back into the same model, because a
+    dump that succeeds but cannot be re-validated would poison the checkpoint and fail every
+    later resume instead of failing here.
+
     Limitation: paused vertex state that is not JSON-serializable is NOT restored
     on resume (it returns as None). A flow that depends on such state downstream of
     the pause must re-derive it from the rebuilt node, not from the checkpoint.
@@ -88,6 +92,17 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
         except Exception:  # noqa: BLE001
             # Opaque field (LLM client / model class) can't round-trip; degrade to None.
             logger.debug("checkpoint: dropping non-serializable model %s", type(value).__qualname__)
+            return None
+        # Why: a successful dump is NOT proof the value round-trips. Pydantic can degrade a field it
+        # cannot represent in JSON to its repr *without warning* -- langchain-core >= 1.6.1 does this
+        # for BaseTool.func/coroutine, so an agent's tool dumped to "<function ... at 0x...>" and then
+        # failed validation on every resume ("Input should be callable"), stranding the paused run.
+        # Validating here keeps the drop symmetric with _restore_model: anything that would raise on
+        # resume is dropped at write time instead, and the rebuilt component re-derives it.
+        try:
+            type(value).model_validate(dumped)
+        except Exception:  # noqa: BLE001
+            logger.debug("checkpoint: dropping model %s whose dump does not round-trip", type(value).__qualname__)
             return None
         return {
             _WIRE_KIND: "model",
