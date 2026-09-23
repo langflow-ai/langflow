@@ -2642,5 +2642,21 @@
   "toolPacks.selectedCount_one": "{{count}} paquete de herramientas",
   "toolPacks.nestedDependencies": "Dependencias de flujos anidados",
   "toolPacks.nestedRecordedHelp": "Definiciones revisadas disponibles para esta herramienta. La ejecución puede usar solo algunos de estos flujos.",
-  "toolPacks.nestedReviewHelp": "Los cambios en estos flujos también cambian la revisión de la herramienta."
+  "toolPacks.nestedReviewHelp": "Los cambios en estos flujos también cambian la revisión de la herramienta.",
+  "runConfig.toolContract": "Contrato de la herramienta",
+  "runConfig.identity": "Identidad registrada",
+  "runConfig.parameters": "Detalles del modelo",
+  "runConfig.toolRetries": "Reintentos de herramientas",
+  "runConfig.runtime": "Controles de ejecución",
+  "runConfig.history": "Límite de mensajes del historial",
+  "runConfig.bindings": "Vínculos de flujos configurados",
+  "runConfig.help": "Valores capturados del Agente en ejecución. Se omiten las credenciales del modelo y los objetos de conexión.",
+  "runConfig.legacy": "Este informe no tiene una configuración registrada. La configuración actual del proyecto no demuestra qué usó esta ejecución.",
+  "runConfig.prompt": "Instrucciones resueltas",
+  "runConfig.select": "Configuración registrada",
+  "runConfig.loadedHistory": "Mensajes del historial cargados",
+  "runConfig.title": "Configuración de la ejecución",
+  "runConfig.inspect": "Inspeccionar configuración",
+  "runConfig.empty": "Ninguno",
+  "runConfig.record": "Configuración {{number}}"
 }

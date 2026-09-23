@@ -2642,5 +2642,21 @@
   "toolPacks.snapshot": "Instantané du flux enregistré",
   "toolPacks.nestedDependencies": "Dépendances des flux imbriqués",
   "toolPacks.nestedRecordedHelp": "Définitions vérifiées disponibles pour cet outil. L’exécution peut n’utiliser que certains de ces flux.",
-  "toolPacks.nestedReviewHelp": "Les modifications de ces flux changent aussi la révision de l’outil."
+  "toolPacks.nestedReviewHelp": "Les modifications de ces flux changent aussi la révision de l’outil.",
+  "runConfig.loadedHistory": "Messages d’historique chargés",
+  "runConfig.legacy": "Ce rapport ne contient aucune configuration enregistrée. Les paramètres actuels du projet ne prouvent pas ceux utilisés par cette exécution.",
+  "runConfig.help": "Valeurs capturées pendant l’exécution de l’Agent. Les identifiants du modèle et les objets de connexion sont omis.",
+  "runConfig.select": "Configuration enregistrée",
+  "runConfig.title": "Configuration de l’exécution",
+  "runConfig.prompt": "Instructions résolues",
+  "runConfig.empty": "Aucun",
+  "runConfig.runtime": "Contrôles d’exécution",
+  "runConfig.toolContract": "Contrat de l’outil",
+  "runConfig.toolRetries": "Nouvelles tentatives des outils",
+  "runConfig.record": "Configuration {{number}}",
+  "runConfig.parameters": "Détails du modèle",
+  "runConfig.history": "Limite des messages d’historique",
+  "runConfig.identity": "Identité enregistrée",
+  "runConfig.inspect": "Inspecter la configuration",
+  "runConfig.bindings": "Liaisons de flux configurées"
 }

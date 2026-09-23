@@ -187,8 +187,10 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
     job_id = uuid4()
     jobs = get_job_service()
     await jobs.create_job(job_id=job_id, flow_id=UUID(agent_id), user_id=active_user.id)
+    builds = 0
 
     async def build(checkpoint=None):
+        nonlocal builds
         graph = (
             Graph.resume_from_checkpoint(checkpoint)
             if checkpoint
@@ -200,8 +202,15 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
         graph.session_id = f"evidence-test-{agent_id}"
         model = StoredEvidenceModel()
         graph.get_vertex("Agent-research").update_raw_params(
-            {"model": model, "input_value": "Research the alpha and beta fixtures."}, overwrite=True
+            {
+                "model": model,
+                "input_value": "Research the alpha and beta fixtures.",
+                "system_prompt": f"Research alpha and beta. Configuration attempt {builds}.",
+                "max_iterations": 8 + builds,
+            },
+            overwrite=True,
         )
+        builds += 1
         return graph, model
 
     async def execute_until_pause(graph):
@@ -242,6 +251,23 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
     assert not graph.pause_requested
     output = graph.get_vertex("SourcedReport-save").custom_component.get_output("artifact").value.data
     report = SourcedReport.model_validate(output["artifact"])
+    assert report.configurations
+    assert [item.runtime.max_iterations for item in report.configurations] == ([8, 9, 10] if gated else [8])
+    assert all(
+        f"Configuration attempt {index}." in item.system_prompt for index, item in enumerate(report.configurations)
+    )
+    configuration = report.configurations[-1]
+    assert configuration.agent_node_id == "Agent-research"
+    assert configuration.flow_id == agent_id
+    assert configuration.component_revision
+    assert configuration.runtime.tool_policy == ("ask" if gated else "tool_defaults")
+    assert configuration.model.name == "stored-offline-evidence-test"
+    assert configuration.tools[0].name == model.tool_name
+    assert any(
+        message.type == "system" and message.content == configuration.system_prompt
+        for messages in model.seen
+        for message in messages
+    )
     assert len(report.sources) == 2
     assert all(len(source.content.encode()) > 128_000 for source in report.sources)
     assert {use.tool_call_id for use in report.source_uses} == {"call-alpha", "call-beta"}
@@ -272,6 +298,7 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
         assert run.evidence.sources == report.sources
         assert run.evidence.uses == report.source_uses
         assert run.evidence.tool_dependencies == report.tool_dependencies
+        assert run.configurations == report.configurations
         assert run.answer == report.markdown
     for path in output["files"]:
         response = await client.get(f"api/v1/files/download/{path}", headers=logged_in_headers)
