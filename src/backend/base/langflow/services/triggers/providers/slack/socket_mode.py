@@ -138,6 +138,15 @@ def is_slack_socket_url(url: SplitResult) -> bool:
     return url.scheme == "wss" and (host == "slack.com" or host.endswith(".slack.com"))
 
 
+@dataclass(frozen=True)
+class _SameAppTrigger:
+    """What fan-out needs from another connection's trigger, detached from the session."""
+
+    id: UUID
+    kind: str
+    config: dict[str, Any]
+
+
 @dataclass(eq=False)
 class _Socket:
     """One open WebSocket and what this adapter knows about it."""
@@ -171,6 +180,7 @@ class SlackSocketModeAdapter:
         url_allowed: Callable[[SplitResult], bool] = is_slack_socket_url,
         open_timeout_s: float = 10.0,
         drain_timeout_s: float = 10.0,
+        same_app_ttl_s: float = 5.0,
     ) -> None:
         self._max_connections = max_connections
         self._api_base_url = api_base_url
@@ -178,8 +188,19 @@ class SlackSocketModeAdapter:
         self._url_allowed = url_allowed
         self._open_timeout_s = open_timeout_s
         self._drain_timeout_s = drain_timeout_s
+        self._same_app_ttl_s = same_app_ttl_s
+        #: ``(loaded_at, triggers)`` for :meth:`_same_app_triggers`. A busy
+        #: workspace sends events far faster than triggers are armed, so the
+        #: set is re-read at most once per reconcile interval rather than once
+        #: per event on the path that must acknowledge within Slack's deadline.
+        self._same_app_cache: tuple[float, list[_SameAppTrigger]] | None = None
         self._sockets: list[_Socket] = []
         self._refresh = asyncio.Event()
+        #: Set by :meth:`stop`. ``_serve`` waits on it alongside ``ctx.stopping``
+        #: and every place a socket would be opened checks it, so a ``stop()``
+        #: that races a running ``start()`` ends it rather than being followed by
+        #: a reconnect that re-opens what it just closed.
+        self._halt = asyncio.Event()
         self._app_id: str | None = None
         #: Trigger ids whose ``provider_state`` already names ``_app_id``.
         self._recorded: set[UUID] = set()
@@ -192,7 +213,12 @@ class SlackSocketModeAdapter:
         return self._app_id is not None and any(not socket.retiring for socket in self._sockets)
 
     async def stop(self) -> None:
+        self._halt.set()
         await self._close_all()
+
+    @property
+    def _stopped(self) -> bool:
+        return self._halt.is_set()
 
     async def start(self, ctx: ListenerContext) -> None:
         token = await self._app_token(ctx)
@@ -220,14 +246,15 @@ class SlackSocketModeAdapter:
 
     async def _serve(self, ctx: ListenerContext, http: httpx.AsyncClient, token: str) -> None:
         stopping = asyncio.create_task(ctx.stopping.wait())
+        halted = asyncio.create_task(self._halt.wait())
         refresh = asyncio.create_task(self._refresh.wait())
         try:
             await self._add_socket(ctx, http, token)
             unexpected_closes = 0
-            while True:
+            while not self._stopped:
                 readers = {socket.reader for socket in self._sockets if socket.reader is not None}
-                done, _ = await asyncio.wait({stopping, refresh, *readers}, return_when=asyncio.FIRST_COMPLETED)
-                if stopping in done:
+                done, _ = await asyncio.wait({stopping, halted, refresh, *readers}, return_when=asyncio.FIRST_COMPLETED)
+                if stopping in done or halted in done:
                     return
                 if refresh in done:
                     self._refresh.clear()
@@ -249,6 +276,8 @@ class SlackSocketModeAdapter:
                     # A socket that carried traffic and then dropped is a routine
                     # hiccup; one that drops again before carrying anything is not.
                     unexpected_closes = 0 if socket.productive else unexpected_closes + 1
+                if self._stopped:
+                    return
                 if not any(not socket.retiring for socket in self._sockets):
                     if unexpected_closes > 1:
                         msg = "The Slack socket closed again straight after reconnecting."
@@ -256,28 +285,64 @@ class SlackSocketModeAdapter:
                     await logger.ainfo("Slack socket on connection %s closed; reconnecting", ctx.connection_id)
                     await self._add_socket(ctx, http, token)
         finally:
-            for waiter in (stopping, refresh):
+            for waiter in (stopping, halted, refresh):
                 waiter.cancel()
 
     async def _replace_retiring(self, ctx: ListenerContext, http: httpx.AsyncClient, token: str) -> None:
-        """Open the replacement for a socket Slack is about to close, then drain the old one."""
+        """Open the replacement for a socket Slack is about to close, then drain the old one.
+
+        A replacement is opened whenever no live (non-retiring) socket remains -
+        including when a *second* warning retires the previous replacement while
+        the first socket is still draining. Staying within two sockets then means
+        cutting the oldest drain short to make room, never skipping the
+        replacement: a connection must not be left with nothing but sockets
+        Slack has said it is about to close.
+        """
         retiring = [socket for socket in self._sockets if socket.retiring and socket.drain is None]
-        if not retiring:
+        if not retiring or self._stopped:
             return
-        if len(self._sockets) < _MAX_SOCKETS_PER_CONNECTION:
+        if not any(not socket.retiring for socket in self._sockets):
+            while len(self._sockets) >= _MAX_SOCKETS_PER_CONNECTION:
+                oldest = next((socket for socket in self._sockets if socket.drain is not None), None)
+                if oldest is None:
+                    break
+                self._sockets.remove(oldest)
+                await self._discard(oldest)
             await self._add_socket(ctx, http, token)
         for socket in retiring:
             socket.drain = asyncio.create_task(self._retire(socket))
 
     async def _retire(self, socket: _Socket) -> None:
-        """Let a retiring socket deliver what is already in flight, then close it."""
-        if socket.reader is not None:
-            with contextlib.suppress(TimeoutError, asyncio.TimeoutError, asyncio.CancelledError):
-                await asyncio.wait_for(asyncio.shield(socket.reader), timeout=self._drain_timeout_s)
+        """Let a retiring socket deliver what is already in flight, then close it.
+
+        A cancellation (``stop()``, lease loss) still propagates: only the drain
+        timeout and the reader's own failure - which ``_serve`` reports - are
+        absorbed here.
+        """
+        try:
+            if socket.reader is not None:
+                with contextlib.suppress(Exception):
+                    await asyncio.wait_for(asyncio.shield(socket.reader), timeout=self._drain_timeout_s)
+        finally:
+            await socket.close()
+
+    async def _discard(self, socket: _Socket) -> None:
+        """Stop a socket's tasks and close it, waiting for the tasks to end."""
+        tasks = [task for task in (socket.reader, socket.drain) if task is not None]
+        for task in tasks:
+            if not task.done():
+                task.cancel()
         await socket.close()
+        for task in tasks:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
 
     async def _add_socket(self, ctx: ListenerContext, http: httpx.AsyncClient, token: str) -> None:
         socket = await self._open(http, token)
+        if self._stopped:
+            # ``stop()`` ran while this socket was being opened.
+            await socket.close()
+            return
         self._app_id = socket.app_id or self._app_id
         socket.reader = asyncio.create_task(self._read(ctx, socket))
         self._sockets.append(socket)
@@ -301,6 +366,11 @@ class SlackSocketModeAdapter:
             await ws.close()
             msg = "Slack opened a socket but never said hello."
             raise SlackSocketModeError(msg) from exc
+        except BaseException:
+            # Cancelled mid-handshake (a stop, a lost lease): the socket is open
+            # and counts against the app's ten, so it must not outlive this.
+            await ws.close()
+            raise
         if not isinstance(hello, dict) or hello.get("type") != "hello":
             await ws.close()
             msg = "Slack's first Socket Mode frame was not a hello."
@@ -351,15 +421,7 @@ class SlackSocketModeAdapter:
     async def _close_all(self) -> None:
         sockets, self._sockets = self._sockets, []
         for socket in sockets:
-            for task in (socket.reader, socket.drain):
-                if task is not None and not task.done():
-                    task.cancel()
-            await socket.close()
-        for socket in sockets:
-            for task in (socket.reader, socket.drain):
-                if task is not None:
-                    with contextlib.suppress(asyncio.CancelledError, Exception):
-                        await task
+            await self._discard(socket)
 
     # ------------------------------------------------------------------ #
     # Frames
@@ -434,17 +496,43 @@ class SlackSocketModeAdapter:
             for trigger in list(ctx.triggers)
             if trigger.mechanism_id == MECHANISM_SLACK_SOCKET_MODE and matches(trigger.kind, trigger.config, event)
         ]
-        targets.extend(
+        elsewhere = [
             row.id
             for row in await self._same_app_triggers(ctx)
-            if row.id not in own and matches(row.kind, row.config or {}, event)
-        )
-        return targets
+            if row.id not in own and matches(row.kind, row.config, event)
+        ]
+        if elsewhere:
+            # Provenance for an operator: this socket carried an event another
+            # connection's triggers fire on. Both connections proved (by Slack's
+            # hello) that they hold a token for the same app.
+            await logger.adebug(
+                "Slack event %s on connection %s also fires %s trigger(s) on other connections of app %s",
+                event.event_id,
+                ctx.connection_id,
+                len(elsewhere),
+                self._app_id,
+            )
+        return targets + elsewhere
 
-    async def _same_app_triggers(self, ctx: ListenerContext) -> list[Trigger]:
-        """Armed Socket Mode triggers of this Slack app on *other* connections."""
+    async def _same_app_triggers(self, ctx: ListenerContext) -> list[_SameAppTrigger]:
+        """Armed Socket Mode triggers of this Slack app on *other* connections.
+
+        Cached for ``same_app_ttl_s``. A trigger armed or paused on another
+        connection is seen within that interval - the same bound the listener
+        itself works to - and a paused one that still receives an event in the
+        meantime is refused by the dispatcher, which re-reads the trigger's
+        state before it runs anything.
+        """
         if self._app_id is None:
             return []
+        loop = asyncio.get_running_loop()
+        if self._same_app_cache is not None and loop.time() - self._same_app_cache[0] < self._same_app_ttl_s:
+            return self._same_app_cache[1]
+        rows = await self._load_same_app_triggers(ctx)
+        self._same_app_cache = (loop.time(), rows)
+        return rows
+
+    async def _load_same_app_triggers(self, ctx: ListenerContext) -> list[_SameAppTrigger]:
         from langflow.services.deps import session_scope
 
         mechanism = col(Trigger.config)["mechanism_id"].as_string()
@@ -464,7 +552,10 @@ class SlackSocketModeAdapter:
             .order_by(col(Trigger.id))
         )
         async with session_scope() as session:
-            return list((await session.exec(statement)).all())
+            return [
+                _SameAppTrigger(id=row.id, kind=row.kind, config=dict(row.config or {}))
+                for row in (await session.exec(statement)).all()
+            ]
 
     async def _record_app_id(self, ctx: ListenerContext) -> None:
         """Record on this connection's triggers which app its socket proved it is.

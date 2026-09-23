@@ -287,7 +287,10 @@ def _slack_socket_mode_factory(_trigger: ListenerTrigger) -> ListenerAdapter:
     from langflow.services.triggers.providers.slack.socket_mode import SlackSocketModeAdapter
 
     settings = get_settings_service().settings
-    return SlackSocketModeAdapter(max_connections=settings.trigger_slack_socket_max_connections)
+    return SlackSocketModeAdapter(
+        max_connections=settings.trigger_slack_socket_max_connections,
+        same_app_ttl_s=settings.listener_reconcile_interval_s,
+    )
 
 
 def register_builtin_adapters() -> None:

@@ -86,6 +86,10 @@ class FakeSlackSocketMode:
         #: Called with each acknowledged ``envelope_id`` as it arrives, before
         #: the ack is recorded - where a test checks what was committed by then.
         self.on_ack: Callable[[str], Awaitable[None]] | None = None
+        #: Seconds the server waits before saying hello, to hold a socket mid-handshake.
+        self.hello_delay = 0.0
+        #: The most sockets that were open at the same moment.
+        self.max_live = 0
         self._opened = asyncio.Event()
         self._server = None
         self._port = 0
@@ -137,16 +141,23 @@ class FakeSlackSocketMode:
         self.sockets.append(socket)
         self._opened.set()
         live = len(self.live())
-        await ws.send(
-            json.dumps(
-                {
-                    "type": "hello",
-                    "num_connections": self.num_connections if self.num_connections is not None else live,
-                    "connection_info": {"app_id": self.app_id},
-                    "debug_info": {"host": "applink-test", "approximate_connection_time": 18060},
-                }
+        self.max_live = max(self.max_live, live)
+        try:
+            if self.hello_delay:
+                await asyncio.sleep(self.hello_delay)
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "hello",
+                        "num_connections": self.num_connections if self.num_connections is not None else live,
+                        "connection_info": {"app_id": self.app_id},
+                        "debug_info": {"host": "applink-test", "approximate_connection_time": 18060},
+                    }
+                )
             )
-        )
+        except ConnectionClosed:
+            socket.closed.set()
+            return
         try:
             async for raw in ws:
                 frame = json.loads(raw)

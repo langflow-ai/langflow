@@ -9,6 +9,7 @@ warnings and dropped connections are frames on the wire, not mock calls.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 
 import pytest
 from langflow.services.database.models.trigger.model import Trigger
@@ -17,7 +18,7 @@ from langflow.services.deps import session_scope
 from langflow.services.triggers.constants import MECHANISM_SLACK_SOCKET_MODE
 from langflow.services.triggers.listeners import connection_leases
 from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
-from langflow.services.triggers.providers.slack.socket_mode import PROVIDER_STATE_APP_ID
+from langflow.services.triggers.providers.slack.socket_mode import PROVIDER_STATE_APP_ID, SlackSocketModeAdapter
 
 from tests.unit.services.triggers import slack_fixtures as fx
 
@@ -386,3 +387,117 @@ async def test_a_different_app_on_the_same_instance_is_not_fanned_out_to(
 
     assert len(await fx.events_for(mine)) == 1
     assert await fx.events_for(other_app) == []
+
+
+# --------------------------------------------------------------------------- #
+# Lifecycle edges: no socket outlives the adapter, and a refresh never leaves
+# the connection without a live socket
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_a_socket_cancelled_mid_handshake_is_closed(slack, supervisor, trigger_owner, owned_flow) -> None:
+    """A lost lease or a stop can land between connect and hello; the socket counts against Slack's ten."""
+    slack.hello_delay = 3.0
+    await _armed(trigger_owner, owned_flow)
+    await supervisor.reconcile()
+    [socket] = await slack.wait_for_sockets(1)
+
+    await supervisor.stop()
+
+    await asyncio.wait_for(socket.closed.wait(), timeout=5)
+
+
+async def test_stop_racing_a_running_start_never_reconnects(slack) -> None:
+    """``stop()`` without cancelling ``start()`` first must still leave nothing open."""
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from langflow.services.triggers.listeners.adapters import ListenerContext
+    from pydantic import SecretStr
+
+    from tests.unit.services.triggers.fake_slack_socket import API_BASE_URL, local_socket_url
+
+    async def _credential(_trigger_id=None):
+        return SimpleNamespace(access_token=SecretStr(fx.APP_TOKEN))
+
+    async def _noop(**_kwargs):
+        return True
+
+    adapter = SlackSocketModeAdapter(
+        api_base_url=API_BASE_URL, http_transport=slack.transport(), url_allowed=local_socket_url
+    )
+    ctx = ListenerContext(
+        connection_id=uuid4(),
+        triggers=[],
+        emit=_noop,
+        save_cursor=_noop,
+        resolve_credential=_credential,
+        stopping=asyncio.Event(),
+    )
+    running = asyncio.create_task(adapter.start(ctx))
+    try:
+        [socket] = await slack.wait_for_sockets(1)
+
+        await adapter.stop()
+
+        await asyncio.wait_for(running, timeout=5)
+        await asyncio.wait_for(socket.closed.wait(), timeout=5)
+        await asyncio.sleep(0.2)
+        assert len(slack.sockets) == 1, "nothing may reconnect after stop()"
+    finally:
+        running.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await running
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_back_to_back_disconnect_warnings_keep_a_live_socket_within_two(
+    slack, supervisor, socket_adapters, trigger_owner, owned_flow
+) -> None:
+    """A second warning, for the replacement, arrives while the first socket is still draining."""
+    _, trigger_id = await _armed(trigger_owner, owned_flow)
+    await supervisor.reconcile()
+    [first] = await slack.wait_for_sockets(1)
+    socket_adapters[0]._drain_timeout_s = 5.0  # keep the first socket draining throughout
+
+    await first.send({"type": "disconnect", "reason": "warning"})
+    _, second = await slack.wait_for_sockets(2)
+    await second.send({"type": "refresh_requested", "reason": "refresh_requested"})
+    await second.send({"type": "disconnect", "reason": "refresh_requested"})
+    _, _, third = await slack.wait_for_sockets(3)
+
+    assert not second.closed.is_set(), "the replacement opens before the retiring socket closes"
+    await asyncio.wait_for(first.closed.wait(), timeout=5)  # its drain was cut short to make room
+    assert slack.max_live <= 2
+    await third.deliver(fx.load("message_channel"), envelope_id="env-third")
+    assert await third.wait_for_ack("env-third")
+    assert len(await fx.events_for(trigger_id)) == 1
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_a_burst_of_events_reads_the_same_app_triggers_once(
+    slack, supervisor, socket_adapters, trigger_owner, owned_flow, monkeypatch
+) -> None:
+    """Cross-connection targets are cached per reconcile interval, not re-queried per event."""
+    await _armed(trigger_owner, owned_flow)
+    await supervisor.reconcile()
+    [socket] = await slack.wait_for_sockets(1)
+    adapter = socket_adapters[0]
+    adapter._same_app_ttl_s = 60.0
+    loads = 0
+    original = adapter._load_same_app_triggers
+
+    async def _counting(ctx):
+        nonlocal loads
+        loads += 1
+        return await original(ctx)
+
+    monkeypatch.setattr(adapter, "_load_same_app_triggers", _counting)
+    for index in range(5):
+        body = fx.load("message_channel")
+        body["event_id"] = f"Ev0BURST{index:03d}"
+        await socket.deliver(body, envelope_id=f"env-burst-{index}")
+    assert await socket.wait_for_ack("env-burst-4")
+
+    assert loads == 1

@@ -219,6 +219,10 @@ One Request URL serves every workspace the app is installed in. Each event reach
 
 An app-level token only opens Socket Mode connections. Langflow uses it only in the [trigger listener process](../Deployment/deployment-trigger-listeners.mdx), never in a flow, so choosing it on an action component fails. Socket Mode isn't available on hosted Langflow.
 
+:::important
+An app-level token is the app's whole event stream: every workspace the app is installed in, every conversation it can see. When several people on one Langflow instance each add a token for the same Slack app, Langflow delivers each of the app's events to all of their Socket Mode triggers, because Slack spreads an app's events across every open connection. Give an app-level token only to people who may read everything the app can see.
+:::
+
 #### Allow background runs
 
 A trigger runs its flow with no one signed in. The connection on the trigger, and every connection the flow uses, must allow that: turn on **Allow background runs** when you add the connection, or on the connection later. Enabling a trigger whose connection doesn't allow background runs says so.
