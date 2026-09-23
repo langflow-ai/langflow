@@ -28,6 +28,12 @@ def _mock_langchain_community():
     _MockRedisChatMessageHistory.reset_mock()
 
 
+@pytest.fixture(autouse=True)
+def _disable_connector_ssrf(monkeypatch):
+    """URL-construction tests use fake hosts; SSRF validation has its own test class below."""
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "false")
+
+
 class TestValkeyIndexChatMemoryMetadata:
     def test_display_name(self):
         assert ValkeyIndexChatMemory.display_name == "Valkey Chat Memory"
@@ -203,3 +209,49 @@ class TestValkeyIndexChatMemoryKeyPrefix:
         component.session_id = "test-session"
         component.build_message_history()
         assert "key_prefix" not in _MockRedisChatMessageHistory.call_args[1]
+
+
+class TestValkeyIndexChatMemorySSRF:
+    """H1-3996328: the tenant-controlled host must be SSRF-validated before connecting."""
+
+    @pytest.fixture(autouse=True)
+    def _enable_ssrf(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    def _component(self, host: str) -> ValkeyIndexChatMemory:
+        component = ValkeyIndexChatMemory()
+        component.host = host
+        component.port = 6379
+        component.database = "0"
+        component.username = ""
+        component.password = ""
+        component.key_prefix = ""
+        component.session_id = "test-session"
+        return component
+
+    def test_blocks_cloud_metadata_host_before_connect(self):
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        with pytest.raises(SSRFProtectionError):
+            self._component("169.254.169.254").build_message_history()
+        _MockRedisChatMessageHistory.assert_not_called()
+
+    def test_blocks_private_ip_before_connect(self):
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        with pytest.raises(SSRFProtectionError):
+            self._component("10.0.0.5").build_message_history()
+        _MockRedisChatMessageHistory.assert_not_called()
+
+    def test_allows_loopback_by_default(self):
+        """Literal loopback stays exempt for single-tenant defaults (matches qdrant/redis)."""
+        self._component("localhost").build_message_history()
+        assert _MockRedisChatMessageHistory.call_count == 1
+
+    def test_allowlisted_private_ip_passes(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "10.0.0.5")
+        self._component("10.0.0.5").build_message_history()
+        assert _MockRedisChatMessageHistory.call_count == 1

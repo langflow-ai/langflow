@@ -26,6 +26,7 @@ const mockCreate = jest.fn();
 const mockRemove = jest.fn();
 let mockRegistrations: RegistrationsState;
 let mockTypes: APIDataType = {};
+let mockPolledConnection: ConnectionRead | undefined;
 
 jest.mock("@/controllers/API/queries/connections", () => ({
   CONNECTION_NAME_PATTERN: /^[a-z0-9][a-z0-9_-]*$/,
@@ -41,7 +42,7 @@ jest.mock("@/controllers/API/queries/connections", () => ({
   useDeleteConnectionMutation: () => ({ mutate: mockRemove }),
   useStartOAuthMutation: () => ({ mutateAsync: mockStartOAuth }),
   useOAuthRegistrationsQuery: () => mockRegistrations,
-  usePendingConnectionPoll: () => ({ data: undefined }),
+  usePendingConnectionPoll: () => ({ data: mockPolledConnection }),
 }));
 
 jest.mock("@/controllers/API/queries/flows/use-get-types", () => ({
@@ -190,6 +191,7 @@ describe("AddConnectionDialog re-authorize", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTypes = TYPES;
+    mockPolledConnection = undefined;
     popup.closed = false;
     popup.location.href = "";
     setRegistrations([registration({})]);
@@ -231,6 +233,68 @@ describe("AddConnectionDialog re-authorize", () => {
       }),
     );
     await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
+  });
+
+  it.each(["create", "reauthorize"])(
+    "closes the consent window only after successful %s authorization",
+    async (mode) => {
+      const initial = connection(
+        mode === "create" ? { status: "pending", has_credentials: false } : {},
+      );
+      const reauthorize = mode === "reauthorize" ? initial : undefined;
+      mockCreate.mockResolvedValue(initial);
+      mockPolledConnection = initial;
+      const { rerender } = render(dialog(reauthorize));
+
+      if (mode === "create") {
+        await userEvent.type(screen.getByTestId("connection-name"), "work");
+        await userEvent.type(
+          screen.getByTestId("connection-display-name"),
+          "Work Google",
+        );
+        await userEvent.click(screen.getByTestId("connection-continue"));
+      } else {
+        await userEvent.click(screen.getByTestId("connection-authorize"));
+      }
+
+      await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
+      expect(popup.close).not.toHaveBeenCalled();
+      expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+
+      mockPolledConnection = connection({
+        updated_at: "2026-09-16T10:01:00",
+      });
+      rerender(dialog(reauthorize));
+
+      expect(await screen.findByText("Connected")).toBeInTheDocument();
+      expect(screen.getByText("calendar.events")).toBeInTheDocument();
+      expect(popup.close).toHaveBeenCalledTimes(1);
+      expect(mockRemove).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByTestId("connection-done"));
+      expect(popup.close).toHaveBeenCalledTimes(1);
+      expect(mockRemove).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports a denied callback from the changed row even when old credentials remain ready", async () => {
+    const initial = connection();
+    mockPolledConnection = initial;
+    const { rerender } = render(dialog(initial));
+
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
+
+    mockPolledConnection = connection({
+      updated_at: "2026-09-16T10:01:00",
+      status_reason: "oauth-denied",
+    });
+    rerender(dialog(initial));
+
+    expect(
+      await screen.findByText("The provider denied authorization."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Connected")).not.toBeInTheDocument();
   });
 
   it("opens the consent window on the click, before the start request returns", async () => {
@@ -354,6 +418,46 @@ describe("AddConnectionDialog re-authorize", () => {
     );
   });
 
+  it("lets re-authorization add registration scopes no component declares", async () => {
+    setRegistrations([
+      registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [
+          MAIL_SEND,
+          "User.Read",
+          "offline_access",
+          "openid",
+          "email",
+          "profile",
+        ],
+      }),
+    ]);
+    render(
+      dialog(
+        connection({
+          provider_key: "microsoft",
+          granted_scopes: [MAIL_SEND],
+        }),
+      ),
+    );
+
+    for (const scope of ["offline_access", "openid", "email", "profile"]) {
+      expect(scopeBox(scope)).toHaveAttribute("aria-checked", "false");
+      await userEvent.click(scopeBox(scope));
+    }
+    expect(scopeBox("User.Read")).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft-work",
+        scopes: [MAIL_SEND, "offline_access", "openid", "email", "profile"],
+      }),
+    );
+  });
+
   it("does not authorize with nothing selected", async () => {
     render(dialog(connection()));
 
@@ -384,6 +488,7 @@ describe("AddConnectionDialog create flow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTypes = TYPES;
+    mockPolledConnection = undefined;
     setRegistrations([registration({})]);
   });
 
@@ -396,5 +501,52 @@ describe("AddConnectionDialog create flow", () => {
     ).not.toBeInTheDocument();
     expect(scopeBox(CALENDAR)).toHaveAttribute("aria-checked", "true");
     expect(scopeBox(GMAIL_SEND)).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("can request Microsoft identity and refresh scopes on first consent", async () => {
+    setRegistrations([
+      registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [
+          MAIL_SEND,
+          "User.Read",
+          "offline_access",
+          "openid",
+          "email",
+          "profile",
+        ],
+      }),
+    ]);
+    mockCreate.mockResolvedValue(
+      connection({ provider_key: "microsoft", status: "pending" }),
+    );
+    mockStartOAuth.mockResolvedValue({ authorization_url: AUTHORIZATION_URL });
+    const openSpy = jest
+      .spyOn(window, "open")
+      .mockReturnValue(popup as unknown as Window);
+    try {
+      render(dialog(undefined, [MICROSOFT]));
+      expect(scopeBox("User.Read")).toHaveAttribute("aria-checked", "false");
+      for (const scope of ["offline_access", "openid", "email", "profile"]) {
+        expect(scopeBox(scope)).toHaveAttribute("aria-checked", "true");
+      }
+
+      await userEvent.type(screen.getByTestId("connection-name"), "outlook");
+      await userEvent.type(
+        screen.getByTestId("connection-display-name"),
+        "Outlook",
+      );
+      await userEvent.click(screen.getByTestId("connection-continue"));
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "microsoft-work",
+          scopes: [MAIL_SEND, "offline_access", "openid", "email", "profile"],
+        }),
+      );
+    } finally {
+      openSpy.mockRestore();
+    }
   });
 });
