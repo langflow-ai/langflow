@@ -334,11 +334,14 @@ async def test_flows_download_nulls_bindings_to_missing_variables(client: AsyncC
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_project_download_keeps_global_variable_bindings(client: AsyncClient, logged_in_headers, active_user):
+@pytest.mark.parametrize("project_type", ["flows", "agent-harness", "tool-pack"])
+async def test_project_download_keeps_global_variable_bindings(
+    client: AsyncClient, logged_in_headers, active_user, project_type
+):
     """LE-2649: GET /api/v1/projects/download/{project_id} keeps the variable name of bound fields."""
     create_response = await client.post(
         "api/v1/projects/",
-        json={"name": "le2649-project", "description": "", "components_list": [], "flows_list": []},
+        json={"name": "le2649-project", "project_type": project_type, "components_list": [], "flows_list": []},
         headers=logged_in_headers,
     )
     assert create_response.status_code == status.HTTP_201_CREATED

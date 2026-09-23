@@ -1,5 +1,6 @@
 """Permission bindings preserve source snapshots, canvas ownership, and mixed archives."""
 
+import json
 from copy import deepcopy
 from uuid import UUID, uuid4
 
@@ -293,11 +294,19 @@ async def test_permission_source_changes_require_review_before_save_or_import(cl
     assert stale.status_code == 422
     assert (await stored_flow(agent)).data == before
     exported = await client.get(f"api/v1/projects/download/{project}", headers=logged_in_headers)
-    assert exported.status_code == 200
+    assert exported.status_code == 422, exported.text
+    # Legacy JSON uploads must still reject stale bindings independently of export.
+    current = (await client.get(f"api/v1/projects/{project}", headers=logged_in_headers)).json()
+    payload = {
+        "folder_name": "Stale binding import",
+        "folder_project_type": "agent-harness",
+        "folder_project_config": current["project_config"],
+        "flows": current["flows"],
+    }
     imported = await client.post(
         "api/v1/projects/upload/",
         headers=logged_in_headers,
-        files={"file": ("stale-permissions.zip", exported.content, "application/zip")},
+        files={"file": ("stale.json", json.dumps(payload).encode(), "application/json")},
     )
     assert imported.status_code == 422
     config["flow_bindings"]["tool_policy"]["revision"] = flow_revision(data)

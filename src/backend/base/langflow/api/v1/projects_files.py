@@ -34,9 +34,11 @@ from langflow.api.utils import (
     normalize_flow_for_export,
     strip_flow_secrets,
 )
+from langflow.api.utils.composition_zip import composition_zip, extract_composition
 from langflow.api.utils.zip_utils import PROJECT_METADATA_FILENAME, extract_project_from_zip
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
+from langflow.api.v1.project_compositions import composition_error, export_composition, import_composition
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
@@ -90,6 +92,19 @@ async def download_project_flows(
 
         if not flows:
             raise HTTPException(status_code=404, detail="No flows found in project")
+
+        if project.project_type in {"agent-harness", "tool-pack"}:
+            try:
+                composition = await export_composition(session, current_user, project, visible_flows)
+                zip_stream = composition_zip(composition)
+            except (ValueError, KeyError, TypeError) as exc:
+                raise composition_error(exc) from exc
+            current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
+            return StreamingResponse(
+                zip_stream,
+                media_type="application/x-zip-compressed",
+                headers={"Content-Disposition": build_content_disposition(f"{current_time}_{project.name}_flows.zip")},
+            )
 
         # Strip secret field values then normalise for git-friendly export
         # (sorted keys, volatile fields removed, code fields as line arrays).
@@ -197,6 +212,12 @@ async def upload_project_flows(
 
     # Detect ZIP files and extract flow data
     if zipfile.is_zipfile(io.BytesIO(contents)):
+        try:
+            composition = await extract_composition(contents)
+            if composition is not None:
+                return await import_composition(session, current_user, composition)
+        except (ValueError, KeyError, TypeError) as exc:
+            raise composition_error(exc) from exc
         try:
             flows_data, project_metadata = await extract_project_from_zip(contents)
         except ValueError as e:
