@@ -2612,5 +2612,21 @@
   "toolPacks.updated": "Alterado",
   "toolPacks.nestedReviewHelp": "Alterações nestes fluxos também alteram a revisão da ferramenta.",
   "toolPacks.nestedDependencies": "Dependências de fluxos aninhados",
-  "toolPacks.nestedRecordedHelp": "Definições revisadas disponíveis para esta ferramenta. A execução pode usar apenas alguns destes fluxos."
+  "toolPacks.nestedRecordedHelp": "Definições revisadas disponíveis para esta ferramenta. A execução pode usar apenas alguns destes fluxos.",
+  "runConfig.select": "Configuração registrada",
+  "runConfig.empty": "Nenhum",
+  "runConfig.help": "Valores capturados do Agente em execução. Credenciais do modelo e objetos de conexão são omitidos.",
+  "runConfig.inspect": "Inspecionar configuração",
+  "runConfig.toolRetries": "Novas tentativas de ferramenta",
+  "runConfig.toolContract": "Contrato da ferramenta",
+  "runConfig.title": "Configuração da execução",
+  "runConfig.identity": "Identificação registrada",
+  "runConfig.bindings": "Vínculos de fluxos configurados",
+  "runConfig.history": "Limite de mensagens do histórico",
+  "runConfig.runtime": "Controles de execução",
+  "runConfig.legacy": "Este relatório não tem configuração registrada. As configurações atuais do projeto não comprovam o que esta execução usou.",
+  "runConfig.parameters": "Detalhes do modelo",
+  "runConfig.prompt": "Instruções resolvidas",
+  "runConfig.loadedHistory": "Mensagens do histórico carregadas",
+  "runConfig.record": "Configuração {{number}}"
 }

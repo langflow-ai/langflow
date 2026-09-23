@@ -2774,5 +2774,21 @@
   "toolPacks.callCount_other": "{{count}} completed calls",
   "toolPacks.nestedRecordedHelp": "Reviewed definitions available to this tool. The run may use only some of these flows.",
   "toolPacks.nestedDependencies": "Nested flow dependencies",
-  "toolPacks.nestedReviewHelp": "Changes to these flows also change the reviewed tool revision."
+  "toolPacks.nestedReviewHelp": "Changes to these flows also change the reviewed tool revision.",
+  "runConfig.parameters": "Model details",
+  "runConfig.prompt": "Resolved instructions",
+  "runConfig.record": "Configuration {{number}}",
+  "runConfig.history": "History message limit",
+  "runConfig.empty": "None",
+  "runConfig.help": "Values captured from the running Agent. Model credentials and connection objects are omitted.",
+  "runConfig.toolContract": "Tool contract",
+  "runConfig.select": "Recorded configuration",
+  "runConfig.toolRetries": "Tool retries",
+  "runConfig.title": "Run configuration",
+  "runConfig.identity": "Recorded identity",
+  "runConfig.inspect": "Inspect configuration",
+  "runConfig.bindings": "Configured flow bindings",
+  "runConfig.runtime": "Runtime controls",
+  "runConfig.loadedHistory": "History messages loaded",
+  "runConfig.legacy": "This report has no recorded configuration. Current project settings cannot establish what this run used."
 }
