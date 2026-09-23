@@ -84,7 +84,7 @@ class EvalRunRequest(BaseModel):
     expected_candidate_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
-@router.post("/runs")
+@router.post("/runs", status_code=202)
 async def execute_suite(project_id: UUID, body: EvalRunRequest, request: Request, current_user: CurrentActiveUser):
     async with session_scope() as session:
         project = await eval_project(session, current_user, project_id, write=True)
@@ -125,3 +125,31 @@ async def read_evaluation(project_id: UUID, run_id: UUID, current_user: CurrentA
         ):
             raise HTTPException(404, "Evaluation not found.")
         return present_run(job)
+
+
+@router.post("/runs/{run_id}/cancel", status_code=202)
+async def cancel_evaluation(project_id: UUID, run_id: UUID, current_user: CurrentActiveUser):
+    from langflow.services.deps import get_background_execution_service, get_job_service
+    from langflow.services.evaluations.state import ACTIVE, save_progress
+
+    async with session_scope() as session:
+        await eval_project(session, current_user, project_id, write=True)
+    jobs = get_job_service()
+    for _ in range(10):
+        job = await jobs.get_job_by_job_id(run_id)
+        if (
+            job is None
+            or job.user_id != current_user.id
+            or job.asset_id != project_id
+            or job.type != JobType.EVALUATION
+        ):
+            raise HTTPException(404, "Evaluation not found.")
+        if job.status not in ACTIVE or (job.result or {}).get("cancel_requested"):
+            return present_run(job)
+        if (job.job_metadata or {}).get("evaluation_format") != 1:
+            raise HTTPException(409, "This legacy evaluation does not support cancellation.")
+        progress = {**job.result, "cancel_requested": True, "pending_approval": None}
+        if await save_progress(job, progress, job.status):
+            await get_background_execution_service().start()
+            return present_run(await jobs.get_job_by_job_id(run_id))
+    raise HTTPException(409, "Evaluation progress changed. Refresh its status and retry cancellation.")

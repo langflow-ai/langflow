@@ -11,6 +11,11 @@ the Workflows API. Research producing a sourced artifact remains the proof workf
 Agent Harness, Tool Pack, Skill Pack, and Eval Suite remain the product
 model; deployment artifacts and releases are lifecycle records.
 
+**September 16 completion review:** `feat/harness-delivery-completion` fixes
+accepted-scorer retention, Eval Suite editing/review races, and desktop form polish
+without expanding the capability scope. See the [review, checks, and screenshots](harness-delivery-review.md).
+The production gates and deferrals below remain unchanged.
+
 ## Runtime artifact delivery update
 
 The first branch now implements an explicit v5 candidate writer/reader and LFX
@@ -26,11 +31,29 @@ contract](harness-workflow-reliability.md). Local PostgreSQL verification now pa
 and authorized the next capability. `feat/harness-eval-suites` implements the first
 bounded Eval Suite API and desktop workbench; see [its contract and evidence](harness-eval-suites.md).
 Live-provider and intended deployed-topology acceptance remain production gates.
-Durable/approval-aware evaluation, measured costs and portable evaluation archives
-remain follow-up work before claiming the full production evaluation profile.
+The follow-up `feat/harness-eval-durability` adds persistent evaluation coordination,
+Workflows child jobs, candidate/scorer approval, cancellation, and restart recovery.
+See [its contract and verification](harness-eval-durability.md). Measured costs and
+portable evaluation archives remain follow-up work before claiming the full
+production evaluation profile.
+
+`feat/harness-eval-scaled-db` ports #13508's database-backed Workflows queue and
+connects native evaluations to separate workers, including approval, frozen
+candidate recovery and execution deadlines. See [the implementation and local
+verification](harness-eval-scaled-db.md). Redis is not required. Live-provider and
+actual deployed-topology acceptance remain production gates; deployment-topology
+work and external evaluation integrations remain deferred.
 Files, memory/knowledge services, and request-only credential provisioning remain
 blocked by the initial standalone mount; their production host provisioning still
 needs verification. Existing Control Plane deployment is not candidate-aware.
+
+**September 16 scope decision:** external evaluation-platform integrations
+(Braintrust, LangSmith and Phoenix import/export adapters) are postponed at the
+user's request. They are not prerequisites for the current native Eval Suite
+delivery or the next implementation slice. This supersedes the original taxonomy's
+"from day one" adapter requirement; interoperability remains a future direction.
+Native evaluation durability and the database queue integration are delivered. Measured costs and portable
+Langflow suite archives remain separate follow-up items; external adapters remain deferred.
 
 ## Revised gap assessment
 

@@ -595,7 +595,13 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     if "execution_family" in request and request["execution_family"] not in TRIGGER_FAMILIES:
         msg = "Invalid background trigger execution family"
         raise ValueError(msg)
-    internal = {"persist_messages", "end_user_id", "component_substitution_warning", "execution_family"}
+    internal = {
+        "persist_messages",
+        "end_user_id",
+        "component_substitution_warning",
+        "execution_family",
+        "evaluation_timeout_s",
+    }
     persist_messages = request.get("persist_messages", True)
     end_user_id = request.get("end_user_id")
     request_fields = {k: v for k, v in request.items() if k not in internal}
