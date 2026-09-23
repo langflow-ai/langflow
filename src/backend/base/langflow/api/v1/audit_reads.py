@@ -211,35 +211,49 @@ async def plugin_decides_visibility() -> bool:
 
 
 # The same table read from the caller's side, so the window can be correlated.
-_OwnEvent = aliased(AuditEvent)
+#: The same table read from the resource's side, to find where its current life began.
+_Incarnation = aliased(AuditEvent)
 
 
 async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement[bool] | None:
-    """The OSS floor: events the caller made, and events on what they own since they owned it.
+    """The OSS floor: events the caller made, and events on what they own in its current life.
 
     Superusers read everything, and so does a caller a plugin authorized, because
     then the plugin, not ownership, decides what is visible.
 
     Ownership is of a UUID, and a UUID can be reused: ``PUT /flows/{id}`` and
     ``PUT /projects/{id}`` create at an id the caller chooses, and a delete frees
-    that id. Owning the id today therefore cannot grant the whole history of the
-    id, or re-creating a deleted resource would hand the previous owner's trail to
-    whoever asks for it. The window opens at the caller's own first event on that
-    resource; a resource they own but never acted on carries no history for them,
-    which is the safe direction to be wrong in.
+    that id, for another resource type as much as for the same one. Owning the id
+    today therefore cannot grant everything ever recorded for it, or re-creating a
+    deleted resource would hand its previous owners' trails to whoever asked.
+
+    The window is the resource's current life: it opens at the newest ``create``
+    for that id *and* resource type, so an id that changed hands twice shows only
+    what happened after it came back. Without such an event — auditing was off
+    when the resource was created — the period cannot be established and the
+    ownership side matches nothing. The caller's own events stay readable either
+    way, and a deliberate transfer of ownership without a new ``create`` is not
+    something Langflow does today; if it ever does, the period has to come from a
+    recorded owner rather than from the create.
     """
     if user.is_superuser or await plugin_decides_visibility():
         return None
-    first_touched = (
-        select(func.min(col(_OwnEvent.timestamp)))
-        .where(col(_OwnEvent.resource_id) == col(AuditEvent.resource_id), col(_OwnEvent.user_id) == user.id)
+    current_life_began = (
+        select(func.max(col(_Incarnation.timestamp)))
+        .where(
+            col(_Incarnation.resource_id) == col(AuditEvent.resource_id),
+            col(_Incarnation.resource_type) == col(AuditEvent.resource_type),
+            col(_Incarnation.operation) == AuditOperation.CREATE.value,
+        )
         .scalar_subquery()
     )
-    owned_since_acquired = and_(
+    # A NULL bound (no create recorded) compares as unknown, so the row is left
+    # out: the ownership side fails closed rather than opening the whole history.
+    owned_in_its_current_life = and_(
         col(AuditEvent.resource_id).in_(owned_resource_ids),
-        col(AuditEvent.timestamp) >= first_touched,
+        col(AuditEvent.timestamp) >= current_life_began,
     )
-    return or_(owned_since_acquired, col(AuditEvent.user_id) == user.id)
+    return or_(owned_in_its_current_life, col(AuditEvent.user_id) == user.id)
 
 
 class AuditActorRead(BaseModel):
