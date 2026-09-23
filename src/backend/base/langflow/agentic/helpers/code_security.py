@@ -119,6 +119,11 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("yaml", "CLoader", "yaml.CLoader is forbidden in components — use yaml.SafeLoader"),
     ("yaml", "CUnsafeLoader", "yaml.CUnsafeLoader is forbidden in components — use yaml.SafeLoader"),
     ("yaml", "CFullLoader", "yaml.CFullLoader is forbidden in components — use yaml.SafeLoader"),
+    (
+        "pandas.compat",
+        "pickle_compat",
+        "pandas.compat.pickle_compat is forbidden — unsafe pickle deserialization",
+    ),
 ]
 
 # Dangerous attribute calls: (module, method, violation_message)
@@ -195,16 +200,6 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("pandas", "read_pickle", "pandas.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.api", "read_pickle", "pandas.io.api.read_pickle() is forbidden — unsafe pickle deserialization"),
-    (
-        "pandas.compat.pickle_compat",
-        "load",
-        "pandas.compat.pickle_compat.load() is forbidden — unsafe pickle deserialization",
-    ),
-    (
-        "pandas.compat.pickle_compat",
-        "loads",
-        "pandas.compat.pickle_compat.loads() is forbidden — unsafe pickle deserialization",
-    ),
 ]
 
 # NumPy's array readers are safe by default, but allow_pickle=True enables
@@ -289,6 +284,9 @@ DANGEROUS_SUBMODULES: tuple[str, ...] = (
     "urllib.error",
     "http.client",
     "http.server",
+    # This compatibility module exposes several pickle entry points, including
+    # Unpickler and the underlying pickle module. Block its whole namespace.
+    "pandas.compat.pickle_compat",
 )
 
 # Imports where only specific names are dangerous (module -> set of dangerous names)
@@ -1254,15 +1252,14 @@ class _SecurityChecker(ast.NodeVisitor):
 
         if root_module in DANGEROUS_IMPORTS or _is_dangerous_submodule(node.module):
             self.violations.append(f"Import from '{node.module}' is forbidden in components")
-        elif root_module in RESTRICTED_IMPORT_NAMES and node.names:
-            restricted = RESTRICTED_IMPORT_NAMES[root_module]
+        else:
+            restricted = RESTRICTED_IMPORT_NAMES.get(root_module, set())
             for alias in node.names:
                 if alias.name in restricted:
                     self.violations.append(f"Import of '{root_module}.{alias.name}' is forbidden in components")
-        elif node.names:
-            # `from urllib import request` / `from http import client`: the
-            # imported name *is* a blocked submodule.
-            for alias in node.names:
+                # `from urllib import request` / `from http import client`:
+                # the imported name *is* a blocked submodule. This also
+                # applies to packages with other restricted member names.
                 if _is_dangerous_submodule(f"{node.module}.{alias.name}"):
                     self.violations.append(f"Import of '{node.module}.{alias.name}' is forbidden in components")
 
@@ -1969,6 +1966,17 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
             elif _is_blocked_attribute(member_name):
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+            else:
+                module_owners = {name.removesuffix(".__dict__") for name in module_names}
+                if violation := next(
+                    (
+                        message
+                        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                        if mod in module_owners and attr == member_name
+                    ),
+                    None,
+                ):
+                    self.violations.append(violation)
 
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
         if function_names & vars_names and len(node.args) == 1 and _restricted_names(node.args[0]):

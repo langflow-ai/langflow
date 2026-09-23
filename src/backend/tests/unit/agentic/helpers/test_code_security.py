@@ -3333,6 +3333,14 @@ class TestScanCodeSecurityUnsafeDeserialization:
             ("import pandas.compat.pickle_compat as pc\npc.load(payload)", "pandas"),
             ("import pandas.compat.pickle_compat as pc\npc.loads(payload)", "pandas"),
             ("from pandas.compat.pickle_compat import *\nloads(payload)", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.Unpickler(stream).load()", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.pkl.loads(payload)", "pandas"),
+            ("from pandas.compat.pickle_compat import Unpickler", "pandas"),
+            ("from pandas.compat import pickle_compat as pc\npc.Unpickler(stream).load()", "pandas"),
+            ("import pandas as pd\npd.compat.pickle_compat.pkl.loads(payload)", "pandas"),
+            ("import pandas as pd\ngetattr(pd.compat, 'pickle_compat').pkl.loads(payload)", "pandas"),
+            ("import pandas as pd\nvars(pd.compat)['pickle_compat'].pkl.loads(payload)", "pandas"),
+            ("import pandas as pd\nvars(pd.compat).get('pickle_compat').pkl.loads(payload)", "pandas"),
             ("from pandas import *\nread_pickle(payload)", "pandas"),
             ("import joblib\njoblib.load(payload)", "joblib"),
             ("from dill import loads\nloads(payload)", "dill"),
@@ -3349,6 +3357,7 @@ class TestScanCodeSecurityUnsafeDeserialization:
         [
             "import pandas as pd\npd.read_csv(path)",
             "from pandas import DataFrame\nframe = DataFrame(data)",
+            "import pandas.compat as compat\nvalue = compat.is_numpy_dev",
         ],
     )
     def test_preserves_non_pickle_pandas_operations(self, code):
