@@ -91,7 +91,7 @@ Post to `/signing-secret` again. The address stays the same, so your callers kee
 
 Every provider here is at-least-once. Slack retries at zero, one, and five minutes when it doesn't get an acknowledgement in time; Graph and Google redeliver too.
 
-Langflow keys each delivery on the provider's own event identity — Slack's `event_id`, Graph's subscription and resource and change type, Google's channel and message number — and the ledger rejects a second event with the same key. Three retries of one Slack event produce one run.
+Langflow keys each delivery on the provider's own event identity — Slack's `event_id`, Graph's subscription, resource, change type and resource etag (so a second edit to the same message is a second event), Google's channel and message number — and the ledger rejects a second event with the same key. Three retries of one Slack event produce one run.
 
 Duplicates are acknowledged with `202` rather than an error, because telling a provider its retry failed teaches it to retry forever.
 
@@ -119,7 +119,7 @@ A trigger in **needs reconnect** is waiting for a person. It won't quietly start
 |---|---|---|
 | `LANGFLOW_TRIGGER_INGRESS_ENABLED` | `true` | Set to `false` on an instance that should accept no inbound deliveries at all. Every ingress request then answers `404`. |
 | `LANGFLOW_TRIGGER_INGRESS_MAX_BODY_BYTES` | `1048576` | Per-route body cap, independent of the global request limit. |
-| `LANGFLOW_TRIGGER_INGRESS_RATE_LIMIT_PER_MINUTE` | `600` | Per-trigger delivery ceiling. |
+| `LANGFLOW_TRIGGER_INGRESS_RATE_LIMIT_PER_MINUTE` | `600` | Per-trigger delivery ceiling. The Microsoft Graph subscription handshake gets its own per-client counter at this ceiling, so probing unknown addresses cannot block subscription creation or renewal. |
 | `LANGFLOW_TRIGGER_INGRESS_UNKNOWN_RATE_LIMIT_PER_MINUTE` | `60` | Per-client ceiling for deliveries naming no known trigger, so probing for addresses is bounded without a real provider sharing the budget. |
 | `LANGFLOW_TRIGGER_INGRESS_SIGNATURE_TOLERANCE_S` | `300` | How stale a signed request's timestamp may be. |
 | `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_FRACTION` | `0.5` | Fraction of a subscription's lifetime after which renewal is attempted. |

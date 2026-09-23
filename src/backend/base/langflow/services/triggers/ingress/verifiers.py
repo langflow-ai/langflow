@@ -27,10 +27,11 @@ Four verifiers, one per wave-1 mechanism:
     The generic signed endpoint: ``X-Langflow-Signature: v1=<hex>`` over
     ``v1:{timestamp}:{body}`` with the trigger's own rotatable secret.
 
-Every comparison uses :func:`hmac.compare_digest`. Every failure returns the
-same shaped rejection with a machine-readable reason, and the route turns all of
-them into one status code, so the endpoint is not an oracle for which check
-failed or whether a trigger exists.
+Every comparison is constant-time over bytes. Every failure - including a
+header or body malformed enough to break parsing - returns the same shaped
+rejection with a machine-readable reason, and the route turns all of them into
+one status code, so the endpoint is not an oracle for which check failed or
+whether a trigger exists.
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -66,6 +68,9 @@ REASON_UNKNOWN_TRIGGER = "unknown_trigger"
 REASON_TRIGGER_NOT_ACCEPTING = "trigger_not_accepting"
 REASON_RATE_LIMITED = "rate_limited"
 REASON_SCHEMA_MISMATCH = "schema_mismatch"
+#: A verifier raised something other than a refusal. Still a refusal to the
+#: caller; the distinct word is so an operator can find the bug.
+REASON_VERIFIER_ERROR = "verifier_error"
 #: Not a refusal: the audit word for a subscription handshake, which is
 #: answered without a trigger and therefore has no target to name.
 REASON_HANDSHAKE = "handshake"
@@ -130,9 +135,29 @@ class IngressSecrets:
     channel_id: str | None = None
 
 
+def _utf8(value: str) -> bytes:
+    r"""Encode anything a request can carry, including JSON's lone surrogates.
+
+    A strict encode raises on ``"\ud800"``, which ``json.loads`` accepts. For
+    every string a strict encode does accept, the bytes are identical, so no
+    stored digest changes.
+    """
+    return value.encode("utf-8", "surrogatepass")
+
+
+def _same(expected: str, supplied: str) -> bool:
+    r"""Constant-time equality that answers False rather than raising.
+
+    ``hmac.compare_digest`` raises TypeError for a non-ASCII ``str``, and
+    Starlette decodes header bytes as latin-1, so a ``\xff`` in a signature
+    header would otherwise escape as a 500 - but only for an id that resolved.
+    """
+    return hmac.compare_digest(_utf8(expected), _utf8(supplied))
+
+
 def state_digest(value: str) -> str:
     """The stored form of a secret Langflow minted and only ever compares."""
-    return hashlib.sha256(value.encode()).hexdigest()
+    return hashlib.sha256(_utf8(value)).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -196,9 +221,13 @@ def _check_timestamp(raw: str | None, *, tolerance_s: int) -> int:
     if not raw:
         raise IngressRejected(REASON_MISSING_SIGNATURE)
     try:
-        timestamp = int(float(raw))
+        parsed = float(raw)
     except (TypeError, ValueError) as exc:
         raise IngressRejected(REASON_STALE_TIMESTAMP) from exc
+    # ``inf`` and ``1e400`` parse, then overflow ``int()``; ``nan`` fails it.
+    if not math.isfinite(parsed):
+        raise IngressRejected(REASON_STALE_TIMESTAMP)
+    timestamp = int(parsed)
     # Both directions: a far-future timestamp is as much a replay tool as an old
     # one, because it would stay "fresh" for as long as the attacker likes.
     if abs(time.time() - timestamp) > tolerance_s:
@@ -225,7 +254,7 @@ def verify_slack(request: IngressRequest, secrets: IngressSecrets, *, tolerance_
     secret = _require(secrets.signing_secret)
     basestring = f"{_SLACK_SIGNATURE_VERSION}:{timestamp}:".encode() + request.body
     expected = f"{_SLACK_SIGNATURE_VERSION}={_hmac_hex(secret, basestring)}"
-    if not hmac.compare_digest(expected, signature):
+    if not _same(expected, signature):
         raise IngressRejected(REASON_BAD_SIGNATURE)
 
     payload = _json_body(request.body)
@@ -260,7 +289,7 @@ def verify_microsoft(request: IngressRequest, secrets: IngressSecrets, *, tolera
         if not isinstance(notification, dict):
             raise IngressRejected(REASON_BAD_PAYLOAD)
         supplied = notification.get("clientState")
-        if not isinstance(supplied, str) or not hmac.compare_digest(state_digest(supplied), expected):
+        if not isinstance(supplied, str) or not _same(expected, state_digest(supplied)):
             raise IngressRejected(REASON_BAD_STATE)
 
     lifecycle = tuple(
@@ -271,14 +300,36 @@ def verify_microsoft(request: IngressRequest, secrets: IngressSecrets, *, tolera
     if lifecycle:
         return Verified(payload=payload, lifecycle=lifecycle)
 
-    first = notifications[0]
-    suffix = first.get("subscriptionId")
-    resource_data = first.get("resourceData") if isinstance(first.get("resourceData"), dict) else {}
-    resource_id = resource_data.get("id") or first.get("resource")
     # Graph basic notifications carry ids only; the run fetches the resource back
     # with the owner's connection. Nothing is fetched in this request.
-    parts = [str(part) for part in (suffix, resource_id, first.get("changeType")) if part]
-    return Verified(payload=payload, dedupe_suffix=":".join(parts) or None)
+    identities = [_graph_identity(notification) for notification in notifications]
+    if len(identities) == 1:
+        return Verified(payload=payload, dedupe_suffix=identities[0] or None)
+    # One ledger row per batch, so the key covers the whole batch: keyed on its
+    # first entry alone, a batch whose head was delivered before would be
+    # dropped as a duplicate along with everything behind it.
+    batch = hashlib.sha256(_utf8("\n".join(identities))).hexdigest()[:32]
+    return Verified(payload=payload, dedupe_suffix=f"batch:{batch}")
+
+
+def _graph_identity(notification: dict[str, Any]) -> str:
+    """What makes one Graph notification the same event when it is redelivered.
+
+    Subscription, resource and change type are not enough on their own: every
+    ``updated`` notification for one message or calendar event shares them.
+    The resource's ``@odata.etag`` changes with each edit and survives a retry,
+    so it is what tells a second edit apart from a redelivery of the first.
+    """
+    resource_data = notification.get("resourceData")
+    resource_data = resource_data if isinstance(resource_data, dict) else {}
+    resource_id = resource_data.get("id") or notification.get("resource")
+    parts = (
+        notification.get("subscriptionId"),
+        resource_id,
+        notification.get("changeType"),
+        resource_data.get("@odata.etag"),
+    )
+    return ":".join(str(part) for part in parts if part)
 
 
 def verify_google(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int) -> Verified:  # noqa: ARG001
@@ -286,10 +337,10 @@ def verify_google(request: IngressRequest, secrets: IngressSecrets, *, tolerance
     token = request.header("X-Goog-Channel-Token")
     if not token:
         raise IngressRejected(REASON_MISSING_SIGNATURE)
-    if not hmac.compare_digest(state_digest(token), _require(secrets.channel_token_digest)):
+    if not _same(_require(secrets.channel_token_digest), state_digest(token)):
         raise IngressRejected(REASON_BAD_SIGNATURE)
     channel_id = request.header("X-Goog-Channel-ID")
-    if secrets.channel_id and not hmac.compare_digest(channel_id or "", secrets.channel_id):
+    if secrets.channel_id and not _same(secrets.channel_id, channel_id or ""):
         # A token is per channel. Accepting it for another channel would let one
         # watched resource drive a trigger armed against a different one.
         raise IngressRejected(REASON_BAD_STATE)
@@ -320,7 +371,7 @@ def verify_webhook(request: IngressRequest, secrets: IngressSecrets, *, toleranc
     secret = _require(secrets.signing_secret)
     basestring = f"{_WEBHOOK_SIGNATURE_VERSION}:{timestamp}:".encode() + request.body
     expected = f"{_WEBHOOK_SIGNATURE_VERSION}={_hmac_hex(secret, basestring)}"
-    if not hmac.compare_digest(expected, signature):
+    if not _same(expected, signature):
         raise IngressRejected(REASON_BAD_SIGNATURE)
 
     payload = _json_body(request.body)
@@ -344,7 +395,16 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
     verifier = _VERIFIERS.get(request.provider)
     if verifier is None:
         raise IngressRejected(REASON_UNKNOWN_PROVIDER)
-    return verifier(request, secrets, tolerance_s=tolerance_s)
+    try:
+        return verifier(request, secrets, tolerance_s=tolerance_s)
+    except IngressRejected:
+        raise
+    except Exception as exc:
+        # A verifier only runs for an id that resolved to an accepting trigger,
+        # so anything escaping here would be a 500 that an unknown id can never
+        # produce. The uniform answer must not depend on every parsing branch
+        # being exception-tight; the distinct reason keeps the bug findable.
+        raise IngressRejected(REASON_VERIFIER_ERROR) from exc
 
 
 def sign_webhook_payload(secret: str, *, timestamp: int, body: bytes) -> str:

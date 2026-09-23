@@ -336,6 +336,7 @@ async def test_reauthorization_required_moves_the_trigger_to_needs_reconnect(mak
     async with session_scope() as session:
         changed = await subscriptions.apply_lifecycle(
             session,
+            trigger_id=trigger_id,
             subscription_id=provider_subscription_id,
             event=subscriptions.LIFECYCLE_REAUTHORIZATION_REQUIRED,
         )
@@ -351,7 +352,10 @@ async def test_subscription_removed_retires_the_row_and_asks_for_a_reconnect(mak
 
     async with session_scope() as session:
         await subscriptions.apply_lifecycle(
-            session, subscription_id=provider_subscription_id, event=subscriptions.LIFECYCLE_SUBSCRIPTION_REMOVED
+            session,
+            trigger_id=trigger_id,
+            subscription_id=provider_subscription_id,
+            event=subscriptions.LIFECYCLE_SUBSCRIPTION_REMOVED,
         )
 
     assert (await _subscription(subscription_id)).state == TriggerSubscriptionState.EXPIRED.value
@@ -364,7 +368,10 @@ async def test_a_missed_notification_is_recorded_without_disarming_the_trigger(m
 
     async with session_scope() as session:
         await subscriptions.apply_lifecycle(
-            session, subscription_id=provider_subscription_id, event=subscriptions.LIFECYCLE_MISSED
+            session,
+            trigger_id=trigger_id,
+            subscription_id=provider_subscription_id,
+            event=subscriptions.LIFECYCLE_MISSED,
         )
 
     assert "missed_at" in (await _subscription(subscription_id)).provider_state
@@ -518,3 +525,111 @@ async def test_removing_the_canvas_node_retires_the_subscription_too(make_subscr
 
     assert (await _trigger(trigger_id)).state == TriggerState.PAUSED.value
     assert (await _subscription(subscription_id)).state == TriggerSubscriptionState.EXPIRED.value
+
+
+# --------------------------------------------------------------------------- #
+# QA regressions
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_lifecycle_notification_cannot_reach_another_triggers_subscription(client, make_subscription) -> None:
+    """The clientState proves which trigger a delivery is for; the body's subscription id proves nothing.
+
+    Verified against trigger C, a ``subscriptionRemoved`` naming D's subscription
+    used to expire D's row and move D to ``needs_reconnect``.
+    """
+    c_public, d_public = uuid4().hex, uuid4().hex
+    c_trigger, _c_connection, c_subscription, _c_external = await make_subscription(public_id=c_public)
+    d_trigger, _d_connection, d_subscription, d_external = await make_subscription(public_id=d_public)
+
+    response = await client.post(
+        f"api/v1/triggers/ingress/microsoft/{c_public}",
+        json={
+            "value": [
+                {"clientState": "client-state", "subscriptionId": d_external, "lifecycleEvent": "subscriptionRemoved"}
+            ]
+        },
+    )
+
+    # Verified for C, so acknowledged - but it named nothing C owns.
+    assert response.status_code == 202, response.text
+    assert (await _subscription(d_subscription)).state == TriggerSubscriptionState.ACTIVE.value
+    assert (await _trigger(d_trigger)).state == TriggerState.ACTIVE.value
+    assert (await _subscription(c_subscription)).state == TriggerSubscriptionState.ACTIVE.value
+    assert (await _trigger(c_trigger)).state == TriggerState.ACTIVE.value
+
+
+async def _make_due(subscription_id) -> None:
+    async with session_scope() as session:
+        row = await session.get(TriggerSubscription, subscription_id)
+        row.renew_after = _now() - timedelta(minutes=1)
+        session.add(row)
+
+
+async def test_a_row_whose_lease_was_taken_over_is_not_renewed(make_subscription, fake_renewer) -> None:
+    """A claim outlived by a slow pass may be reclaimed; the old claimant must then keep its hands off.
+
+    Without the ownership check, both replicas call the provider and both write
+    the row back, each overwriting the other's expiry and lease.
+    """
+    _trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+    await _make_due(subscription_id)
+    async with session_scope() as session:
+        claimed = await subscriptions.claim_due(session, owner="replica-b", limit=10, lease_ttl_s=60)
+    assert claimed == [subscription_id]
+
+    async with session_scope() as session:
+        renewed = await subscriptions.renew_one(session, subscription_id=subscription_id, owner="replica-a")
+
+    assert renewed is False
+    assert fake_renewer == []
+    assert (await _subscription(subscription_id)).lease_owner == "replica-b"
+
+
+async def test_a_pass_that_loses_the_renewal_lease_stops(make_subscription, fake_renewer, monkeypatch) -> None:
+    """The pass lease is heartbeated per row, so a long pass cannot outlive it unnoticed."""
+    for _ in range(3):
+        _trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+        await _make_due(subscription_id)
+
+    real_acquire = leases.acquire
+    calls = 0
+
+    async def _lose_after_first_row(session, *, name, owner, ttl_s):
+        nonlocal calls
+        calls += 1
+        if calls > 2:  # the pass's own acquire, then one heartbeat
+            return False
+        return await real_acquire(session, name=name, owner=owner, ttl_s=ttl_s)
+
+    monkeypatch.setattr(subscriptions.leases, "acquire", _lose_after_first_row)
+
+    renewed = await subscriptions.run_renewal_pass(owner="replica-a")
+
+    assert renewed == 1
+    assert len(fake_renewer) == 1
+
+
+@pytest.mark.usefixtures("fake_renewer")
+async def test_a_renewal_pass_completes_with_durable_audit_on(make_subscription, monkeypatch) -> None:
+    """The renewal audit is written after its transaction commits, not while it is open.
+
+    On SQLite the durable writer cannot commit past an open write, so auditing
+    inside the transaction hung the pass and rolled the renewal back.
+    """
+    import asyncio
+
+    from langflow.services.authorization.audit import drain_pending_audit_writes
+
+    _trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+    await _make_due(subscription_id)
+    auth_settings = get_settings_service().auth_settings
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_DURABLE", True)
+    try:
+        renewed = await asyncio.wait_for(subscriptions.run_renewal_pass(owner="replica-a"), timeout=10)
+    finally:
+        await drain_pending_audit_writes()
+
+    assert renewed == 1
+    assert (await _subscription(subscription_id)).expires_at.replace(tzinfo=timezone.utc) > _now() + timedelta(days=6)

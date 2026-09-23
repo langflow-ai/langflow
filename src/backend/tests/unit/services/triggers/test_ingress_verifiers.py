@@ -342,3 +342,143 @@ def test_a_long_key_is_digested_rather_than_truncated() -> None:
     assert len(second) <= DEDUPE_KEY_MAX_LENGTH
     assert first != second, "two distinct events must not share a ledger key"
     assert first.startswith("ingress:microsoft:")
+
+
+# --------------------------------------------------------------------------- #
+# Malformed input is a refusal, never a crash
+# --------------------------------------------------------------------------- #
+#
+# A verifier only runs for a public id that resolved to an accepting trigger, so
+# any exception other than IngressRejected becomes a 500 that an unknown id can
+# never produce - the existence oracle the uniform 404 exists to close.
+
+_SIGNED_HEADERS = {
+    "slack": ("X-Slack-Signature", "X-Slack-Request-Timestamp"),
+    "webhook": ("X-Langflow-Signature", "X-Langflow-Timestamp"),
+}
+
+
+@pytest.mark.parametrize("provider", ["slack", "webhook"])
+@pytest.mark.parametrize("timestamp", ["inf", "-inf", "1e400", "nan", "Infinity"])
+def test_a_non_finite_timestamp_is_refused_as_stale(provider: str, timestamp: str) -> None:
+    signature_header, timestamp_header = _SIGNED_HEADERS[provider]
+    request = IngressRequest(
+        provider=provider,
+        body=b"{}",
+        headers={signature_header: "v0=00", timestamp_header: timestamp},
+        query={},
+    )
+    with pytest.raises(IngressRejected) as excinfo:
+        verify(request, IngressSecrets(signing_secret=SLACK_SECRET), tolerance_s=TOLERANCE)
+    assert excinfo.value.reason == verifiers.REASON_STALE_TIMESTAMP
+
+
+@pytest.mark.parametrize("provider", ["slack", "webhook"])
+def test_a_non_ascii_signature_is_refused_not_raised(provider: str) -> None:
+    r"""Starlette decodes header bytes as latin-1, so ``b"\xff"`` arrives as ``"ÿ"``.
+
+    ``hmac.compare_digest`` raises TypeError for a non-ASCII str rather than
+    answering False.
+    """
+    signature_header, timestamp_header = _SIGNED_HEADERS[provider]
+    request = IngressRequest(
+        provider=provider,
+        body=b"{}",
+        headers={signature_header: "v1=\xff", timestamp_header: str(int(time.time()))},
+        query={},
+    )
+    with pytest.raises(IngressRejected) as excinfo:
+        verify(request, IngressSecrets(signing_secret=SLACK_SECRET), tolerance_s=TOLERANCE)
+    assert excinfo.value.reason == verifiers.REASON_BAD_SIGNATURE
+
+
+def test_a_graph_client_state_that_cannot_be_encoded_is_refused_not_raised() -> None:
+    """JSON can carry a lone surrogate, which a strict UTF-8 encode refuses."""
+    body = b'{"value": [{"subscriptionId": "sub-1", "clientState": "\\ud800"}]}'
+    request = IngressRequest(provider="microsoft", body=body, headers={}, query={})
+    with pytest.raises(IngressRejected) as excinfo:
+        verify(request, IngressSecrets(client_state_digest=state_digest("real")), tolerance_s=TOLERANCE)
+    assert excinfo.value.reason == verifiers.REASON_BAD_STATE
+
+
+def test_a_non_ascii_google_channel_id_is_refused_not_raised() -> None:
+    token = "channel-token"  # noqa: S105 - test fixture
+    request = IngressRequest(
+        provider="google",
+        body=b"",
+        headers={"X-Goog-Channel-Token": token, "X-Goog-Channel-ID": "chan-\xff"},
+        query={},
+    )
+    with pytest.raises(IngressRejected) as excinfo:
+        verify(
+            request,
+            IngressSecrets(channel_token_digest=state_digest(token), channel_id="chan-1"),
+            tolerance_s=TOLERANCE,
+        )
+    assert excinfo.value.reason == verifiers.REASON_BAD_STATE
+
+
+def test_an_unexpected_verifier_error_is_still_a_refusal(monkeypatch) -> None:
+    """The uniform answer must not depend on every parsing branch being exception-tight."""
+
+    def _broken(_request, _secrets, *, tolerance_s):  # noqa: ARG001
+        missing = "a future parsing bug"
+        raise KeyError(missing)
+
+    monkeypatch.setitem(verifiers._VERIFIERS, "webhook", _broken)
+    request = IngressRequest(provider="webhook", body=b"{}", headers={}, query={})
+    with pytest.raises(IngressRejected) as excinfo:
+        verify(request, IngressSecrets(signing_secret=WEBHOOK_SECRET), tolerance_s=TOLERANCE)
+    assert excinfo.value.reason == verifiers.REASON_VERIFIER_ERROR
+
+
+# --------------------------------------------------------------------------- #
+# The Graph dedupe identity
+# --------------------------------------------------------------------------- #
+
+
+def _graph_notification(*, resource_id: str, etag: str | None = None, change: str = "updated") -> dict:
+    resource_data: dict = {"id": resource_id}
+    if etag is not None:
+        resource_data["@odata.etag"] = etag
+    return {
+        "subscriptionId": "sub-1",
+        "clientState": "client-state-value",
+        "changeType": change,
+        "resource": f"Users/u/Messages/{resource_id}",
+        "resourceData": resource_data,
+    }
+
+
+def _graph_suffix(*notifications: dict) -> str | None:
+    request = IngressRequest(
+        provider="microsoft", body=json.dumps({"value": list(notifications)}).encode(), headers={}, query={}
+    )
+    secrets = IngressSecrets(client_state_digest=state_digest("client-state-value"))
+    return verify(request, secrets, tolerance_s=TOLERANCE).dedupe_suffix
+
+
+def test_two_edits_to_one_graph_resource_are_two_events() -> None:
+    """Graph distinguishes successive ``updated`` notifications by the resource etag.
+
+    Without it, every edit after the first to the same message or calendar
+    event would collapse into the first one's ledger row for the whole
+    retention window - a silently lost run each time.
+    """
+    first = _graph_suffix(_graph_notification(resource_id="msg-1", etag='W/"v1"'))
+    second = _graph_suffix(_graph_notification(resource_id="msg-1", etag='W/"v2"'))
+    redelivered = _graph_suffix(_graph_notification(resource_id="msg-1", etag='W/"v1"'))
+
+    assert first != second
+    assert first == redelivered
+
+
+def test_a_graph_batch_is_keyed_on_every_notification_in_it() -> None:
+    """Keying on the first entry alone would drop the rest of a batch as a duplicate."""
+    alone = _graph_suffix(_graph_notification(resource_id="msg-1", change="created"))
+    batched = _graph_suffix(
+        _graph_notification(resource_id="msg-1", change="created"),
+        _graph_notification(resource_id="msg-2", change="created"),
+    )
+
+    assert alone != batched

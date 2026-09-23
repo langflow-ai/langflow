@@ -67,9 +67,11 @@ from langflow.services.triggers.ingress.verifiers import (
 router = APIRouter(prefix="/triggers/ingress", tags=["Triggers"])
 
 #: Counter namespaces, kept apart so a busy Slack workspace cannot exhaust the
-#: budget that bounds id probing.
+#: budget that bounds id probing, and so probing cannot exhaust the budget Graph
+#: needs to create and renew subscriptions.
 _SCOPE_INGRESS = "trigger_ingress"
 _SCOPE_INGRESS_UNKNOWN = "trigger_ingress_unknown"
+_SCOPE_INGRESS_HANDSHAKE = "trigger_ingress_handshake"
 
 #: The one answer every rejection gets.
 _NOT_FOUND = {"detail": "Not found"}
@@ -156,7 +158,17 @@ async def receive_provider_delivery(
     # whether a public id exists.
     handshake = validation_token(provider, request.query_params)
     if handshake is not None:
-        if _unknown_budget_spent():
+        # Its own counter, at the per-trigger ceiling. Sharing the unknown-id
+        # budget let anonymous probing - one key for every caller behind a
+        # proxy - deny Graph's subscription creation and renewal instance-wide.
+        # The echo reveals nothing, so the budget only bounds cost and audit volume.
+        try:
+            check_rate_limit(
+                request,
+                scope=_SCOPE_INGRESS_HANDSHAKE,
+                limit_per_minute=settings.trigger_ingress_rate_limit_per_minute,
+            )
+        except RateLimitExceeded:
             return _reject()
         await intake.audit_ingress(
             accepted=True, provider=provider, public_id=public_id, target=None, reason=REASON_HANDSHAKE
@@ -242,7 +254,12 @@ async def receive_provider_delivery(
         from langflow.services.triggers import subscriptions
 
         for subscription_id, event in verified.lifecycle:
-            await subscriptions.apply_lifecycle(session, subscription_id=subscription_id, event=event)
+            # Scoped to the trigger whose clientState verified this delivery;
+            # the subscription id in the body is the caller's claim, not proof.
+            await subscriptions.apply_lifecycle(
+                session, trigger_id=target.trigger_id, subscription_id=subscription_id, event=event
+            )
+        await session.commit()
         await intake.audit_ingress(accepted=True, provider=provider, public_id=public_id, target=target)
         return Response(status_code=status.HTTP_202_ACCEPTED)
 
@@ -263,6 +280,11 @@ async def receive_provider_delivery(
         suffix=verified.dedupe_suffix,
         fallback=fallback,
     )
+    # Commit before auditing. A durable audit waits for the writer's own
+    # connection to commit, and on SQLite that cannot happen past this
+    # request's open write - the delivery would hang, answer 500, and roll the
+    # ledger row back.
+    await session.commit()
     await intake.audit_ingress(
         accepted=True, provider=provider, public_id=public_id, target=target, duplicate=not created
     )

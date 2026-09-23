@@ -554,3 +554,140 @@ async def test_an_unknown_provider_is_rate_limited_before_it_is_audited(client: 
     assert {response.status_code for response in responses} == {404}
     # The budget stopped the audit rows well before the request flood did.
     assert len(audited) <= 2
+
+
+# --------------------------------------------------------------------------- #
+# QA regressions
+# --------------------------------------------------------------------------- #
+
+
+async def _armed_webhook(client: AsyncClient, headers: dict[str, str], flow) -> tuple[str, dict]:
+    """An enabled inbound webhook with a minted address and secret, via the API."""
+    created = await client.post(
+        "api/v1/triggers",
+        json={"flow_id": str(flow.id), "name": "orders", "kind": "inbound_webhook", "config": {}},
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    trigger_id = created.json()["id"]
+    await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+    minted = await client.post(f"api/v1/triggers/{trigger_id}/signing-secret", headers=headers)
+    assert minted.status_code == 200, minted.text
+    return trigger_id, minted.json()
+
+
+@pytest.mark.parametrize(
+    ("signature", "timestamp", "reason"),
+    [
+        ("v1=anything", "inf", "stale_timestamp"),
+        ("v1=anything", "1e400", "stale_timestamp"),
+        (b"v1=\xff", None, "bad_signature"),
+    ],
+    ids=["inf", "overflowing-exponent", "non-ascii-signature"],
+)
+async def test_a_malformed_header_on_a_real_trigger_is_an_audited_404(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    flow,
+    monkeypatch,
+    signature: str | bytes,
+    timestamp: str | None,
+    reason: str,
+) -> None:
+    """A 500 that only a resolving id can produce is the oracle the uniform 404 closes.
+
+    ``int(float("inf"))`` raises OverflowError and ``hmac.compare_digest``
+    raises TypeError for a non-ASCII str; neither is a refusal, so both used to
+    escape as 500 - and write no audit row.
+    """
+    from langflow.services.authorization.audit import drain_pending_audit_writes
+    from langflow.services.database.models.auth import AuthzAuditLog
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    trigger_id, minted = await _armed_webhook(client, logged_in_headers, flow)
+    headers = {
+        "X-Langflow-Signature": signature,
+        "X-Langflow-Timestamp": timestamp or str(int(time.time())),
+    }
+    try:
+        real = await client.post(minted["ingress_url"], content=b"{}", headers=headers)
+        unknown = await client.post(f"api/v1/triggers/ingress/webhook/{uuid4().hex}", content=b"{}", headers=headers)
+        await drain_pending_audit_writes()
+    finally:
+        await drain_pending_audit_writes()
+
+    assert real.status_code == unknown.status_code == 404
+    assert real.text == unknown.text
+    async with session_scope() as session:
+        audits = (
+            await session.exec(
+                select(AuthzAuditLog).where(
+                    AuthzAuditLog.action == "trigger_ingress:reject",
+                    AuthzAuditLog.resource_id == UUID(trigger_id),
+                )
+            )
+        ).all()
+    assert [audit.details["reason"] for audit in audits] == [reason]
+
+
+async def test_an_accepted_delivery_commits_before_the_durable_audit_waits(
+    client: AsyncClient, logged_in_headers: dict[str, str], flow, monkeypatch
+) -> None:
+    """On SQLite the durable audit writer cannot commit past an open write transaction.
+
+    Auditing with the ledger row still uncommitted hung the request until the
+    writer gave up, answered 500, and rolled the row back - the delivery was
+    lost and the flow never ran.
+    """
+    import asyncio
+
+    from langflow.services.authorization.audit import drain_pending_audit_writes
+    from langflow.services.deps import get_settings_service
+
+    trigger_id, minted = await _armed_webhook(client, logged_in_headers, flow)
+    auth_settings = get_settings_service().auth_settings
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_DURABLE", True)
+    body = json.dumps({"order": 7}).encode()
+    timestamp = int(time.time())
+    try:
+        response = await asyncio.wait_for(
+            client.post(
+                minted["ingress_url"],
+                content=body,
+                headers={
+                    "X-Langflow-Signature": sign_webhook_payload(
+                        minted["signing_secret"], timestamp=timestamp, body=body
+                    ),
+                    "X-Langflow-Timestamp": str(timestamp),
+                },
+            ),
+            timeout=10,
+        )
+    finally:
+        await drain_pending_audit_writes()
+
+    assert response.status_code == 202, response.text
+    assert len(await _events(trigger_id)) == 1
+
+
+async def test_probing_cannot_spend_the_graph_handshake_budget(client: AsyncClient, monkeypatch) -> None:
+    """Graph creates and renews subscriptions through the handshake.
+
+    Charged to the unknown-id counter, sixty anonymous probes a minute - one
+    shared key for every caller behind a proxy - would make subscription
+    creation and renewal fail instance-wide.
+    """
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "trigger_ingress_unknown_rate_limit_per_minute", 1)
+
+    probes = [await client.post(f"api/v1/triggers/ingress/webhook/{uuid4().hex}", content=b"{}") for _ in range(3)]
+    handshake = await client.post(
+        f"api/v1/triggers/ingress/microsoft/{uuid4().hex}?validationToken=tok-after-probing", content=b""
+    )
+
+    assert {probe.status_code for probe in probes} == {404}
+    assert handshake.status_code == 200
+    assert handshake.text == "tok-after-probing"

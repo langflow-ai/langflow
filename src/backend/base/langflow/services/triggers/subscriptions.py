@@ -69,6 +69,9 @@ _FAILURE_REASON_KEY = "renew_last_error"
 _FAILURE_AT_KEY = "renew_last_failed_at"
 _FAILURE_KEYS = frozenset({_FAILURE_COUNT_KEY, _FAILURE_REASON_KEY, _FAILURE_AT_KEY})
 
+#: ``session.info`` key for renewal audits waiting on their transaction's commit.
+_DEFERRED_AUDITS_KEY = "trigger_subscription_deferred_audits"
+
 _NEEDS_RECONNECT_REASON = "The provider subscription needs to be re-authorized. Reconnect the connection."
 _REMOVED_REASON = "The provider deleted this subscription. Re-enable the trigger to subscribe again."
 
@@ -220,7 +223,7 @@ async def _set_trigger_state(session: AsyncSession, *, trigger_id: UUID, state: 
     await session.flush()
 
 
-async def apply_lifecycle(session: AsyncSession, *, subscription_id: str, event: str) -> bool:
+async def apply_lifecycle(session: AsyncSession, *, trigger_id: UUID, subscription_id: str, event: str) -> bool:
     """Act on one Graph lifecycle notification. True when something changed.
 
     Graph sends these instead of - not alongside - the notification you were
@@ -228,8 +231,13 @@ async def apply_lifecycle(session: AsyncSession, *, subscription_id: str, event:
     healthy. ``reauthorizationRequired`` and ``subscriptionRemoved`` both need a
     human, so both move the trigger to ``needs_reconnect``; ``missed`` is a
     resync hint recorded on the subscription for the provider adapter to use.
+
+    ``trigger_id`` is the trigger whose ``clientState`` verified the delivery.
+    The subscription id comes from the body, so without that scope a delivery
+    verified for one trigger could retire another trigger's subscription.
     """
     statement = select(TriggerSubscription).where(
+        TriggerSubscription.trigger_id == trigger_id,
         TriggerSubscription.provider_subscription_id == subscription_id,
     )
     row = (await session.exec(statement)).first()
@@ -356,14 +364,49 @@ async def claim_due(session: AsyncSession, *, owner: str, limit: int, lease_ttl_
     return claimed
 
 
-async def renew_one(session: AsyncSession, *, subscription_id: UUID) -> bool:
-    """Renew one claimed subscription. True when its expiry moved.
+async def _refresh_claim(session: AsyncSession, *, subscription_id: UUID, owner: str) -> bool:
+    """Extend this owner's claim on one row. False when somebody else holds it now.
+
+    Rows are claimed together at the start of a pass but renewed one provider
+    call at a time, so a slow pass can outlive the claims on its later rows and
+    another replica can reclaim them. Guarded on ``lease_owner`` alone, like the
+    dispatcher's re-check: an expired claim nobody took is still ours to use,
+    a reclaimed one is not.
+    """
+    from sqlmodel import update
+
+    ttl_s = get_settings_service().settings.trigger_lease_ttl_s
+    guard = (
+        update(TriggerSubscription)
+        .where(
+            TriggerSubscription.id == subscription_id,
+            TriggerSubscription.lease_owner == owner,
+            TriggerSubscription.state == TriggerSubscriptionState.ACTIVE.value,
+        )
+        .values(lease_until=_now() + timedelta(seconds=ttl_s))
+    )
+    result = await session.exec(guard)  # type: ignore[call-overload]
+    return result.rowcount == 1
+
+
+async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str) -> bool:
+    """Renew one subscription this owner has claimed. True when its expiry moved.
+
+    A row whose claim was taken over by another replica is left alone, so a
+    provider never sees two renewals of one subscription from one pass each.
+    The claim is refreshed for one lease TTL before the provider call, so a
+    renewer must answer inside ``trigger_lease_ttl_s``.
 
     A provider with no registered renewer is left exactly as it was - claimed,
     then released - because "no bundle installed" is not the same as "renewal
     failed", and recording it as a failure would fill an operator's audit log
     with a problem they do not have.
+
+    Audits are deferred onto the session and written by :func:`run_renewal_pass`
+    once the transaction has committed.
     """
+    if not await _refresh_claim(session, subscription_id=subscription_id, owner=owner):
+        return False
     row = await session.get(TriggerSubscription, subscription_id)
     if row is None:
         return False
@@ -391,7 +434,7 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID) -> bool:
     session.add(row)
     await session.flush()
     await _clear_renewal_error(session, trigger_id=row.trigger_id)
-    await _audit_subscription(AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=1)
+    _defer_audit(session, AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=1)
     return True
 
 
@@ -452,7 +495,7 @@ async def _record_renewal_failure(session: AsyncSession, *, row: TriggerSubscrip
                 f"{failures} attempts. Reconnect the connection if this persists."
             ),
         )
-    await _audit_subscription(AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=0, result="deny")
+    _defer_audit(session, AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=0, result="deny")
 
 
 async def _set_trigger_error(session: AsyncSession, *, trigger_id: UUID, message: str) -> None:
@@ -503,11 +546,30 @@ async def run_renewal_pass(*, owner: str) -> int:
 
     renewed = 0
     for subscription_id in claimed:
+        # Heartbeat the pass lease per row: a pass of provider calls can outlive
+        # one TTL, and another replica that took the lease meanwhile is running
+        # its own pass. Stop rather than race it.
+        async with session_scope() as session:
+            held = await leases.acquire(
+                session, name=SUBSCRIPTION_LEASE_NAME, owner=owner, ttl_s=settings.trigger_lease_ttl_s
+            )
+        if not held:
+            break
         # One transaction per subscription: a provider that fails on one must
         # not roll back the renewals that already succeeded.
         async with session_scope() as session:
-            renewed += int(await renew_one(session, subscription_id=subscription_id))
+            renewed += int(await renew_one(session, subscription_id=subscription_id, owner=owner))
+            deferred = session.info.pop(_DEFERRED_AUDITS_KEY, [])
+        # Audited after the commit. A durable audit waits for the writer's own
+        # connection to commit, which SQLite cannot do past this open write -
+        # the pass would hang and roll the renewal back.
+        for action, trigger_id, count, result in deferred:
+            await _audit_subscription(action, trigger_id=trigger_id, count=count, result=result)
     return renewed
+
+
+def _defer_audit(session: AsyncSession, action: str, *, trigger_id: UUID, count: int, result: str = "allow") -> None:
+    session.info.setdefault(_DEFERRED_AUDITS_KEY, []).append((action, trigger_id, count, result))
 
 
 async def _audit_subscription(action: str, *, trigger_id: UUID, count: int, result: str = "allow") -> None:
