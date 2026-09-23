@@ -655,3 +655,79 @@ async def test_an_unparseable_connection_still_asks_for_a_reconnect(
     assert connection_id not in supervisor.workers
     state, _ = await _state(trigger_id)
     assert state == TriggerState.NEEDS_RECONNECT.value
+
+
+class ResolvingAdapter:
+    """Calls ``ctx.resolve_credential`` the way a provider adapter does, and records the outcome."""
+
+    transport = "socket"
+
+    def __init__(self, *, trigger_id=None) -> None:
+        self.trigger_id = trigger_id
+        self.error: BaseException | None = None
+        self.done = asyncio.Event()
+
+    async def start(self, ctx: ListenerContext) -> None:
+        try:
+            await ctx.resolve_credential(self.trigger_id)
+        except BaseException as exc:
+            self.error = exc
+            raise
+        finally:
+            self.done.set()
+        await ctx.stopping.wait()
+
+    async def stop(self) -> None:
+        return None
+
+    def healthy(self) -> bool:
+        return True
+
+
+async def _resolve_failure(supervisor: ListenerSupervisor, adapter: ResolvingAdapter, connection_id) -> None:
+    await supervisor.reconcile()
+    await asyncio.wait_for(adapter.done.wait(), timeout=5)
+    worker = supervisor.workers.get(connection_id)
+    if worker is not None and worker.task is not None:
+        await asyncio.gather(worker.task, return_exceptions=True)
+
+
+async def test_resolving_a_trigger_that_is_not_on_the_connection_raises_a_typed_error(
+    make_connection, make_trigger, adapter_registry
+) -> None:
+    """An adapter asking for a foreign trigger's credential gets a typed error, not a TypeError.
+
+    The typed error is what routes the failure to ``needs_reconnect``; a
+    ``TypeError`` from a mis-built exception would have been retried forever as
+    a generic adapter failure.
+    """
+    adapter = adapter_registry(ResolvingAdapter(trigger_id=uuid4()))
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await _resolve_failure(supervisor, adapter, connection_id)
+        assert isinstance(adapter.error, ConnectionUnresolvedError)
+        assert str(connection_id) in str(adapter.error)
+        state, _ = await _state(trigger_id)
+        assert state == TriggerState.NEEDS_RECONNECT.value
+    finally:
+        await supervisor.stop()
+
+
+async def test_resolving_an_unparseable_connection_handle_raises_a_typed_error(
+    make_connection, make_trigger, adapter_registry
+) -> None:
+    """A stored connection whose handle cannot parse fails as ``connection-unresolved``."""
+    adapter = adapter_registry(ResolvingAdapter())
+    connection_id = await make_connection(name="Not A Valid Handle!")
+    await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await _resolve_failure(supervisor, adapter, connection_id)
+        assert isinstance(adapter.error, ConnectionUnresolvedError)
+        assert adapter.error.provider == "selftest"
+    finally:
+        await supervisor.stop()

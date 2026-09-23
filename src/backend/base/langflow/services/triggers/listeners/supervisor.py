@@ -622,13 +622,17 @@ class ListenerSupervisor:
             """
             target = next((t for t in worker.triggers if trigger_id is None or t.id == trigger_id), None)
             if target is None:
-                msg = "No trigger on this connection to resolve a credential for."
-                raise ConnectionUnresolvedError(provider=None, hint=msg)
+                # A trigger id that is not armed on this connection (or none at
+                # all). Typed, so the supervisor classifies it rather than
+                # treating a programming slip as a transient failure.
+                handle = f"connection:{worker.connection_id}"
+                raise ConnectionUnresolvedError(handle)
             async with session_scope() as session:
                 row = await session.get(Connection, worker.connection_id)
                 trigger_row = await session.get(Trigger, target.id)
             if row is None or trigger_row is None:
-                raise ConnectionUnresolvedError(provider=None)
+                handle = f"connection:{worker.connection_id}"
+                raise ConnectionUnresolvedError(handle)
             try:
                 request = ConnectionResolutionRequest(
                     ref=ConnectionRef(provider=row.provider_key, name=row.name),
@@ -641,7 +645,8 @@ class ListenerSupervisor:
                 # reconnect" instead of retrying a row that can never work -
                 # the same treatment ``principal.connection_preflight`` gives it
                 # on the dispatch side.
-                raise ConnectionUnresolvedError(provider=row.provider_key) from exc
+                handle = f"{row.provider_key}/{row.name}"
+                raise ConnectionUnresolvedError(handle, provider=row.provider_key) from exc
             return await get_connection_resolver_service().resolve(request)
 
         return ListenerContext(
