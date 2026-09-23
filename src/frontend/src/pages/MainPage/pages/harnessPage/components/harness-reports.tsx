@@ -21,6 +21,7 @@ import {
 } from "@/controllers/API/queries/folders/use-project-reports";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { cn } from "@/utils/utils";
+import { ReportDependencies } from "./report-dependencies";
 import { ReportEvidence } from "./report-evidence";
 import { ReportMarkdown, reportCitations } from "./report-markdown";
 
@@ -336,6 +337,11 @@ function ReportContent({
             setSelectedSource(id);
             sourcePicker.current?.focus();
           }}
+        />
+        <ReportDependencies
+          uses={report.tool_dependencies ?? []}
+          harnessId={projectId}
+          onOpen={onOpenFlow}
         />
         <details className="mt-8 border-t border-border pt-4 text-xs">
           <summary className="cursor-pointer font-medium">

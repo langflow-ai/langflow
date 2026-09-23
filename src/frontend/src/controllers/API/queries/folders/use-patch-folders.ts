@@ -66,6 +66,7 @@ export const usePatchFolders: useMutationFunctionType<
       queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
       queryClient.invalidateQueries({ queryKey: ["useGetProjectFlows"] });
       queryClient.invalidateQueries({ queryKey: ["useGetProjectFlowOutputs"] });
+      queryClient.invalidateQueries({ queryKey: ["projectToolPack"] });
     },
   });
 

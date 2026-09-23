@@ -122,7 +122,12 @@ class TestAgentHarness:
         """Everything else must render with a shipped canvas widget, or the form is bespoke."""
         bespoke = {f.name: f.renders for f in harness.fields if f.renders and f.input.show}
 
-        assert bespoke == {"system_prompt": "long_text", "tools": "project_flows", "hooks": "hook_flows"}
+        assert bespoke == {
+            "system_prompt": "long_text",
+            "tools": "project_flows",
+            "tool_packs": "project_refs",
+            "hooks": "hook_flows",
+        }
 
     def test_every_field_renders_with_a_shipped_widget(self, harness):
         """The form reuses the canvas field renderer, so each field must carry a real input type."""
