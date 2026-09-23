@@ -201,6 +201,7 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
 # effective allow_pickle value cannot be proven false from the AST.
 _NUMPY_LOAD_NAMES = frozenset({"numpy.load", "numpy.lib.npyio.load", "numpy.lib._npyio_impl.load"})
 _NUMPY_ALLOW_PICKLE_ARG_INDEX = 2
+_NUMPY_OPAQUE_LOAD_MESSAGE = "Indirect numpy.load() references are forbidden — allow_pickle cannot be verified"
 
 # Imports that are forbidden entirely
 DANGEROUS_IMPORTS: set[str] = {
@@ -989,6 +990,8 @@ class _SecurityChecker(ast.NodeVisitor):
 
         resolved_names = self._resolved_assignment_value(node)
         for resolved_name in resolved_names:
+            if resolved_name in _NUMPY_LOAD_NAMES:
+                return _NUMPY_OPAQUE_LOAD_MESSAGE
             if _is_restricted_module_reference(resolved_name):
                 return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
             if _is_restricted_reflective_capability(resolved_name):
@@ -1102,6 +1105,9 @@ class _SecurityChecker(ast.NodeVisitor):
         if not self._binding_escapes(name):
             return
         for value in sorted(values):
+            if value in _NUMPY_LOAD_NAMES:
+                self.violations.append(_NUMPY_OPAQUE_LOAD_MESSAGE)
+                return
             if _is_restricted_module_reference(value):
                 self.violations.append(f"Indirect reference to restricted module '{value}' is forbidden in components")
                 return

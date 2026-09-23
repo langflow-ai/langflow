@@ -3354,6 +3354,9 @@ class TestScanCodeSecurityUnsafeDeserialization:
         [
             "import numpy as np\nnp.load(payload, allow_pickle=True)",
             "import numpy as np\nreader = np.load\nreader(payload, allow_pickle=True)",
+            "import numpy as np\nreader = [np.load][0]\nreader(payload, allow_pickle=True)",
+            "import numpy as np\nclass Loader:\n    reader = np.load\n"
+            "    def run(self):\n        return self.reader(payload, allow_pickle=True)",
             "import numpy as np\ngetattr(np, 'load')(payload, allow_pickle=True)",
             "from numpy import load as reader\nreader(payload, allow_pickle=True)",
             "import numpy as np\nnp.load(payload, None, True)",
