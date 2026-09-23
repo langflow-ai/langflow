@@ -87,7 +87,10 @@ def str_to_timestamp(timestamp: str | datetime) -> datetime:
 
         msg = f"Invalid timestamp format: {timestamp}. Expected format: YYYY-MM-DD HH:MM:SS.ffffff UTC"
         raise ValueError(msg)
-    return ensure_utc(timestamp)
+    if isinstance(timestamp, datetime):
+        return ensure_utc(timestamp)
+    # Leave other values, such as epoch numbers, to pydantic's datetime validation.
+    return timestamp
 
 
 def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:

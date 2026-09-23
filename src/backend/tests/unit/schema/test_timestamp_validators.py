@@ -1,10 +1,12 @@
 """Unit tests for timestamp validator functions in both langflow and lfx schemas."""
 
 from datetime import datetime, timedelta, timezone
+from typing import Annotated
 
 import langflow.schema.validators as lf_validators
 import lfx.schema.validators as lfx_validators
 import pytest
+from pydantic import BaseModel, ValidationError
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -104,6 +106,41 @@ class TestStrToTimestamp:
     def test_invalid_string_raises(self, mod):
         with pytest.raises(ValueError, match="Invalid timestamp format"):
             mod.str_to_timestamp("not-a-date")
+
+    @pytest.mark.parametrize("value", [None, 1_700_000_000, 1_700_000_000.5, {"not": "a timestamp"}])
+    def test_non_string_non_datetime_passes_through(self, mod, value):
+        """As a before-validator, leave other types for pydantic's datetime validation."""
+        assert mod.str_to_timestamp(value) == value
+
+
+@pytest.mark.parametrize("mod", VALIDATOR_MODULES)
+class TestStrToTimestampValidator:
+    """str_to_timestamp_validator composes with pydantic's own datetime coercion."""
+
+    @staticmethod
+    def _model(mod):
+        class TimestampModel(BaseModel):
+            timestamp: Annotated[datetime, mod.str_to_timestamp_validator]
+
+        return TimestampModel
+
+    def test_epoch_seconds_coerced_to_aware_utc(self, mod):
+        result = self._model(mod)(timestamp=1_700_000_000).timestamp
+        assert result == _utc(2023, 11, 14, 22, 13, 20)
+        assert result.utcoffset() == timedelta(0)
+
+    def test_epoch_float_keeps_fractional_seconds(self, mod):
+        result = self._model(mod)(timestamp=1_700_000_000.25).timestamp
+        assert result == _utc(2023, 11, 14, 22, 13, 20, 250000)
+
+    @pytest.mark.parametrize("value", [None, {"not": "a timestamp"}])
+    def test_invalid_type_raises_validation_error(self, mod, value):
+        with pytest.raises(ValidationError):
+            self._model(mod)(timestamp=value)
+
+    def test_naive_datetime_normalized_to_utc(self, mod):
+        naive = datetime(2024, 5, 20, 12, 0, 0, 999)  # noqa: DTZ001
+        assert self._model(mod)(timestamp=naive).timestamp == _utc(2024, 5, 20, 12, 0, 0, 999)
 
 
 @pytest.mark.parametrize("mod", VALIDATOR_MODULES)
