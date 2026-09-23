@@ -2828,7 +2828,7 @@ async def test_get_job_owner_raises_backend_unavailable_when_redis_down() -> Non
 @pytest.mark.asyncio
 async def test_verify_job_ownership_maps_backend_unavailable_to_503() -> None:
     """The ownership-check chokepoint maps a backend-unavailable error to HTTP 503."""
-    from fastapi import HTTPException
+    from fastapi import HTTPException, Request
     from langflow.api.v1.chat import _verify_job_ownership
 
     class _User:
@@ -2837,7 +2837,7 @@ async def test_verify_job_ownership_maps_backend_unavailable_to_503() -> None:
     service = RedisJobQueueService()
     service._client = _PingFailRedis()
     with pytest.raises(HTTPException) as exc_info:
-        await _verify_job_ownership(str(uuid.uuid4()), _User(), service)
+        await _verify_job_ownership(str(uuid.uuid4()), _User(), service, Request({"type": "http", "headers": []}))
     assert exc_info.value.status_code == 503
 
 

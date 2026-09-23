@@ -67,6 +67,7 @@ from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_chat_service,
+    get_job_service,
     get_queue_service,
     get_settings_service,
     get_telemetry_service,
@@ -109,16 +110,41 @@ async def _clear_invalid_graph_cache(chat_service: ChatService, flow_id: str) ->
         await logger.aexception("Failed to evict a graph rejected by runtime policy")
 
 
-async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
+async def _verify_job_ownership(
+    job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService, http_request: Request
+) -> None:
     """Raise HTTP 404 if the requesting user does not own the job.
 
-    Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
+    Public temporary builds are accessible to authenticated users. V2 workflow
+    jobs have a database owner but deliberately omit queue ownership because
+    queue ownership opts them into the polling watchdog.
     """
     try:
         job_owner = await queue_service.get_job_owner(job_id)
     except JobQueueBackendUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    if job_owner is not None and job_owner != current_user.id:
+    end_user_allowed = True
+    if job_owner is None:
+        try:
+            if await queue_service.is_public_job_async(job_id):
+                return
+        except JobQueueBackendUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+        try:
+            job = await get_job_service().get_job_by_job_id(job_id)
+        except ValueError:
+            job = None
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Job ownership unavailable") from exc
+        job_owner = job.user_id if job is not None else None
+        if job is not None:
+            # V2 runs can share a service-account owner across serving end users.
+            from langflow.api.v2.workflow import _caller_owns_job_end_user
+
+            end_user_allowed = _caller_owns_job_end_user(job, http_request, current_user)
+
+    if job_owner is None or job_owner != current_user.id or not end_user_allowed:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
             current_user.id,
@@ -481,6 +507,7 @@ async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     current_user: CurrentActiveUser,
+    http_request: Request,
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
@@ -489,10 +516,10 @@ async def get_build_events(
     Requires authentication and ownership verification. A job owner is registered
     when build_flow is called; if a registered owner does not match the requesting
     user the endpoint returns 404 to avoid leaking job existence.
-    Jobs started via build_public_tmp have no registered owner and remain accessible
-    to any authenticated user.
+    Jobs started via build_public_tmp are explicitly marked public; v2 background
+    jobs use their persisted owner when no queue owner was registered.
     """
-    await _verify_job_ownership(job_id, current_user, queue_service)
+    await _verify_job_ownership(job_id, current_user, queue_service, http_request)
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -508,15 +535,16 @@ async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     current_user: CurrentActiveUser,
+    http_request: Request,
 ):
     """Cancel a specific build job.
 
     Requires authentication and ownership verification to prevent a user from
     aborting another user's running build (DoS via job cancellation).
-    Jobs with no registered owner (build_public_tmp) are accessible to any
-    authenticated user, consistent with get_build_events.
+    Jobs started via build_public_tmp are explicitly marked public; v2 background
+    jobs use their persisted owner when no queue owner was registered.
     """
-    await _verify_job_ownership(job_id, current_user, queue_service)
+    await _verify_job_ownership(job_id, current_user, queue_service, http_request)
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
