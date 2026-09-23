@@ -27,7 +27,7 @@ from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.services.deps import session_scope
 from lfx.services.mcp_composer.service import COMPOSER_BACKEND_AUTH_HEADER
 from lfx.services.settings.base import Settings
@@ -1173,6 +1173,78 @@ async def test_install_mcp_config_embeds_api_key_without_skip_auth_auto_login(
     assert api_key_value != "x-api-key"  # pragma: allowlist secret
 
 
+async def test_should_keep_both_client_entries_when_installing_projects_sharing_server_name_prefix(
+    client: AsyncClient,
+    active_user,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Installing a second project whose name shares the truncated prefix must not replace the first entry."""
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_shared_prefix.json")
+    project_ids = [uuid4(), uuid4()]
+    async with session_scope() as session:
+        for project_id, name in zip(
+            project_ids, ["Marketing Automation Project Alpha", "Marketing Automation Project Beta"], strict=True
+        ):
+            session.add(Folder(id=project_id, name=name, user_id=active_user.id))
+
+    try:
+        for project_id in project_ids:
+            response = await client.post(
+                f"/api/v1/mcp/project/{project_id}/install",
+                headers=logged_in_headers,
+                json={"client": "cursor", "transport": "streamablehttp"},
+            )
+            assert response.status_code == status.HTTP_200_OK, response.text
+
+        installed_servers = json.loads(config_path.read_text(encoding="utf-8"))["mcpServers"]
+        installed_targets = {name: config["args"][-1] for name, config in installed_servers.items()}
+        assert installed_targets["lf-marketing_automation_proje"].endswith(f"/{project_ids[0]}/streamable")
+        assert sorted(target.split("/")[-2] for target in installed_targets.values()) == sorted(map(str, project_ids))
+
+        response = await client.post(
+            f"/api/v1/mcp/project/{project_ids[1]}/install",
+            headers=logged_in_headers,
+            json={"client": "cursor", "transport": "streamablehttp"},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.text
+        assert json.loads(config_path.read_text(encoding="utf-8"))["mcpServers"].keys() == installed_servers.keys()
+    finally:
+        async with session_scope() as session:
+            for project_id in project_ids:
+                project = await session.get(Folder, project_id)
+                if project:
+                    await session.delete(project)
+
+
+async def test_should_replace_base_name_entry_without_project_url_on_reinstall(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """An entry with no Langflow project URL (e.g. a former MCP Composer install) is replaced, not duplicated."""
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_mode_switch.json")
+    stale_composer_entry = {"command": "uvx", "args": ["mcp-composer", "--endpoint", "http://localhost:9999"]}
+    config_path.write_text(
+        json.dumps({"mcpServers": {"lf-user_test_project": stale_composer_entry}}),
+        encoding="utf-8",
+    )
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor", "transport": "streamablehttp"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    installed_servers = json.loads(config_path.read_text(encoding="utf-8"))["mcpServers"]
+    assert list(installed_servers) == ["lf-user_test_project"]
+    assert installed_servers["lf-user_test_project"]["args"][-1].endswith(f"/{user_test_project.id}/streamable")
+
+
 async def test_init_mcp_servers(user_test_project, other_test_project):
     """Test the initialization of MCP servers for all projects."""
     # Clear existing caches
@@ -1675,6 +1747,42 @@ async def test_list_project_tools_response_structure(client: AsyncClient, user_t
         assert "action_name" in tool
         assert "action_description" in tool
         assert "mcp_enabled" in tool
+
+
+async def test_list_project_tools_returns_registered_server_name(
+    client: AsyncClient, user_test_project, logged_in_headers
+):
+    """The response carries the name the backend registers.
+
+    Clients render this instead of deriving their own, which is how the copyable config
+    and the installed server stay in agreement.
+    """
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["server_name"] == project_mcp_server_name(user_test_project.name)
+
+
+async def test_list_project_tools_server_name_keeps_chinese_characters(client: AsyncClient, logged_in_headers):
+    """A Chinese project name survives into the server name the API reports."""
+    created = await client.post(
+        "api/v1/projects/",
+        json={"name": "\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert created.status_code in (200, 201)
+    project = created.json()
+
+    try:
+        response = await client.get(f"/api/v1/mcp/project/{project['id']}", headers=logged_in_headers)
+
+        assert response.status_code == 200
+        assert response.json()["server_name"] == "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848"
+    finally:
+        await client.delete(f"api/v1/projects/{project['id']}", headers=logged_in_headers)
 
 
 @pytest.mark.asyncio

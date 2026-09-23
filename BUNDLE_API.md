@@ -216,6 +216,14 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
+
+`filter_plugin_entry_points()` and `filter_component_entry_points()` inspect
+installed manifests only when an entry point has an identifiable distribution.
+App startup with no legacy plugins avoids scanning installed package files.
+Manifest precedence, entry-point ordering, and public signatures are unchanged;
+`BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-17 — `ResolvedCredential.identity = None` is not an identity proof
 
 - Clarify the documented meaning of `ResolvedCredential.identity is None`: the
