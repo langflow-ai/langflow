@@ -316,10 +316,19 @@ async def test_compaction_source_changes_require_review_before_save_or_import(cl
     assert rejected.status_code == 422
     assert (await stored_flow(agent)).data == before
     exported = await client.get(f"api/v1/projects/download/{project}", headers=logged_in_headers)
+    assert exported.status_code == 422, exported.text
+    # Legacy JSON uploads must still reject stale bindings independently of export.
+    current = (await client.get(f"api/v1/projects/{project}", headers=logged_in_headers)).json()
+    payload = {
+        "folder_name": "Stale binding import",
+        "folder_project_type": "agent-harness",
+        "folder_project_config": current["project_config"],
+        "flows": current["flows"],
+    }
     imported = await client.post(
         "api/v1/projects/upload/",
         headers=logged_in_headers,
-        files={"file": ("stale.zip", exported.content, "application/zip")},
+        files={"file": ("stale.json", json.dumps(payload).encode(), "application/json")},
     )
     assert imported.status_code == 422, imported.text
     config["flow_bindings"]["compaction"]["revision"] = flow_revision(data)
