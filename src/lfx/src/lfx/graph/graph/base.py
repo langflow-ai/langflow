@@ -1767,6 +1767,9 @@ class Graph:
         state.setdefault("source_flow_id", None)
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
         state.setdefault("branch_inactivation_sources", {})
+        # __getstate__ omits end_user_id, so graphs restored from cache/checkpoint
+        # payloads need the default for _vertex_result_cache_key to read it safely.
+        state.setdefault("end_user_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -2278,6 +2281,36 @@ class Graph:
         """
         return run_until_complete(self.astep(inputs, files, user_id))
 
+    def _vertex_result_cache_key(self, vertex_id: str) -> str:
+        """Namespace the vertex result cache key to the executing principal.
+
+        Frozen-vertex results were historically cached under the bare vertex UUID,
+        which let any tenant read or overwrite another tenant's cached component
+        output by reusing the vertex id in their own flow (H1-3985565). Served
+        executions always carry the authenticated user (editor/API plane) or the
+        executing flow (anonymous public runs), so the key is prefixed with that
+        principal scope; entries written under other scopes become unreachable,
+        which fails closed against stale keys written by older versions. Graphs
+        with no principal context (standalone ``lfx run``, scripted graphs) have
+        no tenant boundary and keep the bare key, matching the empty-scope
+        contract of ``enforce_storage_key_scope``.
+        """
+        user_scope = str(self.user_id).strip() if self.user_id is not None else ""
+        if user_scope:
+            from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+            if user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
+                # Serving-plane runs execute as a service account on behalf of many
+                # end users, so include the end-user identity when one is present.
+                end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
+                if end_user_scope:
+                    return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
+                return f"user:{user_scope}:{vertex_id}"
+        flow_scope = str(self.flow_id).strip() if self.flow_id is not None else ""
+        if flow_scope:
+            return f"flow:{flow_scope}:{vertex_id}"
+        return vertex_id
+
     async def build_vertex(
         self,
         vertex_id: str,
@@ -2324,9 +2357,9 @@ class Graph:
                 # Reauthorize before even consulting the result cache so a
                 # revoked provider cannot reuse output from an earlier run.
                 await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
-                # Check the cache for the vertex
+                # Check the cache for the vertex under the principal-scoped key
                 if get_cache is not None:
-                    cached_result = await get_cache(key=vertex.id)
+                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id))
                 else:
                     cached_result = CacheMiss()
                 if isinstance(cached_result, CacheMiss):
@@ -2372,7 +2405,7 @@ class Graph:
                         "full_data": vertex.full_data,
                     }
 
-                    await set_cache(key=vertex.id, data=vertex_dict)
+                    await set_cache(key=self._vertex_result_cache_key(vertex.id), data=vertex_dict)
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):

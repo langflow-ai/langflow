@@ -45,7 +45,7 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
@@ -864,7 +864,21 @@ def _sanitize_flow_filename(raw_name: str, fallback_id: str = "flow") -> str:
     return name or fallback_id
 
 
-def _build_flows_download_response(
+async def _export_variable_names(session: AsyncSession, owner_id: UUID | None) -> frozenset[str]:
+    """Return the global-variable names a flow owner's export may keep as bindings.
+
+    Export keeps a ``load_from_db`` value only when it names one of the owner's
+    existing global variables, so a literal secret behind a stale flag is not
+    exported even when it is shaped like a variable name.
+    """
+    if owner_id is None:
+        return frozenset()
+    names = await get_variable_service().list_variables(user_id=owner_id, session=session)
+    return frozenset(name for name in names if name)
+
+
+async def _build_flows_download_response(
+    session: AsyncSession,
     flows: list[Flow],
 ) -> StreamingResponse | dict:
     """Build a download response (ZIP or single JSON) for the given flows.
@@ -872,9 +886,19 @@ def _build_flows_download_response(
     Strips secret field values and normalises for git-friendly export before
     packaging. Scrubbing uses the metadata-driven scrubber rather than the
     legacy API-key-name matcher, so ``password``-marked fields under ordinary
-    names and credential-bearing connection strings are cleared too.
+    names and credential-bearing connection strings are cleared too. Global
+    variable bindings survive only when they name one of the flow owner's
+    variables.
     """
-    normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
+    variable_names_by_owner = {
+        owner_id: await _export_variable_names(session, owner_id) for owner_id in {flow.user_id for flow in flows}
+    }
+    normalised_flows = [
+        normalize_flow_for_export(
+            strip_flow_secrets(flow.model_dump(), known_variable_names=variable_names_by_owner[flow.user_id])
+        )
+        for flow in flows
+    ]
 
     if len(normalised_flows) > 1:
         zip_stream = io.BytesIO()

@@ -991,11 +991,17 @@ async def create_flows(
 ):
     """Create multiple new flows."""
     catalog_policy_snapshot = get_catalog_policy_service().snapshot
+    storage_service = get_storage_service()
     # Validate the complete request before adding or flushing any rows. This
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        # This endpoint bypasses _new_flow, so the fs_path containment check
+        # every sibling flow-write route applies must run here too. Without it
+        # an absolute fs_path reaches the fs sync poller, which merges any
+        # readable JSON file on the host into the caller's own flow.
+        await _verify_fs_path(flow.fs_path, current_user.id, storage_service)
 
     # Resolve and authorize every flow's canonical project/workspace instead of
     # trusting caller-supplied denormalized scope fields.
@@ -1046,6 +1052,9 @@ async def create_flows(
         raise _handle_unique_constraint_error(exc, status_code=409) from exc
     for db_flow in db_flows:
         await session.refresh(db_flow)
+        # Mirror _new_flow: an fs_path verified above is materialized with the
+        # flow's content so the fs sync poller never reads an empty file.
+        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
     return [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in db_flows]
 
@@ -1343,7 +1352,7 @@ async def download_multiple_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="No flows found.") from exc
 
-    return _build_flows_download_response(flows)
+    return await _build_flows_download_response(db, flows)
 
 
 # 5 minutes

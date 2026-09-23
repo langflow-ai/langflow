@@ -1,10 +1,12 @@
 import type { IntegrationCapabilityRead } from "@/controllers/API/queries/connections";
 import type { APIDataType } from "@/types/api";
 import {
+  defaultScopesForNewConnection,
   findComponentByRef,
   partitionByCeiling,
   reauthorizeScopeList,
   scopeRequirements,
+  scopesForRegistration,
   shortScope,
   uniqueScopes,
 } from "../helpers/scopes";
@@ -101,6 +103,71 @@ describe("partitionByCeiling", () => {
       requestable: [GMAIL_SEND],
       unavailable: [],
     });
+  });
+});
+
+describe("scopesForRegistration", () => {
+  it("offers OAuth infrastructure scopes that no component declares", () => {
+    expect(
+      scopesForRegistration(
+        "microsoft",
+        ["Mail.Send"],
+        [
+          "https://graph.microsoft.com/Mail.Send",
+          "offline_access",
+          "openid",
+          "email",
+          "profile",
+        ],
+      ),
+    ).toEqual({
+      requestable: [
+        "https://graph.microsoft.com/Mail.Send",
+        "offline_access",
+        "openid",
+        "email",
+        "profile",
+      ],
+      unavailable: [],
+    });
+  });
+
+  it("keeps a component scope outside the ceiling visible as unavailable", () => {
+    expect(
+      scopesForRegistration(
+        "microsoft",
+        ["Mail.Send", "User.Read"],
+        ["https://graph.microsoft.com/Mail.Send", "offline_access"],
+      ),
+    ).toEqual({
+      requestable: ["https://graph.microsoft.com/Mail.Send", "offline_access"],
+      unavailable: ["User.Read"],
+    });
+  });
+});
+
+describe("defaultScopesForNewConnection", () => {
+  it("selects component and identity/refresh scopes, leaving other grants optional", () => {
+    expect(
+      defaultScopesForNewConnection(
+        "microsoft",
+        ["Mail.Send"],
+        [
+          "https://graph.microsoft.com/Mail.Send",
+          "User.Read",
+          "offline_access",
+          "openid",
+          "email",
+          "profile",
+        ],
+      ),
+    ).toEqual([
+      "https://graph.microsoft.com/Mail.Send",
+      "offline_access",
+      "openid",
+      "email",
+      "profile",
+    ]);
   });
 });
 

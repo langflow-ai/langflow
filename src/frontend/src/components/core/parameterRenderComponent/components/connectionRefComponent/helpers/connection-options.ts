@@ -13,8 +13,8 @@ export type ConnectionOption = {
   missingScopes: string[];
   /** True when the connection is ready and covers every required scope. */
   usable: boolean;
-  /** Short reason shown next to an unusable option. */
-  unusableReason?: string;
+  /** The view translates this reason using the connection and missing scopes. */
+  unusableReason?: "status" | "userRequired" | "instanceRequired" | "scopes";
 };
 
 /**
@@ -85,16 +85,12 @@ function unusableReason(
   connection: ConnectionRead,
   missingScopes: string[],
   identityKind: string | undefined,
-): string | undefined {
-  if (connection.status !== "ready")
-    return `Connection is ${connection.status}`;
+): ConnectionOption["unusableReason"] {
+  if (connection.status !== "ready") return "status";
   if (!identityMatches(connection, identityKind)) {
-    return identityKind === "user"
-      ? "Runs as the instance, not a user"
-      : "Runs as a user, not the instance";
+    return identityKind === "user" ? "userRequired" : "instanceRequired";
   }
-  if (missingScopes.length)
-    return `Missing ${missingScopes.map(shortScope).join(", ")}`;
+  if (missingScopes.length) return "scopes";
   return undefined;
 }
 
