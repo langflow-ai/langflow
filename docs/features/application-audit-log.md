@@ -111,7 +111,7 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 2. A failed or denied event is written only after the mutation's transaction is gone.
 3. An event violating the contract is refused before any database write.
 4. Deleting a resource, user, or API key never deletes its events.
-5. A traversal returns each event at most once, newest first; later inserts do not appear midway.
+5. A traversal returns each event at most once, in `(timestamp DESC, id DESC)` order, and never skips a row it has not yet passed. The first page fixes a cutoff and no row timestamped after it is returned. A row is timestamped when its `INSERT` runs, not when its transaction commits, so an event staged before the traversal started and committed after it can still appear on a later page. Reading the same traversal twice is not guaranteed to return the same set.
 6. With `lfx serve` (no database), nothing is written and nothing raises.
 7. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
 8. An exclusion entry that matches no audited action excludes nothing and never stops startup.

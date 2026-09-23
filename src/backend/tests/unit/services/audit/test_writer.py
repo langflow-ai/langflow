@@ -233,6 +233,18 @@ def test_an_api_key_request_is_attributed_to_the_key_under_its_account():
     assert (actor.user_id, actor.actor_type, actor.actor_id) == (user_id, AuditActorType.API_KEY, key_id)
 
 
+def test_an_environment_api_key_is_attributed_to_the_key_without_an_id():
+    """An env-sourced key has no key record; the credential is still an API key."""
+    user_id = uuid4()
+    set_current_auth_context(AuthCredentialContext(method="api_key", api_key_id=None, api_key_source="env"))
+    try:
+        actor = resolve_audit_actor(user_id)
+    finally:
+        clear_current_auth_context()
+
+    assert (actor.user_id, actor.actor_type, actor.actor_id) == (user_id, AuditActorType.API_KEY, None)
+
+
 def test_a_session_request_is_attributed_to_the_user():
     user_id = uuid4()
     set_current_auth_context(AuthCredentialContext(method="jwt"))

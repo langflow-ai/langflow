@@ -44,10 +44,15 @@ async def test_a_zero_window_keeps_everything(audit_session):
     assert len((await audit_session.exec(select(AuditEvent))).all()) == 1
 
 
-async def test_the_sweep_is_not_scheduled_when_auditing_is_off(audit_disabled):  # noqa: ARG001
+async def test_the_sweep_still_runs_when_production_is_off(audit_disabled):  # noqa: ARG001
+    """Rows written before the switch was turned off must keep ageing out."""
     worker = AuditEventCleanupWorker(interval=0.01)
 
     await worker.start()
+    try:
+        assert worker._task is not None
+    finally:
+        await worker.stop()
 
     assert worker._task is None
 

@@ -146,23 +146,30 @@ async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
     event = build_audit_event(draft)
 
     async def _write() -> bool:
-        async with _slots(), session_scope() as session:
+        async with session_scope() as session:
             if isinstance(session, NoopSession):
                 return False
             session.add(event)
         return True
 
-    try:
-        # wait_for rather than asyncio.timeout, which does not exist on Python 3.10.
-        return await asyncio.wait_for(_write(), timeout=INDEPENDENT_WRITE_TIMEOUT_SECONDS)
-    except Exception as exc:  # noqa: BLE001
-        await logger.aerror(
-            "op=record_audit_event_after_rollback outcome=not_persisted request_id=%s "
-            "resource_type=%s operation=%s result=%s error=%s",
-            event.request_id,
-            event.resource_type,
-            event.operation,
-            event.result,
-            type(exc).__name__,
-        )
-        return False
+    # Queueing for a slot is not the write: only the write is on the clock, so a
+    # burst does not spend another event's budget waiting in line.
+    async with _slots():
+        try:
+            # wait_for rather than asyncio.timeout, which does not exist on Python 3.10.
+            return await asyncio.wait_for(_write(), timeout=INDEPENDENT_WRITE_TIMEOUT_SECONDS)
+        except Exception as exc:  # noqa: BLE001
+            # A timeout can fire after the COMMIT reached the database, so the row
+            # may exist: report it as unknown rather than as certain data loss.
+            outcome = "unknown" if isinstance(exc, asyncio.TimeoutError) else "not_persisted"
+            await logger.aerror(
+                "op=record_audit_event_after_rollback outcome=%s request_id=%s "
+                "resource_type=%s operation=%s result=%s error=%s",
+                outcome,
+                event.request_id,
+                event.resource_type,
+                event.operation,
+                event.result,
+                type(exc).__name__,
+            )
+            return False

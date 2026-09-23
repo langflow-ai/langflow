@@ -1,10 +1,13 @@
 """Reading audit events: filtered, newest first, with keyset pagination.
 
 Offsets are not used because inserts and the retention sweep shift every offset
-under a reader. The first page captures the database clock as an insertion
-boundary; every later page reapplies it before walking ``(timestamp DESC, id
-DESC)`` from the last row seen. A cursor is bound to the filters that produced
-it.
+under a reader. The first page captures the database clock as an upper bound and
+carries it in the cursor, so a row timestamped after the traversal started is
+never returned; later pages walk ``(timestamp DESC, id DESC)`` from the last row
+seen, where the bound is already implied. It is an upper bound on timestamps, not
+a commit snapshot: a row is timestamped when its ``INSERT`` runs, so an event
+staged before the first page and committed after it can still be reached. A
+cursor is bound to the filters that produced it.
 """
 
 from __future__ import annotations
@@ -143,7 +146,15 @@ def decode_cursor(cursor: str, filters: AuditEventFilters) -> _CursorState:
             event_id=UUID(payload["i"]),
         )
         version = payload["v"]
-    except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+    except (
+        binascii.Error,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        KeyError,
+        OverflowError,
+        TypeError,
+        ValueError,
+    ) as exc:
         msg = "Malformed cursor"
         raise AuditCursorError(msg) from exc
     if version != CURSOR_VERSION:
