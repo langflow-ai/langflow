@@ -228,10 +228,10 @@ async def _build_serve_registry(
                 raise typer.Exit(1) from e
             verbose_print(f"Loaded {len(registry)} flow(s) from directory {dir_path}")
         else:
-            non_supported = [p for p in resolved if p.suffix not in {".json", ".py"}]
+            non_supported = [p for p in resolved if p.suffix not in {".json", ".py", ".lfpkg"}]
             if non_supported:
                 for p in non_supported:
-                    typer.echo(f"Error: '{p}' must be a .json or .py file.", err=True)
+                    typer.echo(f"Error: '{p}' must be a .json, .py, or .lfpkg file.", err=True)
                 raise typer.Exit(1)
             try:
                 registry = await build_registry_from_paths(
@@ -262,7 +262,7 @@ def serve_command(
     script_paths: list[str] | None = typer.Argument(
         default=None,
         help=(
-            "Path(s) to JSON flow file(s) (.json), Python script(s) (.py), or a directory "
+            "Path(s) to JSON flows (.json), Python scripts (.py), Harness candidates (.lfpkg), or a directory "
             "containing .json files (top-level only, non-recursive). "
             "Optional when using --flow-json or --stdin."
         ),
@@ -860,10 +860,22 @@ async def _populate_registry(
     errors: list[str] = []
     for path in paths:
         try:
+            if path.suffix == ".lfpkg":
+                from lfx.cli.harness_artifacts import mount_candidate
+                from lfx.projects.runtime_artifacts import MAX_EXPANDED_BYTES, MAX_MANIFEST_BYTES
+
+                with path.open("rb") as artifact_file:
+                    content = artifact_file.read(MAX_EXPANDED_BYTES + MAX_MANIFEST_BYTES + 1)
+                candidate = mount_candidate(registry, content, relative_path=str(path.relative_to(root_dir)))
+                verbose_print(f"Loaded Harness candidate sha256:{candidate.digest}")
+                continue
             graph, meta, raw_json = await _load_graph_and_meta(path, root_dir, check_variables=check_variables)
             registry.add(graph, meta, raw_json=raw_json)
             verbose_print(f"Loaded flow '{meta.title}' (id={meta.id})")
         except FlowAlreadyRegisteredError:
+            if path.suffix == ".lfpkg":
+                errors.append(f"{path.name}: duplicate Harness entrypoint; mount one candidate per workflow ID")
+                continue
             verbose_print(f"Skipping duplicate flow id={meta.id} from {path.name}")
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{path.name}: {exc}")
@@ -907,7 +919,7 @@ async def build_registry_from_paths(
     no_env_fallback: bool = False,
     store: FlowStore | None = None,
 ) -> FlowRegistry:
-    """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths.
+    """Build a FlowRegistry from explicit ``.json``, ``.py``, or candidate ``.lfpkg`` paths.
 
     Callers that want pre-existing store flows to be reachable are responsible
     for calling ``registry.warm_from_store()`` after this returns.

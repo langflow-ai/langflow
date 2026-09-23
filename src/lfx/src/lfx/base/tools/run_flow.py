@@ -56,13 +56,17 @@ def _flow_file_in(directory: Path, flow_name: str) -> Path | None:
     return candidate if candidate.is_file() else None
 
 
-def _model_provider_policy(user_id, flow_id, flow_name):
+def _model_provider_policy(user_id, flow_id, flow_name, *, runtime_candidate=None):
     """Scope model provider credentials to the target flow, when langflow is installed.
 
     ``scoped_model_provider_policy_for_target_flow`` resolves per-flow provider credentials out
     of langflow's database. Standalone lfx has no database, so there is nothing to scope and the
     run proceeds unscoped.
     """
+    if runtime_candidate is not None:
+        # Mounted definitions use destination credentials, never source UUIDs
+        # to query an unrelated authoring database installed in the same process.
+        return nullcontext()
     try:
         from langflow.helpers.flow import scoped_model_provider_policy_for_target_flow
     except ImportError:
@@ -254,6 +258,7 @@ class RunFlowBaseComponent(Component):
             user_id=self.user_id,
             flow_id=frozen["id"] if frozen else flow_id_selected,
             flow_name=flow_name_selected,
+            runtime_candidate=getattr(self.graph, "runtime_candidate", None),
         ):
             if frozen is not None:
                 graph = Graph.from_payload(
@@ -263,6 +268,8 @@ class RunFlowBaseComponent(Component):
                     user_id=self.user_id,
                 )
                 graph.frozen_tool_flows = self.graph.frozen_tool_flows
+                if self.graph.runtime_candidate is not None:
+                    self.graph.runtime_candidate.inherit(self.graph, graph)
                 graph.description = frozen.get("description")
                 return graph
             if local is not None:

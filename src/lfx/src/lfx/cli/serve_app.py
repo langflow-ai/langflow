@@ -107,6 +107,12 @@ async def guarded_execute(graph_copy, input_value, session_id=None, user_id=None
     skipped entirely unless opted in.
     """
     async with _EXECUTE_GUARD:
+        if graph_copy.runtime_candidate is not None:
+            from lfx.cli.harness_artifacts import preflight_candidate
+
+            preflight_candidate(
+                graph_copy.runtime_candidate, no_env_fallback=bool(graph_copy.context.get("no_env_fallback"))
+            )
         reset_environ = os.environ.get(_SERVE_RESET_ENVIRON_ENV) == "1"
         env_snapshot = dict(os.environ) if reset_environ else None
         try:
@@ -312,6 +318,10 @@ class FlowRegistry:
             graph.context["no_env_fallback"] = True
         if self._project_dir is not None:
             graph.context["project_dir"] = str(self._project_dir)
+
+    @property
+    def no_env_fallback(self) -> bool:
+        return self._no_env_fallback
 
     def _get_cached_store_ids(self) -> list[str]:
         """Return store.list_ids(), refreshing at most once per _STORE_IDS_TTL seconds."""
