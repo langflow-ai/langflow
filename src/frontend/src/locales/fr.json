@@ -2658,5 +2658,8 @@
   "runConfig.history": "Limite des messages d’historique",
   "runConfig.identity": "Identité enregistrée",
   "runConfig.inspect": "Inspecter la configuration",
-  "runConfig.bindings": "Liaisons de flux configurées"
+  "runConfig.bindings": "Liaisons de flux configurées",
+  "projectStarters.research.title": "Recherche sourcée",
+  "projectStarters.label": "Modèles de départ",
+  "projectStarters.research.description": "Agent Harness avec un Tool Pack séparé pour rechercher, lire les sources et produire un rapport sourcé."
 }

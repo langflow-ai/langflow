@@ -2658,5 +2658,8 @@
   "runConfig.history": "履歴メッセージの上限",
   "runConfig.record": "設定 {{number}}",
   "runConfig.empty": "なし",
-  "runConfig.toolRetries": "ツールの再試行回数"
+  "runConfig.toolRetries": "ツールの再試行回数",
+  "projectStarters.research.description": "検索と情報源の読み取りを行う別の Tool Pack を備え、出典付きレポートを作成する Agent Harness。",
+  "projectStarters.research.title": "出典付きリサーチ",
+  "projectStarters.label": "スターター"
 }

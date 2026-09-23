@@ -2820,5 +2820,8 @@
   "runConfig.bindings": "Configured flow bindings",
   "runConfig.runtime": "Runtime controls",
   "runConfig.loadedHistory": "History messages loaded",
-  "runConfig.legacy": "This report has no recorded configuration. Current project settings cannot establish what this run used."
+  "runConfig.legacy": "This report has no recorded configuration. Current project settings cannot establish what this run used.",
+  "projectStarters.research.title": "Research starter",
+  "projectStarters.research.description": "Agent Harness with a separate Tool Pack for search, source reading, and a sourced report.",
+  "projectStarters.label": "Starters"
 }

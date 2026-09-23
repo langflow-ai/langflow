@@ -2657,5 +2657,8 @@
   "runConfig.empty": "无",
   "runConfig.bindings": "已配置的流程绑定",
   "runConfig.inspect": "检查配置",
-  "runConfig.title": "运行配置"
+  "runConfig.title": "运行配置",
+  "projectStarters.research.description": "配备独立 Tool Pack 的 Agent Harness，用于搜索、读取来源并生成带引用的报告。",
+  "projectStarters.research.title": "带来源的研究",
+  "projectStarters.label": "入门模板"
 }

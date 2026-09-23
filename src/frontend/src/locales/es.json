@@ -2658,5 +2658,8 @@
   "runConfig.title": "Configuración de la ejecución",
   "runConfig.inspect": "Inspeccionar configuración",
   "runConfig.empty": "Ninguno",
-  "runConfig.record": "Configuración {{number}}"
+  "runConfig.record": "Configuración {{number}}",
+  "projectStarters.research.description": "Agent Harness con un Tool Pack separado para buscar, leer fuentes y producir un informe con citas.",
+  "projectStarters.research.title": "Investigación con fuentes",
+  "projectStarters.label": "Plantillas iniciales"
 }
