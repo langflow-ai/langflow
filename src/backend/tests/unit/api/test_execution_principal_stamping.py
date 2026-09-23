@@ -408,11 +408,11 @@ async def test_the_run_flow_component_forwards_its_graph_principal(monkeypatch: 
 
     principal = execution_principal_for(FAMILY_INTERACTIVE_CHAT, user=_user())
     component = run_flow_module.RunFlowBaseComponent()
-    child_graph = object()
+    child_graph = SimpleNamespace(vertices=[])
     monkeypatch.setattr(component, "get_graph", lambda **_kwargs: _awaitable(child_graph))
     monkeypatch.setattr(component, "_build_flow_tweak_data", dict)
     monkeypatch.setattr(component, "_build_inputs", lambda _tweaks: {})
-    component._vertex = SimpleNamespace(graph=SimpleNamespace(execution_principal=principal))
+    component._vertex = SimpleNamespace(data={}, graph=SimpleNamespace(execution_principal=principal))
     component.flow_name_selected = None
     component.flow_id_selected = None
     component.session_id = "session"

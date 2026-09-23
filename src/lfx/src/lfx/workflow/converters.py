@@ -642,6 +642,7 @@ def run_response_to_workflow_response(
         errors=[],
         inputs=inputs or {},
         globals=response_globals,
+        candidate_digest=graph.runtime_candidate.digest if graph.runtime_candidate is not None else None,
         output=_resolve_output(outputs, selected_ids=selected_ids),
         outputs=outputs,
     )

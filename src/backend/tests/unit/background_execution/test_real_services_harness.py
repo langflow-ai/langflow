@@ -35,3 +35,31 @@ async def test_real_services_db_url_yields_real_engine(real_services_db_url: str
             assert result.scalar_one() == 1
     finally:
         await engine.dispose()
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_job_service_uses_the_requested_database(real_services_job_service, real_services_db_url: str) -> None:
+    """Verify the JobService's actual session, not just a separately created engine."""
+    from uuid import uuid4
+
+    from langflow.services.deps import session_scope
+
+    job_id = uuid4()
+    await real_services_job_service.create_job(job_id=job_id, flow_id=uuid4())
+    async with session_scope() as session:
+        expected = "postgresql" if real_services_db_url.startswith("postgresql") else "sqlite"
+        assert session.bind.dialect.name == expected
+        if expected == "postgresql":
+            version = (await session.execute(text("SELECT version()"))).scalar_one()
+            assert version.startswith("PostgreSQL ")
+    # An independent connection to the requested URL must see the committed job.
+    engine = create_async_engine(real_services_db_url)
+    try:
+        async with engine.connect() as connection:
+            from langflow.services.database.models.jobs.model import Job
+            from sqlmodel import select
+
+            assert (await connection.execute(select(Job.job_id).where(Job.job_id == job_id))).scalar_one() == job_id
+    finally:
+        await engine.dispose()

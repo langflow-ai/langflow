@@ -865,10 +865,16 @@ class Graph:
         self.pause_info = {"reason": reason, "data": data or {}}
 
     @classmethod
-    def resume_from_checkpoint(cls, checkpoint: GraphCheckpoint, *, checkpoint_store: CheckpointStore | None = None):
+    def resume_from_checkpoint(
+        cls,
+        checkpoint: GraphCheckpoint,
+        *,
+        checkpoint_store: CheckpointStore | None = None,
+        runtime_candidate: RuntimeCandidate | None = None,
+    ):
         from lfx.graph.checkpoint.resume import restore_graph_from_checkpoint
 
-        return restore_graph_from_checkpoint(checkpoint, store=checkpoint_store)
+        return restore_graph_from_checkpoint(checkpoint, store=checkpoint_store, runtime_candidate=runtime_candidate)
 
     def resume_first_layer(self) -> list[str]:
         from lfx.graph.checkpoint.resume import compute_resume_layer

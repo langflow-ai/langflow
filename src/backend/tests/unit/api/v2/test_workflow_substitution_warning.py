@@ -87,7 +87,7 @@ async def test_sync_response_preserves_warning_without_changing_status(custom_ag
     parsed = _validate_flow_data_for_execution(
         ParsedWorkflowRun(flow_id=str(flow.id), mode="sync"), flow, user, expose_error_details=True
     )
-    graph = MagicMock()
+    graph = MagicMock(runtime_candidate=None)
     graph.get_terminal_nodes.return_value = []
     job_service = SimpleNamespace(
         create_job=AsyncMock(),

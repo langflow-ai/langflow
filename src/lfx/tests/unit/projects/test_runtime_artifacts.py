@@ -189,12 +189,30 @@ def test_sanitized_output_validation_keeps_original_review_identity():
         candidate.execution_binding(binding.model_copy(update={"revision": "b" * 64}))
 
 
-def test_candidate_cannot_be_checkpointed_without_retained_artifact_support():
+def test_candidate_checkpoint_requires_matching_retained_bytes():
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
     root = definition("root")
-    graph = Graph.from_payload(root["data"], instantiate_components=False)
-    build_candidate(root["id"], [root]).bind(graph)
-    with pytest.raises(ValueError, match="Durable Harness candidate checkpoints"):
-        graph.build_checkpoint()
+    candidate = build_candidate(root["id"], [root])
+    graph = Graph.from_payload(root["data"], flow_id=root["id"], instantiate_components=False)
+    candidate.bind(graph)
+    graph.set_run_id(str(uuid4()))
+    checkpoint = GraphCheckpoint.model_validate_json(graph.build_checkpoint().model_dump_json())
+    assert checkpoint.candidate_digest == candidate.digest
+    with pytest.raises(ValueError, match="retained Harness candidate"):
+        Graph.resume_from_checkpoint(checkpoint)
+    other = definition("other")
+    with pytest.raises(ValueError, match="retained Harness candidate"):
+        Graph.resume_from_checkpoint(checkpoint, runtime_candidate=build_candidate(other["id"], [other]))
+    checkpoint.flow_payload = {"nodes": [{"id": "draft-drift"}], "edges": []}
+    restored = Graph.resume_from_checkpoint(checkpoint, runtime_candidate=candidate)
+    assert restored.runtime_candidate.digest == candidate.digest
+    assert restored.frozen_tool_flows[root["id"]]["data"] == root["data"]
+    assert not restored.vertices
+    with pytest.raises(ValueError, match="legacy checkpoint"):
+        Graph.resume_from_checkpoint(
+            checkpoint.model_copy(update={"candidate_digest": None}), runtime_candidate=candidate
+        )
 
 
 def test_destination_variable_reference_replaces_provider_default(monkeypatch):
@@ -267,3 +285,18 @@ def test_skill_cannot_silently_lose_its_tools():
     ]
     with pytest.raises(ValueError, match="Tool Pack that is missing"):
         build_candidate(root["id"], [root])
+
+
+def test_nested_candidate_preserves_end_user_and_ephemeral_execution():
+    root = definition("root")
+    candidate = build_candidate(root["id"], [root])
+    parent = Graph.from_payload(root["data"], instantiate_components=False)
+    child = Graph.from_payload(root["data"], instantiate_components=False)
+    parent.end_user_id = "research-user"
+    parent.persist_messages = False
+    parent.context["request_variables"] = {"CONTEXT": "per-request"}
+    candidate.inherit(parent, child)
+    assert child.end_user_id == "research-user"
+    assert child.persist_messages is False
+    child.context["request_variables"]["CONTEXT"] = "child-only"
+    assert parent.context["request_variables"]["CONTEXT"] == "per-request"

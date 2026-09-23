@@ -126,6 +126,7 @@ class JobService(Service):
         dedupe_key: str | None = None,
         end_user_id: str | None = None,
         initial_metadata: dict | None = None,
+        initial_checkpoints: dict[str, str] | None = None,
     ) -> Job:
         """Create a new job record with QUEUED status.
 
@@ -147,6 +148,8 @@ class JobService(Service):
                 row. The background workflow facade uses this for its replay request and
                 encrypted override envelope so a worker can never claim a partially
                 initialized job.
+            initial_checkpoints: Opaque blobs committed in that same transaction. Candidate
+                runs retain their executable archive before any worker can claim the job.
 
         Returns:
             Created Job object
@@ -211,6 +214,8 @@ class JobService(Service):
                 job_metadata=inject_trace_carrier(metadata) or None,
             )
             session.add(job)
+            for kind, blob in (initial_checkpoints or {}).items():
+                session.add(JobCheckpoint(job_id=job_id, kind=kind, blob=blob))
             await session.flush()
             return job
 
