@@ -86,6 +86,13 @@ PROVIDER_MICROSOFT = "microsoft"
 PROVIDER_GOOGLE = "google"
 INGRESS_PROVIDERS = frozenset({PROVIDER_WEBHOOK, PROVIDER_SLACK, PROVIDER_MICROSOFT, PROVIDER_GOOGLE})
 
+#: Ledger dedupe-key prefix for a Slack event, from either Slack mechanism. The
+#: one prefix named for a provider rather than a producer, on purpose: Slack's
+#: ``event_id`` is stable across the Events API's retries *and* a Socket Mode
+#: redelivery, so both producers must write the same key for a trigger moving
+#: between transports to collapse the event it sees twice.
+DEDUPE_PREFIX_SLACK = "slack"
+
 #: Ledger dedupe-key prefix for a delivery that arrived through push ingress.
 #: The suffix is the provider's own event identity, which is what makes a Slack
 #: retry at zero, one, and five minutes collapse into one run.
