@@ -112,13 +112,13 @@ describe("buildConnectionOptions", () => {
     const [option] = buildConnectionOptions([connection()], [GMAIL_SEND]);
     expect(option.usable).toBe(false);
     expect(option.missingScopes).toEqual([GMAIL_SEND]);
-    expect(option.unusableReason).toBe("Missing gmail.send");
+    expect(option.unusableReason).toBe("scopes");
   });
 
   it("reports a status that blocks the run before scope coverage", () => {
     const revoked = connection({ status: "revoked" });
     const [option] = buildConnectionOptions([revoked], [GMAIL_SEND]);
-    expect(option.unusableReason).toBe("Connection is revoked");
+    expect(option.unusableReason).toBe("status");
   });
 
   it("lists usable connections first, then the most recently updated", () => {
@@ -215,7 +215,7 @@ describe("identity kind", () => {
     });
     const [option] = buildConnectionOptions([slackBot], ["chat:write"], "user");
     expect(option.usable).toBe(false);
-    expect(option.unusableReason).toBe("Runs as the instance, not a user");
+    expect(option.unusableReason).toBe("userRequired");
   });
 
   it("accepts any connection when the field does not constrain the identity", () => {
@@ -235,7 +235,7 @@ describe("identity kind", () => {
       "user",
     );
     expect(option.usable).toBe(false);
-    expect(option.unusableReason).toBe("Runs as the instance, not a user");
+    expect(option.unusableReason).toBe("userRequired");
   });
 
   it("keeps a matching identity usable", () => {

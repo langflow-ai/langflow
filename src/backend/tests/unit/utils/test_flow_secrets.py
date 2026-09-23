@@ -152,6 +152,46 @@ def test_preserving_scrub_handles_table_reference_columns() -> None:
     assert variable_references == {"TENANT_TOKEN"}
 
 
+def test_known_variable_names_restrict_preserved_references() -> None:
+    """With the owner's variable names, only values naming one of them survive."""
+    flow_data = _flow_data(
+        {
+            "api_key": {"name": "api_key", "password": True, "load_from_db": True, "value": "OPENAI_API_KEY"},
+            # Shaped like a name, but no variable has it: a literal behind a stale flag.
+            "stripe_key": {
+                "name": "stripe_key",
+                "password": True,
+                "load_from_db": True,
+                "value": "sk_live_NAMESHAPED",  # pragma: allowlist secret
+            },
+            "headers": {
+                "name": "headers",
+                "type": "table",
+                "table_schema": [{"name": "api_key", "load_from_db": True}],
+                "value": [
+                    {"api_key": "TENANT_TOKEN"},  # pragma: allowlist secret
+                    {"api_key": "UNKNOWN_TOKEN"},  # pragma: allowlist secret
+                ],
+            },
+        }
+    )
+    variable_references: set[str] = set()
+
+    strip_secret_field_values_in_place(
+        flow_data,
+        variable_references=variable_references,
+        known_variable_names={"OPENAI_API_KEY", "TENANT_TOKEN"},
+    )
+
+    template = _template(flow_data)
+    assert template["api_key"]["value"] == "OPENAI_API_KEY"
+    assert template["stripe_key"]["value"] is None
+    rows = template["headers"]["value"]
+    assert rows[0]["api_key"] == "TENANT_TOKEN"  # pragma: allowlist secret
+    assert rows[1]["api_key"] is None
+    assert variable_references == {"OPENAI_API_KEY", "TENANT_TOKEN"}
+
+
 def test_preserving_scrub_nulls_table_cells_marked_as_literals() -> None:
     """A cell the row excludes from load_from_db holds the secret, not its name."""
     flow_data = _flow_data(
