@@ -362,6 +362,31 @@ def _minimum_and_upper(specifier: str) -> tuple[str | None, str | None]:
     return minimum, upper
 
 
+def _lfx_range_is_compatible(specifier: str, lfx_version: str) -> bool:
+    """Accept the generated range or a bounded, installable tightening of it."""
+    minimum, upper = _minimum_and_upper(specifier)
+    if not minimum or not upper or specifier != f">={minimum},<{upper}":
+        return False
+    generated_minimum, generated_upper = _minimum_and_upper(_lfx_floor_spec(lfx_version))
+    if generated_minimum is None or generated_upper is None:
+        return False
+
+    def version_key(value: str) -> tuple[int, int, int, int, int]:
+        # Upper bounds such as <1.12 are valid PEP 440 shorthand.
+        if re.fullmatch(r"\d+", value):
+            value += ".0.0"
+        elif re.fullmatch(r"\d+\.\d+", value):
+            value += ".0"
+        return parse_version(value)
+
+    try:
+        return version_key(generated_minimum) <= version_key(minimum) <= version_key(lfx_version) and version_key(
+            lfx_version
+        ) < version_key(upper) <= version_key(generated_upper)
+    except PlanError:
+        return False
+
+
 def _lock_version(bundle_name: str, base_dir: Path = BASE_DIR) -> str | None:
     lock_data = _read_toml(base_dir / "uv.lock")
     for package in lock_data.get("package", []):
@@ -389,9 +414,10 @@ def _metadata_errors(bundle: BundleInfo, base_dir: Path = BASE_DIR) -> list[str]
     lfx_version = str(_read_toml(base_dir / "src" / "lfx" / "pyproject.toml")["project"]["version"])
     expected_lfx = _lfx_floor_spec(lfx_version)
     _, observed_lfx = _requirement_parts(bundle.lfx_requirement)
-    if observed_lfx != expected_lfx:
+    if not _lfx_range_is_compatible(observed_lfx, lfx_version):
         errors.append(
-            f"{bundle.name} {bundle.version}: expected lfx range {expected_lfx}, observed {observed_lfx or '<none>'}; "
+            f"{bundle.name} {bundle.version}: expected lfx range compatible with {expected_lfx} "
+            f"and lfx {lfx_version}, observed {observed_lfx or '<none>'}; "
             "run bundle_release_plan.py update"
         )
 
@@ -570,7 +596,12 @@ def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False) -
     if len(requirements) != 1:
         raise PlanError(f"Expected exactly one bundle runtime lfx requirement, found {requirements}")
     dependency_index, observed = requirements[0]
-    replacement = _restamped_lfx_requirement(observed, expected)
+    observed_specifier = _requirement_parts(observed)[1]
+    replacement = (
+        observed
+        if not exact and _lfx_range_is_compatible(observed_specifier, lfx_version)
+        else _restamped_lfx_requirement(observed, expected)
+    )
 
     expected_dependencies = list(dependencies)
     expected_dependencies[dependency_index] = replacement
