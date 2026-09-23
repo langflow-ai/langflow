@@ -456,7 +456,12 @@ async def read_flows(
                 )
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
-                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                flow_headers = []
+                for flow in flows:
+                    header = FlowHeader.model_validate(flow, from_attributes=True)
+                    if flow.user_id != current_user.id:
+                        header.data = strip_secret_field_values(header.data)
+                    flow_headers.append(header)
                 return compress_response(flow_headers)
 
             # Convert to FlowRead while session is still active to avoid detached instance errors

@@ -69,6 +69,7 @@ async def _make_flow(
     workspace_id: UUID | None = None,
     folder_id: UUID | None = None,
     data: dict | None = None,
+    is_component: bool = False,
 ) -> UUID:
     """Insert a minimal flow owned by ``owner_id`` and return its id."""
     async with session_scope() as session:
@@ -78,6 +79,7 @@ async def _make_flow(
             workspace_id=workspace_id,
             folder_id=folder_id,
             data=data if data is not None else {"nodes": [], "edges": []},
+            is_component=is_component,
         )
         session.add(flow)
         await session.flush()
@@ -286,7 +288,9 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
         ],
         "edges": [],
     }
-    flow_id = await _make_flow(alice_id, f"aliceflow_{uuid4().hex}", folder_id=folder_id, data=flow_data)
+    flow_id = await _make_flow(
+        alice_id, f"aliceflow_{uuid4().hex}", folder_id=folder_id, data=flow_data, is_component=True
+    )
     alice_headers = await _login(client, alice_username)
     bob_headers = await _login(client, bob_username)
 
@@ -320,6 +324,11 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
         assert listed.status_code == 200, listed.text
         shared = next(flow for flow in listed.json() if flow["id"] == str(flow_id))
         assert shared["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+
+        headers = await client.get("api/v1/flows/", headers=bob_headers, params={"header_flows": "true"})
+        assert headers.status_code == 200, headers.text
+        shared_header = next(flow for flow in headers.json() if flow["id"] == str(flow_id))
+        assert shared_header["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
 
         paged = await client.get(
             "api/v1/flows/", headers=bob_headers, params={"get_all": "false", "folder_id": str(folder_id)}
