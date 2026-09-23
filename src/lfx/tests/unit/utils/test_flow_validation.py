@@ -923,6 +923,8 @@ async def test_prepare_public_flow_build_substitutes_trusted_code(monkeypatch):
 @pytest.mark.asyncio
 async def test_prepare_public_flow_build_resanitizes_code_after_group_proxy(monkeypatch):
     """A group proxy cannot replace trusted child code after public validation."""
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.graph.utils import process_flow
     from lfx.utils import flow_validation as fv
 
     trusted = "# trusted ChatInput code"
@@ -938,13 +940,23 @@ async def test_prepare_public_flow_build_resanitizes_code_after_group_proxy(monk
 
     prepared = await fv.prepare_public_flow_build(raw)
 
-    assert [node["id"] for node in prepared["nodes"]] == ["child"]
-    assert prepared["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted
+    assert [node["id"] for node in prepared["nodes"]] == ["group"]
+    group_info = prepared["nodes"][0]["data"]["node"]
+    assert group_info["template"]["exposed"]["value"] == trusted
+    assert group_info["flow"]["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted
+    assert process_flow(prepared)["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted
+
+    monkeypatch.setattr(Graph, "initialize", lambda _graph: None)
+    graph = Graph(instantiate_components=False)
+    graph.add_nodes_and_edges(prepared["nodes"], prepared["edges"])
+    assert graph.top_level_vertices == ["group"]
+    assert graph.dump()["data"]["nodes"][0]["id"] == "group"
     assert raw["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == injected
 
 
 @pytest.mark.asyncio
 async def test_prepare_public_flow_build_preserves_safe_group_proxy_value(monkeypatch):
+    from lfx.graph.graph.utils import process_flow
     from lfx.utils import flow_validation as fv
 
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
@@ -957,7 +969,34 @@ async def test_prepare_public_flow_build_preserves_safe_group_proxy_value(monkey
 
     prepared = await fv.prepare_public_flow_build(raw)
 
-    assert prepared["nodes"][0]["data"]["node"]["template"]["input_value"]["value"] == "hello"
+    assert prepared["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == "hello"
+    assert process_flow(prepared)["nodes"][0]["data"]["node"]["template"]["input_value"]["value"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_sanitizes_nested_group_code_proxies(monkeypatch):
+    from lfx.graph.graph.utils import process_flow
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    injected = "import os; os.system('unexpected')"
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": trusted})),
+    )
+    inner = _group_with_proxy(_node("child", "ChatInput", trusted), "code", injected)["nodes"][0]
+    inner["id"] = inner["data"]["id"] = "inner"
+    outer = _group_with_proxy(inner, "exposed", injected)
+
+    prepared = await fv.prepare_public_flow_build(outer)
+
+    assert prepared["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == trusted
+    prepared_inner = prepared["nodes"][0]["data"]["node"]["flow"]["data"]["nodes"][0]
+    assert prepared_inner["data"]["node"]["template"]["exposed"]["value"] == trusted
+    assert process_flow(prepared)["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted
+    assert outer["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == injected
 
 
 @pytest.mark.asyncio

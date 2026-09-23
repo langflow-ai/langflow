@@ -1469,6 +1469,74 @@ async def _ensure_public_component_lookup_snapshot(
     return type_to_code or {}, type_to_current_hash or {}
 
 
+def _restore_grouped_public_flow(grouped: dict, executable: dict) -> dict:
+    """Keep group identity while carrying validated code through its proxy fields."""
+    import copy
+
+    from lfx.graph.graph.utils import process_flow
+
+    result = copy.deepcopy(grouped)
+    nodes_by_id: dict[str, dict] = {}
+
+    def collect(nodes: list) -> None:
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            node_id = node.get("id")
+            if isinstance(node_id, str):
+                nodes_by_id[node_id] = node
+            nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
+            if isinstance(nested, list):
+                collect(nested)
+
+    collect(result["nodes"])
+    executable_code = {}
+    for node in executable["nodes"]:
+        code = node.get("data", {}).get("node", {}).get("template", {}).get("code")
+        if isinstance(code, dict) and isinstance(node.get("id"), str):
+            executable_code[node["id"]] = code.get("value")
+
+    def resolved_code(node_id: str, field_name: str) -> Any | None:
+        seen = set()
+        while (node_id, field_name) not in seen:
+            seen.add((node_id, field_name))
+            node = nodes_by_id.get(node_id)
+            if node is None:
+                return None
+            field = node.get("data", {}).get("node", {}).get("template", {}).get(field_name)
+            if not isinstance(field, dict):
+                return None
+            proxy = field.get("proxy")
+            if isinstance(proxy, dict) and isinstance(proxy.get("id"), str) and isinstance(proxy.get("field"), str):
+                node_id, field_name = proxy["id"], proxy["field"]
+            else:
+                return executable_code.get(node_id) if field_name == "code" else None
+        return None
+
+    for node_id, node in nodes_by_id.items():
+        template = node.get("data", {}).get("node", {}).get("template", {})
+        if not isinstance(template, dict):
+            continue
+        code = template.get("code")
+        if isinstance(code, dict) and node_id in executable_code:
+            code["value"] = executable_code[node_id]
+        for field in template.values():
+            if not isinstance(field, dict) or not isinstance(field.get("proxy"), dict):
+                continue
+            proxy = field["proxy"]
+            if isinstance(proxy.get("id"), str) and isinstance(proxy.get("field"), str):
+                safe_code = resolved_code(proxy["id"], proxy["field"])
+                if safe_code is not None:
+                    field["value"] = safe_code
+
+    # A second expansion must be identical to the graph we just checked. This catches proxy
+    # chains or future substitutions that the projection does not cover.
+    if process_flow(result) != executable:
+        msg = "Public flow validation failed: grouped graph differs from its validated executable graph."
+        raise CustomComponentValidationError(msg)
+    return result
+
+
 async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> dict | None:
     """Return server-trusted, build-ready flow data for the unauthenticated public build path.
 
@@ -1487,8 +1555,8 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
 
     Opt-in (``allow_public_custom_components`` is True): preserves stored custom code only when
     the global custom-component policy is also permissive. When the global policy is restricted,
-    this helper mirrors its trusted-code substitution. Both paths validate and return the
-    expanded graph, so group proxies cannot change a checked field later.
+    this helper mirrors its trusted-code substitution. Both paths validate the expanded graph
+    and return its grouped form, preserving group IDs in build status and graph snapshots.
 
     The code-execution check is intentionally repeated after default-mode substitution. A
     namespaced extension identity may not itself appear in the public blocklist, while its
@@ -1529,14 +1597,14 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
         return None
 
     # Group proxies overwrite child template fields during Graph.add_nodes_and_edges. Expand
-    # those groups first, then validate and sanitize the exact executable graph. Returning the
-    # flattened copy also keeps Graph construction from applying the same proxy a second time.
+    # those groups first, then validate and sanitize the exact executable graph. Restore the
+    # grouped form afterwards so Graph still knows which children belong to a top-level group.
     sanitized = process_flow(normalized_flow_data)
 
     if settings.allow_public_custom_components and settings.allow_custom_components:
         validate_flow_for_current_settings(sanitized)
         validate_public_flow_no_code_execution(sanitized)
-        return sanitized
+        return _restore_grouped_public_flow(normalized_flow_data, sanitized)
 
     type_to_code, type_to_current_hash = await _ensure_public_component_lookup_snapshot(settings_service)
     if not type_to_code or not type_to_current_hash:
@@ -1574,7 +1642,7 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     # by route-level defense in depth. This central guarantee covers v1, v2, A2A start, and A2A
     # resume callers alike.
     validate_public_flow_no_code_execution(sanitized, type_to_current_hash=type_to_current_hash)
-    return sanitized
+    return _restore_grouped_public_flow(normalized_flow_data, sanitized)
 
 
 def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
