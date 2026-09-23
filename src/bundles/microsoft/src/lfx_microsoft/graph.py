@@ -56,7 +56,7 @@ DEFAULT_TIMEOUT_SECONDS = 30.0
 # this decoration; sending it keeps this bundle out of the anonymous bucket.
 # See https://learn.microsoft.com/en-us/sharepoint/dev/general-development/
 # how-to-avoid-getting-throttled-or-blocked-in-sharepoint-online
-USER_AGENT = "NONISV|Langflow|lfx-microsoft/0.1.0"
+USER_AGENT = "NONISV|Langflow|lfx-microsoft/0.1.1"
 
 HTTP_MOVED_PERMANENTLY = 301
 HTTP_FOUND = 302
