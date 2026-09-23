@@ -102,7 +102,7 @@ def apply_run_defaults(
             user_id=str(user_id),
             actor_id=str(user_id),
             family="lfx_headless",
-            interactive=True,
+            interactive=False,
             actor_label=str(user_id),
         )
 

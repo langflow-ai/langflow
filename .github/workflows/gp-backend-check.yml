@@ -4,10 +4,13 @@ on:
   pull_request:
     paths:
       - "src/lfx/src/lfx/components/**"
-      # Bundle component strings reach core locales/en.json through the
-      # lfx/components/<provider> import shims, so an edit to a bundle's
+      # Bundle component strings reach core locales/en.json because the
+      # extractor loads every installed extension bundle through
+      # lfx.extension.load_installed_extensions(), so an edit to a bundle's
       # display_name/description/info must re-trigger the extractor too --
-      # otherwise en.json silently drifts from src/bundles/**.
+      # otherwise en.json silently drifts from src/bundles/**.  The install
+      # step below is `uv sync --no-dev` at the workspace root, which is what
+      # puts every curated lfx-* bundle on importlib.metadata for that walk.
       - "src/bundles/**"
       - "src/backend/base/langflow/initial_setup/starter_projects/**"
 

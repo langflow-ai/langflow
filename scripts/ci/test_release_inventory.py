@@ -25,6 +25,7 @@ OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-firecrawl",
     "lfx-nextplaid",
     "lfx-paddle",
+    "lfx-serpingapi",
     "lfx-serply",
     "lfx-valkey",
 }
@@ -85,8 +86,10 @@ def test_contract_required_files_exist_in_sources() -> None:
         "lfx-azure": REPO_ROOT / "src" / "bundles" / "azure" / "src",
         "lfx-datastax": REPO_ROOT / "src" / "bundles" / "datastax" / "src",
         "lfx-google": REPO_ROOT / "src" / "bundles" / "google" / "src",
+        "lfx-microsoft": REPO_ROOT / "src" / "bundles" / "microsoft" / "src",
         "lfx-ollama": REPO_ROOT / "src" / "bundles" / "ollama" / "src",
         "lfx-openai": REPO_ROOT / "src" / "bundles" / "openai" / "src",
+        "lfx-slack": REPO_ROOT / "src" / "bundles" / "slack" / "src",
         "lfx-toolguard": REPO_ROOT / "src" / "bundles" / "toolguard" / "src",
         "lfx-bundles": REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "src",
     }

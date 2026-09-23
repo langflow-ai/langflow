@@ -45,13 +45,16 @@ members = [
     "lfx-firecrawl",
     "lfx-google",
     "lfx-ibm",
+    "lfx-microsoft",
     "lfx-nextplaid",
     "lfx-ollama",
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-serpingapi",
     "lfx-serply",
+    "lfx-slack",
     "lfx-toolguard",
     "lfx-valkey",
     "lfx-vllm",
@@ -2667,6 +2670,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fc/3a/00cc578cd27ed0b22c9be25cef2c24539d92df9fa80ebd67a3fc5419724c/crc32c-2.8-pp311-pypy311_pp73-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:15905fa78344654e241371c47e6ed2411f9eeb2b8095311c68c88eccf541e8b4", size = 64108, upload-time = "2025-10-17T06:20:11.072Z" },
     { url = "https://files.pythonhosted.org/packages/6b/bc/0587ef99a1c7629f95dd0c9d4f3d894de383a0df85831eb16c48a6afdae4/crc32c-2.8-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c596f918688821f796434e89b431b1698396c38bf0b56de873621528fe3ecb1e", size = 64815, upload-time = "2025-10-17T06:20:11.919Z" },
     { url = "https://files.pythonhosted.org/packages/73/42/94f2b8b92eae9064fcfb8deef2b971514065bd606231f8857ff8ae02bebd/crc32c-2.8-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:8d23c4fe01b3844cb6e091044bc1cebdef7d16472e058ce12d9fadf10d2614af", size = 66659, upload-time = "2025-10-17T06:20:12.766Z" },
+]
+
+[[package]]
+name = "croniter"
+version = "6.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/57/2e2a65aee2a70483cb28e2b7e15a072d00a523207593b44400d4717bb100/croniter-6.2.4.tar.gz", hash = "sha256:fc124f751b1b04805c2a04b061898b436b45ab2320b045e1e052ea895de65189", size = 166267, upload-time = "2026-07-10T09:52:59.955Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/ba/d678e5bd329646ca51d3c92addbc77804e86d21f4b6b6a027218e6abb010/croniter-6.2.4-py3-none-any.whl", hash = "sha256:8ef3d544107a5c05a150a2d78f8bf5a8eb9c5c4d93405a736b824109574e3f4d", size = 46677, upload-time = "2026-07-10T09:52:58.425Z" },
 ]
 
 [[package]]
@@ -7509,10 +7524,12 @@ dependencies = [
     { name = "lfx-docling" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
+    { name = "lfx-microsoft" },
     { name = "lfx-ollama" },
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
+    { name = "lfx-slack" },
     { name = "lfx-toolguard" },
     { name = "lfx-vllm" },
 ]
@@ -7531,6 +7548,7 @@ bundles = [
     { name = "lfx-firecrawl" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
+    { name = "lfx-serpingapi" },
     { name = "lfx-serply" },
     { name = "lfx-valkey" },
 ]
@@ -7646,13 +7664,16 @@ requires-dist = [
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
     { name = "lfx-ollama", editable = "src/bundles/ollama" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
+    { name = "lfx-slack", editable = "src/bundles/slack" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
@@ -7725,6 +7746,7 @@ dependencies = [
     { name = "chardet" },
     { name = "chromadb" },
     { name = "clickhouse-connect" },
+    { name = "croniter" },
     { name = "cryptography" },
     { name = "defusedxml" },
     { name = "docstring-parser" },
@@ -8226,6 +8248,7 @@ requires-dist = [
     { name = "composio", marker = "extra == 'composio'", specifier = "==0.16.0" },
     { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.16.0" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
+    { name = "croniter", specifier = ">=2.0.0,<7.0.0" },
     { name = "cryptography", specifier = ">=50.0.0" },
     { name = "cryptography", marker = "extra == 'litellm'" },
     { name = "ctransformers", marker = "extra == 'ctransformers'", specifier = ">=0.2.10" },
@@ -8407,7 +8430,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlmodel", specifier = "~=0.0.37" },
+    { name = "sqlmodel", specifier = "~=0.0.46" },
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "starlette", specifier = ">=1.5.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
@@ -9010,7 +9033,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.26"
+version = "1.1.30"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9855,7 +9878,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.1.2"
+version = "0.3.0"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
@@ -9888,7 +9911,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.2.4"
+version = "0.2.5"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-cloud-sdk-core" },
@@ -9919,6 +9942,17 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26.4,<3.0.0" },
     { name = "presto-python-client", specifier = ">=0.8,<1" },
 ]
+
+[[package]]
+name = "lfx-microsoft"
+version = "0.1.1"
+source = { editable = "src/bundles/microsoft" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-nextplaid"
@@ -9958,7 +9992,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "src/bundles/openai" }
 dependencies = [
     { name = "langchain-openai" },
@@ -10009,8 +10043,23 @@ requires-dist = [
 
 [[package]]
 name = "lfx-paddle"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "src/bundles/paddle" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-serpingapi"
+version = "0.1.0"
+source = { editable = "src/bundles/serpingapi" }
 dependencies = [
     { name = "httpx" },
     { name = "lfx" },
@@ -10038,6 +10087,23 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-slack"
+version = "0.1.1"
+source = { editable = "src/bundles/slack" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "lfx" },
+    { name = "slack-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.10.0,<4.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "slack-sdk", specifier = ">=3.33.0,<4.0.0" },
+]
+
+[[package]]
 name = "lfx-toolguard"
 version = "0.1.2"
 source = { editable = "src/bundles/toolguard" }
@@ -10054,7 +10120,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-valkey"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/bundles/valkey" }
 dependencies = [
     { name = "langchain-aws" },
@@ -18120,6 +18186,15 @@ wheels = [
 ]
 
 [[package]]
+name = "slack-sdk"
+version = "3.44.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6e/4e/371068dd7281139307e60cd18553b96b9c8c391a4c3040617192713a3cc4/slack_sdk-3.44.1.tar.gz", hash = "sha256:ca19505423789fa2a3189ff486f989f02e49289f008d0a5813df7255b3fb93ea", size = 256661, upload-time = "2026-09-03T14:21:13.879Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/fc/67352b742fc6fa520a550581b0284f5757e4e31a32327c2a00276747fd30/slack_sdk-3.44.1-py2.py3-none-any.whl", hash = "sha256:d6f20a0fbe3fecf9cac955c99d686301b48a645b7045472c3a0cdd186d7c42b2", size = 319865, upload-time = "2026-09-03T14:21:12.405Z" },
+]
+
+[[package]]
 name = "slowapi"
 version = "0.1.10"
 source = { registry = "https://pypi.org/simple" }
@@ -18333,16 +18408,16 @@ wheels = [
 
 [[package]]
 name = "sqlmodel"
-version = "0.0.39"
+version = "0.0.46"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "sqlalchemy" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/68/ee/22a0559283c3cf6048678e787ed5d4959dcd00dedd8ba4567eeae684eeb1/sqlmodel-0.0.39.tar.gz", hash = "sha256:23d8e50a8d8ee936032ed79c55023a5d618dd6bc3c510bbf4909d1a7a605a570", size = 91057, upload-time = "2026-06-25T13:01:38.475Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/92/d5eaf0a7ffaac17a23396e854b36a4e1326c5933d7afb18af530f8227e89/sqlmodel-0.0.46.tar.gz", hash = "sha256:a1f962c0b92bc569d21e08d152fe823c61edd37a461e551636f15a153aa66bd5", size = 98115, upload-time = "2026-09-22T09:38:21.047Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/7d/b9813a582d4eb310be35e1fc7dfaae71207d7b62e9e53be314ebd251b53b/sqlmodel-0.0.39-py3-none-any.whl", hash = "sha256:90ebe92ce5cc11d7fff8dc7cb594790a102333c8fe7c14865254f6fc5c939795", size = 29680, upload-time = "2026-06-25T13:01:37.494Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/4a/bbd78ee71a65af4f4e8a54632671b5acb58dad8df86d383cf53a33f9fd6e/sqlmodel-0.0.46-py3-none-any.whl", hash = "sha256:c9c8b6b9642eb82aa6b5db6e6e0eea61a6fcb0b37440db35a9eecd9fc897ea3f", size = 31303, upload-time = "2026-09-22T09:38:19.956Z" },
 ]
 
 [[package]]

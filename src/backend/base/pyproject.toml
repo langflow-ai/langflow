@@ -38,7 +38,7 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
-    "sqlmodel~=0.0.37",
+    "sqlmodel~=0.0.46",
     "pydantic>=2.13.0,<2.14",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
@@ -49,6 +49,9 @@ dependencies = [
     "python-multipart>=0.0.12,<1.0.0",
     "orjson>=3.11.6,<4.0.0",
     "alembic>=1.13.0,<1.19.0",
+    # Schedule triggers (TRG-2). Cron semantics live in langflow-base only; the
+    # lfx component validates expressions syntactically so lfx keeps no cron dep.
+    "croniter>=2.0.0,<7.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
     "pillow>=12.3.0,<13.0.0",

@@ -36,6 +36,9 @@ export const usePatchFolders: useMutationFunctionType<
     ...options,
     onSettled: () => {
       queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+      // A rename re-registers the project's MCP server under a new name, so the MCP tab
+      // would otherwise keep showing the old one.
+      queryClient.invalidateQueries({ queryKey: ["useGetFlowsMCP"] });
     },
   });
 

@@ -216,6 +216,34 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
+
+`filter_plugin_entry_points()` and `filter_component_entry_points()` inspect
+installed manifests only when an entry point has an identifiable distribution.
+App startup with no legacy plugins avoids scanning installed package files.
+Manifest precedence, entry-point ordering, and public signatures are unchanged;
+`BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-17 — `ResolvedCredential.identity = None` is not an identity proof
+
+- Clarify the documented meaning of `ResolvedCredential.identity is None`: the
+  resolver does not know the executing identity (the headless
+  `LF_CONNECTION__*` wire format has no place to declare one). It no longer
+  reads as "the operator vouched for this token". A capability that must run as
+  one identity has to establish it another way (`lfx-slack` reads the token's
+  type prefix) or fail closed with `connection-not-authorized`. Documentation
+  only: no symbol, signature, or default changes, and `BUNDLE_API_VERSION`
+  stays `1`.
+
+### 2026-09-15 — Permanent provider request and resource errors
+
+- Add `InvalidRequestError` (`invalid-request`) and `ResourceNotFoundError`
+  (`resource-not-found`) to `lfx.integrations` and `INTEGRATION_ERROR_CODES`.
+  Both are non-retryable and provide sanitized input/access hints. Bundles can
+  distinguish invalid inputs and missing resources from temporary provider
+  failures and unsupported actions. Existing codes and normalization defaults
+  remain compatible; this additive change retains `BUNDLE_API_VERSION = 1`.
+
 ### 2026-09-14 — Integration action selection and execution denials
 
 - Add the pure `Component.select_integration_capabilities(capability_ids)` hook.
@@ -331,6 +359,13 @@ the deserialize half is covered by
   its docstring now states that a host must never authorize a share for a
   principal with this flag set to `False`. Additive for bundles and
   resolvers alike; `BUNDLE_API_VERSION` remains `1`.
+
+- **2026-09-05 (`lfx-microsoft`).** First consumer of the bundle-owned
+  integration manifest: `lfx-microsoft` ships eight Microsoft Graph delegated
+  actions and builds its `ConnectionRefInput` scopes *from* its own
+  `capabilities.v1.json`. No surface in this document changed --
+  `BUNDLE_API_VERSION` remains `1` -- the entry is recorded so the contract's
+  history names its first out-of-tree consumer.
 
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
@@ -759,6 +794,20 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+- **`ResolvedCredential.identity` (additive, optional).**
+  `lfx.integrations.models.ResolvedCredential` gained
+  `identity: Literal["user_delegated", "bot", "service"] | None = None`,
+  mirroring `lfx.integrations.capabilities.IntegrationIdentity`.  The
+  database-backed resolver populates it from the connection row's
+  `executing_identity`; the headless environment resolver leaves it `None`
+  because the `LF_CONNECTION__*` wire format has no place to declare one.
+  Providers whose user and bot tokens share scope names — Slack's `chat:write`
+  is both a User Token Scope and a Bot Token Scope — cannot distinguish the two
+  identities from `granted_scopes`, so a bundle capability that must run as a
+  bot compares this field and fails closed with `connection-not-authorized`
+  before its first request.  The field defaults to `None`, no existing field
+  changed name, type, or meaning, and every existing construction site keeps
+  working, so `BUNDLE_API_VERSION` remains `1`.
 
 - **Pinned action-to-tool mode for preset MCP components (additive).**
   `MCPPresetComponent` gains a `_pinned_spec()` hook returning a

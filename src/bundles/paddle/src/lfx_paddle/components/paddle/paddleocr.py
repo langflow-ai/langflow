@@ -13,7 +13,7 @@ from lfx.utils.ssrf_protection import (
     validate_and_resolve_connector_url,
     validate_and_resolve_url,
 )
-from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client
+from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client, pin_host_for_url
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -354,7 +354,7 @@ class PaddleOCRComponent(BaseFileComponent):
         extraction failure).
         """
         if is_ssrf_protection_enabled() and validated_ips:
-            hostname = httpx.URL(url).host
+            hostname = pin_host_for_url(url)
             if hostname:
                 return create_ssrf_protected_sync_client(
                     hostname=hostname, validated_ips=validated_ips, timeout=self.REQUEST_TIMEOUT

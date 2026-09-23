@@ -37,7 +37,7 @@ def test_flow_identity_is_preserved(component):
     # migration_table.json maps it. The deprecation metadata must survive the stub.
     assert ZepChatMemory.name == "ZepChatMemory"
     assert ZepChatMemory.legacy is True
-    assert ZepChatMemory.replacement == ["helpers.Memory"]
+    assert ZepChatMemory.replacement == ["models_and_agents.Memory"]
     assert ZepChatMemory.display_name == "Zep Chat Memory"
 
     frontend_node = component.to_frontend_node()

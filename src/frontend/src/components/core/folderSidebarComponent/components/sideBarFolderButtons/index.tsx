@@ -337,6 +337,18 @@ const SideBarFoldersButtonsComponent = ({
               })),
             );
           },
+          onError: (err) => {
+            console.error(err);
+            // Put the stored name back: the rename did not happen
+            setFoldersNames((old) => ({
+              ...old,
+              [item.id]: item.name,
+            }));
+            setErrorData({
+              title: t("sidebar.renameError"),
+              list: extractApiErrorMessages(err),
+            });
+          },
         },
       );
     } else {

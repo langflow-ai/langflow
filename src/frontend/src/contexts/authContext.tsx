@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
@@ -31,8 +31,17 @@ export function AuthProvider({ children }): React.ReactElement {
   // Authentication state is now managed via session validation
   // instead of reading cookies directly (supports HttpOnly cookies)
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<Users | null>(null);
+  const [userData, setUserDataState] = useState<Users | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+
+  // `useAuthStore.userData` mirrors this state for hooks and stores that live
+  // outside the context (the Connections page, flowStore, use-get-flow-id).
+  // Writing both here keeps every path in sync, including a session restored
+  // after a reload, which never goes through `useGetUserData`.
+  const setUserData = useCallback((user: Users | null) => {
+    setUserDataState(user);
+    useAuthStore.getState().setUserData(user);
+  }, []);
 
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);

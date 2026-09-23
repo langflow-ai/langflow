@@ -1,0 +1,207 @@
+---
+title: Deploy Langflow trigger listeners
+slug: /deployment-trigger-listeners
+---
+
+A flow runs when something calls it. Triggers let something *elsewhere* call it — a schedule, an inbound webhook, or an event at a provider such as Slack, Microsoft 365, or Google Workspace.
+
+Providers deliver those events in two ways, and they need different things from your deployment:
+
+- **Push.** The provider posts to a Langflow URL. This needs a public HTTPS endpoint, and it is served by the Langflow API process you already run.
+- **Held connections and polling.** Langflow dials out and holds the connection, or polls on an interval. This needs no public URL, which is what makes triggers work on a firewalled instance — and it needs a process that is not the API.
+
+This page covers the second kind: the `langflow listeners` process.
+
+## Why listeners are a separate process
+
+The Langflow API runs several worker processes, and it is restarted, upgraded, and autoscaled on its own schedule. A long-lived provider connection held inside it is either opened once per worker — duplicating every event — or dropped on the next rollout.
+
+So listeners run as their own process. It uses the same image, the same database, and the same configuration as the API, and it hosts no HTTP application at all: only a health endpoint. A lease row in the database elects one owner per provider connection, so you can run several replicas. During a handover the outgoing process may still be connected for a few seconds — the lease says the previous holder stopped reporting in, not that its socket closed — and Langflow collapses the resulting duplicates on the event's dedupe key, so a flow still runs once.
+
+## Choose a shape
+
+| Your deployment | Run listeners as | How |
+|---|---|---|
+| Kubernetes, multiple replicas | A separate Deployment | `args: ["langflow", "listeners"]` |
+| Docker Compose | A separate service | `command: ["langflow", "listeners"]` |
+| A single container | A child of the API | `LANGFLOW_LISTENERS_MODE=subprocess` |
+| Langflow Desktop | A child of the app | `LANGFLOW_LISTENERS_MODE=subprocess` |
+
+`lfx run` and `lfx serve` don't host listeners. Headless deployments keep the existing webhook endpoint.
+
+:::important
+In subprocess mode, listeners live and die with Langflow. On Desktop, triggers fire only while Langflow is open.
+:::
+
+Ready-to-adapt manifests are in [`deploy/listeners/`](https://github.com/langflow-ai/langflow/tree/main/deploy/listeners) in the Langflow repository.
+
+## Before you start
+
+- **Use the same database as the API.** Set `LANGFLOW_DATABASE_URL` to the same value.
+  Use PostgreSQL for any deployment with more than one process. SQLite is single-process, so use subprocess mode there.
+- **Use the same `LANGFLOW_SECRET_KEY` as the API.** The listener resolves and refreshes the same connections the API does, and decrypts the same token material. A different key means it cannot read a single credential.
+- **Use the same `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` as the API**, if any connection was authorized through OAuth. The listener refreshes access tokens in its own process — it never asks the API to — so without the registrations every refresh fails locally, before a request reaches the provider. The listener logs a warning at startup naming the registrations it is missing.
+- **Start or upgrade the API first.** The listener never runs database migrations, so that a rolling upgrade can't race Alembic from two directions. If the trigger tables are missing, it exits with a message telling you to start the API first.
+
+## Run listeners on Kubernetes
+
+Add a second Deployment alongside your API Deployment:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langflow-listeners
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: listeners
+          image: langflowai/langflow:latest
+          args: ["langflow", "listeners"]
+          env:
+            - name: LANGFLOW_DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: langflow-secrets, key: database-url}
+            - name: LANGFLOW_SECRET_KEY
+              valueFrom:
+                secretKeyRef: {name: langflow-secrets, key: secret-key}
+            - name: LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS
+              valueFrom:
+                secretKeyRef: {name: langflow-secrets, key: connection-oauth-registrations, optional: true}
+            - name: LANGFLOW_LISTENERS_HEALTH_HOST
+              value: "0.0.0.0"
+          ports:
+            - name: health
+              containerPort: 7861
+          livenessProbe:
+            httpGet: {path: /health, port: health}
+          readinessProbe:
+            httpGet: {path: /healthz, port: health}
+```
+
+Bind the health server to `0.0.0.0` here: probes reach the pod on its pod IP, and the default binding is loopback only. There is no Service and no Ingress, because the listener accepts no inbound traffic.
+
+## Run listeners with Docker Compose
+
+```yaml
+services:
+  langflow-listeners:
+    image: langflowai/langflow:latest
+    command: ["langflow", "listeners"]
+    depends_on:
+      - langflow
+      - postgres
+    environment:
+      - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL:?set LANGFLOW_DATABASE_URL to the API's database}
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?set LANGFLOW_SECRET_KEY to the API's key}
+      - LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS=${LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS:-}
+      - LANGFLOW_LISTENERS_HEALTH_HOST=0.0.0.0
+    stop_grace_period: 30s
+    restart: unless-stopped
+```
+
+## Run listeners in a single container or on Desktop
+
+Set one variable on the Langflow container or app:
+
+```bash
+LANGFLOW_LISTENERS_MODE=subprocess
+```
+
+Langflow then spawns `langflow listeners` as a child process and stops it on shutdown. Exactly one API worker does this, even when `LANGFLOW_WORKERS` is greater than one: the workers elect a host through a database lease, so you never get one listener per worker.
+
+## Health endpoints
+
+The listener serves two paths on `LANGFLOW_LISTENERS_HEALTH_PORT` (default `7861`) and nothing else.
+
+| Path | Meaning | Use it for |
+|---|---|---|
+| `/health` | The process is up and its reconcile loop is alive. Returns `503` when the loop has stopped. | Liveness probes |
+| `/healthz` | The database answers, the reconcile loop is current, and no connection lease has failed to renew. | Readiness probes |
+
+Both paths return `503` when they fail, so a probe that only compares status codes still restarts a listener whose reconcile loop died. `/healthz` names the failing check in its body:
+
+```json
+{
+  "status": "not_ready",
+  "database": "ok",
+  "leases": "renew_failed",
+  "reconcile": "ok",
+  "connections": 4,
+  "healthy_connections": 3,
+  "replicas": 2,
+  "fair_share": 6
+}
+```
+
+`replicas` is how many listener replicas this one can see, and `fair_share` is the number of connections that entitles it to hold. Together they answer "did adding a replica help?" without a database session.
+
+## Scale and fail over
+
+Each provider connection is held by exactly one replica, elected by a lease with a 30-second lifetime and a 10-second heartbeat. If a replica dies, its connections move to another replica within two lease lifetimes.
+
+Scale out when one process can't keep up with the number of armed connections — not for redundancy. Failover doesn't require a warm standby, and a stopped replica releases its leases immediately on `SIGTERM` rather than waiting for them to expire. Give the container at least 30 seconds of shutdown grace so that release can happen.
+
+Start with one replica. Each connection costs one long-lived socket or one polling task, and listeners don't execute flows — the API and its background workers do — so listener CPU and memory stay flat as your flows get heavier.
+
+### Adding a replica to a loaded deployment
+
+Adding a replica rebalances the connections that are already held. You don't need to restart anything.
+
+Each replica announces itself in the database on every reconcile pass and counts the replicas that are announcing themselves. Its share is the armed connections divided by that count, rounded up, and it releases whatever it holds above that share. The other replicas claim the freed connections through the same lease race that spreads a newly armed connection, so a third replica on 31 connections settles at roughly 11 each.
+
+Expect this to take a few reconcile intervals — about 15 seconds at the defaults — plus the handover overlap each moved connection costs. Watch it happen on `/healthz`: `replicas` should rise on every replica, and `connections` should fall on the loaded one and rise on the new one until both sit at `fair_share`.
+
+A replica that can't see any peer keeps everything, which is what makes this a no-op for the single-replica case. A replica killed without `SIGTERM` stops being counted after one lease lifetime.
+
+## Verify a listener before connecting a provider
+
+Langflow includes one built-in listener source, `listener_selftest`, that emits an event on an interval without contacting any provider. Use it to prove that the process boots, takes a lease, emits events, and stops cleanly, before any OAuth consent exists.
+
+Arm a trigger of kind `listener_selftest` on any connection, start the listener, and watch events appear on that trigger's event list.
+
+## Configuration reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `LANGFLOW_LISTENERS_MODE` | `off` | Set to `subprocess` to have the API spawn the listener as a child process. |
+| `LANGFLOW_LISTENERS_HEALTH_HOST` | `127.0.0.1` | Interface the health server binds. Set to `0.0.0.0` for container probes. |
+| `LANGFLOW_LISTENERS_HEALTH_PORT` | `7861` | Health server port. |
+| `LANGFLOW_LISTENER_LEASE_TTL_S` | `30` | Connection lease lifetime. Failover happens within two of these. |
+| `LANGFLOW_LISTENER_HEARTBEAT_INTERVAL_S` | `10` | How often a held lease is renewed. |
+| `LANGFLOW_LISTENER_RECONCILE_INTERVAL_S` | `5` | How often the listener compares your triggers with the connections it holds. |
+| `LANGFLOW_LISTENER_POLL_INTERVAL_S` | `30` | Default interval for polling sources. |
+| `LANGFLOW_LISTENER_BACKOFF_BASE_S` | `2` | First delay after a connection fails. |
+| `LANGFLOW_LISTENER_BACKOFF_CAP_S` | `300` | Maximum reconnect delay. |
+| `LANGFLOW_LISTENER_FAILURE_THRESHOLD` | `5` | Consecutive failures before the error appears on the trigger. |
+| `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` | unset | The API's OAuth registrations. Required to refresh OAuth-backed connections from the listener. |
+
+## Troubleshoot
+
+**The listener exits with "The trigger tables are missing or unreadable."**
+Start or upgrade the Langflow API against this database first. The listener never migrates.
+
+**A trigger shows "needs reconnect."**
+The connection's credential was revoked or expired. The listener stops dialing, because no amount of retrying fixes a withdrawn consent. Reconnect the connection, then re-enable the trigger.
+
+A listener that is configured wrong never puts a trigger here. A mismatched `LANGFLOW_SECRET_KEY` and a missing OAuth registration both leave the consent intact, so they're reported as the error below and recover on their own once the process is fixed.
+
+**A trigger says the listener can't read the connection with its own configuration.**
+The listener is running with a different `LANGFLOW_SECRET_KEY` than the API, or without the API's `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`. Either way it can't read or refresh the credential, and no request reached the provider. Set both to the API's values and restart the listener: the triggers stayed armed, so they resume on their own.
+
+**A trigger shows a connection error but keeps its state.**
+The listener failed to hold the connection several times in a row and is retrying with backoff. This is a provider outage or a network problem, not a configuration error, so the trigger stays armed. The message clears after the next successful event.
+
+**A new replica holds no connections.**
+Check `replicas` on its `/healthz`. If it reads `1`, the replicas can't see each other — they're pointed at different databases. If it reads the number you expect, give it a few reconcile intervals: the loaded replica releases its excess on its next pass, and this one claims it on the pass after that.
+
+**`/healthz` reports `"leases": "renew_failed"`.**
+This replica lost a connection lease to another one, usually after a stall. It is not serving those connections. If it persists, check database latency between the listener and the database.
+
+**Events arrive twice.**
+They shouldn't: the event ledger deduplicates on a per-source key, so a provider redelivery or a handover overlap produces one run. If you see two runs, check whether two *triggers* are armed on the same source.

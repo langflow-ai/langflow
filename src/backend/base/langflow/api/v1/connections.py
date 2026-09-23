@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -11,14 +11,17 @@ from fastapi.routing import APIRoute
 from lfx.integrations.errors import IntegrationPolicyBlockedError
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
 from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
+from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
+from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
-from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
+from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
 from langflow.services.connection.service import enforce_integration_policy_for_provider
 from langflow.services.database.models.connection import (
     Connection,
@@ -30,6 +33,12 @@ from langflow.services.database.models.connection import (
 )
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
 from langflow.services.deps import get_connection_resolver_service, session_scope
+from langflow.services.rate_limit import (
+    check_rate_limit,
+    get_connection_write_limit,
+    get_metadata_read_limit,
+    get_user_limiter_key,
+)
 
 
 class _ConnectionRoute(APIRoute):
@@ -54,6 +63,32 @@ router = APIRouter(prefix="/connections", tags=["Connections"], route_class=_Con
 # holds even when authorization is disabled or a plugin would allow the action.
 _INSTANCE_OPERATOR_ACTIONS = frozenset({ConnectionAction.WRITE, ConnectionAction.DELETE})
 
+# Rate-limit counter namespaces. The endpoints that trigger outbound provider
+# calls get their own buckets so a burst of OAuth or health traffic cannot
+# consume a client's budget for ordinary CRUD, and so the unauthenticated
+# callback cannot block a user's ability to start a consent flow.
+#
+# Metadata reads are split off from the write bucket and sized by
+# connection_metadata_rate_limit_per_minute rather than the login budget: they
+# decrypt nothing and call no provider, and the connections UI polls the listing
+# every two seconds while a consent is pending, which the 5/minute login default
+# would cut off about ten seconds in. Writes (create, update, revoke, delete)
+# share one bucket sized by connection_write_rate_limit_per_minute for the same
+# reason: on the login budget a user was refused after five actions. Test,
+# health, and OAuth start keep the login-sized allowance.
+#
+# Every authenticated route counts per user, not per client IP: current_user is
+# resolved as a dependency before the handler runs, so the caller is known by
+# the time the limiter is consulted, and an IP key would only make users behind
+# one NAT or proxy throttle each other. The OAuth callback is unauthenticated
+# (state replaces login), so it alone stays keyed by client IP.
+_SCOPE_CONNECTIONS = "connections"
+_SCOPE_CONNECTIONS_READ = "connections-read"
+_SCOPE_CONNECTION_TEST = "connections-test"
+_SCOPE_CONNECTION_HEALTH = "connections-health"
+_SCOPE_CONNECTION_OAUTH_START = "connections-oauth-start"
+_SCOPE_CONNECTION_OAUTH_CALLBACK = "connections-oauth-callback"
+
 _OAUTH_NONCE_LENGTH = 43
 _OAUTH_MAX_CODE_LENGTH = 8192
 _OAUTH_RESPONSE_HEADERS = {
@@ -71,6 +106,30 @@ class OAuthStartRequest(BaseModel):
 
 class OAuthStartResponse(BaseModel):
     authorization_url: str
+
+
+class OAuthRegistrationRead(BaseModel):
+    """One operator-configured registration, as a connection picker may show it.
+
+    Credential-free by construction: the client id, the client secret or private
+    key, and the redirect URI stay on the server. A caller needs the id to name
+    the registration in a start request, and the scope ceiling to know which
+    subset it may ask for.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    provider: str
+    profile: Literal["user", "bot"]
+    context: Literal["self_managed", "hosted", "desktop"]
+    client_type: Literal["confidential", "public"]
+    scopes: list[str] = Field(description="The operator's ceiling; a start request selects a nonempty subset.")
+    allowed_tenants: list[str] = Field(description="Workspaces or domains the provider account must belong to.")
+
+
+class OAuthRegistrationListRead(BaseModel):
+    registrations: list[OAuthRegistrationRead]
 
 
 def _oauth_cookie(state_value: str) -> str:
@@ -169,6 +228,16 @@ async def _authorized_row(
     row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=True)
     if row is None or (row.ownership_mode, row.owner_id) != authorized_owner:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    # Ownership can stay unchanged while the plugin's policy is revoked.
+    # Recheck after acquiring the lock; durable audit must use this transaction
+    # (or release it on denial) rather than wait on another SQLite writer.
+    async with audit_guard_in_transaction(session):
+        await ensure_connection_permission(
+            user,
+            action,
+            connection_id=row.id,
+            connection_owner_id=row.owner_id,
+        )
     return row
 
 
@@ -181,23 +250,37 @@ def _may_enable_non_interactive(user: CurrentActiveUser, row: Connection) -> boo
 
 @router.get("", response_model=list[ConnectionRead])
 async def list_connections(
+    request: Request,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
     service: ConnectionService,
     provider: Annotated[str | None, Query(pattern=PROVIDER_ID_PATTERN, max_length=120)] = None,
 ) -> list[ConnectionRead]:
     """List owned, instance-owned, and explicitly shared connection metadata."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS_READ,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     return await service.list_for_user(session, user=current_user, provider_key=provider)
 
 
 @router.post("", response_model=ConnectionRead, status_code=status.HTTP_201_CREATED)
 async def create_connection(
+    request: Request,
     payload: ConnectionCreate,
     session: DbSession,
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> ConnectionRead:
     """Create connection metadata and optionally store encrypted credentials."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     if payload.ownership_mode.value == "instance" and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -218,6 +301,7 @@ async def create_connection(
 
 @router.post("/{connection_id}/test", response_model=ConnectionRead)
 async def test_connection(
+    request: Request,
     connection_id: UUID,
     payload: ConnectionTestRequest,
     session: DbSession,
@@ -225,6 +309,7 @@ async def test_connection(
     service: ConnectionService,
 ) -> ConnectionRead:
     """Validate the local credential envelope and requested scope coverage."""
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_TEST, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
         session=session,
@@ -247,12 +332,14 @@ async def test_connection(
 
 @router.post("/{connection_id}/health", response_model=ConnectionRead)
 async def refresh_connection_health(
+    request: Request,
     connection_id: UUID,
     session: DbSession,
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> ConnectionRead:
     """Refresh credential health without returning or logging token material."""
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_HEALTH, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
         session=session,
@@ -274,6 +361,7 @@ async def refresh_connection_health(
 
 @router.patch("/{connection_id}", response_model=ConnectionRead)
 async def update_connection(
+    request: Request,
     connection_id: UUID,
     payload: ConnectionUpdate,
     session: DbSession,
@@ -286,6 +374,12 @@ async def update_connection(
     widens which executions reach the owner's account, so only the owner (a
     superuser, for an instance connection) may turn it on.
     """
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     row = await _authorized_row(
         service=service,
         session=session,
@@ -308,12 +402,19 @@ async def update_connection(
 
 @router.post("/{connection_id}/revoke", response_model=ConnectionRevokeRead)
 async def revoke_connection(
+    request: Request,
     connection_id: UUID,
     session: DbSession,
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> ConnectionRead:
     """Revoke at the provider when supported and always remove local credentials."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     row = await _authorized_row(
         service=service,
         session=session,
@@ -327,11 +428,19 @@ async def revoke_connection(
 
 @router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_connection(
+    request: Request,
     connection_id: UUID,
     session: DbSession,
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> Response:
+    """Delete a connection and its stored credential; only a deleter of the row may call this."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     row = await _authorized_row(
         service=service,
         session=session,
@@ -346,6 +455,7 @@ async def delete_connection(
 
 @router.post("/{connection_id}/oauth/start")
 async def start_connection_oauth(
+    request: Request,
     connection_id: UUID,
     payload: OAuthStartRequest,
     session: DbSession,
@@ -354,6 +464,7 @@ async def start_connection_oauth(
     response: Response,
 ) -> OAuthStartResponse:
     """Authorize an instance-configured registration for an existing connection."""
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_OAUTH_START, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
         session=session,
@@ -388,10 +499,77 @@ async def start_connection_oauth(
     return OAuthStartResponse(authorization_url=url)
 
 
+@router.get("/oauth/registrations", response_model=OAuthRegistrationListRead)
+async def list_oauth_registrations(
+    request: Request,
+    current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
+    response: Response,
+    provider: Annotated[str | None, Query(pattern=PROVIDER_ID_PATTERN, max_length=120)] = None,
+) -> OAuthRegistrationListRead:
+    """List the registrations a caller may name in an authorization request.
+
+    Registration configuration is operator-only, so a client had no way to learn
+    the ids that ``POST /connections/{connection_id}/oauth/start`` accepts, or the
+    scope ceiling it must stay inside. Only availability and non-secret fields are
+    returned, and a registration that this deployment would refuse is omitted
+    rather than advertised: a picker must not offer consent that cannot start.
+    """
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS_READ,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    # The list is filtered per caller, so a shared cache must never replay one
+    # user's answer to another.
+    response.headers["Cache-Control"] = "no-store"
+    settings = get_oauth_settings()
+    available: list[tuple[str, OAuthRegistration]] = []
+    for registration_id in settings.registration_ids():
+        try:
+            registration = settings.registration(registration_id)
+        except OAuthError:
+            # Invalid, or configured for another deployment context. The start
+            # request would raise the same error, so leave it out.
+            continue
+        if provider is not None and registration.provider != provider:
+            continue
+        available.append((registration_id, registration))
+
+    if not available:
+        return OAuthRegistrationListRead(registrations=[])
+
+    # A provider outside the operator's integration ceiling is refused at
+    # oauth/start, so it must not appear here either.
+    policy = await aresolve_integration_policy(
+        user_id=current_user.id,
+        provider_ids=frozenset(registration.provider for _, registration in available),
+        purpose=IntegrationPolicyPurpose.DISCOVER,
+        attributes=provider_policy_attributes,
+    )
+    return OAuthRegistrationListRead(
+        registrations=[
+            OAuthRegistrationRead(
+                id=registration_id,
+                provider=registration.provider,
+                profile=registration.profile,
+                context=registration.context,
+                client_type=registration.client_type,
+                scopes=list(registration.scopes),
+                allowed_tenants=list(registration.allowed_tenants),
+            )
+            for registration_id, registration in available
+            if policy.allows_provider(registration.provider)
+        ]
+    )
+
+
 @router.get("/oauth/{provider}/callback", response_class=HTMLResponse)
 async def complete_connection_oauth(provider: str, request: Request, service: ConnectionService) -> HTMLResponse:
     """Terminate provider callbacks here; state and browser binding replace login."""
     _ = service  # Respect host-managed connection services at the callback too.
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_OAUTH_CALLBACK)
     query = request.query_params
     # Uvicorn derives its access-log target from this shared scope at response time.
     # Never leave the authorization code or state in that target.
