@@ -23,6 +23,7 @@ from langflow.services.connection import ConnectionConflictError, DatabaseConnec
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
 from langflow.services.connection.service import enforce_integration_policy_for_provider
+from langflow.services.connection.slack_credentials import ManualCredentialError
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
@@ -297,6 +298,8 @@ async def create_connection(
         raise _policy_blocked(exc) from exc
     except ConnectionConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except ManualCredentialError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
 
 
 @router.post("/{connection_id}/test", response_model=ConnectionRead)

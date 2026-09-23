@@ -30,6 +30,14 @@ pytestmark = pytest.mark.no_blockbuster
 SOCKET = MECHANISM_SLACK_SOCKET_MODE
 
 
+@pytest.fixture(autouse=True)
+def _listener_process(trigger_owner, monkeypatch):  # noqa: ARG001 - the API app must exist before the flag is set
+    """These tests play the listener process: the only one an app-level token resolves in."""
+    from langflow.services.triggers.listeners import guard
+
+    monkeypatch.setattr(guard, "_IS_LISTENER_PROCESS", True)
+
+
 @pytest.fixture
 async def slack():
     async with FakeSlackSocketMode() as fake:

@@ -216,6 +216,16 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-23 — Slack sources for triggers (TRG-5)
+
+- `ConnectionNotAuthorizedError`'s `reason` additionally accepts
+  `listener-only`: the connection holds a credential that only a trigger
+  listener process may resolve. A Slack app-level token (`xapp-`) opens
+  Socket Mode sockets and has no other use, so the host resolver refuses it
+  everywhere else, including in a triggered run, and a component is told to
+  choose a different connection. The error code and HTTP 403 status are
+  unchanged. This is additive; `BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
 
 `filter_plugin_entry_points()` and `filter_component_entry_points()` inspect
