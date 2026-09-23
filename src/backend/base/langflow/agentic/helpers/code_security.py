@@ -125,6 +125,7 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
         "pandas.compat.pickle_compat is forbidden — unsafe pickle deserialization",
     ),
     ("pandas.io", "pickle", "pandas.io.pickle is forbidden — unsafe pickle deserialization"),
+    ("pandas.core.generic", "pickle", "pandas.core.generic.pickle is forbidden — unsafe pickle deserialization"),
     # NumPy's array modules re-export the stdlib pickle module while also
     # exposing safe readers. Deny the re-export without blocking those readers.
     ("numpy.lib.format", "pickle", "numpy.lib.format.pickle is forbidden — unsafe pickle deserialization"),
