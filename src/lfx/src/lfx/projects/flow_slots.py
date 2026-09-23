@@ -14,17 +14,25 @@ from lfx.projects.compaction import (
 )
 from lfx.projects.context import CONTEXT_ORIGIN, ContextBinding, context_outputs, validate_context_binding
 from lfx.projects.hooks import HOOK_ORIGIN, hook_outputs, validate_hook_binding
+from lfx.projects.permissions import (
+    PERMISSION_ORIGIN,
+    PermissionBinding,
+    permission_outputs,
+    validate_permission_binding,
+)
 
 BINDING_LABELS = {
     "system_prompt": "Instructions",
     "hooks": "Hooks",
     "context_strategy": "Context",
     "compaction": "Compaction",
+    "tool_policy": "Permissions",
 }
 _RUNTIME_FIELDS = {
     "hooks": ("hook_bindings", HOOK_ORIGIN, "bindings", []),
     "context_strategy": ("context_binding", CONTEXT_ORIGIN, "binding", None),
     "compaction": ("compaction_binding", COMPACTION_ORIGIN, "binding", None),
+    "tool_policy": ("permission_binding", PERMISSION_ORIGIN, "binding", None),
 }
 
 
@@ -35,6 +43,7 @@ class ProjectFlowBindings(BaseModel):
     hooks: list[HookBinding] = Field(default_factory=list)
     context_strategy: ContextBinding | None = None
     compaction: CompactionBinding | None = None
+    tool_policy: PermissionBinding | None = None
 
     def entries(self) -> list[tuple[str, FlowBinding]]:
         return (
@@ -42,6 +51,7 @@ class ProjectFlowBindings(BaseModel):
             + [("hooks", binding) for binding in self.hooks]
             + ([("context_strategy", self.context_strategy)] if self.context_strategy else [])
             + ([("compaction", self.compaction)] if self.compaction else [])
+            + ([("tool_policy", self.tool_policy)] if self.tool_policy else [])
         )
 
 
@@ -54,6 +64,8 @@ def binding_outputs(field_name: str, data: dict) -> list[dict]:
         return context_outputs(data)
     if field_name == "compaction":
         return compaction_outputs(data)
+    if field_name == "tool_policy":
+        return permission_outputs(data)
     msg = "This field does not yet support flow bindings."
     raise ValueError(msg)
 
@@ -67,6 +79,8 @@ def validate_project_binding(field_name: str, data: dict, binding: FlowBinding) 
         validate_context_binding(data, binding)
     elif field_name == "compaction" and isinstance(binding, CompactionBinding):
         validate_compaction_binding(data, binding)
+    elif field_name == "tool_policy" and isinstance(binding, PermissionBinding):
+        validate_permission_binding(data, binding)
     else:
         msg = "This field does not yet support flow bindings."
         raise ValueError(msg)
@@ -99,7 +113,7 @@ def flow_runtime_bindings(data: dict) -> list[tuple[str, FlowBinding]]:
 def remap_runtime_bindings(flows: dict[str, dict], id_map: dict[str, str], project_id: str) -> None:
     """Remap all runtime contracts children first, after ordinary Run Flow links.
 
-    A flow can contain Context, Compaction, and Hook references. One traversal ensures that each
+    A flow can contain Context, Compaction, Permission, and Hook references. One traversal ensures that each
     parent revision includes all child changes, independent of contract or archive order.
     Callers must validate original reviewed definitions before this mutates imported flows.
     """

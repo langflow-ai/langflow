@@ -129,9 +129,12 @@ const HarnessPage = ({
           validCompactionThreshold(
             (binding as CompactionBinding).trigger_tokens ?? 8000,
           )
-        : field !== "context_strategy" ||
+        : (field !== "context_strategy" && field !== "tool_policy") ||
           !binding ||
-          validFlowTimeout((binding as ContextBinding).timeout_seconds ?? 30),
+          validFlowTimeout(
+            (binding as ContextBinding).timeout_seconds ??
+              (field === "tool_policy" ? 10 : 30),
+          ),
   );
   const updateBinding = (
     fieldName: string,
@@ -559,10 +562,12 @@ const HarnessPage = ({
                                   compaction_keep_messages:
                                     values.compaction_keep_messages,
                                 }
-                              : {
-                                  context_strategy: values.context_strategy,
-                                  context_turns: values.context_turns,
-                                }
+                              : fieldName === "tool_policy"
+                                ? { tool_policy: values.tool_policy }
+                                : {
+                                    context_strategy: values.context_strategy,
+                                    context_turns: values.context_turns,
+                                  }
                           }
                           disabled={isPending}
                           onChange={(binding) =>
