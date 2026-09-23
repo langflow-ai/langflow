@@ -588,7 +588,11 @@ export function AddConnectionDialog({
             {usesToken && (
               <SlackTokenFields
                 token={token}
-                onTokenChange={setToken}
+                onTokenChange={(value) => {
+                  setToken(value);
+                  // The server refused the token that was there; it no longer is.
+                  setFieldError(null);
+                }}
                 allowBackgroundRuns={allowBackgroundRuns}
                 onAllowBackgroundRunsChange={setAllowBackgroundRuns}
               />

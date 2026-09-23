@@ -334,4 +334,25 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     );
     expect(screen.getByTestId("connection-continue")).toBeEnabled();
   });
+
+  it("clears the server's refusal once the person edits the token", async () => {
+    mockCreate.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          detail: "Slack app-level tokens neither expire nor refresh.",
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderDialog([slack]);
+
+    await choosePastedToken(user, "xapp-1-A0APP-1-secret");
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+    await user.type(screen.getByTestId("connection-token"), "2");
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });

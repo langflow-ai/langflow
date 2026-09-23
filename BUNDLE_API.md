@@ -237,8 +237,10 @@ the deserialize half is covered by
   `BaseTriggerComponent` for its `Slack: On Message` and `Slack: On Reaction`
   nodes, so the base class, `TRIGGER_EVENT_FIELD` and `TriggerDefinition` are
   now a bundle contract and `check_bundle_api_changelog.py` guards the module.
-  Every lfx 1.13.0 release ships it; only 1.13 nightlies built before it
-  landed do not, and `lfx-slack` 0.2.0 does not import against those.
+  Every lfx 1.13.0 release ships it; nightlies before `1.13.0.dev17` do not.
+  `lfx-slack` 0.2.0 keeps the line-wide `lfx>=1.13.0.dev0` floor the release
+  plan requires and imports its triggers lazily, so on those nightlies its
+  actions still load and only the two trigger modules report an import error.
 
 ### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
 

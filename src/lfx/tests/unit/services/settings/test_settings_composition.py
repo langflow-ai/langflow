@@ -283,7 +283,7 @@ EXPECTED_FIELDS = {
     "trigger_ingress_unknown_rate_limit_per_minute",
     "trigger_ingress_signature_tolerance_s",
     "trigger_ingress_slack_app_rate_limit_per_minute",
-    "trigger_ingress_slack_team_rate_limit_per_minute",
+    "trigger_ingress_slack_team_rate_limit_per_hour",
     "trigger_slack_socket_max_connections",
     "trigger_subscription_renew_fraction",
     "trigger_subscription_renew_lead_cap_s",

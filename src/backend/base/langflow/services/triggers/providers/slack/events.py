@@ -93,8 +93,9 @@ class SlackEvent:
     """One normalized event, ready to be matched against triggers.
 
     ``team_ids`` and ``bot_user_ids`` are routing facts, not flow data: the
-    installation(s) the event was delivered for, and the app's own bot users, so
-    a flow that replies in a thread does not trigger itself.
+    installation(s) the event was delivered for (``authorizations[].team_id``,
+    never the outer ``team_id``), and the app's own bot users, so a flow that
+    replies in a thread does not trigger itself.
     """
 
     event_id: str
@@ -188,7 +189,12 @@ def normalize(body: Mapping[str, Any]) -> SlackEvent | SlackControl | None:
         event_id=event_id,
         kind=kind,
         dedupe_key=dedupe_key(event_id),
-        team_ids=frozenset(filter(None, [team_id, *(_str(entry.get("team_id")) for entry in authorizations)])),
+        # Only the installations Slack delivered this event for. The outer
+        # ``team_id`` names the workspace the event happened in, which in a
+        # Slack Connect channel can be one where this app's installation is
+        # not in the channel - routing on it would hand that installation's
+        # triggers a conversation they cannot see.
+        team_ids=frozenset(filter(None, (_str(entry.get("team_id")) for entry in authorizations))),
         bot_user_ids=frozenset(
             filter(None, (_str(entry.get("user_id")) for entry in authorizations if entry.get("is_bot") is True))
         ),

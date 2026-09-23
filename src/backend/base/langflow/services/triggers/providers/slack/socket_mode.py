@@ -104,6 +104,10 @@ _DISABLED_REASONS = frozenset({"link_disabled", "socket_mode_disabled"})
 _MAX_SOCKETS_PER_CONNECTION = 2
 #: Socket Mode frames carry one event each; message bodies are well under this.
 _MAX_FRAME_BYTES = 4 * 1024 * 1024
+#: A socket that stayed open this long held, even if nothing was said on it: a
+#: quiet workspace can keep a healthy socket silent for hours, and Slack does
+#: not always warn before closing one.
+_STABLE_SOCKET_S = 60.0
 
 
 class SlackSocketModeError(RuntimeError):
@@ -153,10 +157,17 @@ class _Socket:
 
     ws: ClientConnection
     app_id: str | None
+    #: Event-loop time the handshake completed, to tell a socket that held from
+    #: one that dropped straight after opening.
+    opened_at: float = 0.0
     reader: asyncio.Task | None = None
     retiring: bool = False
     productive: bool = False
     drain: asyncio.Task | None = field(default=None, repr=False)
+
+    def held(self, now: float) -> bool:
+        """Carried traffic, or stayed open long enough that its close is routine."""
+        return self.productive or now - self.opened_at >= _STABLE_SOCKET_S
 
     async def ack(self, envelope_id: str) -> None:
         await self.ws.send(json.dumps({"envelope_id": envelope_id}))
@@ -273,9 +284,11 @@ class SlackSocketModeAdapter:
                         raise error
                     if socket.retiring:
                         continue
-                    # A socket that carried traffic and then dropped is a routine
-                    # hiccup; one that drops again before carrying anything is not.
-                    unexpected_closes = 0 if socket.productive else unexpected_closes + 1
+                    # A socket that held - carried traffic, or simply stayed up -
+                    # and then dropped is a routine hiccup; one that drops again
+                    # straight after opening is not.
+                    held = socket.held(asyncio.get_running_loop().time())
+                    unexpected_closes = 0 if held else unexpected_closes + 1
                 if self._stopped:
                     return
                 if not any(not socket.retiring for socket in self._sockets):
@@ -387,7 +400,7 @@ class SlackSocketModeAdapter:
             raise SlackConnectionLimitError(msg)
         info = hello.get("connection_info") if isinstance(hello.get("connection_info"), dict) else {}
         app_id = info.get("app_id") if isinstance(info.get("app_id"), str) else None
-        return _Socket(ws=ws, app_id=app_id)
+        return _Socket(ws=ws, app_id=app_id, opened_at=asyncio.get_running_loop().time())
 
     async def _issue_url(self, http: httpx.AsyncClient, token: str) -> str:
         """Call ``apps.connections.open`` and return the one-use WebSocket URL."""

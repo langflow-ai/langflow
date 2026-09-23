@@ -21,7 +21,7 @@ Slack has two kinds of token, and a component is fixed to one of them:
 | Identity | Authorization profile | Posts as | Available on Desktop |
 | --- | --- | --- | --- |
 | Connected Slack user | `slack-user-oauth` | the person who authorized the connection | Yes |
-| App bot user | `slack-bot-install` | the app's bot user | No |
+| App bot user | `slack-bot-install` | the app's bot user | With a pasted bot token (`xoxb-`); not through Slack sign-in |
 
 Slack user scopes and bot scopes share names — `chat:write` is both a User Token Scope and a Bot Token Scope — so the scopes a connection was granted cannot tell the two identities apart. Each component instead checks the identity recorded on the connection and the token's own type prefix (`xoxb-` for a bot token, `xoxp-` for a user token), and fails with a connection authorization error, before any request reaches Slack, when either one names the wrong kind.
 

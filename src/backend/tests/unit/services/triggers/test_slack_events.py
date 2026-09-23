@@ -121,6 +121,26 @@ def test_routing_facts_come_from_the_authorizations() -> None:
     assert event.api_app_id == fx.APP_ID
 
 
+def test_a_slack_connect_event_routes_to_the_installation_not_the_senders_workspace() -> None:
+    """In a shared channel the outer ``team_id`` is where the message came from.
+
+    That workspace may have this app installed without its bot being in the
+    channel, so only the installation Slack delivered the event for routes it.
+    The flow still sees where the message came from.
+    """
+    event = _event("message_slack_connect")
+    assert event.team_ids == frozenset({fx.TEAM_ID})
+    assert event.payload["team_id"] == fx.OTHER_TEAM_ID
+
+
+def test_an_event_with_no_authorizations_routes_nowhere() -> None:
+    body = fx.load("message_channel")
+    del body["authorizations"]
+    event = normalize(body)
+    assert isinstance(event, SlackEvent)
+    assert event.team_ids == frozenset()
+
+
 def test_the_handshake_and_the_rate_limit_notice_are_controls_not_events() -> None:
     handshake = normalize(fx.load("url_verification"))
     assert handshake == SlackControl(kind="url_verification", challenge="please-echo-this-challenge-back")

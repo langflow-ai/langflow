@@ -80,6 +80,7 @@ router = APIRouter(prefix="/triggers/ingress", tags=["Triggers"])
 _SCOPE_INGRESS = "trigger_ingress"
 _SCOPE_INGRESS_UNKNOWN = "trigger_ingress_unknown"
 _SCOPE_INGRESS_HANDSHAKE = "trigger_ingress_handshake"
+_SCOPE_SLACK_CLIENT = "trigger_ingress_slack_client"
 _SCOPE_SLACK_APP = "trigger_ingress_slack_app"
 _SCOPE_SLACK_TEAM = "trigger_ingress_slack_team"
 
@@ -110,9 +111,19 @@ def _unknown_budget_spent(request: Request, limit_per_minute: int) -> bool:
     return False
 
 
-def _within_budget(request: Request, *, scope: str, limit_per_minute: int, key: str) -> bool:
+def _within_budget(
+    request: Request,
+    *,
+    scope: str,
+    key: str | None = None,
+    limit_per_minute: int | None = None,
+    limit_per_hour: int | None = None,
+) -> bool:
+    """Charge one budget. ``key=None`` counts per client, as the limiter keys it."""
     try:
-        check_rate_limit(request, scope=scope, limit_per_minute=limit_per_minute, key=key)
+        check_rate_limit(
+            request, scope=scope, limit_per_minute=limit_per_minute, limit_per_hour=limit_per_hour, key=key
+        )
     except RateLimitExceeded:
         return False
     return True
@@ -328,6 +339,13 @@ async def receive_slack_app_delivery(
     trigger: resolve the registration, rate-limit, read a bounded body, verify
     Slack's signature with the registration's signing secret, and only then
     touch the database. Every refusal is the same ``404``.
+
+    The budgets split around verification. A registration id is an operator's
+    chosen name, not a secret, so before the signature is checked a caller only
+    spends its own per-client budget; the app-wide budget is charged only for
+    deliveries that verify. Otherwise anyone who knew the Request URL could
+    spend it with unsigned requests and every workspace's real deliveries would
+    be refused.
     """
     settings = get_settings_service().settings
     app = slack_ingress.resolve_app(registration_id) if settings.trigger_ingress_enabled else None
@@ -339,11 +357,13 @@ async def receive_slack_app_delivery(
         )
         return _reject()
 
+    # Per client, before verification: bounds what one sender can make us read
+    # and hash. At the app's ceiling, so Slack's own senders never reach it.
     if not _within_budget(
         request,
-        scope=_SCOPE_SLACK_APP,
+        scope=_SCOPE_SLACK_CLIENT,
+        key=None,
         limit_per_minute=settings.trigger_ingress_slack_app_rate_limit_per_minute,
-        key=f"slack-app:{registration_id}",
     ):
         await slack_ingress.audit_delivery(accepted=False, registration_id=registration_id, reason=REASON_RATE_LIMITED)
         return _reject()
@@ -363,6 +383,17 @@ async def receive_slack_app_delivery(
         )
     except IngressRejected as rejection:
         await slack_ingress.audit_delivery(accepted=False, registration_id=registration_id, reason=rejection.reason)
+        return _reject()
+
+    # Per app, after verification: only Slack, or a leaked signing secret, can
+    # spend it.
+    if not _within_budget(
+        request,
+        scope=_SCOPE_SLACK_APP,
+        key=f"slack-app:{registration_id}",
+        limit_per_minute=settings.trigger_ingress_slack_app_rate_limit_per_minute,
+    ):
+        await slack_ingress.audit_delivery(accepted=False, registration_id=registration_id, reason=REASON_RATE_LIMITED)
         return _reject()
 
     retry = {
@@ -397,12 +428,13 @@ async def receive_slack_app_delivery(
         return Response(status_code=status.HTTP_200_OK)
 
     # Per workspace, after verification: the workspace is only known from the
-    # signed body, and only a leaked signing secret can reach this ceiling.
+    # signed body. Counted over the hour, the window Slack itself caps, so a
+    # burst Slack permits is never refused.
     if not _within_budget(
         request,
         scope=_SCOPE_SLACK_TEAM,
-        limit_per_minute=settings.trigger_ingress_slack_team_rate_limit_per_minute,
         key=f"slack-team:{registration_id}:{event.payload['team_id']}",
+        limit_per_hour=settings.trigger_ingress_slack_team_rate_limit_per_hour,
     ):
         await slack_ingress.audit_delivery(
             accepted=False, registration_id=registration_id, reason=REASON_RATE_LIMITED, event=event, **retry

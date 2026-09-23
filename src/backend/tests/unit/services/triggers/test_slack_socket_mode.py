@@ -223,6 +223,66 @@ async def test_an_abrupt_close_reconnects(slack, supervisor, trigger_owner, owne
     assert len(await fx.events_for(trigger_id)) == 2
 
 
+def _record_failures(supervisor, monkeypatch) -> list[Exception]:
+    """Every error the supervisor backs off from; reconnecting inside the adapter adds none."""
+    failures: list[Exception] = []
+    original = supervisor._failed
+
+    async def record(worker, exc) -> None:
+        failures.append(exc)
+        await original(worker, exc)
+
+    monkeypatch.setattr(supervisor, "_failed", record)
+    return failures
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_quiet_sockets_that_stayed_up_reconnect_without_backing_off(
+    slack, supervisor, trigger_owner, owned_flow, monkeypatch
+) -> None:
+    """A quiet workspace can leave a healthy socket silent for hours.
+
+    Two such sockets closing without a warning, however far apart, are two
+    routine closes - not a socket failing straight after it reconnected - so the
+    adapter reconnects itself instead of handing the supervisor a failure and a
+    backoff, during which Slack's events would be lost.
+    """
+    from langflow.services.triggers.providers.slack import socket_mode
+
+    monkeypatch.setattr(socket_mode, "_STABLE_SOCKET_S", 0.05)
+    failures = _record_failures(supervisor, monkeypatch)
+    await _armed(trigger_owner, owned_flow)
+    await supervisor.reconcile()
+
+    [first] = await slack.wait_for_sockets(1)
+    await asyncio.sleep(0.1)
+    await first.drop()
+    _, second = await slack.wait_for_sockets(2)
+    await asyncio.sleep(0.1)
+    await second.drop()
+    await slack.wait_for_sockets(3)
+
+    assert failures == []
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_sockets_that_keep_dropping_straight_after_opening_back_off(
+    slack, supervisor, trigger_owner, owned_flow, monkeypatch
+) -> None:
+    from langflow.services.triggers.providers.slack.socket_mode import SlackSocketClosedError
+
+    failures = _record_failures(supervisor, monkeypatch)
+    await _armed(trigger_owner, owned_flow)
+    await supervisor.reconcile()
+
+    [first] = await slack.wait_for_sockets(1)
+    await first.drop()
+    _, second = await slack.wait_for_sockets(2)
+    await second.drop()
+
+    await _eventually(lambda: any(isinstance(error, SlackSocketClosedError) for error in failures))
+
+
 @pytest.mark.usefixtures("socket_adapters")
 async def test_a_rejected_app_token_asks_for_a_reconnect(slack, supervisor, trigger_owner, owned_flow) -> None:
     slack.open_errors = [(200, {"ok": False, "error": "invalid_auth"})]
