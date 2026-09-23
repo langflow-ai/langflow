@@ -170,6 +170,95 @@ async def test_global_scope_excludes_reserved_projects_but_keeps_owner_share_and
     )
 
 
+async def test_global_scope_combines_reserved_project_and_resource_exclusions(async_session):
+    """Combine excluded_global_project_ids and excluded_resource_ids at once.
+
+    all_resources=True with BOTH set together exercises the
+    wildcard_clause/concrete_clause branch in restrict_to_owned_or_visible_scope
+    that only runs when a project_column is supplied and
+    excluded_global_project_ids is non-empty. Every other test sets one or the
+    other alone; this is the combination that actually exercises both AND'd
+    not_in(excluded) checks in that branch.
+    """
+    owner_id = uuid4()
+    other_owner_id = uuid4()
+    ordinary_project_id = uuid4()
+    reserved_project_id = uuid4()
+
+    # Wildcard-visible, not excepted.
+    ordinary_flow = Flow(name="ordinary", user_id=other_owner_id, folder_id=ordinary_project_id)
+    # In the reserved project — the wildcard alone never grants this one.
+    reserved_flow = Flow(name="reserved", user_id=other_owner_id, folder_id=reserved_project_id)
+    # Wildcard-visible project, but excepted — the exception must still cancel it.
+    excepted_ordinary_flow = Flow(name="excepted ordinary", user_id=other_owner_id, folder_id=ordinary_project_id)
+    # Owned AND excepted — ownership overrides the exception either way.
+    owned_excepted_flow = Flow(name="owned excepted", user_id=owner_id, folder_id=reserved_project_id)
+    # In the reserved project but covered by a concrete grant (e.g. a share) —
+    # visible via the concrete clause despite the wildcard excluding its project.
+    concrete_flow = Flow(name="concrete visible", user_id=other_owner_id, folder_id=reserved_project_id)
+    # Same concrete grant, but ALSO excepted — the exception must win over the
+    # concrete clause too, not just the wildcard clause.
+    concrete_excepted_flow = Flow(name="concrete excepted", user_id=other_owner_id, folder_id=reserved_project_id)
+
+    async_session.add_all(
+        [
+            Folder(id=ordinary_project_id, name="Ordinary project"),
+            Folder(id=reserved_project_id, name="Reserved project"),
+            ordinary_flow,
+            reserved_flow,
+            excepted_ordinary_flow,
+            owned_excepted_flow,
+            concrete_flow,
+            concrete_excepted_flow,
+        ]
+    )
+    await async_session.commit()
+
+    scope = ResourceVisibilityScope(
+        all_resources=True,
+        resource_ids=(concrete_flow.id, concrete_excepted_flow.id),
+        excluded_global_project_ids=(reserved_project_id,),
+        excluded_resource_ids=(excepted_ordinary_flow.id, owned_excepted_flow.id, concrete_excepted_flow.id),
+    )
+    stmt = restrict_to_owned_or_visible_scope(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        workspace_column=Flow.workspace_id,
+        project_column=Flow.folder_id,
+        visibility=scope,
+    )
+    rows = list((await async_session.exec(stmt)).all())
+
+    assert {row.id for row in rows} == {
+        ordinary_flow.id,
+        owned_excepted_flow.id,
+        concrete_flow.id,
+    }
+    assert resource_visible_in_scope(
+        resource_id=ordinary_flow.id, project_id=ordinary_project_id, visibility=scope
+    )
+    assert not resource_visible_in_scope(
+        resource_id=reserved_flow.id, project_id=reserved_project_id, visibility=scope
+    )
+    assert not resource_visible_in_scope(
+        resource_id=excepted_ordinary_flow.id, project_id=ordinary_project_id, visibility=scope
+    )
+    # resource_visible_in_scope is deliberately ownership-blind (see its own
+    # docstring) — excluded_resource_ids wins unconditionally there, so
+    # owned_excepted_flow's visibility despite the exception is proven above,
+    # by the SQL row set, not by this helper.
+    assert not resource_visible_in_scope(
+        resource_id=owned_excepted_flow.id, project_id=reserved_project_id, visibility=scope
+    )
+    assert resource_visible_in_scope(
+        resource_id=concrete_flow.id, project_id=reserved_project_id, visibility=scope
+    )
+    assert not resource_visible_in_scope(
+        resource_id=concrete_excepted_flow.id, project_id=reserved_project_id, visibility=scope
+    )
+
+
 def test_unassigned_workspace_scope_uses_a_compact_null_predicate():
     excluded_project_id = uuid4()
     scope = ResourceVisibilityScope(
