@@ -4,7 +4,7 @@
  * LangGraph's `recursion_limit` (`max_iterations * 2 + 5`). Raising it lets
  * compound build+run+report turns finish instead of hitting the recursion limit.
  *
- * `null` means "unset" — the backend uses the flow default (30). The preference
+ * `null` means "unset" — the backend uses its default (`DEFAULT_ITERATIONS_LIMIT`). The preference
  * persists across sessions like `/skip-all` and `/history`.
  *
  * Defensive: localStorage can throw in private browsing; a corrupted value
@@ -13,7 +13,7 @@
 
 const STORAGE_KEY = "langflow-assistant-iterations-limit";
 export const MAX_ITERATIONS_LIMIT = 200;
-export const DEFAULT_ITERATIONS_LIMIT = 30;
+export const DEFAULT_ITERATIONS_LIMIT = 100;
 
 export function readIterationsLimit(): number | null {
   try {

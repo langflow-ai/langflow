@@ -159,7 +159,7 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
       },
       {
         // Optional. Knowledge Bases / Memory Bases now derive a unique index
-        // per base from its name, so this is no longer required and is not used
+        // per base from its owner and name, so this is no longer required and is not used
         // to route KB/MB storage. Kept for operators who want a shared default
         // index for other (non-KB) OpenSearch usage.
         label: "Default index name (optional)",
@@ -354,9 +354,9 @@ export function getDBProviderConfig(
     // Intentionally NOT setting ``index_name``: pinning the single global
     // OPENSEARCH_INDEX_NAME into every base's config made all Knowledge Bases /
     // Memory Bases share one index (cross-base retrieval + collection-level
-    // deletion). The backend now derives a unique index per KB from its name
-    // when ``index_name`` is absent, mirroring how the Chroma backends use
-    // ``collection_name=kb_name``. Operators pointing a base at a pre-existing
+    // deletion). The backend now derives a unique index per KB from its owner
+    // and name when ``index_name`` is absent, the same way pgvector names each
+    // KB's table. Operators pointing a base at a pre-existing
     // external index can still set ``index_name`` explicitly downstream.
     vector_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
