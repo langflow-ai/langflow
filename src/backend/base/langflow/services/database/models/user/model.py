@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from lfx.schema.validators import ensure_utc
+from pydantic import BaseModel, field_validator
 from sqlalchemy import JSON, Column, Index, text
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -140,3 +141,8 @@ class UserUpdate(SQLModel):
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
     optins: dict[str, Any] | None = None
+
+    @field_validator("last_login_at")
+    @classmethod
+    def normalize_last_login(cls, value: datetime | None) -> datetime | None:
+        return ensure_utc(value) if value is not None else None

@@ -98,9 +98,9 @@
       "providers": [
         "lfx-microsoft"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-microsoft==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-microsoft==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-ollama",
@@ -180,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:beab090a9afb4298",
+  "profile_digest": "sha256:5a7ca5be73fcc98c",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

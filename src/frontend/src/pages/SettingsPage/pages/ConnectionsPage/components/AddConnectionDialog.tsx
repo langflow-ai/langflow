@@ -37,9 +37,10 @@ import { useTypesStore } from "@/stores/typesStore";
 import { uniqueNormalizedScopes } from "@/utils/connection-scopes";
 import { cn } from "@/utils/utils";
 import {
-  partitionByCeiling,
+  defaultScopesForNewConnection,
   reauthorizeScopeList,
   scopeRequirements,
+  scopesForRegistration,
   shortScope,
   uniqueScopes,
 } from "../helpers/scopes";
@@ -158,14 +159,23 @@ export function AddConnectionDialog({
     ({ id }) => id === resolvedRegistration,
   )?.scopes;
   const { requestable, unavailable } = useMemo(
-    () => partitionByCeiling(uniqueScopes(requirements), ceiling),
-    [requirements, ceiling],
+    () =>
+      scopesForRegistration(providerId, uniqueScopes(requirements), ceiling),
+    [providerId, requirements, ceiling],
   );
 
   useEffect(() => {
     if (!provider || reauthorize) return;
-    setSelectedScopes(new Set(requestable));
-  }, [provider, reauthorize, requestable]);
+    setSelectedScopes(
+      new Set(
+        defaultScopesForNewConnection(
+          providerId,
+          uniqueScopes(requirements),
+          requestable,
+        ),
+      ),
+    );
+  }, [provider, providerId, requirements, reauthorize, requestable]);
 
   // Re-authorizing offers the same requestable scopes plus everything the
   // connection already holds, checked, so adding a scope never drops one.
