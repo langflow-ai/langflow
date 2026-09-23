@@ -42,6 +42,22 @@ ANTHROPIC_TEMPERATURE_ERROR = (
     "'request_id': 'req_011CdY7B6Rx9fGzrwztE6gYX'}"
 )
 
+# Verbatim Amazon Bedrock Converse responses captured from live us.openai.gpt-6-sol calls.
+BEDROCK_TEMPERATURE_ERROR = (
+    "An error occurred (ValidationException) when calling the Converse operation: "
+    "This model doesn't support the temperature field. Remove temperature and try again."
+)
+BEDROCK_TOP_P_ERROR = (
+    "An error occurred (ValidationException) when calling the Converse operation: "
+    "This model doesn't support the topP field. Remove topP and try again."
+)
+# Same models, verbatim, through Bedrock's OpenAI-compatible /openai/v1/chat/completions.
+BEDROCK_CHAT_COMPLETIONS_TEMPERATURE_ERROR = (
+    "Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support 0.1 "
+    "with this model. Only the default (1) value is supported.\", 'type': 'invalid_request_error', "
+    "'param': 'temperature', 'code': 'unsupported_value'}}"
+)
+
 UNRELATED_ERROR = (
     "Error code: 429 - {'type': 'error', 'error': {'type': 'rate_limit_error', "
     "'message': 'Number of requests has exceeded your rate limit.'}}"
@@ -79,6 +95,32 @@ class TemperatureSensitiveChatModel(BaseChatModel):
             raise ProviderBadRequestError(ANTHROPIC_TEMPERATURE_ERROR)
         if self.temperature is not None:
             raise ProviderBadRequestError(ANTHROPIC_TEMPERATURE_ERROR)
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content="ok"))])
+
+
+class BedrockSamplingSensitiveChatModel(BaseChatModel):
+    """Mirrors OpenAI GPT-6 on Bedrock Converse: rejects temperature, then top_p, one error at a time."""
+
+    temperature: float | None = None
+    top_p: float | None = None
+    seen: list[tuple[float | None, float | None]] = Field(default_factory=list)
+
+    @property
+    def _llm_type(self) -> str:
+        return "bedrock-sampling-sensitive-fake"
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],  # noqa: ARG002
+        stop: list[str] | None = None,  # noqa: ARG002
+        run_manager: CallbackManagerForLLMRun | None = None,  # noqa: ARG002
+        **kwargs: Any,  # noqa: ARG002
+    ) -> ChatResult:
+        self.seen.append((self.temperature, self.top_p))
+        if self.temperature is not None:
+            raise ProviderBadRequestError(BEDROCK_TEMPERATURE_ERROR)
+        if self.top_p is not None:
+            raise ProviderBadRequestError(BEDROCK_TOP_P_ERROR)
         return ChatResult(generations=[ChatGeneration(message=AIMessage(content="ok"))])
 
 
@@ -153,6 +195,21 @@ class TestTemperatureRemediationRegistry:
         """The constraint is not Anthropic-specific; match on the error text alone."""
         assert find_remediation(ANTHROPIC_TEMPERATURE_ERROR, provider=None, already_applied=set()) is not None
 
+    @pytest.mark.parametrize(
+        ("error", "overrides"),
+        [
+            (BEDROCK_TEMPERATURE_ERROR, {"temperature": None}),
+            (BEDROCK_TOP_P_ERROR, {"top_p": None}),
+            (BEDROCK_CHAT_COMPLETIONS_TEMPERATURE_ERROR, {"temperature": None}),
+        ],
+        ids=["temperature", "top_p", "chat_completions_temperature"],
+    )
+    def test_should_match_the_bedrock_unsupported_field_errors(self, error, overrides):
+        remediation = find_remediation(error, provider=None, already_applied=set())
+
+        assert remediation is not None
+        assert remediation.overrides == overrides
+
     def test_should_not_match_unrelated_provider_errors(self):
         assert find_remediation(UNRELATED_ERROR, provider="Anthropic", already_applied=set()) is None
 
@@ -200,6 +257,17 @@ class TestGetChatResultRetry:
         assert result.text == "ok"
         assert model.seen_temperatures == [0.1, None], "expected exactly one retry, with temperature cleared"
         assert model.temperature is None
+
+    @pytest.mark.asyncio
+    async def test_should_retry_without_temperature_then_top_p_when_bedrock_rejects_both(self):
+        """The Bedrock Converse component defaults to temperature 0.7 and top_p 0.9; GPT-6 rejects each in turn."""
+        probe = _make_probe()
+        model = BedrockSamplingSensitiveChatModel(temperature=0.7, top_p=0.9)
+
+        result = await probe._get_chat_result(runnable=model, stream=False, input_value="say ok")
+
+        assert result.text == "ok"
+        assert model.seen == [(0.7, 0.9), (None, 0.9), (None, None)]
 
     @pytest.mark.asyncio
     async def test_should_not_retry_when_the_error_is_unrelated(self):
