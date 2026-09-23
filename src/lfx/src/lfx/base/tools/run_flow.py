@@ -328,8 +328,10 @@ class RunFlowBaseComponent(Component):
                     )
                     self._instruction_snapshot_key = key
                 snapshot = self._instruction_snapshot
+                payload = deepcopy(snapshot["data"])
+                sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
                 graph = Graph.from_payload(
-                    deepcopy(snapshot["data"]),
+                    payload=sanitized_payload if sanitized_payload is not None else payload,
                     flow_id=instruction.flow_id,
                     flow_name=snapshot.get("name"),
                     user_id=self.user_id,
