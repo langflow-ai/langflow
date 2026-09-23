@@ -18,6 +18,7 @@ import {
   CONNECTION_NAME_PATTERN,
   type ConnectionPollBaseline,
   type ConnectionRead,
+  type DeploymentContext,
   hasConsentLanded,
   type IntegrationIdentity,
   type IntegrationProviderRead,
@@ -78,7 +79,7 @@ export interface AddConnectionDialogProps {
   /** Re-authorizing an existing connection instead of creating one. */
   reauthorize?: ConnectionRead;
   /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
-  deploymentContext?: string;
+  deploymentContext?: DeploymentContext;
 }
 
 export function AddConnectionDialog({
@@ -191,9 +192,16 @@ export function AddConnectionDialog({
     [provider, typesData],
   );
 
+  // Keyed on the scope list's content, not its identity: the types store hands
+  // back a new object on every refetch (window focus included - which is
+  // exactly when someone returns from copying a token), and resetting on that
+  // would silently re-check a scope the person had just unchecked.
+  const botTokenScopeKey = botTokenScopes.join(" ");
   useEffect(() => {
-    setTokenScopes(new Set(botTokenScopes));
-  }, [botTokenScopes]);
+    setTokenScopes(
+      new Set(botTokenScopeKey ? botTokenScopeKey.split(" ") : []),
+    );
+  }, [botTokenScopeKey]);
   const ceiling = candidates.find(
     ({ id }) => id === resolvedRegistration,
   )?.scopes;
@@ -490,7 +498,13 @@ export function AddConnectionDialog({
                 id="connection-provider"
                 className="h-9 rounded-md border border-border bg-background px-2 text-sm"
                 value={providerId}
-                onChange={(event) => setProviderId(event.target.value)}
+                onChange={(event) => {
+                  setProviderId(event.target.value);
+                  // A pasted token belongs to the provider it was pasted for.
+                  setMethod("oauth");
+                  setToken("");
+                  setAllowBackgroundRuns(false);
+                }}
                 data-testid="connection-provider"
               >
                 {providers.map((item) => (

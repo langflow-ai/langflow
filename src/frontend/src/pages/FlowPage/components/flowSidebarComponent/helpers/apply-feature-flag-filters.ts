@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import type { APIDataType } from "@/types/api";
+import type { APIClassType, APIDataType } from "@/types/api";
 import { hideConnectionBackedComponents } from "@/utils/connection-ref-gate";
 
 export interface FeatureFlagFilterOptions {
@@ -17,11 +17,17 @@ export const TRIGGERS_CATEGORY = "triggers";
  * that provider's group next to its actions; the server stamps every one of
  * them with `metadata.trigger_kind` from the loaded class.
  */
-export function isTriggerComponent(component: unknown): boolean {
-  const metadata = (component as { metadata?: Record<string, unknown> } | null)
-    ?.metadata;
+export function isTriggerComponent(
+  component: APIClassType | undefined,
+): boolean {
+  // `metadata` is an object, which APIClassType's index signature does not
+  // admit, so it is read through this one narrow view rather than widening the
+  // palette type for every consumer.
+  const metadata = (component as ComponentMetadataView | undefined)?.metadata;
   return typeof metadata?.trigger_kind === "string";
 }
+
+type ComponentMetadataView = { metadata?: { trigger_kind?: unknown } };
 
 /**
  * Removes the Triggers category and every trigger-marked component from the

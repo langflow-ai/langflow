@@ -65,11 +65,15 @@ export function SlackTokenFields({
             onCheckedChange={(checked) =>
               onAllowBackgroundRunsChange(checked === true)
             }
+            aria-describedby="connection-allow-background-runs-help"
             data-testid="connection-allow-background-runs"
           />
           {t("connections.add.allowBackgroundRuns")}
         </label>
-        <p className="pl-6 text-xs text-muted-foreground">
+        <p
+          id="connection-allow-background-runs-help"
+          className="pl-6 text-xs text-muted-foreground"
+        >
           {t("connections.add.allowBackgroundRunsHelp")}
         </p>
       </div>

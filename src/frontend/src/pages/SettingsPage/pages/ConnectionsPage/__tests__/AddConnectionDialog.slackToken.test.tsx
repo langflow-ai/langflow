@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import type {
   ConnectionRead,
+  DeploymentContext,
   IntegrationProviderRead,
 } from "@/controllers/API/queries/connections";
 import i18n from "@/i18n";
@@ -151,21 +152,25 @@ const created = (overrides: Partial<ConnectionRead> = {}): ConnectionRead => ({
   ...overrides,
 });
 
+const dialog = (
+  providers: IntegrationProviderRead[],
+  deploymentContext: DeploymentContext | undefined,
+) => (
+  <I18nextProvider i18n={i18n}>
+    <AddConnectionDialog
+      open
+      onOpenChange={jest.fn()}
+      providers={providers}
+      canCreateInstance={false}
+      deploymentContext={deploymentContext}
+    />
+  </I18nextProvider>
+);
+
 const renderDialog = (
   providers: IntegrationProviderRead[],
-  deploymentContext = "desktop",
-) =>
-  render(
-    <I18nextProvider i18n={i18n}>
-      <AddConnectionDialog
-        open
-        onOpenChange={jest.fn()}
-        providers={providers}
-        canCreateInstance={false}
-        deploymentContext={deploymentContext}
-      />
-    </I18nextProvider>,
-  );
+  deploymentContext: DeploymentContext | undefined = "desktop",
+) => render(dialog(providers, deploymentContext));
 
 const choosePastedToken = async (
   user: ReturnType<typeof userEvent.setup>,
@@ -201,6 +206,35 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     renderDialog([slack], "hosted");
 
     expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
+  });
+
+  it("does not offer a pasted token before the deployment says what it is", () => {
+    // Not ``renderDialog``: its default would stand in for the missing context.
+    render(dialog([slack], undefined));
+
+    expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
+  });
+
+  it("keeps a scope the person unchecked when the component types refetch", async () => {
+    mockCreate.mockResolvedValueOnce(created({ granted_scopes: [] }));
+    const user = userEvent.setup();
+    const { rerender } = renderDialog([slack]);
+
+    await choosePastedToken(user, "xoxb-1111-2222-secret");
+    const scope = screen.getByTestId("connection-scope-chat:write");
+    expect(scope).toBeChecked();
+    await user.click(scope);
+    expect(scope).not.toBeChecked();
+
+    // A refetch (window focus, say) hands back equal types in a new object.
+    mockTypesState.data = JSON.parse(JSON.stringify(mockTypesState.data));
+    rerender(dialog([slack], "desktop"));
+
+    expect(screen.getByTestId("connection-scope-chat:write")).not.toBeChecked();
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ granted_scopes: [] }),
+    );
   });
 
   it("stores an app-level token without a consent window, and without claiming its scope", async () => {
