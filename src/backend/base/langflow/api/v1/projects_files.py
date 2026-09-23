@@ -15,8 +15,13 @@ from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
-from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
-from lfx.projects.hooks import flow_hook_bindings, remap_flow_hooks, validate_hook_binding
+from lfx.projects.flow_slots import (
+    BINDING_LABELS,
+    ProjectFlowBindings,
+    flow_runtime_bindings,
+    remap_runtime_bindings,
+    validate_project_binding,
+)
 from lfx.projects.tools import TOOL_ORIGIN
 from pydantic import ValidationError
 from sqlmodel import select
@@ -314,7 +319,9 @@ async def upload_project_flows(
         try:
             parsed_bindings = ProjectFlowBindings.model_validate(bindings)
         except ValueError as exc:
-            raise HTTPException(422, "Imported flow bindings must contain Instructions or Hook selections.") from exc
+            raise HTTPException(
+                422, "Imported flow bindings must contain Instructions, Context, or Hook selections."
+            ) from exc
     has_bindings = new_project.project_type == "agent-harness" and bool(bindings)
     if has_bindings:
         id_map = {str(flow.id): str(uuid4()) for flow in flow_list.flows if flow.id is not None}
@@ -333,10 +340,10 @@ async def upload_project_flows(
                 ) from exc
         try:
             for flow in flow_list.flows:
-                for binding in flow_hook_bindings(flow.data or {}):
-                    validate_hook_binding(by_original_id[binding.flow_id].data or {}, binding)
+                for field_name, binding in flow_runtime_bindings(flow.data or {}):
+                    validate_project_binding(field_name, by_original_id[binding.flow_id].data or {}, binding)
         except (ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(422, "An imported Agent has an invalid or unavailable Hook binding.") from exc
+            raise HTTPException(422, "An imported Agent has an invalid or unavailable runtime binding.") from exc
         if config.get("agent_flow_id") in id_map:
             config["agent_flow_id"] = id_map[config["agent_flow_id"]]
         if isinstance(config.get("tools"), list):
@@ -370,11 +377,11 @@ async def upload_project_flows(
                         if key == BINDING_ORIGIN:
                             origin.pop("version_id", None)
         try:
-            remap_flow_hooks(
+            remap_runtime_bindings(
                 {flow_id: flow.data or {} for flow_id, flow in by_original_id.items()}, id_map, str(new_project.id)
             )
         except (ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(422, "Could not remap the imported Hook bindings.") from exc
+            raise HTTPException(422, "Could not remap the imported harness bindings.") from exc
         for _, binding in parsed_bindings.entries():
             source = by_original_id[binding.flow_id]
             binding.flow_id = id_map[binding.flow_id]
