@@ -18,6 +18,7 @@ from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
 from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
 from lfx.projects.hooks import flow_hook_bindings, remap_flow_hooks, validate_hook_binding
 from lfx.projects.tools import TOOL_ORIGIN
+from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import (
@@ -30,7 +31,7 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.zip_utils import PROJECT_METADATA_FILENAME, extract_project_from_zip
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.flows_helpers import _sanitize_flow_filename
+from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
@@ -87,7 +88,12 @@ async def download_project_flows(
 
         # Strip secret field values then normalise for git-friendly export
         # (sorted keys, volatile fields removed, code fields as line arrays).
-        normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
+        # Bindings survive only when they name one of the owner's global variables.
+        known_variable_names = await _export_variable_names(session, owner_id)
+        normalised_flows = [
+            normalize_flow_for_export(strip_flow_secrets(flow.model_dump(), known_variable_names=known_variable_names))
+            for flow in flows
+        ]
         zip_stream = io.BytesIO()
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
@@ -230,12 +236,16 @@ async def upload_project_flows(
 
     data["folder_name"] = project_name
 
-    project = FolderCreate(
-        name=data["folder_name"],
-        description=data.get("folder_description", ""),
-        project_type=_imported_project_type(data.get("folder_project_type")),
-        project_config=_imported_project_config(data.get("folder_project_config")),
-    )
+    try:
+        project = FolderCreate(
+            name=data["folder_name"],
+            description=data.get("folder_description", ""),
+            project_type=_imported_project_type(data.get("folder_project_type")),
+            project_config=_imported_project_config(data.get("folder_project_config")),
+        )
+    except ValidationError as e:
+        # The imported name is validated like a typed one; report why rather than 500
+        raise HTTPException(status_code=422, detail=e.errors()[0]["msg"]) from e
 
     # The one project-creation route that does not go through ``projects._new_project``: it
     # builds the Folder itself, so it runs the same hooks through the same helper. Without
