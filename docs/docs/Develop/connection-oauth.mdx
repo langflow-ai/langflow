@@ -272,11 +272,11 @@ or an explicit share receives no information about another user's connection or 
 
 ## Microsoft 365 bundle
 
-The [Microsoft 365 bundle](../Components/bundles-microsoft.mdx) resolves its connections through a
+The [Microsoft 365 bundle](./bundles-microsoft) resolves its connections through a
 `provider: "microsoft"` registration configured above. Its components hold a
 portable handle such as `microsoft/work`, never a token.
 
-[Register a Microsoft Entra application](./entra-app-registration.mdx) is the operator
+[Register a Microsoft Entra application](./entra-app-registration) is the operator
 runbook for that registration: the per-action delegated permission table, the
 redirect URIs per deployment context, the consent and admin-consent rules, and
 the troubleshooting table. Two constraints are worth repeating here.
@@ -378,7 +378,7 @@ operator to supply the right token type.
 
 ## Headless connection resolution
 
-- [Resolve connections in headless LFX](../Lfx/lfx-connections.mdx), for hosts that resolve the same connection references without Langflow's database.
+- [Resolve connections in headless LFX](./lfx-connections), for hosts that resolve the same connection references without Langflow's database.
 
 ## Google Workspace action scopes
 
@@ -444,7 +444,7 @@ test consent in a sandbox tenant, does not establish consent in the production t
 - **Microsoft:** Tenant user-consent settings can restrict consent to verified
   publishers and low-impact permissions, or disable it entirely, in which case each
   connection needs administrator approval. See the consent guidance in
-  [Add delegated permissions](./entra-app-registration.mdx#add-delegated-permissions).
+  [Add delegated permissions](./entra-app-registration#add-delegated-permissions).
 - **Slack:** A workspace can require administrator approval before an app is installed
   or before new scopes are added to it. Install the app in the target workspace and
   confirm its approval before users connect accounts.
@@ -463,7 +463,7 @@ locally; its `provider_revocation` field then reports what happened upstream:
 `failed` means the provider call could not complete, so revoke the grant in the
 provider's account or admin console as well. `not_applicable` means no OAuth credential
 was stored. For Microsoft's `unsupported`, remove the app's consent in Entra as
-described in [Revocation](./entra-app-registration.mdx#revocation).
+described in [Revocation](./entra-app-registration#revocation).
 
 `revoked` reports token revocation, not a complete uninstall. Langflow sends only the
 stored access token to Slack's `auth.revoke`, which revokes that token without
