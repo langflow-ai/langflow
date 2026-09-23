@@ -28,7 +28,7 @@ TARGETABLE_COMPONENTS = {AgentComponent.name: AgentComponent}
 
 class TestRegistry:
     def test_shipped_types_are_registered_on_import(self):
-        assert registered_project_types() == ("agent-harness", "flows", "tool-pack")
+        assert registered_project_types() == ("agent-harness", "flows", "skill-pack", "tool-pack")
 
     def test_default_type_is_registered(self):
         assert get_project_type(DEFAULT_PROJECT_TYPE).name == DEFAULT_PROJECT_TYPE
@@ -93,6 +93,7 @@ class TestAgentHarness:
             "tools",
             "tool_packs",
             "n_messages",
+            "skill_packs",
             "tool_policy",
             "context_strategy",
             "context_turns",
@@ -105,7 +106,7 @@ class TestAgentHarness:
 
     def test_the_form_reads_as_sections(self, harness):
         """The type decides how its own form is grouped, so the UI does not hardcode the order."""
-        assert harness.sections() == ("Instructions", "Model", "Tools", "Runtime", "Hooks")
+        assert harness.sections() == ("Instructions", "Model", "Tools", "Runtime", "Skills", "Hooks")
 
     def test_every_field_belongs_to_a_section(self, harness):
         assert all(field.section for field in harness.fields)
@@ -126,6 +127,7 @@ class TestAgentHarness:
             "system_prompt": "long_text",
             "tools": "project_flows",
             "tool_packs": "project_refs",
+            "skill_packs": "skill_pack_refs",
             "hooks": "hook_flows",
         }
 

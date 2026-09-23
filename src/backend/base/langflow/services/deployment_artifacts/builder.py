@@ -352,6 +352,7 @@ def _snapshot_rows(
             max_bytes=limits.max_flow_bytes,
             max_items=_MAX_JSON_ITEMS,
         )
+        _validate_harness_packaging(flow.data, flow_id=flow.id)
         payload = FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json")
         flow_size, flow_items = _preflight_json_value(
             payload,
@@ -369,6 +370,35 @@ def _snapshot_rows(
         item_count += flow_items
         snapshots.append(_FlowSnapshot(flow_id=flow.id, name=flow.name, payload=payload, owner_id=flow.user_id))
     return _SnapshotBatch(tuple(snapshots), estimated_bytes, item_count)
+
+
+def _validate_harness_packaging(data: dict | None, *, flow_id: UUID) -> None:
+    """Do not ship Tool Pack references that the standalone host cannot resolve.
+
+    Composition ZIPs import reviewed projects and versions into Langflow storage.
+    Deployment packages currently carry flow files, knowledge and memory resources;
+    they do not provision the project/version storage used by Tool Pack adapters.
+    """
+    from lfx.projects.skills import parse_harness_skills
+
+    for node in (data or {}).get("nodes", []):
+        node_data = node.get("data", {})
+        pack = (node_data.get("_harness_tool") or {}).get("tool_pack")
+        if node_data.get("type") == "Agent":
+            raw = node_data.get("node", {}).get("template", {}).get("skill_bindings", {}).get("value") or ""
+            try:
+                skills = parse_harness_skills(raw)
+            except (ValueError, TypeError, AttributeError) as exc:
+                msg = f"Flow {flow_id} has invalid reviewed skills. Review and save the Harness before packaging."
+                raise ProjectArtifactError(msg) from exc
+            pack = pack or any(skill.tool_packs for item in skills.packs for skill in item.skills)
+        if pack:
+            msg = (
+                f"Flow {flow_id} uses reviewed Tool Packs, which standalone deployment packages cannot resolve yet. "
+                "Export the project composition, import it into a Langflow host with project storage, "
+                "and execute it through /api/v2/workflows."
+            )
+            raise ProjectArtifactError(msg)
 
 
 def _build_archive(
