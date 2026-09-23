@@ -13,6 +13,7 @@ next to the route it protects.
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -37,6 +38,23 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+#: Bytes of entropy behind a trigger's public ingress address. The address is
+#: unauthenticated and guessable-by-brute-force is the failure to avoid, so it
+#: is a random 256-bit value rendered URL-safe, not a sequence or a UUID.
+_PUBLIC_ID_BYTES = 24
+_SIGNING_SECRET_BYTES = 32
+
+
+def mint_public_id() -> str:
+    """An opaque, URL-safe ingress address for one trigger."""
+    return secrets.token_urlsafe(_PUBLIC_ID_BYTES)
+
+
+def mint_signing_secret() -> str:
+    """A shared secret for the generic HMAC verifier."""
+    return secrets.token_urlsafe(_SIGNING_SECRET_BYTES)
+
 
 #: Only these states are re-armable by ``enable``. ``dead`` is terminal: a dead
 #: trigger is re-created, not resurrected, so the audit trail stays truthful.
@@ -184,6 +202,13 @@ class TriggerService(Service):
         if row.state == TriggerState.DEAD.value:
             msg = "A dead trigger cannot be disabled."
             raise ValueError(msg)
+        # Retire the provider-side subscription with the trigger. A paused
+        # trigger whose subscription is still live keeps costing the provider's
+        # per-tenant quota and keeps delivering notifications this instance will
+        # only reject.
+        from langflow.services.triggers.subscriptions import revoke_for_trigger
+
+        await revoke_for_trigger(session, trigger_id=row.id)
         return await self.set_state(session, row=row, state=TriggerState.PAUSED)
 
     async def pin(self, session: AsyncSession, *, row: Trigger, flow_version_id: UUID | None) -> Trigger:
@@ -195,6 +220,30 @@ class TriggerService(Service):
         await session.flush()
         await session.refresh(row)
         return row
+
+    async def rotate_signing_secret(self, session: AsyncSession, *, row: Trigger) -> str:
+        """Mint (or replace) the trigger's ingress address and signing secret.
+
+        The address is minted once and kept: rotating a leaked secret must not
+        force every caller to be reconfigured with a new URL. The secret is
+        replaced outright, with no grace window, because a secret is rotated
+        precisely when the old one must stop working.
+
+        Returns the plaintext secret. It is the only time it exists outside the
+        caller's own storage - the row keeps it encrypted, and nothing reads it
+        back except the ingress verifier.
+        """
+        from langflow.services.auth.utils import encrypt_api_key
+
+        if not row.public_id:
+            row.public_id = mint_public_id()
+        secret = mint_signing_secret()
+        row.signing_secret_encrypted = encrypt_api_key(secret)
+        row.updated_at = datetime.now(timezone.utc)
+        session.add(row)
+        await session.flush()
+        await session.refresh(row)
+        return secret
 
     async def delete(self, session: AsyncSession, *, row: Trigger) -> None:
         await delete_triggers(session, trigger_ids=[row.id])

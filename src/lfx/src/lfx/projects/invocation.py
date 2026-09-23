@@ -27,10 +27,11 @@ class ReviewedFlowRunner:
             _ACTIVE_FLOWS.reset(token)
 
     async def _invoke(self, binding, context):
-        from lfx.base.tools.run_flow import _model_provider_policy
+        from lfx.base.tools.run_flow import _model_provider_policy, get_user_is_superuser
         from lfx.components.flow_controls.run_flow import RunFlowComponent
         from lfx.graph.graph.base import Graph
         from lfx.helpers.flow import run_flow
+        from lfx.utils.flow_validation import custom_component_admin_only_enabled, prepare_flow_build_for_user
 
         key = (binding.flow_id, binding.revision)
         if key not in self.definitions:
@@ -48,8 +49,17 @@ class ReviewedFlowRunner:
             "project_dir": (parent.context or {}).get("project_dir") if parent else None,
         }
         async with _model_provider_policy(user_id=self.component.user_id, flow_id=binding.flow_id, flow_name=None):
+            # A reviewed definition is still caller-authored. Recheck policy on
+            # every invocation, including definitions cached earlier in this run.
+            is_superuser = False
+            if custom_component_admin_only_enabled() is not False:
+                is_superuser = await get_user_is_superuser(self.component.user_id)
+            prepared = await prepare_flow_build_for_user(deepcopy(data), is_superuser=is_superuser)
             graph = Graph.from_payload(
-                deepcopy(data), flow_id=binding.flow_id, user_id=self.component.user_id, context=context
+                prepared if prepared is not None else deepcopy(data),
+                flow_id=binding.flow_id,
+                user_id=self.component.user_id,
+                context=context,
             )
             await run_flow(
                 graph=graph,
