@@ -215,6 +215,26 @@ async def test_a_late_commit_with_an_earlier_timestamp_is_reached_on_a_later_pag
     assert [event.timestamp for event in walked] == sorted((event.timestamp for event in walked), reverse=True)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("i", 1), ("t", "2026-13-01T00:00:00"), ("f", {"not": "a string"})],
+)
+async def test_a_cursor_with_an_ill_typed_field_is_refused(audit_session, field, value):
+    """A hand-made cursor is caller input: it answers 400, never 500."""
+    payload = {
+        "v": 2,
+        "f": "x",
+        "c": "2026-01-01T00:00:00+00:00",
+        "t": "2026-01-01T00:00:00+00:00",
+        "i": str(uuid4()),
+        field: value,
+    }
+    cursor = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+
+    with pytest.raises(AuditCursorError):
+        await list_audit_events(audit_session, AuditEventFilters(resource_type=PROJECTS), limit=1, cursor=cursor)
+
+
 async def test_a_cursor_with_an_out_of_range_datetime_is_refused(audit_session):
     """Astimezone raises OverflowError near datetime.min, which is not a ValueError."""
     payload = {

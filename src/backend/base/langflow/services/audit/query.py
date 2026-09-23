@@ -147,6 +147,7 @@ def decode_cursor(cursor: str, filters: AuditEventFilters) -> _CursorState:
         )
         version = payload["v"]
     except (
+        AttributeError,  # UUID() of a non-string, e.g. a JSON number.
         binascii.Error,
         UnicodeDecodeError,
         json.JSONDecodeError,
