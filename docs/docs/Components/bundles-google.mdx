@@ -183,12 +183,8 @@ Each component requests exactly one scope, the one its action needs. No componen
 for a scope Google classifies as restricted, so the Langflow-managed OAuth app does not
 require a security assessment.
 
-:::important
-The visual editor does not yet have a control for the **Google Connection** field, so these
-five components are not offered in the component menu in this release. Flows that already
-contain them, such as flows created through the API or run with `lfx run`, keep working and
-keep their connection handle.
-:::
+Select the account in the component's **Google Connection** field.
+For how to create and authorize that connection, see [Connections](./connections).
 
 ### Drive reach on the drive.file scope
 
@@ -201,6 +197,11 @@ file it has not created or opened. Reaching arbitrary Drive content requires a r
 scope, which is deliberately out of scope for this release.
 
 ### Connect a Google account
+
+In the visual editor, create the connection in **Settings** and select it on the component.
+See [Connections](./connections).
+
+To create the same connection through the API:
 
 1. Configure a Google registration on the server. See
    [Configure connection OAuth](../Develop/connection-oauth.mdx).

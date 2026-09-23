@@ -10,7 +10,7 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 This page describes the components that are available in the **Slack** bundle.
 
-Every Slack component runs on the [Slack Web API](https://docs.slack.dev/reference/methods/) and takes its credential from a Langflow [connection](../Develop/connection-oauth.mdx) rather than from a token pasted into the flow.
+Every Slack component runs on the [Slack Web API](https://docs.slack.dev/reference/methods/) and takes its credential from a Langflow [connection](./connections) rather than from a token pasted into the flow.
 
 <GraduatedBundleInstall packageName="slack" />
 
@@ -31,7 +31,7 @@ Bot components are unavailable on Langflow Desktop because Slack desktop redirec
 
 ## Prerequisites
 
-* A Slack app installed in the target workspace, and a Langflow connection for it. See [Configure connection OAuth](../Develop/connection-oauth.mdx) for the registration steps, the redirect URLs, and the per-action scope tables.
+* A Slack app installed in the target workspace, and a Langflow connection for it. See [Connections](./connections) to connect the account, and [Configure connection OAuth](./connection-oauth) for the registration steps, the redirect URLs, and the per-action scope tables.
 * For bot components, the app's bot user must be a member of the channel it acts on.
 
 ## Slack: Search (as user)
