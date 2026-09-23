@@ -70,9 +70,9 @@ async def test_send_mail_defaults_to_plain_text_and_sent_items(resolver_factory)
     assert payload["message"]["body"]["contentType"] == "text"
 
 
-async def test_send_mail_attaches_files_as_base64_file_attachments(resolver_factory, tmp_path) -> None:
+async def test_send_mail_attaches_files_as_base64_file_attachments(resolver_factory, user_storage_dir) -> None:
     resolver_factory(credential(scopes={"Mail.Send"}))
-    attachment = tmp_path / "notes.txt"
+    attachment = user_storage_dir / "notes.txt"
     attachment.write_bytes(b"hello")
     recorder = TransportRecorder(lambda _request: httpx.Response(202))
     component = build_component(
@@ -84,6 +84,7 @@ async def test_send_mail_attaches_files_as_base64_file_attachments(resolver_fact
         body="see attached",
         attachments=[str(attachment)],
     )
+    component._user_id = user_storage_dir.name
 
     result = await component.send_mail()
 
@@ -98,10 +99,10 @@ async def test_send_mail_attaches_files_as_base64_file_attachments(resolver_fact
     assert result.data["attachment_count"] == 1
 
 
-async def test_send_mail_refuses_attachments_over_the_inline_graph_limit(resolver_factory, tmp_path) -> None:
+async def test_send_mail_refuses_attachments_over_the_inline_graph_limit(resolver_factory, user_storage_dir) -> None:
     """Graph caps the sendMail body at 4 MB; refuse before reading the file, not after a 413."""
     resolver_factory(credential(scopes={"Mail.Send"}))
-    attachment = tmp_path / "big.bin"
+    attachment = user_storage_dir / "big.bin"
     attachment.write_bytes(b"0" * (MAX_ATTACHMENT_BYTES + 1))
     recorder = TransportRecorder(lambda _request: httpx.Response(202))
     component = build_component(
@@ -113,6 +114,7 @@ async def test_send_mail_refuses_attachments_over_the_inline_graph_limit(resolve
         body="see attached",
         attachments=[str(attachment)],
     )
+    component._user_id = user_storage_dir.name
 
     with pytest.raises(ValueError, match="exceed"):
         await component.send_mail()

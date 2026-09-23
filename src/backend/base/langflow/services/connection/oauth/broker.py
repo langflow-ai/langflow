@@ -19,6 +19,7 @@ from langflow.services.connection.oauth.config import OAuthError, get_oauth_sett
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection import ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
+from langflow.services.database.models.connection.schemas import ConnectionStatusReason
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
@@ -99,42 +100,68 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
         values = binding.model_dump()
         binding.encrypted_verifier = None
         session.add(binding)
-    if denied or not code or _aware(values["expires_at"]) <= datetime.now(timezone.utc):
-        msg = "OAuth authorization was denied or expired. Start again."
-        raise OAuthError(msg)
-    registration = get_oauth_settings().registration(values["registration_id"])
-    if registration.provider != provider or registration.fingerprint() != values["config_digest"]:
-        msg = "OAuth registration changed or is not configured for this provider."
-        raise OAuthError(msg)
-    async with session_scope() as session:
-        row = await lock_connection(session, values["connection_id"])
-        binding = await session.get(ConnectionOAuth, values["connection_id"])
-        if row is None or binding is None or binding.generation != values["generation"]:
-            msg = "OAuth authorization was superseded or revoked. Start again."
+    reason = ConnectionStatusReason.OAUTH_FAILED
+    try:
+        if denied:
+            reason = ConnectionStatusReason.OAUTH_DENIED
+            msg = "OAuth authorization was denied. Start again."
             raise OAuthError(msg)
-        user = await session.get(User, values["user_id"])
-        if user is None or not user.is_active:
-            msg = "OAuth initiating user is no longer active."
+        if not code or _aware(values["expires_at"]) <= datetime.now(timezone.utc):
+            reason = ConnectionStatusReason.OAUTH_EXPIRED
+            msg = "OAuth authorization expired. Start again."
             raise OAuthError(msg)
-        await ensure_connection_permission(
-            user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
-        )
-        verifier = auth_utils.decrypt_api_key(values["encrypted_verifier"])
-        if not verifier:
-            msg = "OAuth verifier is unavailable. Start again."
+        registration = get_oauth_settings().registration(values["registration_id"])
+        if registration.provider != provider or registration.fingerprint() != values["config_digest"]:
+            msg = "OAuth registration changed or is not configured for this provider."
             raise OAuthError(msg)
-        payload, scopes, account = await providers.exchange(
-            registration, code=code, verifier=verifier, previous_scopes=values["scopes"]
-        )
-        payload["oauth"] = {
-            "registration_id": binding.registration_id,
-            "config_digest": binding.config_digest,
-            "generation": str(binding.generation),
-        }
-        await store_tokens(session, row, payload, scopes)
-        if account:
+        async with session_scope() as session:
+            row = await lock_connection(session, values["connection_id"])
+            binding = await session.get(ConnectionOAuth, values["connection_id"])
+            if row is None or binding is None or binding.generation != values["generation"]:
+                msg = "OAuth authorization was superseded or revoked. Start again."
+                raise OAuthError(msg)
+            user = await session.get(User, values["user_id"])
+            if user is None or not user.is_active:
+                msg = "OAuth initiating user is no longer active."
+                raise OAuthError(msg)
+            await ensure_connection_permission(
+                user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
+            )
+            verifier = auth_utils.decrypt_api_key(values["encrypted_verifier"])
+            if not verifier:
+                msg = "OAuth verifier is unavailable. Start again."
+                raise OAuthError(msg)
+            payload, scopes, account = await providers.exchange(
+                registration, code=code, verifier=verifier, previous_scopes=values["scopes"]
+            )
+            payload["oauth"] = {
+                "registration_id": binding.registration_id,
+                "config_digest": binding.config_digest,
+                "generation": str(binding.generation),
+            }
+            await store_tokens(session, row, payload, scopes)
+            # A new consent may belong to a different account. Clear stale
+            # metadata when this authorization does not provide identity.
             row.executing_identity = {**row.executing_identity, "account": account}
             session.add(row)
+    except OAuthError:
+        await _record_failed_authorization(values["connection_id"], values["generation"], reason)
+        raise
+
+
+async def _record_failed_authorization(connection_id: UUID, generation: UUID, reason: ConnectionStatusReason) -> None:
+    """Report a consumed attempt without clobbering a newer one or old tokens."""
+    async with session_scope() as session:
+        row = await lock_connection(session, connection_id)
+        binding = await session.get(ConnectionOAuth, connection_id)
+        if row is None or binding is None or binding.generation != generation:
+            return
+        if await session.get(ConnectionSecret, connection_id) is None:
+            row.status = "error"
+        row.status_reason = reason.value
+        now = datetime.now(timezone.utc)
+        row.updated_at = max(now, _aware(row.updated_at) + timedelta(microseconds=1)) if row.updated_at else now
+        session.add(row)
 
 
 async def store_tokens(session: AsyncSession, row: Connection, payload: dict, scopes: list[str]) -> None:
