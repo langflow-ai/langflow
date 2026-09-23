@@ -154,6 +154,63 @@ async def test_recreating_a_deleted_id_does_not_hand_over_its_history(client, lo
     assert all(item["project_name"] != victim["name"] for item in feed["items"])
 
 
+async def test_an_id_that_changed_hands_twice_shows_only_its_current_life(client, logged_in_headers):
+    """A → B → A: coming back must not open what B did in between."""
+    shared_id = str(uuid4())
+    await client.put(
+        f"api/v1/projects/{shared_id}", json={"name": f"a1-{uuid4().hex[:8]}"}, headers=logged_in_headers
+    )
+    await client.delete(f"api/v1/projects/{shared_id}", headers=logged_in_headers)
+
+    _other_id, other_name = await make_user("intervening")
+    other_headers = await login(client, other_name)
+    await client.put(f"api/v1/projects/{shared_id}", json={"name": f"b-{uuid4().hex[:8]}"}, headers=other_headers)
+    between = f"b-renamed-{uuid4().hex[:8]}"
+    await client.patch(f"api/v1/projects/{shared_id}", json={"name": between}, headers=other_headers)
+    await client.delete(f"api/v1/projects/{shared_id}", headers=other_headers)
+
+    back = f"a2-{uuid4().hex[:8]}"
+    retaken = await client.put(f"api/v1/projects/{shared_id}", json={"name": back}, headers=logged_in_headers)
+    assert retaken.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, retaken.text
+
+    feed = await _audits(client, logged_in_headers, f"?project_id={shared_id}&limit=200")
+
+    names = {item["project_name"] for item in feed["items"]}
+    assert between not in names, "the intervening owner's events must stay theirs"
+    assert all(item["actor"]["user_id"] != str(_other_id) for item in feed["items"])
+
+
+async def test_an_earlier_flow_event_does_not_open_project_history_at_the_same_id(client, logged_in_headers):
+    """The window is per resource type: a Flow create at this id is not a Project's."""
+    shared_id = str(uuid4())
+    # 1. The caller acts on a *Flow* at this id, before anything else happens there.
+    mine = await client.put(
+        f"api/v1/flows/{shared_id}",
+        json={"name": f"flow-{uuid4().hex[:8]}", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert mine.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, mine.text
+
+    # 2. Someone else owns, edits and drops a *Project* at the same id.
+    _other_id, other_name = await make_user("cross-type")
+    other_headers = await login(client, other_name)
+    await client.put(f"api/v1/projects/{shared_id}", json={"name": f"p-{uuid4().hex[:8]}"}, headers=other_headers)
+    theirs = f"theirs-{uuid4().hex[:8]}"
+    await client.patch(f"api/v1/projects/{shared_id}", json={"name": theirs}, headers=other_headers)
+    await client.delete(f"api/v1/projects/{shared_id}", headers=other_headers)
+
+    # 3. The caller takes the Project id. Their Flow event predates the other owner's.
+    retaken = await client.put(
+        f"api/v1/projects/{shared_id}", json={"name": f"mine-{uuid4().hex[:8]}"}, headers=logged_in_headers
+    )
+    assert retaken.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, retaken.text
+
+    feed = await _audits(client, logged_in_headers, f"?project_id={shared_id}&limit=200")
+
+    assert theirs not in {item["project_name"] for item in feed["items"]}
+    assert all(item["actor"]["user_id"] != str(_other_id) for item in feed["items"])
+
+
 async def test_query_string_api_key_auth_is_not_read_as_a_filter(client, logged_in_headers):
     """``x-api-key`` in the query string authenticates the request (#15088 F2)."""
     await _project(client, logged_in_headers)
