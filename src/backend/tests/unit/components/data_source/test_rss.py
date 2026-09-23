@@ -3,6 +3,7 @@ import os
 import socket
 from unittest.mock import Mock, patch
 
+import httpx
 import pytest
 import requests
 from lfx.components.data_source.rss import RSSReaderComponent
@@ -220,26 +221,41 @@ class TestRSSReaderSSRFProtection:
 
     def test_blocks_redirect_to_metadata(self):
         """A public feed that redirects to the metadata endpoint is blocked at the redirect hop."""
-        redirect = _mock_response(302, location="http://169.254.169.254/latest/meta-data/")
+        redirect = httpx.Response(
+            302,
+            headers={"Location": "http://169.254.169.254/latest/meta-data/"},
+            request=httpx.Request("GET", "http://public-feed.example.com/rss"),
+        )
 
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", return_value=redirect) as mock_get,
+            patch("requests.utils.get_environ_proxies", return_value={}),
+            patch("httpx.Client.get", return_value=redirect) as mock_get,
+            patch("requests.get") as requests_get,
         ):
             component = RSSReaderComponent(rss_url="http://public-feed.example.com/rss")
             result = component.read_rss()
 
         assert result.iloc[0]["title"] == "Error"
+        assert "blocked" in result.iloc[0]["summary"].lower() or "ssrf" in result.iloc[0]["summary"].lower()
         # Only the first (public) hop was requested; the internal redirect was not followed.
-        assert mock_get.call_count == 1
+        mock_get.assert_called_once()
+        requests_get.assert_not_called()
 
     def test_allows_public_feed(self):
         """A legitimate public RSS feed is fetched and parsed with SSRF protection enabled."""
+        response = httpx.Response(
+            200,
+            content=_VALID_RSS,
+            request=httpx.Request("GET", "http://feed.example.com/rss"),
+        )
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", return_value=_mock_response(200, content=_VALID_RSS)),
+            patch("requests.utils.get_environ_proxies", return_value={}),
+            patch("httpx.Client.get", return_value=response) as mock_get,
+            patch("requests.get") as requests_get,
         ):
             component = RSSReaderComponent(rss_url="http://feed.example.com/rss")
             result = component.read_rss()
@@ -247,6 +263,8 @@ class TestRSSReaderSSRFProtection:
         assert isinstance(result, DataFrame)
         assert len(result) == 1
         assert result.iloc[0]["title"] == "A"
+        mock_get.assert_called_once()
+        requests_get.assert_not_called()
 
     def test_protection_disabled_allows_internal(self):
         """With SSRF protection disabled, internal URLs are reachable (user opted out)."""
