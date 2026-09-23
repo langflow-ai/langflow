@@ -9,6 +9,7 @@ implementations.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -278,6 +279,28 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
         raise FileNotFoundError(msg)
 
     return path_obj.stat().st_size
+
+
+async def get_file_size_async(file_path: str, storage_service: StorageService | None = None) -> int:
+    """Async counterpart of ``get_file_size`` that awaits object-storage lookups on the caller's loop.
+
+    Local files (including real local files under S3) are stat'ed in a worker thread through
+    ``get_file_size``, so they keep its containment checks.
+    """
+    settings = get_settings_service().settings
+    if settings.storage_type != "s3" or _is_existing_local_file(file_path):
+        return await asyncio.to_thread(get_file_size, file_path, storage_service)
+
+    parsed = parse_storage_path(file_path)
+    if not parsed:
+        msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+        raise ValueError(msg)
+
+    if storage_service is None:
+        storage_service = require_storage_service(get_storage_service())
+
+    flow_id, filename = parsed
+    return await storage_service.get_file_size(flow_id, filename)
 
 
 def file_exists(file_path: str, storage_service: StorageService | None = None) -> bool:

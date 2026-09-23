@@ -5,7 +5,9 @@ Notes:
 - ALL Docling parsing/export runs in a separate OS process to prevent memory
   growth and native library state from impacting the main Langflow process.
 - Standard text/structured parsing continues to use existing BaseFileComponent
-  utilities (and optional threading via `parallel_load_data`).
+  utilities, bounded by `concurrency_multithreading` via `aparallel_load_data`.
+- The loaders are coroutines (see BaseFileComponent): storage reads are awaited on
+  the caller's event loop, parsing and the Docling subprocess run in worker threads.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from lfx.base.data.storage_utils import (
     require_storage_service,
     validate_image_content_type,
 )
-from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
+from lfx.base.data.utils import TEXT_FILE_TYPES, aparallel_load_data, aparse_text_file_to_data
 from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output, SecretStrInput
@@ -40,7 +42,7 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
-from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.async_helpers import delegates_to, run_until_complete
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 _FILE_TOOL_CANCEL_EVENT: ContextVar[threading.Event | None] = ContextVar("file_tool_cancel_event", default=None)
@@ -109,6 +111,20 @@ def _log_abandoned_file_tool_result(task: asyncio.Task) -> None:
         return
     if error is not None and not isinstance(error, _FileToolCancelledError):
         logger.error("Abandoned file loader failed after its tool call was cancelled", exc_info=error)
+
+
+def _write_temp_file(content: bytes, suffix: str) -> str:
+    with NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
+        tmp_file.write(content)
+        return tmp_file.name
+
+
+def _unlink_orphaned_temp_file(write: asyncio.Future[str]) -> None:
+    """Remove a temp file whose writer finished after the awaiting coroutine was cancelled."""
+    if write.cancelled() or write.exception() is not None:
+        return
+    with contextlib.suppress(OSError):
+        Path(write.result()).unlink()
 
 
 def _get_storage_location_options():
@@ -401,18 +417,19 @@ class FileComponent(BaseFileComponent):
                     # outputs rather than triggering a second subprocess via
                     # load_files_message.
                     self.markdown = True
-                    loader = self.load_files_markdown
+                    loader_name = "load_files_markdown"
                 else:
-                    loader = self.load_files_message
-                # Both loaders are blocking (file IO plus, in advanced mode, a Docling
-                # subprocess). Run them off the event loop so streaming/heartbeats on
-                # the same loop keep flowing while the agent waits for this tool. Keep
-                # admission bounded until the real worker exits so cancelled standard
-                # parsers cannot build an unbounded default-executor backlog.
+                    loader_name = "load_files_message"
+                # Await the async loader chain on this loop: storage reads are awaited here,
+                # while parsing and the Docling subprocess run in worker threads, so
+                # streaming/heartbeats on the same loop keep flowing while the agent waits.
+                # A subclass that overrides the sync loader still has it run in a thread.
+                # Keep admission bounded until the real work exits so cancelled parsers
+                # cannot build an unbounded default-executor backlog.
                 load_limiter = _get_file_tool_limiter()
                 await load_limiter.acquire()
                 try:
-                    loader_task = asyncio.create_task(asyncio.to_thread(loader))
+                    loader_task = asyncio.create_task(self._adispatch(loader_name))
                 except BaseException:
                     load_limiter.release()
                     raise
@@ -991,38 +1008,55 @@ class FileComponent(BaseFileComponent):
         # Get file content from S3
         content = await storage_service.get_file(flow_id, filename)
 
-        suffix = Path(filename).suffix
-        with NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
-            tmp_file.write(content)
-            temp_path = tmp_file.name
+        write = asyncio.ensure_future(asyncio.to_thread(_write_temp_file, content, Path(filename).suffix))
+        try:
+            temp_path = await asyncio.shield(write)
+        except asyncio.CancelledError:
+            write.add_done_callback(_unlink_orphaned_temp_file)
+            raise
 
         return temp_path, True
 
     def _process_docling_in_subprocess(self, file_path: str, *, is_local_temp_file: bool = False) -> Data | None:
+        """Sync wrapper around ``_aprocess_docling_in_subprocess``."""
+        return run_until_complete(
+            self._aprocess_docling_in_subprocess(file_path, is_local_temp_file=is_local_temp_file)
+        )
+
+    async def _aprocess_docling_in_subprocess(self, file_path: str, *, is_local_temp_file: bool = False) -> Data | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
         passing JSON config via stdin. The child prints a JSON result to stdout.
 
-        For S3 storage, the file is downloaded to a temp file first.
+        For S3 storage, the file is downloaded to a temp file first; the download is
+        awaited, and the subprocess is driven from a worker thread.
         """
         if not file_path:
             return None
 
-        cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
-        _raise_if_file_tool_cancelled(cancel_event)
+        _raise_if_file_tool_cancelled()
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
-            local_path, should_delete = run_until_complete(
-                self._get_local_file_for_docling(file_path, is_local_temp_file=is_local_temp_file)
+            local_path, should_delete = await self._get_local_file_for_docling(
+                file_path, is_local_temp_file=is_local_temp_file
             )
         else:
             local_path = file_path
             should_delete = False
 
+        # The worker owns a downloaded temp file: if this coroutine is cancelled mid-parse the
+        # subprocess may still be reading it, so only the worker may delete it.
+        return await asyncio.to_thread(
+            self._process_docling_local_file, local_path, file_path, should_delete=should_delete
+        )
+
+    def _process_docling_local_file(
+        self, local_path: str, original_file_path: str, *, should_delete: bool
+    ) -> Data | None:
         try:
-            _raise_if_file_tool_cancelled(cancel_event)
-            return self._process_docling_subprocess_impl(local_path, file_path)
+            _raise_if_file_tool_cancelled()
+            return self._process_docling_subprocess_impl(local_path, original_file_path)
         finally:
             # Clean up temp file if we created one
             if should_delete:
@@ -1328,14 +1362,25 @@ class FileComponent(BaseFileComponent):
         rows = list(result.get("doc", []))
         return Data(data={"doc": rows, "export_format": self.EXPORT_FORMAT, **meta})
 
+    @delegates_to("aprocess_files")
     def process_files(
+        self,
+        file_list: list[BaseFileComponent.BaseFile],
+    ) -> list[BaseFileComponent.BaseFile]:
+        """Process input files. Sync wrapper around ``aprocess_files``."""
+        return run_until_complete(self.aprocess_files(file_list))
+
+    async def aprocess_files(
         self,
         file_list: list[BaseFileComponent.BaseFile],
     ) -> list[BaseFileComponent.BaseFile]:
         """Process input files.
 
         - advanced_mode => Docling in a separate process.
-        - Otherwise => standard parsing in current process (optionally threaded).
+        - Otherwise => standard parsing, up to ``concurrency_multithreading`` files at once.
+
+        Storage reads are awaited on the running loop; parsing and the Docling subprocess
+        run in worker threads.
         """
         cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
         _raise_if_file_tool_cancelled(cancel_event)
@@ -1356,10 +1401,10 @@ class FileComponent(BaseFileComponent):
                     if settings.storage_type == "s3":
                         # For S3 storage, use storage service to read file bytes
                         file_path_str = str(file.path)
-                        content = run_until_complete(read_file_bytes(file_path_str))
+                        content = await read_file_bytes(file_path_str)
                     else:
                         # For local storage, read bytes directly from filesystem
-                        content = file.path.read_bytes()
+                        content = await asyncio.to_thread(file.path.read_bytes)
 
                     is_valid, error_msg = validate_image_content_type(
                         str(file.path),
@@ -1392,10 +1437,10 @@ class FileComponent(BaseFileComponent):
                     self.log(msg)
                     raise ValueError(msg)
 
-        def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
+        async def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
             try:
                 _raise_if_file_tool_cancelled(cancel_event)
-                result = parse_text_file_to_data(file_path, silent_errors=silent_errors)
+                result = await aparse_text_file_to_data(file_path, silent_errors=silent_errors)
                 _raise_if_file_tool_cancelled(cancel_event)
             except _FileToolCancelledError:
                 raise
@@ -1420,75 +1465,15 @@ class FileComponent(BaseFileComponent):
             for file in file_list:
                 _raise_if_file_tool_cancelled(cancel_event)
                 file_path = str(file.path)
-                advanced_data: Data | None = self._process_docling_in_subprocess(
+                advanced_data: Data | None = await self._aprocess_docling_in_subprocess(
                     file_path, is_local_temp_file=file.cleanup_local_file
                 )
                 _raise_if_file_tool_cancelled(cancel_event)
 
-                # Handle None case - Docling processing failed or returned None
-                if advanced_data is None:
-                    error_data = Data(
-                        data={
-                            "file_path": file_path,
-                            "error": "Docling processing returned no result. Check logs for details.",
-                        },
-                    )
-                    final_return.extend(self.rollup_data([file], [error_data]))
-                    continue
-
-                # --- UNNEST: expand each element in `doc` to its own Data row
-                payload = getattr(advanced_data, "data", {}) or {}
-
-                # Check for errors first
-                if "error" in payload:
-                    error_msg = payload.get("error", "Unknown error")
-                    error_data = Data(
-                        data={
-                            "file_path": file_path,
-                            "error": error_msg,
-                            **{k: v for k, v in payload.items() if k not in ("error", "file_path")},
-                        },
-                    )
-                    final_return.extend(self.rollup_data([file], [error_data]))
-                    continue
-
-                doc_rows = payload.get("doc")
-                if isinstance(doc_rows, list) and doc_rows:
-                    # Non-empty list of structured rows
-                    rows: list[Data | None] = [
-                        Data(
-                            data={
-                                "file_path": file_path,
-                                **(item if isinstance(item, dict) else {"value": item}),
-                            },
-                        )
-                        for item in doc_rows
-                    ]
-                    final_return.extend(self.rollup_data([file], rows))
-                elif isinstance(doc_rows, list) and not doc_rows:
-                    # Empty list - file was processed but no text content found
-                    # Create a Data object indicating no content was extracted
-                    self.log(f"No text extracted from '{file_path}', creating placeholder data")
-                    empty_data = Data(
-                        data={
-                            "file_path": file_path,
-                            "text": "(No text content extracted from image)",
-                            "info": "Image processed successfully but contained no extractable text",
-                            **{k: v for k, v in payload.items() if k != "doc"},
-                        },
-                    )
-                    final_return.extend(self.rollup_data([file], [empty_data]))
-                else:
-                    # If not structured, keep as-is (e.g., markdown export or error dict)
-                    # Ensure file_path is set for proper rollup matching
-                    if not payload.get("file_path"):
-                        payload["file_path"] = file_path
-                        # Create new Data with file_path
-                        advanced_data = Data(
-                            data=payload,
-                            text=getattr(advanced_data, "text", None),
-                        )
-                    final_return.extend(self.rollup_data([file], [advanced_data]))
+                # Expanding a large Docling export into rows is O(rows), so it stays off the event loop.
+                final_return.extend(
+                    await asyncio.to_thread(self._docling_result_to_files, file, file_path, advanced_data)
+                )
             return final_return
 
         # Standard multi-file (or single non-advanced) path
@@ -1496,19 +1481,90 @@ class FileComponent(BaseFileComponent):
 
         file_paths = [str(f.path) for f in file_list]
         self.log(f"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.")
-        my_data = parallel_load_data(
+        my_data = await aparallel_load_data(
             file_paths,
             silent_errors=self.silent_errors,
             load_function=process_file_standard,
             max_concurrency=concurrency,
         )
         _raise_if_file_tool_cancelled(cancel_event)
-        return self.rollup_data(file_list, my_data)
+        return await asyncio.to_thread(self.rollup_data, file_list, my_data)
+
+    def _docling_result_to_files(
+        self, file: BaseFileComponent.BaseFile, file_path: str, advanced_data: Data | None
+    ) -> list[BaseFileComponent.BaseFile]:
+        """Map one file's Docling result onto BaseFile rows (one Data row per ``doc`` element)."""
+        # Handle None case - Docling processing failed or returned None
+        if advanced_data is None:
+            error_data = Data(
+                data={
+                    "file_path": file_path,
+                    "error": "Docling processing returned no result. Check logs for details.",
+                },
+            )
+            return self.rollup_data([file], [error_data])
+
+        # --- UNNEST: expand each element in `doc` to its own Data row
+        payload = getattr(advanced_data, "data", {}) or {}
+
+        # Check for errors first
+        if "error" in payload:
+            error_msg = payload.get("error", "Unknown error")
+            error_data = Data(
+                data={
+                    "file_path": file_path,
+                    "error": error_msg,
+                    **{k: v for k, v in payload.items() if k not in ("error", "file_path")},
+                },
+            )
+            return self.rollup_data([file], [error_data])
+
+        doc_rows = payload.get("doc")
+        if isinstance(doc_rows, list) and doc_rows:
+            # Non-empty list of structured rows
+            rows: list[Data | None] = [
+                Data(
+                    data={
+                        "file_path": file_path,
+                        **(item if isinstance(item, dict) else {"value": item}),
+                    },
+                )
+                for item in doc_rows
+            ]
+            return self.rollup_data([file], rows)
+        if isinstance(doc_rows, list):
+            # Empty list - file was processed but no text content found
+            # Create a Data object indicating no content was extracted
+            self.log(f"No text extracted from '{file_path}', creating placeholder data")
+            empty_data = Data(
+                data={
+                    "file_path": file_path,
+                    "text": "(No text content extracted from image)",
+                    "info": "Image processed successfully but contained no extractable text",
+                    **{k: v for k, v in payload.items() if k != "doc"},
+                },
+            )
+            return self.rollup_data([file], [empty_data])
+
+        # If not structured, keep as-is (e.g., markdown export or error dict)
+        # Ensure file_path is set for proper rollup matching
+        if not payload.get("file_path"):
+            payload["file_path"] = file_path
+            # Create new Data with file_path
+            advanced_data = Data(
+                data=payload,
+                text=getattr(advanced_data, "text", None),
+            )
+        return self.rollup_data([file], [advanced_data])
 
     # ------------------------------ Output helpers -----------------------------------
 
+    @delegates_to("aload_files_helper")
     def load_files_helper(self) -> DataFrame:
-        result = self.load_files()
+        return run_until_complete(self.aload_files_helper())
+
+    async def aload_files_helper(self) -> DataFrame:
+        result = await self._adispatch("load_files")
 
         # Result is a DataFrame - check if it has any rows
         if result.empty:
@@ -1523,15 +1579,25 @@ class FileComponent(BaseFileComponent):
 
         return result
 
+    @delegates_to("aload_files_dataframe")
     def load_files_dataframe(self) -> DataFrame:
         """Load files using advanced Docling processing and export to DataFrame format."""
-        self.markdown = False
-        return self.load_files_helper()
+        return run_until_complete(self.aload_files_dataframe())
 
+    async def aload_files_dataframe(self) -> DataFrame:
+        """Load files using advanced Docling processing and export to DataFrame format."""
+        self.markdown = False
+        return await self._adispatch("load_files_helper")
+
+    @delegates_to("aload_files_markdown")
     def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
+        return run_until_complete(self.aload_files_markdown())
+
+    async def aload_files_markdown(self) -> Message:
+        """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
-        result = self.load_files_helper()
+        result = await self._adispatch("load_files_helper")
 
         # Result is a DataFrame - check for text or exported_content columns
         if "text" in result.columns and not result["text"].isna().all():
