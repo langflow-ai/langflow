@@ -452,6 +452,20 @@ class S3StorageService(StorageService):
         else:
             return file_size
 
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:
+        """The object's MD5, read from its ETag.
+
+        S3 sets the ETag to the MD5 of the body for a single-part upload. A multipart
+        ETag is a hash of the part hashes and carries a ``-``, so it says nothing about
+        the content and this returns None for it.
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+        async with self._get_client() as s3_client:
+            response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
+        etag = response.get("ETag", "").strip('"')
+        return None if not etag or "-" in etag else etag
+
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down.
 

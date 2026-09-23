@@ -195,6 +195,7 @@ LANGFLOW_STORAGE_TYPE=local langflow relocate-files --bucket S3_BUCKET_NAME --pr
 
 Each file keeps its key, so no database row changes.
 Nothing is deleted from local disk, files already in the bucket are skipped, and a file counts as copied only when the bucket reports an object of the same size, so you can run the command again after an interrupted run.
+A file already in the bucket with the same size but different content, such as a file edited between runs, is reported rather than skipped. The content comparison uses the object's MD5, which S3 provides for files uploaded in one part; for larger multipart uploads the command compares size only and says so.
 Add `--dry-run` to see what it would copy, and `--username` to limit it to one user's files.
 
 The command copies uploads, chat attachments and files attached to flows.

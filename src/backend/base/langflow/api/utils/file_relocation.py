@@ -14,11 +14,17 @@ the authority here.
 
 Nothing is deleted from the source, and a file counts as copied only once the
 target reports an object of the same size. Running it again skips what is already
-there, so an interrupted run can be repeated.
+there, so an interrupted run can be repeated. "Already there" means the same size
+and, where the target gives an MD5 cheaply, the same content; otherwise it is size
+alone, and the report says so.
+
+``plan_file`` and ``verify_file`` are the decision and the check on their own, for a
+caller that has to show what would happen before anything moves.
 """
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Literal
@@ -167,6 +173,55 @@ async def _stored_names(source: StorageService, namespace: str) -> list[str]:
     return await source.list_files(flow_id=namespace)
 
 
+@dataclass
+class FilePlan:
+    """What copying one file would do, decided before anything moves."""
+
+    action: Literal["copy", "skip", "refuse"]
+    key: str
+    size: int
+    reason: str | None = None
+
+
+async def plan_file(source: StorageService, target: StorageService, namespace: str, file_name: str) -> FilePlan:
+    """Decide what to do with one file without writing anything.
+
+    Reads no bytes, except when the target already holds an object of the same size:
+    a file edited between runs can keep its length, so the content is compared where
+    the target gives a checksum cheaply.
+    """
+    key = target.build_full_path(namespace, file_name)
+    size = await source.get_file_size(flow_id=namespace, file_name=file_name)
+    existing = await _target_size(target, namespace, file_name)
+    if existing is None:
+        return FilePlan("copy", key, size)
+    if existing != size:
+        # Something else of this name is there. Never overwritten without saying so.
+        reason = (
+            f"target already holds {existing} bytes under this key, a different size from the source's {size} bytes"
+        )
+        return FilePlan("refuse", key, size, reason)
+
+    target_md5 = await target.get_file_md5(flow_id=namespace, file_name=file_name)
+    if target_md5 is None:
+        return FilePlan("skip", key, size, f"already in the target ({size} bytes, identity checked by size only)")
+    data = await source.get_file(flow_id=namespace, file_name=file_name)
+    if hashlib.md5(data).hexdigest() != target_md5:  # noqa: S324 - compared with S3's ETag, not a security use
+        reason = f"target holds an object of the same size ({size} bytes) with different content"
+        return FilePlan("refuse", key, size, reason)
+    return FilePlan("skip", key, size, "already in the target")
+
+
+async def verify_file(target: StorageService, namespace: str, file_name: str, *, expected_size: int) -> str | None:
+    """None when the target holds an object of the expected size, otherwise what is wrong with it."""
+    settled = await _target_size(target, namespace, file_name)
+    if settled is None:
+        return f"target holds nothing under this key, {expected_size} bytes expected"
+    if settled != expected_size:
+        return f"target holds {settled} bytes of {expected_size} bytes"
+    return None
+
+
 async def _relocate_one(
     source: StorageService,
     target: StorageService,
@@ -179,30 +234,22 @@ async def _relocate_one(
     try:
         # Inside the try: object storage rejects names that local disk once accepted,
         # and one such name must not end a run that still has files to copy.
-        result.key = target.build_full_path(namespace, file_name)
-        result.size = await source.get_file_size(flow_id=namespace, file_name=file_name)
-
-        existing = await _target_size(target, namespace, file_name)
-        if existing is not None:
-            # Already carried, or something else of the same name is there. Either way
-            # this run must not overwrite it without saying so.
-            if existing == result.size:
-                result.status = "skipped"
-                result.reason = "already in the target"
-            else:
-                result.reason = f"target already holds {existing} bytes under this key, a different size"
+        plan = await plan_file(source, target, namespace, file_name)
+        result.key, result.size, result.reason = plan.key, plan.size, plan.reason
+        if plan.action == "skip":
+            result.status = "skipped"
+            return result
+        if plan.action == "refuse":
             return result
         if dry_run:
-            # Before the read, deliberately: a dry run over a real instance would
-            # otherwise pull every file into memory to write nothing.
             result.status = "would_copy"
             return result
 
         data = await source.get_file(flow_id=namespace, file_name=file_name)
         await target.save_file(flow_id=namespace, file_name=file_name, data=data)
-        settled = await _target_size(target, namespace, file_name)
-        if settled != len(data):
-            result.reason = f"target holds {settled} bytes of {len(data)} after the copy"
+        problem = await verify_file(target, namespace, file_name, expected_size=len(data))
+        if problem:
+            result.reason = f"{problem} after the copy"
             return result
         result.status = "copied"
     except FileNotFoundError:
@@ -210,7 +257,9 @@ async def _relocate_one(
         # reads as "nothing to do" in a report someone uses to call the move complete.
         result.reason = "no bytes in the source storage"
     except Exception as exc:  # noqa: BLE001 - reported per file
-        result.reason = f"{type(exc).__name__}: {exc}"
+        # The size makes a timeout on a large file recognisable in the report.
+        size = f" ({result.size} bytes)" if result.size else ""
+        result.reason = f"{type(exc).__name__}: {exc}{size}"
         await logger.awarning("Relocating file %s/%s failed: %s", namespace, file_name, exc)
     return result
 

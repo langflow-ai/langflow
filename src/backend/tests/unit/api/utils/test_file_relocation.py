@@ -230,3 +230,74 @@ class TestWhatGetsFound:
             await relocate_files(target_bucket=bucket, target_prefix="files")
 
         assert "does not exist" not in caplog.text
+
+
+class TestPlanAndVerify:
+    """The decision and the check stand alone, so a sync can show its plan before anything moves."""
+
+    async def test_plan_decides_without_writing_or_reading_the_body(self, active_user, storage_dir, bucket):
+        from langflow.api.utils.file_relocation import _target_storage, plan_file
+
+        name = await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        source = get_storage_service()
+        reads = []
+        original = type(source).get_file
+
+        async def counted(self, *args, **kwargs):
+            reads.append(kwargs.get("file_name"))
+            return await original(self, *args, **kwargs)
+
+        monkey = pytest.MonkeyPatch()
+        monkey.setattr(type(source), "get_file", counted)
+        target = _target_storage(bucket, "files", None)
+        try:
+            plan = await plan_file(source, target, str(active_user.id), name)
+        finally:
+            monkey.undo()
+
+        assert (plan.action, plan.size) == ("copy", len(b"pdf-bytes"))
+        assert reads == []
+        assert await _stored_keys(bucket) == []
+
+    async def test_verify_says_why_the_target_does_not_match(self, active_user, storage_dir, bucket):  # noqa: ARG002
+        from aiobotocore.session import get_session
+        from langflow.api.utils.file_relocation import _target_storage, verify_file
+
+        owner = str(active_user.id)
+        async with get_session().create_client("s3") as s3:
+            await s3.put_object(Bucket=bucket, Key=f"files/{owner}/report.pdf", Body=b"short")
+        target = _target_storage(bucket, "files", None)
+
+        problem = await verify_file(target, owner, "report.pdf", expected_size=9)
+
+        assert problem is not None
+        assert "5 bytes" in problem
+        assert "9 bytes" in problem
+        assert await verify_file(target, owner, "report.pdf", expected_size=5) is None
+
+
+class TestIdentityOnRerun:
+    async def test_same_size_different_content_is_refused_not_skipped(self, active_user, storage_dir, bucket):
+        """A file edited between runs can keep its length. Size alone would call it carried."""
+        from aiobotocore.session import get_session
+
+        name = await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        async with get_session().create_client("s3") as s3:
+            await s3.put_object(Bucket=bucket, Key=f"files/{active_user.id}/{name}", Body=b"PDF-BYTES")
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert [r.status for r in results] == ["failed"]
+        assert "same size" in (results[0].reason or "")
+
+    async def test_a_refusal_names_the_source_size(self, active_user, storage_dir, bucket):
+        """A large file failing looks like any other failure unless the report says how large."""
+        from aiobotocore.session import get_session
+
+        name = await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        async with get_session().create_client("s3") as s3:
+            await s3.put_object(Bucket=bucket, Key=f"files/{active_user.id}/{name}", Body=b"longer than nine")
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert "9 bytes" in (results[0].reason or "")
