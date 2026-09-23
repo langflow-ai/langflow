@@ -781,15 +781,28 @@ class JobService(Service):
         of queueing behind it (or deadlocking on the child deletes), and a
         selected row cannot change status before it is deleted. SQLite renders
         no lock clause and serializes writers on its own.
+
+        A job a trigger ledger row still marks DISPATCHED is skipped until the
+        dispatcher records its outcome: ``reconcile_dispatched`` reads that
+        outcome by joining the job, so purging the job first would leave the
+        ledger row DISPATCHED forever. A later sweep purges it once reconciled.
         """
+        from sqlalchemy import exists
         from sqlmodel import delete
+
+        from langflow.services.database.models.trigger.model import TriggerEvent
+        from langflow.services.database.models.trigger.schemas import TriggerEventState
 
         cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
         aged_at = func.coalesce(col(Job.finished_timestamp), col(Job.created_timestamp))
+        awaiting_reconcile = exists().where(
+            col(TriggerEvent.job_id) == col(Job.job_id),
+            col(TriggerEvent.state) == TriggerEventState.DISPATCHED.value,
+        )
         async with session_scope() as session:
             result = await session.exec(
                 select(Job.job_id)
-                .where(col(Job.status).in_(_RETAINABLE_STATUSES), aged_at < cutoff)
+                .where(col(Job.status).in_(_RETAINABLE_STATUSES), aged_at < cutoff, ~awaiting_reconcile)
                 .limit(limit)
                 .with_for_update(skip_locked=True)
             )

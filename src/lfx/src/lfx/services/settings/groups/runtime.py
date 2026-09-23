@@ -142,7 +142,10 @@ class RuntimeSettings(BaseModel):
     while ``job_events`` grows a row per durable milestone of a background run.
     Live runs are never deleted at any age: QUEUED, IN_PROGRESS and SUSPENDED
     rows are excluded (a suspended run is waiting on a human who may answer
-    weeks later)."""
+    weeks later).
+
+    A request ``idempotency_key`` blocks a duplicate run only while the original
+    job row exists, so once that row is purged the same key starts a new run."""
     # Triggers (TRG-2): the leased dispatcher, the schedule tick producer, and
     # the ledger retention windows.
     trigger_dispatcher_enabled: bool = True
