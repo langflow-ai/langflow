@@ -62,10 +62,23 @@ async def _login(client, username: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-async def _make_flow(owner_id: UUID, name: str, *, workspace_id: UUID | None = None) -> UUID:
+async def _make_flow(
+    owner_id: UUID,
+    name: str,
+    *,
+    workspace_id: UUID | None = None,
+    folder_id: UUID | None = None,
+    data: dict | None = None,
+) -> UUID:
     """Insert a minimal flow owned by ``owner_id`` and return its id."""
     async with session_scope() as session:
-        flow = Flow(name=name, user_id=owner_id, workspace_id=workspace_id, data={"nodes": [], "edges": []})
+        flow = Flow(
+            name=name,
+            user_id=owner_id,
+            workspace_id=workspace_id,
+            folder_id=folder_id,
+            data=data if data is not None else {"nodes": [], "edges": []},
+        )
         session.add(flow)
         await session.flush()
         flow_id = flow.id
@@ -246,6 +259,89 @@ async def test_share_grants_cross_user_access_and_absence_is_404(client):
         assert patch.status_code == 200, patch.text
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})
         assert build.status_code == 200, build.text
+
+
+async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_view(client):
+    """A share grants flow access, but never the owner's persisted password fields."""
+    settings = get_settings_service()
+    alice_username = f"alice_{uuid4().hex}"
+    bob_username = f"bob_{uuid4().hex}"
+    alice_id = await _make_user(alice_username)
+    bob_id = await _make_user(bob_username)
+    folder_id = await _make_project(alice_id, f"secrets_{uuid4().hex}")
+    secret_value = "test-only-credential-value"  # noqa: S105  # pragma: allowlist secret
+    flow_data = {
+        "nodes": [
+            {
+                "id": "model-node",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {"name": "api_key", "password": True, "value": secret_value},
+                            "model_name": {"name": "model_name", "value": "test-model"},
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    flow_id = await _make_flow(alice_id, f"aliceflow_{uuid4().hex}", folder_id=folder_id, data=flow_data)
+    alice_headers = await _login(client, alice_username)
+    bob_headers = await _login(client, bob_username)
+
+    async with session_scope() as session:
+        await create_user_share(
+            session,
+            resource_type="flow",
+            resource_id=flow_id,
+            target_user_id=bob_id,
+            permission_level="read",
+            created_by=alice_id,
+        )
+        await create_user_share(
+            session,
+            resource_type="project",
+            resource_id=folder_id,
+            target_user_id=bob_id,
+            permission_level="read",
+            created_by=alice_id,
+        )
+
+    def value(response):
+        assert response.status_code == 200, response.text
+        return response.json()["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"]
+
+    with install_policy_authz(settings):
+        assert value(await client.get(f"api/v1/flows/{flow_id}", headers=alice_headers)) == secret_value
+        assert value(await client.get(f"api/v1/flows/{flow_id}", headers=bob_headers)) is None
+
+        listed = await client.get("api/v1/flows/", headers=bob_headers)
+        assert listed.status_code == 200, listed.text
+        shared = next(flow for flow in listed.json() if flow["id"] == str(flow_id))
+        assert shared["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+
+        paged = await client.get(
+            "api/v1/flows/", headers=bob_headers, params={"get_all": "false", "folder_id": str(folder_id)}
+        )
+        assert paged.status_code == 200, paged.text
+        shared_page = next(flow for flow in paged.json()["items"] if flow["id"] == str(flow_id))
+        assert shared_page["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+
+        project = await client.get(f"api/v1/projects/{folder_id}", headers=bob_headers)
+        assert project.status_code == 200, project.text
+        shared_project_flow = next(flow for flow in project.json()["flows"] if flow["id"] == str(flow_id))
+        assert shared_project_flow["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+
+        paged_project = await client.get(
+            f"api/v1/projects/{folder_id}", headers=bob_headers, params={"page": 1, "size": 10}
+        )
+        assert paged_project.status_code == 200, paged_project.text
+        shared_project_page = next(
+            flow for flow in paged_project.json()["flows"]["items"] if flow["id"] == str(flow_id)
+        )
+        assert shared_project_page["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+        assert value(await client.get(f"api/v1/flows/{flow_id}", headers=alice_headers)) == secret_value
 
 
 async def test_read_only_share_allows_get_but_denies_write_and_execute(client):
