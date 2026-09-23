@@ -115,9 +115,10 @@ async def _verify_job_ownership(
 ) -> None:
     """Raise HTTP 404 if the requesting user does not own the job.
 
-    Public temporary builds are accessible to authenticated users. V2 workflow
-    jobs have a database owner but deliberately omit queue ownership because
-    queue ownership opts them into the polling watchdog.
+    Public temporary builds are accessible to authenticated users. Queue-backed
+    V2 workflow jobs have a database owner but deliberately omit queue ownership
+    because queue ownership opts them into the polling watchdog. Durable V2 jobs
+    without a v1 queue are handled only by their own workflow routes.
     """
     try:
         job_owner = await queue_service.get_job_owner(job_id)
@@ -137,6 +138,11 @@ async def _verify_job_ownership(
             job = None
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Job ownership unavailable") from exc
+        # BackgroundExecutionService persists its request in metadata and runs
+        # through its own executor. It has no v1 event queue, even when its owner
+        # matches, so the v1 routes must not stream or signal that job.
+        if job is not None and isinstance(job.job_metadata, dict) and "request" in job.job_metadata:
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
         job_owner = job.user_id if job is not None else None
         if job is not None:
             # V2 runs can share a service-account owner across serving end users.
@@ -516,8 +522,8 @@ async def get_build_events(
     Requires authentication and ownership verification. A job owner is registered
     when build_flow is called; if a registered owner does not match the requesting
     user the endpoint returns 404 to avoid leaking job existence.
-    Jobs started via build_public_tmp are explicitly marked public; v2 background
-    jobs use their persisted owner when no queue owner was registered.
+    Jobs started via build_public_tmp are explicitly marked public; queue-backed
+    v2 jobs use their persisted owner when no queue owner was registered.
     """
     await _verify_job_ownership(job_id, current_user, queue_service, http_request)
     return await get_flow_events_response(
@@ -541,8 +547,8 @@ async def cancel_build(
 
     Requires authentication and ownership verification to prevent a user from
     aborting another user's running build (DoS via job cancellation).
-    Jobs started via build_public_tmp are explicitly marked public; v2 background
-    jobs use their persisted owner when no queue owner was registered.
+    Jobs started via build_public_tmp are explicitly marked public; queue-backed
+    v2 jobs use their persisted owner when no queue owner was registered.
     """
     await _verify_job_ownership(job_id, current_user, queue_service, http_request)
     try:

@@ -105,3 +105,30 @@ async def test_public_temporary_job_does_not_require_database_owner(monkeypatch)
     monkeypatch.setattr(chat, "get_job_service", no_database_lookup)
 
     await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), PublicQueue(), request())
+
+
+@pytest.mark.asyncio
+async def test_v1_routes_reject_durable_v2_jobs_without_touching_queue(monkeypatch):
+    """Durable background jobs use the v2 control plane, not a v1 build queue."""
+    owner_id = uuid4()
+    job_id = str(uuid4())
+
+    class JobService:
+        async def get_job_by_job_id(self, _job_id):
+            return SimpleNamespace(user_id=owner_id, job_metadata={"request": {"input_value": "x"}})
+
+    class NoQueue(OwnerlessQueue):
+        def get_queue_data(self, _job_id):
+            pytest.fail("v1 routes must reject durable v2 jobs before queue access")
+
+    monkeypatch.setattr(chat, "get_job_service", JobService)
+    user = SimpleNamespace(id=owner_id, is_superuser=False)
+    queue = NoQueue()
+
+    with pytest.raises(HTTPException) as events_denied:
+        await chat.get_build_events(job_id=job_id, queue_service=queue, current_user=user, http_request=request())
+    assert events_denied.value.status_code == 404
+
+    with pytest.raises(HTTPException) as cancel_denied:
+        await chat.cancel_build(job_id=job_id, queue_service=queue, current_user=user, http_request=request())
+    assert cancel_denied.value.status_code == 404
