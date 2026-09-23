@@ -9,7 +9,7 @@ history rather than with the work in flight.
 Additive only. Creating an index carries no data with it, and the down path drops it again.
 
 Revision ID: b3f7c2a91d48
-Revises: a3f8b1c9d7e2
+Revises: f2a7c9e4b681
 Create Date: 2026-08-25
 
 Phase: EXPAND
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "b3f7c2a91d48"  # pragma: allowlist secret
-down_revision: str | None = "a3f8b1c9d7e2"  # pragma: allowlist secret
+down_revision: str | None = "f2a7c9e4b681"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
