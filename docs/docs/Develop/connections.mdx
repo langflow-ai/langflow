@@ -1,0 +1,102 @@
+---
+title: Connections
+slug: /connections
+---
+
+import Icon from "@site/src/components/icon";
+
+A **Connection** is a reusable OAuth connection that your flows can take scoped actions within.
+Google Workspace, Microsoft 365, and Slack components can re-use **Connections**.
+
+## Prerequisite
+
+* Configure the provider's OAuth registration. 
+  To configure OAuth, see [Configure connection OAuth](./connection-oauth).
+
+## Add a connection
+
+To add a connection, do the following:
+
+1. In the Langflow header, click your profile icon, and then select **Settings**.
+2. Click **Connections**.
+3. Click <Icon name="Plus" aria-hidden="true" /> **Add connection**.
+4. Select a **Provider**, such as **Google Workspace**, **Microsoft 365**, or **Slack**.
+5. Enter a **Handle**. The handle is a stable name for the connection that is stored with a flow and can travel with exported flow JSONs without sharing keys. The handle cannot be renamed.
+6. Enter a **Display name**. This is the label in the Langflow UI. The display name can be renamed.
+7. If you're connecting Slack, select whether the connection acts as the signed-in user, or as a Slackbot.
+   Google Workspace and Microsoft 365 connections always act as the signed-in user.
+8. In **Scopes to request**, select the permissions your flows require, and clear the rest.
+   Components that perform actions through connections require specific scopes. For example, the Google component requires the `Gmail: Send Email` scope to send emails.
+9. Click **Continue**, and complete consent in the OAuth provider window.
+   If **Continue** is unavailable and Langflow reports that no OAuth registration is configured for the provider, you have to first configure the OAuth connection, or ask your server administrator to configure it.
+   For more information, see [Configure connection OAuth](./connection-oauth).
+
+## Use a connection in a flow
+
+1. Add a component that takes a connection, such as **Gmail: Send Email**, a Microsoft 365 component, or a Slack component.
+2. In the component's connection field, select the connection.
+
+   The field is **Google Connection**, **Microsoft Connection**, or **Slack Connection**, depending on the component.
+   It stores the handle, such as `google/work`. The token never appears in the flow.
+
+For the actions each provider offers, see [Google components](../Components/bundles-google.mdx), [Microsoft 365 components](../Components/bundles-microsoft.mdx), and [Slack](../Components/bundles-slack.mdx).
+
+## Find a connection
+
+**Settings**, then **Connections**, lists the connections you can use.
+The page subtitle is the rule for what you see: tokens stay on the server, and only metadata is shown.
+
+| Tab | What it lists |
+| --- | --- |
+| **Mine** | Connections you own, and connections shared with you. |
+| **Instance** | Connections shared with the whole instance. |
+| **Other users** | Other people's connections. This tab is visible to superusers. |
+
+**Search name, handle, or account** filters the current tab.
+
+Each row shows the display name, handle, owner, signed-in account, status, granted scopes, and the last credential check.
+
+| Status | Meaning |
+| --- | --- |
+| **Ready** | Authorized and usable. |
+| **Pending** | Created, and consent is not finished. |
+| **Expired** | The credential expired. Reconnect the connection. |
+| **Revoked** | Authorization was removed locally. |
+| **Error** | The stored credential cannot be used. |
+
+**Not signed in yet** means consent has not completed.
+**Signed in, account not shared** means a credential exists, but the provider did not return an account name.
+
+## Manage a connection
+
+Open <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the row.
+
+* **Check credential** tests the stored credential. It is available after the connection has one.
+* **Authorize** or **Reconnect** starts consent again. Scopes the connection already holds stay selected. Check another scope to add it, or clear one to drop it. A pending connection offers **Authorize**. A connection that already completed consent offers **Reconnect**.
+* **Rename** changes the display name. The handle stays the same, so flows that reference it keep working.
+* **Allow scheduled and deployed runs** lets deployments and other non-interactive runs use this connection as its owner. It is off until the connection owner turns it on. For an instance connection, a superuser turns it on. Turning it off does not grant anonymous access, and it does not bypass integration policy.
+* **Revoke** removes the stored credential. The row stays, with status **Revoked**, and later runs fail until someone authorizes the connection again.
+* **Delete** removes the connection. It is available after the credential is gone, so revoke the connection first, or delete it while it is still **Pending**.
+
+Revoking a Google or Slack connection also asks the provider to revoke the token.
+Microsoft Entra has no per-grant revocation endpoint for this flow, so an administrator removes the app's consent in Entra when upstream revocation is required.
+For the provider differences, see [Provider revocation and token rotation](./connection-oauth.mdx#provider-revocation-and-token-rotation).
+
+## Share a connection with the instance
+
+A superuser can select **Share with the whole instance** in **Add connection**.
+That connection appears on the **Instance** tab.
+Creating or changing an instance connection is limited to superusers.
+
+A connection you create without that option stays under **Mine**.
+
+## Move a flow to another Langflow deployment
+
+Exporting a flow keeps each connection field as its handle.
+The export does not include the token, the account, or the granted scopes.
+
+Importing the flow keeps the component and the handle unchanged.
+Langflow does not substitute a different provider, action, or connection.
+If the target deployment has no connection with that handle, the run fails with `connection-unresolved` until you create one with the same provider and handle, or you select a different connection on the component.
+
+For the other failure codes, see [Move a flow between deployments](./connection-oauth.mdx#move-a-flow-between-deployments).
