@@ -14,9 +14,11 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
+from langflow.services.authorization.audit import drain_pending_audit_writes
 from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.auth import AuthzAuditLog
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_settings_service, session_scope
+from sqlmodel import col, select
 
 BASE = datetime(2021, 3, 4, 12, 0, tzinfo=timezone.utc)
 WINDOW = "since=2021-03-04T00:00:00Z&until=2021-03-05T00:00:00Z"
@@ -325,6 +327,47 @@ async def test_an_export_spanning_many_batches_keeps_every_row_once_in_order(cli
 
     exported = [json.loads(line)["id"] for line in response.text.splitlines()]
     assert exported == expected
+
+
+async def test_a_real_authorization_decision_shares_the_request_id(client, logged_in_headers_super_user):
+    """The feed can only correlate a decision with what it guarded if the writer records it."""
+    service = get_settings_service()
+    settings, auth_settings = service.settings, service.auth_settings
+    original = (settings.audit_enabled, auth_settings.AUTHZ_AUDIT_ENABLED)
+    settings.audit_enabled = True
+    auth_settings.AUTHZ_AUDIT_ENABLED = True
+    try:
+        created = await client.post(
+            "api/v1/flows/",
+            json={"name": f"correlated-{uuid4().hex[:8]}", "data": {"nodes": [], "edges": []}},
+            headers=logged_in_headers_super_user,
+        )
+        assert created.status_code == status.HTTP_201_CREATED, created.text
+    finally:
+        settings.audit_enabled, auth_settings.AUTHZ_AUDIT_ENABLED = original
+
+    # The authorization writer is a queue; read only once it has landed.
+    await drain_pending_audit_writes()
+
+    async with session_scope() as session:
+        event = (
+            await session.exec(
+                select(AuditEvent)
+                .where(AuditEvent.resource_id == UUID(created.json()["id"]))
+                .order_by(col(AuditEvent.timestamp).desc())
+            )
+        ).first()
+    assert event is not None, "the create should have been audited"
+
+    # Not the fixed test window: this event is at "now".
+    response = await client.get(
+        f"api/v1/audits?request_id={event.request_id}", headers=logged_in_headers_super_user
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+    sources = {item["source"] for item in response.json()["items"]}
+    assert "resource" in sources
+    assert "authz" in sources, "the authorization decision must carry the same request id"
 
 
 async def test_the_search_matches_names_actions_details_and_actors(client, logged_in_headers_super_user):
