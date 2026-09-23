@@ -1,7 +1,7 @@
 """add_job_claim_scan_index
 
-Revision ID: f1c5e7a9b3d0
-Revises: e8f0a2c4d6b9
+Revision ID: c3b8d5f2a760
+Revises: f2a7c9e4b681
 Create Date: 2026-07-23 12:00:00.000000
 
 Phase: EXPAND
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "f1c5e7a9b3d0"  # pragma: allowlist secret
-down_revision: str | Sequence[str] | None = "e8f0a2c4d6b9"  # pragma: allowlist secret
+revision: str = "c3b8d5f2a760"  # pragma: allowlist secret
+down_revision: str | Sequence[str] | None = "f2a7c9e4b681"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
