@@ -1,10 +1,61 @@
 from datetime import timedelta
+from ipaddress import ip_address
+from urllib.parse import urlsplit
 
+import dns.exception
+import dns.resolver
 from langchain_community.vectorstores import CouchbaseVectorStore
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_connector_ssrf_validation_enabled,
+    is_ssrf_protection_enabled,
+    validate_connector_hostname_for_ssrf,
+)
+
+
+def _validate_couchbase_hosts(connection_string: str) -> None:
+    if not is_connector_ssrf_validation_enabled() or not is_ssrf_protection_enabled():
+        return
+
+    parsed = urlsplit(connection_string)
+    if parsed.scheme not in {"couchbase", "couchbases"} or not parsed.netloc:
+        msg = "Couchbase connection string must contain a host."
+        raise SSRFProtectionError(msg)
+
+    # The SDK accepts comma-separated bootstrap nodes. Validate every seed, not just the first.
+    seeds = parsed.netloc.split(",")
+    for seed in seeds:
+        if not seed or any(char in seed for char in "@\\/%?#"):
+            msg = "Couchbase connection string contains an invalid host."
+            raise SSRFProtectionError(msg)
+        try:
+            address = urlsplit(f"//{seed}")
+            host = address.hostname
+            _port = address.port  # Check for an invalid port before the SDK interprets the seed.
+        except ValueError as e:
+            msg = "Couchbase connection string contains an invalid host."
+            raise SSRFProtectionError(msg) from e
+        if len(seeds) == 1 and host and address.port is None:
+            try:
+                ip_address(host)
+            except ValueError:
+                try:
+                    records = dns.resolver.resolve(f"_{parsed.scheme}._tcp.{host}", "SRV")
+                except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+                    pass  # The SDK falls back to the seed host when no SRV record exists.
+                except dns.exception.DNSException as e:
+                    msg = "Could not verify Couchbase bootstrap nodes."
+                    raise SSRFProtectionError(msg) from e
+                else:
+                    if records:
+                        for record in records:
+                            validate_connector_hostname_for_ssrf(str(record.target).rstrip("."))
+                        continue
+        validate_connector_hostname_for_ssrf(host or "")
 
 
 class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
@@ -36,6 +87,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> CouchbaseVectorStore:
+        _validate_couchbase_hosts(self.couchbase_connection_string)
         try:
             from couchbase.auth import PasswordAuthenticator
             from couchbase.cluster import Cluster

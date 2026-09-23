@@ -556,6 +556,41 @@ def validate_connector_url_for_ssrf(url: str) -> None:
     validate_url_for_ssrf(url)
 
 
+def validate_connector_hostname_for_ssrf(hostname: str) -> None:
+    """Apply the connector host policy to SDKs that use non-HTTP connection strings.
+
+    Callers must extract the actual host used by their client library first. Passing only the
+    host avoids interpreting credentials, paths, or a database-specific scheme as an HTTP URL.
+    """
+    if not is_connector_ssrf_validation_enabled() or not is_ssrf_protection_enabled():
+        return
+
+    if not isinstance(hostname, str) or not hostname or any(char.isspace() for char in hostname):
+        msg = "Connector connection string must contain a valid host."
+        raise SSRFProtectionError(msg)
+    if hostname.startswith("[") and hostname.endswith("]"):
+        try:
+            ipaddress.IPv6Address(hostname[1:-1])
+        except ValueError as e:
+            msg = "Connector connection string contains an invalid host."
+            raise SSRFProtectionError(msg) from e
+        hostname = hostname[1:-1]
+    if any(char in hostname for char in "/?#@\\,[]"):
+        msg = "Connector connection string contains an invalid host."
+        raise SSRFProtectionError(msg)
+
+    try:
+        is_ipv6 = isinstance(ipaddress.ip_address(hostname), ipaddress.IPv6Address)
+    except ValueError:
+        if ":" in hostname:
+            msg = "Connector connection string contains an invalid host."
+            raise SSRFProtectionError(msg) from None
+        is_ipv6 = False
+
+    authority = f"[{hostname}]" if is_ipv6 else hostname
+    validate_connector_url_for_ssrf(f"http://{authority}")
+
+
 def validate_and_resolve_connector_url(url: str) -> tuple[str, list[str]]:
     """Validate a connector URL and return IPs for DNS-pinned HTTP clients.
 

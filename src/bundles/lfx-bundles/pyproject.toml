@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.30"
+version = "1.1.31"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -45,7 +45,7 @@ codeagents = ["smolagents>=1.8.0"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 composio = ["composio==0.16.0", "composio-langchain==0.16.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
-couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
+couchbase = ["couchbase>=4.2.1", "dnspython>=2.6,<3", "langchain-community>=0.4.1,<1.0.0"]
 cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]

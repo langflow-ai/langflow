@@ -6,6 +6,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_hostname_for_ssrf
 
 
 class RedisVectorStoreComponent(LCVectorStoreComponent):
@@ -40,6 +41,15 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> Redis:
+        from redis.connection import parse_url
+
+        connection = parse_url(self.redis_server_url)
+        if host := connection.get("host"):
+            validate_connector_hostname_for_ssrf(host)
+        elif "path" not in connection:
+            # redis-py defaults a hostless redis:// URL to localhost.
+            validate_connector_hostname_for_ssrf("localhost")
+
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
 

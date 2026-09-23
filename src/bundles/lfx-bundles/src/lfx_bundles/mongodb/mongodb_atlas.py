@@ -1,5 +1,7 @@
+import ipaddress
 import tempfile
 import time
+from urllib.parse import urlsplit
 
 import certifi
 from langchain_mongodb import MongoDBAtlasVectorSearch
@@ -7,6 +9,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_hostname_for_ssrf
 from pymongo.collection import Collection
 from pymongo.operations import SearchIndexModel
 
@@ -96,9 +99,24 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> MongoDBAtlasVectorSearch:
         try:
             from pymongo import MongoClient
+            from pymongo.uri_parser import parse_uri
         except ImportError as e:
             msg = "Please install pymongo to use MongoDB Atlas Vector Store"
             raise ImportError(msg) from e
+
+        uri = self.mongodb_atlas_cluster_uri
+        if uri.startswith("mongodb+srv://"):
+            # An SRV-only seed need not have an A/AAAA record. PyMongo connects to the
+            # returned nodes, so validate those below; reject literal internal IP seeds first.
+            seed = urlsplit(uri).hostname or ""
+            try:
+                ipaddress.ip_address(seed)
+            except ValueError:
+                pass
+            else:
+                validate_connector_hostname_for_ssrf(seed)
+        for host, _port in parse_uri(uri)["nodelist"]:
+            validate_connector_hostname_for_ssrf(host)
 
         # Create temporary files for the client certificate
         if self.enable_mtls:

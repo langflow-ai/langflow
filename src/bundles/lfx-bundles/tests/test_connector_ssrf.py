@@ -11,7 +11,9 @@ exercised directly in ``lfx/tests/unit/utils/test_ssrf_protection.py``. The weav
 memory, confluence, nvidia, and sambanova guards (H1-3996328) are exercised below.
 """
 
+import sys
 from contextlib import contextmanager
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -218,3 +220,244 @@ def test_sambanova_build_model_blocks_metadata_url_before_sdk():
     ):
         component.build_model()
     assert mock_chat.call_count == 0
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "mongodb://169.254.169.254:27017/test",
+        "mongodb://8.8.8.8:27017,169.254.169.254:27017/test",
+        "mongodb+srv://169.254.169.254/test",
+    ],
+)
+def test_mongodb_blocks_every_seed_before_client_connect(uri):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.mongodb.mongodb_atlas import MongoVectorStoreComponent
+
+    component = MongoVectorStoreComponent()
+    component.mongodb_atlas_cluster_uri = uri
+    with ssrf_enabled(), patch("pymongo.MongoClient") as mock_client, pytest.raises(SSRFProtectionError):
+        component.build_vector_store()
+    mock_client.assert_not_called()
+
+
+def test_mongodb_preserves_public_seed_connection():
+    from lfx_bundles.mongodb.mongodb_atlas import MongoVectorStoreComponent
+
+    component = MongoVectorStoreComponent()
+    component.mongodb_atlas_cluster_uri = "mongodb://8.8.8.8:27017/test"
+    component.enable_mtls = False
+    component.db_name = "db"
+    component.collection_name = "docs"
+    component.index_name = "vector"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("pymongo.MongoClient") as mock_client,
+        patch("lfx_bundles.mongodb.mongodb_atlas.MongoDBAtlasVectorSearch") as mock_store,
+    ):
+        assert component.build_vector_store() is mock_store.return_value
+    mock_client.assert_called_once_with(component.mongodb_atlas_cluster_uri)
+
+
+def test_mongodb_blocks_internal_srv_target_before_client_connect():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.mongodb.mongodb_atlas import MongoVectorStoreComponent
+
+    component = MongoVectorStoreComponent()
+    component.mongodb_atlas_cluster_uri = "mongodb+srv://8.8.8.8/test"
+    with (
+        ssrf_enabled(),
+        patch("pymongo.uri_parser.parse_uri", return_value={"nodelist": [("169.254.169.254", 27017)]}),
+        patch("pymongo.MongoClient") as mock_client,
+        pytest.raises(SSRFProtectionError),
+    ):
+        component.build_vector_store()
+    mock_client.assert_not_called()
+
+
+def test_mongodb_srv_seed_does_not_require_address_record():
+    from lfx_bundles.mongodb.mongodb_atlas import MongoVectorStoreComponent
+
+    component = MongoVectorStoreComponent()
+    component.mongodb_atlas_cluster_uri = "mongodb+srv://cluster.example.com/test"
+    component.enable_mtls = False
+    component.db_name = "db"
+    component.collection_name = "docs"
+    component.index_name = "vector"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("pymongo.uri_parser.parse_uri", return_value={"nodelist": [("8.8.8.8", 27017)]}),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", side_effect=AssertionError("seed A lookup")),
+        patch("pymongo.MongoClient"),
+        patch("lfx_bundles.mongodb.mongodb_atlas.MongoDBAtlasVectorSearch") as mock_store,
+    ):
+        assert component.build_vector_store() is mock_store.return_value
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "redis://user:password@169.254.169.254:6379/0",  # pragma: allowlist secret
+        "redis://?host=169.254.169.254",
+    ],
+)
+def test_redis_vector_store_blocks_effective_host_before_sdk(uri):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.redis.redis import RedisVectorStoreComponent
+
+    component = RedisVectorStoreComponent()
+    component.redis_server_url = uri
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
+        pytest.raises(SSRFProtectionError),
+    ):
+        component.build_vector_store()
+    mock_connect.assert_not_called()
+
+
+def test_redis_vector_store_preserves_public_connection():
+    from lfx_bundles.redis.redis import RedisVectorStoreComponent
+
+    component = RedisVectorStoreComponent()
+    component.redis_server_url = "redis://8.8.8.8:6379/0"
+    component.redis_index_name = "docs"
+    component.schema = "schema"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.redis.redis.Path.write_text"),
+        patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
+    ):
+        assert component.build_vector_store() is mock_connect.return_value
+    assert mock_connect.call_args.kwargs["redis_url"] == component.redis_server_url
+
+
+def test_redis_vector_store_preserves_unix_socket_connection():
+    from lfx_bundles.redis.redis import RedisVectorStoreComponent
+
+    component = RedisVectorStoreComponent()
+    component.redis_server_url = "unix:///tmp/redis.sock"
+    component.redis_index_name = "docs"
+    component.schema = "schema"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.redis.redis.Path.write_text"),
+        patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
+    ):
+        assert component.build_vector_store() is mock_connect.return_value
+    assert mock_connect.call_args.kwargs["redis_url"] == component.redis_server_url
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "postgresql://user:password@169.254.169.254:5432/db",  # pragma: allowlist secret
+        "postgresql://user:password@8.8.8.8:5432/db?hostaddr=169.254.169.254",  # pragma: allowlist secret
+    ],
+)
+def test_pgvector_blocks_metadata_before_sdk(uri):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.pgvector.pgvector import PGVectorStoreComponent
+
+    component = PGVectorStoreComponent()
+    component.pg_server_url = uri
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.pgvector.pgvector.PGVector.from_existing_index") as mock_connect,
+        pytest.raises(SSRFProtectionError),
+    ):
+        component.build_vector_store()
+    mock_connect.assert_not_called()
+
+
+def test_pgvector_preserves_public_database_connection():
+    from lfx_bundles.pgvector.pgvector import PGVectorStoreComponent
+
+    component = PGVectorStoreComponent()
+    component.pg_server_url = "postgresql://user:password@8.8.8.8:5432/db"  # pragma: allowlist secret
+    component.collection_name = "docs"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with ssrf_enabled(), patch("lfx_bundles.pgvector.pgvector.PGVector.from_existing_index") as mock_connect:
+        assert component.build_vector_store() is mock_connect.return_value
+    assert mock_connect.call_args.kwargs["connection_string"] == component.pg_server_url
+
+
+def test_supabase_blocks_metadata_before_credentials_reach_sdk():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+
+    # The optional Supabase SDK is not needed to prove the guard runs before client creation.
+    supabase = ModuleType("supabase")
+    supabase.__path__ = []
+    client = ModuleType("supabase.client")
+    client.Client = MagicMock()
+    client.create_client = MagicMock()
+    supabase.client = client
+    with patch.dict(sys.modules, {"supabase": supabase, "supabase.client": client}):
+        from lfx_bundles.supabase.supabase import SupabaseVectorStoreComponent
+
+        component = SupabaseVectorStoreComponent()
+        component.supabase_url = METADATA_URL
+        component.supabase_service_key = "test-key"
+        with ssrf_enabled(), pytest.raises(SSRFProtectionError):
+            component.build_vector_store()
+        client.create_client.assert_not_called()
+
+        component.supabase_url = "https://8.8.8.8"
+        component.ingest_data = []
+        component.embedding = MagicMock()
+        component.table_name = "docs"
+        component.query_name = "search"
+        with ssrf_enabled(), patch("lfx_bundles.supabase.supabase.SupabaseVectorStore") as mock_store:
+            assert component.build_vector_store() is mock_store.return_value
+        client.create_client.assert_called_once_with(component.supabase_url, supabase_key="test-key")
+
+
+def test_couchbase_blocks_second_seed_before_sdk_import():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import CouchbaseVectorStoreComponent
+
+    component = CouchbaseVectorStoreComponent()
+    component.couchbase_connection_string = "couchbases://8.8.8.8,169.254.169.254"
+    with ssrf_enabled(), pytest.raises(SSRFProtectionError):
+        component.build_vector_store()
+
+
+def test_couchbase_allows_public_multi_seed_url():
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with ssrf_enabled():
+        _validate_couchbase_hosts("couchbases://8.8.8.8,1.1.1.1")
+
+
+def test_couchbase_blocks_internal_srv_target():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        ssrf_enabled(),
+        patch("dns.resolver.resolve", return_value=[MagicMock(target="169.254.169.254.")]) as mock_resolve,
+        pytest.raises(SSRFProtectionError),
+    ):
+        _validate_couchbase_hosts("couchbases://cluster.example.com")
+    mock_resolve.assert_called_once_with("_couchbases._tcp.cluster.example.com", "SRV")
+
+
+def test_couchbase_srv_seed_does_not_require_address_record():
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        ssrf_enabled(),
+        patch("dns.resolver.resolve", return_value=[MagicMock(target="8.8.8.8.")]),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", side_effect=AssertionError("seed A lookup")),
+    ):
+        _validate_couchbase_hosts("couchbases://cluster.example.com")

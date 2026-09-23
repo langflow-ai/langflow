@@ -15,6 +15,7 @@ from lfx.utils.ssrf_protection import (
     is_ssrf_protection_enabled,
     resolve_hostname,
     validate_and_resolve_url,
+    validate_connector_hostname_for_ssrf,
     validate_connector_url_for_ssrf,
     validate_database_url_for_ssrf,
     validate_git_repository_url,
@@ -880,3 +881,27 @@ class TestConnectorURLValidation:
             mock_ssrf_settings(enabled=False),
         ):
             validate_connector_url_for_ssrf("host:19530")
+
+
+class TestConnectorHostnameValidation:
+    @pytest.mark.parametrize("host", ["169.254.169.254", "10.0.0.5", "::ffff:169.254.169.254", "[fe80::1]"])
+    def test_blocks_internal_host(self, host):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_connector_hostname_for_ssrf(host)
+
+    @pytest.mark.parametrize("host", ["8.8.8.8@169.254.169.254", "8.8.8.8,169.254.169.254", ""])
+    def test_rejects_ambiguous_or_missing_host(self, host):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_connector_hostname_for_ssrf(host)
+
+    def test_allows_public_ipv4_and_ipv6(self):
+        with mock_ssrf_settings(enabled=True):
+            validate_connector_hostname_for_ssrf("8.8.8.8")
+            validate_connector_hostname_for_ssrf("2606:4700:4700::1111")
+            validate_connector_hostname_for_ssrf("[2606:4700:4700::1111]")
+
+    def test_respects_operator_allowlist_and_disabled_setting(self):
+        with mock_ssrf_settings(enabled=True, allowed_hosts=["10.0.0.0/8"]):
+            validate_connector_hostname_for_ssrf("10.0.0.5")
+        with mock_ssrf_settings(enabled=True, connector_validation=False):
+            validate_connector_hostname_for_ssrf("169.254.169.254")
