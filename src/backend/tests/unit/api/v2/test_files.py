@@ -4,6 +4,7 @@ import io
 import json
 import os
 import tempfile
+import unicodedata
 import uuid
 import zipfile
 from contextlib import suppress
@@ -327,6 +328,7 @@ async def test_edit_file_rejects_unsafe_archive_names(files_client, files_create
         "LPT²",
         "CON .txt",
         "a\x00b",
+        "a\x85b",
         "a..b",
     ):
         response = await files_client.put(f"api/v2/files/{file_id}", params={"name": name}, headers=headers)
@@ -347,6 +349,9 @@ async def test_batch_download_sanitizes_legacy_file_names(files_client, files_cr
         ("other.txt", b"second"),
         ("third.txt", b"third"),
         ("fourth.txt", b"fourth"),
+        ("fifth.txt", b"fifth"),
+        ("sixth.txt", b"sixth"),
+        ("seventh.txt", b"seventh"),
     ):
         upload = await files_client.post("api/v2/files", files={"file": (filename, content)}, headers=headers)
         assert upload.status_code == 201, upload.text
@@ -354,7 +359,7 @@ async def test_batch_download_sanitizes_legacy_file_names(files_client, files_cr
 
     # Legacy rows may predate rename validation. They must be safe in new ZIPs.
     async with session_scope() as session:
-        legacy_names = ("../../escape", "..\\..\\escape", "Foo", "foo")
+        legacy_names = ("../../escape", "..\\..\\escape", "Foo", "foo", "a\x85b", "é", "e\u0301")
         for file_id, legacy_name in zip(file_ids, legacy_names, strict=True):
             stored = await session.get(UserFile, uuid.UUID(file_id))
             assert stored is not None
@@ -365,14 +370,23 @@ async def test_batch_download_sanitizes_legacy_file_names(files_client, files_cr
     response = await files_client.post("api/v2/files/batch/", json=file_ids, headers=headers)
     assert response.status_code == 200
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-        assert len(archive.namelist()) == 4
-        assert len({entry.casefold() for entry in archive.namelist()}) == 4
+        assert len(archive.namelist()) == 7
+        assert len({unicodedata.normalize("NFC", entry).casefold() for entry in archive.namelist()}) == 7
         for entry in archive.namelist():
             assert entry.endswith(".txt")
             assert "/" not in entry
             assert "\\" not in entry
             assert ".." not in entry
-        assert {archive.read(entry) for entry in archive.namelist()} == {b"first", b"second", b"third", b"fourth"}
+            assert "\x85" not in entry
+        assert {archive.read(entry) for entry in archive.namelist()} == {
+            b"first",
+            b"second",
+            b"third",
+            b"fourth",
+            b"fifth",
+            b"sixth",
+            b"seventh",
+        }
 
 
 async def test_upload_list_delete_and_validate_files(files_client, files_created_api_key):

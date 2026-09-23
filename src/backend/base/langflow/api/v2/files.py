@@ -1,5 +1,6 @@
 import io
 import re
+import unicodedata
 import uuid
 import zipfile
 from collections.abc import AsyncGenerator, AsyncIterable
@@ -29,7 +30,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Set the static name of the MCP servers file
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
-_UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f<>:"|?*]')
+_UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f-\x9f<>:"|?*]')
 _WINDOWS_DEVICE_NAME = re.compile(
     r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?=[ .]|$)",
     re.IGNORECASE,
@@ -694,12 +695,12 @@ async def download_files_batch(
                 # Create the filename with extension
                 filename_with_extension = _safe_archive_member_name(f"{file.name}{file_extension}")
                 duplicate = 0
-                while filename_with_extension.casefold() in used_names:
+                while unicodedata.normalize("NFC", filename_with_extension).casefold() in used_names:
                     duplicate += 1
                     filename_with_extension = _safe_archive_member_name(
                         f"{file.name}_{file.id}_{duplicate}{file_extension}"
                     )
-                used_names.add(filename_with_extension.casefold())
+                used_names.add(unicodedata.normalize("NFC", filename_with_extension).casefold())
 
                 # Write the file to the ZIP with the proper extension
                 zip_file.writestr(filename_with_extension, file_content)
