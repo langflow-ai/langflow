@@ -2985,7 +2985,10 @@ async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient
     assert imported[0]["project_type"] == "flows"
 
 
-async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, logged_in_headers, json_flow):
+@pytest.mark.parametrize("project_type", ["flows", "agent-harness"])
+async def test_flow_named_project_survives_the_round_trip(
+    client: AsyncClient, logged_in_headers, json_flow, project_type
+):
     """A flow called "project" must not be eaten by the reserved metadata member.
 
     Flows export as ``{name}.json``, so a metadata member named ``project.json`` collides with
@@ -2993,7 +2996,7 @@ async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, l
     """
     create_response = await client.post(
         "api/v1/projects/",
-        json={"name": "collide_src", "description": "", "project_type": "agent-harness"},
+        json={"name": "collide_src", "description": "", "project_type": project_type},
         headers=logged_in_headers,
     )
     assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
@@ -3012,8 +3015,17 @@ async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, l
     download_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
     assert download_response.status_code == status.HTTP_200_OK, download_response.text
 
-    names = zipfile.ZipFile(io.BytesIO(download_response.content)).namelist()
-    assert sorted(names) == ["keeper.json", "project.json", "project.meta"], names
+    with zipfile.ZipFile(io.BytesIO(download_response.content)) as archive:
+        names = archive.namelist()
+        assert "project.meta" in names
+        flow_members = [name for name in names if name.endswith(".json")]
+        assert len(flow_members) == 2
+        assert sorted(json.loads(archive.read(name))["name"] for name in flow_members) == ["keeper", "project"]
+        if project_type == "flows":
+            assert sorted(names) == ["keeper.json", "project.json", "project.meta"]
+        else:
+            # Composition archives use flow IDs and a separate dependency manifest.
+            assert "composition.meta" in names
 
     delete_response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert delete_response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), delete_response.text
@@ -3028,7 +3040,7 @@ async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, l
     projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
     imported = [p for p in projects if p["name"].startswith("collide")]
     assert imported, f"no imported project in {[p['name'] for p in projects]}"
-    assert imported[0]["project_type"] == "agent-harness"
+    assert imported[0]["project_type"] == project_type
 
     detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
     assert sorted(f["name"] for f in detail.get("flows", [])) == ["keeper", "project"]
