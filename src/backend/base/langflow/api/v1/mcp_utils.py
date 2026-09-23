@@ -15,8 +15,7 @@ from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
-from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
+from lfx.base.mcp.util import build_mcp_tool_name_map, get_flow_snake_case
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.utils.flow_validation import (
@@ -29,6 +28,7 @@ from mcp import types
 from sqlmodel import select
 
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.execution_principal import FAMILY_LEGACY_MCP, FAMILY_MCP_PROJECTS
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
@@ -506,6 +506,15 @@ async def handle_call_tool(
                             context=exec_context,
                             expose_error_details=caller_owns_resource(flow.user_id),
                             http_request=http_request_shim,
+                            # Both MCP families are owner-only: their admission never
+                            # admits a delegated caller, so an explicit connection
+                            # share must not resolve either.
+                            execution_family=(FAMILY_MCP_PROJECTS if project_id is not None else FAMILY_LEGACY_MCP),
+                            # A project transport authenticated with auth_type=none has
+                            # nobody at the keyboard: it already executes under the
+                            # anonymous principal (which resolves no user connection at
+                            # all), and marking it non-interactive keeps that explicit.
+                            interactive=not is_public_project_call,
                         )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()
@@ -593,9 +602,9 @@ async def _collect_tools(
                         "handle_list_tools called with project_id but no current user; returning empty list"
                     )
                     return tools, excluded
-                # Ordered for the same reason the call path is: without it, which duplicate
-                # holds the bare callable name and which gets get_unique_name's _1 suffix
-                # is heap order, so it can flip between two calls.
+                # Ordered for the same reason the call path is: build_mcp_tool_name_map
+                # hands the bare name to the first flow it sees and the _1 suffix to the
+                # next, so without an order that can flip between a list and a call.
                 flows_query = (
                     select(Flow)
                     .where(
@@ -618,34 +627,20 @@ async def _collect_tools(
 
             flows = (await session.exec(flows_query)).all()
 
-            existing_names = set()
-            for flow in flows:
-                if flow.user_id is None:
-                    continue
-
-                # For project-specific tools, use action names if available
+            # The same map the call path resolves against, so a name cannot be published
+            # here and refused there. A flow dropped below still holds its name: the call
+            # path cannot know which tools failed to build, and a name that shifted
+            # because a neighbour was dropped would put the two halves back out of step.
+            name_map = build_mcp_tool_name_map(
+                [flow for flow in flows if flow.user_id is not None],
+                is_action=bool(project_id),
+            )
+            for name, flow in name_map.items():
                 if project_id:
-                    base_name = (
-                        sanitize_mcp_name(flow.action_name) if flow.action_name else sanitize_mcp_name(flow.name)
-                    )
-                    name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
                     description = flow.action_description or (
                         flow.description if flow.description else f"Tool generated from flow: {name}"
                     )
                 else:
-                    # For global tools, use simple sanitized names
-                    base_name = sanitize_mcp_name(flow.name)
-                    name = base_name[:MAX_MCP_TOOL_NAME_LENGTH]
-                    if name in existing_names:
-                        i = 1
-                        while True:
-                            suffix = f"_{i}"
-                            truncated_base = base_name[: MAX_MCP_TOOL_NAME_LENGTH - len(suffix)]
-                            candidate = f"{truncated_base}{suffix}"
-                            if candidate not in existing_names:
-                                name = candidate
-                                break
-                            i += 1
                     description = (
                         f"{flow.id}: {flow.description}" if flow.description else f"Tool generated from flow: {name}"
                     )
@@ -657,13 +652,12 @@ async def _collect_tools(
                         inputSchema=json_schema_from_flow(flow),
                     )
                     tools.append(tool)
-                    existing_names.add(name)
                 except Exception as e:  # noqa: BLE001
                     # Type only: the project endpoint answers end users on the serving plane, and a raw
                     # exception string carries paths, SQL and component internals. The full
                     # message stays in the error log below, where only the operator reads it.
-                    excluded.append({"flow_id": str(flow.id), "tool_name": base_name, "reason": type(e).__name__})
-                    await logger.aerror(f"Flow excluded from MCP tool list -- {base_name} ({flow.id}): {e!s}")
+                    excluded.append({"flow_id": str(flow.id), "tool_name": name, "reason": type(e).__name__})
+                    await logger.aerror(f"Flow excluded from MCP tool list -- {name} ({flow.id}): {e!s}")
                     continue
 
             # A project that answers 200 with an empty list reads as "no tools configured".

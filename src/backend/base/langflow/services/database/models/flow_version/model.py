@@ -6,7 +6,14 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, computed_field, field_serializer
 from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy.sql.naming import conv
 from sqlmodel import JSON, Field, SQLModel
+
+# Final name of the ``version_number >= 1`` CHECK. It is wrapped in ``conv()`` below so Alembic's
+# ``ck_%(table_name)s_%(constraint_name)s`` convention (installed on SQLModel.metadata by
+# alembic/env.py) renders the same name whether the table is created by
+# ``SQLModel.metadata.create_all`` or by the migration's ``op.create_table``.
+VERSION_NUMBER_CHECK_NAME = "ck_flow_version_version_number_positive"
 
 
 class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
@@ -32,7 +39,7 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     # flow_id. No additional index is needed for the list/prune queries.
     __table_args__ = (
         UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
-        CheckConstraint("version_number >= 1", name="check_version_number_positive"),
+        CheckConstraint("version_number >= 1", name=conv(VERSION_NUMBER_CHECK_NAME)),
     )
 
 

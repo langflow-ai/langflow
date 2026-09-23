@@ -1,0 +1,8 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#teams('team')/channels('channel')/messages/$entity",
+  "id": "1756640111111",
+  "messageType": "message",
+  "createdDateTime": "2026-08-31T12:05:00.000Z",
+  "webUrl": "https://teams.microsoft.com/l/message/19%3Achannel/1756640111111",
+  "body": {"contentType": "text", "content": "Release notes are up."}
+}

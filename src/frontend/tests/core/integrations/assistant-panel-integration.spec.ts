@@ -98,6 +98,80 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
     await expect(textarea).toBeEnabled();
   });
 
+  test("should reopen the panel after clicking the canvas while a generation is running", async ({
+    page,
+  }) => {
+    await page
+      .getByTestId("assistant-input-textarea")
+      .fill(
+        "Write a very detailed 2000-word essay about the history of computing",
+      );
+    await page.getByTestId("assistant-send-button").click();
+    const stopButton = page.getByTestId("assistant-stop-button");
+    await expect(stopButton).toBeVisible();
+
+    try {
+      await page
+        .locator(".react-flow__pane")
+        .click({ position: { x: 5, y: 5 } });
+      await expect(page.getByTestId("assistant-panel")).not.toBeVisible();
+
+      const assistantButton = page.getByTestId("assistant-button");
+      await expect(assistantButton).toBeEnabled();
+      await expect(assistantButton).not.toHaveAttribute("title", "(Read-Only)");
+      await expect(page.getByTestId("canvas-add-note-button")).toBeDisabled();
+
+      await assistantButton.click();
+      await expect(page.getByTestId("assistant-panel")).toBeVisible();
+      await expect(stopButton).toBeVisible();
+
+      await stopButton.click();
+      await expect(stopButton).not.toBeVisible();
+    } finally {
+      assistantMock.releaseCancelledRequest();
+    }
+  });
+
+  test("should preserve a flow lock applied during assistant generation", async ({
+    page,
+  }) => {
+    await page
+      .getByTestId("assistant-input-textarea")
+      .fill("Write a very detailed 2000-word essay about computing");
+    await page.getByTestId("assistant-send-button").click();
+    const stopButton = page.getByTestId("assistant-stop-button");
+    await expect(stopButton).toBeVisible();
+
+    try {
+      await page
+        .locator(".react-flow__pane")
+        .click({ position: { x: 5, y: 5 } });
+      await expect(page.getByTestId("assistant-panel")).not.toBeVisible();
+
+      await page.getByTestId("flow_name").click();
+      await page.getByTestId("lock-flow-switch").click();
+      await page.getByTestId("save-flow-settings").click();
+      await expect(page.getByTestId("save-flow-settings")).not.toBeVisible();
+
+      const assistantButton = page.getByTestId("assistant-button");
+      await expect(assistantButton).toBeDisabled();
+      await expect(assistantButton).toHaveAttribute("title", "(Read-Only)");
+      await expect(page.getByTestId("canvas-add-note-button")).toBeDisabled();
+
+      await page.getByTestId("flow_name").click();
+      await page.getByTestId("lock-flow-switch").click();
+      await page.getByTestId("save-flow-settings").click();
+      await expect(page.getByTestId("save-flow-settings")).not.toBeVisible();
+      await expect(assistantButton).toBeEnabled();
+      await assistantButton.click();
+      await expect(stopButton).toBeVisible();
+      await stopButton.click();
+      await expect(stopButton).not.toBeVisible();
+    } finally {
+      assistantMock.releaseCancelledRequest();
+    }
+  });
+
   test("should clear history and reset the backend session", async ({
     page,
   }) => {

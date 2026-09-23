@@ -50,11 +50,17 @@ from langflow.services.authorization.fetch import (
     deny_to_404_unless_readable,
 )
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.creation_hooks import (
+    RESOURCE_PROJECT,
+    PreCreationContext,
+    enforce_pre_creation,
+)
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
     run_with_lock_retry,
     sanitize_database_error,
 )
+from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -115,7 +121,22 @@ async def _new_project(
 
     ``current_user`` (the full ``User``) is required because the MCP registration and flow-move
     side effects operate on the owning user, not just their id.
+
+    Runs the ``project`` pre-creation hooks first, so an enterprise plugin can refuse the
+    creation before anything is written (403 with the denial contract). Both routes that
+    reach this helper — ``POST /projects/`` and the create branch of ``PUT /projects/{id}``
+    — re-raise ``HTTPException`` untouched, so the denial reaches the client verbatim.
     """
+    await enforce_pre_creation(
+        PreCreationContext(
+            resource=RESOURCE_PROJECT,
+            session=session,
+            actor_user_id=current_user.id,
+            workspace_id=getattr(project, "workspace_id", None),
+            requested_name=project.name,
+        )
+    )
+
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
@@ -158,6 +179,10 @@ async def _new_project(
 
     settings_service = get_settings_service()
     mcp_auth: dict = {"auth_type": "none"}
+    # Whether the API key below is something the caller asked for or something
+    # this endpoint chose for them. It decides what happens if the deployment
+    # refuses to issue one: a request is answered, a convenience is dropped.
+    auth_was_chosen_for_caller = False
 
     if project.auth_settings:
         mcp_auth = project.auth_settings.copy()
@@ -165,6 +190,7 @@ async def _new_project(
     # If AUTO_LOGIN is false, automatically enable API key authentication
     elif not settings_service.auth_settings.AUTO_LOGIN:
         mcp_auth = {"auth_type": "apikey"}
+        auth_was_chosen_for_caller = True
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
         await logger.adebug(
             "Auto-enabled API key authentication for project %s (%s) due to AUTO_LOGIN=false",
@@ -178,7 +204,21 @@ async def _new_project(
 
     # Auto-register MCP server for this project with configured default auth
     if get_settings_service().settings.add_projects_to_mcp_servers:
-        await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
+        try:
+            await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
+        except ApiKeyIssuanceDeniedError as denial:
+            if not auth_was_chosen_for_caller:
+                raise HTTPException(status_code=403, detail=str(denial)) from denial
+            # The caller never asked for a key. Create the project without the
+            # MCP server rather than failing on a credential they did not
+            # request and cannot be given.
+            new_project.auth_settings = None
+            await logger.awarning(
+                "Skipped MCP auto-registration for project %s (%s): %s",
+                new_project.name,
+                new_project.id,
+                denial,
+            )
 
     flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
     authorized_flow_owner_ids: dict[UUID, UUID] = {}
@@ -1012,14 +1052,19 @@ async def delete_project(
     # only their own (which is the empty set for a non-owner).
     project_owner_id = project.user_id
 
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
+    memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
+
     def _make_delete_operation(target: Folder):
         async def _delete_project_operation() -> None:
+            memory_base_cleanups.clear()
             flows = (
                 await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
             ).all()
             if len(flows) > 0:
                 for flow in flows:
-                    await cascade_delete_flow(session, flow.id)
+                    await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
 
             await check_project_has_deployments(session, project_id=project_id)
             await session.delete(target)
@@ -1033,6 +1078,13 @@ async def delete_project(
     # therefore re-read with awaits — a plain attribute read on expired state
     # would lazy-load outside the greenlet context and raise MissingGreenlet.
     async def _delete_attempt(attempt: int) -> None:
+        # LE-2020 follow-up: a prior attempt may have populated memory_base_cleanups
+        # before hitting a lock error. If this attempt short-circuits below (target
+        # is None — the project was already deleted by a concurrent request), the
+        # clear() inside _delete_project_operation never runs, and the stale handles
+        # from the earlier attempt would flow into finalize_flow_memory_base_cleanup
+        # for a flow that only moved, not deleted. Clear unconditionally, first.
+        memory_base_cleanups.clear()
         if attempt == 0:
             target = project
         else:
@@ -1050,6 +1102,10 @@ async def delete_project(
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
+        # Commit the deletions before the best-effort external teardown so a
+        # Memory Base's remote collection is dropped only for flows that are gone.
+        await session.commit()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(

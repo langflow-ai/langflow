@@ -118,7 +118,7 @@ class MessageBase(SQLModel):
                 parsed = datetime.fromisoformat(message.timestamp)
                 timestamp = parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         else:
-            timestamp = message.timestamp
+            timestamp = str_to_timestamp(message.timestamp)
 
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
@@ -182,6 +182,14 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     __tablename__ = "message"
     __table_args__ = (
+        # Every history read filters by flow_id (the monitor endpoints) or by
+        # session_id (chat memory) and orders by timestamp. Without these the
+        # whole message table is scanned and sorted on each read, which is what
+        # made a flow with a long history stall the API. ``id`` trails the sort
+        # key because it is the paging tie-breaker; leaving it out makes the
+        # planner sort the matched rows instead of walking the index in order.
+        Index("ix_message_flow_id_timestamp_id", "flow_id", "timestamp", "id"),
+        Index("ix_message_session_id_timestamp_id", "session_id", "timestamp", "id"),
         Index(
             "ix_message_session_metadata_tenant",
             text("(session_metadata->>'tenant_id')"),

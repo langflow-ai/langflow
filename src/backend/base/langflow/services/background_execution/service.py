@@ -266,12 +266,14 @@ class BackgroundExecutionService(Service):
             stale_job_id for stale_job_id in stale_job_ids if await self._cancel_suspended(stale_job_id, job_service)
         ]
 
-    async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
+    async def submit(
+        self, *, flow_id: UUID, request: dict[str, Any], user: UserRead, job_id: UUID | None = None
+    ) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
         # lifespan called start() first. start() is idempotent.
         await self.start()
         job_service = get_job_service()
-        job_id = uuid4()
+        job_id = job_id or uuid4()
         dedupe_key = request.get("idempotency_key")
         # Construct and encrypt the durable payload BEFORE creating the row. The
         # QUEUED insert then commits the marker, plaintext-safe request, and
@@ -969,6 +971,10 @@ class BackgroundExecutionService(Service):
             StreamAdapterContext(
                 run_id=str(job_id),
                 thread_id=request.get("session_id") or str(flow_id),
+                # ``submit`` persists the whole request body, so the replayed
+                # stream is narrowed exactly like the live one. Legacy rows
+                # written before the field existed default to today's behavior.
+                expose_graph_state=request.get("expose_graph_state", True),
             ),
         )
 

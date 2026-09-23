@@ -24,6 +24,8 @@ from lfx.services.settings.base import (
     save_settings_to_yaml,
 )
 from lfx.services.settings.constants import AGENTIC_VARIABLES
+from lfx.services.settings.groups.runtime import RuntimeSettings
+from pydantic import ValidationError
 
 
 def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -138,6 +140,8 @@ EXPECTED_FIELDS = {
     "ssrf_allowed_hosts",
     "connector_ssrf_validation_enabled",
     "connector_ssrf_allow_loopback",
+    "provider_credential_allowed_hosts",
+    "kb_allowed_hosts",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
@@ -205,6 +209,8 @@ EXPECTED_FIELDS = {
     "rate_limit_storage_uri",
     "rate_limit_trust_proxy",
     "public_flow_rate_limit_per_minute",
+    "connection_metadata_rate_limit_per_minute",
+    "connection_write_rate_limit_per_minute",
     "custom_component_admin_only",
     "allow_components_paths_override",
     # RuntimeSettings
@@ -251,6 +257,40 @@ EXPECTED_FIELDS = {
     "background_backend",
     "background_poll_interval_s",
     "background_claim_candidates",
+    # Triggers (TRG-2)
+    "trigger_dispatcher_enabled",
+    "trigger_dispatcher_poll_interval_s",
+    "trigger_lease_ttl_s",
+    "trigger_max_events_per_poll",
+    "trigger_retry_backoff_base_s",
+    "trigger_retry_backoff_cap_s",
+    "trigger_replay_window_days",
+    "trigger_event_retention_days",
+    "trigger_purge_interval_s",
+    # Triggers (TRG-3): the listener process
+    "listeners_mode",
+    "listeners_health_host",
+    "listeners_health_port",
+    "listener_lease_ttl_s",
+    "listener_heartbeat_interval_s",
+    "listener_reconcile_interval_s",
+    "listener_poll_interval_s",
+    "listener_backoff_base_s",
+    "listener_backoff_cap_s",
+    "listener_failure_threshold",
+    # Triggers (TRG-4): provider push ingress and subscription renewal.
+    "trigger_ingress_enabled",
+    "trigger_ingress_max_body_bytes",
+    "trigger_ingress_rate_limit_per_minute",
+    "trigger_ingress_unknown_rate_limit_per_minute",
+    "trigger_ingress_signature_tolerance_s",
+    "trigger_subscription_renew_fraction",
+    "trigger_subscription_renew_lead_cap_s",
+    "trigger_subscription_renew_interval_s",
+    "trigger_subscription_max_per_poll",
+    "trigger_subscription_retry_backoff_base_s",
+    "trigger_subscription_retry_backoff_cap_s",
+    "trigger_subscription_failure_threshold",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
@@ -314,7 +354,7 @@ def test_critical_defaults_unchanged():
     assert settings.allow_custom_components is True
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
-    assert settings.restrict_local_file_access is False
+    assert settings.restrict_local_file_access is True
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
     assert settings.mcp_server_allowed_packages is None
@@ -365,6 +405,32 @@ def test_multi_worker_forces_direct_event_delivery(monkeypatch):
     settings = Settings()
     assert settings.workers == 4
     assert settings.event_delivery == "direct"
+
+
+@pytest.mark.parametrize(("retention", "replay"), [(1, 7), (6, 7), (30, 31)])
+def test_trigger_retention_cannot_shorten_the_replay_window(retention, replay):
+    with pytest.raises(ValidationError, match=r"trigger_event_retention_days.*trigger_replay_window_days"):
+        RuntimeSettings(trigger_event_retention_days=retention, trigger_replay_window_days=replay)
+
+
+@pytest.mark.parametrize(("retention", "replay"), [(1, 1), (7, 7), (30, 7)])
+def test_trigger_retention_may_equal_or_exceed_the_replay_window(retention, replay):
+    settings = RuntimeSettings(trigger_event_retention_days=retention, trigger_replay_window_days=replay)
+    assert (settings.trigger_event_retention_days, settings.trigger_replay_window_days) == (retention, replay)
+
+
+def test_trigger_retention_validates_environment_configuration(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_TRIGGER_EVENT_RETENTION_DAYS", "1")
+    monkeypatch.setenv("LANGFLOW_TRIGGER_REPLAY_WINDOW_DAYS", "7")
+    with pytest.raises(ValidationError, match=r"trigger_event_retention_days.*trigger_replay_window_days"):
+        Settings()
+
+
+@pytest.mark.parametrize("field", ["trigger_event_retention_days", "trigger_replay_window_days"])
+@pytest.mark.parametrize("value", [0, -1])
+def test_trigger_windows_must_remain_positive(field, value):
+    with pytest.raises(ValidationError, match="greater than 0"):
+        RuntimeSettings(**{field: value})
 
 
 def test_single_worker_keeps_explicit_event_delivery(monkeypatch):

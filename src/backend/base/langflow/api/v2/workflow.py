@@ -65,6 +65,7 @@ from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
 from langflow.api.utils.execution_errors import caller_owns_flow
+from langflow.api.utils.execution_principal import FAMILY_WORKFLOW_HITL_V2, FAMILY_WORKFLOW_V2
 from langflow.api.v2.workflow_execution import (
     _execute_streaming_workflow,
     _resolve_execution_timeout,
@@ -401,6 +402,7 @@ def build_stream_response(
         StreamAdapterContext(
             run_id=run_id,
             thread_id=parsed.session_id or str(flow.id),
+            expose_graph_state=parsed.expose_graph_state,
         ),
     )
     return _execute_streaming_workflow(
@@ -583,7 +585,15 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     user). Legacy rows that predate the fields fall back to persist=True /
     end_user_id=None, matching prior behavior.
     """
-    internal = {"persist_messages", "end_user_id"}
+    from langflow.services.triggers.constants import TRIGGER_FAMILIES
+
+    # Only trusted server callers can add this internal field: the public
+    # WorkflowRunRequest still forbids it. Persist it so workers and resumes
+    # retain a trigger's non-interactive connection policy.
+    if "execution_family" in request and request["execution_family"] not in TRIGGER_FAMILIES:
+        msg = "Invalid background trigger execution family"
+        raise ValueError(msg)
+    internal = {"persist_messages", "end_user_id", "component_substitution_warning", "execution_family"}
     persist_messages = request.get("persist_messages", True)
     end_user_id = request.get("end_user_id")
     request_fields = {k: v for k, v in request.items() if k not in internal}
@@ -591,6 +601,7 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
         parse_workflow_run_request(WorkflowRunRequest(**request_fields)),
         persist_messages=persist_messages,
         end_user_id=end_user_id,
+        component_substitution_warning=request.get("component_substitution_warning"),
     )
 
 
@@ -637,6 +648,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # This factory is the runner the v2 background route actually reaches, so the label
                 # belongs here; without it a background run is indistinguishable from a live stream.
                 protocol="v2.background",
+                # A resume runs on a worker with no caller present: it keeps the
+                # STARTING job's owner as its principal and must be non-interactive,
+                # so an owner connection needs the per-connection opt-in to resolve.
+                execution_family=request.get("execution_family")
+                or (FAMILY_WORKFLOW_HITL_V2 if resume is not None else FAMILY_WORKFLOW_V2),
                 # Emit the off-wire terminal-output capture the runner records into
                 # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
                 # populated GET-status result too (not just langflow).
@@ -707,6 +723,10 @@ async def execute_workflow_background(
             "files": parsed.files,
             "start_component_id": parsed.start_component_id,
             "stop_component_id": parsed.stop_component_id,
+            # Must survive the worker re-parse, or a job submitted with the
+            # narrowed stream would persist (and replay on re-attach) the graph
+            # state the caller opted out of.
+            "expose_graph_state": parsed.expose_graph_state,
             "idempotency_key": idempotency_key,
             # Serving-plane ephemeral decision must survive the worker re-parse so an
             # anonymous background/resume run does not persist memory (see the pop in
@@ -716,6 +736,8 @@ async def execute_workflow_background(
             # it must survive the round-trip so an identified background/resume run
             # stamps memory to the end user on the worker, not the SID.
             "end_user_id": parsed.end_user_id,
+            # Sanitized code no longer reveals the substitution when the worker rebuilds it.
+            "component_substitution_warning": parsed.component_substitution_warning,
         }
         job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
         return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
@@ -863,6 +885,10 @@ async def get_workflow_status(
             # searched structurally — the persisted request is the source of truth.
             persisted_request = (job.job_metadata or {}).get("request") or {}
             effective_session_id = persisted_request.get("session_id") or flow_id_str
+            warning = (job.job_metadata or {}).get("component_substitution_warning") or persisted_request.get(
+                "component_substitution_warning"
+            )
+            warnings = [warning] if isinstance(warning, str) and warning else []
 
             # Default GET-status path: rebuild from the protocol-neutral terminal
             # captures the runner stored in ``Job.result``. This needs no
@@ -879,7 +905,7 @@ async def get_workflow_status(
                         job_id=job_id_str,
                         session_id=effective_session_id,
                         fail_on_rejected=True,
-                    )
+                    ).model_copy(update={"warnings": warnings})
                 except ValueError:
                     # Preserve every decodable capture in case the legacy
                     # vertex-build fallback is also unavailable.
@@ -888,7 +914,7 @@ async def get_workflow_status(
                         flow_id=flow_id_str,
                         job_id=job_id_str,
                         session_id=effective_session_id,
-                    )
+                    ).model_copy(update={"warnings": warnings})
 
             # Fallback: ``Job.result`` carried no outputs, has an invalid shape,
             # contains rejected/version-skewed entries, or predates capture.
@@ -909,11 +935,11 @@ async def get_workflow_status(
                     flow_id=flow_id_str,
                     job_id=job_id_str,
                     session_id=effective_session_id,
-                )
+                ).model_copy(update={"warnings": warnings})
             else:
                 if reconstructed.session_id is None:
                     reconstructed = reconstructed.model_copy(update={"session_id": effective_session_id})
-                return reconstructed
+                return reconstructed.model_copy(update={"warnings": warnings})
 
         if job.status == JobStatus.FAILED:
             # Surface the durable error JSON the runner persisted, additively.

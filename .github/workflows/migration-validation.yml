@@ -6,12 +6,17 @@ on:
       - 'src/backend/base/langflow/alembic/**'
       - 'src/backend/base/langflow/services/database/models/**'
       - 'src/backend/base/langflow/services/database/service.py'
+      - 'src/backend/base/langflow/services/connection/**'
+      - 'src/backend/base/langflow/api/v1/connections.py'
       - 'src/backend/tests/unit/alembic/**'
+      - 'src/backend/tests/unit/services/connection/**'
+      - 'src/backend/tests/unit/api/v1/test_connection_oauth.py'
       - '.github/workflows/migration-validation.yml'
       - 'src/backend/base/langflow/services/background_execution/**'
       - 'src/backend/base/langflow/services/jobs/**'
       - 'src/backend/base/langflow/services/job_queue/**'
       - 'src/backend/tests/unit/background_execution/**'
+      - 'src/backend/tests/unit/services/database/models/flow_version/**'
 
 jobs:
   model-migration-consistency:
@@ -58,7 +63,30 @@ jobs:
           MIGRATION_VALIDATION_CI: "true"
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
         run: |
-          uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
+          uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py src/backend/tests/unit/alembic/test_message_history_index_migration.py -x -v
+
+      - name: Check flow version deletion and attachment concurrency
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest -c pyproject.toml src/backend/tests/unit/services/database/models/flow_version/test_delete_attachment_concurrency.py -x -v
+
+      # Unit-test jobs have no database URI, so they run only the SQLite arm of
+      # backend-parametrized migration tests. Partial unique indexes are written
+      # per backend, so run the PostgreSQL arm here against the job's database.
+      - name: Run connection migration tests on PostgreSQL
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest src/backend/tests/unit/alembic/test_connection_migration.py -x -v
+
+      - name: Run OAuth migration and multi-worker refresh tests on PostgreSQL
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest \
+            src/backend/tests/unit/alembic/test_connection_oauth_migration.py \
+            src/backend/tests/unit/alembic/test_connection_oauth_workers.py -x -v
 
   background-real-service:
     name: Background Execution Real-Service Tests (real Postgres)

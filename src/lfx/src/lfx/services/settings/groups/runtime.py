@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from lfx.log.logger import logger
 
@@ -152,6 +152,138 @@ class RuntimeSettings(BaseModel):
     frames while a job is live. Bounds the added reattach latency per milestone.
     Must be > 0."""
 
+    # Triggers (TRG-2): the leased dispatcher, the schedule tick producer, and
+    # the ledger retention windows.
+    trigger_dispatcher_enabled: bool = True
+    """Run the leased trigger dispatcher and schedule tick producer inside this
+    process. Every API replica may set this: the loops are singletons held by a
+    ``trigger_lease`` row, so N replicas still produce one tick per schedule and
+    one run per event. Turn it off on replicas that must never execute triggers
+    (and when TRG-3's dedicated listener process hosts the loops instead)."""
+    trigger_dispatcher_poll_interval_s: float = Field(default=5.0, gt=0)
+    """How often the dispatcher scans the ledger for claimable events. The lower
+    bound on scheduling latency for an event that arrives just after a scan."""
+    trigger_lease_ttl_s: float = Field(default=30.0, gt=0)
+    """Lifetime of a dispatcher/scheduler singleton lease and of a per-event
+    claim. A holder that dies has its work re-dispatched this many seconds
+    later, so this is the worst-case duplicate-suppression window as well as the
+    worst-case stall. The loops renew on ``trigger_dispatcher_poll_interval_s``,
+    which must stay comfortably below this TTL so a healthy holder never looks
+    dead. TRG-3's listener process adds its own heartbeat knob when it has a
+    loop whose cadence differs from the poll."""
+    trigger_max_events_per_poll: int = Field(default=25, gt=0)
+    """Upper bound on events one dispatcher pass claims, so a large backlog is
+    drained in bounded batches instead of one unbounded transaction."""
+    trigger_retry_backoff_base_s: float = Field(default=5.0, gt=0)
+    """First retry delay for a failed dispatch. Subsequent attempts back off
+    exponentially up to ``trigger_retry_backoff_cap_s``."""
+    trigger_retry_backoff_cap_s: float = Field(default=300.0, gt=0)
+    """Ceiling on the exponential retry backoff."""
+    trigger_replay_window_days: int = Field(default=7, gt=0)
+    """How far back an owner may replay a ledger row, and how far back the
+    schedule catch-up may reach after downtime."""
+    trigger_event_retention_days: int = Field(default=30, gt=0)
+    """How long terminal ledger rows are kept before the purge job deletes them.
+    Must be at least ``trigger_replay_window_days`` for replay to be meaningful."""
+    trigger_purge_interval_s: float = Field(default=3600.0, gt=0)
+    """How often the purge pass runs inside the dispatcher loop."""
+
+    # Triggers (TRG-3): the supervised listener process that holds Track B
+    # provider connections (Slack Socket Mode, Graph delta polling, Gmail
+    # Pub/Sub pull). The listeners never run the dispatcher loops and the API
+    # never holds a provider connection; the two processes meet only at the
+    # ledger.
+    listeners_mode: Literal["off", "subprocess"] = "off"
+    """Whether the API lifespan spawns ``langflow listeners`` as a child process.
+
+    ``off`` (default) means the API hosts no listeners: either nothing needs
+    Track B, or an operator runs ``langflow listeners`` as its own service (the
+    supported shape for multi-replica deployments). ``subprocess`` is the
+    single-container and Desktop shape - exactly one API worker spawns the child
+    and stops it on shutdown, so a multi-worker API does not start N copies."""
+    listeners_health_host: str = "127.0.0.1"
+    """Interface the listener health server binds. Loopback by default so a
+    listener container exposes nothing by accident; set ``0.0.0.0`` when a
+    Kubernetes probe or a Compose healthcheck must reach it from outside the
+    process namespace."""
+    listeners_health_port: int = Field(default=7861, gt=0, le=65535)
+    """Port serving ``/health`` (liveness) and ``/healthz`` (readiness) in the
+    listener process. The listener serves nothing else: it has no HTTP app."""
+    listener_lease_ttl_s: float = Field(default=30.0, gt=0)
+    """How long a ``trigger_listener_lease`` row stays valid without a
+    heartbeat. A replica that dies has its connections taken over within two
+    TTLs, which is the failover target ``decisions/process-model.md`` records.
+    Expiry is a Langflow recovery bound, not proof that the dead process closed
+    its socket, so adapters must tolerate bounded overlap."""
+    listener_heartbeat_interval_s: float = Field(default=10.0, gt=0)
+    """How often a held connection lease is renewed. Must stay well below
+    ``listener_lease_ttl_s`` so a healthy holder never looks dead."""
+    listener_reconcile_interval_s: float = Field(default=5.0, gt=0)
+    """How often the supervisor compares the triggers in the database with the
+    connections it is holding, and claims or drops leases accordingly. There is
+    no broker: this poll is how a listener learns about a new trigger."""
+    listener_poll_interval_s: float = Field(default=30.0, gt=0)
+    """Default interval for the generic poll loop that drives pull adapters.
+    An adapter may ask for a different cadence; this is the fallback."""
+    listener_backoff_base_s: float = Field(default=2.0, gt=0)
+    """First delay after a connection task fails. Subsequent consecutive
+    failures back off exponentially, with jitter, up to the cap."""
+    listener_backoff_cap_s: float = Field(default=300.0, gt=0)
+    """Ceiling on the listener reconnect backoff."""
+    listener_failure_threshold: int = Field(default=5, gt=0)
+    """Consecutive failures on one connection before the error is surfaced on
+    every trigger that connection feeds. A success resets the counter."""
+
+    # Triggers (TRG-4): the provider-signed ingress route on the API process and
+    # the leased job that keeps provider subscriptions alive.
+    trigger_ingress_enabled: bool = True
+    """Serve the provider ingress route. Turn it off on an instance that accepts
+    no inbound provider deliveries at all (a firewalled install using Track B
+    listeners only); every ingress request then answers 404 exactly as an
+    unknown trigger id does, so disabling it leaks nothing either."""
+    trigger_ingress_max_body_bytes: int = Field(default=1_048_576, gt=0)
+    """Per-route body cap for an ingress delivery, independent of the global
+    request limit. Provider notifications are small - Graph basic notifications
+    carry ids only - and this route is unauthenticated, so it reads a bounded
+    body and rejects anything larger before parsing it."""
+    trigger_ingress_rate_limit_per_minute: int = Field(default=600, gt=0)
+    """Per-trigger ingress ceiling. Ten deliveries a second is far above any
+    wave-1 provider's own cap (Slack allows 30,000 per workspace per app per
+    hour) and far below what an abusive caller would need to hurt the API."""
+    trigger_ingress_unknown_rate_limit_per_minute: int = Field(default=60, gt=0)
+    """Per-client ceiling for deliveries that name no known trigger. Separate
+    from the per-trigger counter so probing for valid ids is bounded without a
+    real provider's retries ever consuming the same budget."""
+    trigger_ingress_signature_tolerance_s: int = Field(default=300, gt=0)
+    """How stale a signed request's timestamp may be. Slack's own guidance is
+    five minutes; a shorter window rejects legitimate retries, a longer one
+    widens the replay window."""
+    trigger_subscription_renew_fraction: float = Field(default=0.5, gt=0, le=1)
+    """Fraction of a subscription's lifetime after which renewal is attempted."""
+    trigger_subscription_renew_lead_cap_s: float = Field(default=86_400.0, gt=0)
+    """Upper bound on how far ahead of expiry a subscription is renewed. With
+    the fraction above, a seven-day Graph mail subscription renews a day early
+    and a one-day rich-notification subscription renews twelve hours early."""
+    trigger_subscription_renew_interval_s: float = Field(default=300.0, gt=0)
+    """How often the leased renewal job scans for subscriptions coming due."""
+    trigger_subscription_max_per_poll: int = Field(default=25, gt=0)
+    """Upper bound on how many subscriptions one renewal pass claims. Separate
+    from the dispatcher's ``trigger_max_events_per_poll`` on purpose: one is an
+    event budget measured against flow execution, the other a provider-call
+    budget measured against an HTTP round trip per row, and an operator tuning
+    one should not silently change the other."""
+    trigger_subscription_retry_backoff_base_s: float = Field(default=60.0, gt=0)
+    """First delay before a failed renewal is retried. Subsequent consecutive
+    failures back off exponentially up to the cap. A renewal failure is never
+    terminal while the subscription still has time on it - only expiry is."""
+    trigger_subscription_retry_backoff_cap_s: float = Field(default=3600.0, gt=0)
+    """Ceiling on the renewal retry backoff. Well under every wave-1 provider's
+    shortest subscription lifetime (one day), so a subscription that is failing
+    still gets many attempts before it expires."""
+    trigger_subscription_failure_threshold: int = Field(default=3, gt=0)
+    """Consecutive renewal failures before the problem is surfaced on the
+    trigger the subscription feeds. A success clears it."""
+
     event_delivery: Literal["polling", "streaming", "direct"] = "streaming"
     """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
 
@@ -200,6 +332,35 @@ class RuntimeSettings(BaseModel):
     `in-process` executor runs graphs in the current process; third-party executors registered
     via the `lfx.executors` entry-point group can be selected by setting this to their kind.
     """
+
+    @model_validator(mode="after")
+    def validate_trigger_event_retention(self) -> "RuntimeSettings":
+        """Retain terminal events for the entire advertised replay window."""
+        if self.trigger_event_retention_days < self.trigger_replay_window_days:
+            msg = "trigger_event_retention_days must be at least trigger_replay_window_days"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def validate_listener_lease_cadence(self) -> "RuntimeSettings":
+        """A lease must not be able to expire before its holder gets to renew it.
+
+        Renewal happens inside the reconcile pass, so the worst case between two
+        renewals is a heartbeat that came due just after a pass plus a whole
+        reconcile interval. Individually valid settings can combine to exceed
+        the TTL - 30s TTL, 25s heartbeat, 20s reconcile renews at 45s - and then
+        another replica takes over a connection whose adapter is still running.
+        """
+        renewal_ceiling = self.listener_heartbeat_interval_s + self.listener_reconcile_interval_s
+        if renewal_ceiling >= self.listener_lease_ttl_s:
+            msg = (
+                "listener_heartbeat_interval_s + listener_reconcile_interval_s "
+                f"({renewal_ceiling:g}s) must be below listener_lease_ttl_s "
+                f"({self.listener_lease_ttl_s:g}s): renewal happens on a reconcile pass, so a "
+                "healthy holder would otherwise look dead and lose its connections to another replica."
+            )
+            raise ValueError(msg)
+        return self
 
     @field_validator("event_delivery", mode="before")
     @classmethod

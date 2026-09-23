@@ -46,6 +46,12 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         return []
 
     @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "data": "sends the request to the live URL in default_kwargs",
+        }
+
+    @pytest.fixture
     async def component(self, component_class, default_kwargs):
         """Return a component instance."""
         return component_class(**default_kwargs)
@@ -709,6 +715,25 @@ class TestAPIRequestSSRFProtection:
             call_kwargs = mock_create_client.call_args[1]
             assert call_kwargs["hostname"] == "example.com"
             assert len(call_kwargs["validated_ips"]) > 0  # Should have validated IPs
+
+    def test_idn_url_pins_punycode_host(self, component):
+        """IDN URLs must pin under the punycode host httpx actually connects to.
+
+        Regression test: httpx/httpcore connect to the IDNA form of an IDN host, so a
+        Unicode pin key silently bypasses DNS pinning (rebinding SSRF for IDN hosts).
+        """
+        from unittest.mock import MagicMock
+
+        with (
+            patch("lfx.components.data_source.api_request.is_ssrf_protection_enabled", return_value=True),
+            patch("lfx.components.data_source.api_request.create_ssrf_protected_client") as mock_create_client,
+        ):
+            mock_create_client.return_value = MagicMock()
+            component._build_http_client("http://exämple-rebind.test/path", ["93.184.216.34"])
+
+        mock_create_client.assert_called_once_with(
+            hostname="xn--exmple-rebind-cfb.test", validated_ips=["93.184.216.34"]
+        )
 
     async def test_normal_client_used_when_protection_disabled(self, component):
         """Test that normal httpx client is used when SSRF protection is disabled."""

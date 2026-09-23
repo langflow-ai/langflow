@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -15,6 +16,15 @@ from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+
+@pytest.fixture(autouse=True)
+def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise vector-store mechanics against tmp_path, not containment; opt out of restriction."""
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
 
 
 class _KeywordEmbeddings(Embeddings):
@@ -491,10 +501,10 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         assert "tags" not in data_obj.data
         assert "nested" not in data_obj.data
 
-    def test_metadata_filtering_fallback(
+    def test_metadata_filtering_without_community(
         self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any], monkeypatch
     ) -> None:
-        """Test the fallback behavior when filter_complex_metadata import fails."""
+        """Complex metadata must still be filtered when Community is unavailable."""
         import builtins
 
         original_import = builtins.__import__
@@ -507,12 +517,12 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         monkeypatch.setattr(builtins, "__import__", mock_import)
 
-        # Use simple test data to avoid ChromaDB errors when filtering is unavailable
-        test_data = [Data(data={"text": "Simple document", "simple_field": "simple_value"})]
+        # Include container and null metadata that Chroma cannot store.
+        test_data = [Data(data={"text": "Simple document", "simple_field": "simple_value", "nested": [], "null": None})]
         default_kwargs["ingest_data"] = test_data
         default_kwargs["collection_name"] = "test_fallback"
 
-        # Should work with fallback (no filtering)
+        # Filtering is independent of the retired dependency.
         component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
         vector_store = component.build_vector_store()
 

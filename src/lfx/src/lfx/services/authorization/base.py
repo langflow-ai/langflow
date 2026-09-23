@@ -30,6 +30,7 @@ class AuthzContext(TypedDict, total=False):
     file_user_id: _UUID | None
     share_user_id: _UUID | None
     provider_account_user_id: _UUID | None
+    connection_owner_id: _UUID | None
     voice_user_id: _UUID | None
     workspace_id: _UUID | None
     folder_id: _UUID | None
@@ -42,6 +43,15 @@ class AuthzContext(TypedDict, total=False):
 PUBLIC_ANONYMOUS_ACTOR_ID = uuid5(NAMESPACE_URL, "urn:langflow:principal:anonymous-public")
 
 AdministrationResource = Literal["user", "team", "role"]
+ExecutionPrincipalKind = Literal[
+    "actor",
+    "flow_owner",
+    "deployment_owner",
+    "job_owner",
+    "anonymous_public",
+    "headless_operator",
+    "unknown",
+]
 
 
 class PublicResourceAction(str, Enum):
@@ -68,6 +78,33 @@ class AuthorizationPrincipal:
     def public_anonymous(cls) -> AuthorizationPrincipal:
         """Return the stable, non-user identity used by anonymous direct links."""
         return cls(actor_type="anonymous_public", actor_id=PUBLIC_ANONYMOUS_ACTOR_ID)
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionPrincipal:
+    """Identity and route family used for dependency credential resolution.
+
+    ``allow_explicit_shares`` is the owner-only switch for route families whose
+    admission never admits a delegated caller (the legacy MCP transports). It is
+    additive and defaults to ``True`` so the
+    resolver keeps honoring explicit shares for every family that already did;
+    a host resolver that supports shares must skip its share branch when it is
+    ``False``. The portable deny floor is unaffected either way.
+    """
+
+    kind: ExecutionPrincipalKind
+    user_id: str | None = None
+    actor_id: str | None = None
+    family: str | None = None
+    interactive: bool = False
+    end_user_id: str | None = None
+    actor_label: str | None = None
+    allow_explicit_shares: bool = True
+
+    @classmethod
+    def unknown(cls) -> ExecutionPrincipal:
+        """Return the fail-closed principal for unstamped execution paths."""
+        return cls(kind="unknown")
 
 
 @dataclass(frozen=True, slots=True)
