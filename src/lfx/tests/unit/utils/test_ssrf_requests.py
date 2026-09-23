@@ -109,6 +109,26 @@ class TestSSRFSafeGet:
         # Auto-redirects must be disabled so each hop can be validated.
         assert mock_get.call_args.kwargs["follow_redirects"] is False
 
+    @pytest.mark.parametrize(
+        ("content_type", "expected_encoding"),
+        [("text/plain", "ISO-8859-1"), ("application/json", "utf-8"), ("application/octet-stream", None)],
+    )
+    def test_pinned_response_keeps_requests_charset_rules(self, content_type, expected_encoding):
+        """A pinned response must decode the same way as a Requests response."""
+        upstream = httpx.Response(
+            200,
+            headers={"Content-Type": content_type},
+            content=b"feed",
+            request=httpx.Request("GET", "http://example.com"),
+        )
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("httpx.Client.get", return_value=upstream),
+        ):
+            response = ssrf_safe_get("http://feed.example.com/rss", timeout=5)
+        assert response.encoding == expected_encoding
+
     def test_redirect_to_internal_is_blocked(self):
         """A public URL that redirects to an internal address is blocked at the redirect hop."""
         with (

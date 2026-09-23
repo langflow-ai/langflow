@@ -81,7 +81,7 @@ def _pinned_get(
     response.headers = requests.structures.CaseInsensitiveDict(result.headers)
     response.url = str(result.url)
     response.reason = result.reason_phrase
-    response.encoding = result.encoding
+    response.encoding = requests.utils.get_encoding_from_headers(response.headers)
     response._content = result.content  # noqa: SLF001 - adapt the buffered httpx body to Requests
     response._content_consumed = True  # noqa: SLF001
     response.request = requests.Request("GET", url, headers=request_headers, params=params).prepare()
