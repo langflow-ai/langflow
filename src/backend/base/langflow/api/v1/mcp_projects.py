@@ -72,6 +72,8 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import audited_route, stage_flow_succeeded, stage_project_succeeded
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_AUTO_LOGIN,
@@ -583,6 +585,15 @@ async def handle_project_streamable_http(
 
 
 @router.patch("/{project_id}", status_code=200)
+@audited_route(
+    resource_type=audit_vocab.AuditResourceType.PROJECT,
+    action=audit_vocab.PROJECT_WRITE,
+    operation=audit_vocab.AuditOperation.PATCH,
+    resource_id_param="project_id",
+    session_param=None,
+    user_param="current_user",
+    authorized=False,
+)
 async def update_project_mcp_settings(
     project_id: UUID,
     request: MCPProjectUpdateRequest,
@@ -661,6 +672,26 @@ async def update_project_mcp_settings(
                     updated_flows.append(flow)
 
             await session.flush()
+
+            for flow in updated_flows:
+                await stage_flow_succeeded(
+                    session,
+                    action=audit_vocab.FLOW_WRITE,
+                    operation=audit_vocab.AuditOperation.PATCH,
+                    flow_id=flow.id,
+                    flow_name=flow.name,
+                    written_fields=["mcp_enabled", "action_name", "action_description"],
+                )
+            if auth_settings_updated:
+                # The Project details contract has no field for auth settings, so the
+                # event records the write itself: who changed this project, and when.
+                await stage_project_succeeded(
+                    session,
+                    action=audit_vocab.PROJECT_WRITE,
+                    operation=audit_vocab.AuditOperation.PATCH,
+                    project_id=project.id,
+                    project_name=project.name,
+                )
 
             response: dict[str, Any] = {
                 "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"

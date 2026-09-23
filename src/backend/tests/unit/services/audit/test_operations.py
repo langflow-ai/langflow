@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import sqlite3
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.services.audit import operations
 from langflow.services.audit.operations import (
     UNKNOWN_RESOURCE_ID,
     AuditedOperation,
+    audited_route,
     classify_failure,
     describe_flow_body,
     describe_project_body,
@@ -21,6 +25,7 @@ from langflow.services.audit.vocabulary import (
     AuditResourceType,
     AuditResult,
 )
+from langflow.services.authorization.refusal import mark_authorization_refusal
 from langflow.services.database.models.flow.model import FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -115,3 +120,44 @@ def test_a_flow_patch_prefers_the_known_name_over_the_attempted_one():
     described = describe_flow_body("flow", loaded_param="db_flow")({"flow": FlowUpdate(name="new"), "db_flow": loaded})
 
     assert described == {"resource_name": "current-name", "attempted_fields": {"name"}}
+
+
+async def _recorded(exc: Exception, monkeypatch) -> list:
+    """Run an already-authorized route that raises `exc`, capturing what it records."""
+    written: list = []
+
+    async def _capture(draft):
+        written.append(draft)
+        return True
+
+    monkeypatch.setattr(operations, "record_audit_event_after_rollback", _capture)
+    monkeypatch.setattr(operations, "_release", lambda _session: asyncio.sleep(0))
+
+    @audited_route(
+        resource_type=AuditResourceType.FLOW,
+        action=FLOW_WRITE,
+        operation=AuditOperation.PATCH,
+        resource_id_param="flow_id",
+        authorized=True,
+    )
+    async def route(*, flow_id, session, current_user):  # noqa: ARG001
+        raise exc
+
+    with pytest.raises(type(exc)):
+        await route(flow_id=uuid4(), session=None, current_user=SimpleNamespace(id=uuid4()))
+    return written
+
+
+async def test_a_refusal_after_authorization_is_not_recorded_as_a_failure(audit_enabled, monkeypatch):  # noqa: ARG001
+    """The guard already wrote its decision to authz_audit_log."""
+    refusal = mark_authorization_refusal(HTTPException(status_code=404, detail="Flow not found"))
+
+    assert await _recorded(refusal, monkeypatch) == []
+
+
+async def test_a_real_failure_after_authorization_is_still_recorded(audit_enabled, monkeypatch):  # noqa: ARG001
+    written = await _recorded(HTTPException(status_code=409, detail="A flow with that name exists"), monkeypatch)
+
+    assert [(draft.result, draft.error_code) for draft in written] == [
+        (AuditResult.FAILED, AuditErrorCode.FLOW_NAME_CONFLICT)
+    ]
