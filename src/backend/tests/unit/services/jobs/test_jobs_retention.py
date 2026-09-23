@@ -113,3 +113,17 @@ async def test_purge_is_a_noop_when_nothing_is_old_enough():
     await _aged_job(service, status=JobStatus.COMPLETED, age_days=1)
 
     assert await service.purge_terminal_jobs(older_than_days=30, limit=100) == 0
+
+
+async def test_purge_leaves_child_rows_of_retained_jobs_alone():
+    """Child deletes are keyed to the purged batch, never to the whole table."""
+    service = JobService()
+    fresh = await _aged_job(service, status=JobStatus.COMPLETED, age_days=2, with_children=True)
+    suspended = await _aged_job(service, status=JobStatus.SUSPENDED, age_days=400, with_children=True)
+    old = await _aged_job(service, status=JobStatus.COMPLETED, age_days=90, with_children=True)
+
+    await service.purge_terminal_jobs(older_than_days=30, limit=100)
+
+    assert await _child_counts(service, old) == (0, 0, 0)
+    assert await _child_counts(service, fresh) == (1, 1, 1)
+    assert await _child_counts(service, suspended) == (1, 1, 1)

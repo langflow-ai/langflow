@@ -774,8 +774,13 @@ class JobService(Service):
         row that reached a terminal status without one. Deletes are chunked by
         ``limit`` so a pass never takes a long lock or bloats one transaction;
         a caller with a backlog loops until a pass returns fewer than ``limit``.
-        Concurrent callers are safe: the delete is keyed by id, so a racer
-        simply finds fewer rows.
+
+        Every API worker runs the sweep, so concurrent callers are expected. On
+        Postgres the batch is selected ``FOR UPDATE SKIP LOCKED``: a second
+        sweep skips rows the first has locked and takes a disjoint batch instead
+        of queueing behind it (or deadlocking on the child deletes), and a
+        selected row cannot change status before it is deleted. SQLite renders
+        no lock clause and serializes writers on its own.
         """
         from sqlmodel import delete
 
@@ -783,7 +788,10 @@ class JobService(Service):
         aged_at = func.coalesce(col(Job.finished_timestamp), col(Job.created_timestamp))
         async with session_scope() as session:
             result = await session.exec(
-                select(Job.job_id).where(col(Job.status).in_(_RETAINABLE_STATUSES), aged_at < cutoff).limit(limit)
+                select(Job.job_id)
+                .where(col(Job.status).in_(_RETAINABLE_STATUSES), aged_at < cutoff)
+                .limit(limit)
+                .with_for_update(skip_locked=True)
             )
             job_ids = list(result.all())
             if not job_ids:
