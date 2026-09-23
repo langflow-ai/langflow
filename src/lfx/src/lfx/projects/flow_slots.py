@@ -71,7 +71,11 @@ def binding_outputs(field_name: str, data: dict) -> list[dict]:
 
 
 def validate_project_binding(field_name: str, data: dict, binding: FlowBinding) -> None:
-    if field_name == "system_prompt":
+    if field_name == "scorer":
+        from lfx.projects.evaluations import validate_scorer
+
+        validate_scorer(data, binding)
+    elif field_name == "system_prompt":
         validate_instruction_binding(data, binding)
     elif field_name == "hooks" and isinstance(binding, HookBinding):
         validate_hook_binding(data, binding)

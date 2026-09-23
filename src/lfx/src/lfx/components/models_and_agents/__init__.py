@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.compactor import CompactorComponent
     from lfx.components.models_and_agents.context_manager import ContextManagerComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
+    from lfx.components.models_and_agents.evaluation_input import EvaluationInputComponent
+    from lfx.components.models_and_agents.evaluation_result import EvaluationResultComponent
     from lfx.components.models_and_agents.hook import HookComponent
     from lfx.components.models_and_agents.hook_event import HookEventComponent
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
@@ -31,6 +33,8 @@ _dynamic_imports = {
     "CompactorComponent": "compactor",
     "ContextManagerComponent": "context_manager",
     "EmbeddingModelComponent": "embedding_model",
+    "EvaluationInputComponent": "evaluation_input",
+    "EvaluationResultComponent": "evaluation_result",
     "HookComponent": "hook",
     "HookEventComponent": "hook_event",
     "LanguageModelComponent": "language_model",
@@ -50,6 +54,8 @@ __all__ = [
     "CompactorComponent",
     "ContextManagerComponent",
     "EmbeddingModelComponent",
+    "EvaluationInputComponent",
+    "EvaluationResultComponent",
     "HookComponent",
     "HookEventComponent",
     "LanguageModelComponent",

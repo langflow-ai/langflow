@@ -24,7 +24,13 @@ DEFAULT_PROJECT_TYPE = builtins.DEFAULT_PROJECT_TYPE
 #: The types Langflow ships. Anything outside this set came from a plugin, so the API can tell
 #: a user's own type from one it is responsible for.
 CORE_PROJECT_TYPES = frozenset(
-    {builtins.FLOWS.name, builtins.AGENT_HARNESS.name, builtins.TOOL_PACK.name, builtins.SKILL_PACK.name}
+    {
+        builtins.FLOWS.name,
+        builtins.AGENT_HARNESS.name,
+        builtins.TOOL_PACK.name,
+        builtins.SKILL_PACK.name,
+        builtins.EVAL_SUITE.name,
+    }
 )
 
 __all__ = [
