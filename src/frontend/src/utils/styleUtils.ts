@@ -506,6 +506,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
   { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
   { display_name: "Redis", name: "redis", icon: "Redis" },
+  { display_name: "Requesty", name: "requesty", icon: "Requesty" },
   { display_name: "SambaNova", name: "sambanova", icon: "SambaNova" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
   { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
