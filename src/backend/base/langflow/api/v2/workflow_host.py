@@ -87,6 +87,10 @@ class LangflowWorkflowHost(WorkflowHostBase):
         from langflow.api.v2.workflow import authorize_flow_action
 
         await authorize_flow_action(caller, flow.graph, action, requested_id=flow.flow_id)
+        if action == WorkflowAction.EXECUTE:
+            from langflow.services.deployment_artifacts.harness_runtime import mounted_flow
+
+            flow.graph = await mounted_flow(flow.graph, caller)
 
     async def run_sync(
         self,

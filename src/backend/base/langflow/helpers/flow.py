@@ -428,11 +428,21 @@ async def run_flow(
     target_flow_id = flow_id or graph_flow_id
     target_flow_name = flow_name or (getattr(graph, "flow_name", None) if graph is not None else None)
 
-    async with scoped_model_provider_policy_for_target_flow(
-        user_id=user_id,
-        flow_id=target_flow_id,
-        flow_name=target_flow_name,
-    ) as target_flow:
+    from contextlib import nullcontext
+
+    candidate = getattr(graph, "runtime_candidate", None)
+    if candidate is not None:
+        if str(target_flow_id) not in candidate.definitions or str(graph.user_id) != str(user_id):
+            msg = "Candidate flow or execution identity does not match the retained graph."
+            raise ValueError(msg)
+        # The trusted candidate was authorized at the destination workflow boundary.
+        # Inherit that provider-policy scope; source UUIDs need not exist in this DB.
+        scope = nullcontext()
+    else:
+        scope = scoped_model_provider_policy_for_target_flow(
+            user_id=user_id, flow_id=target_flow_id, flow_name=target_flow_name
+        )
+    async with scope as target_flow:
         if graph is None:
             graph = await _build_graph_from_authorized_flow(
                 flow=target_flow,

@@ -277,6 +277,7 @@ EXPECTED_FIELDS = {
     "background_backend",
     "background_poll_interval_s",
     "background_claim_candidates",
+    "harness_candidate_mounts",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",

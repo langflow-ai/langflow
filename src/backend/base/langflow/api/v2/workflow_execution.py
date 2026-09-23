@@ -275,7 +275,9 @@ async def _stream_event_frames(
     queue = _WorkflowEventQueue(maxsize=_EVENT_QUEUE_MAX_SIZE)
     event_manager = create_default_event_manager(queue)
     input_request = _single_input_value_request(parsed)
-    flow_data = FlowDataRequest(**parsed.data) if parsed.data else None
+    runtime_candidate = getattr(provider_policy_flow, "runtime_candidate", None)
+    executable_data = provider_policy_flow.data if runtime_candidate is not None else parsed.data
+    flow_data = FlowDataRequest(**executable_data) if executable_data else None
     # Ceiling for the modes whose caller is waiting on a socket (stream, public).
     # Sync uses its own asyncio.wait_for upstream; background passes None and is
     # bounded by JobRunner instead. wait_for(timeout=None) simply awaits.
@@ -353,6 +355,8 @@ async def _stream_event_frames(
                         # Carry the end-user identity onto the graph so per-user state
                         # (chat memory) scopes to the end user.
                         end_user_id=parsed.end_user_id,
+                        runtime_candidate=runtime_candidate,
+                        request_variables=parsed.globals if runtime_candidate is not None else None,
                     ),
                     timeout=execution_timeout,
                 )
@@ -546,9 +550,12 @@ def _execute_streaming_workflow(
         ):
             yield frame
 
+    headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    if (candidate := getattr(flow, "runtime_candidate", None)) is not None:
+        headers["X-Langflow-Candidate-Digest"] = candidate.digest
     return EventSourceResponse(
         _frames_only(),
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers=headers,
     )
 
 
@@ -746,7 +753,13 @@ async def execute_sync_workflow(
             user_id=current_user.id,
             is_superuser=bool(getattr(current_user, "is_superuser", False)),
         ):
-            if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
+            if (
+                getattr(flow, "runtime_candidate", None) is None
+                and sanitized_flow_data is None
+                and not tweaks
+                and context is None
+                and checkpoint_store is None
+            ):
                 graph = await warm_deepcopy(
                     flow_id_str,
                     expected_version=flow_version(flow.updated_at),
@@ -773,6 +786,8 @@ async def execute_sync_workflow(
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
+        if getattr(flow, "runtime_candidate", None) is not None:
+            flow.runtime_candidate.bind(graph)
         graph.persist_messages = parsed.persist_messages
         # Carry the end-user identity onto the graph so services (chat memory) scope
         # per-user state to the end user. None for anonymous / feature-off / editor runs.
@@ -809,13 +824,24 @@ async def execute_sync_workflow(
     warnings = [warning] if warning else []
     # user_id stays the executing service account (flow fetch / resume rely on it); the end
     # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
+    # Persist both the substitution notice and candidate identity in the same
+    # transaction as the queued job and its executable candidate checkpoint.
+    candidate_metadata = {"component_substitution_warning": warning} if warning else {}
+    candidate_kwargs = {"initial_metadata": candidate_metadata or None}
+    if graph.runtime_candidate is not None:
+        from langflow.services.deployment_artifacts.harness_runtime import CANDIDATE_KIND, candidate_checkpoint
+
+        candidate_metadata["candidate_digest"] = graph.runtime_candidate.digest
+        candidate_kwargs = {
+            "initial_metadata": candidate_metadata,
+            "initial_checkpoints": {CANDIDATE_KIND: await candidate_checkpoint(graph.runtime_candidate)},
+        }
     await job_service.create_job(
         job_id=job_id,
         flow_id=flow_id_str,
         user_id=current_user.id,
         end_user_id=parsed.end_user_id,
-        # Keep the notice available to GET status even when sync result caching is off.
-        initial_metadata={"component_substitution_warning": warning} if warning else None,
+        **candidate_kwargs,
     )
     _sync_run_paused = False
     _sync_run_success = False

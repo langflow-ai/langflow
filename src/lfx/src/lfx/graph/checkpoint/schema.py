@@ -39,6 +39,8 @@ class GraphCheckpoint(BaseModel):
     # user (e.g. self.user_id-reading components keep working after a HITL pause).
     user_id: str | None = None
     job_id: str | None = None
+    # Server-retained executable identity. Old checkpoints have no candidate.
+    candidate_digest: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     flow_payload: dict[str, Any] = Field(default_factory=dict)
     reviewed_tool_packs: dict[str, dict] = Field(default_factory=dict)
     reviewed_harness_flows: dict[str, dict] = Field(default_factory=dict)
