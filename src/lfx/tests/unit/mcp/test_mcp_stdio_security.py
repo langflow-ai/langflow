@@ -230,6 +230,73 @@ def test_extract_base_command_handles_paths_and_args():
     assert extract_base_command(r"C:\Program Files\nodejs\node.exe") == "node"
 
 
+def test_path_form_command_rejected_in_hardened_mode():
+    """A lookalike path ('/tmp/x/node') must not pass the basename allowlist when hardened."""
+    for command in ("/tmp/evil/node", "./node", "../bin/node", r"C:\Temp\node.exe"):
+        with pytest.raises(MCPStdioSecurityError, match="file path"):
+            validate_mcp_stdio_config(command, [], {}, interpreter_hardening=True)
+        with pytest.raises(MCPStdioSecurityError, match="file path"):
+            validate_mcp_stdio_config(command, [], {}, docker_hardening=True, interpreter_hardening=False)
+
+
+def test_path_form_command_allowed_in_legacy_mode():
+    """Legacy single-tenant mode keeps trusting operator-supplied paths."""
+    validate_mcp_stdio_config(
+        "/usr/local/bin/uvx", ["mcp-server-fetch"], {}, docker_hardening=False, interpreter_hardening=False
+    )
+
+
+def test_shell_wrapped_path_command_rejected_in_hardened_mode():
+    """Shell-exec wrapping a path ('sh -c /tmp/x/node') hits the same guard as a top-level path."""
+    with pytest.raises(MCPStdioSecurityError, match="file path"):
+        validate_mcp_stdio_config(
+            "sh",
+            ["-c", "/tmp/evil/node server.js"],
+            {},
+            interpreter_hardening=True,
+        )
+
+
+def test_hardening_flag_falls_back_to_last_known_good(monkeypatch):
+    """A settings failure after a successful True read must not silently disable hardening."""
+    from lfx.base.mcp import security
+
+    monkeypatch.setitem(security._hardening_last_known, "docker", value=False)
+    calls = {"n": 0}
+
+    class _Settings:
+        @property
+        def mcp_server_docker_hardening(self):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return True
+            msg = "settings service exploded"
+            raise RuntimeError(msg)
+
+    class _Svc:
+        settings = _Settings()
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", _Svc, raising=False)
+    assert security._docker_hardening_enabled() is True  # successful read caches True
+    assert security._docker_hardening_enabled() is True  # failure falls back to cached True
+
+
+def test_hardening_flag_honors_intentional_disable(monkeypatch):
+    """A successful False read clears the cache so later failures do not resurrect hardening."""
+    from lfx.base.mcp import security
+
+    monkeypatch.setitem(security._hardening_last_known, "interpreter", value=True)
+
+    class _Settings:
+        mcp_server_interpreter_hardening = False
+
+    class _Svc:
+        settings = _Settings()
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", _Svc, raising=False)
+    assert security._interpreter_hardening_enabled() is False  # successful False read wins
+
+
 def test_allowlist_excludes_dangerous_binaries():
     for bad in ("curl", "wget", "nc", "rm", "perl", "ruby"):
         assert bad not in ALLOWED_MCP_COMMANDS
