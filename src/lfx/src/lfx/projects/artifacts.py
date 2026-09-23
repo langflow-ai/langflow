@@ -228,6 +228,55 @@ class StoredReport(BaseModel):
     record_name: str
 
 
+class ReportSummary(BaseModel):
+    """Small browsing record; original source text stays in the canonical report."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["sourced_report"] = "sourced_report"
+    id: UUID
+    title: str = Field(min_length=1)
+    created_at: datetime
+    execution: ArtifactExecution
+    source_count: int = Field(ge=0)
+    citation_count: int = Field(ge=0)
+    unresolved_citation_count: int = Field(ge=0)
+    citations_resolved: bool
+    claim_support: Literal["not_evaluated"] = "not_evaluated"
+
+    @field_validator("created_at")
+    @classmethod
+    def aware_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            msg = "Report creation time must include a timezone."
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def consistent_citations(self) -> ReportSummary:
+        if self.unresolved_citation_count > self.citation_count or self.citations_resolved != (
+            bool(self.citation_count) and not self.unresolved_citation_count
+        ):
+            msg = "Report citation counts are inconsistent."
+            raise ValueError(msg)
+        return self
+
+    @classmethod
+    def from_report(cls, report: SourcedReport) -> ReportSummary:
+        citations = report.citations
+        unresolved = sum(citation.status != "resolved" for citation in citations)
+        return cls(
+            id=report.id,
+            title=report.title,
+            created_at=report.created_at,
+            execution=report.execution,
+            source_count=len(report.sources),
+            citation_count=len(citations),
+            unresolved_citation_count=unresolved,
+            citations_resolved=bool(citations) and not unresolved,
+        )
+
+
 async def store_report(report: SourcedReport, storage: StorageService) -> StoredReport:
     """Save unique immutable files; the JSON record is written last.
 
@@ -240,12 +289,14 @@ async def store_report(report: SourcedReport, storage: StorageService) -> Stored
     flow_id = str(report.execution.flow_id)
     markdown_name = f"report-{report.id}.md"
     record_name = f"report-{report.id}.json"
+    summary_name = f"report-{report.id}.summary.json"
     try:
         await storage.save_file(flow_id, markdown_name, report.render_markdown().encode())
+        await storage.save_file(flow_id, summary_name, ReportSummary.from_report(report).model_dump_json().encode())
         await storage.save_file(flow_id, record_name, report.model_dump_json(indent=2).encode())
     except Exception:
         # Names are unique to this artifact. Never remove another run's files.
-        for name in (record_name, markdown_name):
+        for name in (record_name, summary_name, markdown_name):
             with contextlib.suppress(Exception):
                 await storage.delete_file(flow_id, name)
         raise

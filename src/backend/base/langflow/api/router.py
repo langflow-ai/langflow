@@ -47,6 +47,7 @@ from langflow.api.v1 import (
     validate_router,
     variables_router,
 )
+from langflow.api.v1.project_reports import router as project_reports_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
 from langflow.api.v2 import files_router as files_router_v2
 from langflow.api.v2 import mcp_router as mcp_router_v2
@@ -90,6 +91,7 @@ router_v1.include_router(monitor_router)
 router_v1.include_router(traces_router)
 router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
+router_v1.include_router(project_reports_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)
 router_v1.include_router(memories_router)
