@@ -66,6 +66,9 @@ export const usePatchFolders: useMutationFunctionType<
       queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
       queryClient.invalidateQueries({ queryKey: ["useGetProjectFlows"] });
       queryClient.invalidateQueries({ queryKey: ["useGetProjectFlowOutputs"] });
+      // A rename re-registers the project's MCP server under a new name, so the MCP tab
+      // would otherwise keep showing the old one.
+      queryClient.invalidateQueries({ queryKey: ["useGetFlowsMCP"] });
     },
   });
 
