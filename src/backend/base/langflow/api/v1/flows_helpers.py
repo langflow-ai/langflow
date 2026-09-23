@@ -202,10 +202,19 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
         raise HTTPException(status_code=500, detail=f"Failed to write flow to filesystem: {e}") from e
 
 
-async def _deduplicate_flow_name(session: AsyncSession, name: str, user_id: UUID) -> str:
+async def _deduplicate_flow_name(
+    session: AsyncSession,
+    name: str,
+    user_id: UUID,
+    *,
+    fail_on_conflict: bool = False,
+) -> str:
     """Return a unique flow name for *user_id*, appending ``(N)`` if needed."""
     if not (await session.exec(select(Flow).where(Flow.name == name).where(Flow.user_id == user_id))).first():
         return name
+
+    if fail_on_conflict:
+        raise HTTPException(status_code=409, detail="Name must be unique")
 
     flows = (
         await session.exec(
@@ -443,9 +452,13 @@ async def _new_flow(
     storage_service: StorageService,
     flow_id: UUID | None = None,
     fail_on_endpoint_conflict: bool = False,
+    fail_on_name_conflict: bool = False,
     validate_folder: bool = False,
     widen_for_authz: bool = False,
     propagate_unhandled_errors: bool = False,
+    save_to_fs: bool = True,
+    reconcile_triggers: bool = True,
+    update_webhook: bool = False,
 ):
     """Create or upsert a flow.
 
@@ -458,9 +471,13 @@ async def _new_flow(
         storage_service: Service for filesystem operations.
         flow_id: Allows PUT upsert to create flows with a specific ID for syncing between instances.
         fail_on_endpoint_conflict: PUT should fail predictably on conflicts rather than silently renaming.
+        fail_on_name_conflict: Fail when a flow name already belongs to the destination owner.
         validate_folder: Validates folder_id under the active authorization fetch mode for external upserts.
         widen_for_authz: Preserve a cross-user destination that the route already authorized.
         propagate_unhandled_errors: Let the caller own retry and sanitization of unexpected failures.
+        save_to_fs: Write flow JSON to the owner-scoped filesystem after saving.
+        reconcile_triggers: Reconcile trigger rows after saving the flow.
+        update_webhook: Recompute the webhook flag from the saved flow data.
     """
     try:
         # Ownership follows the destination project, so it has to be resolved
@@ -489,7 +506,12 @@ async def _new_flow(
 
         # Set user_id (ignore any user_id from body for security)
         flow.user_id = owner_id
-        flow.name = await _deduplicate_flow_name(session, flow.name, owner_id)
+        flow.name = await _deduplicate_flow_name(
+            session,
+            flow.name,
+            owner_id,
+            fail_on_conflict=fail_on_name_conflict,
+        )
 
         if flow.endpoint_name:
             flow.endpoint_name = await _deduplicate_endpoint_name(
@@ -512,8 +534,19 @@ async def _new_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
-        await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
-        await _save_flow_to_fs(db_flow, owner_id, storage_service)
+        if update_webhook:
+            db_flow.webhook = get_webhook_component_in_flow(db_flow.data or {}) is not None
+            session.add(db_flow)
+            await session.flush()
+        if reconcile_triggers:
+            await _reconcile_flow_triggers(
+                session,
+                flow_id=db_flow.id,
+                owner_id=db_flow.user_id,
+                flow_data=db_flow.data,
+            )
+        if save_to_fs:
+            await _save_flow_to_fs(db_flow, owner_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
     except ValidationError as exc:
@@ -580,6 +613,9 @@ async def _update_existing_flow(
     flow: FlowCreate,
     current_user: User,
     storage_service: StorageService,
+    save_to_fs: bool = True,
+    reconcile_triggers: bool = True,
+    preserve_explicit_nulls: bool = False,
 ) -> FlowRead:
     """Update an existing flow (PUT update path).
 
@@ -686,8 +722,9 @@ async def _update_existing_flow(
         if endpoint_conflict:
             raise HTTPException(status_code=409, detail="Endpoint name must be unique")
 
-    # None-valued inputs are treated as omitted by default for updates.
-    update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+    # Ordinary PUT retains its legacy null-as-omitted behavior. Atomic
+    # replacement must apply explicit nulls so a rollback can clear old values.
+    update_data = flow.model_dump(exclude_unset=True, exclude_none=not preserve_explicit_nulls)
 
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
@@ -728,11 +765,13 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
-    await _reconcile_flow_triggers(
-        session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
-    )
-    # Writes happen under the owner's storage namespace, not the actor's.
-    await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
+    if reconcile_triggers:
+        await _reconcile_flow_triggers(
+            session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
+        )
+    if save_to_fs:
+        # Writes happen under the owner's storage namespace, not the actor's.
+        await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
 
     return FlowRead.model_validate(existing_flow, from_attributes=True)
 

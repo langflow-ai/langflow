@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import BackgroundTasks, HTTPException, status
 from httpx import AsyncClient
+from langflow.api.v1 import projects as projects_api
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import (
@@ -19,7 +20,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
 from sqlmodel import select
@@ -144,6 +145,35 @@ async def test_create_project_duplicate_name_escapes_like_wildcards(client: Asyn
     response = await client.post("api/v1/projects/", json=wildcard, headers=logged_in_headers)
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json()["name"] == "proj_% (1)"
+
+
+@pytest.mark.asyncio
+async def test_new_project_can_skip_mcp_registration_for_atomic_callers(monkeypatch):
+    """The copy transaction can opt out of MCP's independent commit path."""
+    session = AsyncMock()
+    existing = MagicMock()
+    existing.first.return_value = None
+    session.exec.return_value = existing
+    session.add = MagicMock()
+    user = SimpleNamespace(id=uuid4())
+    settings = SimpleNamespace(
+        settings=SimpleNamespace(add_projects_to_mcp_servers=True),
+        auth_settings=SimpleNamespace(AUTO_LOGIN=True),
+    )
+    monkeypatch.setattr(projects_api, "enforce_pre_creation", AsyncMock())
+    monkeypatch.setattr(projects_api, "get_settings_service", lambda: settings)
+    register = AsyncMock()
+    monkeypatch.setattr(projects_api, "register_mcp_servers_for_project", register)
+
+    result = await projects_api._new_project(
+        session=session,
+        project=FolderCreate(name="Atomic copy", description="retained"),
+        current_user=user,
+        auto_register_mcp=False,
+    )
+
+    assert result.name == "Atomic copy"
+    register.assert_not_awaited()
 
 
 async def test_read_projects(client: AsyncClient, logged_in_headers):
