@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import jwt
@@ -140,8 +140,17 @@ async def exchange(
                 "tenant_id": team.get("id"),
                 "display": team.get("name"),
             }
-    if registration.provider == "google" and registration.allowed_tenants and not refresh_token:
-        account = await _google_account(registration, body.get("id_token"))
+    if registration.provider == "google" and not refresh_token:
+        id_token = body.get("id_token")
+        if id_token is not None or registration.allowed_tenants:
+            try:
+                account = await _google_account(registration, id_token)
+            except OAuthError:
+                if registration.allowed_tenants:
+                    raise
+                # Identity metadata is optional without a tenant restriction.
+    if registration.provider == "microsoft" and not refresh_token and body.get("id_token") is not None:
+        account = await _microsoft_account(registration, body["id_token"])
     access_token = token.get("access_token")
     refresh = token.get("refresh_token", refresh_token)
     if not isinstance(access_token, str) or not access_token or (refresh is not None and not isinstance(refresh, str)):
@@ -213,9 +222,58 @@ async def _google_account(registration: OAuthRegistration, id_token: object) -> 
             issuer=["https://accounts.google.com", "accounts.google.com"],
             options={"require": ["exp", "iat", "sub", "aud", "iss"]},
         )
-        if claims.get("hd") not in registration.allowed_tenants:
+        if registration.allowed_tenants and claims.get("hd") not in registration.allowed_tenants:
             raise ValueError
-        return {"id": claims["sub"], "tenant_id": claims["hd"], "display": claims.get("email")}
+        return {"id": claims["sub"], "tenant_id": claims.get("hd"), "display": claims.get("email")}
     except (ValueError, KeyError, TypeError, jwt.PyJWTError, httpx.HTTPError):
         msg = "OAuth account is outside the configured tenant restriction."
         raise OAuthError(msg) from None
+
+
+async def _microsoft_account(registration: OAuthRegistration, id_token: object) -> dict:
+    """Read display metadata only after verifying the tenant-bound ID token."""
+    try:
+        if not isinstance(id_token, str):
+            raise TypeError
+        header = jwt.get_unverified_header(id_token)
+        if header.get("alg") != "RS256" or not isinstance(header.get("kid"), str):
+            raise ValueError
+        tenant = str(UUID(registration.tenant or ""))
+        issuer = f"https://login.microsoftonline.com/{tenant}/v2.0"
+        async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+            response = await client.get(f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys")
+            response.raise_for_status()
+            jwks = response.json()
+            keys = jwt.PyJWKSet.from_dict(jwks)
+        key = keys[header["kid"]]
+        key_issuer = next((item.get("issuer") for item in jwks["keys"] if item.get("kid") == header["kid"]), None)
+        if key_issuer is not None and (
+            not isinstance(key_issuer, str) or key_issuer.replace("{tenantid}", tenant) != issuer
+        ):
+            raise ValueError
+        claims = jwt.decode(
+            id_token,
+            key.key,
+            algorithms=["RS256"],
+            audience=registration.client_id,
+            issuer=issuer,
+            options={"require": ["exp", "iat", "sub", "aud", "iss", "tid"]},
+        )
+        if claims["tid"] != tenant:
+            raise ValueError
+        account_id = claims.get("oid") or claims["sub"]
+        if not isinstance(account_id, str) or not account_id:
+            raise ValueError
+        display = next(
+            (
+                value
+                for name in ("preferred_username", "email", "name")
+                if isinstance(value := claims.get(name), str) and value
+            ),
+            None,
+        )
+        account = {"id": account_id, "tenant_id": tenant, "display": display}
+    except (ValueError, KeyError, TypeError, jwt.PyJWTError, httpx.HTTPError):
+        msg = "OAuth provider returned invalid account identity."
+        raise OAuthError(msg) from None
+    return account
