@@ -356,6 +356,63 @@ def test_redis_vector_store_preserves_unix_socket_connection():
     assert mock_connect.call_args.kwargs["redis_url"] == component.redis_server_url
 
 
+@pytest.mark.parametrize("scheme", ["redis+sentinel", "rediss+sentinel"])
+def test_redis_vector_store_blocks_metadata_sentinel_before_sdk(scheme):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.redis.redis import RedisVectorStoreComponent
+
+    component = RedisVectorStoreComponent()
+    component.redis_server_url = f"{scheme}://169.254.169.254:26379/mymaster/0"
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
+        pytest.raises(SSRFProtectionError),
+    ):
+        component.build_vector_store()
+    mock_connect.assert_not_called()
+
+
+@pytest.mark.parametrize("scheme", ["redis+sentinel", "rediss+sentinel"])
+def test_redis_vector_store_preserves_public_sentinel_connection(scheme):
+    from lfx_bundles.redis.redis import RedisVectorStoreComponent
+
+    component = RedisVectorStoreComponent()
+    component.redis_server_url = f"{scheme}://8.8.8.8:26379/mymaster/0"
+    component.redis_index_name = "docs"
+    component.schema = "schema"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.redis.redis.Path.write_text"),
+        patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
+    ):
+        assert component.build_vector_store() is mock_connect.return_value
+    assert mock_connect.call_args.kwargs["redis_url"] == component.redis_server_url
+
+
+@pytest.mark.parametrize(
+    "disabled_gate",
+    ["is_connector_ssrf_validation_enabled", "is_ssrf_protection_enabled"],
+)
+def test_redis_vector_store_opted_out_sentinel_connection(disabled_gate):
+    from lfx_bundles.redis.redis import RedisVectorStoreComponent
+
+    component = RedisVectorStoreComponent()
+    component.redis_server_url = "redis+sentinel://localhost:26379/mymaster/0"
+    component.redis_index_name = "docs"
+    component.schema = "schema"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with (
+        patch(f"lfx_bundles.redis.redis.{disabled_gate}", return_value=False),
+        patch("lfx_bundles.redis.redis.Path.write_text"),
+        patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
+    ):
+        assert component.build_vector_store() is mock_connect.return_value
+    assert mock_connect.call_args.kwargs["redis_url"] == component.redis_server_url
+
+
 @pytest.mark.parametrize(
     "uri",
     [

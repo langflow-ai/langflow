@@ -13,13 +13,12 @@ keywords = ["langflow", "lfx", "extension", "bundle", "datastax"]
 # Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
-# lfx is floored at the current major.minor line and capped below the next
-# lfx major (e.g. "lfx>=1.11.0,<2.0.0"); the floor is read from
-# src/lfx/pyproject.toml at port time and re-synced on ``make patch`` via
-# scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility
+# lfx normally uses the current major.minor floor; this bundle needs 1.12.4
+# for validate_connector_hostname_for_ssrf. ``make patch`` preserves a narrower
+# floor through scripts/ci/sync_bundle_lfx_pin.py. BUNDLE_API compatibility
 # is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.12.4,<2.0.0",
     "langchain-astradb~=1.0.0",
     "langchain-community>=0.4.1,<1.0.0",
     # Imported directly (astrapy.DataAPIClient/Database) by the astra components,
