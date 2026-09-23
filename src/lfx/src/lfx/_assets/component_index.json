@@ -23093,6 +23093,236 @@
           },
           "tool_mode": false
         },
+        "EvaluationInput": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "The case, reference, candidate response, and recorded evidence supplied to a scorer.",
+          "display_name": "Evaluation Input",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "preview"
+          ],
+          "frozen": false,
+          "icon": "ClipboardList",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "7e96483fb624",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 1
+            },
+            "module": "lfx.components.models_and_agents.evaluation_input.EvaluationInputComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Case",
+              "group_outputs": false,
+              "method": "build_case",
+              "name": "case",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "import json\n\nfrom lfx.custom import Component\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.data import Data\n\n\nclass EvaluationInputComponent(Component):\n    display_name = \"Evaluation Input\"\n    description = \"The case, reference, candidate response, and recorded evidence supplied to a scorer.\"\n    icon = \"ClipboardList\"\n    name = \"EvaluationInput\"\n    inputs = [\n        MultilineInput(\n            name=\"preview\",\n            display_name=\"Preview case (JSON)\",\n            value='{\"case\":{\"input\":\"Question\",\"reference\":\"Expected answer\"},\"response\":{\"outputs\":{}}}',\n            info=\"Used only for canvas previews. Suite runs supply the actual case and response.\",\n        )\n    ]\n    outputs = [Output(name=\"case\", display_name=\"Case\", method=\"build_case\")]\n\n    def build_case(self) -> Data:\n        from lfx.projects.evaluations import EVAL_INPUT_VARIABLE\n\n        variables = (self.graph.context or {}).get(\"request_variables\", {}) if self.graph else {}\n        raw = variables.get(EVAL_INPUT_VARIABLE, self.preview)\n        value = json.loads(raw)\n        if not isinstance(value, dict) or not isinstance(value.get(\"case\"), dict) or \"response\" not in value:\n            msg = \"Evaluation Input needs a case and its actual workflow response.\"\n            raise ValueError(msg)\n        return Data(data=value)\n"
+            },
+            "preview": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "api_editable": false,
+              "copy_field": false,
+              "display_name": "Preview case (JSON)",
+              "dynamic": false,
+              "info": "Used only for canvas previews. Suite runs supply the actual case and response.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "preview",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "{\"case\":{\"input\":\"Question\",\"reference\":\"Expected answer\"},\"response\":{\"outputs\":{}}}"
+            }
+          },
+          "tool_mode": false
+        },
+        "EvaluationResult": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Validate a scorer's score, reason, claim support, and policy outcome. Missing judgments cannot pass.",
+          "display_name": "Evaluation Result",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "case",
+            "judgment"
+          ],
+          "frozen": false,
+          "icon": "ClipboardCheck",
+          "is_output": true,
+          "legacy": false,
+          "metadata": {
+            "code_hash": "17a206545b8f",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 1
+            },
+            "module": "lfx.components.models_and_agents.evaluation_result.EvaluationResultComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Evaluation",
+              "group_outputs": false,
+              "method": "build_result",
+              "name": "evaluation",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "case": {
+              "_input_type": "JSONInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Evaluation case",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Data",
+                "JSON"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "case",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from lfx.custom import Component\nfrom lfx.io import DataInput, Output\nfrom lfx.schema.data import Data\n\n\nclass EvaluationResultComponent(Component):\n    display_name = \"Evaluation Result\"\n    description = \"Validate a scorer's score, reason, claim support, and policy outcome. Missing judgments cannot pass.\"\n    icon = \"ClipboardCheck\"\n    name = \"EvaluationResult\"\n    inputs = [\n        DataInput(name=\"case\", display_name=\"Evaluation case\", required=True),\n        DataInput(\n            name=\"judgment\",\n            display_name=\"Judgment\",\n            required=False,\n            info=(\n                'Connect a Data record: {\"score\": 0.0, \"reason\": \"Why\", '\n                '\"claim_support\": \"supported|unsupported|not_evaluated\", '\n                '\"policy\": \"compliant|violation|not_evaluated\"}. '\n                \"Use ordinary Prompt Template, model, and structured-output components to build your scorer.\"\n            ),\n        ),\n    ]\n    outputs = [Output(name=\"evaluation\", display_name=\"Evaluation\", method=\"build_result\")]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.is_output = True\n\n    def build_result(self) -> Data:\n        from lfx.projects.evaluations import EvalVerdict\n\n        if self.judgment is None:\n            msg = \"Connect a scorer judgment to Evaluation Result before running an evaluation.\"\n            raise ValueError(msg)\n        verdict = EvalVerdict.model_validate(self.judgment.data)\n        return Data(data={\"evaluation\": verdict.model_dump()})\n"
+            },
+            "judgment": {
+              "_input_type": "JSONInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Judgment",
+              "dynamic": false,
+              "info": "Connect a Data record: {\"score\": 0.0, \"reason\": \"Why\", \"claim_support\": \"supported|unsupported|not_evaluated\", \"policy\": \"compliant|violation|not_evaluated\"}. Use ordinary Prompt Template, model, and structured-output components to build your scorer.",
+              "input_types": [
+                "Data",
+                "JSON"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "judgment",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
         "Hook": {
           "base_classes": [
             "HookDecision"
@@ -34107,9 +34337,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 139,
+    "num_components": 141,
     "num_modules": 17
   },
-  "sha256": "00a34ecf23ba7e9bc31fc930754df998c677db2a0c24badbbb14fb5b5fca973a",
+  "sha256": "a0f59542e9b061b4c40163e9674b1d25f5af65e7d4d6a6ec6767c68fd26fdf16",
   "version": "1.13.0"
 }

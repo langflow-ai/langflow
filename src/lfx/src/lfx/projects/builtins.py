@@ -211,4 +211,21 @@ SKILL_PACK = register_project_type(
     )
 )
 
-__all__ = ["AGENT_HARNESS", "DEFAULT_PROJECT_TYPE", "FLOWS", "SKILL_PACK", "TOOL_PACK"]
+EVAL_SUITE = register_project_type(
+    ProjectType(
+        name="eval-suite",
+        display_name="Eval Suite",
+        icon="ClipboardCheck",
+        description="Cases and reviewed scorer flows that assess an exact Agent Harness candidate.",
+        fields=(
+            ProjectTypeField(
+                name="cases",
+                section="Cases",
+                renders="eval_cases",
+                input=StrInput(name="cases", display_name="Cases", list=True, value=[]),
+            ),
+        ),
+    )
+)
+
+__all__ = ["AGENT_HARNESS", "DEFAULT_PROJECT_TYPE", "EVAL_SUITE", "FLOWS", "SKILL_PACK", "TOOL_PACK"]

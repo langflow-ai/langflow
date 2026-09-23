@@ -28,7 +28,7 @@ TARGETABLE_COMPONENTS = {AgentComponent.name: AgentComponent}
 
 class TestRegistry:
     def test_shipped_types_are_registered_on_import(self):
-        assert registered_project_types() == ("agent-harness", "flows", "skill-pack", "tool-pack")
+        assert registered_project_types() == ("agent-harness", "eval-suite", "flows", "skill-pack", "tool-pack")
 
     def test_default_type_is_registered(self):
         assert get_project_type(DEFAULT_PROJECT_TYPE).name == DEFAULT_PROJECT_TYPE

@@ -196,6 +196,12 @@ async def write_project_config_to_flows(
         ).all()
     )
     config = deepcopy(project.project_config or {})
+    if project_type.name == "eval-suite":
+        from langflow.services.evaluations.configuration import save_eval_config
+
+        project.project_config = await save_eval_config(session, current_user, config, previous_config)
+        session.add(project)
+        return result
     if project_type.name == "skill-pack":
         manifest = await resolve_skill_pack(session, current_user, project.id)
         config["skills"] = [skill.model_dump(mode="json") for skill in manifest.skills]
