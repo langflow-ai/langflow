@@ -242,9 +242,40 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
         await manager.cleanup_all()
 
     assert transport == "streamable_http"
-    # The background task also bounds session.initialize() (2 s); the readiness wait is the budget.
-    assert 45.0 in observed
+    # Both waits on this path take the budget: the readiness wait here, and the
+    # `session.initialize()` the background task makes. The latter used to be a
+    # hardcoded 2 s, which no value of LANGFLOW_MCP_SERVER_TIMEOUT could lift, and
+    # whose TimeoutError counts as transient so there was no SSE fallback either.
+    assert observed.count(45.0) >= 2
+    assert 2.0 not in observed
     assert 30.0 not in observed
+
+
+@pytest.mark.parametrize(
+    ("client_class", "args"),
+    [
+        (MCPStdioClient, ("python server.py",)),
+        (MCPStreamableHttpClient, ("http://127.0.0.1:9931/mcp",)),
+    ],
+)
+@pytest.mark.asyncio
+async def test_connect_to_server_gives_a_non_positive_server_timeout_the_fallback(client_class, args):
+    """The outer connect wait takes the same budget as the readiness waits inside it.
+
+    asyncio.wait_for times out at once for a timeout <= 0, so a zero
+    mcp_server_timeout used to fail every connection before it began.
+    """
+    client = client_class()
+    observed: list[float] = []
+    settings_service = SimpleNamespace(settings=SimpleNamespace(mcp_server_timeout=0))
+    with (
+        patch("lfx.base.mcp.util.get_settings_service", return_value=settings_service),
+        patch.object(client_class, "_connect_to_server", AsyncMock(return_value=[])),
+        patch("lfx.base.mcp.util.asyncio.wait_for", side_effect=_recording_wait_for(observed)),
+    ):
+        assert await client.connect_to_server(*args) == []
+
+    assert observed == [60.0]
 
 
 # Made with Bob
