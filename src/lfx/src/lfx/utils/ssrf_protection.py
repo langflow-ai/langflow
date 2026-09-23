@@ -117,17 +117,23 @@ def get_allowed_hosts() -> list[str]:
     return []
 
 
-def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
-    """Check if a hostname or IP is in the allowed hosts list.
+def is_host_allowed(hostname: str, ip: str | None = None, allowed_hosts: list[str] | None = None) -> bool:
+    """Check if a hostname or IP matches an allow-list.
 
     Args:
         hostname: Hostname to check
         ip: Optional IP address to check
+        allowed_hosts: Patterns to match against. Defaults to the SSRF allow-list
+            (``LANGFLOW_SSRF_ALLOWED_HOSTS``). Callers that maintain their own
+            operator-controlled list — e.g. the Knowledge Base destination policy in
+            ``lfx.base.knowledge_bases.backends.destination_policy`` — pass it here so the
+            exact-host / wildcard-domain / IP / CIDR matching is not reimplemented.
 
     Returns:
         bool: True if hostname or IP is in the allowed list, False otherwise.
     """
-    allowed_hosts = get_allowed_hosts()
+    if allowed_hosts is None:
+        allowed_hosts = get_allowed_hosts()
     if not allowed_hosts:
         return False
 
@@ -687,8 +693,9 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
       internal/blocked IP — guarded by SSRF protection (``LANGFLOW_SSRF_PROTECTION_ENABLED``,
       default on), so a tenant cannot reach the control-plane DB or other internal services.
     * Local-file-backed dialects (sqlite, duckdb, ...) read/write the server filesystem and
-      are blocked only when ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is on (default off), so
-      single-tenant sqlite usage keeps working while multi-tenant deployments can disable it.
+      are blocked when ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is on (default on), so a tenant
+      cannot turn a URI like ``sqlite:////etc/passwd`` into an arbitrary file read.
+      Single-tenant deployments can opt out to keep local sqlite/duckdb URLs working.
 
     Args:
         url: The SQLAlchemy database URL to validate.
@@ -721,7 +728,7 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
                 "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use a network database (e.g. postgresql, mysql)."
             )
             raise SSRFProtectionError(msg)
-        # Not restricted: local-file DBs are allowed (single-tenant default).
+        # Not restricted: local-file DBs are allowed (explicit single-tenant opt-out).
         return
 
     query_items = parse_qsl(parsed.query, keep_blank_values=True)
