@@ -6,7 +6,7 @@ NPM_VERSION="12.0.2"
 IP_ADDRESS_VERSION="10.3.1"
 BRACE_EXPANSION_VERSION="5.0.9"
 TAR_VERSION="7.5.22"
-UNDICI_VERSION="6.28.0"
+UNDICI_VERSION="6.28.1"
 npm_cache="$(npm config get cache)"
 
 case "$npm_cache" in
@@ -51,7 +51,7 @@ const expected = {
   "ip-address": "10.3.1",
   "brace-expansion": "5.0.9",
   tar: "7.5.22",
-  undici: "6.28.0",
+  undici: "6.28.1",
   sigstore: "5.0.0",
   "@sigstore/core": "4.0.1",
   "tinyglobby/node_modules/picomatch": "4.0.5",

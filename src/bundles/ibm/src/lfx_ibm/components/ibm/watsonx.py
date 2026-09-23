@@ -4,6 +4,7 @@ from typing import Any
 from langchain_ibm import ChatWatsonx
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.model_utils import get_watsonx_llm_models
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -213,6 +214,12 @@ class WatsonxAIComponent(LCModelComponent):
         if bool(self.space_id) == bool(self.project_id):
             msg = "Exactly one of Project_ID or Space_ID must be selected"
             raise ValueError(msg)
+
+        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. The dropdown's canonical watsonx region endpoints are server-chosen;
+        # block internal/cloud-metadata destinations for anything else before connecting.
+        if self.base_url not in WatsonxAIComponent._urls:
+            validate_provider_base_url(self.base_url)
 
         return ChatWatsonx(
             apikey=api_key_value,

@@ -106,6 +106,9 @@ def test_connection_status_vocabularies_are_frozen() -> None:
     assert {member.value for member in ConnectionStatusReason} == {
         "credential-missing",
         "credential-undecryptable",
+        "oauth-denied",
+        "oauth-expired",
+        "oauth-failed",
     }
     assert {member.value for member in ConnectionHealth} == {"unknown", "healthy", "unhealthy"}
     assert {member.value for member in ConnectionOwnershipMode} == {"user", "instance"}
