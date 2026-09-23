@@ -1,4 +1,12 @@
 {
+  "evaluations.refreshAfterSaveError": "Die Suite wurde gespeichert, aber die aktualisierte Revision konnte nicht geladen werden. Ihre Änderungen bleiben erhalten. Speichern Sie vor dem Ausführen erneut.",
+  "evaluations.scorerChanged": "Der Bewerter oder eine seiner Abhängigkeiten wurde geändert. Diese Suite verwendet die geprüfte Version, bis Sie die Aktualisierung übernehmen und speichern.",
+  "evaluations.useUpdatedScorer": "Aktualisierten Bewerter verwenden",
+  "evaluations.nameRequired": "Geben Sie einen Namen für den Testfall ein.",
+  "evaluations.inputRequired": "Geben Sie die Eingabe für den Kandidaten ein.",
+  "evaluations.scoreRange": "Geben Sie einen Wert zwischen 0 und 1 ein.",
+  "evaluations.latencyRange": "Geben Sie eine ganze Zahl zwischen 1 und 3.600.000 ms ein oder lassen Sie das Feld leer.",
+  "evaluations.costRange": "Geben Sie Kosten größer als null ein oder lassen Sie das Feld leer.",
   "field.required": "Erforderlich",
   "accordion.addVariable": "Variable hinzufügen",
   "accordion.fullscreen": "Vollbildschirm",

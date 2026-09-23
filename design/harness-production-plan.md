@@ -8,7 +8,7 @@ run tests, not a new production certification.
 **Objective:** author an Agent Harness from typed projects, freeze a complete
 candidate, evaluate it, and execute/promote/roll back the same candidate through
 the Workflows API. Research producing a sourced artifact remains the proof workflow.
-Agent Harness, Tool Pack, Skill Pack, and the planned Eval Suite remain the product
+Agent Harness, Tool Pack, Skill Pack, and Eval Suite remain the product
 model; deployment artifacts and releases are lifecycle records.
 
 ## Runtime artifact delivery update
@@ -20,11 +20,14 @@ host restrictions. The assessment below is the pre-implementation baseline.
 The second branch, `feat/harness-workflow-reliability`, now adds operator-mounted
 candidates on the authenticated Workflows host, atomic job-owned retention, and
 approval/service/fresh-process restart coverage. See [its host and rollout
-contract](harness-workflow-reliability.md). **Current priority is the production
-verification gates, before Eval Suite implementation.** Local PostgreSQL verification
-now passes (133 background-execution tests and all 10 candidate API cases);
-live-provider and intended deployed-topology acceptance remain open.
-`feat/harness-eval-suites` remains the next capability branch after that verification.
+contract](harness-workflow-reliability.md). Local PostgreSQL verification now passes
+(133 background-execution tests and all 10 candidate API cases).
+**September 16 sequencing update:** the user deferred deployed-topology verification
+and authorized the next capability. `feat/harness-eval-suites` implements the first
+bounded Eval Suite API and desktop workbench; see [its contract and evidence](harness-eval-suites.md).
+Live-provider and intended deployed-topology acceptance remain production gates.
+Durable/approval-aware evaluation, measured costs and portable evaluation archives
+remain follow-up work before claiming the full production evaluation profile.
 Files, memory/knowledge services, and request-only credential provisioning remain
 blocked by the initial standalone mount; their production host provisioning still
 needs verification. Existing Control Plane deployment is not candidate-aware.

@@ -1,4 +1,12 @@
 {
+  "evaluations.refreshAfterSaveError": "套件已保存，但无法加载更新后的版本。你的编辑已保留。请在运行前重新保存。",
+  "evaluations.scorerChanged": "评分器或其依赖项已更改。在你接受并保存更新之前，此套件仍使用已审核的版本。",
+  "evaluations.useUpdatedScorer": "使用更新后的评分器",
+  "evaluations.nameRequired": "请输入用例名称。",
+  "evaluations.inputRequired": "请输入要发送给候选版本的内容。",
+  "evaluations.scoreRange": "请输入 0 到 1 之间的分数。",
+  "evaluations.latencyRange": "请输入 1 到 3,600,000 毫秒之间的整数，或留空。",
+  "evaluations.costRange": "请输入大于零的费用，或留空。",
   "field.required": "必填",
   "accordion.addVariable": "添加变量",
   "accordion.fullscreen": "全屏",
