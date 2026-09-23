@@ -14,6 +14,7 @@ from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
 from lfx.projects.flow_slots import ProjectFlowBindings
 from lfx.projects.local_tools import LocalToolBinding
+from lfx.projects.skills import HarnessSkills, parse_harness_skills
 from lfx.projects.tool_packs import ToolPackToolBinding
 from lfx.utils.url_redaction import redact_urls_in_text
 
@@ -101,6 +102,14 @@ class AgentConfiguration(BaseModel):
     tool_retry_count: int
     tools: tuple[ToolConfiguration, ...] = ()
     flow_bindings: ProjectFlowBindings = Field(default_factory=ProjectFlowBindings)
+    skills: HarnessSkills | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        value = handler(self)
+        if self.skills is None:
+            value.pop("skills", None)
+        return value
 
     @model_validator(mode="after")
     def identify_configuration(self) -> AgentConfiguration:
@@ -166,7 +175,11 @@ def capture_agent_configuration(component, model, policy: HarnessRuntimeConfig) 
         )
     name = getattr(model, "model_name", None) or getattr(model, "model", None) or getattr(model, "_llm_type", "")
     parameters = getattr(model, "_identifying_params", {})
+    skills = (
+        parse_harness_skills(component.skill_bindings) if getattr(component, "skill_bindings", "").strip() else None
+    )
     return AgentConfiguration(
+        skills=skills,
         flow_id=str(graph.flow_id) if getattr(graph, "flow_id", None) else None,
         agent_node_id=component._id,  # noqa: SLF001
         flow_revision=flow_revision(data) if data.get("nodes") else None,
@@ -180,7 +193,9 @@ def capture_agent_configuration(component, model, policy: HarnessRuntimeConfig) 
         runtime=policy.model_copy(deep=True),
         history_messages=int(getattr(component, "n_messages", 100)),
         loaded_history_messages=len(getattr(component, "chat_history", None) or []),
-        tool_retry_count=2 if component.tools and getattr(component, "handle_parsing_errors", False) else 0,
+        tool_retry_count=2
+        if (component.tools or (skills and skills.packs)) and getattr(component, "handle_parsing_errors", False)
+        else 0,
         tools=tuple(tools),
         flow_bindings=ProjectFlowBindings.model_validate(bindings),
     )

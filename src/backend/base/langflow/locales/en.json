@@ -89,6 +89,8 @@
   "components.agent.inputs.permission_binding.info.95f0252a": "The reviewed PermissionGate flow applied before tool execution.",
   "components.agent.inputs.project_id.display_name.c7feb8db": "watsonx Project ID",
   "components.agent.inputs.project_id.info.0d91e5f5": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+  "components.agent.inputs.skill_bindings.display_name.bd482b81": "Reviewed skills",
+  "components.agent.inputs.skill_bindings.info.512f5fce": "Reviewed Skill Pack content and tool scopes managed by the harness.",
   "components.agent.inputs.stream.display_name.1eec3071": "Stream",
   "components.agent.inputs.stream.info.f835b3ff": "Stream the response from the model. Streaming works only in Chat.",
   "components.agent.inputs.system_prompt.display_name.55ce85ab": "Agent Instructions",
