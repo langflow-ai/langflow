@@ -154,7 +154,7 @@ The `session_key` blocks the adapters read from:
 
 | Provider | Session key |
 |---|---|
-| Slack (both mechanisms) | `slack:{team_id}:{channel}:{thread_ts or ts}` |
+| Slack (both mechanisms) | `slack:{team_id}:{channel}:{thread_ts or ts}`, where `team_id` is the receiving installation's (`authorizations[0].team_id`), not the envelope's |
 | Microsoft Outlook | `microsoft:outlook:{conversationId}` |
 | Microsoft calendar | `microsoft:calendar:{iCalUId or seriesMasterId}` |
 | Microsoft files | `microsoft:files:{driveItem id}` |

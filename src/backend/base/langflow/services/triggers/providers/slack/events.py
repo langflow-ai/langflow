@@ -127,6 +127,11 @@ def session_key(team_id: str | None, channel_id: str | None, conversation_ts: st
 
     A threaded reply names its parent's ``ts``, so every reply in a thread lands
     in the parent's session; a new top-level message starts its own.
+
+    ``team_id`` is the workspace of the installation the event was delivered
+    for, not the envelope's outer ``team_id``: in a channel shared between
+    workspaces the outer one follows whoever posted, so a partner's reply would
+    otherwise open a second session in the middle of the thread.
     """
     if not (team_id and channel_id and conversation_ts):
         return None
@@ -169,13 +174,19 @@ def normalize(body: Mapping[str, Any]) -> SlackEvent | SlackControl | None:
     if fields is None:
         return None
 
+    authorizations = [entry for entry in body.get("authorizations") or [] if isinstance(entry, dict)]
+    installation_team_ids = [team for team in (_str(entry.get("team_id")) for entry in authorizations) if team]
     conversation_ts = fields.pop("_conversation_ts")
     payload: dict[str, Any] = dict.fromkeys(PAYLOAD_KEYS)
     payload.update(fields)
     payload.update(
         {
             "provider": PROVIDER_SLACK,
-            "session_key": session_key(team_id, payload["channel_id"], conversation_ts),
+            # The installation's workspace keys the conversation; the outer
+            # ``team_id`` is only the fallback for a body with no authorizations.
+            "session_key": session_key(
+                installation_team_ids[0] if installation_team_ids else team_id, payload["channel_id"], conversation_ts
+            ),
             "slack_event_id": event_id,
             "event_time": body.get("event_time") if isinstance(body.get("event_time"), int) else None,
             "team_id": team_id,
@@ -184,7 +195,6 @@ def normalize(body: Mapping[str, Any]) -> SlackEvent | SlackControl | None:
             "event": event,
         }
     )
-    authorizations = [entry for entry in body.get("authorizations") or [] if isinstance(entry, dict)]
     return SlackEvent(
         event_id=event_id,
         kind=kind,
@@ -194,7 +204,7 @@ def normalize(body: Mapping[str, Any]) -> SlackEvent | SlackControl | None:
         # Slack Connect channel can be one where this app's installation is
         # not in the channel - routing on it would hand that installation's
         # triggers a conversation they cannot see.
-        team_ids=frozenset(filter(None, (_str(entry.get("team_id")) for entry in authorizations))),
+        team_ids=frozenset(installation_team_ids),
         bot_user_ids=frozenset(
             filter(None, (_str(entry.get("user_id")) for entry in authorizations if entry.get("is_bot") is True))
         ),

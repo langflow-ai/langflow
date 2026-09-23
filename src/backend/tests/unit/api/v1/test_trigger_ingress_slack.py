@@ -180,6 +180,27 @@ async def test_a_slack_connect_message_reaches_only_the_installation_it_was_deli
     assert await fx.events_for(partner) == []
 
 
+async def test_a_slack_connect_thread_runs_in_one_session_whichever_side_replies(
+    client: AsyncClient, active_user, flow
+) -> None:
+    """An agent keeps the whole shared-channel thread as memory, partner replies included."""
+    from langflow.services.database.models.trigger.model import Trigger
+    from langflow.services.deps import session_scope
+    from langflow.services.triggers.correlation import derive_session_id
+
+    trigger_id = await fx.arm(flow.id, active_user.id, await fx.make_oauth_connection(active_user.id))
+
+    for body in fx.slack_connect_thread():
+        assert (await _deliver(client, json.dumps(body).encode())).status_code == 202
+
+    rows = await fx.events_for(trigger_id)
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        sessions = {derive_session_id(trigger, row) for row in rows}
+    assert len(rows) == 3
+    assert sessions == {f"slack:{fx.TEAM_ID}:C0SHARED01:1700000940.001690"}
+
+
 @pytest.mark.parametrize(
     "shape",
     ["someone_elses_connection", "instance_connection", "revoked", "paused", "pending", "socket_mode", "other_app"],

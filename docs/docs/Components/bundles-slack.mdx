@@ -160,8 +160,8 @@ The trigger's **Event** output is a `Data` object. Its `payload` has the same ke
 | `user_id`, `text`, `ts` | Who posted (or reacted), the message text, and the message timestamp. |
 | `thread_ts`, `is_thread_reply` | Set when the message is a reply in a thread. |
 | `reaction`, `item_ts`, `item_user_id` | The emoji, and the message it was added to. |
-| `session_key` | `slack:{team}:{channel}:{thread_ts or ts}`, the conversation the run belongs to. |
-| `slack_event_id`, `team_id`, `api_app_id`, `event_time` | Slack's identifiers for the event. |
+| `session_key` | `slack:{team}:{channel}:{thread_ts or ts}`, the conversation the run belongs to. `{team}` is the workspace of the app installation that received the event, so a thread in a channel shared with another workspace stays one session whichever side replies. |
+| `slack_event_id`, `team_id`, `api_app_id`, `event_time` | Slack's identifiers for the event. In a shared channel, `team_id` can name the other workspace. |
 | `event` | Slack's original event object, for anything the other keys leave out. |
 
 Every run started by a Slack event uses the conversation as its session: each reply in a thread lands in the thread's session, so an agent keeps the whole thread as memory. Three replies to one thread start three runs that share one session. A reaction's session is the message it was added to.

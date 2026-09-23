@@ -45,6 +45,33 @@ def socket_envelope(body: dict[str, Any], *, envelope_id: str, retry_attempt: in
     }
 
 
+def slack_connect_thread() -> list[dict[str, Any]]:
+    """A thread in a channel shared with a partner workspace, as our installation receives it.
+
+    Our member starts it, the partner replies, and we reply back. Slack names
+    our installation in ``authorizations`` every time, but the outer
+    ``team_id`` follows whoever posted.
+    """
+    parent = load("message_slack_connect")
+    parent["event_id"] = "Ev0SHC00000"
+    parent["team_id"] = parent["event"]["team"] = TEAM_ID
+    parent["event"]["user"] = "U0ALICE001"
+    parent["event"]["text"] = "Can your team look at the failing export?"
+    parent["event"]["ts"] = parent["event"]["event_ts"] = "1700000940.001690"
+
+    partner_reply = load("message_slack_connect")
+    partner_reply["event"]["thread_ts"] = parent["event"]["ts"]
+
+    our_reply = load("message_slack_connect")
+    our_reply["event_id"] = "Ev0SHC00003"
+    our_reply["team_id"] = our_reply["event"]["team"] = TEAM_ID
+    our_reply["event"]["user"] = "U0ALICE001"
+    our_reply["event"]["text"] = "Thanks, that fixed it"
+    our_reply["event"]["thread_ts"] = parent["event"]["ts"]
+    our_reply["event"]["ts"] = our_reply["event"]["event_ts"] = "1700000960.001800"
+    return [parent, partner_reply, our_reply]
+
+
 def thread_replies(count: int) -> list[dict[str, Any]]:
     """``count`` distinct replies in one thread (distinct ``event_id`` and ``ts``)."""
     replies = []

@@ -133,6 +133,24 @@ def test_a_slack_connect_event_routes_to_the_installation_not_the_senders_worksp
     assert event.payload["team_id"] == fx.OTHER_TEAM_ID
 
 
+def test_a_slack_connect_thread_stays_one_session_whichever_side_replies() -> None:
+    """The outer ``team_id`` follows whoever posted; the session follows the installation."""
+    parent, partner_reply, our_reply = (normalize(body) for body in fx.slack_connect_thread())
+
+    assert partner_reply.payload["team_id"] == fx.OTHER_TEAM_ID
+    assert {event.payload["session_key"] for event in (parent, partner_reply, our_reply)} == {
+        f"slack:{fx.TEAM_ID}:C0SHARED01:1700000940.001690"
+    }
+
+
+def test_without_authorizations_the_session_falls_back_to_the_outer_workspace() -> None:
+    body = fx.load("message_channel")
+    del body["authorizations"]
+    event = normalize(body)
+    assert isinstance(event, SlackEvent)
+    assert event.payload["session_key"] == "slack:T0TEAM0001:C0SUPPORT1:1700000000.000100"
+
+
 def test_an_event_with_no_authorizations_routes_nowhere() -> None:
     body = fx.load("message_channel")
     del body["authorizations"]
