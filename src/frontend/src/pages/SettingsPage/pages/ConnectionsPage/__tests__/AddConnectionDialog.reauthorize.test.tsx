@@ -418,6 +418,46 @@ describe("AddConnectionDialog re-authorize", () => {
     );
   });
 
+  it("lets re-authorization add registration scopes no component declares", async () => {
+    setRegistrations([
+      registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [
+          MAIL_SEND,
+          "User.Read",
+          "offline_access",
+          "openid",
+          "email",
+          "profile",
+        ],
+      }),
+    ]);
+    render(
+      dialog(
+        connection({
+          provider_key: "microsoft",
+          granted_scopes: [MAIL_SEND],
+        }),
+      ),
+    );
+
+    for (const scope of ["offline_access", "openid", "email", "profile"]) {
+      expect(scopeBox(scope)).toHaveAttribute("aria-checked", "false");
+      await userEvent.click(scopeBox(scope));
+    }
+    expect(scopeBox("User.Read")).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft-work",
+        scopes: [MAIL_SEND, "offline_access", "openid", "email", "profile"],
+      }),
+    );
+  });
+
   it("does not authorize with nothing selected", async () => {
     render(dialog(connection()));
 
@@ -461,5 +501,52 @@ describe("AddConnectionDialog create flow", () => {
     ).not.toBeInTheDocument();
     expect(scopeBox(CALENDAR)).toHaveAttribute("aria-checked", "true");
     expect(scopeBox(GMAIL_SEND)).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("can request Microsoft identity and refresh scopes on first consent", async () => {
+    setRegistrations([
+      registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [
+          MAIL_SEND,
+          "User.Read",
+          "offline_access",
+          "openid",
+          "email",
+          "profile",
+        ],
+      }),
+    ]);
+    mockCreate.mockResolvedValue(
+      connection({ provider_key: "microsoft", status: "pending" }),
+    );
+    mockStartOAuth.mockResolvedValue({ authorization_url: AUTHORIZATION_URL });
+    const openSpy = jest
+      .spyOn(window, "open")
+      .mockReturnValue(popup as unknown as Window);
+    try {
+      render(dialog(undefined, [MICROSOFT]));
+      expect(scopeBox("User.Read")).toHaveAttribute("aria-checked", "false");
+      for (const scope of ["offline_access", "openid", "email", "profile"]) {
+        expect(scopeBox(scope)).toHaveAttribute("aria-checked", "true");
+      }
+
+      await userEvent.type(screen.getByTestId("connection-name"), "outlook");
+      await userEvent.type(
+        screen.getByTestId("connection-display-name"),
+        "Outlook",
+      );
+      await userEvent.click(screen.getByTestId("connection-continue"));
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "microsoft-work",
+          scopes: [MAIL_SEND, "offline_access", "openid", "email", "profile"],
+        }),
+      );
+    } finally {
+      openSpy.mockRestore();
+    }
   });
 });
