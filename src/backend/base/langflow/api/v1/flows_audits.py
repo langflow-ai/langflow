@@ -72,13 +72,20 @@ async def read_flow_audits(
         allowed_results=_INITIAL_RESULTS,
     )
     flow_id = query.filters.resource_id
-    flow = await session.get(Flow, flow_id) if flow_id is not None else None
+    # Only the guard's three columns: loading the row would pull the whole graph
+    # JSON into memory to answer a page of small audit rows.
+    scope = (
+        (await session.exec(select(Flow.user_id, Flow.workspace_id, Flow.folder_id).where(Flow.id == flow_id))).first()
+        if flow_id is not None
+        else None
+    )
+    flow_user_id, workspace_id, folder_id = scope if scope is not None else (None, None, None)
     await ensure_flow_audit_read_permission(
         current_user,
         flow_id=flow_id,
-        flow_user_id=getattr(flow, "user_id", None),
-        workspace_id=getattr(flow, "workspace_id", None),
-        folder_id=getattr(flow, "folder_id", None),
+        flow_user_id=flow_user_id,
+        workspace_id=workspace_id,
+        folder_id=folder_id,
     )
     visibility = await owner_visibility(current_user, select(Flow.id).where(Flow.user_id == current_user.id))
     page = await read_audit_page(session, query, visibility)

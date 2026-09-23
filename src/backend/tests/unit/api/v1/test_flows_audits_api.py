@@ -119,6 +119,48 @@ async def test_without_a_plugin_a_user_sees_only_their_flows_and_their_own_actio
     assert probing["items"] == []
 
 
+async def test_recreating_a_deleted_flow_id_does_not_hand_over_its_history(client, logged_in_headers):
+    """Owning a UUID today is not owning what happened to it before (#15089 F1)."""
+    victim = await _flow(client, logged_in_headers)
+    victim_id = victim["id"]
+    await client.patch(f"api/v1/flows/{victim_id}", json={"name": "renamed"}, headers=logged_in_headers)
+    await client.delete(f"api/v1/flows/{victim_id}", headers=logged_in_headers)
+
+    _attacker_id, attacker_name = await make_user("flow-attacker")
+    attacker_headers = await login(client, attacker_name)
+    recreated = await client.put(
+        f"api/v1/flows/{victim_id}",
+        json={"name": f"taken-{uuid4().hex[:8]}", "data": GRAPH},
+        headers=attacker_headers,
+    )
+    assert recreated.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, recreated.text
+
+    feed = await _audits(client, attacker_headers, f"?flow_id={victim_id}")
+
+    assert [item["operation"] for item in feed["items"]] == ["create"]
+    assert all(item["flow_name"] != victim["name"] for item in feed["items"])
+
+
+async def test_a_superuser_reads_every_flow(client, logged_in_headers, logged_in_headers_super_user):
+    theirs = await _flow(client, logged_in_headers)
+
+    feed = await _audits(client, logged_in_headers_super_user, f"?flow_id={theirs['id']}")
+
+    assert [item["operation"] for item in feed["items"]] == ["create"]
+
+
+async def test_an_anonymous_caller_is_refused(client):
+    response = await client.get("api/v1/flows/audits")
+
+    assert response.status_code in {status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN}
+
+
+async def test_invalid_input_is_a_400_never_a_422(client, logged_in_headers):
+    for query in ("?flow_id=nope", "?limit=abc", "?since=yesterday", "?extra=1", "?operation="):
+        response = await client.get(f"api/v1/flows/audits{query}", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, (query, response.text)
+
+
 async def test_project_events_never_appear_in_the_flow_feed(client, logged_in_headers):
     project = (
         await client.post("api/v1/projects/", json={"name": f"p-{uuid4().hex}"}, headers=logged_in_headers)
