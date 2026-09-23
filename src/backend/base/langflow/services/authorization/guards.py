@@ -33,6 +33,7 @@ from langflow.services.authorization.actions import (
     VariableAction,
     VoiceAction,
 )
+from langflow.services.authorization.refusal import mark_authorization_refusal
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -300,9 +301,11 @@ async def ensure_permission(
             result=_audit.AUDIT_DENY,
             details={**audit_details, "error": str(exc)},
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=deny_detail,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=deny_detail,
+            )
         ) from exc
 
     await _audit_guard_decision(
@@ -314,9 +317,11 @@ async def ensure_permission(
     )
 
     if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=deny_detail,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=deny_detail,
+            )
         )
 
 
@@ -347,9 +352,11 @@ async def _ensure_resource_permission(
                 "external_access_level": external_context.level,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="External credentials do not allow this action",
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="External credentials do not allow this action",
+            )
         )
 
     if (
@@ -676,9 +683,11 @@ async def ensure_flows_permission(
                 "flow_count": len(flow_ids),
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="External credentials do not allow this action",
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="External credentials do not allow this action",
+            )
         )
 
     settings = get_settings_service()
@@ -720,9 +729,11 @@ async def ensure_flows_permission(
             result=_audit.AUDIT_DENY,
             details={"domain": resolved_domain, "error": str(exc), **_auth_audit_details()},
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=_DEFAULT_DENY_DETAIL,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=_DEFAULT_DENY_DETAIL,
+            )
         ) from exc
 
     if len(results) != len(flow_ids):
@@ -744,9 +755,11 @@ async def ensure_flows_permission(
                 **_auth_audit_details(),
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=_DEFAULT_DENY_DETAIL,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=_DEFAULT_DENY_DETAIL,
+            )
         )
 
     await _audit_flow_decision_batch(
@@ -759,9 +772,11 @@ async def ensure_flows_permission(
         ],
     )
     if not all(results):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=_DEFAULT_DENY_DETAIL,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=_DEFAULT_DENY_DETAIL,
+            )
         )
 
 

@@ -97,6 +97,86 @@ async def test_a_patch_records_only_what_it_wrote(client, logged_in_headers):
     assert (rename_patch.details, rename_patch.resource_name) == ({"schema_version": 1}, new_name)
 
 
+async def _moves_for(flow_id) -> list:
+    """Flow events that record a project move, which a create never is."""
+    return [
+        event
+        for event in await events_for(flow_id, resource_type="flow")
+        if event.operation == "patch" and "project" in event.details
+    ]
+
+
+async def test_a_project_create_records_the_move_on_each_flow_it_took(client, logged_in_headers):
+    """A Flow's own history stays complete whichever route moved it."""
+    source = await _create_project(client, logged_in_headers)
+    flow = await _create_flow(client, logged_in_headers, folder_id=source["id"])
+
+    destination = await _create_project(client, logged_in_headers, flows_list=[flow["id"]])
+
+    [move] = await _moves_for(flow["id"])
+    assert (move.action, move.result) == ("flow:write", "succeeded")
+    assert move.details["project"] == {"before_id": source["id"], "after_id": destination["id"]}
+    assert move.details["written_fields"] == ["folder_id"]
+
+
+async def test_a_project_update_cannot_change_membership_so_records_none(client, logged_in_headers):
+    """An update writes no membership.
+
+    PATCH recomputes flows/components from the project itself, so a body naming
+    other Flows moves nothing: no Flow records a move and the Project event
+    claims no membership write.
+    """
+    kept = await _create_flow(client, logged_in_headers)
+    project = await _create_project(client, logged_in_headers, flows_list=[kept["id"]])
+    outsider = await _create_flow(client, logged_in_headers)
+
+    updated = await client.patch(
+        f"api/v1/projects/{project['id']}",
+        json={"name": f"renamed-{uuid4().hex[:8]}", "flows": [outsider["id"]]},
+        headers=logged_in_headers,
+    )
+    assert updated.status_code == status.HTTP_200_OK, updated.text
+
+    [patch_event] = [
+        event for event in await events_for(project["id"], resource_type="project") if event.operation == "patch"
+    ]
+    assert "flows" not in patch_event.details
+    assert await _moves_for(outsider["id"]) == []
+    # The one move on `kept` is the create that took it into the project.
+    assert len(await _moves_for(kept["id"])) == 1
+
+
+async def test_mcp_settings_record_the_flow_fields_they_write(client, logged_in_headers):
+    """The same Flow fields PATCH /flows/{id} audits are audited on the MCP route."""
+    flow = await _create_flow(client, logged_in_headers)
+    project = await _create_project(client, logged_in_headers, flows_list=[flow["id"]])
+
+    updated = await client.patch(
+        f"api/v1/mcp/project/{project['id']}",
+        json={
+            "settings": [
+                {
+                    "id": flow["id"],
+                    "action_name": "triage",
+                    "action_description": "Route a ticket",
+                    "mcp_enabled": True,
+                }
+            ]
+        },
+        headers=logged_in_headers,
+    )
+    assert updated.status_code == status.HTTP_200_OK, updated.text
+
+    writes = [
+        event
+        for event in await events_for(flow["id"], resource_type="flow")
+        if event.operation == "patch" and "mcp_enabled" in event.details.get("written_fields", [])
+    ]
+    assert [event.action for event in writes] == ["flow:write"]
+    assert writes[0].details["written_fields"] == ["action_description", "action_name", "mcp_enabled"]
+    assert "project" not in writes[0].details
+
+
 async def test_a_rename_collision_records_a_failure_under_the_known_name(client, logged_in_headers):
     taken = await _create_project(client, logged_in_headers)
     project = await _create_project(client, logged_in_headers)
