@@ -196,10 +196,22 @@ not implicitly grant this permission when an authorization plugin is active.
 |---|---|---|
 | Plugin with cross-user fetch | global `project:audit_read` | `project:audit_read` on that Project |
 | No plugin, superuser | every Project event | that Project's events |
-| No plugin, other users | events on Projects they own, and events they made | the same, narrowed to that Project |
+| No plugin, other users | events on Projects they own since they first acted on them, and events they made | the same, narrowed to that Project |
 
-A deleted Project's events stay readable by whoever acted on it, because
-there is no longer an owner to derive visibility from.
+**Ownership is of the id, and an id can be reused.** `PUT /projects/{id}` and
+`PUT /flows/{id}` create at an id the caller chooses, and deleting frees that id,
+so owning it today cannot grant everything that ever happened to it: otherwise
+re-creating a deleted resource would hand its previous owner's trail to whoever
+asked. Without a plugin, the owner floor therefore opens at the caller's own
+first event on that resource. A resource someone owns but never acted on carries
+no history for them; their own events are always readable.
+
+A deleted resource's events stay readable by whoever acted on them. With a
+plugin, the resource's scope is gone once the row is deleted, so the check runs
+unscoped: only a global `project:audit_read` (or `flow:audit_read`) reads a
+deleted resource's history, not a grant scoped to its former Project or
+workspace. Retaining event-time scope would mean storing it on every event; that
+is a schema change, not part of this delivery.
 
 ## Invariants
 

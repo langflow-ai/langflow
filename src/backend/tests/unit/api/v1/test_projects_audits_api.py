@@ -132,6 +132,37 @@ async def test_a_deleted_project_stays_readable_by_whoever_acted_on_it(client, l
     assert [(item["operation"], item["project_name"]) for item in feed["items"]] == [("delete", project["name"])]
 
 
+async def test_recreating_a_deleted_id_does_not_hand_over_its_history(client, logged_in_headers):
+    """Owning a UUID today is not owning what happened to it before (#15088 F7)."""
+    victim = await _project(client, logged_in_headers)
+    victim_id = victim["id"]
+    await client.delete(f"api/v1/projects/{victim_id}", headers=logged_in_headers)
+
+    _attacker_id, attacker_name = await make_user("attacker")
+    attacker_headers = await login(client, attacker_name)
+    recreated = await client.put(
+        f"api/v1/projects/{victim_id}",
+        json={"name": f"taken-{uuid4().hex[:8]}"},
+        headers=attacker_headers,
+    )
+    assert recreated.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, recreated.text
+
+    feed = await _audits(client, attacker_headers, f"?project_id={victim_id}")
+
+    # Only what the new owner did with that id; nothing from the previous one.
+    assert [item["operation"] for item in feed["items"]] == ["create"]
+    assert all(item["project_name"] != victim["name"] for item in feed["items"])
+
+
+async def test_query_string_api_key_auth_is_not_read_as_a_filter(client, logged_in_headers):
+    """``x-api-key`` in the query string authenticates the request (#15088 F2)."""
+    await _project(client, logged_in_headers)
+
+    response = await client.get("api/v1/projects/audits?x-api-key=not-a-real-key", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+
 async def test_flow_events_never_appear_in_the_project_feed(client, logged_in_headers):
     flow = await client.post("api/v1/flows/", json={"name": f"f-{uuid4().hex}", "data": {}}, headers=logged_in_headers)
 
@@ -151,7 +182,16 @@ async def test_reading_records_nothing(client, logged_in_headers, active_user):
 
 
 async def test_invalid_input_is_a_400_never_a_422(client, logged_in_headers):
-    for query in ("?project_id=nope", "?limit=abc", "?since=yesterday", "?extra=1", "?operation="):
+    for query in (
+        "?project_id=nope",
+        "?limit=abc",
+        "?since=yesterday",
+        "?extra=1",
+        "?operation=",
+        # Edge inputs that used to reach Python as an exception rather than a 400.
+        f"?limit={'0' * 5000}",
+        "?since=0001-01-01T00:00:00%2B01:00",
+    ):
         response = await client.get(f"api/v1/projects/audits{query}", headers=logged_in_headers)
         assert response.status_code == status.HTTP_400_BAD_REQUEST, (query, response.text)
 
