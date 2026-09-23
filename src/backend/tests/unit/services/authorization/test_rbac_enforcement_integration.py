@@ -300,7 +300,7 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
             resource_type="flow",
             resource_id=flow_id,
             target_user_id=bob_id,
-            permission_level="read",
+            permission_level="write",
             created_by=alice_id,
         )
         await create_user_share(
@@ -350,6 +350,17 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
             flow for flow in paged_project.json()["flows"]["items"] if flow["id"] == str(flow_id)
         )
         assert shared_project_page["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+
+        # Metadata-only writes preserve the stored graph. Their responses must
+        # still hide its credentials from a writer who is not the owner.
+        patched = await client.patch(
+            f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": f"shared_patch_{uuid4().hex}"}
+        )
+        assert value(patched) is None
+        upserted = await client.put(
+            f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": f"shared_put_{uuid4().hex}"}
+        )
+        assert value(upserted) is None
         assert value(await client.get(f"api/v1/flows/{flow_id}", headers=alice_headers)) == secret_value
 
 

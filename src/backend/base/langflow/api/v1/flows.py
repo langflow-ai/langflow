@@ -286,7 +286,7 @@ FLOW_DELETE_FAILED = "Could not delete the flow."
 FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
 
-def _flow_read_for_caller(flow: Flow, caller_id: UUID) -> FlowRead:
+def _flow_read_for_caller(flow: Flow | FlowRead, caller_id: UUID) -> FlowRead:
     """Keep persisted credentials visible only to the flow owner."""
     flow_read = FlowRead.model_validate(flow, from_attributes=True)
     if flow.user_id != caller_id:
@@ -714,11 +714,12 @@ async def update_flow(
                 )
             return await operation()
 
-        return await run_with_lock_retry(
+        flow_read = await run_with_lock_retry(
             update_attempt,
             session=session,
             description=f"update_flow {flow_id}",
         )
+        return _flow_read_for_caller(flow_read, actor.id)
     except HTTPException:
         raise
     except Exception as e:
@@ -921,7 +922,10 @@ async def upsert_flow(
             )
             status_code = 201
 
-        return JSONResponse(status_code=status_code, content=jsonable_encoder(flow_read))
+        return JSONResponse(
+            status_code=status_code,
+            content=jsonable_encoder(_flow_read_for_caller(flow_read, writer_id)),
+        )
 
     except HTTPException:
         raise
