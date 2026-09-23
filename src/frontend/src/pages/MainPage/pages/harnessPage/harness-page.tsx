@@ -1,5 +1,5 @@
 import "./harness-form.css";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -780,4 +780,12 @@ const HarnessPage = ({
   );
 };
 
-export default HarnessPage;
+const EvalSuitePage = lazy(() => import("./eval-suite-page"));
+
+export default function ProjectForm(props: HarnessPageProps) {
+  return props.projectType === "eval-suite" ? (
+    <EvalSuitePage key={props.projectId} projectId={props.projectId} />
+  ) : (
+    <HarnessPage {...props} />
+  );
+}

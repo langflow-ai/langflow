@@ -1,4 +1,12 @@
 {
+  "evaluations.refreshAfterSaveError": "スイートは保存されましたが、更新後のリビジョンを読み込めませんでした。編集内容は保持されています。実行前にもう一度保存してください。",
+  "evaluations.scorerChanged": "スコアラーまたはその依存関係が変更されています。更新を承認して保存するまで、このスイートはレビュー済みのバージョンを使用します。",
+  "evaluations.useUpdatedScorer": "更新されたスコアラーを使用",
+  "evaluations.nameRequired": "ケース名を入力してください。",
+  "evaluations.inputRequired": "候補に送信する入力を指定してください。",
+  "evaluations.scoreRange": "0〜1のスコアを入力してください。",
+  "evaluations.latencyRange": "1〜3,600,000ミリ秒の整数を入力するか、空欄にしてください。",
+  "evaluations.costRange": "0より大きいコストを入力するか、空欄にしてください。",
   "field.required": "必須",
   "accordion.addVariable": "変数の追加",
   "accordion.fullscreen": "フルスクリーン",
