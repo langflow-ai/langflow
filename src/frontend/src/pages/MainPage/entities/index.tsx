@@ -118,6 +118,8 @@ export type ProjectTypeType = {
   template: Record<
     string,
     Partial<InputFieldType> & {
+      renders?: string;
+      section?: string;
       flow_contract?: FlowContract;
       supports_flow_binding?: boolean;
       show_when?: Record<string, string>;
