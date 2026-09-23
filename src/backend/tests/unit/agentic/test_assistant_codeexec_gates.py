@@ -12,10 +12,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
-def _settings(*, allow_custom=True, agentic=True):
+def _settings(*, allow_custom=True, agentic=True, admin_only=False):
     s = MagicMock()
     s.settings.allow_custom_components = allow_custom
     s.settings.agentic_experience = agentic
+    s.settings.custom_component_admin_only = admin_only
+    s.settings.assistant_max_message_length = 1000
     return s
 
 
@@ -37,6 +39,58 @@ def test_require_agentic_experience_allows_when_enabled():
 
     with patch("langflow.agentic.api.deps.get_settings_service", return_value=_settings(agentic=True)):
         assert require_agentic_experience() is None
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        ("/agentic/execute/assistant", {"flow_id": ""}),
+        ("/agentic/assist", {"flow_id": ""}),
+        ("/agentic/assist/stream", {"flow_id": ""}),
+        ("/agentic/assist/run", {"instruction": "build a component"}),
+    ],
+)
+def test_assistant_execution_denies_non_admin_when_custom_code_is_admin_only(path: str, body: dict):
+    """Every HTTP entry point refuses before loading a provider or executing code."""
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from langflow.agentic.api.router import router
+    from langflow.services.auth.utils import get_current_active_user
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_active_user] = lambda: SimpleNamespace(id=uuid4(), is_superuser=False)
+    settings = _settings(admin_only=True)
+    with (
+        patch("langflow.agentic.api.deps.get_settings_service", return_value=settings),
+        patch("langflow.agentic.api.router.get_settings_service", return_value=settings),
+        patch("lfx.services.deps.get_settings_service", return_value=settings),
+    ):
+        response = TestClient(app).post(path, json=body)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Assistant code execution is restricted to administrators."
+
+
+def test_assistant_execution_allows_non_admin_when_policy_off():
+    from types import SimpleNamespace
+
+    from langflow.agentic.api.router import require_agentic_component_admin
+
+    with patch("langflow.agentic.api.router.get_settings_service", return_value=_settings(admin_only=False)):
+        assert require_agentic_component_admin(SimpleNamespace(is_superuser=False)) is None
+
+
+def test_assistant_execution_allows_admin_when_policy_on():
+    from types import SimpleNamespace
+
+    from langflow.agentic.api.router import require_agentic_component_admin
+
+    with patch("langflow.agentic.api.router.get_settings_service", return_value=_settings(admin_only=True)):
+        assert require_agentic_component_admin(SimpleNamespace(is_superuser=True)) is None
 
 
 # --- (b) execution gate: allow_custom_components -------------------------------------------------

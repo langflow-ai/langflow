@@ -51,6 +51,16 @@ from langflow.services.model_provider_policy_scope import scoped_model_provider_
 router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
 
 
+def require_agentic_component_admin(current_user: CurrentActiveUser) -> None:
+    """Enforce the caller-aware custom-code policy before assistant execution."""
+    settings = get_settings_service().settings
+    if getattr(settings, "custom_component_admin_only", False) is True and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Assistant code execution is restricted to administrators.")
+
+
+_ASSISTANT_EXECUTION_DEPENDENCIES = [Depends(require_agentic_experience), Depends(require_agentic_component_admin)]
+
+
 @dataclass(frozen=True)
 class _AssistantContext:
     """Resolved provider, model, and execution context for assistant endpoints."""
@@ -178,7 +188,7 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
     return flow
 
 
-@router.post("/execute/{flow_name}", dependencies=[Depends(require_agentic_experience)])
+@router.post("/execute/{flow_name}", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def execute_named_flow(
     flow_name: str,
     request: AssistantRequest,
@@ -331,7 +341,7 @@ async def check_assistant_config(
     }
 
 
-@router.post("/assist", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def assist(
     request: AssistantRequest,
     current_user: CurrentActiveUser,
@@ -367,7 +377,7 @@ async def assist(
         )
 
 
-@router.post("/assist/stream", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist/stream", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def assist_stream(
     request: AssistantRequest,
     http_request: Request,
@@ -421,7 +431,7 @@ async def assist_stream(
     )
 
 
-@router.post("/assist/run", dependencies=[Depends(require_agentic_experience)], include_in_schema=False)
+@router.post("/assist/run", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES, include_in_schema=False)
 async def assist_headless(
     request: HeadlessAssistantRequest,
     current_user: CurrentActiveUser,

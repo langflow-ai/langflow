@@ -357,6 +357,30 @@ class TestScanCodeSecurityDangerousAttrCalls:
 class TestScanCodeSecurityDangerousImports:
     """Tests that dangerous imports are detected."""
 
+    @pytest.mark.parametrize(
+        ("code", "module"),
+        [
+            ('import timeit\ntimeit.timeit("print(1)", number=1)', "timeit"),
+            ('from timeit import Timer\nTimer("print(1)").timeit(1)', "timeit"),
+            ('import profile\nprofile.run("print(1)")', "profile"),
+            ('from profile import runctx\nrunctx("print(1)", {}, {})', "profile"),
+            ('import cProfile as profiler\nprofiler.run("print(1)")', "cProfile"),
+            ('from cProfile import runctx\nrunctx("print(1)", {}, {})', "cProfile"),
+            ('import trace\ntrace.Trace().run("print(1)")', "trace"),
+            ('from trace import Trace\nTrace().runctx("print(1)", {}, {})', "trace"),
+            ('import bdb\nbdb.Bdb().run("print(1)")', "bdb"),
+            ('from bdb import Bdb\nBdb().run("print(1)")', "bdb"),
+            ('import pdb\npdb.Pdb().run("print(1)")', "pdb"),
+            ('from pdb import Pdb\nPdb().run("print(1)")', "pdb"),
+            ("import doctest\ndoctest.DocTestRunner().run(test)", "doctest"),
+            ("from doctest import DocTestRunner\nDocTestRunner().run(test)", "doctest"),
+        ],
+    )
+    def test_should_detect_string_execution_profiling_imports(self, code, module):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any(module in violation for violation in result.violations)
+
     def test_should_detect_subprocess_import(self):
         """Import subprocess should be detected."""
         code = "import subprocess"
