@@ -46,7 +46,6 @@ class TestCeleryConfigAcceptContent:
 
     def test_celery_rejects_pickle_before_decoding(self):
         """Both the task consumer and result reader reject untrusted pickle content."""
-        pytest.importorskip("celery")
         from kombu.exceptions import ContentDisallowed
         from kombu.serialization import loads, prepare_accept_content
         from langflow.core.celery_app import make_celery
