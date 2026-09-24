@@ -172,6 +172,18 @@ def test_relocation_line_shows_what_was_copied(status, copied, expected):
     assert relocation_line(result).endswith(expected)
 
 
+@pytest.mark.parametrize(
+    ("backend_type", "config", "override"),
+    [
+        ("opensearch", {"index_name": "shared"}, "index_name"),
+        ("chroma", {"mode": "cloud", "collection_name": "shared"}, "collection_name"),
+    ],
+)
+async def test_relocation_rejects_shared_target_collection(backend_type, config, override):
+    with pytest.raises(ValueError, match=override):
+        await relocate_knowledge_bases(target_backend_type=backend_type, target_backend_config=config)
+
+
 @pytest.mark.api_key_required
 class TestRelocationToPostgresLive:
     @pytest.fixture(autouse=True)
