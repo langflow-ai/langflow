@@ -313,3 +313,65 @@ async def test_tool_error_string_payload_passes_through():
     error_event = {"event": "on_tool_error", "name": "t", "run_id": "r1", "data": {"error": "tool failed"}}
     message, _ = await handle_on_tool_error(error_event, message, tool_blocks_map, _passthrough, perf_counter())
     assert message.content_blocks[-1].error == "tool failed"
+
+
+@pytest.mark.parametrize("predeclared", [False, True], ids=["fallback", "model-blocks"])
+@pytest.mark.parametrize("first_terminal", ["on_tool_end", "on_tool_error"])
+async def test_parallel_tool_bindings_survive_message_publication(predeclared, first_terminal):
+    """Equal-argument calls keep their own outcomes when publications clone the message."""
+    events = []
+    if predeclared:
+        events.append(
+            {
+                "event": "on_chat_model_end",
+                "data": {
+                    "output": AIMessage(
+                        content=[
+                            {"type": "tool_use", "name": "search", "input": {}, "id": run_id} for run_id in ("a", "b")
+                        ]
+                    )
+                },
+            }
+        )
+    events.extend(
+        {"event": "on_tool_start", "name": "search", "run_id": run_id, "data": {"input": {"q": "same"}}}
+        for run_id in ("a", "b")
+    )
+    # A nested model may publish narration while both tools are still running.
+    events.append({"event": "on_chat_model_end", "data": {"output": AIMessage(content="Still working")}})
+    events.extend(
+        [
+            {
+                "event": first_terminal,
+                "name": "search",
+                "run_id": "b",
+                "data": {"output": "result-b", "error": ValueError("error-b")},
+            },
+            {"event": "on_tool_end", "name": "search", "run_id": "a", "data": {"output": "result-a"}},
+        ]
+    )
+
+    async def event_iterator():
+        for event in events:
+            yield event
+
+    published = []
+
+    async def publish(*, message, **kwargs):
+        result = await _rehydrating_send(message=message, **kwargs)
+        published.append(result.model_dump())
+        return result
+
+    result = await process_agent_events(event_iterator(), Message(content_blocks=[]), publish)
+    blocks = [block for block in result.content_blocks if isinstance(block, ToolContent)]
+    assert len(blocks) == 2
+    assert blocks[0].output == "result-a"
+    assert blocks[0].error is None
+    assert blocks[1].output == ("result-b" if first_terminal == "on_tool_end" else None)
+    assert blocks[1].error == ("error-b" if first_terminal == "on_tool_error" else None)
+    # The first completion must already be visible in its publication, before
+    # the other tool or the overall agent finishes.
+    first_completion = [block for block in published[-3]["content_blocks"] if block["type"] == "tool_use"]
+    assert first_completion[1]["output" if first_terminal == "on_tool_end" else "error"] == (
+        "result-b" if first_terminal == "on_tool_end" else "error-b"
+    )
