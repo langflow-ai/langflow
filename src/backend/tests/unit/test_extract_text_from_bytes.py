@@ -201,6 +201,21 @@ class TestExtractTextFromBytesDOCX:
         assert result.endswith("Host\n\nOuter box\n\nInner box")
         assert result.count("Inner box") == 1
 
+    def test_should_drop_a_text_box_inside_a_tracked_deletion_or_move(self):
+        def box(text: str) -> str:
+            shape = f"<w:txbxContent><w:p>{_run(text)}</w:p></w:txbxContent>"
+            return f"<w:r><w:pict><v:shape><v:textbox>{shape}</v:textbox></v:shape></w:pict></w:r>"
+
+        content = _docx_with_body(
+            "<w:p>"
+            + _run("Kept")
+            + f'<w:del w:id="1" w:author="a">{box("Deleted box")}</w:del>'
+            + f'<w:moveFrom w:id="2" w:author="a">{box("Moved-away box")}</w:moveFrom>'
+            + "</w:p>"
+        )
+
+        assert extract_text_from_bytes("deleted-box.docx", content) == "Kept"
+
     def test_should_keep_tracked_insertions_and_drop_deletions(self):
         content = _docx_with_body(
             "<w:p>"

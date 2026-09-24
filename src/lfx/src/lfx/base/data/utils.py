@@ -264,8 +264,9 @@ def _docx_paragraph_text(paragraph) -> str:
 
 def _docx_text_boxes(paragraph) -> Iterator:
     for text_box in paragraph.iter(f"{_W}txbxContent"):
-        # A nested text box is read with the box around it, and a fallback copy repeats the real one.
-        if not _docx_has_ancestor(text_box, paragraph, {f"{_W}txbxContent", _MC_FALLBACK}):
+        # A nested text box is read with the box around it, a fallback copy repeats the real one, and a
+        # box inside a tracked deletion or moved-away text is no more part of the text than its runs are.
+        if not _docx_has_ancestor(text_box, paragraph, _DOCX_SKIPPED_RUN_ANCESTORS):
             yield text_box
 
 
