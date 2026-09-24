@@ -40,6 +40,12 @@ async def adapt_graph_events_to_executor_shape(
             if event.get("event") == "on_chain_start":
                 yield _reshape_chain_start(event)
                 continue
+            if event.get("event") == "on_chain_stream":
+                model_output = _model_message_from_graph_update(event)
+                if model_output is not None and not _same_message(model_output, last_model_output):
+                    # Some chat models produce a graph update without a model-end callback.
+                    yield _synthetic_model_end(event, model_output)
+                    last_model_output = model_output
             if event.get("event") == "on_chain_end":
                 unstreamed = _final_message_without_model_call(event, last_model_output)
                 if unstreamed is not None:
@@ -47,6 +53,23 @@ async def adapt_graph_events_to_executor_shape(
                 yield _reshape_chain_end(event)
                 continue
         yield event
+
+
+def _model_message_from_graph_update(event: dict[str, Any]) -> AIMessage | None:
+    chunk = (event.get("data") or {}).get("chunk")
+    model_update = chunk.get("model") if isinstance(chunk, dict) else None
+    messages = model_update.get("messages") if isinstance(model_update, dict) else None
+    if isinstance(messages, list):
+        return next((message for message in reversed(messages) if isinstance(message, AIMessage)), None)
+    return None
+
+
+def _same_message(message: AIMessage, previous: AIMessage | None) -> bool:
+    if previous is None:
+        return False
+    if message.id is not None and previous.id is not None:
+        return message.id == previous.id
+    return message.content == previous.content and message.tool_calls == previous.tool_calls
 
 
 def _final_message_without_model_call(
