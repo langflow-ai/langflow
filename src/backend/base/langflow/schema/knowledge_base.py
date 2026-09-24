@@ -8,8 +8,8 @@ from langflow.utils.kb_constants import MAX_CHUNK_OVERLAP, MAX_CHUNK_SIZE, MIN_C
 
 # Required ``backend_config`` fields per backend, enforced at request time.
 # OpenSearch no longer requires ``index_name``: the backend derives a unique
-# index per KB/MB from its name (created lazily on first write), so the index
-# does not need to exist — or even be named — at create / test-connection time.
+# index per KB/MB from its owner and name (created lazily on first write), so the
+# index does not need to exist — or even be named — at create / test-connection time.
 _REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {}
 
 # Backends the API accepts for *new* KB creation. Other ``BackendType``

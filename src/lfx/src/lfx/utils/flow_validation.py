@@ -1967,6 +1967,22 @@ def admin_only_build_required(*, is_superuser: bool) -> bool:
     return _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
 
 
+def custom_component_admin_only_enabled() -> bool | None:
+    """Whether the admin-only component policy is configured on, caller-independent.
+
+    Returns ``None`` when settings cannot be read, so callers that would fail
+    closed through :func:`admin_only_build_required` can keep doing so without a
+    second settings lookup. When this returns ``False`` the policy cannot apply
+    to any caller, and the caller's superuser flag need not be resolved.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        return None
+    return getattr(settings_service.settings, "custom_component_admin_only", False) is True
+
+
 async def prepare_admin_only_flow_build(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
     """Backward-compatible admin-only sanitizer for callers that already selected this policy."""
     return _sanitize_admin_only_flow_build(
