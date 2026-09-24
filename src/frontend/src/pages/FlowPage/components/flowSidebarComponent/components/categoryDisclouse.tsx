@@ -141,7 +141,6 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
         <DisclosureContent>
           <SidebarItemsList
             item={item}
-            bundleDisplayName={extensionId ? item.display_name : ""}
             dataFilter={dataFilter}
             nodeColors={nodeColors}
             onDragStart={onDragStart}

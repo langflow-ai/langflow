@@ -35,7 +35,6 @@ export const SidebarDraggableComponent = forwardRef(
     {
       sectionName,
       display_name,
-      paletteLabel,
       icon,
       itemName,
       error,
@@ -53,7 +52,6 @@ export const SidebarDraggableComponent = forwardRef(
       apiClass: APIClassType;
       icon: string;
       display_name: string;
-      paletteLabel?: string;
       itemName: string;
       error: boolean;
       color: string;
@@ -135,11 +133,7 @@ export const SidebarDraggableComponent = forwardRef(
     // visible text — so it goes into the name too ("Add Listen Beta to
     // canvas"), otherwise voice-control users saying "click Listen Beta"
     // get no match. Keep these literals in sync with the badges below.
-    const visibleName = [
-      paletteLabel ?? display_name,
-      beta && "Beta",
-      legacy && "Legacy",
-    ]
+    const visibleName = [display_name, beta && "Beta", legacy && "Legacy"]
       .filter(Boolean)
       .join(" ");
     const addToCanvasLabel = t("sidebar.addComponentToCanvas", {
@@ -228,7 +222,7 @@ export const SidebarDraggableComponent = forwardRef(
                     data-testid="display-name"
                     className="truncate text-sm font-normal"
                   >
-                    {paletteLabel ?? display_name}
+                    {display_name}
                   </span>
                 </ShadTooltip>
                 {beta && (
