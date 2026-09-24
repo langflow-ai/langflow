@@ -59,13 +59,13 @@ class KBRelocationResult:
 
 def validate_relocation_target_config(target_backend_type: str, target_backend_config: dict[str, Any]) -> None:
     """Reject collection overrides that would route multiple KBs into one store."""
-    if target_backend_type == "opensearch" and "index_name" in target_backend_config:
+    if target_backend_type == "opensearch" and target_backend_config.get("index_name"):
         msg = "--target-config cannot set index_name: relocation needs a separate OpenSearch index for each KB"
         raise ValueError(msg)
     if (
         target_backend_type == "chroma"
         and str(target_backend_config.get("mode", "local")).lower() == "cloud"
-        and "collection_name" in target_backend_config
+        and target_backend_config.get("collection_name")
     ):
         msg = (
             "--target-config cannot set collection_name: "
