@@ -477,8 +477,8 @@ export function AddConnectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : close(true))}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] sm:max-w-[560px]">
+        <DialogHeader className="shrink-0">
           <DialogTitle>
             {reauthorize
               ? t("connections.add.reauthorizeTitle", {
@@ -489,210 +489,211 @@ export function AddConnectionDialog({
         </DialogHeader>
 
         {step === "details" && (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="connection-provider">
-                {t("connections.add.provider")}
-              </Label>
-              <select
-                id="connection-provider"
-                className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                value={providerId}
-                onChange={(event) => {
-                  setProviderId(event.target.value);
-                  // A pasted token belongs to the provider it was pasted for.
-                  setMethod("oauth");
-                  setToken("");
-                  setAllowBackgroundRuns(false);
-                }}
-                data-testid="connection-provider"
-              >
-                {providers.map((item) => (
-                  <option key={item.provider_id} value={item.provider_id}>
-                    {item.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {offersToken && (
+          <div className="flex min-h-0 flex-col gap-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-method">
-                  {t("connections.add.method")}
+                <Label htmlFor="connection-provider">
+                  {t("connections.add.provider")}
                 </Label>
                 <select
-                  id="connection-method"
+                  id="connection-provider"
                   className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                  value={method}
+                  value={providerId}
                   onChange={(event) => {
-                    setMethod(event.target.value as Method);
-                    setFieldError(null);
+                    setProviderId(event.target.value);
+                    // A pasted token belongs to the provider it was pasted for.
+                    setMethod("oauth");
+                    setToken("");
+                    setAllowBackgroundRuns(false);
                   }}
-                  data-testid="connection-method"
+                  data-testid="connection-provider"
                 >
-                  <option value="oauth">
-                    {t("connections.add.methodOauth")}
-                  </option>
-                  <option value="token">
-                    {t("connections.add.methodToken")}
-                  </option>
-                </select>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-name">
-                  {t("connections.add.handle")}
-                </Label>
-                <Input
-                  id="connection-name"
-                  value={name}
-                  spellCheck={false}
-                  placeholder={t("connections.add.handlePlaceholder")}
-                  onChange={(event) => setName(event.target.value)}
-                  maxLength={CONNECTION_NAME_MAX_LENGTH}
-                  aria-invalid={name.length > 0 && !handleValid}
-                  className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
-                  aria-describedby="connection-name-help"
-                  data-testid="connection-name"
-                />
-                <span className="font-mono text-xs text-muted-foreground">
-                  {providerId}/{name || "…"}
-                </span>
-                <p
-                  id="connection-name-help"
-                  className={cn(
-                    "text-xs text-muted-foreground",
-                    name.length > 0 && !handleValid && "text-destructive",
-                  )}
-                >
-                  {t("connections.add.handleHelp", {
-                    max: CONNECTION_NAME_MAX_LENGTH,
-                  })}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-display-name">
-                  {t("connections.add.displayName")}
-                </Label>
-                <Input
-                  id="connection-display-name"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  data-testid="connection-display-name"
-                />
-              </div>
-            </div>
-
-            {usesToken && (
-              <SlackTokenFields
-                token={token}
-                onTokenChange={(value) => {
-                  setToken(value);
-                  // The server refused the token that was there; it no longer is.
-                  setFieldError(null);
-                }}
-                allowBackgroundRuns={allowBackgroundRuns}
-                onAllowBackgroundRunsChange={setAllowBackgroundRuns}
-              />
-            )}
-
-            {usesToken && tokenKind === "bot" && (
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium">
-                  {t("connections.add.tokenScopes")}
-                </span>
-                <ScopeChecklist
-                  scopes={botTokenScopes}
-                  selected={tokenScopes}
-                  onToggle={(scope, checked) =>
-                    setTokenScopes((current) => {
-                      const next = new Set(current);
-                      if (checked) next.add(scope);
-                      else next.delete(scope);
-                      return next;
-                    })
-                  }
-                />
-              </div>
-            )}
-
-            {!usesToken && identities.length > 1 && (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-identity">
-                  {t("connections.add.identity")}
-                </Label>
-                <select
-                  id="connection-identity"
-                  className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                  value={identity}
-                  onChange={(event) =>
-                    setIdentity(event.target.value as IntegrationIdentity)
-                  }
-                  data-testid="connection-identity"
-                >
-                  {identities.map((option) => (
-                    <option key={option} value={option}>
-                      {t(`connections.identity.${option}`)}
+                  {providers.map((item) => (
+                    <option key={item.provider_id} value={item.provider_id}>
+                      {item.display_name}
                     </option>
                   ))}
                 </select>
               </div>
-            )}
 
-            {!usesToken && registrationSelect}
+              {offersToken && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="connection-method">
+                    {t("connections.add.method")}
+                  </Label>
+                  <select
+                    id="connection-method"
+                    className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                    value={method}
+                    onChange={(event) => {
+                      setMethod(event.target.value as Method);
+                      setFieldError(null);
+                    }}
+                    data-testid="connection-method"
+                  >
+                    <option value="oauth">
+                      {t("connections.add.methodOauth")}
+                    </option>
+                    <option value="token">
+                      {t("connections.add.methodToken")}
+                    </option>
+                  </select>
+                </div>
+              )}
 
-            {!usesToken && canCreateInstance && (
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={ownership === "instance"}
-                  onCheckedChange={(checked) =>
-                    setOwnership(checked ? "instance" : "user")
-                  }
-                  data-testid="connection-instance-owned"
-                />
-                {t("connections.add.instanceOwned")}
-              </label>
-            )}
-
-            {!usesToken && (
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium">
-                  {t("connections.add.scopes")}
-                </span>
-                {requestable.length === 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    {t("connections.add.noScopes")}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="connection-name">
+                    {t("connections.add.handle")}
+                  </Label>
+                  <Input
+                    id="connection-name"
+                    value={name}
+                    spellCheck={false}
+                    placeholder={t("connections.add.handlePlaceholder")}
+                    onChange={(event) => setName(event.target.value)}
+                    maxLength={CONNECTION_NAME_MAX_LENGTH}
+                    aria-invalid={name.length > 0 && !handleValid}
+                    className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
+                    aria-describedby="connection-name-help"
+                    data-testid="connection-name"
+                  />
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {providerId}/{name || "…"}
                   </span>
-                )}
-                <ScopeChecklist
-                  scopes={requestable}
-                  selected={selectedScopes}
-                  onToggle={toggleScope}
-                />
-                {unavailable.length > 0 && (
-                  <span className="text-xs text-warning-foreground">
-                    {t("connections.add.scopesOutsideCeiling", {
-                      scopes: unavailable.map(shortScope).join(", "),
+                  <p
+                    id="connection-name-help"
+                    className={cn(
+                      "text-xs text-muted-foreground",
+                      name.length > 0 && !handleValid && "text-destructive",
+                    )}
+                  >
+                    {t("connections.add.handleHelp", {
+                      max: CONNECTION_NAME_MAX_LENGTH,
                     })}
-                  </span>
-                )}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="connection-display-name">
+                    {t("connections.add.displayName")}
+                  </Label>
+                  <Input
+                    id="connection-display-name"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    data-testid="connection-display-name"
+                  />
+                </div>
               </div>
-            )}
 
-            {!usesToken && noRegistration && (
-              <p className="text-xs text-destructive" role="alert">
-                {t("connections.add.noRegistration")}
-              </p>
-            )}
-            {fieldError && (
-              <p className="text-xs text-destructive" role="alert">
-                {fieldError}
-              </p>
-            )}
+              {usesToken && (
+                <SlackTokenFields
+                  token={token}
+                  onTokenChange={(value) => {
+                    setToken(value);
+                    // The server refused the token that was there; it no longer is.
+                    setFieldError(null);
+                  }}
+                  allowBackgroundRuns={allowBackgroundRuns}
+                  onAllowBackgroundRunsChange={setAllowBackgroundRuns}
+                />
+              )}
 
-            <div className="flex justify-end gap-2">
+              {usesToken && tokenKind === "bot" && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium">
+                    {t("connections.add.tokenScopes")}
+                  </span>
+                  <ScopeChecklist
+                    scopes={botTokenScopes}
+                    selected={tokenScopes}
+                    onToggle={(scope, checked) =>
+                      setTokenScopes((current) => {
+                        const next = new Set(current);
+                        if (checked) next.add(scope);
+                        else next.delete(scope);
+                        return next;
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {!usesToken && identities.length > 1 && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="connection-identity">
+                    {t("connections.add.identity")}
+                  </Label>
+                  <select
+                    id="connection-identity"
+                    className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                    value={identity}
+                    onChange={(event) =>
+                      setIdentity(event.target.value as IntegrationIdentity)
+                    }
+                    data-testid="connection-identity"
+                  >
+                    {identities.map((option) => (
+                      <option key={option} value={option}>
+                        {t(`connections.identity.${option}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {!usesToken && registrationSelect}
+
+              {!usesToken && canCreateInstance && (
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={ownership === "instance"}
+                    onCheckedChange={(checked) =>
+                      setOwnership(checked ? "instance" : "user")
+                    }
+                    data-testid="connection-instance-owned"
+                  />
+                  {t("connections.add.instanceOwned")}
+                </label>
+              )}
+
+              {!usesToken && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium">
+                    {t("connections.add.scopes")}
+                  </span>
+                  {requestable.length === 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {t("connections.add.noScopes")}
+                    </span>
+                  )}
+                  <ScopeChecklist
+                    scopes={requestable}
+                    selected={selectedScopes}
+                    onToggle={toggleScope}
+                  />
+                  {unavailable.length > 0 && (
+                    <span className="text-xs text-warning-foreground">
+                      {t("connections.add.scopesOutsideCeiling", {
+                        scopes: unavailable.map(shortScope).join(", "),
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {!usesToken && noRegistration && (
+                <p className="text-xs text-destructive" role="alert">
+                  {t("connections.add.noRegistration")}
+                </p>
+              )}
+              {fieldError && (
+                <p className="text-xs text-destructive" role="alert">
+                  {fieldError}
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 justify-end gap-2">
               <Button variant="ghost" onClick={() => close(true)}>
                 {t("connections.add.cancel")}
               </Button>
@@ -708,40 +709,41 @@ export function AddConnectionDialog({
         )}
 
         {step === "scopes" && (
-          <div className="flex flex-col gap-4">
-            {registrationSelect}
+          <div className="flex min-h-0 flex-col gap-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+              {registrationSelect}
 
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">
-                {t("connections.add.scopes")}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {reauthorizeOptions.length === 0
-                  ? t("connections.add.noScopes")
-                  : t("connections.add.reauthorizeHint")}
-              </span>
-              <ScopeChecklist
-                scopes={reauthorizeOptions}
-                selected={selectedScopes}
-                onToggle={toggleScope}
-                granted={grantedOptions}
-              />
-              {notRequestable.length > 0 && (
-                <span className="text-xs text-warning-foreground">
-                  {t("connections.add.scopesOutsideCeiling", {
-                    scopes: notRequestable.map(shortScope).join(", "),
-                  })}
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium">
+                  {t("connections.add.scopes")}
                 </span>
+                <span className="text-xs text-muted-foreground">
+                  {reauthorizeOptions.length === 0
+                    ? t("connections.add.noScopes")
+                    : t("connections.add.reauthorizeHint")}
+                </span>
+                <ScopeChecklist
+                  scopes={reauthorizeOptions}
+                  selected={selectedScopes}
+                  onToggle={toggleScope}
+                  granted={grantedOptions}
+                />
+                {notRequestable.length > 0 && (
+                  <span className="text-xs text-warning-foreground">
+                    {t("connections.add.scopesOutsideCeiling", {
+                      scopes: notRequestable.map(shortScope).join(", "),
+                    })}
+                  </span>
+                )}
+              </div>
+
+              {noRegistration && (
+                <p className="text-xs text-destructive" role="alert">
+                  {t("connections.add.noRegistration")}
+                </p>
               )}
             </div>
-
-            {noRegistration && (
-              <p className="text-xs text-destructive" role="alert">
-                {t("connections.add.noRegistration")}
-              </p>
-            )}
-
-            <div className="flex justify-end gap-2">
+            <div className="flex shrink-0 justify-end gap-2">
               <Button variant="ghost" onClick={() => close(true)}>
                 {t("connections.add.cancel")}
               </Button>
