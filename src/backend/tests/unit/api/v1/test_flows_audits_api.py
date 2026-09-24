@@ -145,17 +145,22 @@ async def test_a_flow_id_that_changed_hands_twice_shows_only_its_current_life(cl
     """A → B → A: the same rule the Project feed follows (#15088)."""
     shared_id = str(uuid4())
     body = {"name": f"a1-{uuid4().hex[:8]}", "data": GRAPH}
-    await client.put(f"api/v1/flows/{shared_id}", json=body, headers=logged_in_headers)
-    await client.delete(f"api/v1/flows/{shared_id}", headers=logged_in_headers)
+    first = await client.put(f"api/v1/flows/{shared_id}", json=body, headers=logged_in_headers)
+    assert first.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, first.text
+    dropped = await client.delete(f"api/v1/flows/{shared_id}", headers=logged_in_headers)
+    assert dropped.status_code in {status.HTTP_200_OK, status.HTTP_204_NO_CONTENT}, dropped.text
 
     other_id, other_name = await make_user("flow-intervening")
     other_headers = await login(client, other_name)
-    await client.put(
+    took = await client.put(
         f"api/v1/flows/{shared_id}", json={"name": f"b-{uuid4().hex[:8]}", "data": GRAPH}, headers=other_headers
     )
+    assert took.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, took.text
     between = f"b-renamed-{uuid4().hex[:8]}"
-    await client.patch(f"api/v1/flows/{shared_id}", json={"name": between}, headers=other_headers)
-    await client.delete(f"api/v1/flows/{shared_id}", headers=other_headers)
+    edited = await client.patch(f"api/v1/flows/{shared_id}", json={"name": between}, headers=other_headers)
+    assert edited.status_code == status.HTTP_200_OK, edited.text
+    released = await client.delete(f"api/v1/flows/{shared_id}", headers=other_headers)
+    assert released.status_code in {status.HTTP_200_OK, status.HTTP_204_NO_CONTENT}, released.text
 
     retaken = await client.put(
         f"api/v1/flows/{shared_id}", json={"name": f"a2-{uuid4().hex[:8]}", "data": GRAPH}, headers=logged_in_headers
@@ -166,6 +171,43 @@ async def test_a_flow_id_that_changed_hands_twice_shows_only_its_current_life(cl
 
     assert between not in {item["flow_name"] for item in feed["items"]}
     assert all(item["actor"]["user_id"] != str(other_id) for item in feed["items"])
+
+
+async def test_an_unrecorded_create_does_not_reopen_the_previous_life(client, logged_in_headers):
+    """Excluding `flow:create` must not let the window fall back to the old owner's create."""
+    settings = get_settings_service().settings
+    original = settings.audit_exclude_events
+    shared_id = str(uuid4())
+    hers = f"alice-{uuid4().hex[:8]}"
+    created = await client.put(
+        f"api/v1/flows/{shared_id}", json={"name": hers, "data": GRAPH}, headers=logged_in_headers
+    )
+    assert created.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, created.text
+    edited = await client.patch(
+        f"api/v1/flows/{shared_id}", json={"name": f"{hers}-v2"}, headers=logged_in_headers
+    )
+    assert edited.status_code == status.HTTP_200_OK, edited.text
+    dropped = await client.delete(f"api/v1/flows/{shared_id}", headers=logged_in_headers)
+    assert dropped.status_code in {status.HTTP_200_OK, status.HTTP_204_NO_CONTENT}, dropped.text
+
+    other_id, other_name = await make_user("no-create-recorded")
+    other_headers = await login(client, other_name)
+    try:
+        # A supported setting: the new owner's create is never written.
+        settings.audit_exclude_events = "flow:create"
+        retaken = await client.put(
+            f"api/v1/flows/{shared_id}",
+            json={"name": f"bob-{uuid4().hex[:8]}", "data": GRAPH},
+            headers=other_headers,
+        )
+        assert retaken.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, retaken.text
+
+        feed = await _audits(client, other_headers, f"?flow_id={shared_id}&limit=200")
+    finally:
+        settings.audit_exclude_events = original
+
+    assert feed["items"] == [], "the previous owner's rows must stay theirs"
+    assert str(other_id) not in {item["actor"]["user_id"] for item in feed["items"]}
 
 
 async def test_a_superuser_reads_every_flow(client, logged_in_headers, logged_in_headers_super_user):

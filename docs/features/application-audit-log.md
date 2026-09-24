@@ -235,7 +235,10 @@ the Flow schema (`written_fields`, `project`, `attempted_fields`). A
 **Access.** Requires the `flow:audit_read` permission (`FlowAction.AUDIT_READ`);
 `project:audit_read` does not grant it, and resource ownership does not implicitly
 grant it when an authorization plugin is active. Without a plugin, a non-superuser
-reads events on Flows they own and events they made; a superuser reads every Flow event.
+reads events they made, plus events on Flows they own within the Flow's current
+life — the same window the Project view uses, per id and resource type, so a
+re-created Flow id never carries a previous owner's trail. A superuser reads every
+Flow event.
 
 ## Invariants
 
