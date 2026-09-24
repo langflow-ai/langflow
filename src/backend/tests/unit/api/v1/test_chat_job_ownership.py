@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1 import chat
+from langflow.services.job_queue.service import JobQueueBackendUnavailableError
 
 
 class OwnerlessQueue:
@@ -40,6 +41,46 @@ async def test_ownerless_nonpublic_job_is_denied():
     with pytest.raises(HTTPException) as denied:
         await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), OwnerlessQueue())
     assert denied.value.status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail_at", ["owner", "marker"])
+async def test_job_ownership_backend_failure_does_not_disclose_connection_target(fail_at: str):
+    backend_detail = "redis://internal.example:6379/0"
+
+    class UnavailableQueue(OwnerlessQueue):
+        async def get_job_owner(self, _job_id):
+            if fail_at == "owner":
+                raise JobQueueBackendUnavailableError(backend_detail)
+
+        async def is_public_job_async(self, _job_id):
+            raise JobQueueBackendUnavailableError(backend_detail)
+
+    with pytest.raises(HTTPException) as unavailable:
+        await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), UnavailableQueue())
+    assert unavailable.value.status_code == 503
+    assert unavailable.value.detail == "Job queue is temporarily unavailable."
+
+
+@pytest.mark.asyncio
+async def test_owner_registration_backend_failure_cancels_job_without_disclosing_connection_target():
+    backend_detail = "redis://internal.example:6379/0"
+
+    class UnavailableQueue:
+        cancelled = False
+
+        async def register_job_owner(self, _job_id, _user_id):
+            raise JobQueueBackendUnavailableError(backend_detail)
+
+        async def cancel_job(self, _job_id):
+            self.cancelled = True
+
+    queue = UnavailableQueue()
+    with pytest.raises(HTTPException) as unavailable:
+        await chat._register_job_owner_or_cancel(queue, str(uuid4()), uuid4())
+    assert queue.cancelled
+    assert unavailable.value.status_code == 503
+    assert unavailable.value.detail == "Job queue is temporarily unavailable."
 
 
 @pytest.mark.asyncio
