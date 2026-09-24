@@ -33,10 +33,11 @@ jobs:
       - name: Detect missing tests
         id: detect
         shell: bash
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           set -euo pipefail
 
-          BASE_REF="${{ github.event.pull_request.base.ref }}"
           git fetch --no-tags --depth=50 origin "$BASE_REF" || true
           MERGE_BASE=$(git merge-base HEAD "origin/$BASE_REF" || git rev-parse HEAD~1)
 

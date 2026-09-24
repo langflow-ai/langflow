@@ -1,6 +1,7 @@
 """Exercise the coverage advisor's actual shell steps with changed PR filenames."""
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -29,15 +30,21 @@ def _outputs(path: Path) -> dict[str, str]:
     ids=["backend-quote", "frontend-quote", "both-command-substitutions", "source-with-test"],
 )
 def test_coverage_advisor_keeps_filenames_as_data(
-    tmp_path: Path, changed_files: list[str], expected: tuple[bool, bool]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, changed_files: list[str], expected: tuple[bool, bool]
 ):
     need_be, need_fe = expected
     steps = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["advise"]["steps"]
-    detect = next(step["run"] for step in steps if step.get("id") == "detect")
-    message = next(step["run"] for step in steps if step.get("id") == "msg")
-    detect = detect.replace("${{ github.event.pull_request.base.ref }}", "main")
+    detect_step = next(step for step in steps if step.get("id") == "detect")
+    message_step = next(step for step in steps if step.get("id") == "msg")
+    detect = detect_step["run"]
+    message = message_step["run"]
+    assert detect_step["env"]["BASE_REF"] == "${{ github.event.pull_request.base.ref }}"
     assert "${{" not in detect
     assert "${{" not in message
+
+    global_config = tmp_path / "global-gitconfig"
+    global_config.touch()
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
 
     remote = tmp_path / "remote.git"
     repo = tmp_path / "repo"
@@ -58,23 +65,18 @@ def test_coverage_advisor_keeps_filenames_as_data(
     _run("git", "commit", "-m", "changes", cwd=repo)
 
     output_file = tmp_path / "detect-output"
-    env = {**os.environ, "GITHUB_OUTPUT": str(output_file)}
+    env = {**os.environ, "GITHUB_OUTPUT": str(output_file), "BASE_REF": "main"}
     _run("bash", "-e", "-o", "pipefail", "-c", detect, cwd=repo, env=env)
     outputs = _outputs(output_file)
     assert outputs["need_be"] == str(need_be).lower()
     assert outputs["need_fe"] == str(need_fe).lower()
 
     message_output = tmp_path / "message-output"
-    env.update(
-        {
-            "GITHUB_OUTPUT": str(message_output),
-            "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"),
-            "NEED_BE": outputs["need_be"],
-            "NEED_FE": outputs["need_fe"],
-            "PY_SRC_FILE": outputs["py_src_file"],
-            "FE_SRC_FILE": outputs["fe_src_file"],
-        }
-    )
+    for key, expression in message_step["env"].items():
+        match = re.fullmatch(r"\$\{\{ steps\.detect\.outputs\.([a-z_]+) \}\}", expression)
+        assert match is not None
+        env[key] = outputs[match.group(1)]
+    env.update({"GITHUB_OUTPUT": str(message_output), "GITHUB_STEP_SUMMARY": str(tmp_path / "summary")})
     _run("bash", "-e", "-o", "pipefail", "-c", message, cwd=repo, env=env)
     body = Path(_outputs(message_output)["body_file"]).read_text(encoding="utf-8")
     assert not (repo / "injected_marker").exists()
