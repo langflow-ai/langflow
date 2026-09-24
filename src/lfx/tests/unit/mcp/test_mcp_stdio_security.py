@@ -556,6 +556,7 @@ def test_interpreter_default_preserves_legacy_single_tenant_config():
         ["--run", "mcp-server"],
         ["--interactive"],
         ["-"],
+        ["inspect", "--import=data:text/javascript,console.log%281%29", "server.js"],
     ],
 )
 def test_node_runtime_options_cannot_load_code_before_mcp_script(args):
@@ -563,20 +564,52 @@ def test_node_runtime_options_cannot_load_code_before_mcp_script(args):
         validate_mcp_stdio_config("node", args, {}, interpreter_hardening=False)
 
 
-def test_node_script_arguments_are_not_interpreted_as_runtime_options():
-    validate_mcp_stdio_config("node", ["server.js", "--import=log-only"], {}, interpreter_hardening=False)
+@pytest.mark.parametrize("command", ["node", "/usr/local/bin/node"])
+def test_node_script_arguments_are_not_interpreted_as_runtime_options(command):
+    validate_mcp_stdio_config(command, ["server.js", "--import=log-only"], {}, interpreter_hardening=False)
 
 
 @pytest.mark.parametrize(
     ("command", "args"),
     [
         ("sh", ["-c", "node --import=data:text/javascript,console.log%281%29"]),
-        ("cmd", ["/c", "node", "--import=data:text/javascript,console.log%281%29"]),
+        ("cmd", ["/c", "node", "--import=./preload.js"]),
     ],
 )
 def test_node_runtime_options_remain_blocked_through_shell_wrappers(command, args):
     with pytest.raises(MCPStdioSecurityError, match=r"Node[.]js runtime options"):
         validate_mcp_stdio_config(command, args, {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("assignment", ["X=/node", "X[0]=/node", "X+=/node", "X[0]+=/node"])
+def test_shell_wrapper_rejects_leading_assignment_before_node(command, assignment):
+    with pytest.raises(MCPStdioSecurityError, match="cannot start with an assignment-like token"):
+        validate_mcp_stdio_config(
+            command,
+            ["-c", f"{assignment} node --import=data:text/javascript,console.log%281%29 server.js"],
+            {},
+            interpreter_hardening=False,
+        )
+
+
+def test_shell_wrapper_allows_equals_in_server_arguments():
+    validate_mcp_stdio_config("sh", ["-c", "node server.js NAME=value"], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("payload", ["node {-p,42}", "node ?p", "node *", "node [-]p"])
+def test_posix_shell_wrapper_rejects_expansion_before_node(command, payload):
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP stdio"):
+        validate_mcp_stdio_config(command, ["-c", payload], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("option", ["%MCP_OPTION%", "!MCP_OPTION!", "^-p", "inspec^t", '"-p"', '"inspect"'])
+@pytest.mark.parametrize("payload_as_one_arg", [False, True])
+def test_cmd_wrapper_rejects_token_transformation_before_node(option, payload_as_one_arg):
+    payload = [f"node {option} server.js"] if payload_as_one_arg else ["node", option, "server.js"]
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP stdio"):
+        validate_mcp_stdio_config("cmd", ["/c", *payload], {}, interpreter_hardening=False)
 
 
 def test_configured_package_allowlist_is_enforced_at_validation_sink(monkeypatch):

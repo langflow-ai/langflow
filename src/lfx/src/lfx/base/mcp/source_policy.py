@@ -149,6 +149,8 @@ DOCKER_HARDENED_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--cgrou
 DOCKER_HARDENED_NETWORK_FLAGS = frozenset({"--net", "--network"})
 DOCKER_SAFE_NETWORK_VALUES = frozenset({"none", "bridge", "default"})
 SHELL_CONTROL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "\n", "\r"})
+POSIX_SHELL_EXPANSION_CHARS = frozenset({"{", "}", "*", "?", "[", "]"})
+CMD_TOKEN_TRANSFORM_CHARS = frozenset({"%", "!", "^", '"'})
 
 # cmd.exe switches that do NOT run the rest of the command line. ``/c`` is not the only
 # executing switch: ``/k`` runs the command and keeps the session alive, and ``/r`` is an
@@ -567,11 +569,15 @@ def _validate_allowed_package(base_command: str, args: list[str], allowed_packag
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
     # Node interprets options before the script operand. A tenant can use --import,
     # --require, --run, or future runtime options to execute code without supplying
-    # a script path. Keep ordinary `node server.js [server args]` configurations,
-    # but never let a runtime option occupy the entrypoint position, even when the
+    # a script path. `node inspect` is also a launcher: it respawns Node with
+    # subsequent options, so it must not be mistaken for a server script.
+    # Keep ordinary `node server.js [server args]` configurations even when the
     # optional interpreter-hardening policy is disabled.
-    if base_command == "node" and args and args[0].startswith("-"):
-        msg = "Node.js runtime options are not allowed before an MCP server script"
+    if base_command == "node" and args and (args[0].startswith("-") or args[0] == "inspect"):
+        msg = (
+            "Node.js runtime options or 'inspect' are not allowed before an MCP server script; "
+            "use 'node server.js [server args]' or an operator-approved launcher"
+        )
         raise ValueError(msg)
     if not hardened:
         return
@@ -693,6 +699,16 @@ def _parse_shell_payload(command: str, payload: str) -> tuple[str, list[str]]:
         raise ValueError(msg) from exc
     if not parts:
         _raise_disallowed(command, payload)
+    # sh/bash also accept assignment variants such as NAME+=value and
+    # NAME[index]=value. The approved launcher names contain no '='; reject
+    # any ambiguous first token before recursing into the wrapped command.
+    if "=" in parts[0]:
+        msg = f"Shell wrapper '{command}' cannot start with an assignment-like token"
+        raise ValueError(msg)
+    # Brace expansion and filename globs can turn a validated script operand
+    # into a Node option such as -p after this parser has checked it.
+    if any(char in payload for char in POSIX_SHELL_EXPANSION_CHARS):
+        _raise_disallowed(command, payload)
     return parts[0], parts[1:]
 
 
@@ -733,7 +749,10 @@ def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[st
             if not is_cmd_exec_flag(arg_lower) or index + 1 >= len(args):
                 continue
             payload = args[index + 1 :]
-            if any(char in " ".join(payload) for char in SHELL_CONTROL_CHARS):
+            # cmd expands %VAR%/!VAR! and strips carets/quotes before launching
+            # the wrapped command. Those forms can supply a Node option or
+            # `inspect` after validation, so reject them before parsing.
+            if any(char in " ".join(payload) for char in SHELL_CONTROL_CHARS | CMD_TOKEN_TRANSFORM_CHARS):
                 _raise_disallowed(command, " ".join(payload))
             return split_mcp_stdio_command(payload[0], payload[1:])
 
