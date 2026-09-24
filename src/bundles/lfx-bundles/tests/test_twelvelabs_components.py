@@ -14,11 +14,25 @@ pytest.importorskip("lfx_bundles")
 from lfx.schema import Data
 from lfx.utils import file_path_security
 from lfx.utils.file_path_security import LocalFileAccessError
+from lfx_bundles.twelvelabs.file_access import resolve_video_file
 from lfx_bundles.twelvelabs.pegasus_index import PegasusIndexVideo
 from lfx_bundles.twelvelabs.split_video import SplitVideoComponent
 from lfx_bundles.twelvelabs.twelvelabs_pegasus import TwelveLabsPegasus
 from lfx_bundles.twelvelabs.video_embeddings import TwelveLabsVideoEmbeddingsComponent
 from lfx_bundles.twelvelabs.video_file import VideoFileComponent
+
+
+@pytest.mark.parametrize(
+    "raw_path", [r"\\server\share\video.mp4", r"\/server/share/video.mp4", r"/\server/share/video.mp4"]
+)
+def test_resolve_video_file_rejects_unc_before_older_lfx_helper(monkeypatch, raw_path):
+    def older_helper(path, *, scope_ids):  # noqa: ARG001
+        msg = "older lfx helper must not receive a network path"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("lfx_bundles.twelvelabs.file_access.enforce_local_file_access", older_helper)
+    with pytest.raises(LocalFileAccessError, match="UNC and device"):
+        resolve_video_file(raw_path, scope_ids=("owner",))
 
 
 @pytest.mark.unit
