@@ -155,3 +155,65 @@ async def test_a_burst_of_failures_is_fully_persisted_through_a_bounded_number_o
     assert all(outcomes)
     assert peak <= MAX_CONCURRENT_INDEPENDENT_WRITES
     assert len(await _events_for([draft.resource_id for draft in drafts])) == 40
+
+
+def _capture_outcomes(monkeypatch) -> list[str]:
+    """The writer logs through structlog, which caplog does not see."""
+    logged: list[str] = []
+
+    async def _record(message, *args):  # noqa: ARG001
+        logged.append(" ".join(str(arg) for arg in args))
+
+    monkeypatch.setattr(writer.logger, "aerror", _record)
+    return logged
+
+
+@pytest.mark.usefixtures("client", "audit_enabled")
+async def test_a_write_that_times_out_is_reported_as_unknown(monkeypatch):
+    """The COMMIT may have landed, so the row may exist: not a certain loss."""
+
+    @asynccontextmanager
+    async def never_finishes():
+        await asyncio.sleep(3600)
+        yield
+
+    monkeypatch.setattr(writer, "session_scope", never_finishes)
+    monkeypatch.setattr(writer, "INDEPENDENT_WRITE_TIMEOUT_SECONDS", 0.01)
+    logged = _capture_outcomes(monkeypatch)
+
+    assert await record_audit_event_after_rollback(_failed_draft()) is False
+
+    assert logged and logged[0].startswith("unknown ")
+    assert logged[0].endswith("TimeoutError")
+
+
+@pytest.mark.usefixtures("client", "audit_enabled")
+async def test_waiting_for_a_slot_is_bounded_and_reported_as_not_persisted(monkeypatch):
+    """A failing request cannot inherit the whole queue's write budget."""
+    held = asyncio.Semaphore(0)
+
+    @asynccontextmanager
+    async def blocked():
+        await held.acquire()
+        yield
+
+    monkeypatch.setattr(writer, "session_scope", blocked)
+    # Only the queue is short: the holders must keep their slots while the
+    # fifth request waits, or it would be served instead of timing out.
+    monkeypatch.setattr(writer, "INDEPENDENT_WRITE_QUEUE_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr(writer, "INDEPENDENT_WRITE_TIMEOUT_SECONDS", 30.0)
+    logged = _capture_outcomes(monkeypatch)
+
+    # Fill every slot, then ask for one more than the queue can serve.
+    holders = [
+        asyncio.create_task(record_audit_event_after_rollback(_failed_draft()))
+        for _ in range(MAX_CONCURRENT_INDEPENDENT_WRITES)
+    ]
+    await asyncio.sleep(0.01)
+    queued = await record_audit_event_after_rollback(_failed_draft())
+
+    assert queued is False
+    assert any(entry.startswith("not_persisted ") and entry.endswith("QueueTimeout") for entry in logged)
+    for _ in holders:
+        held.release()
+    await asyncio.gather(*holders)
