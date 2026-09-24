@@ -67,7 +67,8 @@ def delegates_to(async_name: str) -> Callable[[_F], _F]:
     A subclass that overrides the sync method does not inherit the marker, so async callers
     fall back to running that override in a thread. The class that owns the coroutine must
     implement it natively: a marked wrapper whose coroutine calls back into the wrapper would
-    recurse forever.
+    recurse forever. File-loader sync wrappers should run from plain threads; a coroutine
+    should await the corresponding async method to avoid blocking its event loop.
     """
 
     def decorator(func: _F) -> _F:
@@ -96,20 +97,10 @@ async def acquire_thread_lock(lock: threading.Lock) -> None:
     Use this for state that both coroutines and plain threads (or coroutines on other event
     loops) must serialize on, where an ``asyncio.Lock`` bound to one loop cannot work.
 
-    The uncontended case takes the lock inline. Under contention the blocking acquire runs in a
-    worker thread. If the waiting coroutine is cancelled first, the lock is released as soon as
-    that worker obtains it, so it is never left held without an owner.
+    The uncontended case takes the lock inline. Under contention, poll without occupying a
+    worker thread needed by the lock holder. Cancellation cannot acquire an orphaned lock.
     """
-    if lock.acquire(blocking=False):
-        return
-    waiter = asyncio.ensure_future(asyncio.to_thread(lock.acquire))
-    try:
-        await asyncio.shield(waiter)
-    except asyncio.CancelledError:
-        waiter.add_done_callback(lambda done: _release_orphaned_acquire(lock, done))
-        raise
-
-
-def _release_orphaned_acquire(lock: threading.Lock, done: "asyncio.Future[bool]") -> None:
-    if not done.cancelled() and done.exception() is None and done.result():
-        lock.release()
+    delay = 0.001
+    while not lock.acquire(blocking=False):
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 0.05)

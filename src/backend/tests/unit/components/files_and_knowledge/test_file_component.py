@@ -3,6 +3,7 @@ import json
 import subprocess
 import tempfile
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1436,6 +1437,58 @@ class TestFileComponentAsyncLoaderChain:
         assert not Path(local_path).exists(), "downloaded Docling temp file was not removed"
         assert docling_threads
         assert threading.current_thread() not in docling_threads
+
+    def test_cancelled_queued_docling_worker_removes_download(self, s3_storage, tmp_path):
+        """A cancelled graph call must leave a queued worker responsible for its temp file."""
+        from lfx.schema.data import Data
+
+        local_file = tmp_path / "download.pdf"
+        local_file.write_bytes(b"%PDF-1.4 fake")
+        component = FileComponent()
+        blocker_started = threading.Event()
+        release_blocker = threading.Event()
+        parser_ran = threading.Event()
+
+        def parse_file(*_args):
+            parser_ran.set()
+            return Data(data={"text": "parsed"})
+
+        async def run_case():
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                loop.set_default_executor(executor)
+                blocker = loop.run_in_executor(None, lambda: (blocker_started.set(), release_blocker.wait(5)))
+                assert blocker_started.wait(2)
+                try:
+                    with (
+                        patch.object(
+                            FileComponent,
+                            "_get_local_file_for_docling",
+                            new=AsyncMock(return_value=(str(local_file), True)),
+                        ),
+                        patch.object(FileComponent, "_process_docling_subprocess_impl", side_effect=parse_file),
+                    ):
+                        load = asyncio.create_task(component._aprocess_docling_in_subprocess("user-id/report.pdf"))
+                        await asyncio.sleep(0.05)
+                        assert not parser_ran.is_set()
+                        load.cancel()
+                        with pytest.raises(asyncio.CancelledError):
+                            await load
+                        assert local_file.exists()
+
+                        release_blocker.set()
+                        await blocker
+                        for _ in range(200):
+                            if parser_ran.is_set() and not local_file.exists():
+                                break
+                            await asyncio.sleep(0.01)
+                        assert parser_ran.is_set()
+                        assert not local_file.exists()
+                finally:
+                    release_blocker.set()
+
+        asyncio.run(run_case())
+        s3_storage.get_file.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_cancelled_native_loader_holds_admission_until_worker_exits(self, monkeypatch, tmp_path):

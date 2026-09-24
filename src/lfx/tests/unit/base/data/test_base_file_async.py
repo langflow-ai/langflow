@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock
 import pytest
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.base.data.storage_utils import read_file_bytes
+from lfx.io import Output
 from lfx.schema.data import Data
 from lfx.utils.async_helpers import delegates_to, run_until_complete
 
@@ -227,6 +228,66 @@ class TestConcurrentLoads:
 
         assert sync_results == [async_result]
         assert async_result[0].data["text"] == "from thread"
+
+    async def test_cancelled_graph_load_keeps_file_and_lock_until_parser_exits(self, tmp_path):
+        server_file = tmp_path / "server.txt"
+        server_file.write_text("graph content", encoding="utf-8")
+        component = SyncOnlyFileComponent()
+        component.file_path = Data(data={"file_path": str(server_file)})
+        started = threading.Event()
+        release = threading.Event()
+        original_process = component.process_files
+
+        def gated_process(file_list):
+            started.set()
+            assert release.wait(timeout=5), "parser was not released by the test"
+            return original_process(file_list)
+
+        component.process_files = gated_process
+        output = Output(display_name="Message", name="message", method="load_files_message")
+        load = asyncio.create_task(component._get_output_result(output))
+        assert await asyncio.to_thread(started.wait, 2)
+
+        try:
+            load.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await load
+            assert component._load_files_base_lock.locked()
+            assert server_file.exists()
+        finally:
+            release.set()
+
+        for _ in range(200):
+            if not component._load_files_base_lock.locked():
+                break
+            await asyncio.sleep(0.01)
+        assert not component._load_files_base_lock.locked()
+        assert not server_file.exists()
+
+    async def test_sync_loader_rejects_a_held_lock_on_the_callers_loop(self, tmp_path):
+        text_file = tmp_path / "notes.txt"
+        text_file.write_text("content", encoding="utf-8")
+        component = SyncOnlyFileComponent()
+        component.path = [str(text_file)]
+        started = threading.Event()
+        release = threading.Event()
+        original_process = component.process_files
+
+        def gated_process(file_list):
+            started.set()
+            assert release.wait(timeout=5), "parser was not released by the test"
+            return original_process(file_list)
+
+        component.process_files = gated_process
+        load = asyncio.create_task(component.aload_files_base())
+        assert await asyncio.to_thread(started.wait, 2)
+        try:
+            for sync_loader in (component.load_files_base, component.load_files_message):
+                with pytest.raises(RuntimeError, match="synchronous file loader cannot run on an event loop"):
+                    sync_loader()
+        finally:
+            release.set()
+        await asyncio.wait_for(load, 5)
 
 
 class TestS3AsyncChain:

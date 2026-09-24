@@ -1,5 +1,6 @@
 """Tests for base/data/storage_utils.py - storage-aware file utilities."""
 
+import threading
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -97,6 +98,30 @@ class TestToStoragePath:
 @pytest.mark.asyncio
 class TestReadFileBytes:
     """Test read_file_bytes function."""
+
+    @pytest.mark.parametrize("storage_type", ["local", "s3"])
+    async def test_real_local_read_runs_off_the_event_loop(self, tmp_path, storage_type):
+        test_file = tmp_path / "test.txt"
+        test_file.write_bytes(b"payload")
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = storage_type
+        mock_settings.settings.restrict_local_file_access = False
+        read_threads = []
+        original_read = Path.read_bytes
+
+        def record_read(path):
+            read_threads.append(threading.current_thread())
+            return original_read(path)
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
+            patch.object(Path, "read_bytes", record_read),
+        ):
+            assert await read_file_bytes(str(test_file)) == b"payload"
+
+        assert read_threads
+        assert all(thread is not threading.current_thread() for thread in read_threads)
 
     async def test_read_local_file(self, tmp_path):
         """Test reading a local file when storage_type is local."""

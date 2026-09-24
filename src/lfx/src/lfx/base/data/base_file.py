@@ -4,10 +4,11 @@ import shutil
 import tarfile
 import threading
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING, Any
+from typing import Any, TypeVar
 from zipfile import ZipFile, is_zipfile
 
 import orjson
@@ -22,6 +23,7 @@ from lfx.base.data.storage_utils import (
 )
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -41,12 +43,21 @@ from lfx.utils.file_path_security import (
 )
 from lfx.utils.helpers import build_content_type_from_extension
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+_T = TypeVar("_T")
 
 # ``load_files_structured`` reads these formats straight into rows. Looked up on ``pd`` at call
 # time rather than bound here, so patching a pandas reader still takes effect.
 _STRUCTURED_READERS = {".csv": "read_csv", ".xlsx": "read_excel", ".parquet": "read_parquet"}
+
+
+def _log_abandoned_file_load(task: asyncio.Task) -> None:
+    """Observe failures from a load that outlived its graph caller."""
+    try:
+        error = task.exception()
+    except asyncio.CancelledError:
+        return
+    if error is not None:
+        logger.error("File loader failed after its graph caller was cancelled", exc_info=error)
 
 
 def _read_structured_rows(source: Any, ext: str) -> list[dict] | None:
@@ -281,6 +292,18 @@ class BaseFileComponent(Component, ABC):
             return await async_method(*args)
         return await asyncio.to_thread(getattr(self, method_name), *args)
 
+    def _run_sync_loader(self, async_method: Callable[..., Awaitable[_T]], *args: Any) -> _T:
+        """Run a sync wrapper, rejecting a lock wait that would freeze its caller's loop."""
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            if self._load_files_base_lock.locked():
+                msg = "A synchronous file loader cannot run on an event loop while a load is in progress"
+                raise RuntimeError(msg)
+        return run_until_complete(async_method(*args))
+
     def _load_files_paths_cache_key(self) -> tuple:
         """Build a stable cache key for ``load_files_base`` from the current inputs.
 
@@ -319,7 +342,7 @@ class BaseFileComponent(Component, ABC):
         Returns:
             list[Data]: Parsed data from the processed files.
         """
-        return run_until_complete(self.aload_files_base())
+        return self._run_sync_loader(self.aload_files_base)
 
     async def aload_files_base(self) -> list[Data]:
         """Loads and parses file(s), including unpacked file bundles.
@@ -342,6 +365,15 @@ class BaseFileComponent(Component, ABC):
         paths_subkey = cache_key[:-1]  # paths only, ignoring markdown flag
 
         await acquire_thread_lock(self._load_files_base_lock)
+        work = asyncio.create_task(self._aload_files_base_locked(cache_key, paths_subkey))
+        try:
+            return await asyncio.shield(work)
+        except asyncio.CancelledError:
+            work.add_done_callback(_log_abandoned_file_load)
+            raise
+
+    async def _aload_files_base_locked(self, cache_key: tuple, paths_subkey: tuple) -> list[Data]:
+        """Finish processing and cleanup before releasing the per-instance lock."""
         try:
             cache: dict = getattr(self, "_load_files_base_processed_cache", None) or {}
 
@@ -456,7 +488,7 @@ class BaseFileComponent(Component, ABC):
     @delegates_to("aload_files_core")
     def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects. Sync wrapper around ``aload_files_core``."""
-        return run_until_complete(self.aload_files_core())
+        return self._run_sync_loader(self.aload_files_core)
 
     async def aload_files_core(self) -> list[Data]:
         """Load files and return as Data objects, with per-instance caching.
@@ -564,7 +596,7 @@ class BaseFileComponent(Component, ABC):
         Returns:
           Message: Message containing all file data
         """
-        return run_until_complete(self.aload_files_message())
+        return self._run_sync_loader(self.aload_files_message)
 
     async def aload_files_message(self) -> Message:
         """Load files and return as Message.
@@ -627,7 +659,7 @@ class BaseFileComponent(Component, ABC):
 
     @delegates_to("aload_files_structured_helper")
     def load_files_structured_helper(self, file_path: str) -> list[dict] | None:
-        return run_until_complete(self.aload_files_structured_helper(file_path))
+        return self._run_sync_loader(self.aload_files_structured_helper, file_path)
 
     async def aload_files_structured_helper(self, file_path: str) -> list[dict] | None:
         if not file_path:
@@ -657,7 +689,7 @@ class BaseFileComponent(Component, ABC):
         Returns:
             DataFrame: DataFrame containing structured content from all files
         """
-        return run_until_complete(self.aload_files_structured())
+        return self._run_sync_loader(self.aload_files_structured)
 
     async def aload_files_structured(self) -> DataFrame:
         """Load files and return as DataFrame with structured content.
@@ -716,7 +748,7 @@ class BaseFileComponent(Component, ABC):
         Returns:
             Data: Data object containing JSON content from all files
         """
-        return run_until_complete(self.aload_files_json())
+        return self._run_sync_loader(self.aload_files_json)
 
     async def aload_files_json(self) -> Data:
         """Load files and return as a single Data object containing JSON content.
@@ -743,7 +775,7 @@ class BaseFileComponent(Component, ABC):
         Returns:
             DataFrame: DataFrame containing all file data
         """
-        return run_until_complete(self.aload_files())
+        return self._run_sync_loader(self.aload_files)
 
     async def aload_files(self) -> DataFrame:
         """Load files and return as DataFrame.

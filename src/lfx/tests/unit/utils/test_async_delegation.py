@@ -138,7 +138,7 @@ class TestAcquireThreadLock:
         finally:
             lock.release()
 
-    async def test_cancelled_waiter_hands_the_lock_back(self):
+    async def test_cancelled_waiter_never_acquires_the_lock(self):
         lock = _RecordingLock()
         lock.acquire()
         waiter = asyncio.create_task(acquire_thread_lock(lock))  # type: ignore[arg-type]
@@ -148,12 +148,10 @@ class TestAcquireThreadLock:
         with pytest.raises(asyncio.CancelledError):
             await waiter
 
-        # The worker thread is still blocked in ``acquire``. Once the holder releases, the
-        # worker takes the lock and the orphan callback must release it again. Nothing else
-        # competes for the lock, so the counts pin down exactly who held it.
         lock.release()
-        await _wait_for(lambda: lock.acquired == 2, "the cancelled waiter's worker never acquired the lock")
-        await _wait_for(lambda: lock.released == 2, "the lock stayed held after its cancelled waiter acquired it")
+        await asyncio.sleep(0.1)
+        assert lock.acquired == 1
+        assert lock.released == 1
         assert not lock.locked()
 
 
@@ -180,11 +178,3 @@ class _RecordingLock:
 
     def locked(self) -> bool:
         return self._lock.locked()
-
-
-async def _wait_for(condition, failure: str, timeout: float = 2.0) -> None:
-    deadline = asyncio.get_running_loop().time() + timeout
-    while not condition():
-        if asyncio.get_running_loop().time() > deadline:
-            pytest.fail(failure)
-        await asyncio.sleep(0.01)

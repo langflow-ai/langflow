@@ -103,14 +103,14 @@ def _get_file_tool_limiter() -> asyncio.Semaphore:
     return limiter
 
 
-def _log_abandoned_file_tool_result(task: asyncio.Task) -> None:
+def _log_abandoned_file_loader_result(task: asyncio.Task) -> None:
     """Observe unexpected failures from a synchronous loader that outlived its caller."""
     try:
         error = task.exception()
     except asyncio.CancelledError:
         return
     if error is not None and not isinstance(error, _FileToolCancelledError):
-        logger.error("Abandoned file loader failed after its tool call was cancelled", exc_info=error)
+        logger.error("Abandoned file loader failed after its caller was cancelled", exc_info=error)
 
 
 def _write_temp_file(content: bytes, suffix: str) -> str:
@@ -453,7 +453,7 @@ class FileComponent(BaseFileComponent):
                         logger.exception("File loader failed while cleaning up a cancelled tool call")
                     finally:
                         if not loader_task.done():
-                            loader_task.add_done_callback(_log_abandoned_file_tool_result)
+                            loader_task.add_done_callback(_log_abandoned_file_loader_result)
                     raise
                 if hasattr(result, "get_text"):
                     return result.get_text()
@@ -1047,9 +1047,14 @@ class FileComponent(BaseFileComponent):
 
         # The worker owns a downloaded temp file: if this coroutine is cancelled mid-parse the
         # subprocess may still be reading it, so only the worker may delete it.
-        return await asyncio.to_thread(
-            self._process_docling_local_file, local_path, file_path, should_delete=should_delete
+        work = asyncio.create_task(
+            asyncio.to_thread(self._process_docling_local_file, local_path, file_path, should_delete=should_delete)
         )
+        try:
+            return await asyncio.shield(work)
+        except asyncio.CancelledError:
+            work.add_done_callback(_log_abandoned_file_loader_result)
+            raise
 
     def _process_docling_local_file(
         self, local_path: str, original_file_path: str, *, should_delete: bool
@@ -1561,7 +1566,7 @@ class FileComponent(BaseFileComponent):
 
     @delegates_to("aload_files_helper")
     def load_files_helper(self) -> DataFrame:
-        return run_until_complete(self.aload_files_helper())
+        return self._run_sync_loader(self.aload_files_helper)
 
     async def aload_files_helper(self) -> DataFrame:
         result = await self._adispatch("load_files")
@@ -1582,7 +1587,7 @@ class FileComponent(BaseFileComponent):
     @delegates_to("aload_files_dataframe")
     def load_files_dataframe(self) -> DataFrame:
         """Load files using advanced Docling processing and export to DataFrame format."""
-        return run_until_complete(self.aload_files_dataframe())
+        return self._run_sync_loader(self.aload_files_dataframe)
 
     async def aload_files_dataframe(self) -> DataFrame:
         """Load files using advanced Docling processing and export to DataFrame format."""
@@ -1592,7 +1597,7 @@ class FileComponent(BaseFileComponent):
     @delegates_to("aload_files_markdown")
     def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
-        return run_until_complete(self.aload_files_markdown())
+        return self._run_sync_loader(self.aload_files_markdown)
 
     async def aload_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
