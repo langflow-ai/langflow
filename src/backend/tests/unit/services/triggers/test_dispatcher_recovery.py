@@ -26,12 +26,14 @@ async def test_trigger_recovers_the_committed_job_after_interrupted_submit(make_
     async def no_start():
         pass
 
-    async def fail_enqueue(**_kwargs):
+    async def fail_dispatch(*_args, **_kwargs):
         message = "crash after durable job creation"
         raise failure(message)
 
     monkeypatch.setattr(service, "start", no_start)
-    monkeypatch.setattr(service, "_enqueue", fail_enqueue)
+    # The facade hands a submitted job to its backend; failing there is the
+    # crash-after-durable-creation window this test recreates.
+    monkeypatch.setattr(service._backend, "dispatch", fail_dispatch)
     monkeypatch.setattr(dispatcher, "_ensure_frame_source", lambda: None)
     monkeypatch.setattr("langflow.services.deps.get_background_execution_service", lambda: service)
     if failure is asyncio.CancelledError:
@@ -160,11 +162,11 @@ async def test_overlapping_dispatchers_cannot_insert_two_jobs_for_one_event(make
 
     enqueues = []
 
-    async def enqueue(**kwargs):
-        enqueues.append(kwargs["job_id"])
+    async def dispatch(job_id, **_kwargs):
+        enqueues.append(job_id)
 
     monkeypatch.setattr(service, "start", no_start)
-    monkeypatch.setattr(service, "_enqueue", enqueue)
+    monkeypatch.setattr(service._backend, "dispatch", dispatch)
     monkeypatch.setattr(dispatcher, "_ensure_frame_source", lambda: None)
     monkeypatch.setattr("langflow.services.deps.get_background_execution_service", lambda: service)
 
