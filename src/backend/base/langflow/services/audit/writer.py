@@ -137,6 +137,10 @@ def _slots() -> asyncio.Semaphore:
     return _write_slots
 
 
+class AuditWriteQueueTimeoutError(Exception):
+    """No write slot came free in time, so nothing was attempted."""
+
+
 async def persist_audit_event_independently(
     event: AuditEvent, *, timeout: float = INDEPENDENT_WRITE_TIMEOUT_SECONDS
 ) -> bool:
@@ -159,7 +163,11 @@ async def persist_audit_event_independently(
     # another event's write budget, and the line itself cannot grow without end.
     # wait_for rather than asyncio.timeout, which does not exist on Python 3.10.
     slots = _slots()
-    await asyncio.wait_for(slots.acquire(), timeout=INDEPENDENT_WRITE_QUEUE_TIMEOUT_SECONDS)
+    try:
+        await asyncio.wait_for(slots.acquire(), timeout=INDEPENDENT_WRITE_QUEUE_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError as exc:
+        # Distinct from a write that timed out: this one never reached a database.
+        raise AuditWriteQueueTimeoutError from exc
     try:
         return await asyncio.wait_for(_write(), timeout=timeout)
     finally:
@@ -182,7 +190,8 @@ async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
     except Exception as exc:  # noqa: BLE001
         # A queue timeout wrote nothing; a write timeout may have committed, so
         # the row may exist and the outcome is unknown rather than a certain loss.
-        outcome = "unknown" if isinstance(exc, asyncio.TimeoutError) else "not_persisted"
+        timed_out_writing = isinstance(exc, asyncio.TimeoutError) and not isinstance(exc, AuditWriteQueueTimeoutError)
+        outcome = "unknown" if timed_out_writing else "not_persisted"
         await logger.aerror(
             "op=record_audit_event_after_rollback outcome=%s request_id=%s "
             "resource_type=%s operation=%s result=%s error=%s",
