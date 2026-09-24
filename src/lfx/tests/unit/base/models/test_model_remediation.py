@@ -99,6 +99,13 @@ class TestApplyOverridesToModel:
         # Nothing left to clear, so a repeat of the same error is not retried.
         assert apply_overrides_to_model(model, {"top_k": None}) is False
 
+    def test_should_drop_the_key_even_when_the_model_has_that_attribute(self):
+        """Top P left empty and top_p set in Additional Model Fields: only the dict still sends it."""
+        model = SimpleNamespace(top_p=None, additional_model_request_fields={"top_p": 0.9})
+
+        assert apply_overrides_to_model(model, {"top_p": None}) is True
+        assert model.additional_model_request_fields == {}
+
 
 class TestRemediationCache:
     def test_remember_and_read_overrides_per_model(self):

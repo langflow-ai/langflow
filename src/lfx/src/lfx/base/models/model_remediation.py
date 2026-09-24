@@ -140,8 +140,8 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     fix re-raises the provider error instead of retrying an unchanged request.
     Unknown attributes are never created: silently attaching one would turn a
     clear provider error into a request that fails again for a hidden reason.
-    A field the model only carries in ``additional_model_request_fields`` is
-    cleared by dropping its key there.
+    A field being cleared is also dropped from ``additional_model_request_fields``
+    when that dict carries it, whether or not the model has an attribute of that name.
 
     Mutating in place (rather than rebuilding) is what lets the fix reach a model
     already wrapped in a prompt chain or ``with_config`` binding — those hold a
@@ -150,16 +150,17 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     if not overrides:
         return False
     for key, value in overrides.items():
-        attr, new_value = key, value
         fields = getattr(model, "additional_model_request_fields", None)
-        if value is None and not hasattr(model, key) and isinstance(fields, dict) and key in fields:
-            # ChatBedrockConverse has no top_k attribute: it forwards provider-specific
-            # fields from additional_model_request_fields as-is, so drop the key there.
-            attr, new_value = "additional_model_request_fields", {k: v for k, v in fields.items() if k != key}
-        if not hasattr(model, attr):
+        in_fields = value is None and isinstance(fields, dict) and key in fields
+        if not in_fields and not hasattr(model, key):
             return False
         try:
-            setattr(model, attr, new_value)
+            if in_fields:
+                # ChatBedrockConverse forwards this dict as-is: top_k only lives here, and
+                # Additional Model Fields can put top_p here next to the top_p attribute.
+                model.additional_model_request_fields = {k: v for k, v in fields.items() if k != key}
+            if hasattr(model, key):
+                setattr(model, key, value)
         except (AttributeError, TypeError, ValueError):
             return False
     return True
