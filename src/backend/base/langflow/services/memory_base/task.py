@@ -471,7 +471,10 @@ async def _ingest_memory_task_in_scope(
 
             # ---- 3. Check cancellation before touching the vector store ----
             if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                return {"message": "Job cancelled before ingestion", "ingested": 0}
+                # A normal return makes execute_with_status record COMPLETED.
+                # Preserve cooperative cancellation through the job wrapper.
+                msg = "LANGFLOW_USER_CANCELLED"
+                raise asyncio.CancelledError(msg)
 
             # ---- 4. Open the KB's vector-store backend, write, then sync metadata ----
             embeddings = await _build_embeddings_for_owner(
@@ -543,7 +546,8 @@ async def _ingest_memory_task_in_scope(
                     backend_config=backend_config,
                     user_id=owner_user_id,
                 )
-                return {"message": "Job cancelled during ingestion", "ingested": 0}
+                msg = "LANGFLOW_USER_CANCELLED"
+                raise asyncio.CancelledError(msg)
 
             # ---- 5. Phase B (preprocessing only) — flip preproc row to ingested ----
             # Staged in the same DB session as the ingestion-record writes and cursor
