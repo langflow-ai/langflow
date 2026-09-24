@@ -8,6 +8,8 @@ from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
 from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_connector_loopback_allowed,
     is_connector_ssrf_validation_enabled,
     is_ssrf_protection_enabled,
     validate_connector_hostname_for_ssrf,
@@ -58,6 +60,9 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 connection = parse_url(self.redis_server_url)
                 if host := connection.get("host"):
                     validate_connector_hostname_for_ssrf(host)
+                elif "path" in connection and not is_connector_loopback_allowed():
+                    msg = "Redis Unix sockets are blocked when connector loopback access is disabled."
+                    raise SSRFProtectionError(msg)
                 elif "path" not in connection:
                     # redis-py defaults a hostless redis:// URL to localhost.
                     validate_connector_hostname_for_ssrf("localhost")

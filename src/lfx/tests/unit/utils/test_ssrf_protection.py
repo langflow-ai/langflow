@@ -570,6 +570,25 @@ class TestDatabaseURLValidation:
             mock_resolve.return_value = ["93.184.216.34"]  # public IP
             validate_database_url_for_ssrf("postgresql://db.example.com:5432/app")
 
+    def test_allowlisted_dns_answer_does_not_hide_blocked_answer(self):
+        with (
+            mock_ssrf_settings(enabled=True, allowed_hosts=["8.8.8.8"]),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["8.8.8.8", "169.254.169.254"]),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_database_url_for_ssrf("postgresql://db.example.com/app")
+
+    @pytest.mark.parametrize("delimiter", ["?", "#"])
+    def test_sqlalchemy_username_delimiter_cannot_hide_blocked_host(self, delimiter):
+        uri = f"postgresql://8.8.8.8{delimiter}x:pw@169.254.169.254:5432/db"
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_database_url_for_ssrf(uri)
+
+    def test_sqlalchemy_username_delimiter_cannot_hide_target_query(self):
+        uri = "postgresql://8.8.8.8?x:pw@8.8.4.4:5432/db?hostaddr=169.254.169.254"
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="connection target"):
+            validate_database_url_for_ssrf(uri)
+
     @pytest.mark.parametrize(
         "query",
         [
@@ -599,6 +618,107 @@ class TestDatabaseURLValidation:
             patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
         ):
             validate_database_url_for_ssrf("postgresql://db.example.com:5432/app?sslmode=require")
+
+    @pytest.mark.parametrize(
+        ("dialect", "key"),
+        [
+            ("postgresql", "sslkey"),
+            ("postgresql", "sslcert"),
+            ("postgresql", "sslrootcert"),
+            ("postgresql", "passfile"),
+            ("postgresql", "sslkeylogfile"),
+            ("postgresql", "sslcrl"),
+            ("postgresql", "sslcrldir"),
+            ("postgresql", "servicefile"),
+            ("mysql", "local_infile"),
+            ("mysql", "read_default_file"),
+            ("mysql", "read_default_group"),
+            ("mysql", "ssl_ca"),
+            ("mysql", "ssl_cert"),
+            ("mysql", "ssl_key"),
+            ("mysql", "ssl_capath"),
+        ],
+    )
+    def test_database_local_file_query_options_blocked_when_restricted(self, dialect, key):
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(f"{dialect}://db.example.com/app?{key}=/tmp/client")
+
+    @pytest.mark.parametrize(
+        ("scheme", "disable_option"),
+        [
+            ("mysql+mysqlconnector", "allow_local_infile=false"),
+            ("mariadb+mariadbconnector", "local_infile=false"),
+        ],
+    )
+    def test_mysql_connector_requires_explicit_local_infile_opt_out(self, scheme, disable_option):
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="explicitly disable"),
+        ):
+            validate_database_url_for_ssrf(f"{scheme}://db.example.com/app")
+
+        uri = f"{scheme}://db.example.com/app?{disable_option}"
+        with mock_ssrf_settings(enabled=False, restrict_files=True):
+            validate_database_url_for_ssrf(uri)
+
+        from sqlalchemy.dialects.mysql.mariadbconnector import MySQLDialect_mariadbconnector
+        from sqlalchemy.dialects.mysql.mysqlconnector import MySQLDialect_mysqlconnector
+        from sqlalchemy.engine import make_url
+
+        dialect = MySQLDialect_mysqlconnector() if "mysqlconnector" in scheme else MySQLDialect_mariadbconnector()
+        _args, kwargs = dialect.create_connect_args(make_url(uri))
+        assert kwargs[disable_option.partition("=")[0]] is False
+
+    @pytest.mark.parametrize(
+        ("scheme", "query"),
+        [
+            ("mysql+mysqlconnector", "allow_local_infile=true"),
+            ("mysql+mysqlconnector", "allow_local_infile=false&allow_local_infile=true"),
+            ("mariadb+mariadbconnector", "local_infile=true"),
+            ("mariadb+mariadbconnector", "local_infile=false&local_infile=true"),
+        ],
+    )
+    def test_mysql_connector_local_infile_cannot_be_enabled(self, scheme, query):
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_database_url_for_ssrf(f"{scheme}://db.example.com/app?{query}")
+
+    @pytest.mark.parametrize(
+        ("scheme", "disable_option", "key"),
+        [
+            ("mysql+mysqlconnector", "allow_local_infile=false", "option_files"),
+            ("mysql+mysqlconnector", "allow_local_infile=false", "oci_config_file"),
+            ("mysql+mysqlconnector", "allow_local_infile=false", "openid_token_file"),
+            ("mysql+mysqlconnector", "allow_local_infile=false", "allow_local_infile_in_path"),
+            ("mysql+mysqlconnector", "allow_local_infile=false", "client_flags"),
+            ("mariadb+mariadbconnector", "local_infile=false", "default_file"),
+            ("mariadb+mariadbconnector", "local_infile=false", "default_group"),
+            ("mariadb+mariadbconnector", "local_infile=false", "ssl_crlpath"),
+            ("mariadb+mariadbconnector", "local_infile=false", "tls_fp_list"),
+            ("mariadb+mariadbconnector", "local_infile=false", "plugin_dir"),
+            ("mariadb+mariadbconnector", "local_infile=false", "client_flag"),
+        ],
+    )
+    def test_mysql_connector_file_options_blocked_even_with_local_infile_disabled(self, scheme, disable_option, key):
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match=key),
+        ):
+            validate_database_url_for_ssrf(f"{scheme}://db.example.com/app?{disable_option}&{key}=/tmp/client")
+
+    def test_mysqlconnector_local_infile_path_cannot_override_disabled_flag(self):
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="allow_local_infile_in_path"),
+        ):
+            validate_database_url_for_ssrf(
+                "mysql+mysqlconnector://db.example.com/app?allow_local_infile=false&allow_local_infile_in_path=%2F"
+            )
 
     @pytest.mark.parametrize("target_key", ["SERVER", "Address", "Addr", "Network+Address", "Data+Source"])
     def test_odbc_connection_target_query_aliases_blocked(self, target_key):

@@ -22,7 +22,9 @@ import functools
 import ipaddress
 import re
 import socket
-from urllib.parse import parse_qsl, urlparse
+from urllib.parse import urlparse
+
+from sqlalchemy.engine import make_url
 
 from lfx.logging import logger
 from lfx.services.deps import get_settings_service
@@ -361,7 +363,7 @@ def _validate_hostname_resolution(hostname: str) -> None:
         # Check if this specific IP is in the allowlist
         if is_host_allowed(hostname, ip):
             logger.debug("Resolved IP %s for hostname %s is in allowlist, bypassing SSRF checks", ip, hostname)
-            return
+            continue
 
         if is_ip_blocked(ip):
             blocked_ips.append(ip)
@@ -643,17 +645,46 @@ _DATABASE_CONNECTION_TARGET_QUERY_KEYS = frozenset(
 
 _DATABASE_LOCAL_FILE_QUERY_KEYS = frozenset(
     {
+        "allow_local_infile",
+        "allow_local_infile_in_path",
         "clientcertificate",
         "clientkey",
+        "client_flag",
+        "client_flags",
+        "default_file",
+        "default_group",
         "dsn",
         "filedsn",
+        "local_infile",
         "odbc_connect",
+        "oci_config_file",
+        "openid_token_file",
+        "option_files",
+        "passfile",
+        "plugin_dir",
         "querylogfile",
+        "read_default_file",
+        "read_default_group",
         "savefile",
         "servercertificate",
+        "servicefile",
+        "ssl_ca",
+        "ssl_capath",
+        "ssl_cert",
+        "ssl_crlpath",
+        "ssl_key",
+        "sslcert",
+        "sslcrl",
+        "sslcrldir",
+        "sslkey",
+        "sslkeylogfile",
+        "sslrootcert",
         "statslogfile",
+        "tls_fp_list",
     }
 )
+
+_MYSQL_LOCAL_INFILE_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
 # ODBC drivers accept extensible connection-string attributes. Once either SSRF
 # or local-file policy is active, pass through only documented non-target,
@@ -749,13 +780,13 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
         return
 
     try:
-        parsed = urlparse(url)
+        parsed = make_url(url)
     except Exception as e:
         msg = f"Invalid database URL format: {e}"
         raise ValueError(msg) from e
 
     # SQLAlchemy schemes look like "postgresql+psycopg2"; separate dialect and driver.
-    dialect, _separator, driver = (parsed.scheme or "").lower().partition("+")
+    dialect, _separator, driver = parsed.drivername.lower().partition("+")
     if dialect in _LOCAL_FILE_DB_DIALECTS:
         if file_restricted:
             msg = (
@@ -766,7 +797,7 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
         # Not restricted: local-file DBs are allowed (explicit single-tenant opt-out).
         return
 
-    query_items = parse_qsl(parsed.query, keep_blank_values=True)
+    query_items = [(key, value) for key, values in parsed.normalized_query.items() for value in values]
     query_keys = {key.casefold() for key, _value in query_items}
 
     # SQLAlchemy's ODBC connector serializes arbitrary query keys directly into
@@ -779,6 +810,15 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
             for key, value in query_items
             if key.casefold() in _DATABASE_LOCAL_FILE_QUERY_KEYS
             and (key.casefold() != "clientcertificate" or value.casefold().startswith("file:"))
+            and not (
+                file_restricted
+                and dialect in {"mysql", "mariadb"}
+                and (
+                    (driver == "mysqlconnector" and key.casefold() == "allow_local_infile")
+                    or (driver == "mariadbconnector" and key.casefold() == "local_infile")
+                )
+                and value.casefold() in _MYSQL_LOCAL_INFILE_FALSE_VALUES
+            )
         }
     )
     if file_restricted and local_file_options:
@@ -786,8 +826,18 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
         msg = f"Database URL query key(s) {keys} can access the local filesystem and are not permitted."
         raise SSRFProtectionError(msg)
 
+    # MySQL Connector/Python enables LOAD DATA LOCAL INFILE by default. MariaDB
+    # leaves it to the client-library configuration. Require an explicit false
+    # value that SQLAlchemy coerces to bool before either driver connects.
+    if file_restricted and dialect in {"mysql", "mariadb"} and driver in {"mysqlconnector", "mariadbconnector"}:
+        option = "allow_local_infile" if driver == "mysqlconnector" else "local_infile"
+        values = [value.casefold() for key, value in query_items if key.casefold() == option]
+        if len(values) != 1 or values[0] not in _MYSQL_LOCAL_INFILE_FALSE_VALUES:
+            msg = f"Database URL must explicitly disable {option} when local file access is restricted."
+            raise SSRFProtectionError(msg)
+
     if ssrf_on:
-        hostname = parsed.hostname
+        hostname = parsed.host
         if not hostname:
             # A network dialect with no host cannot be validated -> fail closed.
             msg = "Database URL must contain a network host."

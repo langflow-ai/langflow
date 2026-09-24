@@ -1,7 +1,7 @@
 import ipaddress
 import tempfile
 import time
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 import certifi
 from langchain_mongodb import MongoDBAtlasVectorSearch
@@ -9,7 +9,14 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
-from lfx.utils.ssrf_protection import validate_connector_hostname_for_ssrf
+from lfx.utils.file_path_security import is_local_file_access_restricted
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_connector_loopback_allowed,
+    is_connector_ssrf_validation_enabled,
+    is_ssrf_protection_enabled,
+    validate_connector_hostname_for_ssrf,
+)
 from pymongo.collection import Collection
 from pymongo.operations import SearchIndexModel
 
@@ -105,18 +112,35 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         uri = self.mongodb_atlas_cluster_uri
-        if uri.startswith("mongodb+srv://"):
-            # An SRV-only seed need not have an A/AAAA record. PyMongo connects to the
-            # returned nodes, so validate those below; reject literal internal IP seeds first.
-            seed = urlsplit(uri).hostname or ""
-            try:
-                ipaddress.ip_address(seed)
-            except ValueError:
-                pass
-            else:
-                validate_connector_hostname_for_ssrf(seed)
-        for host, _port in parse_uri(uri)["nodelist"]:
-            validate_connector_hostname_for_ssrf(host)
+        # PyMongo partitions at the first '?' and accepts both '&' and ';' option
+        # separators; urlsplit would incorrectly discard options after a '#'.
+        options = uri.partition("://")[2].partition("?")[2]
+        query_keys = {key.casefold() for key, _value in parse_qsl(options.replace(";", "&"), keep_blank_values=True)}
+        if is_local_file_access_restricted() and query_keys & {
+            "tlscafile",
+            "tlscertificatekeyfile",
+            "tlscrlfile",
+        }:
+            msg = "MongoDB URI TLS file options can access the local filesystem and are not permitted."
+            raise SSRFProtectionError(msg)
+        if is_connector_ssrf_validation_enabled() and is_ssrf_protection_enabled():
+            if uri.startswith("mongodb+srv://"):
+                # An SRV-only seed need not have an A/AAAA record. PyMongo connects to the
+                # returned nodes, so validate those below; reject literal internal IP seeds first.
+                seed = urlsplit(uri).hostname or ""
+                try:
+                    ipaddress.ip_address(seed)
+                except ValueError:
+                    pass
+                else:
+                    validate_connector_hostname_for_ssrf(seed)
+            for host, _port in parse_uri(uri)["nodelist"]:
+                if host.startswith("/") and host.endswith(".sock"):
+                    if not is_connector_loopback_allowed():
+                        msg = "MongoDB Unix sockets are blocked when connector loopback access is disabled."
+                        raise SSRFProtectionError(msg)
+                else:
+                    validate_connector_hostname_for_ssrf(host)
 
         # Create temporary files for the client certificate
         if self.enable_mtls:

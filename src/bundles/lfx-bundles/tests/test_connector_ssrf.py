@@ -261,6 +261,64 @@ def test_mongodb_preserves_public_seed_connection():
     mock_client.assert_called_once_with(component.mongodb_atlas_cluster_uri)
 
 
+def test_mongodb_unix_socket_follows_loopback_setting():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.mongodb.mongodb_atlas import MongoVectorStoreComponent
+
+    component = MongoVectorStoreComponent()
+    component.mongodb_atlas_cluster_uri = "mongodb://%2Ftmp%2Fmongodb-27017.sock"
+    component.enable_mtls = False
+    component.db_name = "db"
+    component.collection_name = "docs"
+    component.index_name = "vector"
+    component.embedding = MagicMock()
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.mongodb.mongodb_atlas.is_connector_loopback_allowed", return_value=False),
+        patch("pymongo.MongoClient") as mock_client,
+        pytest.raises(SSRFProtectionError, match="Unix sockets"),
+    ):
+        component.build_vector_store()
+    mock_client.assert_not_called()
+
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.mongodb.mongodb_atlas.is_connector_loopback_allowed", return_value=True),
+        patch("pymongo.MongoClient") as mock_client,
+        patch("lfx_bundles.mongodb.mongodb_atlas.MongoDBAtlasVectorSearch") as mock_store,
+    ):
+        assert component.build_vector_store() is mock_store.return_value
+    mock_client.assert_called_once_with(component.mongodb_atlas_cluster_uri)
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "mongodb://8.8.8.8/?tlsCAFile=/tmp/nonexistent.pem",
+        "mongodb://8.8.8.8/?tlsCertificateKeyFile=/tmp/nonexistent.pem",
+        "mongodb://8.8.8.8/?tlsCRLFile=/tmp/nonexistent.pem",
+        "mongodb://8.8.8.8#x:pw@8.8.4.4/db?tlsCAFile=/tmp/nonexistent.pem",
+        "mongodb://8.8.8.8/?retryWrites=true;tlsCAFile=/tmp/nonexistent.pem",
+    ],
+)
+def test_mongodb_rejects_uri_tls_files_before_parser_opens_them(uri):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.mongodb.mongodb_atlas import MongoVectorStoreComponent
+
+    component = MongoVectorStoreComponent()
+    component.mongodb_atlas_cluster_uri = uri
+    with (
+        patch("lfx_bundles.mongodb.mongodb_atlas.is_local_file_access_restricted", return_value=True),
+        patch("pymongo.uri_parser.parse_uri") as mock_parse,
+        patch("pymongo.MongoClient") as mock_client,
+        pytest.raises(SSRFProtectionError, match="local filesystem"),
+    ):
+        component.build_vector_store()
+    mock_parse.assert_not_called()
+    mock_client.assert_not_called()
+
+
 def test_mongodb_blocks_internal_srv_target_before_client_connect():
     from lfx.utils.ssrf_protection import SSRFProtectionError
     from lfx_bundles.mongodb.mongodb_atlas import MongoVectorStoreComponent
@@ -356,6 +414,22 @@ def test_redis_vector_store_preserves_unix_socket_connection():
     assert mock_connect.call_args.kwargs["redis_url"] == component.redis_server_url
 
 
+def test_redis_vector_store_blocks_unix_socket_when_loopback_disabled():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.redis.redis import RedisVectorStoreComponent
+
+    component = RedisVectorStoreComponent()
+    component.redis_server_url = "unix:///tmp/redis.sock"
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.redis.redis.is_connector_loopback_allowed", return_value=False),
+        patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
+        pytest.raises(SSRFProtectionError, match="Unix sockets"),
+    ):
+        component.build_vector_store()
+    mock_connect.assert_not_called()
+
+
 @pytest.mark.parametrize("scheme", ["redis+sentinel", "rediss+sentinel"])
 def test_redis_vector_store_blocks_metadata_sentinel_before_sdk(scheme):
     from lfx.utils.ssrf_protection import SSRFProtectionError
@@ -449,6 +523,29 @@ def test_pgvector_preserves_public_database_connection():
     assert mock_connect.call_args.kwargs["connection_string"] == component.pg_server_url
 
 
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "postgresql://8.8.8.8?x:pw@169.254.169.254:5432/db",
+        "postgresql://8.8.8.8#x:pw@169.254.169.254:5432/db",
+    ],
+)
+def test_pgvector_blocks_sqlalchemy_username_delimiter_bypass(uri):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.pgvector.pgvector import PGVectorStoreComponent
+
+    component = PGVectorStoreComponent()
+    component.pg_server_url = uri
+    component.ingest_data = []
+    with (
+        ssrf_enabled(),
+        patch("lfx_bundles.pgvector.pgvector.PGVector.from_existing_index") as mock_connect,
+        pytest.raises(SSRFProtectionError),
+    ):
+        component.build_vector_store()
+    mock_connect.assert_not_called()
+
+
 def test_supabase_blocks_metadata_before_credentials_reach_sdk():
     from lfx.utils.ssrf_protection import SSRFProtectionError
 
@@ -479,12 +576,13 @@ def test_supabase_blocks_metadata_before_credentials_reach_sdk():
         client.create_client.assert_called_once_with(component.supabase_url, supabase_key="test-key")
 
 
-def test_couchbase_blocks_second_seed_before_sdk_import():
+@pytest.mark.parametrize("separator", [",", ";"])
+def test_couchbase_blocks_second_seed_before_sdk_import(separator):
     from lfx.utils.ssrf_protection import SSRFProtectionError
     from lfx_bundles.couchbase.couchbase import CouchbaseVectorStoreComponent
 
     component = CouchbaseVectorStoreComponent()
-    component.couchbase_connection_string = "couchbases://8.8.8.8,169.254.169.254"
+    component.couchbase_connection_string = f"couchbases://8.8.8.8{separator}169.254.169.254"
     with ssrf_enabled(), pytest.raises(SSRFProtectionError):
         component.build_vector_store()
 
@@ -502,6 +600,7 @@ def test_couchbase_blocks_internal_srv_target():
 
     with (
         ssrf_enabled(),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["8.8.8.8"]),
         patch("dns.resolver.resolve", return_value=[MagicMock(target="169.254.169.254.")]) as mock_resolve,
         pytest.raises(SSRFProtectionError),
     ):
@@ -514,7 +613,76 @@ def test_couchbase_srv_seed_does_not_require_address_record():
 
     with (
         ssrf_enabled(),
-        patch("dns.resolver.resolve", return_value=[MagicMock(target="8.8.8.8.")]),
         patch("lfx.utils.ssrf_protection.resolve_hostname", side_effect=AssertionError("seed A lookup")),
+        patch("dns.resolver.resolve", return_value=[MagicMock(target="8.8.8.8.")]),
     ):
         _validate_couchbase_hosts("couchbases://cluster.example.com")
+
+
+def test_couchbase_blocks_internal_fallback_seed_when_srv_is_absent():
+    import dns.resolver
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        ssrf_enabled(),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["169.254.169.254"]),
+        patch("dns.resolver.resolve", side_effect=dns.resolver.NoAnswer) as mock_srv,
+        pytest.raises(SSRFProtectionError),
+    ):
+        _validate_couchbase_hosts("couchbases://cluster.example.com")
+    mock_srv.assert_called_once_with("_couchbases._tcp.cluster.example.com", "SRV")
+
+
+def test_couchbase_validates_explicit_port_seed_without_srv():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        ssrf_enabled(),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["169.254.169.254"]),
+        patch("dns.resolver.resolve", return_value=[MagicMock(target="8.8.8.8.")]) as mock_srv,
+        pytest.raises(SSRFProtectionError),
+    ):
+        _validate_couchbase_hosts("couchbase://cluster.example.com:11210")
+    mock_srv.assert_not_called()
+
+
+@pytest.mark.parametrize("query", ["enable_dns_srv=false", "dns_nameserver=8.8.8.8"])
+def test_couchbase_rejects_dns_discovery_overrides(query):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with ssrf_enabled(), pytest.raises(SSRFProtectionError, match="DNS discovery"):
+        _validate_couchbase_hosts(f"couchbase://8.8.8.8?{query}")
+
+
+def test_couchbase_rejects_trust_certificate_when_local_files_restricted():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        patch("lfx_bundles.couchbase.couchbase.is_local_file_access_restricted", return_value=True),
+        patch("lfx_bundles.couchbase.couchbase.is_connector_ssrf_validation_enabled", return_value=False),
+        pytest.raises(SSRFProtectionError, match="local filesystem"),
+    ):
+        _validate_couchbase_hosts("couchbase://8.8.8.8?trust_certificate=/tmp/ca.pem")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "couchbase://8.8.8.8?foo=bar;trust_certificate=/tmp/ca.pem",
+        "couchbase://8.8.8.8#x?trust_certificate=/tmp/ca.pem",
+    ],
+)
+def test_couchbase_rejects_ambiguous_certificate_options(url):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        patch("lfx_bundles.couchbase.couchbase.is_local_file_access_restricted", return_value=True),
+        patch("lfx_bundles.couchbase.couchbase.is_connector_ssrf_validation_enabled", return_value=False),
+        pytest.raises(SSRFProtectionError),
+    ):
+        _validate_couchbase_hosts(url)

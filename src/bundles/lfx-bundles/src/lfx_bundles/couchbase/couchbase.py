@@ -1,6 +1,7 @@
+import re
 from datetime import timedelta
 from ipaddress import ip_address
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 import dns.exception
 import dns.resolver
@@ -9,6 +10,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import is_local_file_access_restricted
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
     is_connector_ssrf_validation_enabled,
@@ -18,16 +20,28 @@ from lfx.utils.ssrf_protection import (
 
 
 def _validate_couchbase_hosts(connection_string: str) -> None:
-    if not is_connector_ssrf_validation_enabled() or not is_ssrf_protection_enabled():
+    parsed = urlsplit(connection_string)
+    file_restricted = is_local_file_access_restricted()
+    ssrf_enabled = is_connector_ssrf_validation_enabled() and is_ssrf_protection_enabled()
+    if parsed.fragment and (file_restricted or ssrf_enabled):
+        msg = "Couchbase connection string fragments are not permitted."
+        raise SSRFProtectionError(msg)
+    query_keys = {key.casefold() for key, _value in parse_qsl(parsed.query.replace(";", "&"), keep_blank_values=True)}
+    if file_restricted and "trust_certificate" in query_keys:
+        msg = "Couchbase trust_certificate can access the local filesystem and is not permitted."
+        raise SSRFProtectionError(msg)
+    if not ssrf_enabled:
         return
 
-    parsed = urlsplit(connection_string)
     if parsed.scheme not in {"couchbase", "couchbases"} or not parsed.netloc:
         msg = "Couchbase connection string must contain a host."
         raise SSRFProtectionError(msg)
 
-    # The SDK accepts comma-separated bootstrap nodes. Validate every seed, not just the first.
-    seeds = parsed.netloc.split(",")
+    # The C++ SDK accepts both separators for bootstrap nodes.
+    seeds = re.split(r"[,;]", parsed.netloc)
+    if query_keys & {"enable_dns_srv", "dns_nameserver"}:
+        msg = "Couchbase connection string cannot override DNS discovery settings."
+        raise SSRFProtectionError(msg)
     for seed in seeds:
         if not seed or any(char in seed for char in "@\\/%?#"):
             msg = "Couchbase connection string contains an invalid host."
@@ -35,11 +49,11 @@ def _validate_couchbase_hosts(connection_string: str) -> None:
         try:
             address = urlsplit(f"//{seed}")
             host = address.hostname
-            _port = address.port  # Check for an invalid port before the SDK interprets the seed.
+            port = address.port  # Check for an invalid port before the SDK interprets the seed.
         except ValueError as e:
             msg = "Couchbase connection string contains an invalid host."
             raise SSRFProtectionError(msg) from e
-        if len(seeds) == 1 and host and address.port is None:
+        if len(seeds) == 1 and host and port is None:
             try:
                 ip_address(host)
             except ValueError:
@@ -55,6 +69,8 @@ def _validate_couchbase_hosts(connection_string: str) -> None:
                         for record in records:
                             validate_connector_hostname_for_ssrf(str(record.target).rstrip("."))
                         continue
+        # The SDK falls back to this seed when SRV is absent; multi-seed and IP
+        # connections use their seeds directly.
         validate_connector_hostname_for_ssrf(host or "")
 
 
