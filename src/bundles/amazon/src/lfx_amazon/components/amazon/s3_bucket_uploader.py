@@ -133,7 +133,7 @@ class S3BucketUploaderComponent(Component):
         strategy_methods[strategy]()
 
     def _file_data_items(self) -> list[Data]:
-        """Expand file tables into records while preserving individual Data and Message inputs."""
+        """Expand file tables and multi-file Read File messages into individual records."""
         inputs = self.data_inputs
         if not isinstance(inputs, list):
             inputs = [inputs]
@@ -143,7 +143,18 @@ class S3BucketUploaderComponent(Component):
             if isinstance(item, DataFrame):
                 items.extend(item.to_data_list())
             elif isinstance(item, Data):
-                items.append(item)
+                source_files = item.data.get("source_files")
+                if source_files is None:
+                    items.append(item)
+                elif isinstance(source_files, list) and source_files:
+                    for source_file in source_files:
+                        if not isinstance(source_file, dict):
+                            msg = "Invalid Read File source_files entry."
+                            raise TypeError(msg)
+                        items.append(Data(data=source_file))
+                else:
+                    msg = "Invalid Read File source_files value."
+                    raise ValueError(msg)
             else:
                 msg = f"Unsupported S3 upload input: {type(item).__name__}"
                 raise TypeError(msg)

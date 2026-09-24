@@ -97,6 +97,58 @@ def test_file_message_and_directory_table_upload(
 
 
 @pytest.mark.parametrize(
+    ("strategy", "client_method", "expected_calls"),
+    [
+        (
+            "Store Data",
+            "put_object",
+            [
+                {"Bucket": "test-bucket", "Key": "first.txt", "Body": "first content"},
+                {"Bucket": "test-bucket", "Key": "second.txt", "Body": "second content"},
+            ],
+        ),
+        (
+            "Store Original File",
+            "upload_file",
+            [
+                ("files/first.txt", "test-bucket", "first.txt"),
+                ("files/second.txt", "test-bucket", "second.txt"),
+            ],
+        ),
+    ],
+)
+def test_multiple_read_files_upload_separately(strategy: str, client_method: str, expected_calls: list) -> None:
+    component = S3BucketUploaderComponent()
+    component.strategy = strategy
+    component.bucket_name = "test-bucket"
+    component.strip_path = True
+    component.data_inputs = Message(
+        text="first content\n\nsecond content",
+        file_path="files/first.txt",
+        source_files=[
+            {"file_path": "files/first.txt", "text": "first content"},
+            {"file_path": "files/second.txt", "text": "second content"},
+        ],
+    )
+
+    class RecordingS3Client:
+        def __init__(self):
+            self.calls = []
+
+        def put_object(self, **kwargs):
+            self.calls.append(("put_object", kwargs))
+
+        def upload_file(self, path, **kwargs):
+            self.calls.append(("upload_file", (path, kwargs["Bucket"], kwargs["Key"])))
+
+    client = RecordingS3Client()
+    component._s3_client = lambda: client
+    component.process_files()
+
+    assert client.calls == [(client_method, call) for call in expected_calls]
+
+
+@pytest.mark.parametrize(
     ("strategy", "error"),
     [
         ("Store Data", "file_path and text"),
