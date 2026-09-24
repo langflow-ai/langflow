@@ -1,17 +1,22 @@
 import time
-from pathlib import Path
 from typing import Any, cast
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, IntInput, SecretStrInput
+from lfx.utils.file_path_security import component_file_access_scopes
 from twelvelabs import TwelveLabs
+
+from lfx_bundles.twelvelabs.file_access import resolve_video_file
 
 
 class TwelveLabsVideoEmbeddings(Embeddings):
-    def __init__(self, api_key: str, model_name: str = "Marengo-retrieval-2.7") -> None:
+    def __init__(
+        self, api_key: str, model_name: str = "Marengo-retrieval-2.7", *, scope_ids: tuple[str, ...] = ()
+    ) -> None:
         self.client = TwelveLabs(api_key=api_key)
         self.model_name = model_name
+        self.scope_ids = scope_ids
 
     def _wait_for_task_completion(self, task_id: str) -> Any:
         while True:
@@ -52,7 +57,7 @@ class TwelveLabsVideoEmbeddings(Embeddings):
         raise ValueError(error_msg)
 
     def embed_video(self, video_path: str) -> dict[str, list[float] | list[list[float]]]:
-        file_path = Path(video_path)
+        file_path = resolve_video_file(video_path, scope_ids=self.scope_ids)
         with file_path.open("rb") as video_file:
             task = self.client.embed.task.create(
                 model_name=self.model_name,
@@ -96,4 +101,8 @@ class TwelveLabsVideoEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        return TwelveLabsVideoEmbeddings(api_key=self.api_key, model_name=self.model_name)
+        return TwelveLabsVideoEmbeddings(
+            api_key=self.api_key,
+            model_name=self.model_name,
+            scope_ids=component_file_access_scopes(self),
+        )
