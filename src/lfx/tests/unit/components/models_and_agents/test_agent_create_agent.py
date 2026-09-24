@@ -1335,8 +1335,8 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
     would have taken effect. The graph guard MUST sit above the middleware so the
     middleware's user-facing cap is what bounds the loop.
 
-    Each iteration is roughly 2 graph steps (model node + tools node) plus a small
-    constant overhead, so `recursion_limit >= max_iterations * 2 + 5` is the bare
+    Each iteration can use 4 graph steps (before_model, model, after_model, tools)
+    plus a small constant overhead, so `recursion_limit >= max_iterations * 4 + 10` is the bare
     minimum that lets the middleware fire first.
     """
     captured_config: dict = {}
@@ -1369,9 +1369,9 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
         "default of 25 fires before ModelCallLimitMiddleware reaches the user-set cap "
         "(UI-009/UI-010 regression)."
     )
-    # Each user-visible iteration is ~2 graph steps (model + tools), plus overhead.
-    assert captured_config["recursion_limit"] >= 15 * 2 + 5, (
-        f"recursion_limit must sit above max_iterations * 2 + safety; got "
+    # Each user-visible iteration can use 4 graph steps, plus overhead.
+    assert captured_config["recursion_limit"] >= 15 * 4 + 10, (
+        f"recursion_limit must sit above max_iterations * 4 + safety; got "
         f"{captured_config['recursion_limit']} for max_iterations=15"
     )
 
@@ -1468,9 +1468,9 @@ async def test_should_pass_recursion_limit_when_max_iterations_is_clamped_from_z
     ):
         await component.run_agent(fake_graph)
 
-    # Clamped max_iterations=1 → at least 1*2+5 = 7 graph steps must be allowed.
-    assert captured_config.get("recursion_limit", 0) >= 7, (
-        "Clamped max_iterations of 1 must still permit at least one model+tool round-trip"
+    # Clamped max_iterations=1 needs at least 1*4+10 = 14 graph steps.
+    assert captured_config.get("recursion_limit", 0) >= 14, (
+        "Clamped max_iterations of 1 must permit a middleware, model, and tools round-trip"
     )
 
 

@@ -609,11 +609,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         Mirrors the clamp in `_build_middleware` (max(1, max_iterations)) so a
         saved 0 or negative value cannot under-cap the graph below one full
-        iteration. The +5 buffer covers start/end/router overhead.
+        iteration. With model middleware, each tool-calling iteration can run
+        before_model, model, after_model, and tools graph nodes. The additional
+        buffer covers start/end/router overhead.
         """
         raw = getattr(self, "max_iterations", None)
         run_limit = max(1, int(raw)) if raw is not None else 15
-        return run_limit * 2 + 5
+        return run_limit * 4 + 10
 
     def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
@@ -690,8 +692,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # middleware cap (ModelCallLimitMiddleware) is what bounds the loop —
         # not LangGraph's default 25-step guard, which fires at ~12 model+tool
         # iterations and raises a raw GraphRecursionError (QA UI-009/UI-010).
-        # Each iteration is ~2 graph steps (model node + tools node); add 5
-        # for start/end overhead.
+        # Middleware adds before_model and after_model nodes, making each
+        # tool-calling iteration up to 4 graph steps. Allow 10 more for
+        # start/end/router overhead.
         recursion_limit = self._compute_recursion_limit()
 
         agent_config: dict[str, Any] = {
