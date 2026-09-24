@@ -37,6 +37,7 @@ from langflow.api.v1 import (
     monitor_router,
     openai_responses_router,
     policy_bundle_router,
+    projects_audits_router,
     projects_router,
     starter_projects_router,
     store_router,
@@ -88,6 +89,8 @@ router_v1.include_router(files_router)
 router_v1.include_router(monitor_router)
 router_v1.include_router(traces_router)
 router_v1.include_router(folders_router)
+# Before projects_router, whose /{project_id} would otherwise capture /audits and answer 422.
+router_v1.include_router(projects_audits_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)

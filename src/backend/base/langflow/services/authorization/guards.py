@@ -517,6 +517,7 @@ async def _ensure_typed(
     act_str: str,
     kwargs: dict[str, Any],
     domain_override: str | None,
+    allow_owner_override: bool = True,
 ) -> None:
     """Shared body for ``ensure_*_permission`` helpers.
 
@@ -564,10 +565,10 @@ async def _ensure_typed(
     container_owner_id = kwargs.get(spec.create_container_owner_kw) if spec.create_container_owner_kw else None
     if is_create and spec.create_container_owner_kw is not None:
         override_owner_id = container_owner_id
-        owner_override_allowed = True
+        owner_override_allowed = allow_owner_override
     else:
         override_owner_id = owner_id
-        owner_override_allowed = not is_create or spec.owner_override_on_create
+        owner_override_allowed = allow_owner_override and (not is_create or spec.owner_override_on_create)
 
     await _ensure_resource_permission(
         user,
@@ -888,6 +889,28 @@ async def ensure_project_permission(
             "workspace_id": workspace_id,
         },
         domain_override=domain,
+    )
+
+
+async def ensure_project_audit_read_permission(
+    user: User | UserRead,
+    *,
+    project_id: UUID | None = None,
+    project_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+) -> None:
+    """Require ``project:audit_read`` without the ordinary resource-owner override."""
+    await _ensure_typed(
+        user,
+        spec_key="project",
+        act_str=ProjectAction.AUDIT_READ.value,
+        kwargs={
+            "project_id": project_id,
+            "project_user_id": project_user_id,
+            "workspace_id": workspace_id,
+        },
+        domain_override=None,
+        allow_owner_override=False,
     )
 
 
