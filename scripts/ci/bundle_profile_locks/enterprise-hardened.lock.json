@@ -2,14 +2,14 @@
   "application": {
     "distribution": "langflow",
     "requested": ">=1.12.0,<1.13.0",
-    "requirement": "langflow==1.12.3",
-    "resolved_version": "1.12.3"
+    "requirement": "langflow==1.12.4",
+    "resolved_version": "1.12.4"
   },
   "bundle_api": {
     "distribution": "lfx",
     "requested": ">=1.12.0.dev0,<1.13.0",
-    "requirement": "lfx==1.12.3",
-    "resolved_version": "1.12.3"
+    "requirement": "lfx==1.12.4",
+    "resolved_version": "1.12.4"
   },
   "bundles": [
     {
@@ -18,9 +18,9 @@
       "providers": [
         "lfx-amazon"
       ],
-      "requested": ">=0.1.6,<1.0.0",
-      "requirement": "lfx-amazon==0.1.6",
-      "resolved_version": "0.1.6"
+      "requested": ">=0.1.7,<1.0.0",
+      "requirement": "lfx-amazon==0.1.7",
+      "resolved_version": "0.1.7"
     },
     {
       "distribution": "lfx-anthropic",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:f463d48dd9dcf841",
+  "profile_digest": "sha256:395f973df6ff8619",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

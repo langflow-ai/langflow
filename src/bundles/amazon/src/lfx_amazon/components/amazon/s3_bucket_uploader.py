@@ -77,7 +77,7 @@ class S3BucketUploaderComponent(Component):
             name="strategy",
             display_name="Strategy for file upload",
             options=["Store Data", "Store Original File"],
-            value="By Data",
+            value="Store Data",
             info=(
                 "Choose the strategy to upload the file. By Data means that the source file "
                 "is parsed and stored as LangFlow data. By File Name means that the source "
