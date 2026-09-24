@@ -100,6 +100,27 @@ def test_process_tweaks_cannot_redirect_bing_credential(node_type: str):
     assert template["k"]["value"] == 1
 
 
+@pytest.mark.parametrize(
+    "tweaks",
+    [
+        {"Bing Search API": {"bing_search_url": "https://attacker.example/search"}},
+        {"bing_search_url": "https://attacker.example/search"},
+    ],
+    ids=["display-name", "all-nodes"],
+)
+def test_process_tweaks_refuses_other_bing_key_forms(tweaks: dict):
+    node = _template_node(
+        {"bing_search_url": {"value": "https://api.bing.microsoft.com/v7.0/search", "type": "str"}},
+        node_type="BingSearchAPIComponent",
+    )
+    node["data"]["node"]["display_name"] = "Bing Search API"
+    with pytest.raises(TweakRefusedError, match="bing_search_url"):
+        process_tweaks({"nodes": [node]}, tweaks)
+    assert node["data"]["node"]["template"]["bing_search_url"]["value"] == (
+        "https://api.bing.microsoft.com/v7.0/search"
+    )
+
+
 @pytest.mark.parametrize("node_type", _BING_NODE_TYPES)
 def test_graph_tweaks_cannot_redirect_bing_credential(node_type: str):
     """Streaming runs enforce the same destination boundary on a built graph."""
