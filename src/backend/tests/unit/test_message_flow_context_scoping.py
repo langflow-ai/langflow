@@ -47,6 +47,7 @@ from lfx.memory.flow_context import (
     set_current_flow_id,
     set_current_message_executor_id,
     set_current_message_owner_id,
+    should_persist_messages,
 )
 from lfx.schema.data import Data
 from sqlmodel import select
@@ -241,7 +242,9 @@ async def test_graph_without_flow_id_keeps_chat_input_ephemeral(client):  # noqa
 
     rendered = chat_output.get_output_by_method(chat_output.message_response).value
     assert rendered.text == "ad hoc hello"
-    assert await aget_messages(session_id=session_id) == []
+    async with session_scope() as session:
+        rows = (await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))).all()
+    assert rows == []
 
 
 async def test_graph_without_flow_id_keeps_memory_store_ephemeral(client):  # noqa: ARG001
@@ -266,7 +269,41 @@ async def test_graph_without_flow_id_keeps_memory_store_ephemeral(client):  # no
         pass
 
     assert memory.status == "ad hoc memory"
-    assert await aget_messages(session_id=session_id) == []
+    async with session_scope() as session:
+        rows = (await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))).all()
+    assert rows == []
+
+
+@pytest.mark.parametrize("missing_identity", ["flow", "owner"])
+async def test_graph_without_memory_scope_disables_message_persistence(client, monkeypatch, missing_identity):  # noqa: ARG001
+    """A no-ID streaming event must remain valid in an ephemeral graph."""
+    observed: list[bool] = []
+    original = ChatOutput.message_response
+
+    async def capture_persistence(self):
+        observed.append(should_persist_messages())
+        await self.send_message(
+            Message(
+                text="tool started", sender="Machine", sender_name="AI", session_id=f"ephemeral-{missing_identity}"
+            ),
+            skip_db_update=True,
+        )
+        return await original(self)
+
+    monkeypatch.setattr(ChatOutput, "message_response", capture_persistence)
+    output = ChatOutput(_id=f"ephemeral_output_{missing_identity}")
+    output.set(input_value="ad hoc reply", session_id=f"ephemeral-{missing_identity}")
+    graph = Graph(
+        output,
+        output,
+        flow_id=str(uuid4()) if missing_identity == "owner" else None,
+        user_id=str(uuid4()) if missing_identity == "flow" else None,
+    )
+
+    async for _ in graph.async_start():
+        pass
+
+    assert observed == [False]
 
 
 async def test_graph_execution_binds_flow_scope_end_to_end(client):  # noqa: ARG001

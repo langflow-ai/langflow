@@ -478,23 +478,10 @@ async def astore_message(
     # memory. The flag is bound per component execution in get_instance_results
     # from graph.persist_messages, so this is a no-op for every normal run (the
     # default is True) and returns the message unpersisted for an anonymous one.
-    from lfx.memory.flow_context import (
-        coerce_flow_id,
-        get_current_flow_id,
-        get_current_message_owner_id,
-        has_current_flow_scope,
-        should_persist_messages,
-    )
+    from lfx.memory.flow_context import has_current_flow_scope, should_persist_messages
 
     if not should_persist_messages():
         return [message]
-    # Ad hoc graphs with no valid flow or owner can still render chat. They
-    # cannot persist a row without both required scope predicates.
-    if has_current_flow_scope() and (
-        coerce_flow_id(get_current_flow_id()) is None or get_current_message_owner_id() is None
-    ):
-        return [message]
-
     if not message.session_id or not message.sender or not message.sender_name:
         msg = (
             f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"
