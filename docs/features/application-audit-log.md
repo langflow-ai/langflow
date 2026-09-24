@@ -16,8 +16,8 @@ Off by default (`LANGFLOW_AUDIT_ENABLED=false`).
 | Term | Meaning |
 |---|---|
 | Event | One row in `audit_events`. Never updated; deleted only by retention. |
-| Event type | `authz` (was it permitted) or `action` (what the operation did). |
-| Result | `allow`/`deny` for `authz`; `succeeded`/`failed` for `action`. |
+| Event type | `action` (what the operation did). Authorization decisions remain in `authz_audit_log`. |
+| Result | `succeeded` or `failed`. |
 | Action | The permission checked, such as `project:write`. |
 | Operation | The mutation shape attempted: `create`, `replace`, `patch`, `delete`. |
 | Account | `user_id`: the Langflow account the request executes under. |
@@ -42,7 +42,7 @@ Off by default (`LANGFLOW_AUDIT_ENABLED=false`).
 | `operation` | VARCHAR(64) NOT NULL | Application-validated |
 | `event_type` | VARCHAR(16) NOT NULL | |
 | `result` | VARCHAR(16) NOT NULL | |
-| `error_code` | VARCHAR(64) NULL | Required for `deny`/`failed`, null otherwise |
+| `error_code` | VARCHAR(64) NULL | Required for `failed`, null otherwise |
 | `timestamp` | TIMESTAMPTZ NOT NULL | Database UTC when the event is staged |
 | `request_id` | UUID NOT NULL | Server-generated per HTTP request; indexed, not unique |
 | `details` | JSON NOT NULL | See [Details contract](#details-contract) |
@@ -62,7 +62,7 @@ Migration `df1410b1eefa` — `Phase: EXPAND`, additive, reversible.
 
 Every `details` object starts with `schema_version`. Unknown keys are rejected,
 never persisted. Committed changes appear only on `succeeded` events; attempted
-shape appears only on `failed` and `deny` events, so an attempt can never read
+shape appears only on `failed` events, so an attempt can never read
 as a change.
 
 **Project, schema 1**
@@ -73,13 +73,13 @@ as a change.
   (at most 100 `{id, name, change}` entries ordered by change type then id,
   `change` in `added`/`removed`/`updated`), `truncated`. Classification is by
   Flow identity only; no content comparison.
-- `attempted_fields`, `requested_flow_count` — failed or denied only.
+- `attempted_fields`, `requested_flow_count` — failed only.
 
 **Flow, schema 1**
 
 - `written_fields` — Flow attribute names the operation wrote.
 - `project` — `{before_id, after_id}` when Project membership changed.
-- `attempted_fields` — failed or denied only.
+- `attempted_fields` — failed only.
 
 Field-name lists are unique, sorted, capped at 16, and must look like field
 names, so a value cannot pass as one. Never stored: Flow descriptions, graphs,
@@ -97,24 +97,68 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 | `resolve_audit_actor(user_id)` | Derives account and credential from the request's authentication context. A caller cannot supply them. |
 | `build_audit_event(draft)` | Validates a draft against the contract; raises `AuditContractError`. |
 | `stage_audit_event(session, draft)` | Writes a committed operation's event in the mutation's transaction, flushed right after the mutation's own write, so a refused event fails the request and rolls the mutation back before any response. No-op, without a flush, when disabled, when the action is excluded, or without a database. |
-| `record_audit_event_after_rollback(draft)` | Writes a failure or denial in its own transaction, at most 4 concurrently. Waiting for a slot is bounded to 5 seconds and the write itself to another 5, so a failing request never inherits the queue's whole budget: a queue timeout is logged `outcome=not_persisted`, and a write timeout `outcome=unknown`, because the commit may already have landed. A storage failure is logged as an error and never raised into the already failing caller. No-op, without opening a connection, when disabled or when the action is excluded. |
+| `record_audit_event_after_rollback(draft)` | Writes a failure in its own transaction, at most 4 concurrently. Waiting for a slot is bounded to 5 seconds and the write itself to another 5, so a failing request never inherits the queue's whole budget: a queue timeout is logged `outcome=not_persisted`, and a write timeout `outcome=unknown`, because the commit may already have landed. A storage failure is logged as an error and never raised into the already failing caller. No-op, without opening a connection, when disabled or when the action is excluded. |
 | `is_action_audited(action)` | False when `LANGFLOW_AUDIT_EXCLUDE_EVENTS` excludes the action. Both writers above check it, so no producer can bypass an exclusion. |
-| `list_audit_events(session, filters, limit, cursor, visibility)` | Filters (OR within a field, AND across), orders by `(timestamp DESC, id DESC)`, keyset pagination, cursor bound to its filters, no total. |
+| `list_audit_events(session, filters, limit, cursor, visibility)` | Filters (OR within a field, AND across), orders by `(timestamp DESC, id DESC)`, and carries an initial insertion cutoff through keyset pagination; cursor bound to its filters, no total. |
 | `purge_expired_audit_events(session, retention_days)` | Deletes by age only. |
 
 `AuditRequestContextMiddleware` gives every HTTP request its own
-`request_id`, so the authorization and action events of one request share it.
+`request_id` for reconciliation across request and authorization logs.
+
+## Producers (existing write routes)
+
+Each route below carries one `@audited_route` decorator. Succeeded events are
+written where the mutation happens, right after its own write; failures are
+written by the decorator after rollback. Authorization decisions continue to
+be written only to `authz_audit_log`.
+
+| Route | resource / action / operation | Succeeded `details` |
+|---|---|---|
+| `POST /flows/` | flow / `flow:create` / `create` | `written_fields`, `project.after_id` |
+| `PATCH /flows/{id}` | flow / `flow:write` / `patch` | `written_fields`; `project` when moved |
+| `PUT /flows/{id}` existing | flow / `flow:write` / `replace` | `written_fields`; `project` when moved |
+| `PUT /flows/{id}` new id | flow / `flow:create` / `create` | as create |
+| `DELETE /flows/{id}` | flow / `flow:delete` / `delete` | `project.before_id` |
+| `POST /flows/batch/`, `POST /flows/upload/` | one flow event per Flow created or replaced | |
+| `DELETE /flows/` | one `flow:delete` per Flow | |
+| `POST /flows/{id}/versions/{v}/activate` | flow / `flow:write` / `patch` | `written_fields: ["data"]` |
+| `POST /projects/` | project / `project:create` / `create` | `description` when supplied; `flows` (added) |
+| `PATCH /projects/{id}` | project / `project:write` / `patch` | `description` only when written |
+| `PUT /projects/{id}` existing | project / `project:write` / `patch` | same as PATCH (the route has PATCH semantics) |
+| `PUT /projects/{id}` new id | project / `project:create` / `create` | as create |
+| `DELETE /projects/{id}` | project / `project:delete` / `delete` | `flows` (removed); plus one `flow:delete` per Flow removed |
+| `POST /projects/upload/` | project / `project:create` / `create` | `description`, `flows` (added); plus one `flow:create` per Flow |
+
+`replace` for Projects (atomic complete-content replacement) arrives with the
+atomic Project APIs; no existing route replaces a Project's contents.
+
+**Outcome rules**
+
+- A request refused before authorization (unknown id, owner-scoped 404, malformed body) records nothing.
+- A guard that refuses records no `audit_events` row; its authorization decision remains in `authz_audit_log`.
+- Anything raised after authorization records one `action`/`failed` after the transaction rolled back, with a code derived from the error: a uniqueness message maps to `*_NAME_CONFLICT`, a duplicate id to `FLOW_ID_CONFLICT`, 400/422 to `INVALID_CONTENT`, a domain 403 or 423 to `CONSTRAINT_VIOLATION`, a generic 500 by its database cause (`OperationalError` to `SERVICE_UNAVAILABLE`, `IntegrityError` to `CONSTRAINT_VIOLATION`), else `INTERNAL_ERROR`.
+- A failure after an explicit commit (the Memory Base teardown after a delete) is never recorded as failed.
+- A failed attempt with no identity yet uses `resource_id = 00000000-0000-0000-0000-000000000000`.
+- The failed `resource_name` is the known name of an existing resource, otherwise the attempted name.
+
+**Transaction ownership.** Project create, rename and auth reconciliation used to
+commit the request transaction midway through MCP server registration, so a
+create that failed afterwards left the Project behind. Those calls now join the
+request transaction (`owns_transaction=False`). Project delete still commits MCP
+cleanup first; that does not affect the audit, because the Project removal and
+its event share the later transaction.
 
 ## Invariants
 
 1. A succeeded event and its mutation commit or roll back together.
-2. A failed or denied event is written only after the mutation's transaction is gone.
+2. A failed event is written only after the mutation's transaction is gone.
 3. An event violating the contract is refused before any database write.
 4. Deleting a resource, user, or API key never deletes its events.
 5. A traversal returns each event at most once, in `(timestamp DESC, id DESC)` order, and never skips a row it has not yet passed. The first page fixes a cutoff and no row timestamped after it is returned. A row is timestamped when its `INSERT` runs, not when its transaction commits, so an event staged before the traversal started and committed after it can still appear on a later page. Reading the same traversal twice is not guaranteed to return the same set.
 6. With `lfx serve` (no database), nothing is written and nothing raises.
-7. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
-8. An exclusion entry that matches no audited action excludes nothing and never stops startup.
+7. A request that is not audited (auditing off, or a helper called outside an audited route such as startup or the assistant) writes nothing.
+8. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
+9. An exclusion entry that matches no audited action excludes nothing and never stops startup.
 
 ## Settings
 
@@ -139,9 +183,10 @@ stores them, so a value copied from an event works as an entry.
 LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:write,project:delete
 ```
 
-- **Every outcome.** An excluded action records no `succeeded`, `failed` or
-  `deny` event. To keep refusals while dropping routine writes, do not exclude
-  the action.
+- **Every outcome.** An excluded action records no `succeeded` or `failed` event.
+- **Exact, per action.** Excluding `project:delete` keeps the `flow:delete`
+  event of each Flow the deleted Project removed, and excluding `flow:*` keeps
+  every Project event, including the Flow summary inside it.
 - **Normalized.** Entries are trimmed and lowercased; empty and repeated
   entries are dropped.
 - **Ignored, never guessed.** An entry that matches no audited action is ignored
@@ -162,7 +207,7 @@ LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:write,project:delete
 - Atomic Project create/replace endpoints, inbound `request_id` propagation, and
   accepting an acting identity from the configured Control Plane service identity.
   The columns exist; nothing sets the acting pair yet.
-- Flow run events, field-level content differences, version storage.
+- Field-level content differences, version storage, and Flow-run auditing.
 - Retiring `authz_audit_log`.
 
 ## Platform compatibility

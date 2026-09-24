@@ -1,5 +1,5 @@
 import warnings
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
@@ -34,6 +34,16 @@ from langflow.api.v1.projects_mcp_helpers import (
     register_mcp_servers_for_project,
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import (
+    audited_permission,
+    audited_route,
+    current_operation,
+    describe_project_body,
+    mark_committed,
+    stage_flow_succeeded,
+    stage_project_succeeded,
+)
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
     FlowAction,
@@ -96,6 +106,32 @@ PROJECT_DELETE_DENIED_DETAIL = "You don't have permission to delete this project
 # Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
 # same LIKE-escaping is shared across the API endpoints + the tracing repository.
 _escape_like = escape_like_pattern
+
+
+async def _stage_flow_moves(session: DbSession, moved: dict[UUID, tuple[UUID | None, UUID]]) -> None:
+    """Record, on each Flow, a move a Project write performed.
+
+    A Flow's own history has to read the same whichever route moved it, so a
+    membership change made through a Project write stages the same Flow event
+    ``PATCH /flows/{id}`` stages for the same move.
+    """
+    changed = {flow_id: pair for flow_id, pair in moved.items() if pair[0] != pair[1]}
+    if current_operation() is None or not changed:
+        return
+    names = dict(
+        (await session.exec(select(Flow.id, Flow.name).where(Flow.id.in_(list(changed))))).all()  # type: ignore[attr-defined]
+    )
+    for flow_id, (before_id, after_id) in changed.items():
+        await stage_flow_succeeded(
+            session,
+            action=audit_vocab.FLOW_WRITE,
+            operation=audit_vocab.AuditOperation.PATCH,
+            flow_id=flow_id,
+            flow_name=names.get(flow_id),
+            written_fields=["folder_id"],
+            project_before=before_id,
+            project_after=after_id,
+        )
 
 
 async def _new_project(
@@ -205,7 +241,7 @@ async def _new_project(
     # Auto-register MCP server for this project with configured default auth
     if get_settings_service().settings.add_projects_to_mcp_servers:
         try:
-            await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
+            await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session, owns_transaction=False)
         except ApiKeyIssuanceDeniedError as denial:
             if not auth_was_chosen_for_caller:
                 raise HTTPException(status_code=403, detail=str(denial)) from denial
@@ -222,8 +258,10 @@ async def _new_project(
 
     flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
     authorized_flow_owner_ids: dict[UUID, UUID] = {}
+    moved_flows: dict[UUID, tuple[UUID | None, UUID]] = {}
 
     async def _move_flows_into_project() -> None:
+        moved_flows.clear()
         if project.components_list:
             component_flows = (
                 await session.exec(
@@ -234,6 +272,7 @@ async def _new_project(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in component_flows)
+            moved_flows.update((flow_id, (folder_id, new_project.id)) for flow_id, folder_id in component_flows)
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(component_flows),
@@ -256,6 +295,7 @@ async def _new_project(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in project_flows)
+            moved_flows.update((flow_id, (folder_id, new_project.id)) for flow_id, folder_id in project_flows)
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(project_flows),
@@ -277,19 +317,45 @@ async def _new_project(
     else:
         await _move_flows_into_project()
 
+    await _stage_flow_moves(session, moved_flows)
+
+    if current_operation() is not None:
+        flows_after = dict(
+            (await session.exec(select(Flow.id, Flow.name).where(Flow.folder_id == new_project.id))).all()
+        )
+        written = {"description": new_project.description} if "description" in project.model_fields_set else {}
+        await stage_project_succeeded(
+            session,
+            action=audit_vocab.PROJECT_CREATE,
+            operation=audit_vocab.AuditOperation.CREATE,
+            project_id=new_project.id,
+            project_name=new_project.name,
+            flows_before={},
+            flows_after=flows_after,
+            **written,
+        )
+
     # Convert to FolderRead while session is still active to avoid detached instance errors
     return FolderRead.model_validate(new_project, from_attributes=True)
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
+@audited_route(
+    audit_vocab.AuditResourceType.PROJECT,
+    audit_vocab.PROJECT_CREATE,
+    audit_vocab.AuditOperation.CREATE,
+    describe=describe_project_body("project"),
+)
 async def create_project(
     *,
     session: DbSession,
     project: FolderCreate,
     current_user: CurrentActiveUser,
 ):
-    await ensure_project_permission(
-        current_user, ProjectAction.CREATE, workspace_id=getattr(project, "workspace_id", None)
+    await audited_permission(
+        ensure_project_permission(
+            current_user, ProjectAction.CREATE, workspace_id=getattr(project, "workspace_id", None)
+        )
     )
     try:
         return await _new_project(
@@ -649,7 +715,9 @@ async def _apply_project_update(
         existing_project.name = project.name
 
         if get_settings_service().settings.add_projects_to_mcp_servers:
-            await handle_mcp_server_rename(existing_project, old_project_name, project.name, current_user, session)
+            await handle_mcp_server_rename(
+                existing_project, old_project_name, project.name, current_user, session, owns_transaction=False
+            )
 
     if project.description is not None:
         existing_project.description = project.description
@@ -698,6 +766,7 @@ async def _apply_project_update(
                 new_auth_type,
                 current_user,
                 session,
+                owns_transaction=False,
             )
         except HTTPException:
             raise
@@ -716,11 +785,16 @@ async def _apply_project_update(
     # it, copying that stranger's workspace_id. get_default_folder_id() scopes the same lookup by
     # user_id; match it. If the owner has no default folder the move is skipped by the guard
     # below, which is the safe outcome.
-    flows_ids = (
-        await session.exec(
-            select(Flow.id).where(Flow.folder_id == existing_project.id, Flow.user_id == project_owner_id)
-        )
-    ).all()
+    membership_before = dict(
+        (
+            await session.exec(
+                select(Flow.id, Flow.name).where(
+                    Flow.folder_id == existing_project.id, Flow.user_id == project_owner_id
+                )
+            )
+        ).all()
+    )
+    flows_ids = list(membership_before)
 
     excluded_flows = list(set(flows_ids) - set(project.flows))
 
@@ -729,8 +803,10 @@ async def _apply_project_update(
     ).first()
     flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
     authorized_flow_owner_ids: dict[UUID, UUID] = {}
+    moved_flows: dict[UUID, tuple[UUID | None, UUID]] = {}
 
     async def _move_flows_for_project_update() -> None:
+        moved_flows.clear()
         # Both SELECT and UPDATE must scope to the project owner — a
         # non-owner editing a shared project must touch the *owner's*
         # flows, not the actor's. The previous code filtered the SELECT
@@ -748,6 +824,9 @@ async def _apply_project_update(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, project_owner_id) for flow_id, _folder_id in excluded_flow_rows)
+            moved_flows.update(
+                (flow_id, (folder_id, my_collection_project.id)) for flow_id, folder_id in excluded_flow_rows
+            )
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(excluded_flow_rows),
@@ -773,6 +852,9 @@ async def _apply_project_update(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, project_owner_id) for flow_id, _folder_id in component_flow_rows)
+            moved_flows.update(
+                (flow_id, (folder_id, existing_project.id)) for flow_id, folder_id in component_flow_rows
+            )
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(component_flow_rows),
@@ -797,6 +879,31 @@ async def _apply_project_update(
     else:
         await _move_flows_for_project_update()
 
+    await _stage_flow_moves(session, moved_flows)
+
+    membership: dict[str, Any] = {}
+    if any(before_id != after_id for before_id, after_id in moved_flows.values()):
+        membership_after = dict(
+            (
+                await session.exec(
+                    select(Flow.id, Flow.name).where(
+                        Flow.folder_id == existing_project.id, Flow.user_id == project_owner_id
+                    )
+                )
+            ).all()
+        )
+        membership = {"flows_before": membership_before, "flows_after": membership_after}
+
+    await stage_project_succeeded(
+        session,
+        action=audit_vocab.PROJECT_WRITE,
+        operation=audit_vocab.AuditOperation.PATCH,
+        project_id=existing_project.id,
+        project_name=existing_project.name,
+        **({"description": project.description} if project.description is not None else {}),
+        **membership,
+    )
+
     # Convert to FolderRead while session is still active to avoid detached instance errors
     return FolderRead.model_validate(existing_project, from_attributes=True)
 
@@ -816,6 +923,13 @@ def _folder_create_to_update(project: FolderCreate) -> FolderUpdate:
 
 
 @router.patch("/{project_id}", response_model=FolderRead, status_code=200)
+@audited_route(
+    audit_vocab.AuditResourceType.PROJECT,
+    audit_vocab.PROJECT_WRITE,
+    audit_vocab.AuditOperation.PATCH,
+    resource_id_param="project_id",
+    describe=describe_project_body("project"),
+)
 async def update_project(
     *,
     session: DbSession,
@@ -842,12 +956,15 @@ async def update_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     try:
-        await ensure_project_permission(
-            current_user,
-            ProjectAction.WRITE,
-            project_id=project_id,
-            project_user_id=existing_project.user_id,
-            workspace_id=existing_project.workspace_id,
+        await audited_permission(
+            ensure_project_permission(
+                current_user,
+                ProjectAction.WRITE,
+                project_id=project_id,
+                project_user_id=existing_project.user_id,
+                workspace_id=existing_project.workspace_id,
+            ),
+            resource_name=existing_project.name,
         )
     except HTTPException as exc:
         # A caller who can read this project already knows it exists, so the
@@ -894,6 +1011,13 @@ async def update_project(
     # schema to be accurate for generated clients (FastAPI infers only the 200 default).
     responses={status.HTTP_201_CREATED: {"model": FolderRead, "description": "Project created."}},
 )
+@audited_route(
+    audit_vocab.AuditResourceType.PROJECT,
+    audit_vocab.PROJECT_WRITE,
+    audit_vocab.AuditOperation.PATCH,
+    resource_id_param="project_id",
+    describe=describe_project_body("project"),
+)
 async def upsert_project(
     *,
     session: DbSession,
@@ -928,12 +1052,15 @@ async def upsert_project(
                 raise HTTPException(status_code=404, detail="Project not found")
 
             try:
-                await ensure_project_permission(
-                    current_user,
-                    ProjectAction.WRITE,
-                    project_id=project_id,
-                    project_user_id=existing_project.user_id,
-                    workspace_id=existing_project.workspace_id,
+                await audited_permission(
+                    ensure_project_permission(
+                        current_user,
+                        ProjectAction.WRITE,
+                        project_id=project_id,
+                        project_user_id=existing_project.user_id,
+                        workspace_id=existing_project.workspace_id,
+                    ),
+                    resource_name=existing_project.name,
                 )
             except HTTPException as exc:
                 raise deny_to_404(exc, detail="Project not found") from exc
@@ -963,8 +1090,12 @@ async def upsert_project(
         else:
             # CREATE path - project doesn't exist. Create it at the caller-specified id and fail
             # loud (409) on a name collision instead of auto-renaming.
-            await ensure_project_permission(
-                current_user, ProjectAction.CREATE, workspace_id=getattr(project, "workspace_id", None)
+            await audited_permission(
+                ensure_project_permission(
+                    current_user, ProjectAction.CREATE, workspace_id=getattr(project, "workspace_id", None)
+                ),
+                action=audit_vocab.PROJECT_CREATE,
+                operation=audit_vocab.AuditOperation.CREATE,
             )
             folder_read = await _new_project(
                 session=session,
@@ -990,6 +1121,12 @@ async def upsert_project(
 
 
 @router.delete("/{project_id}", status_code=204)
+@audited_route(
+    audit_vocab.AuditResourceType.PROJECT,
+    audit_vocab.PROJECT_DELETE,
+    audit_vocab.AuditOperation.DELETE,
+    resource_id_param="project_id",
+)
 async def delete_project(
     *,
     session: DbSession,
@@ -1015,12 +1152,15 @@ async def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     try:
-        await ensure_project_permission(
-            current_user,
-            ProjectAction.DELETE,
-            project_id=project_id,
-            project_user_id=project.user_id,
-            workspace_id=project.workspace_id,
+        await audited_permission(
+            ensure_project_permission(
+                current_user,
+                ProjectAction.DELETE,
+                project_id=project_id,
+                project_user_id=project.user_id,
+                workspace_id=project.workspace_id,
+            ),
+            resource_name=project.name,
         )
     except HTTPException as exc:
         raise await deny_to_404_unless_readable(
@@ -1059,9 +1199,11 @@ async def delete_project(
     def _make_delete_operation(target: Folder):
         async def _delete_project_operation() -> None:
             memory_base_cleanups.clear()
+            target_name = target.name
             flows = (
                 await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
             ).all()
+            removed_flows = {flow.id: flow.name for flow in flows}
             if len(flows) > 0:
                 for flow in flows:
                     await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
@@ -1070,6 +1212,24 @@ async def delete_project(
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()
+            for flow_id, flow_name in removed_flows.items():
+                await stage_flow_succeeded(
+                    session,
+                    action=audit_vocab.FLOW_DELETE,
+                    operation=audit_vocab.AuditOperation.DELETE,
+                    flow_id=flow_id,
+                    flow_name=flow_name,
+                    project_before=project_id,
+                )
+            await stage_project_succeeded(
+                session,
+                action=audit_vocab.PROJECT_DELETE,
+                operation=audit_vocab.AuditOperation.DELETE,
+                project_id=project_id,
+                project_name=target_name,
+                flows_before=removed_flows,
+                flows_after={},
+            )
 
         return _delete_project_operation
 
@@ -1105,6 +1265,7 @@ async def delete_project(
         # Commit the deletions before the best-effort external teardown so a
         # Memory Base's remote collection is dropped only for flows that are gone.
         await session.commit()
+        mark_committed()
         await finalize_flow_memory_base_cleanup(memory_base_cleanups)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
@@ -1165,6 +1326,11 @@ async def download_file(
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
+@audited_route(
+    audit_vocab.AuditResourceType.PROJECT,
+    audit_vocab.PROJECT_CREATE,
+    audit_vocab.AuditOperation.CREATE,
+)
 async def upload_file(
     *,
     session: DbSession,
@@ -1176,5 +1342,5 @@ async def upload_file(
     Accepts either a JSON file with project metadata (folder_name, folder_description, flows)
     or a ZIP file containing individual flow JSON files (as produced by the download endpoint).
     """
-    await ensure_project_permission(current_user, ProjectAction.CREATE)
+    await audited_permission(ensure_project_permission(current_user, ProjectAction.CREATE))
     return await upload_project_flows(session=session, file=file, current_user=current_user)
