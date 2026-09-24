@@ -160,6 +160,16 @@ class TestShortKeysMatchTheApp:
         with pytest.raises(InvalidToken):
             Fernet(_ensure_legacy_fernet_key(short_new_key)).decrypt(ciphertext)
 
+    def test_canonical_fernet_key_matches_the_app(self, migrate_module):
+        canonical_key = Fernet.generate_key().decode()
+
+        assert migrate_module.ensure_valid_key(canonical_key) == ensure_fernet_key(canonical_key)
+
+
+@pytest.mark.parametrize("value", [b"gAAAAAB", 123, None])
+def test_fernet_detection_ignores_non_string_values(migrate_module, value):
+    assert migrate_module.looks_like_fernet_token(value) is False
+
 
 class TestEncryptDecrypt:
     """Tests for encrypt_with_key and decrypt_with_key functions."""
@@ -953,6 +963,8 @@ class TestMigrateEndToEnd:
             conn.execute(
                 text("CREATE TABLE connection_secret (connection_id TEXT PRIMARY KEY, encrypted_payload TEXT)")
             )
+            conn.execute(text("CREATE TABLE job (status TEXT)"))
+            conn.execute(text("CREATE TABLE connection_oauth (encrypted_verifier TEXT, expires_at TEXT)"))
             conn.execute(
                 text("INSERT INTO deployment_provider_account VALUES ('d1', :k)"),
                 {"k": migrate_module.encrypt_with_key("wxo-api-key", old_key)},
@@ -1039,4 +1051,62 @@ class TestMigrateEndToEnd:
 
         with engine.connect() as conn:
             assert tuple(conn.execute(query).one()) == before
+        assert not (config_dir / "secret_key").exists()
+
+    @pytest.mark.parametrize("status", ["queued", "in_progress", "suspended"])
+    def test_active_job_blocks_rotation(self, migrate_module, rotation_db, old_key, new_key, status):
+        engine, config_dir, url = rotation_db
+        with engine.begin() as conn:
+            conn.execute(text("INSERT INTO job VALUES (:status)"), {"status": status})
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
+        assert not (config_dir / "secret_key").exists()
+
+    def test_live_oauth_verifier_blocks_rotation(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        with engine.begin() as conn:
+            conn.execute(
+                text("INSERT INTO connection_oauth VALUES (:verifier, '2999-01-01')"),
+                {"verifier": migrate_module.encrypt_with_key("verifier", old_key)},
+            )
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
+        assert not (config_dir / "secret_key").exists()
+
+    def test_finished_work_does_not_block_rotation(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        with engine.begin() as conn:
+            conn.execute(text("INSERT INTO job VALUES ('completed')"))
+            conn.execute(
+                text("INSERT INTO connection_oauth VALUES (:verifier, '2000-01-01')"),
+                {"verifier": migrate_module.encrypt_with_key("expired", old_key)},
+            )
+
+        migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, new_key) == "lf-api-key-value"
+
+    def test_non_string_token_column_rolls_back(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE apikey SET api_key = :value"), {"value": b"unexpected-bytes"})
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            variable = conn.execute(text("SELECT value FROM variable")).scalar()
+        assert migrate_module.decrypt_with_key(variable, old_key) == "variable-secret"
         assert not (config_dir / "secret_key").exists()

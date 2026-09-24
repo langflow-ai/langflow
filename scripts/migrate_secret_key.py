@@ -144,7 +144,7 @@ def ensure_valid_key(s: str) -> bytes:
     """
     if len(s) < MINIMUM_KEY_LENGTH:
         return base64.urlsafe_b64encode(hashlib.sha256(s.encode()).digest())
-    padding_needed = 4 - len(s) % 4
+    padding_needed = -len(s) % 4
     return (s + "=" * padding_needed).encode()
 
 
@@ -259,12 +259,14 @@ def migrate_auth_settings(auth_settings: dict, old_key: str, new_key: str) -> tu
     return result, failed_fields
 
 
-def looks_like_fernet_token(value: str) -> bool:
+def looks_like_fernet_token(value: object) -> bool:
     """Tell a Fernet token from a plaintext value without knowing the key.
 
     mcp_server.config can hold plaintext values written before encryption
     shipped, and those must be left alone rather than counted as failures.
     """
+    if not isinstance(value, str):
+        return False
     try:
         raw = base64.urlsafe_b64decode(value.encode() + b"=" * (-len(value) % 4))
     except (binascii.Error, ValueError):
@@ -352,6 +354,9 @@ def verify_migration(conn, new_key: str) -> tuple[int, int]:
             text(f"SELECT {key}, {column} FROM {table} WHERE {column} IS NOT NULL LIMIT 3")  # noqa: S608
         ).fetchall()
         for _, encrypted_value in rows:
+            if not isinstance(encrypted_value, str):
+                failed += 1
+                continue
             if not looks_like_fernet_token(encrypted_value):
                 continue
             try:
@@ -399,6 +404,26 @@ def get_default_database_url(config_dir: Path) -> str | None:
 
 
 DATABASE_URL_DISPLAY_LENGTH = 50
+
+
+def ensure_no_pending_encrypted_work(conn) -> None:
+    """Refuse rotation while jobs or OAuth callbacks may still need the old key."""
+    if inspect(conn).has_table("job"):
+        active_job = conn.execute(
+            text("SELECT 1 FROM job WHERE status IN ('queued', 'in_progress', 'suspended') LIMIT 1")
+        ).first()
+        if active_job:
+            print("Error: Queued, running, or suspended jobs must finish before rotating the secret key.")
+            sys.exit(1)
+
+    if inspect(conn).has_table("connection_oauth"):
+        pending_oauth = conn.execute(
+            text("SELECT 1 FROM connection_oauth WHERE encrypted_verifier IS NOT NULL AND expires_at > :now LIMIT 1"),
+            {"now": datetime.now(timezone.utc)},
+        ).first()
+        if pending_oauth:
+            print("Error: Pending OAuth connection flows must finish before rotating the secret key.")
+            sys.exit(1)
 
 
 def migrate(
@@ -462,6 +487,8 @@ def migrate(
 
     # Use begin() for atomic transaction - all changes commit together or rollback on failure
     with engine.begin() as conn:
+        ensure_no_pending_encrypted_work(conn)
+
         # Migrate user.store_api_key
         print("\n1. Migrating user.store_api_key...")
         users = conn.execute(text('SELECT id, store_api_key FROM "user" WHERE store_api_key IS NOT NULL')).fetchall()
@@ -576,6 +603,10 @@ def migrate(
                     text(f"SELECT {key}, {column} FROM {table} WHERE {column} IS NOT NULL")  # noqa: S608
                 ).fetchall()
                 for row_id, encrypted_value in rows:
+                    if not isinstance(encrypted_value, str):
+                        failed += 1
+                        print(f"   Warning: Unexpected {table}.{column} value for {row_id}")
+                        continue
                     if not looks_like_fernet_token(encrypted_value):
                         continue
                     new_encrypted = migrate_value(encrypted_value, old_key, new_key)
