@@ -28,17 +28,62 @@ async def adapt_graph_events_to_executor_shape(
 ) -> AsyncIterator[dict[str, Any]]:
     """Re-shape outermost graph events; pass everything else through unchanged."""
     outer_run_id: str | None = None
+    last_model_output: AIMessage | None = None
     async for event in stream:
         if outer_run_id is None and event.get("event") == "on_chain_start":
             outer_run_id = event.get("run_id")
+        if event.get("event") == "on_chat_model_end":
+            output = (event.get("data") or {}).get("output")
+            if isinstance(output, AIMessage):
+                last_model_output = output
         if event.get("run_id") == outer_run_id:
             if event.get("event") == "on_chain_start":
                 yield _reshape_chain_start(event)
                 continue
             if event.get("event") == "on_chain_end":
+                unstreamed = _final_message_without_model_call(event, last_model_output)
+                if unstreamed is not None:
+                    yield _synthetic_model_end(event, unstreamed)
                 yield _reshape_chain_end(event)
                 continue
         yield event
+
+
+def _final_message_without_model_call(
+    event: dict[str, Any],
+    last_model_output: AIMessage | None,
+) -> AIMessage | None:
+    """Return the final AIMessage when no model call produced it, else None.
+
+    Middleware can end a run with its own AIMessage — `ModelCallLimitMiddleware` injects
+    "Model call limits exceeded: ...". No `on_chat_model_end` fires for it, so without
+    this it never reaches `content_blocks`, and any text the model wrote earlier in the
+    run becomes the final answer instead.
+    """
+    output = (event.get("data") or {}).get("output")
+    if last_model_output is None or not isinstance(output, dict):
+        return None
+    final = next((msg for msg in reversed(output.get("messages") or []) if isinstance(msg, AIMessage)), None)
+    if final is None or not _message_text(final).strip():
+        return None
+    if (final.id is not None and final.id == last_model_output.id) or (
+        _message_text(final).strip() == _message_text(last_model_output).strip()
+    ):
+        return None
+    return final
+
+
+def _synthetic_model_end(event: dict[str, Any], message: AIMessage) -> dict[str, Any]:
+    return {
+        "event": "on_chat_model_end",
+        "name": event.get("name", ""),
+        "run_id": f"{event.get('run_id', '')}:final-message",
+        "data": {"output": message},
+    }
+
+
+def _message_text(message: AIMessage) -> str:
+    return message.content if isinstance(message.content, str) else _extract_text(message.content)
 
 
 def _reshape_chain_start(event: dict[str, Any]) -> dict[str, Any]:
