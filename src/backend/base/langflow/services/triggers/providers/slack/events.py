@@ -95,7 +95,10 @@ class SlackEvent:
     ``team_ids`` and ``bot_user_ids`` are routing facts, not flow data: the
     installation(s) the event was delivered for (``authorizations[].team_id``,
     never the outer ``team_id``), and the app's own bot users, so a flow that
-    replies in a thread does not trigger itself.
+    replies in a thread does not trigger itself. ``installation_team_id`` is the
+    one workspace the event is accounted to - the first authorization's, falling
+    back to the outer ``team_id`` only for a body with none - and keys both the
+    conversation's session and the per-workspace budget.
     """
 
     event_id: str
@@ -105,6 +108,7 @@ class SlackEvent:
     bot_user_ids: frozenset[str]
     api_app_id: str | None
     payload: dict[str, Any]
+    installation_team_id: str | None = None
 
     @property
     def event_type(self) -> str:
@@ -176,6 +180,7 @@ def normalize(body: Mapping[str, Any]) -> SlackEvent | SlackControl | None:
 
     authorizations = [entry for entry in body.get("authorizations") or [] if isinstance(entry, dict)]
     installation_team_ids = [team for team in (_str(entry.get("team_id")) for entry in authorizations) if team]
+    installation_team_id = installation_team_ids[0] if installation_team_ids else team_id
     conversation_ts = fields.pop("_conversation_ts")
     payload: dict[str, Any] = dict.fromkeys(PAYLOAD_KEYS)
     payload.update(fields)
@@ -184,9 +189,7 @@ def normalize(body: Mapping[str, Any]) -> SlackEvent | SlackControl | None:
             "provider": PROVIDER_SLACK,
             # The installation's workspace keys the conversation; the outer
             # ``team_id`` is only the fallback for a body with no authorizations.
-            "session_key": session_key(
-                installation_team_ids[0] if installation_team_ids else team_id, payload["channel_id"], conversation_ts
-            ),
+            "session_key": session_key(installation_team_id, payload["channel_id"], conversation_ts),
             "slack_event_id": event_id,
             "event_time": body.get("event_time") if isinstance(body.get("event_time"), int) else None,
             "team_id": team_id,
@@ -210,6 +213,7 @@ def normalize(body: Mapping[str, Any]) -> SlackEvent | SlackControl | None:
         ),
         api_app_id=payload["api_app_id"],
         payload=payload,
+        installation_team_id=installation_team_id,
     )
 
 

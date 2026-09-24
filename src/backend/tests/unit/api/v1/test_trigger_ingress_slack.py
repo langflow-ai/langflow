@@ -320,26 +320,50 @@ async def test_a_workspace_over_its_budget_is_refused_like_everything_else(
     assert len(await fx.events_for(trigger_id)) == 1
 
 
-async def test_unsigned_requests_cannot_spend_the_apps_budget(
+async def test_a_workspaces_budget_is_its_installations_not_the_partners(
     client: AsyncClient, active_user, flow, monkeypatch
 ) -> None:
-    """The Request URL names an operator's registration; it is not a secret.
+    """In a Slack Connect channel the outer ``team_id`` is whoever posted.
 
-    So before the signature is checked a sender spends only its own budget. A
-    flood of unsigned requests from elsewhere must not get Slack's real
-    deliveries refused for every workspace the app is installed in.
+    Slack's hourly cap applies to the installation the event was delivered
+    for, so that is the counter a shared-channel message spends.
     """
     from langflow.services.deps import get_settings_service
 
     # An unusual ceiling: the limiter keys a counter by its limit, so nothing
     # else in this process shares these counters.
-    monkeypatch.setattr(get_settings_service().settings, "trigger_ingress_slack_app_rate_limit_per_minute", 7)
-    _key_client_ip_by_header(monkeypatch)
+    monkeypatch.setattr(get_settings_service().settings, "trigger_ingress_slack_team_rate_limit_per_hour", 2)
+    trigger_id = await fx.arm(flow.id, active_user.id, await fx.make_oauth_connection(active_user.id))
+
+    ours = await _deliver(client, "message_channel")
+    partners = await _deliver(client, "message_slack_connect")
+    over = await _deliver(client, "message_im")
+
+    assert (ours.status_code, partners.status_code, over.status_code) == (202, 202, 404)
+    assert len(await fx.events_for(trigger_id)) == 2
+
+
+async def test_unsigned_requests_never_get_slacks_deliveries_refused(
+    client: AsyncClient, active_user, flow, monkeypatch
+) -> None:
+    """The Request URL names an operator's registration; it is not a secret.
+
+    And behind a reverse proxy not trusted for ``X-Forwarded-For`` every sender -
+    Slack included - shares the proxy's address. So nothing is refused before
+    the signature is checked: a flood of unsigned requests from that same
+    address, past every budget there is, must not cost Slack one delivery.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    # Unusual ceilings: the limiter keys a counter by its limit, so nothing
+    # else in this process shares these counters.
+    monkeypatch.setattr(settings, "trigger_ingress_slack_app_rate_limit_per_minute", 7)
+    monkeypatch.setattr(settings, "trigger_ingress_unknown_rate_limit_per_minute", 3)
     trigger_id = await fx.arm(flow.id, active_user.id, await fx.make_oauth_connection(active_user.id))
     body = fx.raw("message_channel")
-    unsigned = {**fx.sign(b"not this body"), _CLIENT_IP_HEADER: "203.0.113.9"}
 
-    flood = [await client.post(URL, content=body, headers=unsigned) for _ in range(10)]
+    flood = [await client.post(URL, content=body, headers=fx.sign(b"not this body")) for _ in range(10)]
     delivered = await _deliver(client, "message_channel")
 
     assert {response.status_code for response in flood} == {404}
@@ -347,12 +371,18 @@ async def test_unsigned_requests_cannot_spend_the_apps_budget(
     assert len(await fx.events_for(trigger_id)) == 1
 
 
-async def test_one_sender_is_cut_off_before_its_requests_are_verified(client: AsyncClient, monkeypatch) -> None:
+async def test_refused_requests_are_audited_only_within_the_probing_budget(client: AsyncClient, monkeypatch) -> None:
+    """The audit queue is bounded and single-writer; one sender's garbage must not fill it.
+
+    The same bound the per-trigger route puts on unknown ids: a client's
+    refusals are audited while its probing budget lasts, then only answered.
+    """
     from langflow.services.deps import get_settings_service
-    from langflow.services.triggers.ingress.verifiers import REASON_RATE_LIMITED
+    from langflow.services.triggers.ingress.verifiers import REASON_BAD_SIGNATURE, REASON_BODY_TOO_LARGE
     from langflow.services.triggers.providers.slack import ingress as slack_ingress
 
-    monkeypatch.setattr(get_settings_service().settings, "trigger_ingress_slack_app_rate_limit_per_minute", 5)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "trigger_ingress_unknown_rate_limit_per_minute", 4)
     _key_client_ip_by_header(monkeypatch)
     reasons: list[str | None] = []
 
@@ -362,12 +392,16 @@ async def test_one_sender_is_cut_off_before_its_requests_are_verified(client: As
     monkeypatch.setattr(slack_ingress, "audit_delivery", record)
     body = fx.raw("message_channel")
     unsigned = {**fx.sign(b"not this body"), _CLIENT_IP_HEADER: "203.0.113.10"}
+    oversized = b"{" + b" " * (settings.trigger_ingress_max_body_bytes + 1) + b"}"
 
-    for _ in range(7):
-        assert (await client.post(URL, content=body, headers=unsigned)).status_code == 404
+    statuses = [(await client.post(URL, content=body, headers=unsigned)).status_code for _ in range(3)]
+    statuses.append((await client.post(URL, content=oversized, headers=unsigned)).status_code)
+    statuses += [(await client.post(URL, content=body, headers=unsigned)).status_code for _ in range(5)]
+    elsewhere = {**fx.sign(b"not this body"), _CLIENT_IP_HEADER: "203.0.113.11"}
+    statuses.append((await client.post(URL, content=body, headers=elsewhere)).status_code)
 
-    assert REASON_RATE_LIMITED not in reasons[:5]
-    assert reasons[5:] == [REASON_RATE_LIMITED, REASON_RATE_LIMITED]
+    assert set(statuses) == {404}
+    assert reasons == [REASON_BAD_SIGNATURE] * 3 + [REASON_BODY_TOO_LARGE, REASON_BAD_SIGNATURE]
 
 
 async def test_an_oversized_body_is_refused_without_being_stored(client: AsyncClient, active_user, flow) -> None:
