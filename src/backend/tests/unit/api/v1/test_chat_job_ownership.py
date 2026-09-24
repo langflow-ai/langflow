@@ -53,7 +53,7 @@ async def test_public_temporary_job_does_not_require_queue_owner():
 
 @pytest.mark.asyncio
 async def test_v1_routes_reject_ownerless_jobs_without_touching_queue():
-    """Durable background jobs use the v2 control plane, not a v1 build queue."""
+    """Ownerless nonpublic v1 jobs are rejected before queue access."""
     job_id = str(uuid4())
 
     class NoQueue(OwnerlessQueue):
