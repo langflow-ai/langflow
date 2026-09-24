@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 from lfx.exceptions.tweaks import TweakRefusedError
+from lfx.graph import Graph
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.processing.process import apply_tweaks, process_tweaks, process_tweaks_on_graph
 from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES, CODE_EXECUTION_FIELD_NAMES
@@ -218,6 +219,67 @@ def test_graph_tweaks_refuse_group_proxy_to_protected_field():
 
     assert vertex.data["node"]["template"][proxy_name]["value"] == original
     vertex.update_raw_params.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("child_type", "field_name", "child_field_type", "group_field_type", "expected_result"),
+    [
+        ("SearchComponent", "k", "str", "str", "accepted"),
+        ("SQLComponent", "database_url", "str", "str", "refused"),
+        ("SearchComponent", "custom_source", "code", "str", "refused"),
+    ],
+)
+def test_graph_tweaks_check_child_field_after_group_expansion(
+    child_type: str, field_name: str, child_field_type: str, group_field_type: str, expected_result: str
+):
+    """A copied proxy is inert, while the child's protected field still refuses tweaks."""
+    child_id = f"{child_type}-abc12"
+    child_field = {"name": field_name, "value": "before", "type": child_field_type, "show": True, "advanced": False}
+    child = {
+        "id": child_id,
+        "type": "genericNode",
+        "data": {
+            "id": child_id,
+            "type": child_type,
+            "node": {
+                "template": {"_type": child_type, field_name: child_field},
+                "base_classes": [],
+                "outputs": [],
+            },
+        },
+    }
+    group = {
+        "id": "group-1",
+        "type": "genericNode",
+        "data": {
+            "id": "group-1",
+            "type": "Group",
+            "node": {
+                "template": {
+                    field_name: {
+                        **child_field,
+                        "type": group_field_type,
+                        "proxy": {"id": child_id, "field": field_name},
+                    },
+                },
+                "flow": {"data": {"nodes": [child], "edges": []}},
+            },
+        },
+    }
+
+    graph = Graph.from_payload({"nodes": [group], "edges": []}, instantiate_components=False)
+    vertex = graph.get_vertex(child_id)
+    assert vertex.data["node"]["template"][field_name]["proxy"] == {"id": child_id, "field": field_name}
+    assert "flow" not in vertex.data["node"]
+
+    if expected_result == "refused":
+        with pytest.raises(TweakRefusedError, match=field_name):
+            process_tweaks_on_graph(graph, {child_id: {field_name: "after"}})
+        assert vertex.data["node"]["template"][field_name]["value"] == "before"
+    else:
+        process_tweaks_on_graph(graph, {child_id: {field_name: "after"}})
+
+        assert vertex.raw_params[field_name] == "after"
 
 
 def test_process_tweaks_refuses_nested_group_proxy_to_protected_field():

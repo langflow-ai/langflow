@@ -329,6 +329,11 @@ def _is_protected_proxy_tweak(node_data: dict[str, Any], field: dict[str, Any]) 
         node = node_data.get("node")
         if not isinstance(node, dict):
             return True
+        # Group expansion copies the outer field, including its proxy, onto the
+        # executable child. Without a nested flow, that copied proxy has no
+        # target to follow; the child's own type and field checks still apply.
+        if "flow" not in node:
+            return False
         flow = node.get("flow")
         flow_data = flow.get("data") if isinstance(flow, dict) else None
         nodes = flow_data.get("nodes") if isinstance(flow_data, dict) else None
