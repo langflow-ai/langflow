@@ -609,11 +609,23 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         Mirrors the clamp in `_build_middleware` (max(1, max_iterations)) so a
         saved 0 or negative value cannot under-cap the graph below one full
-        iteration. The +5 buffer covers start/end/router overhead.
+        iteration.
+
+        In `langchain.agents.create_agent` with middleware (such as
+        `ModelCallLimitMiddleware` or `HumanInTheLoopMiddleware`), each iteration
+        decomposes into 4 distinct graph nodes per cycle:
+          1. ModelCallLimitMiddleware.before_model
+          2. model
+          3. ModelCallLimitMiddleware.after_model
+          4. tools
+        Therefore, each tool-calling iteration consumes up to 4 Pregel graph steps.
+        We scale by 4 with a +10 buffer for start/end/router transitions so
+        `ModelCallLimitMiddleware` gracefully governs model calls instead of
+        tripping LangGraph's raw `GraphRecursionError`.
         """
         raw = getattr(self, "max_iterations", None)
         run_limit = max(1, int(raw)) if raw is not None else 15
-        return run_limit * 2 + 5
+        return run_limit * 4 + 10
 
     def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
