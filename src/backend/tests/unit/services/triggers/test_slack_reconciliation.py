@@ -154,6 +154,7 @@ async def test_saving_an_unchanged_node_does_not_rewrite_the_row(trigger_owner, 
         ("user_registration", "user connection cannot receive events"),
         ("manual_bot_token", "cannot receive events"),
         ("bad_channel", "conversation IDs"),
+        ("bad_mention_types", "Conversation types cannot be narrowed"),
     ],
 )
 async def test_a_node_that_cannot_be_armed_records_why(
@@ -166,7 +167,13 @@ async def test_a_node_that_cannot_be_armed_records_why(
     elif setup == "instance":
         connection_id = await fx.make_oauth_connection(trigger_owner, ownership_mode="instance")
         values["connection"] = f"slack/{await _connection_name(connection_id)}"
-    elif setup in {"unconfigured_registration", "no_signing_secret", "user_registration", "bad_channel"}:
+    elif setup in {
+        "unconfigured_registration",
+        "no_signing_secret",
+        "user_registration",
+        "bad_channel",
+        "bad_mention_types",
+    }:
         registrations = {
             "no_signing_secret": {fx.REGISTRATION_ID: fx.registration(signing_secret=None)},
             "user_registration": {fx.REGISTRATION_ID: fx.registration(profile="user", signing_secret=None)},
@@ -178,6 +185,8 @@ async def test_a_node_that_cannot_be_armed_records_why(
         values["connection"] = f"slack/{await _connection_name(connection_id)}"
         if setup == "bad_channel":
             values["channels"] = ["#support"]
+        elif setup == "bad_mention_types":
+            values.update(mentions_only=True, conversation_types=["im"])
     elif setup == "manual_bot_token":
         connection_id = await fx.make_app_token_connection(trigger_owner, token="xoxb-bot")  # noqa: S106
         async with session_scope() as session:

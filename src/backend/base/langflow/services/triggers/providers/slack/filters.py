@@ -99,11 +99,14 @@ def _message_matches(config: Mapping[str, Any], event: SlackEvent) -> bool:
     ):
         return False
 
-    # ``app_mention`` carries no channel_type; the conversation-type filter
-    # applies only where Slack says which kind of conversation it was.
+    # ``app_mention`` carries no channel_type. Older stored configs may still
+    # narrow types with mentions_only, so fail closed rather than firing in an
+    # excluded conversation.
     channel_type = payload["channel_type"]
     types = config.get("conversation_types") or MESSAGE_DEFAULTS["conversation_types"]
-    return channel_type is None or channel_type in types
+    if channel_type is None:
+        return set(types) == set(MESSAGE_DEFAULTS["conversation_types"])
+    return channel_type in types
 
 
 def _reaction_matches(config: Mapping[str, Any], event: SlackEvent) -> bool:

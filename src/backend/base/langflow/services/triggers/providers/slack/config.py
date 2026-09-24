@@ -69,11 +69,18 @@ def _message(raw: dict[str, Any]) -> dict[str, Any]:
     if not types:
         msg = "Choose at least one conversation type, or the trigger can never fire."
         raise InvalidSlackTriggerConfigError(msg)
+    mentions_only = _bool(raw.get("mentions_only"), default=MESSAGE_DEFAULTS["mentions_only"])
+    if mentions_only and set(types) != set(CONVERSATION_TYPES):
+        msg = (
+            "Conversation types cannot be narrowed when 'Only when the app is mentioned' is on: "
+            "Slack app_mention events do not include a conversation type. Select all types or turn off mentions only."
+        )
+        raise InvalidSlackTriggerConfigError(msg)
     return {
         "channels": _channels(raw.get("channels")),
         # Stable order, so an unchanged node never rewrites the row.
         "conversation_types": [value for value in CONVERSATION_TYPES if value in types],
-        "mentions_only": _bool(raw.get("mentions_only"), default=MESSAGE_DEFAULTS["mentions_only"]),
+        "mentions_only": mentions_only,
         "include_thread_replies": _bool(
             raw.get("include_thread_replies"), default=MESSAGE_DEFAULTS["include_thread_replies"]
         ),

@@ -223,6 +223,11 @@ def test_config_keeps_the_keys_reconciliation_owns() -> None:
         (KIND_SLACK_MESSAGE, {"channels": "general"}, "conversation IDs"),
         (KIND_SLACK_MESSAGE, {"conversation_types": ["channel", "voice"]}, "Unknown conversation type"),
         (KIND_SLACK_MESSAGE, {"conversation_types": []}, "at least one conversation type"),
+        (
+            KIND_SLACK_MESSAGE,
+            {"mentions_only": True, "conversation_types": ["im"]},
+            "Conversation types cannot be narrowed",
+        ),
         (KIND_SLACK_MESSAGE, {"mentions_only": "sometimes"}, "true or false"),
         (KIND_SLACK_REACTION, {"reaction_events": "toggled"}, "reaction_events"),
         (KIND_SLACK_REACTION, {"emoji": ["party parrot!"]}, "emoji name"),
@@ -250,6 +255,14 @@ def test_a_mention_fires_a_trigger_once_not_twice() -> None:
     assert [matches(KIND_SLACK_MESSAGE, every_message, event) for event in (mention, twin)] == [False, True]
     mentions_only = _message_config(mentions_only=True)
     assert [matches(KIND_SLACK_MESSAGE, mentions_only, event) for event in (mention, twin)] == [True, False]
+
+
+def test_old_mention_config_with_narrowed_types_does_not_fire_without_channel_type() -> None:
+    mention = _event("app_mention")
+    assert mention.payload["channel_type"] is None
+    config = _message_config(mentions_only=True)
+    config["conversation_types"] = ["im"]  # A row saved before the config guard.
+    assert not matches(KIND_SLACK_MESSAGE, config, mention)
 
 
 def test_the_apps_own_messages_and_reactions_never_fire_a_trigger() -> None:
