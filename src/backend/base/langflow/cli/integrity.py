@@ -338,10 +338,12 @@ async def check_authorization(session: AsyncSession) -> CheckResult:
     from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment, CasbinRule
 
     role_ids = set((await session.exec(select(AuthzRole.id))).all())
-    assignments = (await session.exec(select(AuthzRoleAssignment.id, AuthzRoleAssignment.role_id))).all()
+    assignments = (
+        await session.exec(select(AuthzRoleAssignment.id, AuthzRoleAssignment.role_id, AuthzRoleAssignment.user_id))
+    ).all()
     problems = [
         f"assignment {assignment_id}: role {role_id} does not exist"
-        for assignment_id, role_id in assignments
+        for assignment_id, role_id, _ in assignments
         if role_id not in role_ids
     ]
 
@@ -350,19 +352,22 @@ async def check_authorization(session: AsyncSession) -> CheckResult:
         # OSS ships no plugin, so nothing compiles a policy and there is nothing to compare.
         note = "no compiled policy in casbin_rule, so assignments were not compared with it"
     else:
-        user_rules = (
-            await session.exec(
-                select(func.count())
-                .select_from(CasbinRule)
-                .where(CasbinRule.ptype == "g", CasbinRule.v0.like("user:%"))
-            )
-        ).one()
-        note = f"{user_rules} compiled user role rules"
-        if user_rules != len(assignments):
-            problems.append(
-                f"{len(assignments)} role assignments but {user_rules} compiled user role rules: "
-                "the policy sync skipped some or is stale"
-            )
+        # A plugin may compile one assignment into several rules (one per domain, say),
+        # so compare who holds a role, not how many rules there are.
+        with_role = set(
+            (
+                await session.exec(
+                    select(CasbinRule.v0).where(CasbinRule.ptype == "g", CasbinRule.v1.like("role:%")).distinct()
+                )
+            ).all()
+        )
+        assigned = {f"user:{user_id}" for _, _, user_id in assignments}
+        missing = sorted(assigned - with_role)
+        note = f"{len(assigned) - len(missing)} of {len(assigned)} assigned users have a compiled role rule"
+        problems.extend(
+            f"{subject} has a role assignment but no compiled role rule: the policy sync skipped it or is stale"
+            for subject in missing
+        )
     return _result(
         "authorization",
         problems,
