@@ -810,6 +810,7 @@
   "files.emptyDescription": "Laden Sie Dateien hoch oder importieren Sie sie aus Ihrer bevorzugten Cloud.",
   "files.errorDeleting": "Fehler beim Löschen von Dateien",
   "files.errorDeletingDetail": "Beim Löschen der Dateien ist ein Fehler aufgetreten",
+  "files.errorRenaming": "Fehler beim Umbenennen der Datei",
   "files.errorUploading": "Fehler beim Hochladen der Datei",
   "files.errorUploadingDetail": "Beim Hochladen der Datei ist ein Fehler aufgetreten",
   "files.filesUploadedSuccessfully": "Dateien erfolgreich hochgeladen",

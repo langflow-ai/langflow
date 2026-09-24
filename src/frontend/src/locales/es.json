@@ -810,6 +810,7 @@
   "files.emptyDescription": "Sube archivos o impórtalos desde tu servicio en la nube preferido.",
   "files.errorDeleting": "Error al eliminar archivos",
   "files.errorDeletingDetail": "Se ha producido un error al eliminar los archivos",
+  "files.errorRenaming": "Error al cambiar el nombre del archivo",
   "files.errorUploading": "Error al cargar el archivo",
   "files.errorUploadingDetail": "Se ha producido un error al cargar el archivo",
   "files.filesUploadedSuccessfully": "Archivos cargados correctamente",

@@ -810,6 +810,7 @@
   "files.emptyDescription": "Téléchargez des fichiers ou importez-les depuis votre service de stockage en ligne préféré.",
   "files.errorDeleting": "Erreur lors de la suppression des fichiers",
   "files.errorDeletingDetail": "Une erreur s'est produite lors de la suppression des fichiers",
+  "files.errorRenaming": "Erreur lors du renommage du fichier",
   "files.errorUploading": "Erreur lors du téléchargement du fichier",
   "files.errorUploadingDetail": "Une erreur s'est produite lors du téléchargement du fichier",
   "files.filesUploadedSuccessfully": "Fichiers téléchargés correctement",

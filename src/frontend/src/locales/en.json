@@ -1038,6 +1038,7 @@
   "files.errorUploadingDetail": "An error occurred while uploading the file",
   "files.errorDeleting": "Error deleting files",
   "files.errorDeletingDetail": "An error occurred while deleting the files",
+  "files.errorRenaming": "Error renaming file",
   "files.dropToUpload": "Drop files to upload",
   "files.columnName": "Name",
   "files.columnType": "Type",
