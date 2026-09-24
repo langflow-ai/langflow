@@ -15,16 +15,24 @@ _HAS_OTEL = importlib.util.find_spec("opentelemetry") is not None
 pytestmark = pytest.mark.skipif(not _HAS_OTEL, reason="requires the lfx[otel] extra")
 
 _ALLOWED_KEYS = {"gen_ai.provider.name", "gen_ai.request.model", "error.type"}
+_LLM_METRIC_NAMES = {"gen_ai.client.operation.duration", "langflow.llm.provider.errors"}
 
 
 @pytest.fixture(scope="module")
 def reader():
-    """Install a real meter provider once before any handler reads the global meter.
+    """Install a real meter provider, then bootstrap the way a real startup does.
+
+    The bootstrap is what binds the handler's instruments: it adopts an SDK provider that is
+    already installed (the ``opentelemetry-instrument`` case) and remembers it, and the handler
+    records on that rather than on the global API. Without the bootstrap call the handler gets a
+    no-op meter on purpose, so that a provider an LLM tracing SDK registers later can never
+    adopt these metrics.
 
     The global meter provider can only be set once per process (the SDK refuses to override),
     so this is module-scoped. Each test constructs a fresh handler and uses distinct run_ids;
     the reader is cumulative, so assertions read the point matching what the test just recorded.
     """
+    from lfx.observability import bootstrap_application_telemetry
     from opentelemetry import metrics
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
@@ -32,6 +40,8 @@ def reader():
     in_memory = InMemoryMetricReader()
     provider = MeterProvider(metric_readers=[in_memory])
     metrics.set_meter_provider(provider)
+    telemetry = bootstrap_application_telemetry(prometheus_enabled=False)
+    assert telemetry.meter_provider is provider, "the bootstrap should adopt an already-installed provider"
     yield in_memory
     provider.shutdown()
 
@@ -124,7 +134,13 @@ def test_no_leak_and_bounded_cardinality(reader):
     h.on_chat_model_start({}, [[HumanMessage("y")]], run_id=rid2, invocation_params={"model_name": "claude-3-5-sonnet"})
     h.on_llm_error(RuntimeError("boom https://api.openai.com/v1/chat?key=sk-SECRET-LEAK"), run_id=rid2)
 
-    for metric_points in _all_data_points(reader).values():
+    # Only this module's two metrics: the bootstrap also instruments process CPU, memory and GC
+    # on the same provider, and those legitimately carry keys of their own ("type", "generation").
+    points = _all_data_points(reader)
+    llm_metrics = {name: pts for name, pts in points.items() if name in _LLM_METRIC_NAMES}
+    assert set(llm_metrics) == _LLM_METRIC_NAMES, f"expected both LLM metrics, got {sorted(points)}"
+
+    for metric_points in llm_metrics.values():
         for dp in metric_points:
             for key, value in dict(dp.attributes).items():
                 assert key in _ALLOWED_KEYS, f"unexpected attribute key: {key}"
