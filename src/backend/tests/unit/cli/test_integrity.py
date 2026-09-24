@@ -272,7 +272,21 @@ class TestAuthorization:
         check = _check(await check_instance(), "authorization")
 
         assert check.status == "fail"
-        assert "1 role assignments but 0 compiled user role rules" in check.problems[0]
+        assert f"user:{active_user.id} has a role assignment but no compiled role rule" in check.problems[0]
+
+    async def test_an_assignment_compiled_into_several_rules_passes(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        async with session_scope() as session:
+            admin = (await session.exec(select(AuthzRole).where(AuthzRole.name == "admin"))).one()
+            admin_id = admin.id
+        await _add(AuthzRoleAssignment(user_id=active_user.id, role_id=admin_id, domain_type="global"))
+        # A plugin may write one rule per domain, and team memberships are g rules too.
+        await _add(CasbinRule(ptype="g", v0=f"user:{active_user.id}", v1="role:admin", v2="*"))
+        await _add(CasbinRule(ptype="g", v0=f"user:{active_user.id}", v1="role:admin", v2="project:1"))
+        await _add(CasbinRule(ptype="g", v0=f"user:{active_user.id}", v1=f"team:{uuid.uuid4()}"))
+
+        check = _check(await check_instance(), "authorization")
+
+        assert check.status == "ok", check.problems
 
     async def test_no_compiled_policy_is_not_a_failure(self, active_user, storage_dir, kb_root):  # noqa: ARG002
         check = _check(await check_instance(), "authorization")
