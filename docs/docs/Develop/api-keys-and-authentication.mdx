@@ -162,7 +162,7 @@ For role-based access control, see [Authorization](./authorization).
 
 This variable controls whether the visual editor uses automatic login or requires users to sign in.
 
-* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
+* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key or session token for Langflow API requests. Session tokens can be sent in the `access_token_lf` cookie or `Authorization: Bearer` header.
 You must explicitly set [`LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) before startup. Set [`LANGFLOW_SUPERUSER`](#langflow-superuser) only if you want to override the default superuser username (`langflow`).
 
 * If `LANGFLOW_AUTO_LOGIN=True`, the visual editor automatically signs in all users as the configured superuser, and Langflow uses that username with a configured or generated bootstrap password.
@@ -779,7 +779,7 @@ This involves disabling automatic login, setting superuser credentials, and gene
 
 This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.
 
-With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
+With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require a Langflow API key or session token.
 Sign in as a superuser to [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.
 User management is through the [Users API](/api-users), not the visual editor.
 

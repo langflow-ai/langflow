@@ -62,7 +62,7 @@ The Langflow repo includes a ready-to-use Compose file at `docker_example/docker
    cd langflow/docker_example
    ```
 
-3. Set `LANGFLOW_SUPERUSER_PASSWORD` in a `.env` file in the repository root. The Compose file requires this value because official images disable automatic login.
+3. Set `LANGFLOW_SUPERUSER_PASSWORD` in a `.env` file in the `docker_example` directory. The Compose file requires this value because official images disable automatic login.
 
    ```shell
    echo 'LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD' > .env
