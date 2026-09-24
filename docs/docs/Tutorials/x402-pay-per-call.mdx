@@ -1,0 +1,136 @@
+---
+title: Call a paid API with x402 from an agent
+slug: /x402-pay-per-call
+---
+
+Many third-party APIs now sell access **per call** over the `x402` scheme.
+When your agent calls such an API without payment, the server responds with
+`402 Payment Required` and a small JSON body describing what it costs.
+Your agent can read that price, authorize a payment, and retry the same
+request to get the result — no account signup, no API key, no subscription.
+
+This tutorial shows you how to build a Langflow custom component that makes a
+pay-per-call API request and completes the `402` handshake, so your agents can
+buy tool access in flow instead of stopping at every paid endpoint.
+
+## How x402 works
+
+`x402` is a request-for-payment pattern. A server that offers a paid endpoint
+answers an unpaid request like this:
+
+```http
+HTTP/1.1 402 Payment Required
+Content-Type: application/json
+
+{
+  "reason": "Payment required",
+  "accepts": [
+    {
+      "scheme": "https",
+      "network": "optimism",
+      "asset": "0x...",
+      "amount": "1",
+      "decimals": 6,
+      "target": "0x...",
+      "callback": "https://provider.example.com/callback/1"
+    }
+  ]
+}
+```
+
+The `accepts[]` array lists the payment methods the seller accepts. The caller
+picks one, creates the payment to the listed `target`, waits for the seller to
+confirm it, and then retries the original request. The flow is documented by
+sellers and wallets, for example [OpenSea's x402 docs](https://docs.opensea.io/docs/x402)
+and [MetaMask's explainer](https://www.metamask.io/news/what-is-x402).
+
+## Prerequisites
+
+* [Install and start Langflow](/get-started-installation)
+* Create a [Langflow API key](/api-keys-and-authentication) if you want to run the flow from an app
+
+## Build a custom component that handles a `402`
+
+In Langflow, a custom component is a Python class that inherits from the
+[`Component`](/contributing-components) base class. Create a new component that:
+
+1. Makes an HTTP request to the paid endpoint.
+2. Detects a `402 Payment Required` response and reads the `accepts[]` payment
+   requirements from the body.
+3. If a payer is configured, completes the payment and retries the request
+   before returning a result.
+4. Fails cleanly — **no money moves** — if the response is malformed or no payer
+   is configured.
+
+```python
+import httpx
+from lfx.custom.custom_component.component import Component
+from lfx.io import MessageTextInput, Output
+
+from x402_client import complete_payment  # from the reference client below
+
+
+class PaidApiCaller(Component):
+    display_name: str = "Paid API Caller"
+    description: str = "Call a pay-per-call (x402) API and complete the 402 payment handshake."
+    icon: str = "credit-card"
+
+    inputs = [
+        MessageTextInput(name="url", display_name="Endpoint URL"),
+        MessageTextInput(name="payer", display_name="Payer (optional)", info="A configured payer reference (credential or signer id) that can authorize the payment."),
+    ]
+
+    outputs = [
+        Output(display_name="Result", name="result", method="call_api"),
+    ]
+
+    def call_api(self):
+        # First attempt: unpaid request.
+        resp = httpx.get(self.url)
+        if resp.status_code != 402:
+            return resp.text
+
+        # 402: read the payment requirements. x402 carries them in the body's
+        # `accepts` array for v1; a v2 server may use a PAYMENT-REQUIRED header.
+        body = resp.json()
+        accepts = body.get("accepts", [])
+        if not accepts or not self.payer:
+            # No valid payment envelope and no payer: fail cleanly.
+            return f"Payment required. Accepts: {accepts}"
+
+        # Complete the payment for the first accepted method, then retry. The
+        # reference client builds the versioned request and sets the correct
+        # header (v1 X-PAYMENT / v2 PAYMENT-SIGNATURE) on the caller's behalf.
+        retried = complete_payment(
+            url=self.url,
+            requirement=accepts[0],
+            payer_ref=self.payer,
+        )
+        return retried
+```
+
+This component is intentionally small. The `complete_payment(...)` call wraps the
+payment handshake — choosing one of the `accepts[]` methods, creating the
+payment, and waiting for confirmation before the retry.
+
+## Port the handshake from a reference client
+
+The payment handshake itself is a solved problem with a MIT-licensed reference
+client you can reuse instead of writing it from scratch.
+[`feeless402`](https://pypi.org/project/feeless402/) is a pip-installable x402
+client with a self-custody Nano wallet; its single-file handshake logic ports
+directly into the `complete_payment()` function above. The canonical
+[x402 reference client](https://github.com/coinbase/x402) documents the same
+flow against the spec.
+
+x402 is rail-agnostic — the `accepts[]` envelope names a scheme, network and
+asset. A feeless, instant rail like Nano (XNO) keeps sub-cent per-call payments
+practical for both the tool seller and the agent buyer, with no gas and no
+merchant account. But the pattern works the same for any rail the seller lists.
+
+## Next steps
+
+* Read [configure tools for agents](/agents-tools) to attach the component to an
+  agent as a tool, so the agent can call it during a flow.
+* See how to [contribute a custom component](/contributing-components) to
+  Langflow itself if you want to share one with the community.
