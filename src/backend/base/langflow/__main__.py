@@ -1268,7 +1268,9 @@ def relocate_files(
 def relocate_kb(
     to: str = typer.Option(..., "--to", help="Target backend type, for example 'postgres' or 'opensearch'."),
     target_config: str = typer.Option(
-        "{}", help="Target backend_config as JSON. Postgres needs none; it reads PGVECTOR_CONNECTION_STRING."
+        "{}",
+        help="Target backend_config as JSON. Postgres needs none; it reads PGVECTOR_CONNECTION_STRING. "
+        "Per-collection names are not supported.",
     ),
     username: str = typer.Option("", help="Only relocate this user's knowledge bases."),
     dry_run: bool = typer.Option(default=False, help="Report what would be moved without writing."),  # noqa: FBT001
@@ -1296,6 +1298,13 @@ def relocate_kb(
     if not isinstance(config, dict):
         typer.echo("--target-config must be a JSON object", err=True)
         raise typer.Exit(2)
+    from langflow.api.utils.knowledge_base_relocation import validate_relocation_target_config
+
+    try:
+        validate_relocation_target_config(to, config)
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
     configure(log_level=log_level)
     failed = asyncio.run(
         _relocate_kb(
