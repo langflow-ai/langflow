@@ -218,6 +218,7 @@ def apply_tweaks(
         template_data,
         node.get("data", {}).get("type"),
         node_tweaks,
+        node_data=node.get("data", {}),
         policy=policy,
         flow_declares_allowlist=flow_declares_allowlist,
         exempt_keys=exempt_keys,
@@ -267,6 +268,7 @@ def _refused_tweak_reasons(
     component_type: str | None,
     node_tweaks: dict[str, Any],
     *,
+    node_data: dict[str, Any],
     policy: str,
     flow_declares_allowlist: bool,
     exempt_keys: frozenset[str] = frozenset(),
@@ -279,15 +281,23 @@ def _refused_tweak_reasons(
     survives into later runs that send no tweaks at all.
     """
     refused: dict[str, str] = {}
-    for tweak_name in node_tweaks:
+    for tweak_name, tweak_value in node_tweaks.items():
         field = template_data.get(tweak_name)
         if not isinstance(field, dict):
             continue
+        field_type = field.get("type", "")
+        # For ordinary fields, a dict tweak is copied into the template field.
+        # A caller must not replace proxy metadata after the target check and
+        # redirect a benign group field to a protected child.
+        changes_proxy = (
+            isinstance(tweak_value, dict) and field_type not in {"NestedDict", "mcp", "dict"} and "proxy" in tweak_value
+        )
         reason = _tweak_refusal_reason(
             component_type,
             tweak_name,
-            field.get("type", ""),
+            field_type,
             policy,
+            protected_by_proxy=changes_proxy or _is_protected_proxy_tweak(node_data, field),
             flow_declares_allowlist=flow_declares_allowlist,
             field_is_api_editable=field.get("api_editable") is True,
             policy_exempt=tweak_name in exempt_keys,
@@ -299,6 +309,47 @@ def _refused_tweak_reasons(
                 logger.warning(f"Policy {policy!r}: refusing to override field {tweak_name!r} via tweaks.")
             refused[tweak_name] = reason
     return refused
+
+
+def _is_protected_proxy_tweak(node_data: dict[str, Any], field: dict[str, Any]) -> bool:
+    """Follow a grouped field proxy to the child whose value will run."""
+    from lfx.utils.flow_validation import is_protected_tweak_field
+
+    seen: set[tuple[str, str]] = set()
+    while proxy := field.get("proxy"):
+        if not isinstance(proxy, dict):
+            return True
+        target_id, target_name = proxy.get("id"), proxy.get("field")
+        if not isinstance(target_id, str) or not isinstance(target_name, str):
+            return True
+        if (target_id, target_name) in seen:
+            return True
+        seen.add((target_id, target_name))
+
+        node = node_data.get("node")
+        if not isinstance(node, dict):
+            return True
+        flow = node.get("flow")
+        flow_data = flow.get("data") if isinstance(flow, dict) else None
+        nodes = flow_data.get("nodes") if isinstance(flow_data, dict) else None
+        if not isinstance(nodes, list):
+            return True
+        child = next((node for node in nodes if isinstance(node, dict) and node.get("id") == target_id), None)
+        if child is None:
+            return True
+        node_data = child.get("data")
+        if not isinstance(node_data, dict):
+            return True
+        child_node = node_data.get("node")
+        if not isinstance(child_node, dict):
+            return True
+        template = child_node.get("template")
+        field = template.get(target_name) if isinstance(template, dict) else None
+        if not isinstance(field, dict):
+            return True
+        if is_protected_tweak_field(node_data.get("type"), target_name, field.get("type", "")):
+            return True
+    return False
 
 
 def _resolve_tweak_policy() -> str:
@@ -349,6 +400,7 @@ def _tweak_refusal_reason(
     field_type: str,
     policy: str,
     *,
+    protected_by_proxy: bool,
     flow_declares_allowlist: bool,
     field_is_api_editable: bool,
     policy_exempt: bool,
@@ -374,7 +426,7 @@ def _tweak_refusal_reason(
     )
     if refused_by_policy and policy == TWEAK_POLICY_OFF:
         return _OFF_TWEAK_REASON
-    if is_protected_tweak_field(component_type, field_name, field_type):
+    if is_protected_tweak_field(component_type, field_name, field_type) or protected_by_proxy:
         return _PROTECTED_TWEAK_REASON
     if refused_by_policy:
         return _DECLARED_TWEAK_REASON
@@ -421,6 +473,7 @@ def apply_tweaks_on_vertex(
         template_data,
         vertex.data.get("type"),
         node_tweaks,
+        node_data=vertex.data,
         policy=policy,
         flow_declares_allowlist=flow_declares_allowlist,
     )
@@ -526,6 +579,7 @@ def process_tweaks(
                 template_data,
                 node.get("data", {}).get("type"),
                 node_tweaks,
+                node_data=node.get("data", {}),
                 policy=policy,
                 flow_declares_allowlist=flow_declares_allowlist,
                 exempt_keys=exempt_keys,
@@ -593,6 +647,7 @@ def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]], *, 
                 template_data,
                 vertex.data.get("type"),
                 node_tweaks,
+                node_data=vertex.data,
                 policy=policy,
                 flow_declares_allowlist=flow_declares_allowlist,
             ).items()

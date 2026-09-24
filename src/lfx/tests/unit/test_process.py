@@ -121,6 +121,202 @@ def test_process_tweaks_refuses_other_bing_key_forms(tweaks: dict):
     )
 
 
+@pytest.mark.parametrize(
+    ("child_type", "field_name"),
+    [("BingSearchAPIComponent", "bing_search_url"), ("SQLComponent", "database_url")],
+)
+def test_process_tweaks_refuses_group_proxy_to_protected_field(child_type: str, field_name: str):
+    """A group proxy cannot turn an ordinary-looking outer field into a sink override."""
+    child_id = f"{child_type}-abc12"
+    original = "https://stored.example/sink"
+    proxy_name = f"{field_name}_{child_id}"
+    child = {
+        "id": child_id,
+        "data": {
+            "type": child_type,
+            "node": {"template": {field_name: {"value": original, "type": "str"}}},
+        },
+    }
+    outer = _template_node(
+        {
+            proxy_name: {
+                "value": original,
+                "type": "str",
+                "proxy": {"id": child_id, "field": field_name},
+            },
+            "label": {"value": "before", "type": "str"},
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [child]}}
+    graph_data = {"nodes": [outer]}
+
+    with pytest.raises(TweakRefusedError, match=proxy_name):
+        process_tweaks(graph_data, {"n": {proxy_name: "https://attacker.example/sink", "label": "after"}})
+
+    assert outer["data"]["node"]["template"][proxy_name]["value"] == original
+    assert outer["data"]["node"]["template"]["label"]["value"] == "before"
+    assert child["data"]["node"]["template"][field_name]["value"] == original
+
+
+def test_process_tweaks_accepts_group_proxy_to_ordinary_field():
+    child = _template_node({"query": {"value": "before", "type": "str"}}, node_type="SearchComponent")
+    child["id"] = "SearchComponent-abc12"
+    outer = _template_node(
+        {
+            "query_SearchComponent-abc12": {
+                "value": "before",
+                "type": "str",
+                "proxy": {"id": child["id"], "field": "query"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [child]}}
+
+    process_tweaks({"nodes": [outer]}, {"n": {"query_SearchComponent-abc12": "after"}})
+
+    assert outer["data"]["node"]["template"]["query_SearchComponent-abc12"]["value"] == "after"
+
+
+def test_graph_tweaks_refuse_group_proxy_to_protected_field():
+    child_id = "BingSearchAPI-abc12"
+    proxy_name = f"bing_search_url_{child_id}"
+    original = "https://api.bing.microsoft.com/v7.0/search"
+    vertex = MagicMock(spec=Vertex)
+    vertex.id = "group-1"
+    vertex.data = {
+        "type": "GroupNode",
+        "node": {
+            "template": {
+                proxy_name: {
+                    "value": original,
+                    "type": "str",
+                    "proxy": {"id": child_id, "field": "bing_search_url"},
+                }
+            },
+            "flow": {
+                "data": {
+                    "nodes": [
+                        {
+                            "id": child_id,
+                            "data": {
+                                "type": "BingSearchAPI",
+                                "node": {"template": {"bing_search_url": {"value": original, "type": "str"}}},
+                            },
+                        }
+                    ]
+                }
+            },
+        },
+    }
+    graph = MagicMock()
+    graph.vertices = [vertex]
+
+    with pytest.raises(TweakRefusedError, match=proxy_name):
+        process_tweaks_on_graph(graph, {vertex.id: {proxy_name: "https://attacker.example/search"}})
+
+    assert vertex.data["node"]["template"][proxy_name]["value"] == original
+    vertex.update_raw_params.assert_not_called()
+
+
+def test_process_tweaks_refuses_nested_group_proxy_to_protected_field():
+    bing = _template_node({"bing_search_url": {"value": "stored", "type": "str"}}, node_type="BingSearchAPI")
+    bing["id"] = "BingSearchAPI-1"
+    inner = _template_node(
+        {
+            "search_url": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": bing["id"], "field": "bing_search_url"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    inner["id"] = "inner-group"
+    inner["data"]["node"]["flow"] = {"data": {"nodes": [bing]}}
+    outer = _template_node(
+        {
+            "search_url": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": inner["id"], "field": "search_url"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [inner]}}
+
+    with pytest.raises(TweakRefusedError, match="search_url"):
+        process_tweaks({"nodes": [outer]}, {"n": {"search_url": "https://attacker.example"}})
+
+    assert outer["data"]["node"]["template"]["search_url"]["value"] == "stored"
+
+
+@pytest.mark.parametrize("flow_data", [None, []])
+def test_process_tweaks_refuses_malformed_group_proxy_without_server_error(flow_data):
+    outer = _template_node(
+        {
+            "search_url": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": "missing-child", "field": "bing_search_url"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": flow_data}
+
+    with pytest.raises(TweakRefusedError, match="search_url"):
+        process_tweaks({"nodes": [outer]}, {"n": {"search_url": "https://attacker.example"}})
+
+
+def test_process_tweaks_cannot_retarget_ordinary_group_proxy_to_bing():
+    ordinary = _template_node({"query": {"value": "stored", "type": "str"}}, node_type="SearchComponent")
+    ordinary["id"] = "SearchComponent-1"
+    bing = _template_node({"bing_search_url": {"value": "stored", "type": "str"}}, node_type="BingSearchAPI")
+    bing["id"] = "BingSearchAPI-1"
+    outer = _template_node(
+        {
+            "query": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": ordinary["id"], "field": "query"},
+            },
+            "label": {"value": "before", "type": "str"},
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [ordinary, bing]}}
+
+    with pytest.raises(TweakRefusedError, match="query"):
+        process_tweaks(
+            {"nodes": [outer]},
+            {
+                "n": {
+                    "query": {
+                        "value": "https://attacker.example",
+                        "proxy": {"id": bing["id"], "field": "bing_search_url"},
+                    },
+                    "label": "after",
+                }
+            },
+        )
+
+    template = outer["data"]["node"]["template"]
+    assert template["query"]["value"] == "stored"
+    assert template["query"]["proxy"] == {"id": ordinary["id"], "field": "query"}
+    assert template["label"]["value"] == "before"
+
+
+def test_process_tweaks_allows_proxy_key_in_dict_value():
+    node = _template_node({"config": {"value": {}, "type": "dict"}})
+
+    process_tweaks({"nodes": [node]}, {"n": {"config": {"proxy": "ordinary data"}}})
+
+    assert node["data"]["node"]["template"]["config"]["value"] == {"proxy": "ordinary data"}
+
+
 @pytest.mark.parametrize("node_type", _BING_NODE_TYPES)
 def test_graph_tweaks_cannot_redirect_bing_credential(node_type: str):
     """Streaming runs enforce the same destination boundary on a built graph."""
