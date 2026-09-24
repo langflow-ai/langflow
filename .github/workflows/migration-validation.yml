@@ -17,11 +17,6 @@ on:
       - 'src/backend/base/langflow/services/job_queue/**'
       - 'src/backend/tests/unit/background_execution/**'
       - 'src/backend/tests/unit/services/database/models/flow_version/**'
-      - 'src/backend/base/langflow/services/storage/**'
-      - 'src/backend/base/langflow/api/utils/file_relocation.py'
-      - 'src/lfx/src/lfx/services/storage/**'
-      - 'src/backend/tests/unit/api/utils/test_file_relocation.py'
-      - 'src/backend/tests/unit/services/storage/**'
 
 jobs:
   model-migration-consistency:
@@ -298,49 +293,3 @@ jobs:
             if (!validationPassed) {
               core.setFailed('Migration validation failed');
             }
-
-  object-storage-relocation:
-    name: File Relocation Against Real S3 (MinIO)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      # A service container cannot pass MinIO its "server" command, so start it here.
-      - name: Start MinIO
-        env:
-          MINIO_ROOT_USER: langflow
-          MINIO_ROOT_PASSWORD: langflow-minio  # pragma: allowlist secret
-        run: |
-          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
-            quay.io/minio/minio:latest server /data
-          for _ in $(seq 30); do
-            curl -sf http://localhost:9000/minio/health/live && exit 0
-            sleep 2
-          done
-          docker logs minio
-          exit 1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.0
-        with:
-          version: latest-known
-
-      - name: Setup Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          uv sync
-
-      - name: Run file relocation tests against MinIO
-        env:
-          AWS_ACCESS_KEY_ID: langflow
-          AWS_SECRET_ACCESS_KEY: langflow-minio  # pragma: allowlist secret
-          AWS_ENDPOINT_URL: http://localhost:9000
-          AWS_DEFAULT_REGION: us-east-1
-        run: |
-          uv run pytest src/backend/tests/unit/api/utils/test_file_relocation.py -v

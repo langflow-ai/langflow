@@ -197,6 +197,7 @@ jobs:
       database: ${{ steps.filter.outputs.database }}
       docker: ${{ steps.filter.outputs.docker }}
       design-md: ${{ steps.filter.outputs.design-md }}
+      storage: ${{ steps.filter.outputs.storage }}
       docs-only: ${{
         steps.filter.outputs.docs == 'true' &&
         steps.filter.outputs.python != 'true' &&
@@ -371,6 +372,62 @@ jobs:
     if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/docker_test.yml
 
+  test-object-storage:
+    needs: [path-filter, set-ci-condition]
+    name: Object Storage Tests (MinIO)
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.storage == 'true')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      # A service container cannot pass MinIO its "server" command, so start it here.
+      - name: Start MinIO
+        env:
+          MINIO_ROOT_USER: langflow
+          MINIO_ROOT_PASSWORD: langflow-minio  # pragma: allowlist secret
+        run: |
+          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
+            quay.io/minio/minio:latest server /data
+          for _ in $(seq 30); do
+            curl -sf http://localhost:9000/minio/health/live && exit 0
+            sleep 2
+          done
+          docker logs minio
+          exit 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync
+
+      # These tests are marked api_key_required, so the unit lanes deselect them.
+      - name: Run object storage tests against MinIO
+        env:
+          AWS_ACCESS_KEY_ID: langflow
+          AWS_SECRET_ACCESS_KEY: langflow-minio  # pragma: allowlist secret
+          AWS_ENDPOINT_URL: http://localhost:9000
+          AWS_DEFAULT_REGION: us-east-1
+        run: uv run pytest src/backend/tests/unit/api/utils/test_file_relocation.py -v
+
   lint-design-md:
     needs: path-filter
     name: Lint DESIGN.md
@@ -465,6 +522,7 @@ jobs:
         test-docs-build,
         test-templates,
         test-docker,
+        test-object-storage,
         lint-design-md,
         set-ci-condition,
         path-filter,
@@ -528,6 +586,8 @@ jobs:
                   "  - Template Tests: Check starter project templates"
                 elif $job == "test-docker" then
                   "  - Docker Tests: Check Docker image builds and version verification"
+                elif $job == "test-object-storage" then
+                  "  - Object Storage Tests: Check S3 storage and file relocation against MinIO"
                 elif $job == "lint-design-md" then
                   "  - DESIGN.md Lint: Check token references, WCAG contrast, and spec compliance"
                 elif $job == "path-filter" then
