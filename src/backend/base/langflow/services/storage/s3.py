@@ -17,7 +17,7 @@ from langflow.logging.logger import logger
 from .service import StorageReadiness, StorageService
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator, AsyncIterator
 
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
@@ -62,7 +62,9 @@ class S3StorageService(StorageService):
         # One client per event loop. A client is bound to the loop that made it, and
         # the service is reached from more than one: components running a loop of
         # their own, CLI paths behind asyncio.run.
-        self._clients: dict[asyncio.AbstractEventLoop, tuple[contextlib.AsyncExitStack, Any]] = {}
+        self._clients: dict[asyncio.AbstractEventLoop, tuple[AsyncGenerator[Any, None], Any]] = {}
+        # Bumped by teardown, so a client still being built when it runs is not cached.
+        self._generation = 0
 
         self.set_ready()
         logger.info(
@@ -169,28 +171,46 @@ class S3StorageService(StorageService):
         """
         return logical_path
 
+    async def _hold_client(self) -> AsyncGenerator[Any, None]:
+        """Open a client and keep it open until this generator is closed.
+
+        Holding the client in an async generator ties it to its loop: a loop that shuts
+        down cleanly (``asyncio.run`` does) closes the async generators still open on
+        it, so a client built on a loop of its own is closed there, on that loop.
+        """
+        async with self.session.create_client("s3") as client:
+            yield client
+
     @contextlib.asynccontextmanager
     async def _get_client(self) -> AsyncIterator[Any]:
         """Yield this event loop's S3 client, building it on first use.
 
         Building a client per call costs a client and a TLS handshake for every
-        operation. The client stays open until ``teardown``, so leaving the block
-        does not close it.
+        operation. The client stays open until ``teardown`` or until its loop shuts
+        down, so leaving the block does not close it.
         """
         loop = asyncio.get_running_loop()
-        # A loop that has closed cannot use or close its client, so drop it.
-        # ponytail: its connections are only released when garbage collected.
+        # Its loop already closed what it could; only the reference is left to drop.
+        # ponytail: a loop closed without shutdown_asyncgens leaves its client for the GC.
         for closed in [other for other in self._clients if other.is_closed()]:
             del self._clients[closed]
-        if loop not in self._clients:
-            stack = contextlib.AsyncExitStack()
-            client = await stack.enter_async_context(self.session.create_client("s3"))
-            if loop in self._clients:
-                # Another coroutine on this loop built one while this one awaited.
-                await stack.aclose()
-            else:
-                self._clients[loop] = (stack, client)
-        yield self._clients[loop][1]
+        if (held := self._clients.get(loop)) is not None:
+            yield held[1]
+            return
+
+        generation = self._generation
+        holder = self._hold_client()
+        client = await anext(holder)
+        if generation != self._generation or loop in self._clients:
+            # A teardown ran while this client was built, or another coroutine on this
+            # loop built one first. Use it for this call only.
+            try:
+                yield client
+            finally:
+                await holder.aclose()
+            return
+        self._clients[loop] = (holder, client)
+        yield client
 
     async def check_readiness(self) -> StorageReadiness:
         """Verify S3 credentials resolve and the configured bucket is reachable.
@@ -478,11 +498,16 @@ class S3StorageService(StorageService):
     async def teardown(self) -> None:
         """Close the clients this service built.
 
-        Only the current loop's client can be closed from here. A client on another
-        loop is dropped, since closing it needs its own loop.
+        Assumes no operation is in flight: a client still in use is closed under it.
+        A client is closed on its own loop: this loop's here, a running loop's by a
+        close scheduled on it. A loop that has stopped closes its own when it shuts down.
         """
+        self._generation += 1
         loop = asyncio.get_running_loop()
         clients, self._clients = self._clients, {}
-        if (current := clients.get(loop)) is not None:
-            await current[0].aclose()
+        for owner, (holder, _) in clients.items():
+            if owner is loop:
+                await holder.aclose()
+            elif owner.is_running():
+                asyncio.run_coroutine_threadsafe(holder.aclose(), owner)
         logger.info("S3 storage service teardown complete")

@@ -42,25 +42,46 @@ async def service(aws_credentials):  # noqa: ARG001
         object_storage_tags=None,
     )
     storage = S3StorageService(SimpleNamespace(), SimpleNamespace(settings=settings))
+    region = os.environ["AWS_DEFAULT_REGION"]
+    # Outside us-east-1, AWS refuses a bucket created without its region.
+    location = {} if region == "us-east-1" else {"CreateBucketConfiguration": {"LocationConstraint": region}}
     async with storage.session.create_client("s3") as s3:
         with contextlib.suppress(s3.exceptions.BucketAlreadyOwnedByYou):
-            await s3.create_bucket(Bucket=storage.bucket_name)
+            await s3.create_bucket(Bucket=storage.bucket_name, **location)
     yield storage
     await storage.teardown()
 
 
+class _Clients(list):
+    """The threads that built a client, and the threads that closed one."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.closed: list[int] = []
+
+
 @pytest.fixture
 def client_count(service):
-    """Count the clients the service builds, while still building real ones."""
-    created = []
+    """Count the clients the service builds and closes, while still building real ones."""
+    clients = _Clients()
     real_create_client = service.session.create_client
 
-    def counting_create_client(*args, **kwargs):
-        created.append(threading.get_ident())
-        return real_create_client(*args, **kwargs)
+    class CountingClient:
+        # A plain class, not an async generator: a loop shutting down closes open async
+        # generators itself, which would record a close the service never made.
+        def __init__(self, *args, **kwargs):
+            self.inner = real_create_client(*args, **kwargs)
 
-    service.session.create_client = counting_create_client
-    return created
+        async def __aenter__(self):
+            clients.append(threading.get_ident())
+            return await self.inner.__aenter__()
+
+        async def __aexit__(self, *exc):
+            clients.closed.append(threading.get_ident())
+            return await self.inner.__aexit__(*exc)
+
+    service.session.create_client = CountingClient
+    return clients
 
 
 async def _round_trip(storage: S3StorageService, files: int) -> None:
@@ -98,6 +119,8 @@ class TestClientReuse:
 
         assert errors == []
         assert len(client_count) == 2
+        # The other loop's client was closed on that loop, before it shut down.
+        assert client_count.closed == [client_count[1]]
         # And the original loop keeps using the one it already had.
         await _round_trip(service, files=1)
         assert len(client_count) == 2
@@ -109,3 +132,18 @@ class TestClientReuse:
         await _round_trip(service, files=1)
 
         assert len(client_count) == 2
+
+    async def test_a_teardown_while_a_client_is_built_does_not_leave_it_cached(self, service, client_count):
+        real_create_client = service.session.create_client
+
+        @contextlib.asynccontextmanager
+        async def slow_create_client(*args, **kwargs):
+            # Teardown lands while the client is still being built.
+            await service.teardown()
+            async with real_create_client(*args, **kwargs) as client:
+                yield client
+
+        service.session.create_client = slow_create_client
+        await _round_trip(service, files=1)
+
+        assert len(client_count) == len(client_count.closed), "a client built across a teardown was left open"
