@@ -58,6 +58,9 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
                 # Replace multiple newlines with a single newline
                 data = data.replace(r"\n+", "\n", regex=True)
 
+            # tabulate pads each in-cell line to full table width; one line per row stays proportional.
+            data = data.replace(r"^(\r?\n)+|(\r?\n)+$", "", regex=True).replace(r"\r?\n", "<br/>", regex=True)
+
             # Replace pipe characters to avoid markdown table issues
             processed_data = data.replace(r"\|", r"\\|", regex=True)
 
