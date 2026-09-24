@@ -519,7 +519,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
-    validation_model = model_name or first_model
+    # WatsonX's static catalog is not region-specific. When no model was
+    # requested, select one from the configured endpoint below instead.
+    validation_model = model_name if provider == "IBM WatsonX" else model_name or first_model
     validation_metadata = next(
         (model.get("metadata", {}) for model in provider_models if model.get("model_name") == validation_model),
         {},
