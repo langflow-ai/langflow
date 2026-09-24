@@ -23,13 +23,14 @@ Run from the repository root so the venv resolves. Seed both engines: SQLite and
 Postgres fail differently, and a converter has to survive both.
 
 ```bash
-KEY=$(python -c "import base64; print(base64.urlsafe_b64encode(b'x'*32).decode())")
+mkdir -p /tmp/fx
+KEY=$(uv run python -c "import base64; print(base64.urlsafe_b64encode(b'x'*32).decode())")
 
 LANGFLOW_DATABASE_URL=sqlite:////tmp/fx/src.db \
 LANGFLOW_CONFIG_DIR=/tmp/fx/cfg \
 LANGFLOW_KNOWLEDGE_BASES_DIR=/tmp/fx/kb \
 LANGFLOW_SECRET_KEY=$KEY \
-uv run --no-project python scripts/migration_rehearsal/seed_instance.py \
+uv run python scripts/migration_rehearsal/seed_instance.py \
     --chunks 300 --manifest /tmp/fx/manifest.json
 ```
 
@@ -52,7 +53,7 @@ naming what it created, so a test can assert what survived a migration.
 | Custom role parented on a system role, and a second parented on the first | Realigning system role ids fails once any row references one, since `parent_role_id` has no `ON UPDATE CASCADE`. The two-level chain means remapping has a hierarchy to carry |
 | Role assignments on a system and a custom role | System role ids are generated per install, so a carried assignment points at a role the target does not have |
 | Shares targeting a user and a team | `resource_id` and `target_id` are polymorphic with no foreign key, so stale values insert cleanly and grant nothing |
-| Six encrypted columns across five tables | `variable.value`, `apikey.api_key`, `user.store_api_key`, `folder.auth_settings` and `mcp_server.config` are Fernet under `LANGFLOW_SECRET_KEY`; `sso_config.client_secret_encrypted` is an AES-256-GCM envelope keyed by HKDF off the same secret. A wrong key returns `""` rather than raising | <!-- pragma: allowlist secret -->
+| Six encrypted columns across six tables | `variable.value`, `apikey.api_key`, `user.store_api_key`, `folder.auth_settings` and `mcp_server.config` are Fernet under `LANGFLOW_SECRET_KEY`; `sso_config.client_secret_encrypted` is an AES-256-GCM envelope keyed by HKDF off the same secret. A wrong key returns `""` rather than raising | <!-- pragma: allowlist secret -->
 | Knowledge base with empty `model_selection` | Embedding resolution silently falls back to a default, so the row reports a model it may never have used. Its store holds as many vectors as the row records, so the empty selection is the only thing wrong with it |
 | Knowledge base naming a stubbed backend | `BackendType` still carries `astra` and `mongodb`, so the row parses and then fails at backend construction |
 | Knowledge base with 300 real vectors in a local Chroma store | Enough to force batched reads, so count reconciliation and partial-read behaviour get exercised. The store's `count()` matches the row's cached `chunks`, so a reconciliation run starts clean |
