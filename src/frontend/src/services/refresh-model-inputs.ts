@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { isEqual } from "lodash";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { appendProviderScope } from "@/controllers/API/helpers/provider-scope";
@@ -194,9 +195,7 @@ async function refreshSingleNode(
       );
       // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (e: any) {
-      // Suppress 403 specifically from custom component blocking — fallback
-      // for race conditions where guards above couldn't detect the outdated
-      // state.
+      // Fallback 403 suppression for races the outdated-state guards above miss.
       if (!allowCustomComponents && isCustomComponentBlockError(e)) {
         console.warn(
           `Suppressed 403 for outdated component (node ${node.id}):`,
@@ -217,14 +216,23 @@ async function refreshSingleNode(
       providerConfiguration,
     );
 
-    // This response was authorized for the flow/project snapshot captured at
-    // refresh start. Never let it update a same-id node after navigation (or a
-    // project move) changes the active scope while the request is in flight.
+    // Authorized for the flow/project scope captured at refresh start; a
+    // navigation or project move while in flight must not reach a same-id node.
     const activeFlow = useFlowsManagerStore.getState();
     if (
       activeFlow.currentFlowId !== flowId ||
       activeFlow.currentFlow?.folder_id !== folderId
     ) {
+      return;
+    }
+
+    // A pick made in flight is newer; applying this response would swap it for options[0].
+    const liveNode = useFlowStore
+      .getState()
+      .nodes.find((candidate) => candidate.id === node.id);
+    const liveModelValue = (liveNode?.data?.node as APIClassType | undefined)
+      ?.template?.[modelFieldKey]?.value;
+    if (!isEqual(liveModelValue, currentModelValue)) {
       return;
     }
 
