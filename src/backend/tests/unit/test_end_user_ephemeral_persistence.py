@@ -163,13 +163,13 @@ async def test_update_stored_message_is_noop_on_ephemeral_run(client):  # noqa: 
 async def test_send_message_skip_db_update_allows_ephemeral_unstored(client, monkeypatch):  # noqa: ARG001
     """Agent token streaming uses send_message(skip_db_update=True) per chunk.
 
-    Ephemeral messages never have an id, so the "must already have an ID" guard
-    must not fire when persistence is off — otherwise any anonymous run with an
-    Agent component crashes mid-stream.
+    Ephemeral messages need a transient ID to correlate streamed chunks, but
+    must not write a database row when persistence is off.
     """
     component = ChatOutput(_id="chat_output")
     monkeypatch.setattr(component, "_should_skip_message", lambda _msg: False)
-    message = _msg(f"ephemeral-skipdb-{uuid4()}")
+    session_id = f"ephemeral-skipdb-{uuid4()}"
+    message = _msg(session_id)
 
     token = set_messages_persist(persist=False)
     try:
@@ -178,7 +178,11 @@ async def test_send_message_skip_db_update_allows_ephemeral_unstored(client, mon
         reset_messages_persist(token)
 
     assert result.text == "remember me"
-    assert not result.has_id()
+    assert result.has_id()
+    assert result.id == message.id
+    async with session_scope() as session:
+        rows = await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))
+        assert rows.all() == []
 
 
 # --- background / resume round-trip -------------------------------------------
