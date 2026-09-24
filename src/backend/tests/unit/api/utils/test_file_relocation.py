@@ -60,7 +60,7 @@ def storage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "storage"
     root.mkdir()
     monkeypatch.setattr(get_settings_service().settings, "config_dir", str(root))
-    get_storage_service().data_dir = anyio.Path(root)
+    monkeypatch.setattr(get_storage_service(), "data_dir", anyio.Path(root))
     return root
 
 
