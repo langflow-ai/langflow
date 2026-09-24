@@ -868,6 +868,7 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
             "import os.path\ngetattr(os.path, 'os').system('id')",
             "import os.path\nos.path.os.system('id')",
             "import os.path\nos.path.os.getenv('SECRET')",
+            "from os import *\npath.os.system('id')",
         ],
     )
     def test_should_detect_os_module_escape_through_os_path(self, code):
@@ -2328,6 +2329,18 @@ class TestScanCodeSecurityDottedSubmoduleAccess:
         assert result.is_safe is False
         assert any("urllib.request" in v for v in result.violations)
 
+    @pytest.mark.parametrize(
+        ("submodule", "access"),
+        [
+            ("request", "request.urlopen('file:///etc/passwd')"),
+            ("error", "error.HTTPError('url', 400, 'bad request', {}, None)"),
+        ],
+    )
+    def test_should_detect_urllib_star_submodule(self, submodule, access):
+        result = scan_code_security(f"from urllib import *\n{access}")
+        assert result.is_safe is False
+        assert any(f"urllib.{submodule}" in violation for violation in result.violations)
+
     def test_should_detect_bare_http_then_client(self):
         code = "import http\nc = http.client.HTTPConnection('attacker', 80)"
         result = scan_code_security(code)
@@ -3353,6 +3366,7 @@ class TestScanCodeSecurityUnsafeDeserialization:
             ("import pandas as pd\nvars(pd.compat).get('pickle_compat').pkl.loads(payload)", "pandas"),
             ("from pandas import *\nread_pickle(payload)", "pandas"),
             ("from pandas import *\ndata = io.pickle.read_pickle(payload)", "pandas"),
+            ("from pandas.io import *\napi.read_pickle(payload)", "pandas"),
             ("from pandas.core import *\ndata = generic.pickle.loads(payload)", "pandas"),
             ("import joblib\njoblib.load(payload)", "joblib"),
             ("from dill import loads\nloads(payload)", "dill"),
@@ -3374,6 +3388,10 @@ class TestScanCodeSecurityUnsafeDeserialization:
                 "from concurrent.futures import process\nprocess.mp.reduction.ForkingPickler.loads(payload)",
                 "concurrent.futures.process",
             ),
+            (
+                "from concurrent import *\nfutures.process.mp.reduction.ForkingPickler.loads(payload)",
+                "concurrent.futures.process",
+            ),
             ("import numpy.lib.format as fmt\nfmt.pickle.loads(payload)", "numpy"),
             ("import numpy._core._methods as methods\nmethods.pickle.loads(payload)", "numpy"),
             ("from numpy._core._methods import pickle as p\np.loads(payload)", "numpy"),
@@ -3381,6 +3399,8 @@ class TestScanCodeSecurityUnsafeDeserialization:
             ("import numpy.lib._npyio_impl as npio\nnpio.pickle.loads(payload)", "numpy"),
             ("import numpy as np\nnp.lib._format_impl.pickle.loads(payload)", "numpy"),
             ("from numpy import *\ndata = lib._format_impl.pickle.loads(payload)", "numpy"),
+            ("from numpy.lib import *\nformat.read_array(payload, allow_pickle=True)", "numpy"),
+            ("from numpy.lib import *\nnpyio.NpzFile(payload, allow_pickle=True)", "numpy"),
             ("from numpy.lib._format_impl import pickle as p\np.loads(payload)", "numpy"),
             ("from numpy.lib._npyio_impl import pickle", "numpy"),
             ("from numpy.lib._format_impl import *\npickle.loads(payload)", "numpy"),
@@ -3400,9 +3420,40 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "import pandas as pd\npd.read_csv(path)",
             "from pandas import DataFrame\nframe = DataFrame(data)",
             "import pandas.compat as compat\nvalue = compat.is_numpy_dev",
+            "from pandas.io import *\nframe = api.read_csv(path)",
         ],
     )
     def test_preserves_non_pickle_pandas_operations(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        ("private_name", "reader_method"),
+        [("_npyio_impl", "load"), ("_format_impl", "read_array")],
+    )
+    def test_numpy_lib_star_does_not_replace_private_local(self, private_name, reader_method):
+        code = (
+            f"class SafeReader:\n    def {reader_method}(self, payload, allow_pickle):\n"
+            f"        return payload\n{private_name} = SafeReader()\n"
+            f"from numpy.lib import *\n{private_name}.{reader_method}(payload, allow_pickle=True)"
+        )
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "class SafeCompat:\n    pickle_compat = 'plain text'\n"
+            "compat = SafeCompat()\nfrom pandas import *\nvalue = compat.pickle_compat",
+            "class SafeGeneric:\n    pickle = 'plain text'\n"
+            "class SafeCore:\n    generic = SafeGeneric()\n"
+            "core = SafeCore()\nfrom pandas import *\nvalue = core.generic.pickle",
+            "class SafeOS:\n    def system(self, command):\n        return command\n"
+            "class SafeClient:\n    os = SafeOS()\n"
+            "client = SafeClient()\nfrom http import *\nvalue = client.os.system('safe')",
+            "class SafeProcess:\n    def create_subprocess_exec(self, command):\n        return command\n"
+            "subprocess = SafeProcess()\nfrom asyncio import *\nvalue = subprocess.create_subprocess_exec('safe')",
+        ],
+    )
+    def test_star_import_does_not_replace_unexported_public_local(self, code):
         assert scan_code_security(code).is_safe is True
 
     @pytest.mark.parametrize(
@@ -3431,6 +3482,20 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "import numpy as np\n"
             "with np.load(payload, allow_pickle=False) as z:\n"
             "    setattr(z, 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    list(map(setattr, [z], ['allow_pickle'], [True]))\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import functools\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    functools.partial(setattr, z, 'allow_pickle')(True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "from builtins import setattr as write\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    list(map(write, [z], ['allow_pickle'], [True]))\n"
             "    data = z['arr_0']",
             "import numpy as np\n"
             "with np.load(payload, allow_pickle=False) as z:\n"
@@ -3707,6 +3772,10 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "import numpy.lib.format as fmt\nvalue = fmt.read_array(payload, allow_pickle=False)",
             "from numpy import load\nload(payload, None, False)",
             "from numpy import *\nload(payload, allow_pickle=False)",
+            "from numpy.lib import *\nformat.read_array(payload, allow_pickle=False)",
+            "from numpy.lib import *\nnpyio.NpzFile(payload, allow_pickle=False)",
+            "setattr(record, 'label', label)",
+            "from builtins import setattr as write\nwrite(record, 'label', label)",
             "from numpy.lib.npyio import *\nload(payload)",
             "from numpy.lib._npyio_impl import NpzFile\nNpzFile(payload)['arr_0']",
             "import numpy.lib._npyio_impl as npio\nnpio.NpzFile(payload, allow_pickle=False)['arr_0']",

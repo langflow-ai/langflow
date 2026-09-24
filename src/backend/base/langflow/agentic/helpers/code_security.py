@@ -255,15 +255,7 @@ _NUMPY_ARCHIVE_READER_CALLS = frozenset(
     name for name in _NUMPY_PICKLE_READER_ARG_INDEX if name.endswith((".load", ".NpzFile"))
 )
 _NUMPY_ARCHIVE_RESULT = "<numpy-archive-reader-result>"
-
-# These package stars expose submodules as bare names. Bind them before scanning
-# later uses so ``from pandas import *; io.pickle.read_pickle(...)`` does not
-# resolve ``io`` as the unrelated stdlib module.
-_WILDCARD_SUBMODULE_BINDINGS: dict[str, dict[str, str]] = {
-    "numpy": {"lib": "numpy.lib"},
-    "pandas": {"io": "pandas.io"},
-    "pandas.core": {"generic": "pandas.core.generic"},
-}
+_SETATTR_CALLABLE_NAMES = frozenset({"setattr", "builtins.setattr", "__builtins__.setattr"})
 
 # Imports that are forbidden entirely
 DANGEROUS_IMPORTS: set[str] = {
@@ -658,6 +650,51 @@ def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]
 
 
 _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
+
+# Importing arbitrary packages to inspect ``__all__`` would execute code during
+# the scan. These are verified star exports from packages with nested sinks;
+# the sink tables below determine which of the exported names need binding.
+_KNOWN_WILDCARD_SUBMODULE_EXPORTS: dict[str, frozenset[str]] = {
+    "concurrent": frozenset({"futures"}),
+    "numpy": frozenset({"lib"}),
+    "numpy.lib": frozenset({"format", "npyio"}),
+    "os": frozenset({"path"}),
+    "pandas": frozenset({"io"}),
+    "pandas.io": frozenset({"api", "pickle"}),
+    "pandas.core": frozenset({"generic"}),
+    "urllib": frozenset({"error", "request"}),
+}
+
+
+def _build_wildcard_submodule_bindings() -> dict[str, dict[str, str]]:
+    """Bind verified star-exported submodules along known dangerous paths.
+
+    A star import from ``numpy.lib`` exposes ``format`` and ``npyio`` as bare
+    names. A path alone does not prove an export: ``pandas.core`` is reachable
+    by name but is absent from ``pandas.__all__``.
+    """
+    sink_paths = {
+        f"{module}.{member}"
+        for table in (_DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS)
+        for module, members in table.items()
+        for member in members
+    }
+    sink_paths.update(_NUMPY_PICKLE_READER_ARG_INDEX)
+    module_paths = {path.rpartition(".")[0] for path in sink_paths}
+    module_paths.update(DANGEROUS_SUBMODULES)
+
+    bindings: dict[str, dict[str, str]] = {}
+    for module_path in module_paths:
+        parts = module_path.split(".")
+        for index in range(1, len(parts)):
+            package = ".".join(parts[:index])
+            if parts[index] not in _KNOWN_WILDCARD_SUBMODULE_EXPORTS.get(package, ()):
+                continue
+            bindings.setdefault(package, {})[parts[index]] = ".".join(parts[: index + 1])
+    return bindings
+
+
+_WILDCARD_SUBMODULE_BINDINGS = _build_wildcard_submodule_bindings()
 
 # Modules importable under a second name that yields the *same* objects. ``io``
 # is a thin Python wrapper over the C module ``_io``: ``io.FileIO is _io.FileIO``
@@ -1078,6 +1115,8 @@ class _SecurityChecker(ast.NodeVisitor):
 
         resolved_names = self._resolved_assignment_value(node)
         for resolved_name in resolved_names:
+            if resolved_name in _SETATTR_CALLABLE_NAMES:
+                return "Indirect setattr() reference is forbidden in components (numpy pickle risk)"
             if resolved_name in _NUMPY_PICKLE_READER_ARG_INDEX:
                 return f"Indirect {resolved_name}() reference is forbidden — allow_pickle cannot be verified"
             if _is_restricted_module_reference(resolved_name):
@@ -1207,6 +1246,9 @@ class _SecurityChecker(ast.NodeVisitor):
         if not self._binding_escapes(name):
             return
         for value in sorted(values):
+            if value in _SETATTR_CALLABLE_NAMES:
+                self.violations.append("Indirect setattr() reference is forbidden in components (numpy pickle risk)")
+                return
             if value in _NUMPY_PICKLE_READER_ARG_INDEX:
                 self.violations.append(f"Indirect {value}() reference is forbidden — allow_pickle cannot be verified")
                 return
@@ -1870,6 +1912,9 @@ class _SecurityChecker(ast.NodeVisitor):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
         if isinstance(node.ctx, ast.Load):
             for resolved_name in self._resolved_names(node.id):
+                if resolved_name in DANGEROUS_SUBMODULES:
+                    self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
+                    break
                 if violation := next(
                     (message for mod, attr, message in DANGEROUS_ATTRIBUTE_READS if resolved_name == f"{mod}.{attr}"),
                     None,
@@ -1898,7 +1943,7 @@ class _SecurityChecker(ast.NodeVisitor):
             len(node.args) == 1 or any(isinstance(argument, ast.Starred) for argument in node.args)
         ):
             self.saw_one_arg_type_call = True
-        if {"setattr", "builtins.setattr", "__builtins__.setattr"} & resolved_call_names:
+        if _SETATTR_CALLABLE_NAMES & resolved_call_names:
             if any(isinstance(argument, ast.Starred) for argument in node.args) or any(
                 keyword.arg is None for keyword in node.keywords
             ):
