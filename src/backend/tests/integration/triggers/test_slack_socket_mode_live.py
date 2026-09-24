@@ -8,14 +8,17 @@ invited to the channel:
 
 ```bash
 export LANGFLOW_SLACK_LIVE_APP_TOKEN=xapp-...   # the app's app-level token (connections:write)
-export LANGFLOW_SLACK_LIVE_USER_TOKEN=xoxp-...  # a person who posts and reacts (chat:write, reactions:write)
+export LANGFLOW_SLACK_LIVE_USER_TOKEN=xoxp-...  # a user token with reactions:write
 export LANGFLOW_SLACK_LIVE_CHANNEL=C0...        # a channel the app is a member of
-uv run pytest src/backend/tests/integration/triggers/test_slack_socket_mode_live.py -m api_key_required -q
+uv run pytest src/backend/tests/integration/triggers/test_slack_socket_mode_live.py -m api_key_required -q -s
 ```
 
-The events must come from a person: the app's own messages and reactions never
-fire a trigger, by design. The suite posts, reacts to and replies to a real
-message, then deletes it.
+Watch the test output. When it prints a unique marker, a person must post a
+message containing it in the configured channel and then two replies containing
+it in that message's thread. A message sent through this app's Web API token,
+including a user token, is attributed to the app and suppressed. The suite adds
+a reaction to the human message through the API and leaves the human's messages
+in place.
 
 The Events API transport has no live test here: it needs Slack to reach this
 process over public HTTPS. Its route, signature checks and fan-out are covered by
@@ -27,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import uuid
 
 import httpx
@@ -56,7 +60,7 @@ async def _slack(method: str, **payload) -> dict:
     return body
 
 
-async def _rows_matching(trigger_id, predicate, *, count: int, timeout: float = 45.0) -> list:
+async def _rows_matching(trigger_id, predicate, *, count: int, timeout: float = 120.0) -> list:
     deadline = asyncio.get_running_loop().time() + timeout
     while True:
         rows = [row for row in await fx.events_for(trigger_id) if predicate(row.payload)]
@@ -92,24 +96,22 @@ async def test_socket_mode_delivers_messages_threads_and_reactions_from_a_real_w
     marker = f"langflow-live-{uuid.uuid4().hex[:8]}"
 
     supervisor = ListenerSupervisor(holder="live")
-    posted = None
     try:
         await supervisor.reconcile()
         await asyncio.sleep(3)  # let the socket say hello before Slack has anything to send
 
-        posted = await _slack("chat.postMessage", channel=CHANNEL, text=marker)
-        for index in range(2):
-            await _slack("chat.postMessage", channel=CHANNEL, thread_ts=posted["ts"], text=f"{marker} reply {index}")
-        await _slack("reactions.add", channel=CHANNEL, timestamp=posted["ts"], name="rocket")
-
+        sys.stdout.write(f"Post {marker} in {CHANNEL}, then post two replies containing {marker} in its thread.\n")
+        sys.stdout.flush()
         thread = await _rows_matching(messages, lambda p: marker in (p.get("text") or ""), count=3)
+        roots = [row for row in thread if not row.payload["is_thread_reply"]]
+        assert len(roots) == 1, "post one top-level message and two replies in its thread"
+        root_ts = roots[0].payload["ts"]
+        await _slack("reactions.add", channel=CHANNEL, timestamp=root_ts, name="rocket")
         [reaction] = await _rows_matching(
-            reactions, lambda p: p.get("item_ts") == posted["ts"] and p.get("reaction") == "rocket", count=1
+            reactions, lambda p: p.get("item_ts") == root_ts and p.get("reaction") == "rocket", count=1
         )
     finally:
         await supervisor.stop()
-        if posted is not None:
-            await _slack("chat.delete", channel=CHANNEL, ts=posted["ts"])
 
     # Three messages in one thread are three events in one session.
     assert len({row.payload["session_key"] for row in thread}) == 1

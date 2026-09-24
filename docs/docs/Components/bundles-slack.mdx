@@ -131,7 +131,7 @@ Runs the flow when someone posts where the app can see it: in a public channel, 
 | **Slack Connection** | The connection the trigger listens through. It decides the transport. |
 | **Only when the app is mentioned** | Fire only for messages that @-mention the app. |
 | **Channel IDs** | Fire only in these conversations, by ID, such as `C0123456789`. Find a channel's ID at the bottom of its details. Leave empty for every conversation the app can see. |
-| **Conversation types** | `channel` (public), `group` (private), `im` (direct message), `mpim` (group DM). All four by default. |
+| **Conversation types** | `channel` (public), `group` (private), `im` (direct message), `mpim` (group DM). All four by default. Hidden and reset to all four when **Only when the app is mentioned** is on, because Slack mention events do not include a conversation type. |
 | **Include thread replies** | On by default. |
 | **Include messages from other bots** | Off by default. |
 | **Include edits and deletions** | Off by default. When on, the event's `subtype` is `message_changed` or `message_deleted`. |

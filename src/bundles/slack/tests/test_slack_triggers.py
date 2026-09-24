@@ -85,6 +85,23 @@ def test_the_message_trigger_declares_its_filters() -> None:
     }
 
 
+def test_mentions_only_removes_the_incompatible_conversation_filter() -> None:
+    component = build_component(SlackOnMessageTriggerComponent)
+    mention_input = next(input_ for input_ in component.inputs if input_.name == "mentions_only")
+    assert mention_input.real_time_refresh is True
+    config = {
+        "mentions_only": {"value": False},
+        "conversation_types": {"value": ["im"], "show": True},
+    }
+
+    updated = component.update_build_config(config, field_value=True, field_name="mentions_only")
+    assert updated["conversation_types"] == {"value": ["channel", "group", "im", "mpim"], "show": False}
+
+    restored = component.update_build_config(updated, field_value=False, field_name="mentions_only")
+    assert restored["conversation_types"]["show"] is True
+    assert restored["conversation_types"]["value"] == ["channel", "group", "im", "mpim"]
+
+
 def test_the_reaction_trigger_declares_its_filters() -> None:
     config = build_component(SlackOnReactionTriggerComponent, emoji=["rocket"], reaction_events="both").trigger_config()
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from lfx.io import BoolInput, MultiselectInput, Output
 from lfx.schema.message import Message
 
@@ -42,6 +44,7 @@ class SlackOnMessageTriggerComponent(SlackTriggerComponent):
             display_name="Only when the app is mentioned",
             value=False,
             info="Fire only for messages that @-mention the app, instead of every message it can see.",
+            real_time_refresh=True,
         ),
         channels_input(),
         MultiselectInput(
@@ -82,6 +85,15 @@ class SlackOnMessageTriggerComponent(SlackTriggerComponent):
         Output(display_name="Event", name="trigger_event", method="build_event"),
         Output(display_name="Message", name="message", method="build_message"),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        if field_name == "mentions_only":
+            build_config["mentions_only"]["value"] = field_value
+            build_config["conversation_types"]["show"] = not field_value
+            if field_value:
+                # Slack app_mention events have no channel_type to filter on.
+                build_config["conversation_types"]["value"] = list(CONVERSATION_TYPES)
+        return build_config
 
     def build_message(self) -> Message:
         """The message text, ready to hand to an agent or a prompt."""
