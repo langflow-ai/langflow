@@ -858,13 +858,35 @@ class BackgroundExecutionService(Service):
                 )
                 continue
             user = self._user_stub(job.user_id)
-            with contextlib.suppress(Exception):
+            try:
                 await self._enqueue(
                     job_id=job.job_id,
                     flow_id=job.flow_id,
                     request=request_dict,
                     user=user,
                 )
+            except Exception as exc:  # noqa: BLE001
+                await logger.aerror(
+                    "Failed to re-enqueue queued workflow during startup recovery",
+                    job_id=str(job.job_id),
+                    flow_id=str(job.flow_id),
+                    stage="startup_enqueue",
+                    error_type=type(exc).__name__,
+                )
+                try:
+                    await job_service.release_queued_lease(
+                        job.job_id,
+                        owner=self._owner,
+                        heartbeat_at=lease_heartbeat,
+                    )
+                except Exception as release_exc:  # noqa: BLE001
+                    await logger.aerror(
+                        "Failed to release queued workflow lease after enqueue error",
+                        job_id=str(job.job_id),
+                        flow_id=str(job.flow_id),
+                        stage="startup_release",
+                        error_type=type(release_exc).__name__,
+                    )
         # Give up on runs that have sat suspended past their human-input deadline.
         with contextlib.suppress(Exception):
             await self.sweep_input_deadlines()
