@@ -301,3 +301,77 @@ class TestIdentityOnRerun:
         results = await relocate_files(target_bucket=bucket, target_prefix="files")
 
         assert "9 bytes" in (results[0].reason or "")
+
+
+class TestLargeFiles:
+    """A file is streamed across, so its size is not what the copy holds in memory."""
+
+    async def _peak_while_copying(self, storage_dir, owner, bucket, *, name: str, size: int) -> tuple[int, str]:
+        import hashlib
+        import tracemalloc
+
+        data = os.urandom(size)
+        await _seed_user_file(storage_dir, owner, name=name, data=data)
+        expected_md5 = hashlib.md5(data).hexdigest()  # noqa: S324 - a content check, not security
+        del data
+
+        tracemalloc.start()
+        try:
+            results = await relocate_files(target_bucket=bucket, target_prefix="files")
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert {r.file_name: r.status for r in results}[name] == "copied"
+        return peak, expected_md5
+
+    async def test_memory_does_not_grow_with_file_size(self, active_user, storage_dir, bucket):
+        import hashlib
+
+        mib = 1024 * 1024
+        small, _ = await self._peak_while_copying(storage_dir, active_user.id, bucket, name="small.bin", size=16 * mib)
+        large, large_md5 = await self._peak_while_copying(
+            storage_dir, active_user.id, bucket, name="large.bin", size=80 * mib
+        )
+
+        # A copy that held the file would peak at least 64 MiB higher for the larger one.
+        assert large - small < 16 * mib, f"peak {small} bytes for 16 MiB, {large} bytes for 80 MiB"
+        from aiobotocore.session import get_session
+
+        async with get_session().create_client("s3") as s3:
+            obj = await s3.get_object(Bucket=bucket, Key=f"files/{active_user.id}/large.bin")
+            body = await obj["Body"].read()
+        assert hashlib.md5(body).hexdigest() == large_md5  # noqa: S324
+
+    async def test_a_large_file_already_there_is_skipped(self, active_user, storage_dir, bucket):
+        await _seed_user_file(storage_dir, active_user.id, name="big.bin", data=os.urandom(20 * 1024 * 1024))
+        assert [r.status for r in await relocate_files(target_bucket=bucket, target_prefix="files")] == ["copied"]
+
+        again = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        # Uploaded in parts, so its ETag is no MD5 and identity falls back to size.
+        assert [(r.status, r.reason) for r in again] == [
+            ("skipped", "already in the target (20971520 bytes, identity checked by size only)")
+        ]
+
+
+class TestConcurrency:
+    async def test_every_file_is_copied_with_several_in_flight(self, active_user, storage_dir, bucket):
+        for index in range(12):
+            await _seed_user_file(storage_dir, active_user.id, name=f"f{index}.txt", data=f"bytes {index}".encode())
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files", concurrency=4)
+
+        assert sorted(r.status for r in results) == ["copied"] * 12
+        assert len(await _stored_keys(bucket)) == 12
+
+
+class TestMissingObjects:
+    async def test_md5_of_a_missing_key_is_file_not_found(self, active_user, storage_dir, bucket):  # noqa: ARG002
+        from langflow.api.utils.file_relocation import _target_storage
+
+        target = _target_storage(bucket, "files", None)
+        try:
+            with pytest.raises(FileNotFoundError):
+                await target.get_file_md5(flow_id=str(active_user.id), file_name="nothing-here.txt")
+        finally:
+            await target.teardown()

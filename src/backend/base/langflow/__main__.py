@@ -1146,6 +1146,9 @@ def relocate_files(
     prefix: str = typer.Option("files", help="Key prefix inside the bucket."),
     username: str = typer.Option("", help="Only copy this user's files."),
     dry_run: bool = typer.Option(default=False, help="Report what would be copied without writing."),  # noqa: FBT001
+    concurrency: int = typer.Option(
+        4, min=1, help="Files copied at once. Each holds at most one 8 MiB part in memory."
+    ),
 ) -> None:
     """Copy stored file bytes into an S3 bucket, keeping each file's key.
 
@@ -1163,6 +1166,8 @@ def relocate_files(
     pictures and knowledge bases live outside the storage backend and stay where
     they are.
 
+    Files stream across, so memory scales with --concurrency alone.
+
     Exits non-zero if any file could not be copied.
     """
     from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError
@@ -1175,6 +1180,7 @@ def relocate_files(
                 prefix=prefix,
                 username=username or None,
                 dry_run=dry_run,
+                concurrency=concurrency,
             )
         )
     except (SourceNotLocalError, NoSuchUserError) as exc:
@@ -1184,7 +1190,7 @@ def relocate_files(
         raise typer.Exit(1)
 
 
-async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry_run: bool) -> int:
+async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry_run: bool, concurrency: int) -> int:
     from langflow.api.utils.file_relocation import relocate_files
 
     await initialize_services()
@@ -1193,6 +1199,7 @@ async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry
         target_prefix=prefix,
         username=username,
         dry_run=dry_run,
+        concurrency=concurrency,
     )
     for result in results:
         line = f"{result.status:12} {result.owner}/{result.file_name}  {result.size} bytes  -> {result.key}"

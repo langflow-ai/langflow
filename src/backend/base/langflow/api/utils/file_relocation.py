@@ -47,6 +47,10 @@ if TYPE_CHECKING:
 
 RelocationStatus = Literal["copied", "would_copy", "skipped", "failed"]
 
+# Read size for streaming a file across. The target buffers up to one multipart part.
+_COPY_CHUNK = 1024 * 1024
+DEFAULT_CONCURRENCY = 4
+
 
 class SourceNotLocalError(Exception):
     """The instance is already running on object storage, so there is nothing local to read."""
@@ -73,25 +77,35 @@ async def relocate_files(
     target_tags: dict[str, str] | None = None,
     username: str | None = None,
     dry_run: bool = False,
+    concurrency: int = DEFAULT_CONCURRENCY,
 ) -> list[FileRelocationResult]:
     """Copy every stored file's bytes into the target bucket.
 
     Returns one result per file and never raises for a single file's failure, so
     one unreadable file does not stop the rest. Raises before reading anything if
     the instance cannot be the source, or if ``username`` names nobody.
+
+    Up to ``concurrency`` files are copied at once. Each streams across holding at
+    most one multipart part (8 MiB) in memory, so memory scales with ``concurrency``
+    alone.
     """
     _refuse_a_source_that_is_not_local()
     source = get_storage_service()
     namespaces = await _namespaces(username)
     target = _target_storage(target_bucket, target_prefix, target_tags)
     try:
-        results = []
-        copied = set()
-        for namespace in namespaces:
-            for file_name in await _stored_names(source, namespace):
-                copied.add((namespace, file_name))
-                results.append(await _relocate_one(source, target, namespace, file_name, dry_run=dry_run))
-        results += await _rows_without_bytes(copied, username)
+        work = [(namespace, name) for namespace in namespaces for name in await _stored_names(source, namespace)]
+        results: list[FileRelocationResult] = [None] * len(work)  # type: ignore[list-item]
+        limiter = anyio.CapacityLimiter(max(1, concurrency))
+
+        async def relocate(index: int, namespace: str, file_name: str) -> None:
+            async with limiter:
+                results[index] = await _relocate_one(source, target, namespace, file_name, dry_run=dry_run)
+
+        async with anyio.create_task_group() as group:
+            for index, (namespace, file_name) in enumerate(work):
+                group.start_soon(relocate, index, namespace, file_name)
+        results += await _rows_without_bytes(set(work), username)
     finally:
         await target.teardown()
     return results
@@ -188,7 +202,8 @@ async def plan_file(source: StorageService, target: StorageService, namespace: s
 
     Reads no bytes, except when the target already holds an object of the same size:
     a file edited between runs can keep its length, so the content is compared where
-    the target gives a checksum cheaply.
+    the target gives a checksum cheaply. The source's own checksum is asked for first;
+    only when it has none is the file hashed, a chunk at a time.
     """
     key = target.build_full_path(namespace, file_name)
     size = await source.get_file_size(flow_id=namespace, file_name=file_name)
@@ -205,11 +220,21 @@ async def plan_file(source: StorageService, target: StorageService, namespace: s
     target_md5 = await target.get_file_md5(flow_id=namespace, file_name=file_name)
     if target_md5 is None:
         return FilePlan("skip", key, size, f"already in the target ({size} bytes, identity checked by size only)")
-    data = await source.get_file(flow_id=namespace, file_name=file_name)
-    if hashlib.md5(data).hexdigest() != target_md5:  # noqa: S324 - compared with S3's ETag, not a security use
+    source_md5 = await source.get_file_md5(flow_id=namespace, file_name=file_name)
+    if source_md5 is None:
+        source_md5 = await _streamed_md5(source, namespace, file_name)
+    if source_md5 != target_md5:
         reason = f"target holds an object of the same size ({size} bytes) with different content"
         return FilePlan("refuse", key, size, reason)
     return FilePlan("skip", key, size, "already in the target")
+
+
+async def _streamed_md5(source: StorageService, namespace: str, file_name: str) -> str:
+    """The MD5 of a file, read a chunk at a time."""
+    digest = hashlib.md5()  # noqa: S324 - compared with S3's ETag, not a security use
+    async for chunk in source.get_file_stream(flow_id=namespace, file_name=file_name, chunk_size=_COPY_CHUNK):
+        digest.update(chunk)
+    return digest.hexdigest()
 
 
 async def verify_file(target: StorageService, namespace: str, file_name: str, *, expected_size: int) -> str | None:
@@ -245,9 +270,9 @@ async def _relocate_one(
             result.status = "would_copy"
             return result
 
-        data = await source.get_file(flow_id=namespace, file_name=file_name)
-        await target.save_file(flow_id=namespace, file_name=file_name, data=data)
-        problem = await verify_file(target, namespace, file_name, expected_size=len(data))
+        chunks = source.get_file_stream(flow_id=namespace, file_name=file_name, chunk_size=_COPY_CHUNK)
+        written = await target.save_file_stream(namespace, file_name, chunks)
+        problem = await verify_file(target, namespace, file_name, expected_size=written)
         if problem:
             result.reason = f"{problem} after the copy"
             return result

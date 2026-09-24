@@ -158,3 +158,30 @@ class TestS3BuildFullPathValidation:
 
     def test_build_full_path_accepts_legitimate_identifiers(self, s3_service_offline):
         assert s3_service_offline.build_full_path("legit_flow", "file.txt") == "test-prefix/legit_flow/file.txt"
+
+
+MD5 = "0cc175b9c0f1b6a831c399e269772661"  # pragma: allowlist secret - md5("a")
+
+
+class TestEtagAsMd5:
+    """An ETag is the body's MD5 only for a single-part upload without KMS or customer keys."""
+
+    @pytest.mark.parametrize(
+        ("head", "expected"),
+        [
+            ({"ETag": f'"{MD5}"'}, MD5),
+            (
+                {"ETag": f'"{MD5}"', "ServerSideEncryption": "AES256"},
+                MD5,
+            ),
+            ({"ETag": f'"{MD5}-3"'}, None),
+            ({"ETag": f'"{MD5}"', "ServerSideEncryption": "aws:kms"}, None),
+            ({"ETag": f'"{MD5}"', "ServerSideEncryption": "aws:kms:dsse"}, None),
+            ({"ETag": f'"{MD5}"', "SSECustomerAlgorithm": "AES256"}, None),
+            ({}, None),
+        ],
+    )
+    def test_md5_from_head(self, head, expected):
+        from langflow.services.storage.s3 import md5_from_head
+
+        assert md5_from_head(head) == expected
