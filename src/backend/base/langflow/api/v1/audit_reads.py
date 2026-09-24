@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -32,6 +31,9 @@ from langflow.services.database.models.audit_event.model import (
 from langflow.services.deps import get_authorization_service
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+    from enum import Enum
+
     from fastapi import Request
     from sqlalchemy.sql.elements import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -54,45 +56,45 @@ _RFC3339 = re.compile(
 )
 
 
-def _bad_request(detail: str) -> HTTPException:
+def bad_request(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
-def _uuid(name: str, value: str) -> UUID:
+def parse_uuid(name: str, value: str) -> UUID:
     try:
         return UUID(value)
     except ValueError as exc:
         msg = f"{name} must be a UUID"
-        raise _bad_request(msg) from exc
+        raise bad_request(msg) from exc
 
 
-def _timestamp(name: str, value: str) -> datetime:
+def parse_timestamp(name: str, value: str) -> datetime:
     """RFC 3339 with a mandatory offset; Python 3.10 cannot parse ``Z`` or short fractions itself."""
     match = _RFC3339.fullmatch(value)
     if match is None:
         msg = f"{name} must be an RFC 3339 timestamp with a timezone offset"
-        raise _bad_request(msg)
+        raise bad_request(msg)
     offset = match["offset"].upper().replace("Z", "+00:00")
     fraction = f".{match['fraction'].ljust(6, '0')}" if match["fraction"] else ""
     try:
         return datetime.fromisoformat(f"{match['base'].replace('t', 'T')}{fraction}{offset}").astimezone(timezone.utc)
     except (OverflowError, ValueError) as exc:
         msg = f"{name} is not a valid timestamp"
-        raise _bad_request(msg) from exc
+        raise bad_request(msg) from exc
 
 
-def _limit(value: str | None) -> int:
+def parse_limit(value: str | None) -> int:
     if value is None:
         return DEFAULT_PAGE_SIZE
     msg = f"limit must be an integer from 1 through {MAX_PAGE_SIZE}"
     if not (value.isascii() and value.isdigit()):
-        raise _bad_request(msg)
+        raise bad_request(msg)
     try:
         parsed = int(value)
     except ValueError as exc:  # More digits than int() will convert.
-        raise _bad_request(msg) from exc
+        raise bad_request(msg) from exc
     if not 1 <= parsed <= MAX_PAGE_SIZE:
-        raise _bad_request(msg)
+        raise bad_request(msg)
     return parsed
 
 
@@ -107,22 +109,26 @@ class AuditReadQuery:
 _AUTH_PARAMS = frozenset({"x-api-key"})
 
 
-def _grouped(request: Request, allowed: set[str]) -> dict[str, list[str]]:
+def group_query_params(
+    request: Request, allowed: set[str], repeatable: Collection[str] | None = None
+) -> dict[str, list[str]]:
+    """Group the query string by key, answering 400 for unknown, empty or repeated keys."""
+    may_repeat = _REPEATABLE if repeatable is None else repeatable
     grouped: dict[str, list[str]] = {}
     for key, value in request.query_params.multi_items():
         if key in _AUTH_PARAMS:
             continue
         if key not in allowed:
             msg = f"Unknown query parameter: {key}"
-            raise _bad_request(msg)
+            raise bad_request(msg)
         if value == "":
             msg = f"Empty value for query parameter: {key}"
-            raise _bad_request(msg)
+            raise bad_request(msg)
         grouped.setdefault(key, []).append(value)
     for key, values in grouped.items():
-        if key not in _REPEATABLE and len(values) > 1:
+        if key not in may_repeat and len(values) > 1:
             msg = f"Query parameter may appear once: {key}"
-            raise _bad_request(msg)
+            raise bad_request(msg)
     return grouped
 
 
@@ -132,10 +138,10 @@ def _enum_values(key: str, values: list[str], allowed_values: frozenset[Enum] | 
         parsed = frozenset(enum(value) for value in values)
     except ValueError as exc:
         msg = f"Unsupported value for {key}"
-        raise _bad_request(msg) from exc
+        raise bad_request(msg) from exc
     if allowed_values is not None and not parsed.issubset(allowed_values):
         msg = f"Unsupported value for {key}"
-        raise _bad_request(msg)
+        raise bad_request(msg)
     return parsed
 
 
@@ -150,21 +156,21 @@ def parse_audit_query(
 ) -> AuditReadQuery:
     """Turn the raw query string into filters, or answer 400."""
     allowed = {id_param, *_REPEATABLE, *_SINGLE_UUIDS, *_TEXT_LIMITS, "since", "until", "cursor", "limit"}
-    grouped = _grouped(request, allowed)
+    grouped = group_query_params(request, allowed)
     single = {key: values[0] for key, values in grouped.items() if key not in _REPEATABLE}
     for key, limit in _TEXT_LIMITS.items():
         if key in single and len(single[key]) > limit:
             msg = f"{key} is longer than {limit} characters"
-            raise _bad_request(msg)
+            raise bad_request(msg)
     if "acting_issuer" in single and "acting_subject" not in single:
         msg = "acting_issuer must be paired with acting_subject"
-        raise _bad_request(msg)
-    since = _timestamp("since", single["since"]) if "since" in single else None
-    until = _timestamp("until", single["until"]) if "until" in single else None
+        raise bad_request(msg)
+    since = parse_timestamp("since", single["since"]) if "since" in single else None
+    until = parse_timestamp("until", single["until"]) if "until" in single else None
     if since is not None and until is not None and until <= since:
         msg = "until must be later than since"
-        raise _bad_request(msg)
-    uuids = {key: _uuid(key, single[key]) for key in (id_param, *_SINGLE_UUIDS) if key in single}
+        raise bad_request(msg)
+    uuids = {key: parse_uuid(key, single[key]) for key in (id_param, *_SINGLE_UUIDS) if key in single}
     allowed_enums: dict[str, frozenset[Enum]] = {
         "operation": allowed_operations,
         "event_type": allowed_event_types,
@@ -188,7 +194,7 @@ def parse_audit_query(
         since=since,
         until=until,
     )
-    return AuditReadQuery(filters=filters, cursor=single.get("cursor"), limit=_limit(single.get("limit")))
+    return AuditReadQuery(filters=filters, cursor=single.get("cursor"), limit=parse_limit(single.get("limit")))
 
 
 async def read_audit_page(
@@ -201,7 +207,7 @@ async def read_audit_page(
             session, query.filters, limit=query.limit, cursor=query.cursor, visibility=visibility
         )
     except AuditCursorError as exc:
-        raise _bad_request(str(exc)) from exc
+        raise bad_request(str(exc)) from exc
 
 
 async def plugin_decides_visibility() -> bool:

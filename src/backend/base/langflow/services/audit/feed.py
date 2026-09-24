@@ -1,0 +1,456 @@
+"""One audit feed over both audit stores, filtered and keyset-paginated on the server.
+
+``audit_events`` records resource operations and ``authz_audit_log`` records
+authorization, identity and governance events. Both order by
+``(timestamp DESC, id DESC)``, so a page asks each store for one row more than
+it returns, merges the candidates and keeps the newest ``limit``: a row that
+belongs on the page is always within its own store's first ``limit + 1`` rows.
+
+Every filter is defined for both stores. Where a filter cannot hold for a store
+(an ``operation`` on an authorization row, a result one store never writes), that
+store is left out of the read instead of the filter being ignored.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
+
+from sqlalchemy import Text, cast, func, or_
+from sqlmodel import col, select
+
+from langflow.services.audit.query import (
+    AuditCursorError,
+    CursorState,
+    decode_state,
+    encode_cursor,
+    keyset_after,
+    to_utc,
+)
+from langflow.services.database.models.audit_event.model import AuditDatabaseClock, AuditEvent, as_utc
+from langflow.services.database.models.auth import AuthzAuditLog
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import session_scope
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from datetime import datetime
+
+    from sqlalchemy.sql.elements import ColumnElement
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+MAX_FEED_PAGE_SIZE = 200
+AUTHZ_DECISION_EVENT = "authorization_decision"
+MAX_SEARCH_LENGTH = 200
+_LIKE_ESCAPE = "\\"
+
+
+class AuditSource(str, Enum):
+    """Which store a row came from."""
+
+    RESOURCE = "resource"
+    AUTHZ = "authz"
+
+
+class AuditKind(str, Enum):
+    """Whether a row records a permission check or something that was done."""
+
+    ACTION = "action"
+    CHECK = "check"
+
+
+RESOURCE_RESULTS = frozenset({"allow", "deny", "succeeded", "failed"})
+AUTHZ_RESULTS = frozenset({"allow", "deny", "owner_override", "skip"})
+FEED_RESULTS = RESOURCE_RESULTS | AUTHZ_RESULTS
+
+
+def _sorted(values: frozenset[str]) -> list[str]:
+    return sorted(values)
+
+
+@dataclass(frozen=True)
+class AuditFeedFilters:
+    """Every filter the feed accepts. Values within a field OR; fields AND."""
+
+    sources: frozenset[AuditSource] = field(default_factory=frozenset)
+    kinds: frozenset[AuditKind] = field(default_factory=frozenset)
+    resource_types: frozenset[str] = field(default_factory=frozenset)
+    resource_id: UUID | None = None
+    actions: frozenset[str] = field(default_factory=frozenset)
+    exclude_actions: frozenset[str] = field(default_factory=frozenset)
+    operations: frozenset[str] = field(default_factory=frozenset)
+    results: frozenset[str] = field(default_factory=frozenset)
+    actor_types: frozenset[str] = field(default_factory=frozenset)
+    user_id: UUID | None = None
+    actor_id: UUID | None = None
+    request_id: UUID | None = None
+    since: datetime | None = None
+    until: datetime | None = None
+    search: str | None = None
+
+    def fingerprint(self) -> str:
+        canonical: dict[str, Any] = {
+            "feed": 1,
+            "sources": _sorted(frozenset(source.value for source in self.sources)),
+            "kinds": _sorted(frozenset(kind.value for kind in self.kinds)),
+            "resource_types": _sorted(self.resource_types),
+            "resource_id": str(self.resource_id) if self.resource_id else None,
+            "actions": _sorted(self.actions),
+            "exclude_actions": _sorted(self.exclude_actions),
+            "operations": _sorted(self.operations),
+            "results": _sorted(self.results),
+            "actor_types": _sorted(self.actor_types),
+            "user_id": str(self.user_id) if self.user_id else None,
+            "actor_id": str(self.actor_id) if self.actor_id else None,
+            "request_id": str(self.request_id) if self.request_id else None,
+            "since": to_utc(self.since).isoformat() if self.since else None,
+            "until": to_utc(self.until).isoformat() if self.until else None,
+            "search": self.search,
+        }
+        encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def with_until(self, until: datetime) -> AuditFeedFilters:
+        values = {name: getattr(self, name) for name in self.__dataclass_fields__}
+        return AuditFeedFilters(**{**values, "until": until})
+
+    def includes(self, source: AuditSource) -> bool:
+        return not self.sources or source in self.sources
+
+
+def _like_pattern(text: str) -> str:
+    """A substring pattern in which ``%`` and ``_`` typed by the user match themselves."""
+    escaped = text.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2)
+    for wildcard in ("%", "_"):
+        escaped = escaped.replace(wildcard, f"{_LIKE_ESCAPE}{wildcard}")
+    return f"%{escaped}%"
+
+
+def _search_clause(model: Any, search: str) -> ColumnElement[bool]:
+    """Case-insensitive match on what a row records: action, names, actor and details."""
+    pattern = _like_pattern(search)
+
+    def matches(column: Any) -> ColumnElement[bool]:
+        return col(column).ilike(pattern, escape=_LIKE_ESCAPE)
+
+    actors = select(User.id).where(matches(User.username))
+    candidates = [
+        matches(model.action),
+        matches(model.resource_type),
+        cast(col(model.details), Text).ilike(pattern, escape=_LIKE_ESCAPE),
+        col(model.user_id).in_(actors),
+    ]
+    if model is AuditEvent:
+        candidates += [matches(AuditEvent.resource_name), matches(AuditEvent.operation)]
+    return or_(*candidates)
+
+
+def _shared_clauses(model: Any, filters: AuditFeedFilters) -> list[ColumnElement[bool]]:
+    """Filters both stores express with the same columns."""
+    clauses: list[ColumnElement[bool]] = []
+    exact = {model.resource_id: filters.resource_id, model.user_id: filters.user_id, model.actor_id: filters.actor_id}
+    clauses.extend(col(column) == value for column, value in exact.items() if value is not None)
+    if filters.resource_types:
+        clauses.append(col(model.resource_type).in_(_sorted(filters.resource_types)))
+    if filters.actions:
+        clauses.append(col(model.action).in_(_sorted(filters.actions)))
+    if filters.exclude_actions:
+        clauses.append(col(model.action).not_in(_sorted(filters.exclude_actions)))
+    if filters.since is not None:
+        clauses.append(col(model.timestamp) >= to_utc(filters.since))
+    if filters.until is not None:
+        clauses.append(col(model.timestamp) < to_utc(filters.until))
+    if filters.search:
+        clauses.append(_search_clause(model, filters.search))
+    return clauses
+
+
+def resource_clauses(filters: AuditFeedFilters) -> list[ColumnElement[bool]] | None:
+    """Clauses over ``audit_events``, or None when no row there can match."""
+    if not filters.includes(AuditSource.RESOURCE):
+        return None
+    results = filters.results & RESOURCE_RESULTS if filters.results else RESOURCE_RESULTS
+    if not results:
+        return None
+    clauses = _shared_clauses(AuditEvent, filters)
+    if filters.results:
+        clauses.append(col(AuditEvent.result).in_(_sorted(results)))
+    if filters.kinds:
+        event_types = {AuditKind.CHECK: "authz", AuditKind.ACTION: "action"}
+        clauses.append(col(AuditEvent.event_type).in_(sorted(event_types[kind] for kind in filters.kinds)))
+    if filters.operations:
+        clauses.append(col(AuditEvent.operation).in_(_sorted(filters.operations)))
+    if filters.actor_types:
+        clauses.append(col(AuditEvent.actor_type).in_(_sorted(filters.actor_types)))
+    if filters.request_id is not None:
+        clauses.append(col(AuditEvent.request_id) == filters.request_id)
+    return clauses
+
+
+def _authz_event_class() -> ColumnElement[Any]:
+    # Rendered as json_extract on SQLite and ->> on PostgreSQL.
+    return col(AuthzAuditLog.details)["event"].as_string()
+
+
+def _authz_kind_clause(kinds: frozenset[AuditKind]) -> ColumnElement[bool] | None:
+    """A check is a tagged decision; anything else, including untagged history, is an action."""
+    if kinds == frozenset(AuditKind):
+        return None
+    event_class = _authz_event_class()
+    if AuditKind.CHECK in kinds:
+        return event_class == AUTHZ_DECISION_EVENT
+    return or_(event_class != AUTHZ_DECISION_EVENT, event_class.is_(None))
+
+
+def _authz_actor_clause(actor_types: frozenset[str]) -> ColumnElement[bool]:
+    # Rows written before actor attribution have no type and read as ``unknown``.
+    clause = col(AuthzAuditLog.actor_type).in_(_sorted(actor_types))
+    return or_(clause, col(AuthzAuditLog.actor_type).is_(None)) if "unknown" in actor_types else clause
+
+
+def authz_clauses(filters: AuditFeedFilters) -> list[ColumnElement[bool]] | None:
+    """Clauses over ``authz_audit_log``, or None when no row there can match."""
+    if not filters.includes(AuditSource.AUTHZ) or filters.operations:
+        return None
+    results = filters.results & AUTHZ_RESULTS if filters.results else AUTHZ_RESULTS
+    if not results:
+        return None
+    clauses = _shared_clauses(AuthzAuditLog, filters)
+    if filters.results:
+        clauses.append(col(AuthzAuditLog.result).in_(_sorted(results)))
+    kind_clause = _authz_kind_clause(filters.kinds) if filters.kinds else None
+    if kind_clause is not None:
+        clauses.append(kind_clause)
+    if filters.actor_types:
+        clauses.append(_authz_actor_clause(filters.actor_types))
+    if filters.request_id is not None:
+        clauses.append(col(AuthzAuditLog.details)["request_id"].as_string() == str(filters.request_id))
+    return clauses
+
+
+@dataclass(frozen=True)
+class AuditFeedRow:
+    """One row of either store, in the feed's shape."""
+
+    source: AuditSource
+    row: Any
+
+    @property
+    def key(self) -> tuple[datetime, UUID]:
+        return as_utc(self.row.timestamp), UUID(str(self.row.id))
+
+    @property
+    def kind(self) -> AuditKind:
+        if self.source is AuditSource.RESOURCE:
+            return AuditKind.CHECK if self.row.event_type == "authz" else AuditKind.ACTION
+        event_class = (self.row.details or {}).get("event")
+        return AuditKind.CHECK if event_class == AUTHZ_DECISION_EVENT else AuditKind.ACTION
+
+
+@dataclass(frozen=True)
+class AuditFeedPage:
+    items: list[AuditFeedRow]
+    next_cursor: str | None
+    total: int | None = None
+
+
+def _store_plans(filters: AuditFeedFilters) -> list[tuple[AuditSource, Any, list[ColumnElement[bool]]]]:
+    plans: list[tuple[AuditSource, Any, list[ColumnElement[bool]]]] = []
+    resource = resource_clauses(filters)
+    if resource is not None:
+        plans.append((AuditSource.RESOURCE, AuditEvent, resource))
+    authz = authz_clauses(filters)
+    if authz is not None:
+        plans.append((AuditSource.AUTHZ, AuthzAuditLog, authz))
+    return plans
+
+
+async def _store_window(
+    session: AsyncSession,
+    model: Any,
+    clauses: list[ColumnElement[bool]],
+    state: CursorState | None,
+    cutoff: datetime,
+    size: int,
+) -> list[Any]:
+    snapshot = col(model.timestamp) <= cutoff
+    where = [*clauses, snapshot]
+    if state is not None:
+        where.append(keyset_after(model, state))
+    statement = select(model).where(*where).order_by(col(model.timestamp).desc(), col(model.id).desc()).limit(size)
+    return list((await session.exec(statement)).all())
+
+
+async def _database_cutoff(session: AsyncSession) -> datetime:
+    return to_utc((await session.exec(select(AuditDatabaseClock()))).one())
+
+
+async def count_feed(session: AsyncSession, filters: AuditFeedFilters, *, cutoff: datetime | None = None) -> int:
+    cutoff = cutoff or await _database_cutoff(session)
+    total = 0
+    for _, model, clauses in _store_plans(filters):
+        snapshot = col(model.timestamp) <= cutoff
+        statement = select(func.count()).select_from(model).where(*clauses, snapshot)
+        total += int((await session.exec(statement)).one())
+    return total
+
+
+def decode_feed_cursor(cursor: str, filters: AuditFeedFilters) -> CursorState:
+    return decode_state(cursor, filters.fingerprint())
+
+
+async def list_feed(
+    session: AsyncSession,
+    filters: AuditFeedFilters,
+    *,
+    limit: int,
+    cursor: str | None = None,
+    include_total: bool = False,
+) -> AuditFeedPage:
+    """One newest-first page across both stores; the total costs a COUNT and is opt-in."""
+    if not 1 <= limit <= MAX_FEED_PAGE_SIZE:
+        msg = f"limit must be between 1 and {MAX_FEED_PAGE_SIZE}"
+        raise ValueError(msg)
+    state = decode_feed_cursor(cursor, filters) if cursor is not None else None
+    cutoff = state.cutoff if state is not None else await _database_cutoff(session)
+    rows = await _merged_window(session, filters, state, cutoff, limit + 1)
+    items = rows[:limit]
+    next_cursor = None
+    if len(rows) > limit:
+        timestamp, event_id = items[-1].key
+        next_cursor = encode_cursor(
+            CursorState(
+                fingerprint=filters.fingerprint(),
+                cutoff=cutoff,
+                timestamp=timestamp,
+                event_id=event_id,
+            )
+        )
+    total = await count_feed(session, filters, cutoff=cutoff) if include_total else None
+    return AuditFeedPage(items=items, next_cursor=next_cursor, total=total)
+
+
+async def _merged_window(
+    session: AsyncSession,
+    filters: AuditFeedFilters,
+    state: CursorState | None,
+    cutoff: datetime,
+    size: int,
+) -> list[AuditFeedRow]:
+    candidates: list[AuditFeedRow] = []
+    for source, model, clauses in _store_plans(filters):
+        rows = await _store_window(session, model, clauses, state, cutoff, size)
+        candidates.extend(AuditFeedRow(source, row) for row in rows)
+    candidates.sort(key=lambda candidate: candidate.key, reverse=True)
+    return candidates[:size]
+
+
+async def iter_feed_batches(
+    session: AsyncSession,
+    filters: AuditFeedFilters,
+    *,
+    batch_size: int = 500,
+) -> AsyncIterator[list[AuditFeedRow]]:
+    """Every matching row, newest first, one keyset batch at a time.
+
+    The caller freezes ``until`` so the walk is a snapshot: a row written while it
+    runs is newer than every position still to be read. Each batch is released
+    from the session once handed over, so a long walk holds one batch at a time.
+    """
+    state: CursorState | None = None
+    fingerprint = filters.fingerprint()
+    cutoff = await _database_cutoff(session)
+    while True:
+        rows = await _merged_window(session, filters, state, cutoff, batch_size)
+        if rows:
+            yield rows
+        if len(rows) < batch_size:
+            return
+        timestamp, event_id = rows[-1].key
+        state = CursorState(fingerprint=fingerprint, cutoff=cutoff, timestamp=timestamp, event_id=event_id)
+        session.expunge_all()
+
+
+async def iter_feed_batches_per_session(
+    filters: AuditFeedFilters,
+    *,
+    batch_size: int = 500,
+) -> AsyncIterator[list[AuditFeedRow]]:
+    """Every matching row, newest first, on a session that lives for one batch.
+
+    A streamed export hands each batch to a client that may read it slowly. Holding
+    one pooled connection and its transaction open for the whole download would let
+    a single stalled download starve the pool, and an idle-transaction timeout would
+    break the file after the response already promised 200. The keyset cursor and
+    the frozen cutoff carry the walk from one session to the next, so the connection
+    is back in the pool while the client reads.
+    """
+    state: CursorState | None = None
+    cutoff: datetime | None = None
+    fingerprint = filters.fingerprint()
+    while True:
+        async with session_scope() as session:
+            if cutoff is None:
+                cutoff = await _database_cutoff(session)
+            rows = await _merged_window(session, filters, state, cutoff, batch_size)
+            # Detach before the scope closes, so the rows outlive the session that
+            # read them and the caller never touches a closed one.
+            session.expunge_all()
+        if rows:
+            yield rows
+        if len(rows) < batch_size:
+            return
+        timestamp, event_id = rows[-1].key
+        state = CursorState(fingerprint=fingerprint, cutoff=cutoff, timestamp=timestamp, event_id=event_id)
+
+
+async def iter_feed(
+    session: AsyncSession,
+    filters: AuditFeedFilters,
+    *,
+    batch_size: int = 500,
+) -> AsyncIterator[AuditFeedRow]:
+    """Every matching row, newest first; see :func:`iter_feed_batches`."""
+    async for batch in iter_feed_batches(session, filters, batch_size=batch_size):
+        for row in batch:
+            yield row
+
+
+async def frozen_until(session: AsyncSession, filters: AuditFeedFilters) -> AuditFeedFilters:
+    """Pin an open-ended window at the database clock, which stamps the rows.
+
+    Read from the database rather than this process: a row is timestamped by the
+    database, so an application clock running behind it would silently drop rows
+    the feed already returns. The bound makes the export repeatable — it always
+    describes the same window — but it is not a transactional snapshot: the walk
+    runs in batches under READ COMMITTED, so a row committed mid-walk with a
+    timestamp inside the window is included, and one deleted by retention
+    mid-walk is not.
+    """
+    if filters.until is not None:
+        return filters
+    return filters.with_until(await _database_cutoff(session))
+
+
+__all__ = [
+    "AUTHZ_RESULTS",
+    "FEED_RESULTS",
+    "MAX_FEED_PAGE_SIZE",
+    "RESOURCE_RESULTS",
+    "AuditCursorError",
+    "AuditFeedFilters",
+    "AuditFeedPage",
+    "AuditFeedRow",
+    "AuditKind",
+    "AuditSource",
+    "count_feed",
+    "frozen_until",
+    "iter_feed",
+    "iter_feed_batches",
+    "iter_feed_batches_per_session",
+    "list_feed",
+]

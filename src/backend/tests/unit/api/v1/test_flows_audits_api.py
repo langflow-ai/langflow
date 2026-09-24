@@ -183,9 +183,7 @@ async def test_an_unrecorded_create_does_not_reopen_the_previous_life(client, lo
         f"api/v1/flows/{shared_id}", json={"name": hers, "data": GRAPH}, headers=logged_in_headers
     )
     assert created.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, created.text
-    edited = await client.patch(
-        f"api/v1/flows/{shared_id}", json={"name": f"{hers}-v2"}, headers=logged_in_headers
-    )
+    edited = await client.patch(f"api/v1/flows/{shared_id}", json={"name": f"{hers}-v2"}, headers=logged_in_headers)
     assert edited.status_code == status.HTTP_200_OK, edited.text
     dropped = await client.delete(f"api/v1/flows/{shared_id}", headers=logged_in_headers)
     assert dropped.status_code in {status.HTTP_200_OK, status.HTTP_204_NO_CONTENT}, dropped.text
