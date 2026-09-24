@@ -18,6 +18,8 @@ requests require the deployment proxy to enforce the egress policy.
 from __future__ import annotations
 
 import os
+import ssl
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -65,14 +67,33 @@ def _pinned_get(
     try:
         # Requests uses these CA bundle overrides; httpx's defaults use different
         # variable names, so pass the Requests setting into the pinned transport.
-        verify = os.environ.get("REQUESTS_CA_BUNDLE") or os.environ.get("CURL_CA_BUNDLE") or True
+        ca_bundle = os.environ.get("REQUESTS_CA_BUNDLE") or os.environ.get("CURL_CA_BUNDLE")
+        verify: bool | ssl.SSLContext
+        if ca_bundle:
+            # httpx deprecates passing CA paths as strings. Requests accepts both
+            # files and OpenSSL certificate directories for these overrides.
+            verify = (
+                ssl.create_default_context(capath=ca_bundle)
+                if Path(ca_bundle).is_dir()
+                else ssl.create_default_context(cafile=ca_bundle)
+            )
+        else:
+            verify = True
         transport = SSRFProtectedSyncTransport(pinned_ips={pin_host_for_url(url): validated_ips}, verify=verify)
         with httpx.Client(transport=transport) as client:
             result = client.get(
                 url, timeout=httpx_timeout, headers=request_headers, params=params, follow_redirects=False
             )
+    except httpx.InvalidURL as exc:
+        raise requests.exceptions.InvalidURL(str(exc)) from exc
+    except httpx.ConnectTimeout as exc:
+        raise requests.ConnectTimeout(str(exc)) from exc
+    except httpx.ReadTimeout as exc:
+        raise requests.ReadTimeout(str(exc)) from exc
     except httpx.TimeoutException as exc:
         raise requests.Timeout(str(exc)) from exc
+    except httpx.ConnectError as exc:
+        raise requests.ConnectionError(str(exc)) from exc
     except httpx.RequestError as exc:
         raise requests.RequestException(str(exc)) from exc
 

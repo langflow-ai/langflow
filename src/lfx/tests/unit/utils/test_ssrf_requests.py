@@ -3,6 +3,7 @@
 import ipaddress
 import os
 import socket
+import ssl
 from unittest.mock import Mock, patch
 
 import certifi
@@ -108,6 +109,45 @@ class TestSSRFSafeGet:
         assert mock_get.call_count == 1
         # Auto-redirects must be disabled so each hop can be validated.
         assert mock_get.call_args.kwargs["follow_redirects"] is False
+
+    @pytest.mark.parametrize(
+        ("cause", "expected"),
+        [
+            (httpx.ConnectError("connection refused"), requests.ConnectionError),
+            (httpx.ConnectTimeout("connect timed out"), requests.ConnectTimeout),
+            (httpx.ReadTimeout("read timed out"), requests.ReadTimeout),
+            (httpx.InvalidURL("invalid URL"), requests.exceptions.InvalidURL),
+        ],
+    )
+    def test_pinned_errors_use_requests_exceptions(self, cause, expected):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("httpx.Client.get", side_effect=cause),
+            pytest.raises(expected),
+        ):
+            ssrf_safe_get("http://feed.example.com/rss", timeout=5)
+
+    def test_invalid_url_from_pin_host_uses_requests_exception(self):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("lfx.utils.ssrf_requests.pin_host_for_url", side_effect=httpx.InvalidURL("invalid URL")),
+            pytest.raises(requests.exceptions.InvalidURL),
+        ):
+            ssrf_safe_get("http://feed.example.com/rss", timeout=5)
+
+    def test_pinned_get_preserves_connect_and_read_timeouts(self):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("httpx.Client.get", return_value=_response()) as mock_get,
+        ):
+            ssrf_safe_get("http://feed.example.com/rss", timeout=(2.5, 7.5))
+
+        timeout = mock_get.call_args.kwargs["timeout"]
+        assert timeout.connect == timeout.pool == 2.5
+        assert timeout.read == timeout.write == 7.5
 
     @pytest.mark.parametrize(
         ("content_type", "expected_encoding"),
@@ -294,10 +334,25 @@ class TestSSRFSafeGet:
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "REQUESTS_CA_BUNDLE": ca_bundle}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
             patch("lfx.utils.ssrf_requests.SSRFProtectedSyncTransport", wraps=SSRFProtectedSyncTransport) as transport,
+            patch("lfx.utils.ssrf_requests.ssl.create_default_context", wraps=ssl.create_default_context) as context,
             patch("httpx.Client.get", return_value=_response()),
         ):
             ssrf_safe_get("https://feed.example.com/rss", timeout=5)
-        assert transport.call_args.kwargs["verify"] == ca_bundle
+        assert isinstance(transport.call_args.kwargs["verify"], ssl.SSLContext)
+        assert any(call.kwargs.get("cafile") == ca_bundle for call in context.call_args_list)
+
+    def test_requests_ca_directory_is_used_by_the_pinned_transport(self, tmp_path):
+        context = ssl.create_default_context()
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "REQUESTS_CA_BUNDLE": str(tmp_path)}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("lfx.utils.ssrf_requests.SSRFProtectedSyncTransport", wraps=SSRFProtectedSyncTransport) as transport,
+            patch("lfx.utils.ssrf_requests.ssl.create_default_context", return_value=context) as create_context,
+            patch("httpx.Client.get", return_value=_response()),
+        ):
+            ssrf_safe_get("https://feed.example.com/rss", timeout=5)
+        assert transport.call_args.kwargs["verify"] is context
+        assert any(call.kwargs.get("capath") == str(tmp_path) for call in create_context.call_args_list)
 
 
 class TestRefuseRedirects:
