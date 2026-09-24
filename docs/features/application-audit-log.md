@@ -203,12 +203,20 @@ not implicitly grant this permission when an authorization plugin is active.
 so owning it today cannot grant everything that ever happened to it: otherwise
 re-creating a deleted resource would hand its previous owner's trail to whoever
 asked. Without a plugin, the owner floor is therefore scoped to the resource's
-**current life**: the window opens at the newest `create` recorded for that id
-*and* resource type, so an id that changed hands twice shows only what happened
-after it came back, and a Flow event never opens Project history at the same id.
-When no `create` is recorded — auditing was off when the resource was created —
-the period cannot be established and the ownership side matches nothing; the
-caller's own events stay readable either way.
+**current life**, read from the events themselves, per id *and* resource type:
+
+* the newest `create` is where the current life began, and belongs to it;
+* a newer `delete` means that create ended a life that is over — the current one
+  began after it with a create nobody recorded (auditing off, or `create`
+  excluded) — so the window opens *after* the delete;
+* with neither recorded, the id was never freed and the whole stored history
+  belongs to the resource that is there now.
+
+That last case is ordinary rather than exotic: retention deletes by age, so a
+long-lived resource loses its `create` first, and default and starter projects
+never record one. Reuse always needs a delete, and retention sweeps everything
+older than a delete along with it, so opening fully when no boundary survives
+cannot expose a previous life. A caller's own events are readable either way.
 
 A deleted resource's events stay readable by whoever acted on them. With a
 plugin, the resource's scope is gone once the row is deleted, so the check runs

@@ -6,8 +6,10 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
+from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.auth import AuthzRole
 from langflow.services.deps import get_settings_service, session_scope
+from sqlmodel import select
 
 from .audit_helpers import enabled_audit, events_by_user, login, make_user
 
@@ -123,6 +125,48 @@ async def test_a_superuser_reads_every_project(client, logged_in_headers, logged
     assert [item["operation"] for item in feed["items"]] == ["create"]
 
 
+async def test_an_owner_sees_another_actors_change_to_their_project(
+    client, logged_in_headers, logged_in_headers_super_user
+):
+    """The positive side of the floor: the window lets the owner see what others did."""
+    mine = await _project(client, logged_in_headers)
+    renamed = f"by-the-superuser-{uuid4().hex[:8]}"
+    patched = await client.patch(
+        f"api/v1/projects/{mine['id']}", json={"name": renamed}, headers=logged_in_headers_super_user
+    )
+    assert patched.status_code == status.HTTP_200_OK, patched.text
+
+    feed = await _audits(client, logged_in_headers, f"?project_id={mine['id']}&limit=200")
+
+    operations = [item["operation"] for item in feed["items"]]
+    assert operations.count("patch") == 1, operations
+    assert renamed in {item["project_name"] for item in feed["items"]}
+
+
+async def test_an_owner_keeps_the_history_after_retention_sweeps_the_create(
+    client, logged_in_headers, logged_in_headers_super_user
+):
+    """Retention deletes by age, so a long-lived project loses its create first."""
+    mine = await _project(client, logged_in_headers)
+    renamed = f"still-visible-{uuid4().hex[:8]}"
+    await client.patch(f"api/v1/projects/{mine['id']}", json={"name": renamed}, headers=logged_in_headers_super_user)
+
+    async with session_scope() as session:
+        create_row = (
+            await session.exec(
+                select(AuditEvent).where(
+                    AuditEvent.resource_id == UUID(mine["id"]), AuditEvent.operation == "create"
+                )
+            )
+        ).one()
+        await session.delete(create_row)
+
+    feed = await _audits(client, logged_in_headers, f"?project_id={mine['id']}&limit=200")
+
+    # Nothing was ever deleted at this id, so no other life can have used it.
+    assert renamed in {item["project_name"] for item in feed["items"]}
+
+
 async def test_a_deleted_project_stays_readable_by_whoever_acted_on_it(client, logged_in_headers):
     project = await _project(client, logged_in_headers)
     await client.delete(f"api/v1/projects/{project['id']}", headers=logged_in_headers)
@@ -162,10 +206,15 @@ async def test_an_id_that_changed_hands_twice_shows_only_its_current_life(client
 
     _other_id, other_name = await make_user("intervening")
     other_headers = await login(client, other_name)
-    await client.put(f"api/v1/projects/{shared_id}", json={"name": f"b-{uuid4().hex[:8]}"}, headers=other_headers)
+    took = await client.put(
+        f"api/v1/projects/{shared_id}", json={"name": f"b-{uuid4().hex[:8]}"}, headers=other_headers
+    )
+    assert took.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, took.text
     between = f"b-renamed-{uuid4().hex[:8]}"
-    await client.patch(f"api/v1/projects/{shared_id}", json={"name": between}, headers=other_headers)
-    await client.delete(f"api/v1/projects/{shared_id}", headers=other_headers)
+    edited = await client.patch(f"api/v1/projects/{shared_id}", json={"name": between}, headers=other_headers)
+    assert edited.status_code == status.HTTP_200_OK, edited.text
+    released = await client.delete(f"api/v1/projects/{shared_id}", headers=other_headers)
+    assert released.status_code in {status.HTTP_200_OK, status.HTTP_204_NO_CONTENT}, released.text
 
     back = f"a2-{uuid4().hex[:8]}"
     retaken = await client.put(f"api/v1/projects/{shared_id}", json={"name": back}, headers=logged_in_headers)
