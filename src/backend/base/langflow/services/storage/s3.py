@@ -191,7 +191,7 @@ class S3StorageService(StorageService):
         """
         loop = asyncio.get_running_loop()
         # Its loop already closed what it could; only the reference is left to drop.
-        # ponytail: a loop closed without shutdown_asyncgens leaves its client for the GC.
+        # A loop closed without shutdown_asyncgens never closed its client; the GC has to.
         for closed in [other for other in self._clients if other.is_closed()]:
             del self._clients[closed]
         if (held := self._clients.get(loop)) is not None:
