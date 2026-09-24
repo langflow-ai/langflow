@@ -215,6 +215,19 @@ async def plugin_decides_visibility() -> bool:
 _Incarnation = aliased(AuditEvent)
 
 
+def _newest(operation: AuditOperation) -> Any:
+    """When this resource last recorded that operation, correlated per row."""
+    return (
+        select(func.max(col(_Incarnation.timestamp)))
+        .where(
+            col(_Incarnation.resource_id) == col(AuditEvent.resource_id),
+            col(_Incarnation.resource_type) == col(AuditEvent.resource_type),
+            col(_Incarnation.operation) == operation.value,
+        )
+        .scalar_subquery()
+    )
+
+
 async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement[bool] | None:
     """The OSS floor: events the caller made, and events on what they own in its current life.
 
@@ -227,33 +240,33 @@ async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement
     today therefore cannot grant everything ever recorded for it, or re-creating a
     deleted resource would hand its previous owners' trails to whoever asked.
 
-    The window is the resource's current life: it opens at the newest ``create``
-    for that id *and* resource type, so an id that changed hands twice shows only
-    what happened after it came back. Without such an event — auditing was off
-    when the resource was created — the period cannot be established and the
-    ownership side matches nothing. The caller's own events stay readable either
-    way, and a deliberate transfer of ownership without a new ``create`` is not
-    something Langflow does today; if it ever does, the period has to come from a
-    recorded owner rather than from the create.
+    The window is the resource's current life, read from the events themselves:
+
+    * the newest ``create`` is where the current life began, and it is part of it;
+    * a newer ``delete`` means that create belonged to a life that has since
+      ended — the current one started after it, with a create nobody recorded
+      (auditing off, or ``create`` excluded), so the window opens *after* the
+      delete and the previous owner's rows stay theirs;
+    * with neither recorded, the id was never freed, so nothing can have leaked
+      into it and the whole stored history belongs to the resource that is there.
+
+    Retention makes that last case ordinary rather than exotic: it deletes by age,
+    so a long-lived resource loses its create first, and default and starter
+    projects never record one. Reuse always needs a delete, and retention sweeps
+    the rows before a delete along with it, so opening fully when no boundary
+    survives cannot expose a previous life.
     """
     if user.is_superuser or await plugin_decides_visibility():
         return None
-    current_life_began = (
-        select(func.max(col(_Incarnation.timestamp)))
-        .where(
-            col(_Incarnation.resource_id) == col(AuditEvent.resource_id),
-            col(_Incarnation.resource_type) == col(AuditEvent.resource_type),
-            col(_Incarnation.operation) == AuditOperation.CREATE.value,
-        )
-        .scalar_subquery()
+    began, ended = _newest(AuditOperation.CREATE), _newest(AuditOperation.DELETE)
+    current_life = or_(
+        and_(began.is_(None), ended.is_(None)),
+        and_(began.isnot(None), or_(ended.is_(None), began > ended), col(AuditEvent.timestamp) >= began),
+        and_(ended.isnot(None), or_(began.is_(None), ended >= began), col(AuditEvent.timestamp) > ended),
     )
-    # A NULL bound (no create recorded) compares as unknown, so the row is left
-    # out: the ownership side fails closed rather than opening the whole history.
-    owned_in_its_current_life = and_(
-        col(AuditEvent.resource_id).in_(owned_resource_ids),
-        col(AuditEvent.timestamp) >= current_life_began,
+    return or_(
+        and_(col(AuditEvent.resource_id).in_(owned_resource_ids), current_life), col(AuditEvent.user_id) == user.id
     )
-    return or_(owned_in_its_current_life, col(AuditEvent.user_id) == user.id)
 
 
 class AuditActorRead(BaseModel):
