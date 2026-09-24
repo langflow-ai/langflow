@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
@@ -36,6 +36,21 @@ from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, Duplic
 # Bounded retries for append_event's optimistic seq assignment — contention is at most a
 # couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
+
+# Statuses that mean the run is over and the row is retention-eligible. Every
+# other status (QUEUED, IN_PROGRESS, SUSPENDED) is live work: a SUSPENDED run
+# is waiting on a human who may answer weeks later, so age never makes it
+# eligible.
+_RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT)
+
+# Durable identity of a v2 background submission, written into job_metadata with
+# the QUEUED row. The job table is shared: v1 /build, the v1 endpoints, knowledge
+# base ingestion and the legacy v2 background path all create rows here, and some
+# of them are WORKFLOW-typed too, so type alone cannot tell them apart. Retention
+# deletes rows carrying this marker and nothing else, which also means rows
+# written before it existed are never purged.
+BACKGROUND_ORIGIN_KEY = "origin"
+BACKGROUND_ORIGIN = "v2_background"
 
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
@@ -821,6 +836,63 @@ class JobService(Service):
 
         msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
         raise RuntimeError(msg) from last_exc
+
+    async def purge_terminal_jobs(self, *, older_than_days: float, limit: int = 5000) -> int:
+        """Delete finished v2 background runs older than the window, with their child rows.
+
+        Returns the number of job rows deleted.
+
+        Scope is deliberately narrow. The job table is shared with v1 ``/build``,
+        the v1 endpoints, knowledge base ingestion and the legacy v2 background
+        path, and several of those create WORKFLOW-typed rows, so job type cannot
+        separate them. Only rows carrying the ``BACKGROUND_ORIGIN`` marker that
+        ``submit`` writes with the QUEUED row are eligible, so no other
+        subsystem's history is ever deleted by this setting. Rows written before
+        the marker existed carry no marker and are therefore never purged.
+
+        Eligibility also requires a real ``finished_timestamp``. Age is measured
+        from it alone rather than falling back to ``created_timestamp``: a run
+        created months ago and cancelled today is not expired, and falling back
+        would have deleted it immediately. A terminal row that somehow carries no
+        finished timestamp is skipped rather than guessed at.
+
+        Live work is never eligible at any age: QUEUED, IN_PROGRESS and SUSPENDED
+        are absent from ``_RETAINABLE_STATUSES`` because a suspended run is
+        waiting on a human who may answer weeks later.
+
+        The child tables (``job_events``, ``execution_signals``,
+        ``job_checkpoints``) carry ``job_id`` as a plain indexed column with NO
+        foreign key, so nothing cascades: they are deleted explicitly here, or
+        they survive as orphans no query can reach again.
+
+        Deletes are chunked by ``limit`` so a pass never takes a long lock or
+        bloats one transaction; a caller with a backlog loops until a pass
+        returns fewer than ``limit``. Concurrent callers are safe: the delete is
+        keyed by id, so a racer simply finds fewer rows.
+        """
+        from sqlmodel import delete
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        origin = col(Job.job_metadata)[BACKGROUND_ORIGIN_KEY].as_string()
+        async with session_scope() as session:
+            result = await session.exec(
+                select(Job.job_id)
+                .where(
+                    origin == BACKGROUND_ORIGIN,
+                    col(Job.status).in_(_RETAINABLE_STATUSES),
+                    col(Job.finished_timestamp).is_not(None),
+                    col(Job.finished_timestamp) < cutoff,
+                )
+                .limit(limit)
+            )
+            job_ids = list(result.all())
+            if not job_ids:
+                return 0
+            for child in (JobEvent, ExecutionSignal, JobCheckpoint):
+                await session.exec(delete(child).where(col(child.job_id).in_(job_ids)))  # type: ignore[call-overload]
+            await session.exec(delete(Job).where(col(Job.job_id).in_(job_ids)))  # type: ignore[call-overload]
+            await session.flush()
+            return len(job_ids)
 
     async def requeue_resumed_job(self, job_id: UUID, *, owner: str) -> bool:
         """Hand this owner's resumed IN_PROGRESS claim back to the queue. True iff we won.

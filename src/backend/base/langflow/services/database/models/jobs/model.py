@@ -94,8 +94,9 @@ class Job(JobBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "job"
     # The scaled backend's claim poll (claim_next_queued_lease) filters on
     # status + type and sorts by created_timestamp on every worker poll; the
-    # watchdog scans status + type on its interval. The job table has no
-    # retention, so without this composite the hottest query degrades into an
+    # watchdog scans status + type on its interval. Retention is opt-in
+    # (background_retention_days, off by default), so without this composite an
+    # install that never sets a window degrades the hottest query into an
     # ever-growing scan+sort over terminal rows.
     __table_args__ = (Index("ix_job_claim_scan", "status", "type", "created_timestamp"),)
 

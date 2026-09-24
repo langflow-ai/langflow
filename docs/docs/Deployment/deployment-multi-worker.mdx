@@ -312,6 +312,10 @@ The scaled backend requires the following:
 - Workers run the same Langflow version, with the same components and bundles installed, as the API. Workers build and run the flows themselves.
 - At least one worker is running. Without a worker, background runs stay `queued`. The API logs a reminder at startup when the scaled backend is enabled.
 
+:::tip
+Set `LANGFLOW_BACKGROUND_RETENTION_DAYS` on long-lived deployments. With the scaled backend, the job table is the work queue, so without a retention window it grows without bound. Retention is off by default because it deletes run history.
+:::
+
 To enable the scaled backend, set the following environment variables on the API and on every worker:
 
 ```text
@@ -380,6 +384,7 @@ These settings control background runs of the v2 workflows API. For details, see
 | `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S` | `15` | How often in seconds a running job refreshes its heartbeat. |
 | `LANGFLOW_BACKGROUND_WATCHDOG_INTERVAL_S` | `15` | With the scaled backend, how often in seconds each worker checks for jobs whose worker has died. |
 | `LANGFLOW_BACKGROUND_CLAIM_CANDIDATES` | `5` | With the scaled backend, how many of the oldest queued jobs a worker considers on each claim attempt. If workers sit idle while jobs are queued, raise it to roughly your worker count. |
+| `LANGFLOW_BACKGROUND_RETENTION_DAYS` | `0` | Days to keep finished background runs, with their events, before deleting them. `0` keeps every row forever. Only v2 background runs are deleted: queued, running, and paused runs are never deleted at any age, and neither are runs from the v1 build endpoints or knowledge-base ingestion. Age is measured from when a run finished. |
 
 ## Monitor the job queue
 

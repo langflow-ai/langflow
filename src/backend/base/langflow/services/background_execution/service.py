@@ -21,6 +21,7 @@ import contextlib
 import json
 import math
 import os
+import random
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +38,7 @@ from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.jobs.service import BACKGROUND_ORIGIN, BACKGROUND_ORIGIN_KEY
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -61,6 +63,13 @@ if TYPE_CHECKING:
 # Durable statuses that mean the run is over. ``events()`` keys off these (not the
 # process-local live bus) so a reattach to a finished job replays and returns
 # instead of tailing a bus that will never produce another frame.
+# Retention sweep cadence. Purging is never urgent, so it runs hourly in
+# chunks: 5k jobs a batch, up to 50 batches a tick, which clears 250k terminal
+# jobs an hour without any single DELETE holding a long lock.
+_RETENTION_INTERVAL_S = 3600.0
+_RETENTION_BATCH_SIZE = 5000
+_RETENTION_MAX_BATCHES_PER_TICK = 50
+
 _TERMINAL_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT})
 _REQUEST_OVERRIDES_FORMAT_KEY = "request_overrides_format"
 _REQUEST_OVERRIDES_KEY = "request_overrides"
@@ -139,6 +148,7 @@ class BackgroundExecutionService(Service):
         self._bus = InMemoryLiveBus()
         self._frame_source_factory = frame_source_factory
         self._deadline_task: asyncio.Task | None = None
+        self._retention_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
@@ -165,15 +175,19 @@ class BackgroundExecutionService(Service):
         # it is a pure-DB sweep, and the worker fleet does not run it.
         if self._scaled:
             self._start_deadline_watchdog()
+            self._start_retention_sweep()
             return
         await self._executor.start()
         self._start_deadline_watchdog()
+        self._start_retention_sweep()
 
     async def stop(self) -> None:
-        if self._deadline_task is not None:
-            self._deadline_task.cancel()
-            task, self._deadline_task = self._deadline_task, None
-            await asyncio.gather(task, return_exceptions=True)
+        for attr in ("_deadline_task", "_retention_task"):
+            task = getattr(self, attr)
+            if task is not None:
+                task.cancel()
+                setattr(self, attr, None)
+                await asyncio.gather(task, return_exceptions=True)
         # Mirror start(): scaled mode never started the executor.
         if not self._scaled:
             await self._executor.stop()
@@ -196,6 +210,43 @@ class BackgroundExecutionService(Service):
                     await self.sweep_input_deadlines()
 
         self._deadline_task = asyncio.create_task(_loop())
+
+    def _start_retention_sweep(self) -> None:
+        """Purge terminal jobs past the retention window, hourly, until caught up.
+
+        Periodic rather than startup-only on purpose: a fleet that never
+        restarts would otherwise never purge, which is the same "requires a
+        restart to reconcile" failure the lease watchdog exists to avoid. Each
+        tick deletes in chunks and keeps going while a chunk comes back full,
+        so an install that enables retention against a large backlog catches up
+        over a few ticks instead of issuing one enormous DELETE.
+
+        Skipped entirely when ``background_retention_days`` is 0 (the default),
+        so deployments that have not opted in spawn no extra task.
+        """
+        retention_days = self._settings.background_retention_days
+        if not retention_days or self._retention_task is not None:
+            return
+
+        async def _loop() -> None:
+            job_service = get_job_service()
+            while True:
+                # Jitter so replicas running this loop do not all purge at once.
+                await asyncio.sleep(_RETENTION_INTERVAL_S * random.uniform(0.75, 1.25))  # noqa: S311
+                for _ in range(_RETENTION_MAX_BATCHES_PER_TICK):
+                    try:
+                        deleted = await job_service.purge_terminal_jobs(
+                            older_than_days=retention_days, limit=_RETENTION_BATCH_SIZE
+                        )
+                    except Exception:  # noqa: BLE001
+                        # Log and stop this tick: a purge that cannot run must be
+                        # visible, not silently skipped until the table is huge.
+                        await logger.aexception("Background job retention sweep failed")
+                        break
+                    if deleted < _RETENTION_BATCH_SIZE:
+                        break
+
+        self._retention_task = asyncio.create_task(_loop())
 
     async def teardown(self) -> None:
         await self.stop()
@@ -404,7 +455,13 @@ class BackgroundExecutionService(Service):
         # The API models default both fields to {}, so treat empty mappings as no
         # override rather than encrypting an envelope for every ordinary run.
         overrides = {key: value for key, value in supplied_overrides.items() if value}
-        metadata: dict[str, Any] = {"request": self._redact_request(request)}
+        # The origin marker is what retention keys on: it is the durable
+        # identity of a v2 background submission in a job table shared with
+        # v1 /build, the v1 endpoints and knowledge base ingestion.
+        metadata: dict[str, Any] = {
+            BACKGROUND_ORIGIN_KEY: BACKGROUND_ORIGIN,
+            "request": self._redact_request(request),
+        }
         if overrides:
             from langflow.services.auth.utils import get_fernet
 
