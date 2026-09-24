@@ -12,8 +12,11 @@ scope cannot fall back to a cross-tenant query.
 """
 
 import json
+from contextlib import asynccontextmanager
 from importlib.resources import files
+from types import SimpleNamespace
 from typing import cast
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -27,9 +30,13 @@ from langflow.memory import (
     delete_message,
 )
 from langflow.schema.message import Message
+from langflow.services.database.models.message.model import MessageTable
+from langflow.services.deps import session_scope
 from lfx.components.deactivated.store_message import StoreMessageComponent
+from lfx.components.flow_controls.run_flow import RunFlowComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents.memory import MemoryComponent
+from lfx.components.processing.store_message import MessageStoreComponent
 from lfx.custom.eval import eval_custom_component_code
 from lfx.graph.graph.base import Graph
 from lfx.memory.flow_context import (
@@ -42,11 +49,18 @@ from lfx.memory.flow_context import (
     set_current_message_owner_id,
 )
 from lfx.schema.data import Data
+from sqlmodel import select
 
 
 async def _store(session_id: str, flow_id, user_id, text: str) -> None:
     msg = Message(text=text, sender="User", sender_name="User", session_id=session_id)
     await aadd_messages([msg], flow_id=flow_id, user_id=user_id)
+
+
+@asynccontextmanager
+async def _authorized_child_flow(**_kwargs):
+    """Keep this graph execution test focused on message ownership."""
+    yield None
 
 
 async def test_aget_messages_defaults_flow_id_from_context(client):  # noqa: ARG001
@@ -106,6 +120,20 @@ async def test_no_context_requires_explicit_flow_and_owner(client):  # noqa: ARG
 
     assert unscoped == []
     assert [m.text for m in scoped] == ["secret from A"]
+
+
+async def test_trusted_non_graph_store_inserts_message_with_missing_id(client):  # noqa: ARG001
+    """A trusted caller may still insert a message with an unused supplied ID."""
+    flow_id, owner_id = uuid4(), uuid4()
+    message = Message(text="new message", sender="User", sender_name="User", session_id="missing-id-insert")
+    message.id = uuid4()
+
+    stored = await astore_message(message, flow_id=flow_id, user_id=owner_id)
+
+    assert [row.text for row in stored] == ["new message"]
+    assert stored[0].id != message.id
+    queried = await aget_messages(session_id=message.session_id, flow_id=flow_id, user_id=owner_id)
+    assert [row.id for row in queried] == [stored[0].id]
 
 
 async def test_context_accepts_string_flow_id(client):  # noqa: ARG001
@@ -462,6 +490,68 @@ async def test_nested_chat_output_copies_child_message_into_parent_scope(client,
     assert [(row.id, row.text) for row in child_rows] == [(child.id, "child reply")]
     assert [row.text for row in parent_rows] == ["child reply"]
     assert parent_rows[0].id != child.id
+
+
+@pytest.mark.parametrize("persist_messages", [True, False])
+async def test_run_flow_child_inherits_end_user_and_persistence(client, persist_messages):  # noqa: ARG001
+    """A Run Flow child and its parent store replies under the same end user."""
+    child_flow, parent_flow, service_user = uuid4(), uuid4(), uuid4()
+    session_id = f"run-flow-end-user-{persist_messages}"
+    owner_id = derive_message_owner_uuid("alice")
+
+    child_output = ChatOutput(_id="child_output")
+    child_output.set(input_value="child reply", session_id=session_id)
+    child_graph = Graph(child_output, child_output, flow_id=str(child_flow), user_id=str(service_user))
+    parent_output = ChatOutput(_id="parent_output")
+    parent_graph = Graph(parent_output, parent_output, flow_id=str(parent_flow), user_id=str(service_user))
+    parent_graph.end_user_id = "alice"
+    parent_graph.persist_messages = persist_messages
+
+    run_component = RunFlowComponent()
+    run_component.set(flow_name_selected="child", flow_id_selected=str(child_flow), session_id=session_id)
+    run_component._vertex = SimpleNamespace(graph=parent_graph)
+    with (
+        patch.object(run_component, "get_graph", new_callable=AsyncMock, return_value=child_graph),
+        patch("langflow.helpers.flow.scoped_model_provider_policy_for_target_flow", _authorized_child_flow),
+    ):
+        await run_component._run_flow_with_cached_graph(user_id=str(service_user), output_type="any")
+
+    child_rows = await aget_messages(session_id=session_id, flow_id=child_flow, user_id=owner_id)
+    service_rows = await aget_messages(session_id=session_id, flow_id=child_flow, user_id=service_user)
+    assert service_rows == []
+    if persist_messages:
+        assert [row.text for row in child_rows] == ["child reply"]
+        parent_output.set(input_value=child_rows[0], session_id=session_id)
+        async for _ in parent_graph.async_start():
+            pass
+        parent_rows = await aget_messages(session_id=session_id, flow_id=parent_flow, user_id=owner_id)
+        assert [row.text for row in parent_rows] == ["child reply"]
+        assert parent_rows[0].id != child_rows[0].id
+    else:
+        assert child_rows == []
+
+
+@pytest.mark.parametrize("component_class", [ChatOutput, MessageStoreComponent])
+async def test_ownerless_graph_returns_message_without_persisting(client, component_class):  # noqa: ARG001
+    """Ad hoc graphs can render messages without creating ownerless history."""
+    flow_id = uuid4()
+    session_id = f"ownerless-{component_class.__name__}"
+    component = component_class(_id=f"ownerless_{component_class.__name__}")
+    if component_class is ChatOutput:
+        component.set(input_value="ad hoc reply", session_id=session_id)
+        method = component.message_response
+    else:
+        component.set(message="ad hoc reply", session_id=session_id)
+        method = component.store_message
+    graph = Graph(component, component, flow_id=str(flow_id))
+    async for _ in graph.async_start():
+        pass
+
+    output = component.get_output_by_method(method).value
+    assert output.text == "ad hoc reply"
+    async with session_scope() as session:
+        rows = (await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))).all()
+    assert rows == []
 
 
 async def test_graph_write_rejects_foreign_flow_and_owner(client):  # noqa: ARG001

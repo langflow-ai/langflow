@@ -481,15 +481,18 @@ async def astore_message(
     from lfx.memory.flow_context import (
         coerce_flow_id,
         get_current_flow_id,
+        get_current_message_owner_id,
         has_current_flow_scope,
         should_persist_messages,
     )
 
     if not should_persist_messages():
         return [message]
-    # An ad hoc graph with no valid flow ID can still render chat, but its
-    # messages cannot be persisted or queried with the required flow predicate.
-    if has_current_flow_scope() and coerce_flow_id(get_current_flow_id()) is None:
+    # Ad hoc graphs with no valid flow or owner can still render chat. They
+    # cannot persist a row without both required scope predicates.
+    if has_current_flow_scope() and (
+        coerce_flow_id(get_current_flow_id()) is None or get_current_message_owner_id() is None
+    ):
         return [message]
 
     if not message.session_id or not message.sender or not message.sender_name:
@@ -502,27 +505,26 @@ async def astore_message(
     if hasattr(message, "id") and message.id:
         # An existing ID may come from a nested flow's Chat Output. Its parent
         # must get a fresh row, while the child row remains untouched.
-        try:
-            return await aupdate_messages([message])
-        except ValueError as e:
-            await logger.aerror(e)
-            from lfx.memory.flow_context import has_current_flow_scope
-
-            if has_current_flow_scope():
-                # Only an existing row owned by this graph's message principal
-                # in another scoped flow may be copied. Unknown IDs and rows
-                # belonging to another owner produce the same not-found error.
-                if str(e) != f"Message with id {message.id} not found":
+        in_graph = has_current_flow_scope()
+        copy_from_child = False
+        if in_graph:
+            async with session_scope() as session:
+                original = await session.get(MessageTable, UUID(str(message.id)))
+                copy_from_child = (
+                    original is not None
+                    and original.flow_id is not None
+                    and original.flow_id != flow_id
+                    and original.user_id == user_id
+                )
+        # Inside a graph, unknown and different-owner IDs use the scoped
+        # update path and produce the same not-found error. Outside a graph,
+        # trusted callers retain the legacy missing-ID insert behavior.
+        if not copy_from_child:
+            try:
+                return await aupdate_messages([message])
+            except ValueError:
+                if in_graph:
                     raise
-                async with session_scope() as session:
-                    original = await session.get(MessageTable, UUID(str(message.id)))
-                    if (
-                        original is None
-                        or original.flow_id is None
-                        or original.flow_id == flow_id
-                        or original.user_id != user_id
-                    ):
-                        raise
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id, run_id=run_id, user_id=user_id)
