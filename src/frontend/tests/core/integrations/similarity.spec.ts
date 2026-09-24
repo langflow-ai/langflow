@@ -27,16 +27,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
-    await skipIfComponentUnavailable(
-      page.getByText("OpenAI Embeddings", { exact: true }),
-      "OpenAI Embeddings",
-    );
+    const openAiEmbeddings = page.getByTestId("openaiOpenAI Embeddings");
+    await skipIfComponentUnavailable(openAiEmbeddings, "OpenAI Embeddings");
 
-    await page
-      .getByText("OpenAI Embeddings", { exact: true })
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await openAiEmbeddings.dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 100, y: 100 },
+    });
 
     await zoomOut(page, 5);
 
