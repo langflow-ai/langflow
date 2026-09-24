@@ -259,15 +259,19 @@ class TestGetChatResultRetry:
         assert model.temperature is None
 
     @pytest.mark.asyncio
-    async def test_should_retry_without_temperature_then_top_p_when_bedrock_rejects_both(self):
-        """The Bedrock Converse component defaults to temperature 0.7 and top_p 0.9; GPT-6 rejects each in turn."""
+    @pytest.mark.parametrize(("temperature", "top_p"), [(0.7, 0.9), (0.0, 0.0)], ids=["component_defaults", "zero"])
+    async def test_should_retry_without_temperature_then_top_p_when_bedrock_rejects_both(self, temperature, top_p):
+        """The Bedrock Converse component defaults to temperature 0.7 and top_p 0.9; GPT-6 rejects each in turn.
+
+        Zero is rejected the same way (GH-15349), so the fields must be cleared by identity, not truthiness.
+        """
         probe = _make_probe()
-        model = BedrockSamplingSensitiveChatModel(temperature=0.7, top_p=0.9)
+        model = BedrockSamplingSensitiveChatModel(temperature=temperature, top_p=top_p)
 
         result = await probe._get_chat_result(runnable=model, stream=False, input_value="say ok")
 
         assert result.text == "ok"
-        assert model.seen == [(0.7, 0.9), (None, 0.9), (None, None)]
+        assert model.seen == [(temperature, top_p), (None, top_p), (None, None)]
 
     @pytest.mark.asyncio
     async def test_should_not_retry_when_the_error_is_unrelated(self):
