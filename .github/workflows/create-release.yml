@@ -19,6 +19,11 @@ permissions:
   actions: read
   contents: write
 
+# Serialize final-release publication with candidate tag preparation.
+concurrency:
+  group: release-source-v${{ inputs.version }}
+  cancel-in-progress: false
+
 jobs:
   create_release:
     name: Create Release Job

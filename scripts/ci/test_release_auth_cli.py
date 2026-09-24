@@ -127,6 +127,22 @@ def test_should_print_only_release_sha_when_cli_creates_tag(
     assert capsys.readouterr().out == sha
 
 
+def test_should_replace_only_the_explicitly_selected_candidate_from_cli(
+    source_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(source_repo)
+    main(["tag", "v1.13.0"])
+    first = capsys.readouterr().out
+    expected = run_git(source_repo, "rev-parse", "refs/tags/v1.13.0").decode().strip()
+    run_git(source_repo, "commit", "--allow-empty", "-m", "Next candidate")
+
+    main(["tag", "v1.13.0", "--replace-prepared-tag", expected])
+
+    result = capsys.readouterr().out
+    assert result != first
+    assert result.encode() == run_git(source_repo, "rev-parse", "refs/tags/v1.13.0^{commit}")
+
+
 @pytest.mark.parametrize("ref", ["missing-ref", "--invalid-option"])
 def test_should_report_git_failure_when_cli_ref_is_invalid(
     source_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], ref: str

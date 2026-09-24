@@ -30,6 +30,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     tag = commands.add_parser("tag", help="Create an unpublished release-only source tag without moving a branch")
     tag.add_argument("tag")
     tag.add_argument("--ref", default="HEAD")
+    tag.add_argument(
+        "--replace-prepared-tag",
+        metavar="EXPECTED_TAG_OBJECT",
+        help="Replace only this prepared candidate tag; caller must check publication and push with a lease",
+    )
     args = parser.parse_args(argv)
     try:
         if args.command == "prepare":
@@ -43,7 +48,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             verify_release_source(args.source)
             print(f"Verified {args.source}: AUTO_LOGIN=False")
         else:
-            print(prepare_release_tag(Path.cwd(), args.tag, args.ref))
+            print(prepare_release_tag(Path.cwd(), args.tag, args.ref, expected_tag=args.replace_prepared_tag))
     except subprocess.CalledProcessError as exc:
         parser.error(f"Git operation failed: {exc.stderr.decode().strip()}")
     except (OSError, SyntaxError, ValueError, RuntimeError, zipfile.BadZipFile) as exc:

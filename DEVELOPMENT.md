@@ -84,7 +84,11 @@ Use the workspace setup (`make init` or `uv sync`) to develop against the local 
 
 After updating package versions on the development/release branch, run the **Prepare Release Tag** GitHub Actions workflow with that branch or commit as `ref` and a new version tag such as `v1.13.0`. Then run the normal release workflow against the prepared tag.
 
-The preparation workflow creates a separate commit that changes only the authentication default to `false`, and pushes only the tag. It preserves the development branch and refuses to move an existing tag. GitHub's automatic source ZIP/TAR downloads therefore disable auto-login, just like the released wheels. Keep this release-only commit out of development branches when merging release work back.
+The preparation workflow creates a separate commit that changes only the authentication default to `false`, and pushes only the tag. It preserves the development branch. GitHub's automatic source ZIP/TAR downloads therefore disable auto-login, just like the released wheels. Keep this release-only commit out of development branches when merging release work back.
+
+For RC2 or a final candidate with additional fixes, run **Prepare Release Tag** again with the same version tag, the updated release branch as `ref`, and `replace_prepared_tag` enabled. Replacement is opt-in: the existing tag must point to an exact authentication-preparation commit, and the new source must descend from the previous candidate's source. Preparation and release publication share a per-tag concurrency group, so a tag cannot advance through this workflow while its release is running. The workflow refuses replacement when a final GitHub release already uses the tag. Its push checks the previous tag object so a concurrent update cannot be overwritten. Do not replace a tag after publishing final artifacts; use a new version instead.
+
+An unchanged source can reuse its prepared tag without enabling replacement. Once the final candidate is prepared, run the release workflow against that tag with `pre_release` disabled. Do not recreate or force-move the tag directly onto the development branch.
 
 Nightly and standalone LFX release workflows prepare their source tags automatically. Package build jobs also verify the wheel's authentication default before uploading it.
 

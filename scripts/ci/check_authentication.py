@@ -119,7 +119,7 @@ def check_installed_wheel(port: int, timeout: float, username: str, password: st
             LANGFLOW_MODELS_DEV_REFRESH="false",
             DO_NOT_TRACK="true",
         )
-        # Uvicorn runs the installed app in a single process on every CI platform.
+        # Exercise the CLI's platform-specific startup as well as authentication.
         # -I excludes the source checkout and PYTHONPATH from Python's search path.
         with Path(directory, "server.log").open("w") as log:
             process = subprocess.Popen(  # noqa: S603
@@ -127,13 +127,15 @@ def check_installed_wheel(port: int, timeout: float, username: str, password: st
                     sys.executable,
                     "-I",
                     "-m",
-                    "uvicorn",
-                    "langflow.main:create_app",
-                    "--factory",
+                    "langflow",
+                    "run",
+                    "--backend-only",
                     "--host",
                     "127.0.0.1",
                     "--port",
                     str(port),
+                    "--workers",
+                    "1",
                 ],
                 cwd=directory,
                 env=environment,

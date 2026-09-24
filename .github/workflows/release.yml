@@ -64,6 +64,11 @@ on:
         type: boolean
         default: true
 
+# Hold the source tag stable until every build and publication job has finished.
+concurrency:
+  group: release-source-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
 jobs:
   echo-inputs:
     name: Echo Workflow Inputs
@@ -953,6 +958,9 @@ jobs:
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
           uv pip install src/backend/base/dist/*.whl
+          # Workspace sources take precedence over --find-links during dependency
+          # installation. Replace LFX last so startup tests the published artifact.
+          uv pip install --force-reinstall --no-deps lfx-dist/*.whl
           uv run --no-sync python - <<'PY'
           import re
           from importlib.metadata import distributions
@@ -975,7 +983,12 @@ jobs:
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7860/api/v1/auto_login)" = "403"
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7860/api/v1/auto_login)
+          if [ "$status" != "403" ]; then
+            echo "Release wheel authentication check failed: auto_login returned $status; expected 403."
+            kill "$SERVER_PID"
+            exit 1
+          fi
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
