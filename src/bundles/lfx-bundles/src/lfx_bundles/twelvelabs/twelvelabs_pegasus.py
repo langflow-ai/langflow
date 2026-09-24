@@ -1,7 +1,4 @@
-import json
-import subprocess
 import time
-from pathlib import Path
 from typing import Any
 
 from lfx.custom import Component
@@ -9,8 +6,11 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs import DataInput, DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput
 from lfx.io import Output
 from lfx.schema.message import Message
+from lfx.utils.file_path_security import component_file_access_scopes
 from tenacity import retry, stop_after_attempt, wait_exponential
 from twelvelabs import TwelveLabs
+
+from lfx_bundles.twelvelabs.file_access import resolve_video_file
 
 
 class TaskError(Exception):
@@ -239,61 +239,6 @@ class TwelveLabsPegasus(Component):
         self.log(timeout_msg, "ERROR")
         raise TaskTimeoutError(timeout_msg)
 
-    def validate_video_file(self, filepath: str) -> tuple[bool, str]:
-        """Validate video file using ffprobe.
-
-        Returns (is_valid, error_message).
-        """
-        # Ensure filepath is a string and doesn't contain shell metacharacters
-        if not isinstance(filepath, str) or any(c in filepath for c in ";&|`$(){}[]<>*?!#~"):
-            return False, "Invalid filepath"
-
-        try:
-            cmd = [
-                "ffprobe",
-                "-loglevel",
-                "error",
-                "-show_entries",
-                "stream=codec_type,codec_name",
-                "-of",
-                "default=nw=1",
-                "-print_format",
-                "json",
-                "-show_format",
-                filepath,
-            ]
-
-            # Use subprocess with a list of arguments to avoid shell injection
-            # We need to skip the S603 warning here as we're taking proper precautions
-            # with input validation and using shell=False
-            result = subprocess.run(  # noqa: S603
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                shell=False,  # Explicitly set shell=False for security
-            )
-
-            if result.returncode != 0:
-                return False, f"FFprobe error: {result.stderr}"
-
-            probe_data = json.loads(result.stdout)
-
-            has_video = any(stream.get("codec_type") == "video" for stream in probe_data.get("streams", []))
-
-            if not has_video:
-                return False, "No video stream found in file"
-
-            self.log(f"Video validation successful: {json.dumps(probe_data, indent=2)}")
-        except subprocess.SubprocessError as e:
-            return False, f"FFprobe process error: {e!s}"
-        except json.JSONDecodeError as e:
-            return False, f"FFprobe output parsing error: {e!s}"
-        except (ValueError, OSError) as e:
-            return False, f"Validation error: {e!s}"
-        else:
-            return True, ""
-
     def on_task_update(self, task: Any) -> None:
         """Callback for task status updates.
 
@@ -342,8 +287,9 @@ class TwelveLabsPegasus(Component):
                 return Message(text="Please provide exactly one video")
 
             video_path = self.videodata[0].data.get("text")
-            if not video_path or not Path(video_path).exists():
+            if not video_path:
                 return Message(text="Invalid video path")
+            video_path = resolve_video_file(video_path, scope_ids=component_file_access_scopes(self))
 
             if not self.api_key:
                 return Message(text="No API key provided")
@@ -360,7 +306,7 @@ class TwelveLabsPegasus(Component):
             except IndexCreationError as e:
                 return Message(text=f"Failed to get/create index: {e}")
 
-            with Path(video_path).open("rb") as video_file:
+            with video_path.open("rb") as video_file:
                 task = client.task.create(index_id=self._index_id, file=video_file)
             self._task_id = task.id
 

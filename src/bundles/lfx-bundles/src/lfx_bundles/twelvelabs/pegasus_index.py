@@ -7,8 +7,11 @@ from lfx.custom import Component
 from lfx.inputs import DataInput, DropdownInput, SecretStrInput, StrInput
 from lfx.io import Output
 from lfx.schema import Data
+from lfx.utils.file_path_security import component_file_access_scopes
 from tenacity import retry, stop_after_attempt, wait_exponential
 from twelvelabs import TwelveLabs
+
+from lfx_bundles.twelvelabs.file_access import resolve_video_file
 
 
 class TwelveLabsError(Exception):
@@ -199,8 +202,9 @@ class PegasusIndexVideo(Component):
 
         Uploads a video file to the specified index and returns the task ID.
         """
-        video_name = Path(video_path).name
-        with Path(video_path).open("rb") as video_file:
+        path = resolve_video_file(video_path, scope_ids=component_file_access_scopes(self))
+        video_name = path.name
+        with path.open("rb") as video_file:
             self.status = f"Uploading {video_name} to index {index_id}..."
             task = client.task.create(index_id=index_id, file=video_file)
             task_id = task.id
@@ -249,8 +253,10 @@ class PegasusIndexVideo(Component):
                 self.status = f"Skipping item with missing or invalid video path: {video_info}"
                 continue
 
-            if not Path(video_path).exists():
-                self.status = f"Video file not found, skipping: {video_path}"
+            try:
+                video_path = str(resolve_video_file(video_path, scope_ids=component_file_access_scopes(self)))
+            except ValueError:
+                self.status = "Skipping invalid or inaccessible video path"
                 continue
 
             valid_videos.append((video_data_item, video_path))

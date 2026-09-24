@@ -3,8 +3,9 @@
 import os
 import shutil
 import subprocess
+from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,7 +14,10 @@ pytest.importorskip("lfx_bundles")
 from lfx.schema import Data
 from lfx.utils import file_path_security
 from lfx.utils.file_path_security import LocalFileAccessError
+from lfx_bundles.twelvelabs.pegasus_index import PegasusIndexVideo
 from lfx_bundles.twelvelabs.split_video import SplitVideoComponent
+from lfx_bundles.twelvelabs.twelvelabs_pegasus import TwelveLabsPegasus
+from lfx_bundles.twelvelabs.video_embeddings import TwelveLabsVideoEmbeddingsComponent
 from lfx_bundles.twelvelabs.video_file import VideoFileComponent
 
 
@@ -31,6 +35,32 @@ class TestTwelveLabsCloudValidation:
 
             error_msg = str(exc_info.value).lower()
             assert "astra" in error_msg or "cloud" in error_msg
+
+    @pytest.mark.parametrize(
+        "raw_path", [r"\\server\share\video.mp4", r"\/server/share/video.mp4", r"/\server/share/video.mp4"]
+    )
+    def test_video_file_rejects_unc_before_filesystem_access(self, monkeypatch, raw_path):
+        monkeypatch.setattr(file_path_security, "is_local_file_access_restricted", lambda: False)
+        component = VideoFileComponent(file_path=raw_path)
+        video_file = component.BaseFile(data=[], path=Path(raw_path))
+
+        def guard_network_path(method):
+            def guarded(path, *args, **kwargs):
+                if str(path).replace("\\", "/").startswith("//"):
+                    msg = "filesystem access on a network path"
+                    raise AssertionError(msg)
+                return method(path, *args, **kwargs)
+
+            return guarded
+
+        with (
+            patch.object(Path, "exists", guard_network_path(Path.exists)),
+            patch.object(Path, "stat", guard_network_path(Path.stat)),
+            patch.object(Path, "resolve", guard_network_path(Path.resolve)),
+        ):
+            with pytest.raises(LocalFileAccessError, match="UNC and device"):
+                component.process_files([video_file])
+            component.load_files()
 
     def test_split_video_process_disabled_in_astra_cloud(self):
         """Test that SplitVideo process raises error in Astra Cloud."""
@@ -71,7 +101,8 @@ class TestSplitVideoLocalPaths:
 
         assert run.call_count == 2
         assert run.call_args_list[0].args[0][-1] == str(video.resolve())
-        assert run.call_args_list[1].args[0][6] == str(video.resolve())
+        ffmpeg_command = run.call_args_list[1].args[0]
+        assert ffmpeg_command[ffmpeg_command.index("-i") + 1] == str(video.resolve())
         for call in run.call_args_list:
             command = call.args[0]
             assert command[command.index("-format_whitelist") + 1] == (
@@ -163,3 +194,131 @@ class TestSplitVideoLocalPaths:
 
         with pytest.raises(RuntimeError, match="not on whitelist"):
             component.get_video_duration(str(playlist))
+
+
+@pytest.fixture
+def other_users_video(tmp_path, monkeypatch):
+    monkeypatch.setattr(file_path_security, "is_local_file_access_restricted", lambda: True)
+    monkeypatch.setattr(
+        file_path_security,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(config_dir=tmp_path, database_url=None)),
+    )
+    video = tmp_path / "other-user" / "video.mp4"
+    video.parent.mkdir()
+    video.write_bytes(b"other user's video")
+    return video
+
+
+@pytest.mark.unit
+class TestTwelveLabsUploadScopes:
+    def test_video_file_accepts_current_users_video(self, other_users_video):
+        own_video = other_users_video.parent.parent / "current-user" / "video.mp4"
+        own_video.parent.mkdir()
+        own_video.write_bytes(b"current user's video")
+        component = VideoFileComponent(_user_id="current-user", file_path=str(own_video))
+        video_file = component.BaseFile(data=[], path=own_video)
+
+        processed = component.process_files([video_file])
+
+        assert processed == [video_file]
+        assert processed[0].data[0].data["text"] == str(own_video)
+
+    def test_pegasus_does_not_upload_other_users_video(self, other_users_video):
+        component = TwelveLabsPegasus(
+            _user_id="current-user",
+            videodata=[Data(data={"text": str(other_users_video)})],
+            api_key="test-key",
+        )
+
+        with patch("lfx_bundles.twelvelabs.twelvelabs_pegasus.TwelveLabs") as client:
+            response = component.process_video()
+
+        assert "outside the authenticated user's storage scope" in response.text
+        client.assert_not_called()
+
+    def test_pegasus_uploads_current_users_video(self, other_users_video):
+        own_video = other_users_video.parent.parent / "current-user" / "video.mp4"
+        own_video.parent.mkdir()
+        own_video.write_bytes(b"current user's video")
+        component = TwelveLabsPegasus(
+            _user_id="current-user",
+            videodata=[Data(data={"text": str(own_video)})],
+            api_key="test-key",
+        )
+
+        with (
+            patch("lfx_bundles.twelvelabs.twelvelabs_pegasus.TwelveLabs") as client,
+            patch.object(component, "_get_or_create_index", return_value=("test-index", "test-index")),
+        ):
+            client.return_value.task.create.return_value = SimpleNamespace(
+                id="task-id", status="ready", video_id="video-id", wait_for_done=lambda **_kwargs: None
+            )
+            response = component.process_video()
+
+        assert "Video processed successfully" in response.text
+        assert client.return_value.task.create.call_args.kwargs["file"].name == str(own_video)
+
+    def test_pegasus_index_does_not_upload_other_users_video(self, other_users_video):
+        component = PegasusIndexVideo(
+            _user_id="current-user",
+            videodata=[Data(data={"text": str(other_users_video)})],
+            api_key="test-key",
+            index_id="test-index",
+        )
+
+        with (
+            patch("lfx_bundles.twelvelabs.pegasus_index.TwelveLabs") as client,
+            patch.object(component, "_get_or_create_index", return_value=("test-index", "test-index")),
+        ):
+            assert component.index_videos() == []
+
+        client.return_value.task.create.assert_not_called()
+
+    def test_pegasus_index_upload_helper_guards_other_users_video(self, other_users_video):
+        component = PegasusIndexVideo(_user_id="current-user")
+        client = MagicMock()
+
+        with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+            component._upload_video(client, str(other_users_video), "test-index")
+
+        client.task.create.assert_not_called()
+
+    def test_pegasus_index_upload_helper_accepts_current_users_video(self, other_users_video):
+        own_video = other_users_video.parent.parent / "current-user" / "video.mp4"
+        own_video.parent.mkdir()
+        own_video.write_bytes(b"current user's video")
+        component = PegasusIndexVideo(_user_id="current-user")
+        client = MagicMock()
+        client.task.create.return_value.id = "task-id"
+
+        assert component._upload_video(client, str(own_video), "test-index") == "task-id"
+        assert client.task.create.call_args.kwargs["file"].name == str(own_video)
+
+    def test_video_embeddings_do_not_upload_other_users_video(self, other_users_video):
+        component = TwelveLabsVideoEmbeddingsComponent(_user_id="current-user", api_key="test-key")
+
+        with patch("lfx_bundles.twelvelabs.video_embeddings.TwelveLabs") as client:
+            embeddings = component.build_embeddings()
+            with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+                embeddings.embed_video(str(other_users_video))
+
+        client.return_value.embed.task.create.assert_not_called()
+
+    def test_video_embeddings_upload_current_users_video(self, other_users_video):
+        own_video = other_users_video.parent.parent / "current-user" / "video.mp4"
+        own_video.parent.mkdir()
+        own_video.write_bytes(b"current user's video")
+        component = TwelveLabsVideoEmbeddingsComponent(_user_id="current-user", api_key="test-key")
+
+        with patch("lfx_bundles.twelvelabs.video_embeddings.TwelveLabs") as client:
+            embeddings = component.build_embeddings()
+            client.return_value.embed.task.create.return_value.id = "task-id"
+            with patch.object(
+                embeddings,
+                "_wait_for_task_completion",
+                return_value=SimpleNamespace(video_embedding=SimpleNamespace(segments=[])),
+            ):
+                embeddings.embed_video(str(own_video))
+
+        assert client.return_value.embed.task.create.call_args.kwargs["video_file"].name == str(own_video)

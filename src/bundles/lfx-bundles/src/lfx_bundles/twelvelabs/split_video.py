@@ -9,8 +9,10 @@ from lfx.custom import Component
 from lfx.inputs import BoolInput, DropdownInput, HandleInput, IntInput
 from lfx.schema import Data
 from lfx.template import Output
-from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+
+from lfx_bundles.twelvelabs.file_access import resolve_video_file
 
 disable_component_in_astra_cloud_msg = (
     "Video processing is not supported in Astra cloud environment. "
@@ -83,21 +85,8 @@ class SplitVideoComponent(Component):
 
     def _resolve_video_file(self, video_path: str) -> str:
         """Resolve an authorized local file before handing its path to FFmpeg."""
-        if not isinstance(video_path, str) or not video_path or "://" in video_path:
-            msg = "Invalid video path: expected a local file"
-            raise ValueError(msg)
-
-        path = enforce_local_file_access(video_path, scope_ids=component_file_access_scopes(self))
-        try:
-            path = path.resolve(strict=True)
-        except (OSError, RuntimeError) as exc:
-            msg = "Invalid video path: file not found"
-            raise ValueError(msg) from exc
-        if not path.is_file():
-            msg = "Invalid video path: expected a regular file"
-            raise ValueError(msg)
         # An absolute path cannot be interpreted as a leading option or protocol by FFmpeg.
-        return str(path)
+        return str(resolve_video_file(video_path, scope_ids=component_file_access_scopes(self)))
 
     def get_video_duration(self, video_path: str) -> float:
         """Get video duration using FFprobe."""

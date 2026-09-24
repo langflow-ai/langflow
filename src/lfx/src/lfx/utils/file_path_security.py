@@ -8,9 +8,10 @@ When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled (the default), resolved 
 must stay within the authenticated user's or executing flow's storage subdirectory under
 ``settings.config_dir``. The check is a no-op when the setting is explicitly disabled, which
 single-tenant deployments may do to keep the legacy "read any local file by absolute path"
-behavior. Reading the setting fails closed: if the settings service is unavailable the
-restriction is treated as enabled, because the default is on and a fail-open read would drop
-containment for every caller without an operator ever opting out.
+behavior. UNC/device paths are denied in either mode before resolution because Windows may
+connect to the remote host while resolving them. Reading the setting fails closed: if the
+settings service is unavailable the restriction is treated as enabled, because the default is
+on and a fail-open read would drop containment for every caller without an operator opting out.
 
 Reserved-secret denial: the storage data directory IS ``config_dir``, which also holds the
 server-managed secret files as siblings of the per-flow upload subdirectories — the Fernet
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 
 
 class LocalFileAccessError(ValueError):
-    """Raised when a resolved path escapes the allowed storage root under restriction."""
+    """Raised when a local path is unsafe or escapes the allowed storage scope."""
 
 
 class StorageNamespaceError(LocalFileAccessError):
@@ -242,7 +243,7 @@ def enforce_local_file_access(
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
     Symlinks are resolved before the containment check so a symlink inside the storage dir
-    cannot point outside it.
+    cannot point outside it. UNC/device paths are always denied before resolution.
 
     Args:
         resolved_path: A filesystem path. It is re-resolved here (``Path.resolve()``) so that
@@ -260,9 +261,18 @@ def enforce_local_file_access(
         The resolved path as a ``Path`` object when allowed.
 
     Raises:
-        LocalFileAccessError: If the restriction is enabled and the path escapes the
-            authenticated user's or executing flow's storage scope.
+        LocalFileAccessError: If the path is a UNC/device path, or if restriction is enabled
+            and the path escapes the authenticated user's or executing flow's storage scope.
     """
+    # On Windows, resolving a UNC or device path can open an SMB connection before
+    # the scope check runs. Deny it before any filesystem operation in either mode.
+    raw_path = str(resolved_path)
+    # Windows accepts either slash as a separator, including mixed UNC prefixes
+    # such as ``\\/server`` and ``/\\server``.
+    if raw_path.replace("\\", "/").startswith("//"):
+        msg = "Access to UNC and device file paths is not permitted."
+        raise LocalFileAccessError(msg)
+
     path = Path(resolved_path)
     if not is_local_file_access_restricted():
         return path
