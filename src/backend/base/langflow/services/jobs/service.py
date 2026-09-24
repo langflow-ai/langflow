@@ -13,8 +13,9 @@ from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
+from sqlalchemy import JSON, or_
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlmodel import col, func, select
+from sqlmodel import col, func, select, update
 
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.crud import (
@@ -36,6 +37,7 @@ from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, Duplic
 # Bounded retries for append_event's optimistic seq assignment — contention is at most a
 # couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
+_METADATA_UPDATE_MAX_RETRIES = 20
 
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
@@ -262,19 +264,50 @@ class JobService(Service):
         Returns:
             The updated Job, or ``None`` if the row does not exist.
         """
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
-            if job is None:
-                return None
-            if replace or job.job_metadata is None:
+        if replace:
+            async with session_scope() as session:
+                job = await session.get(Job, job_id)
+                if job is None:
+                    return None
                 job.job_metadata = dict(patch)
-            else:
+                session.add(job)
+                await session.flush()
+                return job
+
+        metadata_column = col(Job.job_metadata)
+        for _attempt in range(_METADATA_UPDATE_MAX_RETRIES):
+            async with session_scope() as session:
+                job = await session.get(Job, job_id)
+                if job is None:
+                    return None
+
+                previous_metadata = job.job_metadata
                 # Shallow merge — callers wanting deep-merge own the
                 # composition. This keeps the helper predictable.
-                job.job_metadata = {**job.job_metadata, **patch}
-            session.add(job)
-            await session.flush()
-            return job
+                merged_metadata = {**(previous_metadata or {}), **patch}
+                unchanged = (
+                    or_(metadata_column.is_(None), metadata_column == JSON.NULL)
+                    if previous_metadata is None
+                    else metadata_column == previous_metadata
+                )
+                stmt = (
+                    update(Job)
+                    .where(Job.job_id == job_id, unchanged)
+                    .values(job_metadata=merged_metadata)
+                    .returning(Job.job_id)
+                )
+                result = await session.exec(stmt)  # type: ignore[call-overload]
+                await session.flush()
+                if result.first() is not None:
+                    await session.refresh(job)
+                    return job
+
+            # Another writer changed the JSON blob after our read. Reload and
+            # re-merge instead of overwriting its unrelated top-level keys.
+            await asyncio.sleep(0)
+
+        msg = f"Could not update metadata for job {job_id}: concurrent updates did not settle"
+        raise RuntimeError(msg)
 
     async def suspend_job(self, job_id: UUID, metadata: dict) -> Job | None:
         """Atomically merge pause metadata and transition a job to ``SUSPENDED``.
