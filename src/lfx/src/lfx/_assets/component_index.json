@@ -5180,7 +5180,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -5760,7 +5760,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": null
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 4
@@ -6636,7 +6636,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 }
               ],
               "total_dependencies": 5
@@ -8202,7 +8202,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "langflow",
@@ -8437,11 +8437,11 @@
                 },
                 {
                   "name": "boto3",
-                  "version": null
+                  "version": "1.43.46"
                 },
                 {
                   "name": "googleapiclient",
-                  "version": null
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 7
@@ -29779,7 +29779,7 @@
                 },
                 {
                   "name": "langchain_google_community",
-                  "version": null
+                  "version": "5.0.0"
                 }
               ],
               "total_dependencies": 3
@@ -32211,6 +32211,6 @@
     "num_components": 129,
     "num_modules": 17
   },
-  "sha256": "9c0a6d8cfff6265ecd64ba7439d3dbe91f650558c7295dd5c9e012aed20255e8",
+  "sha256": "df5ce5fff05bb20f0887e554d2cf1c97519076631f6621450df153182b0e15f3",
   "version": "1.13.0"
 }

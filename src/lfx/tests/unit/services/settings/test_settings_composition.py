@@ -130,6 +130,9 @@ EXPECTED_FIELDS = {
     "max_transactions_to_keep",
     "max_vertex_builds_to_keep",
     "max_vertex_builds_per_vertex",
+    "audit_enabled",
+    "audit_retention_days",
+    "audit_exclude_events",
     "max_flow_version_entries_per_flow",
     # SecuritySettings
     "cors_origins",

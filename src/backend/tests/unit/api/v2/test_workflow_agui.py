@@ -1112,6 +1112,7 @@ class TestAGUIStreaming:
                 ),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
             )
         ]
 
