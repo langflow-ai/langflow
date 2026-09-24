@@ -1,5 +1,6 @@
 """Tests for local file-path containment (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS)."""
 
+import os
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
@@ -132,6 +133,7 @@ def test_missing_tenant_scope_fails_closed(tmp_path):
         enforce_local_file_access(upload)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges on Windows")
 def test_symlink_inside_storage_pointing_outside_blocked(tmp_path):
     """A symlink that lives inside the storage dir but resolves outside it is blocked.
 
@@ -153,6 +155,7 @@ def test_symlink_inside_storage_pointing_outside_blocked(tmp_path):
         enforce_local_file_access(str(link), scope_ids=["flow-id"])
 
 
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges on Windows")
 def test_symlink_inside_storage_pointing_inside_allowed(tmp_path):
     """A symlink inside storage that resolves to another in-storage file is allowed.
 
