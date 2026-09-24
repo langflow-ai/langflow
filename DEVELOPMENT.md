@@ -75,6 +75,23 @@ After running `make init`, you have two options for running Langflow:
 - Use `make run_cli` to build and run the application immediately.
 - Continue to the next section to run Langflow in Development mode.
 
+Automatic login is enabled by default when running the workspace from a development branch, including local builds. To require authentication, set `LANGFLOW_AUTO_LOGIN=false` and `LANGFLOW_SUPERUSER_PASSWORD` in your environment or `.env` file. The default username is `langflow`; set `LANGFLOW_SUPERUSER` to use a different username.
+Official release packages, source checkouts/downloads of official release tags, and Docker images (including DEV/CDK) default to `LANGFLOW_AUTO_LOGIN=false`. To opt in for trusted local development, explicitly set `LANGFLOW_AUTO_LOGIN=true` or use `make backend login=true`.
+
+Use the workspace setup (`make init` or `uv sync`) to develop against the local `lfx` package, which owns the authentication settings. Installing only `langflow` from source with pip can still resolve released `langflow-base`/`lfx` dependencies and inherit their `false` default; explicitly set `LANGFLOW_AUTO_LOGIN=true` if you want automatic login in that mixed installation.
+
+### Preparing official release tags
+
+After updating package versions on the development/release branch, run the **Prepare Release Tag** GitHub Actions workflow with that branch or commit as `ref` and a new version tag such as `v1.13.0`. Then run the normal release workflow against the prepared tag.
+
+The preparation workflow creates a separate commit that changes only the authentication default to `false`, and pushes only the tag. It preserves the development branch. GitHub's automatic source ZIP/TAR downloads therefore disable auto-login, just like the released wheels. Keep this release-only commit out of development branches when merging release work back.
+
+For RC2 or a final candidate with additional fixes, run **Prepare Release Tag** again with the same version tag, the updated release branch as `ref`, and `replace_prepared_tag` enabled. Replacement is opt-in: the existing tag must point to an exact authentication-preparation commit, and the new source must descend from the previous candidate's source. Preparation and release publication share a per-tag concurrency group, so a tag cannot advance through this workflow while its release is running. The workflow refuses replacement when a final GitHub release already uses the tag. Its push checks the previous tag object so a concurrent update cannot be overwritten. Do not replace a tag after publishing final artifacts; use a new version instead.
+
+An unchanged source can reuse its prepared tag without enabling replacement. Once the final candidate is prepared, run the release workflow against that tag with `pre_release` disabled. Do not recreate or force-move the tag directly onto the development branch.
+
+Nightly and standalone LFX release workflows prepare their source tags automatically. Package build jobs also verify the wheel's authentication default before uploading it.
+
 ### Troubleshooting frontend build issues
 
 If you encounter frontend build problems or are upgrading from an older version of Langflow, run `make run_clic` once.

@@ -17,7 +17,9 @@ To use a different directory, set the location in `LANGFLOW_FS_TOOL_BASE_DIR` in
 
 If [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login) is set to `true`, all agents share a single workspace at `LANGFLOW_FS_TOOL_BASE_DIR/shared/`.
 If `LANGFLOW_AUTO_LOGIN` is set to `false`, each authenticated user gets a private workspace at `LANGFLOW_FS_TOOL_BASE_DIR/users/HASH/`, where `HASH` is an opaque HMAC-derived identifier. Anonymous requests are refused.
-`LANGFLOW_AUTO_LOGIN` defaults to `true`, so shared mode is the default.
+Official release packages, tagged source archives, and Docker images default `LANGFLOW_AUTO_LOGIN` to `false`, so each authenticated user gets a private workspace. Development branches default to `true` and use the shared workspace.
+
+Standalone `lfx run` and identity-free `lfx serve` executions use the stable `shared/` workspace when LFX generates their user identity. This preserves files between runs even with `LANGFLOW_AUTO_LOGIN=false`; it does not enable automatic login. An explicitly supplied or verified user identity uses private per-user storage when automatic login is disabled. Do not use identity-free serving to separate multiple users' files; configure verified identities for that purpose.
 
 Tool errors are not raised as an unhandled exception.
 Tool errors are returned to the agent as structured JSON:

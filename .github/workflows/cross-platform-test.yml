@@ -72,8 +72,10 @@ jobs:
           mv dist/langflow_base*.whl src/backend/base/dist/
       - name: Build LFX package
         run: |
+          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
           cd src/lfx
           uv build --wheel --out-dir dist
+          uv run --no-sync python ../../scripts/ci/release_auth_defaults.py verify dist/*.whl
       - name: Build SDK package
         run: |
           cd src/sdk
@@ -140,6 +142,8 @@ jobs:
 
   test-installation-stable:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
+    env:
+      LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
     if: |
       always() &&
@@ -201,6 +205,14 @@ jobs:
             python-version: "3.13"
 
     steps:
+      - name: Checkout authentication smoke check
+        uses: actions/checkout@v7
+        with:
+          path: auth-smoke
+          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Determine install method
         id: install-method
         env:
@@ -400,52 +412,18 @@ jobs:
           uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
-      - name: Test server startup (Windows)
+      - name: Test installed release authentication (Windows)
         if: matrix.os == 'windows'
         timeout-minutes: 5
-        run: |
-          # Start server in background
-          $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          do {
-            try {
-              $response = Invoke-WebRequest -Uri "http://localhost:7860/health_check" -UseBasicParsing -TimeoutSec 5
-              if ($response.StatusCode -eq 200) {
-                Write-Host "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-                break
-              }
-            } catch {
-              Start-Sleep -Seconds 5
-            }
-          } while ($true)
-
-          # Stop the server process
-          Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
+        run: .\test-env\Scripts\python.exe auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: powershell
 
-      - name: Test server startup (Unix)
+      - name: Test installed release authentication (Unix)
         if: matrix.os != 'windows'
         timeout-minutes: 5
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-        run: |
-          # Start server in background
-          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
-          SERVER_PID=$!
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          while true; do
-            if curl -f http://localhost:7860/health_check >/dev/null 2>&1; then
-              echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-              break
-            fi
-            sleep 5
-          done
-
-          # Clean shutdown
-          kill $SERVER_PID 2>/dev/null || true
-          sleep 5
+        run: ./test-env/bin/python auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: bash
 
       - name: Test import in Python (Windows)
@@ -476,6 +454,8 @@ jobs:
 
   test-installation-experimental:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }} (Experimental)
+    env:
+      LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
     if: |
       always() &&
@@ -509,6 +489,14 @@ jobs:
             python-version: "3.14"
 
     steps:
+      - name: Checkout authentication smoke check
+        uses: actions/checkout@v7
+        with:
+          path: auth-smoke
+          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Determine install method
         id: install-method
         env:
@@ -840,52 +828,18 @@ jobs:
           uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
-      - name: Test server startup (Windows)
+      - name: Test installed release authentication (Windows)
         if: matrix.os == 'windows'
         timeout-minutes: 5
-        run: |
-          # Start server in background
-          $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          do {
-            try {
-              $response = Invoke-WebRequest -Uri "http://localhost:7860/health_check" -UseBasicParsing -TimeoutSec 5
-              if ($response.StatusCode -eq 200) {
-                Write-Host "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-                break
-              }
-            } catch {
-              Start-Sleep -Seconds 5
-            }
-          } while ($true)
-
-          # Stop the server process
-          Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
+        run: .\test-env\Scripts\python.exe auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: powershell
 
-      - name: Test server startup (Unix)
+      - name: Test installed release authentication (Unix)
         if: matrix.os != 'windows'
         timeout-minutes: 5
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-        run: |
-          # Start server in background
-          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
-          SERVER_PID=$!
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          while true; do
-            if curl -f http://localhost:7860/health_check >/dev/null 2>&1; then
-              echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-              break
-            fi
-            sleep 5
-          done
-
-          # Clean shutdown
-          kill $SERVER_PID 2>/dev/null || true
-          sleep 5
+        run: ./test-env/bin/python auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: bash
 
       - name: Test import in Python (Windows)
@@ -926,6 +880,14 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout authentication smoke check
+        uses: actions/checkout@v7
+        with:
+          path: auth-smoke
+          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Setup UV
         uses: astral-sh/setup-uv@v10.0.0
         with:
@@ -1023,43 +985,12 @@ jobs:
                   getattr(importlib.import_module(module_name), class_name)
           PY
 
-      - name: Boot installed base server
+      - name: Test installed base authentication
         shell: bash
         timeout-minutes: 5
-        run: |
-          set -euo pipefail
-          RUNTIME_DIR=$(mktemp -d)
-          export LANGFLOW_CONFIG_DIR="$RUNTIME_DIR/config"
-          export LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true
-          export LANGFLOW_AUTO_LOGIN=true
-          export DO_NOT_TRACK=true
-          LOG_FILE="$RUNTIME_DIR/server.log"
-
-          base-test-env/bin/langflow run \
-            --host 127.0.0.1 --port 7861 --backend-only --workers 1 >"$LOG_FILE" 2>&1 &
-          SERVER_PID=$!
-          cleanup() {
-            kill "$SERVER_PID" 2>/dev/null || true
-            wait "$SERVER_PID" 2>/dev/null || true
-          }
-          trap cleanup EXIT
-
-          READY=false
-          for _ in $(seq 1 90); do
-            if curl -fsS http://127.0.0.1:7861/health_check >/dev/null 2>&1; then
-              READY=true
-              break
-            fi
-            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-              cat "$LOG_FILE"
-              exit 1
-            fi
-            sleep 2
-          done
-          if [ "$READY" != true ]; then
-            cat "$LOG_FILE"
-            exit 1
-          fi
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
+        run: base-test-env/bin/python auth-smoke/scripts/ci/check_authentication.py --start-server
 
   test-summary:
     name: Cross-Platform Test Summary

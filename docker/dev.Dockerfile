@@ -4,6 +4,7 @@ USER root
 COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx
 ENV TZ=UTC
+ENV LANGFLOW_AUTO_LOGIN=false
 
 WORKDIR /app
 

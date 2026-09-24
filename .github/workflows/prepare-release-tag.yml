@@ -1,0 +1,71 @@
+name: Prepare Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Official release tag (for example v1.13.0)"
+        required: true
+        type: string
+      ref:
+        description: "Version-prepared source branch or commit to release"
+        required: true
+        type: string
+      replace_prepared_tag:
+        description: "Advance an existing prepared candidate to this source (published final releases are protected)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Share this lock with release publication so a running build keeps its source tag.
+concurrency:
+  group: release-source-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  prepare-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: "3.13"
+      - name: Protect published final releases
+        if: inputs.replace_prepared_tag
+        uses: actions/github-script@v9
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        with:
+          script: |
+            try {
+              const {data: release} = await github.rest.repos.getReleaseByTag({
+                ...context.repo, tag: process.env.RELEASE_TAG,
+              });
+              if (!release.prerelease) {
+                core.setFailed('A final release already uses this tag; create a new version instead.');
+              }
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+      - name: Create and push the release source tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          REPLACE_PREPARED_TAG: ${{ inputs.replace_prepared_tag }}
+        run: |
+          git config user.name "Langflow Release Bot"
+          git config user.email "bot-releases@langflow.org"
+          tag_ref="refs/tags/$RELEASE_TAG"
+          if [ "$REPLACE_PREPARED_TAG" = "true" ]; then
+            expected=$(git rev-parse --verify "$tag_ref")
+            uv run --no-project python scripts/ci/release_auth_defaults.py tag "$RELEASE_TAG" \
+              --replace-prepared-tag "$expected"
+            git push --force-with-lease="$tag_ref:$expected" origin "$tag_ref"
+          else
+            uv run --no-project python scripts/ci/release_auth_defaults.py tag "$RELEASE_TAG"
+            git push origin "$tag_ref"
+          fi

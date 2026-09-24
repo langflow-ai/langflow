@@ -151,6 +151,8 @@ jobs:
 
       - name: Verify base application startup and health
         timeout-minutes: 5
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
         run: |
           set -euo pipefail
           inventory-env/bin/langflow run --host 127.0.0.1 --port 7860 --backend-only &
@@ -283,6 +285,8 @@ jobs:
 
       - name: Verify application startup and health
         timeout-minutes: 5
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
         run: |
           set -euo pipefail
           inventory-env/bin/python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &

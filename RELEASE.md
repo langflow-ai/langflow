@@ -94,11 +94,14 @@ See [regressions/README.md](./regressions/README.md) for the full schema and ent
 
 ### 4. Final Release
 
-```sh
-git checkout release-X.Y.Z && git pull # Ensure RC branch is up to date
-git tag vX.Y.Z                         # Create final release tag
-git push origin vX.Y.Z                 # Push tag to remote
-```
+Use the [prepared release-tag process](./DEVELOPMENT.md#preparing-official-release-tags) so published source archives, wheels and images disable automatic login while development branches retain it.
+
+1. Finish version updates and fixes on `release-X.Y.Z`.
+2. Run **Prepare Release Tag** with `tag=vX.Y.Z` and `ref=release-X.Y.Z`.
+   If an earlier candidate already uses this tag and the source has changed, enable `replace_prepared_tag`. The workflow verifies the existing preparation, protects final GitHub releases and checks for concurrent tag updates.
+3. Run the normal release workflow against the prepared `vX.Y.Z` tag with `pre_release` disabled.
+
+Use the same preparation process before each release candidate. Do not create tags directly on the release branch or move published final tags; publish a new version for subsequent fixes. Keep the authentication-preparation commit out of the branch merged back into `main`.
 
 ### 5. Merge RC Back into Main
 
