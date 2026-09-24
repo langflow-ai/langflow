@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -45,9 +43,11 @@ import {
   shortScope,
   uniqueScopes,
 } from "../helpers/scopes";
-import { offersSlackToken, slackTokenKind } from "../helpers/slack-token";
+import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
+import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
+import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
-import SlackTokenFields from "./SlackTokenFields";
+import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
 
 /** Consent can take a while; stop waiting rather than polling forever. */
 const CONSENT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -58,17 +58,6 @@ const openBlankConsentWindow = (): Window | null =>
 
 /** Re-authorizing starts at `scopes`: the handle and identity already exist. */
 type Step = "details" | "scopes" | "authorize";
-
-/** Sign in through the provider, or paste a token (Slack only). */
-type Method = "oauth" | "token";
-
-/** The auth profile a Slack bot token stands in for. */
-const SLACK_BOT_PROFILE = "slack-bot-install";
-
-type AuthorizeState =
-  | { kind: "waiting" }
-  | { kind: "connected"; connection: ConnectionRead }
-  | { kind: "failed"; message: string };
 
 export interface AddConnectionDialogProps {
   open: boolean;
@@ -111,12 +100,6 @@ export function AddConnectionDialog({
   const [authorize, setAuthorize] = useState<AuthorizeState | null>(null);
   const [baseline, setBaseline] = useState<ConnectionPollBaseline | null>(null);
   const [pendingRow, setPendingRow] = useState<ConnectionRead | null>(null);
-  const [method, setMethod] = useState<Method>("oauth");
-  const [token, setToken] = useState("");
-  const [tokenScopes, setTokenScopes] = useState<Set<string>>(new Set());
-  // Consent to unattended use is explicit and off by default: pasting a token
-  // is not the same as allowing a trigger to run with it.
-  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
   const popupRef = useRef<Window | null>(null);
   const startedAt = useRef(0);
   // What the last authorization asked for, so "Try again" repeats it exactly
@@ -130,6 +113,14 @@ export function AddConnectionDialog({
   const poll = usePendingConnectionPoll(
     authorize?.kind === "waiting" ? baseline : null,
   );
+  const slackToken = useSlackTokenConnection({
+    providerId,
+    provider,
+    deploymentContext,
+    reauthorizing: !!reauthorize,
+    create: create.mutateAsync,
+  });
+  const { usesToken } = slackToken;
 
   const registrations = useOAuthRegistrationsQuery(providerId, open);
   const candidates = useMemo(
@@ -174,34 +165,6 @@ export function AddConnectionDialog({
     [provider, typesData],
   );
 
-  const offersToken =
-    !reauthorize && offersSlackToken(providerId, deploymentContext);
-  const usesToken = offersToken && method === "token";
-  const tokenKind = slackTokenKind(token);
-  // What a pasted bot token is for: the actions that run as the app's bot.
-  const botTokenScopes = useMemo(
-    () =>
-      uniqueScopes(
-        scopeRequirements(
-          (provider?.capabilities ?? []).filter(
-            (capability) => capability.auth_profile_id === SLACK_BOT_PROFILE,
-          ),
-          typesData,
-        ),
-      ),
-    [provider, typesData],
-  );
-
-  // Keyed on the scope list's content, not its identity: the types store hands
-  // back a new object on every refetch (window focus included - which is
-  // exactly when someone returns from copying a token), and resetting on that
-  // would silently re-check a scope the person had just unchecked.
-  const botTokenScopeKey = botTokenScopes.join(" ");
-  useEffect(() => {
-    setTokenScopes(
-      new Set(botTokenScopeKey ? botTokenScopeKey.split(" ") : []),
-    );
-  }, [botTokenScopeKey]);
   const ceiling = candidates.find(
     ({ id }) => id === resolvedRegistration,
   )?.scopes;
@@ -368,24 +331,12 @@ export function AddConnectionDialog({
     [reauthorizeList],
   );
 
-  const registrationSelect = candidates.length > 1 && (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor="connection-registration">
-        {t("connections.add.registration")}
-      </Label>
-      <select
-        id="connection-registration"
-        className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-        value={resolvedRegistration ?? ""}
-        onChange={(event) => setRegistrationId(event.target.value)}
-      >
-        {candidates.map((candidate) => (
-          <option key={candidate.id} value={candidate.id}>
-            {candidate.id}
-          </option>
-        ))}
-      </select>
-    </div>
+  const registrationSelect = (
+    <RegistrationSelect
+      registrationIds={candidates.map(({ id }) => id)}
+      value={resolvedRegistration}
+      onChange={setRegistrationId}
+    />
   );
 
   const handleValid =
@@ -395,22 +346,14 @@ export function AddConnectionDialog({
     !!provider &&
     handleValid &&
     displayName.trim().length > 0 &&
-    (usesToken ? tokenKind !== null : !noRegistration);
+    (usesToken ? slackToken.tokenKind !== null : !noRegistration);
 
   /** A pasted token is stored as-is: no consent window, nothing to wait for. */
   const onCreateWithToken = async () => {
-    if (!provider || tokenKind === null) return;
     try {
-      const row = await create.mutateAsync({
-        provider_key: provider.provider_id,
+      const row = await slackToken.createWithToken({
         name,
-        display_name: displayName.trim(),
-        ownership_mode: "user",
-        executing_identity: { identity: "bot" },
-        // An app-level token's scope is recorded by the server, never claimed.
-        granted_scopes: tokenKind === "bot" ? [...tokenScopes] : [],
-        allow_non_interactive: allowBackgroundRuns,
-        credentials: { access_token: token.trim() },
+        displayName: displayName.trim(),
       });
       setStep("authorize");
       setAuthorize({ kind: "connected", connection: row });
@@ -469,9 +412,7 @@ export function AddConnectionDialog({
     setName("");
     setDisplayName("");
     setFieldError(null);
-    setMethod("oauth");
-    setToken("");
-    setAllowBackgroundRuns(false);
+    slackToken.reset();
     onOpenChange(false);
   };
 
@@ -502,9 +443,7 @@ export function AddConnectionDialog({
                   onChange={(event) => {
                     setProviderId(event.target.value);
                     // A pasted token belongs to the provider it was pasted for.
-                    setMethod("oauth");
-                    setToken("");
-                    setAllowBackgroundRuns(false);
+                    slackToken.reset();
                   }}
                   data-testid="connection-provider"
                 >
@@ -516,29 +455,14 @@ export function AddConnectionDialog({
                 </select>
               </div>
 
-              {offersToken && (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="connection-method">
-                    {t("connections.add.method")}
-                  </Label>
-                  <select
-                    id="connection-method"
-                    className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                    value={method}
-                    onChange={(event) => {
-                      setMethod(event.target.value as Method);
-                      setFieldError(null);
-                    }}
-                    data-testid="connection-method"
-                  >
-                    <option value="oauth">
-                      {t("connections.add.methodOauth")}
-                    </option>
-                    <option value="token">
-                      {t("connections.add.methodToken")}
-                    </option>
-                  </select>
-                </div>
+              {slackToken.offersToken && (
+                <ConnectionMethodSelect
+                  method={slackToken.method}
+                  onMethodChange={(method) => {
+                    slackToken.setMethod(method);
+                    setFieldError(null);
+                  }}
+                />
               )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -588,35 +512,20 @@ export function AddConnectionDialog({
 
               {usesToken && (
                 <SlackTokenFields
-                  token={token}
+                  token={slackToken.token}
                   onTokenChange={(value) => {
-                    setToken(value);
+                    slackToken.setToken(value);
                     // The server refused the token that was there; it no longer is.
                     setFieldError(null);
                   }}
-                  allowBackgroundRuns={allowBackgroundRuns}
-                  onAllowBackgroundRunsChange={setAllowBackgroundRuns}
+                  allowBackgroundRuns={slackToken.allowBackgroundRuns}
+                  onAllowBackgroundRunsChange={
+                    slackToken.setAllowBackgroundRuns
+                  }
+                  botTokenScopes={slackToken.botTokenScopes}
+                  tokenScopes={slackToken.tokenScopes}
+                  onToggleTokenScope={slackToken.toggleTokenScope}
                 />
-              )}
-
-              {usesToken && tokenKind === "bot" && (
-                <div className="flex flex-col gap-2">
-                  <span className="text-sm font-medium">
-                    {t("connections.add.tokenScopes")}
-                  </span>
-                  <ScopeChecklist
-                    scopes={botTokenScopes}
-                    selected={tokenScopes}
-                    onToggle={(scope, checked) =>
-                      setTokenScopes((current) => {
-                        const next = new Set(current);
-                        if (checked) next.add(scope);
-                        else next.delete(scope);
-                        return next;
-                      })
-                    }
-                  />
-                </div>
               )}
 
               {!usesToken && identities.length > 1 && (
@@ -760,38 +669,7 @@ export function AddConnectionDialog({
 
         {step === "authorize" && (
           <div className="flex flex-col gap-4">
-            {authorize?.kind === "waiting" && (
-              <div className="flex items-center gap-3 text-sm">
-                <ForwardedIconComponent
-                  name="Loader2"
-                  className="h-4 w-4 animate-spin"
-                />
-                {t("connections.add.waiting")}
-              </div>
-            )}
-            {authorize?.kind === "connected" && (
-              <div className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center gap-2 font-medium">
-                  <ForwardedIconComponent
-                    name="CircleCheckBig"
-                    className="h-4 w-4 text-accent-emerald-foreground"
-                  />
-                  {t("connections.add.connected")}
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {authorize.connection.granted_scopes.map((scope) => (
-                    <Badge key={scope} variant="secondaryStatic" size="xq">
-                      {shortScope(scope)}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            {authorize?.kind === "failed" && (
-              <p className="text-sm text-destructive" role="alert">
-                {authorize.message}
-              </p>
-            )}
+            <AuthorizeStatus state={authorize} />
             <div className="flex justify-end gap-2">
               {authorize?.kind === "failed" && pendingRow && (
                 <Button

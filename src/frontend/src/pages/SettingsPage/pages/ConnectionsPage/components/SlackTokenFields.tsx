@@ -3,12 +3,48 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type SlackTokenKind, slackTokenKind } from "../helpers/slack-token";
+import type { ConnectionMethod } from "../hooks/useSlackTokenConnection";
+import ScopeChecklist from "./ScopeChecklist";
 
 export interface SlackTokenFieldsProps {
   token: string;
   onTokenChange: (token: string) => void;
   allowBackgroundRuns: boolean;
   onAllowBackgroundRunsChange: (allow: boolean) => void;
+  /** The scopes a bot token can be recorded with, offered once one is pasted. */
+  botTokenScopes: string[];
+  tokenScopes: Set<string>;
+  onToggleTokenScope: (scope: string, checked: boolean) => void;
+}
+
+export interface ConnectionMethodSelectProps {
+  method: ConnectionMethod;
+  onMethodChange: (method: ConnectionMethod) => void;
+}
+
+/** Sign in through the provider, or paste a token. */
+export function ConnectionMethodSelect({
+  method,
+  onMethodChange,
+}: ConnectionMethodSelectProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor="connection-method">{t("connections.add.method")}</Label>
+      <select
+        id="connection-method"
+        className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+        value={method}
+        onChange={(event) =>
+          onMethodChange(event.target.value as ConnectionMethod)
+        }
+        data-testid="connection-method"
+      >
+        <option value="oauth">{t("connections.add.methodOauth")}</option>
+        <option value="token">{t("connections.add.methodToken")}</option>
+      </select>
+    </div>
+  );
 }
 
 const HINT_KEY: Record<SlackTokenKind, string> = {
@@ -16,12 +52,15 @@ const HINT_KEY: Record<SlackTokenKind, string> = {
   bot: "connections.add.tokenBot",
 };
 
-/** The token and background-runs fields of a pasted-token Slack connection. */
+/** The token, scope and background-runs fields of a pasted-token Slack connection. */
 export function SlackTokenFields({
   token,
   onTokenChange,
   allowBackgroundRuns,
   onAllowBackgroundRunsChange,
+  botTokenScopes,
+  tokenScopes,
+  onToggleTokenScope,
 }: SlackTokenFieldsProps) {
   const { t } = useTranslation();
   const kind = slackTokenKind(token);
@@ -77,6 +116,19 @@ export function SlackTokenFields({
           {t("connections.add.allowBackgroundRunsHelp")}
         </p>
       </div>
+
+      {kind === "bot" && (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">
+            {t("connections.add.tokenScopes")}
+          </span>
+          <ScopeChecklist
+            scopes={botTokenScopes}
+            selected={tokenScopes}
+            onToggle={onToggleTokenScope}
+          />
+        </div>
+      )}
     </div>
   );
 }
