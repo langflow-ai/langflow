@@ -2389,7 +2389,7 @@
   "sharing.resource.memory": "记忆",
   "sharing.revoke.target": "移除 {{target}} 的访问权限",
   "sharing.scope.public": "公开链接",
-  "sharing.public.description": "任何拥有直接链接的人都可以查看此流程。选择“可运行”以允许匿名运行。",
+  "sharing.public.description": "任何拥有直接链接的人都可以查看并运行此流程。公开链接始终授予“可运行”权限。",
   "sharing.project.level.read.desc": "查看此项目。",
   "sharing.project.level.execute.desc": "查看此项目。项目不使用“可运行”权限级别。",
   "sharing.project.level.write.desc": "查看和编辑此项目。",

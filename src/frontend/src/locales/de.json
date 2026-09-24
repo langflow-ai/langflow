@@ -2389,7 +2389,7 @@
   "sharing.resource.memory": "Speicher",
   "sharing.revoke.target": "Zugriff für {{target}} entfernen",
   "sharing.scope.public": "Öffentlicher Link",
-  "sharing.public.description": "Anyone with the direct link can view this flow. Select Can run to allow anonymous runs.",
+  "sharing.public.description": "Jeder mit dem direkten Link kann diesen Ablauf ansehen und ausführen. Öffentliche Links gewähren immer „Kann ausführen“.",
   "sharing.project.level.read.desc": "Dieses Projekt ansehen.",
   "sharing.project.level.execute.desc": "Dieses Projekt ansehen. Projekte verwenden die Stufe „Kann ausführen“ nicht.",
   "sharing.project.level.write.desc": "Dieses Projekt ansehen und bearbeiten.",

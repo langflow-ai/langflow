@@ -2389,7 +2389,7 @@
   "sharing.resource.memory": "memory",
   "sharing.revoke.target": "Remove access for {{target}}",
   "sharing.scope.public": "Public link",
-  "sharing.public.description": "Anyone with the direct link can view this flow. Select Can run to allow anonymous runs.",
+  "sharing.public.description": "Anyone with the direct link can view and run this flow. Public links always grant Can run.",
   "sharing.project.level.read.desc": "View this project.",
   "sharing.project.level.execute.desc": "View this project. Projects do not use the Can run level.",
   "sharing.project.level.write.desc": "View and edit this project.",
