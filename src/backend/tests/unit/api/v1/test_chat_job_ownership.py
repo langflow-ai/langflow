@@ -1,10 +1,11 @@
 """Ownership checks shared by the v1 build events and cancel endpoints."""
 
+import asyncio
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 from langflow.api.v1 import chat
 
 
@@ -16,119 +17,66 @@ class OwnerlessQueue:
         return False
 
 
-def request(end_user_id: str | None = None) -> Request:
-    headers = [(b"x-end-user-id", end_user_id.encode())] if end_user_id is not None else []
-    return Request({"type": "http", "headers": headers})
-
-
 @pytest.mark.asyncio
-async def test_persisted_workflow_owner_controls_v1_job_access(monkeypatch):
-    """V2 background jobs have no queue owner but must stay tenant-scoped."""
-    owner_id = uuid4()
-    other_id = uuid4()
-    job_id = str(uuid4())
-
-    class JobService:
-        async def get_job_by_job_id(self, _job_id):
-            return SimpleNamespace(user_id=owner_id, job_metadata=None)
-
-    monkeypatch.setattr(chat, "get_job_service", JobService)
-    queue = OwnerlessQueue()
-
-    await chat._verify_job_ownership(job_id, SimpleNamespace(id=owner_id, is_superuser=False), queue, request())
-    with pytest.raises(HTTPException) as denied:
-        await chat._verify_job_ownership(job_id, SimpleNamespace(id=other_id, is_superuser=False), queue, request())
-    assert denied.value.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_shared_service_account_cannot_access_another_end_users_job(monkeypatch):
-    """Serving end users share one account, so its UUID alone is insufficient."""
-    from lfx.services import deps as lfx_deps
-
-    settings = SimpleNamespace(
-        serving_end_user_header="X-End-User-Id", serving_trust_proxy_headers=True, serving_end_user_required=False
-    )
-    monkeypatch.setattr(lfx_deps, "get_settings_service", lambda: SimpleNamespace(settings=settings))
+async def test_owned_job_allows_owner_and_denies_other_user():
     owner_id = uuid4()
 
-    class JobService:
-        async def get_job_by_job_id(self, _job_id):
-            return SimpleNamespace(user_id=owner_id, job_metadata={"end_user_id": "alice"})
+    class OwnedQueue(OwnerlessQueue):
+        async def get_job_owner(self, _job_id):
+            return owner_id
 
-    monkeypatch.setattr(chat, "get_job_service", JobService)
-    user = SimpleNamespace(id=owner_id, is_superuser=True)
-    queue = OwnerlessQueue()
     job_id = str(uuid4())
+    queue = OwnedQueue()
+    await chat._verify_job_ownership(job_id, SimpleNamespace(id=owner_id), queue)
 
-    await chat._verify_job_ownership(job_id, user, queue, request("alice"))
     with pytest.raises(HTTPException) as denied:
-        await chat._verify_job_ownership(job_id, user, queue, request("bob"))
+        await chat._verify_job_ownership(job_id, SimpleNamespace(id=uuid4()), queue)
     assert denied.value.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_ownerless_nonpublic_job_without_database_owner_is_denied(monkeypatch):
-    class JobService:
-        async def get_job_by_job_id(self, _job_id):
-            return None
-
-    monkeypatch.setattr(chat, "get_job_service", JobService)
-
+async def test_ownerless_nonpublic_job_is_denied():
+    """An unowned queue cannot be reached through authenticated v1 controls."""
     with pytest.raises(HTTPException) as denied:
-        await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), OwnerlessQueue(), request())
+        await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), OwnerlessQueue())
     assert denied.value.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_ownerless_job_fails_closed_when_database_is_unavailable(monkeypatch):
-    class JobService:
-        async def get_job_by_job_id(self, _job_id):
-            raise RuntimeError
-
-    monkeypatch.setattr(chat, "get_job_service", JobService)
-
-    with pytest.raises(HTTPException) as denied:
-        await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), OwnerlessQueue(), request())
-    assert denied.value.status_code == 503
-
-
-@pytest.mark.asyncio
-async def test_public_temporary_job_does_not_require_database_owner(monkeypatch):
+async def test_public_temporary_job_does_not_require_queue_owner():
     class PublicQueue(OwnerlessQueue):
         async def is_public_job_async(self, _job_id):
             return True
 
-    def no_database_lookup():
-        pytest.fail("public temporary jobs must not need a persisted workflow job")
-
-    monkeypatch.setattr(chat, "get_job_service", no_database_lookup)
-
-    await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), PublicQueue(), request())
+    await chat._verify_job_ownership(str(uuid4()), SimpleNamespace(id=uuid4()), PublicQueue())
 
 
 @pytest.mark.asyncio
-async def test_v1_routes_reject_durable_v2_jobs_without_touching_queue(monkeypatch):
+async def test_v1_routes_reject_ownerless_jobs_without_touching_queue():
     """Durable background jobs use the v2 control plane, not a v1 build queue."""
-    owner_id = uuid4()
     job_id = str(uuid4())
-
-    class JobService:
-        async def get_job_by_job_id(self, _job_id):
-            return SimpleNamespace(user_id=owner_id, job_metadata={"request": {"input_value": "x"}})
 
     class NoQueue(OwnerlessQueue):
         def get_queue_data(self, _job_id):
-            pytest.fail("v1 routes must reject durable v2 jobs before queue access")
+            pytest.fail("v1 routes must reject ownerless jobs before queue access")
 
-    monkeypatch.setattr(chat, "get_job_service", JobService)
-    user = SimpleNamespace(id=owner_id, is_superuser=False)
+    user = SimpleNamespace(id=uuid4())
     queue = NoQueue()
 
     with pytest.raises(HTTPException) as events_denied:
-        await chat.get_build_events(job_id=job_id, queue_service=queue, current_user=user, http_request=request())
+        await chat.get_build_events(job_id=job_id, queue_service=queue, current_user=user)
     assert events_denied.value.status_code == 404
 
     with pytest.raises(HTTPException) as cancel_denied:
-        await chat.cancel_build(job_id=job_id, queue_service=queue, current_user=user, http_request=request())
+        await chat.cancel_build(job_id=job_id, queue_service=queue, current_user=user)
     assert cancel_denied.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_public_marker_lookup_preserves_cancellation():
+    class CancelledQueue:
+        async def is_public_job_async(self, _job_id):
+            raise asyncio.CancelledError
+
+    with pytest.raises(asyncio.CancelledError):
+        await chat._assert_public_job(str(uuid4()), CancelledQueue(), "Public flow events are unavailable.")

@@ -67,7 +67,6 @@ from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_chat_service,
-    get_job_service,
     get_queue_service,
     get_settings_service,
     get_telemetry_service,
@@ -110,47 +109,23 @@ async def _clear_invalid_graph_cache(chat_service: ChatService, flow_id: str) ->
         await logger.aexception("Failed to evict a graph rejected by runtime policy")
 
 
-async def _verify_job_ownership(
-    job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService, http_request: Request
-) -> None:
+async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
     """Raise HTTP 404 if the requesting user does not own the job.
 
-    Public temporary builds are accessible to authenticated users. Queue-backed
-    V2 workflow jobs have a database owner but deliberately omit queue ownership
-    because queue ownership opts them into the polling watchdog. Durable V2 jobs
-    without a v1 queue are handled only by their own workflow routes.
+    Public temporary builds are accessible to authenticated users. Jobs with no
+    queue owner or public marker are not accessible through the v1 build routes.
     """
     try:
         job_owner = await queue_service.get_job_owner(job_id)
     except JobQueueBackendUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    end_user_allowed = True
     if job_owner is None:
         try:
             if await queue_service.is_public_job_async(job_id):
                 return
         except JobQueueBackendUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-        try:
-            job = await get_job_service().get_job_by_job_id(job_id)
-        except ValueError:
-            job = None
-        except Exception as exc:
-            raise HTTPException(status_code=503, detail="Job ownership unavailable") from exc
-        # BackgroundExecutionService persists its request in metadata and runs
-        # through its own executor. It has no v1 event queue, even when its owner
-        # matches, so the v1 routes must not stream or signal that job.
-        if job is not None and isinstance(job.job_metadata, dict) and "request" in job.job_metadata:
-            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
-        job_owner = job.user_id if job is not None else None
-        if job is not None:
-            # V2 runs can share a service-account owner across serving end users.
-            from langflow.api.v2.workflow import _caller_owns_job_end_user
-
-            end_user_allowed = _caller_owns_job_end_user(job, http_request, current_user)
-
-    if job_owner is None or job_owner != current_user.id or not end_user_allowed:
+    if job_owner is None or job_owner != current_user.id:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
             current_user.id,
@@ -513,7 +488,6 @@ async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     current_user: CurrentActiveUser,
-    http_request: Request,
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
@@ -522,10 +496,10 @@ async def get_build_events(
     Requires authentication and ownership verification. A job owner is registered
     when build_flow is called; if a registered owner does not match the requesting
     user the endpoint returns 404 to avoid leaking job existence.
-    Jobs started via build_public_tmp are explicitly marked public; queue-backed
-    v2 jobs use their persisted owner when no queue owner was registered.
+    Jobs started via build_public_tmp are explicitly marked public. Jobs without
+    a queue owner or public marker return 404.
     """
-    await _verify_job_ownership(job_id, current_user, queue_service, http_request)
+    await _verify_job_ownership(job_id, current_user, queue_service)
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -541,16 +515,15 @@ async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     current_user: CurrentActiveUser,
-    http_request: Request,
 ):
     """Cancel a specific build job.
 
     Requires authentication and ownership verification to prevent a user from
     aborting another user's running build (DoS via job cancellation).
-    Jobs started via build_public_tmp are explicitly marked public; queue-backed
-    v2 jobs use their persisted owner when no queue owner was registered.
+    Jobs started via build_public_tmp are explicitly marked public. Jobs without
+    a queue owner or public marker return 404.
     """
-    await _verify_job_ownership(job_id, current_user, queue_service, http_request)
+    await _verify_job_ownership(job_id, current_user, queue_service)
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
@@ -1237,7 +1210,7 @@ async def build_public_tmp(
     )
 
 
-async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> None:
+async def _assert_public_job(job_id: str, queue_service: JobQueueService, unavailable_detail: str) -> None:
     """Raise HTTP 404 if job_id was not registered through the public build endpoint.
 
     Prevents unauthenticated callers from reading or cancelling private-flow
@@ -1246,7 +1219,17 @@ async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> Non
     Why 404 not 403: returning 403 would confirm the job exists under a different
     access tier, leaking information about private builds. 404 is neutral.
     """
-    if not await queue_service.is_public_job_async(job_id):
+    try:
+        is_public = await queue_service.is_public_job_async(job_id)
+    except asyncio.CancelledError:
+        raise
+    except JobQueueBackendUnavailableError as exc:
+        await logger.aerror(f"Public job marker lookup failed for job_id {job_id}: {exc!r}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=unavailable_detail) from exc
+    except Exception as exc:
+        await logger.aexception(f"Public job marker lookup failed for job_id {job_id}: {exc!r}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=unavailable_detail) from exc
+    if not is_public:
         # Static detail — do not reflect job_id back; avoid confirming which IDs exist.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
@@ -1268,7 +1251,7 @@ async def get_build_events_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to consume build events.
     """
-    await _assert_public_job(job_id, queue_service)
+    await _assert_public_job(job_id, queue_service, _PUBLIC_EVENTS_UNAVAILABLE_DETAIL)
     try:
         return await get_flow_events_response(
             job_id=job_id,
@@ -1309,7 +1292,7 @@ async def cancel_build_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to cancel builds.
     """
-    await _assert_public_job(job_id, queue_service)
+    await _assert_public_job(job_id, queue_service, _PUBLIC_CANCEL_FAILED_DETAIL)
     try:
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
 
