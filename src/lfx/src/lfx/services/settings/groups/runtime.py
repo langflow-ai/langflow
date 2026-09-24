@@ -145,9 +145,13 @@ class RuntimeSettings(BaseModel):
     ``background_backend=scaled``, where the job table IS the work queue: every
     terminal row sits under the claim scan and ``job_events`` grows a row per
     durable milestone, so an install with no window set grows without bound.
-    Live runs are never deleted at any age: QUEUED, IN_PROGRESS and SUSPENDED
-    rows are excluded (a suspended run is waiting on a human who may answer
-    weeks later)."""
+    Only v2 background runs are deleted. The job table is shared with the v1
+    build endpoints and knowledge base ingestion, so those rows are never
+    touched by this setting, and neither are rows written before the origin
+    marker existed. Live runs are never deleted at any age either: QUEUED,
+    IN_PROGRESS and SUSPENDED rows are excluded (a suspended run is waiting on
+    a human who may answer weeks later). Age is measured from the run's
+    finished timestamp."""
     background_backend: Literal["default", "scaled"] = "default"
     """Which background-execution backend runs v2 background workflow jobs.
 

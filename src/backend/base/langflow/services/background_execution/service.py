@@ -38,6 +38,7 @@ from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.jobs.service import BACKGROUND_ORIGIN, BACKGROUND_ORIGIN_KEY
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -454,7 +455,13 @@ class BackgroundExecutionService(Service):
         # The API models default both fields to {}, so treat empty mappings as no
         # override rather than encrypting an envelope for every ordinary run.
         overrides = {key: value for key, value in supplied_overrides.items() if value}
-        metadata: dict[str, Any] = {"request": self._redact_request(request)}
+        # The origin marker is what retention keys on: it is the durable
+        # identity of a v2 background submission in a job table shared with
+        # v1 /build, the v1 endpoints and knowledge base ingestion.
+        metadata: dict[str, Any] = {
+            BACKGROUND_ORIGIN_KEY: BACKGROUND_ORIGIN,
+            "request": self._redact_request(request),
+        }
         if overrides:
             from langflow.services.auth.utils import get_fernet
 

@@ -1585,3 +1585,33 @@ class _StubUser:
 
     def __init__(self, user_id):
         self.id = user_id
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_submit_stamps_the_background_origin_marker(real_services_job_service) -> None:
+    """Retention keys on this marker, so submit has to write it with the QUEUED row.
+
+    The job table is shared with v1 /build, the v1 endpoints and knowledge-base
+    ingestion, and several of those create WORKFLOW rows too. If submit ever
+    stopped stamping the marker, retention would quietly stop purging instead of
+    failing loudly.
+    """
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+    from langflow.services.jobs.service import BACKGROUND_ORIGIN, BACKGROUND_ORIGIN_KEY
+
+    job_service = real_services_job_service
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+        backend=_RecordingBackend(),
+    )
+    job_id = await svc.submit(
+        flow_id=uuid4(),
+        request={"flow_id": str(uuid4()), "mode": "background", "stream_protocol": "langflow"},
+        user=_StubUser(uuid4()),
+    )
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert (job.job_metadata or {}).get(BACKGROUND_ORIGIN_KEY) == BACKGROUND_ORIGIN

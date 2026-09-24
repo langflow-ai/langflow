@@ -1124,7 +1124,10 @@ async def stop_workflow(
             await get_background_execution_service().stop_job(job_id, current_user)
         except Exception:  # noqa: BLE001
             await logger.aexception("Failed to signal stop for workflow job %s; cancelling row anyway", job_id)
-        await job_service.update_job_status(job_id, JobStatus.CANCELLED)
+        # Stamp the terminal time with the status: retention measures age from
+        # finished_timestamp, so a cancel that left it null would keep the row
+        # out of every retention window forever.
+        await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
         message = f"Job {job_id} cancelled successfully." if revoked else f"Job {job_id} is already cancelled."
         return WorkflowStopResponse(job_id=str(job_id), message=message)

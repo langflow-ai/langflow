@@ -14,34 +14,52 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
-from langflow.services.jobs.service import JobService
+from langflow.services.jobs.service import BACKGROUND_ORIGIN, BACKGROUND_ORIGIN_KEY, JobService
 
 pytestmark = pytest.mark.usefixtures("client")
 
 _LIVE_STATUSES = [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED]
 
 
-async def _aged_job(service: JobService, *, status: JobStatus, age_days: float, with_children: bool = False):
-    """Create a job whose finished/created timestamps sit ``age_days`` in the past."""
+async def _aged_job(
+    service: JobService,
+    *,
+    status: JobStatus,
+    age_days: float,
+    with_children: bool = False,
+    background: bool = True,
+    job_type: JobType = JobType.WORKFLOW,
+    created_days_ago: float | None = None,
+):
+    """Create a job aged ``age_days`` in the past.
+
+    ``background`` stamps the origin marker that ``submit`` writes, which is what
+    retention keys on. ``created_days_ago`` ages creation separately from the
+    terminal timestamp, for the run created long ago but finished recently.
+    """
     from langflow.services.database.models.jobs.model import Job
     from langflow.services.deps import session_scope
     from sqlmodel import update
 
     job_id = uuid4()
-    await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, user_id=uuid4())
+    await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=job_type, user_id=uuid4())
     if with_children:
         await service.append_event(job_id, "run_end", {"ok": True})
         await service.write_signal(job_id, SignalType.STOP)
         await service.save_checkpoint(job_id, "graph", "{}")
-    stamp = datetime.now(timezone.utc) - timedelta(days=age_days)
+    finished = datetime.now(timezone.utc) - timedelta(days=age_days)
+    created_age = created_days_ago if created_days_ago is not None else age_days
+    created = datetime.now(timezone.utc) - timedelta(days=created_age)
+    metadata = {BACKGROUND_ORIGIN_KEY: BACKGROUND_ORIGIN} if background else {"request": {"flow_id": "legacy"}}
     async with session_scope() as session:
         await session.exec(
             update(Job)
             .where(Job.job_id == job_id)
             .values(
                 status=status,
-                created_timestamp=stamp,
-                finished_timestamp=stamp if status not in _LIVE_STATUSES else None,
+                created_timestamp=created,
+                finished_timestamp=finished if status not in _LIVE_STATUSES else None,
+                job_metadata=metadata,
             )
         )
     return job_id
@@ -113,3 +131,58 @@ async def test_purge_is_a_noop_when_nothing_is_old_enough():
     await _aged_job(service, status=JobStatus.COMPLETED, age_days=1)
 
     assert await service.purge_terminal_jobs(older_than_days=30, limit=100) == 0
+
+
+async def test_purge_leaves_other_job_sources_alone():
+    """The job table is shared, and this setting only documents background runs.
+
+    v1 /build writes WORKFLOW rows too, so job type cannot separate them, and
+    knowledge-base ingestion keeps its run history here as well. Deleting either
+    from a background retention window would destroy unrelated history.
+    """
+    service = JobService()
+    v1_build_row = await _aged_job(service, status=JobStatus.COMPLETED, age_days=90, background=False)
+    ingestion_row = await _aged_job(
+        service, status=JobStatus.COMPLETED, age_days=90, background=False, job_type=JobType.INGESTION
+    )
+    background_row = await _aged_job(service, status=JobStatus.COMPLETED, age_days=90)
+
+    deleted = await service.purge_terminal_jobs(older_than_days=30, limit=100)
+
+    assert deleted >= 1
+    assert await service.get_job_by_job_id(background_row) is None
+    assert await service.get_job_by_job_id(v1_build_row) is not None
+    assert await service.get_job_by_job_id(ingestion_row) is not None
+
+
+async def test_purge_keeps_an_old_run_that_finished_recently():
+    """Age is the terminal time, not creation.
+
+    A run submitted months ago and cancelled today is one day old as far as
+    retention is concerned. Measuring from creation (or falling back to it) would
+    delete it the moment it was cancelled.
+    """
+    service = JobService()
+    cancelled_today = await _aged_job(service, status=JobStatus.CANCELLED, age_days=0, created_days_ago=200)
+
+    assert await service.purge_terminal_jobs(older_than_days=30, limit=100) == 0
+    assert await service.get_job_by_job_id(cancelled_today) is not None
+
+
+async def test_purge_skips_terminal_rows_with_no_finished_timestamp():
+    """A terminal row with no finished time is skipped, not guessed at.
+
+    Legacy rows predate the stamping fix, so retention leaves them rather than
+    inferring an age from creation and deleting something it cannot date.
+    """
+    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.deps import session_scope
+    from sqlmodel import update
+
+    service = JobService()
+    job_id = await _aged_job(service, status=JobStatus.COMPLETED, age_days=90)
+    async with session_scope() as session:
+        await session.exec(update(Job).where(Job.job_id == job_id).values(finished_timestamp=None))
+
+    assert await service.purge_terminal_jobs(older_than_days=30, limit=100) == 0
+    assert await service.get_job_by_job_id(job_id) is not None
