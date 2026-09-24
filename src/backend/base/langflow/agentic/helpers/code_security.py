@@ -126,6 +126,16 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ),
     ("pandas.io", "pickle", "pandas.io.pickle is forbidden — unsafe pickle deserialization"),
     ("pandas.core.generic", "pickle", "pandas.core.generic.pickle is forbidden — unsafe pickle deserialization"),
+    # These stdlib modules re-export pickle (or multiprocessing) without an
+    # explicit import of the blocked module in generated component code.
+    ("pickletools", "pickle", "pickletools.pickle is forbidden — unsafe pickle deserialization"),
+    ("trace", "pickle", "trace.pickle is forbidden — unsafe pickle deserialization"),
+    ("tracemalloc", "pickle", "tracemalloc.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "concurrent.futures.process",
+        "mp",
+        "concurrent.futures.process.mp is forbidden — multiprocessing exposes unsafe pickle deserialization",
+    ),
     # NumPy's array modules re-export the stdlib pickle module while also
     # exposing safe readers. Deny the re-export without blocking those readers.
     ("numpy.lib.format", "pickle", "numpy.lib.format.pickle is forbidden — unsafe pickle deserialization"),
@@ -140,6 +150,7 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
         "pickle",
         "numpy.lib._npyio_impl.pickle is forbidden — unsafe pickle deserialization",
     ),
+    ("numpy._core._methods", "pickle", "numpy._core._methods.pickle is forbidden — unsafe pickle deserialization"),
 ]
 
 # Dangerous attribute calls: (module, method, violation_message)
@@ -251,6 +262,7 @@ DANGEROUS_IMPORTS: set[str] = {
     "cffi",
     "_cffi_backend",
     "pickle",
+    "_pickle",
     # These loaders also deserialize pickle objects; blocking their imports is
     # safer than trying to enumerate each package's load/loads aliases.
     "joblib",
