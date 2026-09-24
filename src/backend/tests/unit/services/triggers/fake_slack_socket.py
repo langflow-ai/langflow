@@ -88,6 +88,9 @@ class FakeSlackSocketMode:
         self.on_ack: Callable[[str], Awaitable[None]] | None = None
         #: Seconds the server waits before saying hello, to hold a socket mid-handshake.
         self.hello_delay = 0.0
+        #: Close every socket this many seconds after its hello: Slack accepting
+        #: a connection and dropping it straight away. ``None`` keeps them open.
+        self.drop_after_hello: float | None = None
         #: The most sockets that were open at the same moment.
         self.max_live = 0
         self._opened = asyncio.Event()
@@ -156,6 +159,12 @@ class FakeSlackSocketMode:
                 )
             )
         except ConnectionClosed:
+            socket.closed.set()
+            return
+        if self.drop_after_hello is not None:
+            await asyncio.sleep(self.drop_after_hello)
+            with contextlib.suppress(ConnectionClosed):
+                await socket.drop()
             socket.closed.set()
             return
         try:

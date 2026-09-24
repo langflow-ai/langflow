@@ -88,9 +88,11 @@ class ListenerContext:
     resolve_credential: Callable[..., Awaitable[Any]]
     stopping: asyncio.Event
     #: Report a working connection that has not delivered anything yet. A
-    #: socket source proves itself when the provider accepts it (Slack's
-    #: ``hello``), long before a quiet workspace sends an event, and without
-    #: this a recovered connection would keep its failure banner until then.
+    #: socket source proves itself once a socket has stayed up, long before a
+    #: quiet workspace sends an event, and without this a recovered connection
+    #: would keep its failure banner until then. Not on the provider's first
+    #: accept (Slack's ``hello``): that resets the failure count, and a socket
+    #: dropped straight after it would then never back off.
     mark_connected: Callable[[], Awaitable[None]] | None = None
 
 

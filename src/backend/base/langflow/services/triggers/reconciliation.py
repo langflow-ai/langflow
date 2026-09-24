@@ -268,6 +268,45 @@ async def _reconcile_slack(
     return {**config, "mechanism_id": arming.mechanism_id}, arming.connection_id, None
 
 
+async def _apply_slack_verdict(
+    session: AsyncSession, row: Trigger, *, error: str | None, moved: bool, filters_changed: bool
+) -> bool:
+    """:func:`apply_config_verdict` for a Slack row. Returns whether the row changed.
+
+    Two differences from a schedule.
+
+    A save that would put the trigger into service against something new - an
+    ``active`` row whose connection or filters changed, or an ``error`` row this
+    save would heal - first checks what enabling checks, so it cannot go live on
+    an installation missing the scopes its events need, or on a connection whose
+    owner has not allowed background runs.
+
+    And an ``active`` row on the same connection keeps its ``last_error``. On a
+    serving row that is the listener's banner (``record_listener_error``), not
+    a verdict a save can overturn: a configuration error never sits on an active
+    row, because the verdict moves it to ``error``. A move to another connection
+    does clear it, since the banner was about the old one.
+    """
+    from langflow.services.triggers.providers.slack.arming import (
+        SlackArming,
+        SlackTriggerArmingError,
+        check_ready_to_arm,
+    )
+
+    active = row.state == TriggerState.ACTIVE.value
+    goes_live = row.state == TriggerState.ERROR.value or (active and (moved or filters_changed))
+    if error is None and goes_live and row.connection_id is not None:
+        config = row.config or {}
+        arming = SlackArming(connection_id=row.connection_id, mechanism_id=config.get("mechanism_id") or "")
+        try:
+            await check_ready_to_arm(session, kind=row.kind, config=config, arming=arming)
+        except SlackTriggerArmingError as exc:
+            error = str(exc)
+    if error is None and active and not moved:
+        return False
+    return apply_config_verdict(row, error)
+
+
 async def reconcile_flow_triggers(
     session: AsyncSession,
     *,
@@ -336,20 +375,29 @@ async def reconcile_flow_triggers(
             )
             touched += 1
             continue
-        changed = row.config != config or row.session_policy != session_policy
+        config_changed = row.config != config
+        changed = config_changed or row.session_policy != session_policy
         if changed:
             if schedule_timing_changed(row.config or {}, config):
                 row.next_fire_at = None
             row.config = config
             row.session_policy = session_policy
-        if provider is not None and (row.provider, row.connection_id) != (provider, connection_id):
-            row.provider = provider
-            row.connection_id = connection_id
-            changed = True
+        moved = False
+        if provider is not None:
+            from langflow.services.triggers.providers.slack.arming import bind_connection
+
+            if row.provider != provider:
+                row.provider = provider
+                changed = True
+            moved = bind_connection(row, connection_id)
+            changed = changed or moved
         # Evaluated on every save, not only when the config changed, so a row an
         # earlier save left in ``error`` with an already-valid config heals.
-        if (kind == "schedule" or kind in SLACK_TRIGGER_KINDS) and apply_config_verdict(row, error):
-            changed = True
+        if kind == "schedule":
+            changed = apply_config_verdict(row, error) or changed
+        elif kind in SLACK_TRIGGER_KINDS:
+            verdict = await _apply_slack_verdict(session, row, error=error, moved=moved, filters_changed=config_changed)
+            changed = verdict or changed
         if changed:
             session.add(row)
             touched += 1

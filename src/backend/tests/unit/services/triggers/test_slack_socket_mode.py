@@ -111,9 +111,20 @@ async def test_a_redelivered_envelope_is_acknowledged_and_runs_once(
     assert len(await fx.events_for(trigger_id)) == 1
 
 
+def _integrity_error(detail: str) -> Exception:
+    from sqlalchemy.exc import IntegrityError
+
+    return IntegrityError("INSERT INTO trigger_event", {}, Exception(detail))
+
+
 @pytest.mark.usefixtures("socket_adapters")
+@pytest.mark.parametrize(
+    "error",
+    [RuntimeError("database unavailable"), _integrity_error("a constraint on a trigger that still exists")],
+    ids=["unavailable", "integrity"],
+)
 async def test_a_failed_write_leaves_the_envelope_unacknowledged(
-    slack, supervisor, trigger_owner, owned_flow, monkeypatch
+    slack, supervisor, trigger_owner, owned_flow, monkeypatch, error: Exception
 ) -> None:
     """Slack redelivers what it was never told landed; acknowledging first would lose it."""
     from langflow.services.triggers import ledger
@@ -123,8 +134,7 @@ async def test_a_failed_write_leaves_the_envelope_unacknowledged(
     [socket] = await slack.wait_for_sockets(1)
 
     async def _broken(*_args, **_kwargs):
-        msg = "database unavailable"
-        raise RuntimeError(msg)
+        raise error
 
     monkeypatch.setattr(ledger, "append_event", _broken)
     await socket.deliver(fx.load("message_channel"), envelope_id="env-lost")
@@ -281,6 +291,74 @@ async def test_sockets_that_keep_dropping_straight_after_opening_back_off(
     await second.drop()
 
     await _eventually(lambda: any(isinstance(error, SlackSocketClosedError) for error in failures))
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_a_connection_slack_drops_right_after_hello_backs_off_and_says_so(
+    slack, supervisor, trigger_owner, owned_flow, monkeypatch
+) -> None:
+    """Slack's ``hello`` is not proof the connection works; a socket that held is.
+
+    Counting each hello as a success reset the failure count on every attempt,
+    so a connection Slack accepted and dropped straight away retried at the
+    base backoff for good, and its owner never saw why.
+    """
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "listener_failure_threshold", 3)
+    counts: list[int] = []
+    original = supervisor._failed
+
+    async def record(worker, exc) -> None:
+        await original(worker, exc)
+        counts.append(worker.consecutive_failures)
+
+    monkeypatch.setattr(supervisor, "_failed", record)
+    slack.drop_after_hello = 0.02
+    _connection, trigger_id = await _armed(trigger_owner, owned_flow)
+
+    async def _banner_shown() -> bool:
+        await supervisor.reconcile()
+        return "could not hold this connection" in ((await _trigger(trigger_id)).last_error or "")
+
+    await _eventually(_banner_shown, timeout=10)
+    assert counts[:3] == [1, 2, 3]
+    assert (await _trigger(trigger_id)).state == TriggerState.ACTIVE.value
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_a_socket_that_holds_clears_the_listeners_banner(
+    slack, supervisor, trigger_owner, owned_flow, monkeypatch
+) -> None:
+    """A quiet workspace can send nothing for hours; a socket that stayed up is the proof it works."""
+    from langflow.services.deps import get_settings_service
+    from langflow.services.triggers.providers.slack import socket_mode
+
+    monkeypatch.setattr(get_settings_service().settings, "listener_failure_threshold", 1)
+    monkeypatch.setattr(socket_mode, "_STABLE_SOCKET_S", 0.2)
+    slack.open_errors = [(200, {"ok": False, "error": "missing_scope"})]
+    connection_id, trigger_id = await _armed(trigger_owner, owned_flow)
+
+    async def _last_error() -> str | None:
+        await supervisor.reconcile()
+        return (await _trigger(trigger_id)).last_error
+
+    async def _banner_shown() -> bool:
+        return await _last_error() is not None
+
+    async def _banner_cleared() -> bool:
+        return await _last_error() is None
+
+    async def _reopened() -> bool:
+        await supervisor.reconcile()
+        return bool(slack.sockets)
+
+    await _eventually(_banner_shown)
+    await _eventually(_reopened)
+    await _eventually(_banner_cleared)
+
+    assert supervisor.workers[connection_id].consecutive_failures == 0
+    assert slack.open_calls == 2
 
 
 @pytest.mark.usefixtures("socket_adapters")
@@ -447,6 +525,86 @@ async def test_a_different_app_on_the_same_instance_is_not_fanned_out_to(
 
     assert len(await fx.events_for(mine)) == 1
     assert await fx.events_for(other_app) == []
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_a_trigger_deleted_since_it_was_targeted_is_skipped_not_fatal(
+    slack, supervisor, trigger_owner, owned_flow, monkeypatch
+) -> None:
+    """Postgres refuses a ledger row for a deleted trigger; the socket must survive it.
+
+    With the cross-connection fan-out, another person deleting their flow is
+    enough to leave a trigger that no longer exists in this socket's targets
+    for up to one cache interval. SQLite does not enforce the foreign key, so
+    Postgres's refusal is reproduced here.
+    """
+    from langflow.services.triggers import ledger
+    from langflow.services.triggers.cleanup import delete_triggers
+
+    _, mine = await _armed(trigger_owner, owned_flow)
+    colleague = await fx.make_user()
+    _, theirs = await _armed(colleague, await fx.make_flow(colleague))
+    failures = _record_failures(supervisor, monkeypatch)
+    original = ledger.append_event
+
+    async def _foreign_key_enforced(session, *, trigger_id, **kwargs):
+        if await session.get(Trigger, trigger_id) is None:
+            detail = 'insert or update on table "trigger_event" violates foreign key constraint'
+            raise _integrity_error(detail)
+        return await original(session, trigger_id=trigger_id, **kwargs)
+
+    monkeypatch.setattr(ledger, "append_event", _foreign_key_enforced)
+    await supervisor.reconcile()
+    first, _second = await slack.wait_for_sockets(2)
+
+    async def _both_recorded() -> bool:
+        states = [(await _trigger(trigger_id)).provider_state for trigger_id in (mine, theirs)]
+        return all(state.get(PROVIDER_STATE_APP_ID) == fx.APP_ID for state in states)
+
+    await _eventually(_both_recorded)
+    await first.deliver(fx.load("message_channel"), envelope_id="env-1")
+    assert await first.wait_for_ack("env-1")
+    async with session_scope() as session:
+        await delete_triggers(session, trigger_ids=[theirs])
+
+    await first.deliver(fx.load("message_im"), envelope_id="env-2")
+
+    assert await first.wait_for_ack("env-2")
+    assert len(await fx.events_for(mine)) == 2
+    assert failures == []
+    assert not first.closed.is_set()
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_a_trigger_that_comes_back_to_the_connection_has_its_app_recorded_again(
+    slack, supervisor, trigger_owner, owned_flow
+) -> None:
+    """Moving a trigger off a connection forgets its app; moving it back has to record it again.
+
+    Otherwise colleagues' sockets for the app would never find it, and it would
+    silently miss the share of events Slack sends to them.
+    """
+    connection_id, first = await _armed(trigger_owner, owned_flow)
+    _, second = await _armed(trigger_owner, owned_flow, connection_id=connection_id)
+    await supervisor.reconcile()
+    [socket] = await slack.wait_for_sockets(1)
+
+    async def _recorded(trigger_id) -> bool:
+        return (await _trigger(trigger_id)).provider_state.get(PROVIDER_STATE_APP_ID) == fx.APP_ID
+
+    await _eventually(lambda: _recorded(first))
+    await _eventually(lambda: _recorded(second))
+    async with session_scope() as session:
+        # What a move to another connection and back leaves, with no event between.
+        row = await session.get(Trigger, second)
+        row.provider_state = {}
+        session.add(row)
+    await supervisor.reconcile()
+
+    await socket.deliver(fx.load("message_channel"), envelope_id="env-1")
+
+    assert await socket.wait_for_ack("env-1")
+    assert await _recorded(second)
 
 
 # --------------------------------------------------------------------------- #

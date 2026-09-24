@@ -34,6 +34,7 @@ from langflow.services.triggers.constants import (
     MECHANISM_SLACK_EVENTS_API,
     MECHANISM_SLACK_SOCKET_MODE,
     PROVIDER_SLACK,
+    SLACK_PROVIDER_STATE_APP_ID,
 )
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES
 
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.database.models.trigger.model import Trigger
 
 #: The node field holding the connection handle.
 CONNECTION_FIELD = "connection"
@@ -165,7 +168,43 @@ async def _events_api_mechanism(session: AsyncSession, row: Connection) -> str:
             "deliveries could not be verified. Add the app's signing secret to the registration."
         )
         raise SlackTriggerArmingError(msg)
+    if _installation_team_id(row) is None:
+        # Deliveries are routed by the workspace they were delivered for, and an
+        # org-wide Enterprise Grid install records none (``oauth.v2.access``
+        # returns no ``team``). Armed anyway, it would sit active and never fire.
+        msg = (
+            "This Slack installation has no workspace, so no event delivery could ever be matched to it. "
+            "Org-wide Enterprise Grid installations are not supported for triggers; install the app to a "
+            "workspace and choose that connection."
+        )
+        raise SlackTriggerArmingError(msg)
     return MECHANISM_SLACK_EVENTS_API
+
+
+def _installation_team_id(row: Connection) -> str | None:
+    """The workspace an installation belongs to, as the Events API fan-out matches it."""
+    account = (row.executing_identity or {}).get("account")
+    team_id = account.get("tenant_id") if isinstance(account, dict) else None
+    return team_id if isinstance(team_id, str) and team_id else None
+
+
+def bind_connection(row: Trigger, connection_id: UUID | None) -> bool:
+    """Point a Slack trigger at ``connection_id``. Returns whether it moved.
+
+    The Slack app a Socket Mode socket proved (``provider_state.slack_app_id``)
+    is a fact about the *old* connection. Kept across a move, other people's
+    sockets for that app would go on writing its events into this trigger until
+    the new connection's socket says hello - and for good if it never does, say
+    because the new token was refused. The new connection's socket records its
+    own app when it opens.
+    """
+    if row.connection_id == connection_id:
+        return False
+    row.connection_id = connection_id
+    state = row.provider_state or {}
+    if SLACK_PROVIDER_STATE_APP_ID in state:
+        row.provider_state = {key: value for key, value in state.items() if key != SLACK_PROVIDER_STATE_APP_ID}
+    return True
 
 
 def required_event_scopes(kind: str, config: dict[str, Any]) -> set[str]:

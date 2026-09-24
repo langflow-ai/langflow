@@ -120,6 +120,11 @@ SLACK_TRIGGER_KINDS = frozenset({KIND_SLACK_MESSAGE, KIND_SLACK_REACTION})
 MECHANISM_SLACK_EVENTS_API = "slack.events_api"
 MECHANISM_SLACK_SOCKET_MODE = "slack.socket_mode"
 
+#: ``trigger.provider_state`` key recording which Slack app a Socket Mode
+#: trigger's connection proved it belongs to, in that socket's ``hello``. It is a
+#: fact about the connection, so it goes whenever the trigger's connection changes.
+SLACK_PROVIDER_STATE_APP_ID = "slack_app_id"
+
 #: Mechanisms a provider pushes to Langflow's ingress (Track A). A run started
 #: by one executes as the ``trigger_push`` family; everything else a trigger
 #: runs - listener sources and the schedule - as ``trigger_listener``.

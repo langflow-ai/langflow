@@ -653,7 +653,7 @@ class ListenerSupervisor:
             return await get_connection_resolver_service().resolve(request)
 
         async def mark_connected() -> None:
-            """The provider accepted the connection: clear a stale failure banner."""
+            """The connection has held: forget its failures and clear a stale banner."""
             if not worker.succeeded_since_failure:
                 await self._succeeded(worker)
 

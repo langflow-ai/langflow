@@ -16,6 +16,7 @@ from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_trigger_service, session_scope
+from langflow.services.triggers.constants import SLACK_PROVIDER_STATE_APP_ID
 from langflow.services.triggers.reconciliation import find_trigger_nodes, reconcile_flow_triggers
 from sqlmodel import select
 
@@ -45,6 +46,21 @@ async def _save(flow_id, owner_id, *nodes) -> Trigger | None:
 async def _connection_name(connection_id) -> str:
     async with session_scope() as session:
         return (await session.get(Connection, connection_id)).name
+
+
+async def _update_trigger(trigger_id, **fields) -> None:
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger_id)
+        for field, value in fields.items():
+            setattr(row, field, value)
+        session.add(row)
+
+
+async def _grant(connection_id, *scopes: str) -> None:
+    async with session_scope() as session:
+        row = await session.get(Connection, connection_id)
+        row.granted_scopes = list(scopes)
+        session.add(row)
 
 
 @pytest.fixture(autouse=True)
@@ -155,6 +171,7 @@ async def test_saving_an_unchanged_node_does_not_rewrite_the_row(trigger_owner, 
         ("manual_bot_token", "cannot receive events"),
         ("bad_channel", "conversation IDs"),
         ("bad_mention_types", "Conversation types cannot be narrowed"),
+        ("org_wide_install", "has no workspace"),
     ],
 )
 async def test_a_node_that_cannot_be_armed_records_why(
@@ -187,6 +204,10 @@ async def test_a_node_that_cannot_be_armed_records_why(
             values["channels"] = ["#support"]
         elif setup == "bad_mention_types":
             values.update(mentions_only=True, conversation_types=["im"])
+    elif setup == "org_wide_install":
+        # ``oauth.v2.access`` returns no ``team`` for an Enterprise Grid org-wide install.
+        connection_id = await fx.make_oauth_connection(trigger_owner, team_id=None)
+        values["connection"] = f"slack/{await _connection_name(connection_id)}"
     elif setup == "manual_bot_token":
         connection_id = await fx.make_app_token_connection(trigger_owner, token="xoxb-bot")  # noqa: S106
         async with session_scope() as session:
@@ -245,6 +266,90 @@ async def test_an_armed_trigger_whose_connection_disappears_is_taken_out_and_com
     assert healed.last_error is None
 
 
+async def test_a_save_leaves_the_listeners_banner_on_a_serving_trigger(trigger_owner, owned_flow) -> None:
+    """On an active row, ``last_error`` is the listener's, not a verdict a save can overturn.
+
+    A configuration error never sits on an active row - the verdict moves it
+    to ``error`` - so clearing it on a clean save only ever wiped the banner the
+    listener writes while it retries, until its next failed attempt.
+    """
+    from langflow.services.triggers.listeners.supervisor import record_listener_error
+
+    await fx.make_app_token_connection(trigger_owner, name="workspace")
+    row = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace"))
+    await _update_trigger(row.id, state=TriggerState.ACTIVE.value)
+    banner = "The listener could not hold this connection after 5 attempts (SlackSocketModeDisabledError). Retrying."
+    async with session_scope() as session:
+        await record_listener_error(session, trigger_ids=[row.id], message=banner)
+
+    unchanged = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace"))
+    edited = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace", channels=["C0SUPPORT1"]))
+    assert (unchanged.state, unchanged.last_error) == (TriggerState.ACTIVE.value, banner)
+    assert (edited.state, edited.last_error) == (TriggerState.ACTIVE.value, banner)
+
+    await fx.make_app_token_connection(trigger_owner, name="replacement")
+    moved = await _save(owned_flow, trigger_owner, _node(connection="slack/replacement", channels=["C0SUPPORT1"]))
+    assert moved.state == TriggerState.ACTIVE.value
+    assert moved.last_error is None, "the banner was about the connection the trigger just left"
+
+
+async def test_moving_a_trigger_forgets_the_app_its_old_connection_proved(trigger_owner, owned_flow) -> None:
+    """The app a socket's ``hello`` proved belongs to that connection, not to the trigger.
+
+    Kept across a move, colleagues' sockets for the old app would go on writing
+    its events into this trigger until the new connection says hello - and for
+    good if it never does, say because Slack refuses the new token.
+    """
+    old = await fx.make_app_token_connection(trigger_owner, name="old")
+    row = await _save(owned_flow, trigger_owner, _node(connection="slack/old"))
+    await _update_trigger(
+        row.id, state=TriggerState.ACTIVE.value, provider_state={SLACK_PROVIDER_STATE_APP_ID: fx.APP_ID, "kept": 1}
+    )
+    await fx.make_app_token_connection(trigger_owner, name="new")
+
+    moved = await _save(owned_flow, trigger_owner, _node(connection="slack/new"))
+
+    assert moved.connection_id != old
+    assert moved.provider_state == {"kept": 1}
+
+
+async def test_moving_a_serving_trigger_checks_the_new_connection_can_run_it(trigger_owner, owned_flow) -> None:
+    """Enabling checks consent and scopes; a save that moves an active trigger has to as well.
+
+    Otherwise an installation missing the scopes the trigger's events need
+    leaves it active and silently receiving nothing.
+    """
+    await fx.make_oauth_connection(trigger_owner, name="workspace")
+    narrow = await fx.make_oauth_connection(trigger_owner, name="narrow")
+    await _grant(narrow, "chat:write")
+    row = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace"))
+    await _update_trigger(row.id, state=TriggerState.ACTIVE.value)
+
+    moved = await _save(owned_flow, trigger_owner, _node(connection="slack/narrow"))
+    assert moved.state == TriggerState.ERROR.value
+    assert "missing channels:history" in moved.last_error
+    still = await _save(owned_flow, trigger_owner, _node(connection="slack/narrow"))
+    assert still.state == TriggerState.ERROR.value, "a save must not heal a trigger that still cannot run"
+
+    await _grant(narrow, *fx.INSTALLATION_SCOPES)
+    healed = await _save(owned_flow, trigger_owner, _node(connection="slack/narrow"))
+    assert (healed.state, healed.last_error) == (TriggerState.ACTIVE.value, None)
+
+
+async def test_widening_a_serving_triggers_filters_checks_the_scopes_they_need(trigger_owner, owned_flow) -> None:
+    connection_id = await fx.make_oauth_connection(trigger_owner, name="workspace")
+    await _grant(connection_id, "channels:history")
+    row = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace", conversation_types=["channel"]))
+    await _update_trigger(row.id, state=TriggerState.ACTIVE.value)
+
+    widened = await _save(
+        owned_flow, trigger_owner, _node(connection="slack/workspace", conversation_types=["channel", "im"])
+    )
+
+    assert widened.state == TriggerState.ERROR.value
+    assert "missing im:history" in widened.last_error
+
+
 # --------------------------------------------------------------------------- #
 # Enabling
 # --------------------------------------------------------------------------- #
@@ -296,6 +401,37 @@ async def test_enabling_refuses_a_trigger_that_could_not_run(
         await _enable(row.id)
     async with session_scope() as session:
         assert (await session.get(Trigger, row.id)).state == TriggerState.PENDING.value
+
+
+async def test_enabling_refuses_filters_the_last_save_rejected(trigger_owner, owned_flow) -> None:
+    """A rejected save stores the filters as entered; arming them would make a trigger that never fires."""
+    connection_id = await fx.make_oauth_connection(trigger_owner)
+    node = _node(connection=f"slack/{await _connection_name(connection_id)}", channels=["general"])
+    row = await _save(owned_flow, trigger_owner, node)
+    assert row.state == TriggerState.PENDING.value
+    assert "conversation IDs" in row.last_error
+
+    with pytest.raises(ValueError, match="conversation IDs"):
+        await _enable(row.id)
+
+    async with session_scope() as session:
+        stored = await session.get(Trigger, row.id)
+    assert stored.state == TriggerState.PENDING.value
+    assert "conversation IDs" in stored.last_error
+
+
+async def test_enabling_on_a_replaced_connection_forgets_the_old_app(trigger_owner, owned_flow) -> None:
+    original = await fx.make_app_token_connection(trigger_owner, name="workspace")
+    row = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace"))
+    await _update_trigger(row.id, provider_state={SLACK_PROVIDER_STATE_APP_ID: fx.APP_ID})
+    async with session_scope() as session:
+        await session.delete(await session.get(Connection, original))
+    replacement = await fx.make_app_token_connection(trigger_owner, name="workspace")
+
+    enabled = await _enable(row.id)
+
+    assert enabled.connection_id == replacement
+    assert SLACK_PROVIDER_STATE_APP_ID not in enabled.provider_state
 
 
 async def test_a_mentions_only_trigger_needs_only_the_mention_scope(trigger_owner, owned_flow) -> None:

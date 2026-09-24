@@ -193,7 +193,7 @@ Both manifests subscribe the bot to `message.channels`, `message.groups`, `messa
 | `users:read` | Display names in **Slack: List Channel Members (as app)** |
 {/* slack-app-bot-scopes:end */}
 
-A trigger on the Events API also needs the scopes for what it listens to: a message trigger needs the `*:history` scope of each conversation type it covers (or only `app_mentions:read` when it fires only on mentions), and a reaction trigger needs `reactions:read`. Enabling a trigger whose installation lacks them says which are missing.
+A trigger on the Events API also needs the scopes for what it listens to: a message trigger needs the `*:history` scope of each conversation type it covers (or only `app_mentions:read` when it fires only on mentions), and a reaction trigger needs `reactions:read`. Enabling a trigger whose installation lacks them says which are missing. So does saving the flow when the save moves an enabled trigger to another connection or widens what it listens to: the trigger stops, with the reason, until the scopes are there.
 
 #### Events API (hosted and reachable self-managed instances)
 
@@ -208,7 +208,7 @@ A trigger on the Events API also needs the scopes for what it listens to: a mess
 2. Under **Event Subscriptions**, set the **Request URL** to `https://LANGFLOW_HOST/api/v1/triggers/ingress/slack/apps/slack-app`, where the last segment is the registration name. Slack verifies the URL immediately; Langflow answers as soon as the registration is configured, before any trigger exists.
 3. In Langflow, add a Slack connection with **Sign in with Slack** and the bot identity, and choose it on the trigger.
 
-One Request URL serves every workspace the app is installed in. Each event reaches only the triggers whose connection is an installation in that workspace.
+One Request URL serves every workspace the app is installed in. Each event reaches only the triggers whose connection is an installation in that workspace. Triggers can't use an org-wide Enterprise Grid installation, which belongs to no single workspace. Install the app to a workspace instead.
 
 #### Socket Mode (Desktop and instances Slack cannot reach)
 

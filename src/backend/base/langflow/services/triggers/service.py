@@ -85,21 +85,28 @@ def _reject_mechanism(config: dict | None) -> None:
 
 
 async def _arm_slack(session: AsyncSession, row: Trigger) -> None:
-    """Re-derive a Slack trigger's connection and transport, and check it may run unattended.
+    """Re-check a Slack trigger's filters, re-derive its connection and transport, and check it may run unattended.
 
     Re-derived rather than trusted: the connection can change between the save
     that recorded it and this enable (reinstalled, swapped for an app-level
-    token, its background-runs consent withdrawn). Raises a ``ValueError`` with
-    the owner-facing reason, which the route answers with 409.
+    token, its background-runs consent withdrawn). The filters are re-checked
+    too: a save that refused them stored them as entered, and arming those
+    would leave an ``active`` trigger that can never match. Raises a
+    ``ValueError`` with the owner-facing reason, which the route answers with 409.
     """
     from langflow.services.connection.oauth.config import deployment_context
-    from langflow.services.triggers.providers.slack.arming import check_ready_to_arm, resolve_arming
+    from langflow.services.triggers.providers.slack.arming import (
+        bind_connection,
+        check_ready_to_arm,
+        resolve_arming,
+    )
+    from langflow.services.triggers.providers.slack.config import normalize_slack_config
 
-    config = row.config or {}
+    config = normalize_slack_config(row.kind, row.config or {})
     arming = await resolve_arming(session, owner_id=row.user_id, config=config, context=deployment_context())
     await check_ready_to_arm(session, kind=row.kind, config=config, arming=arming)
-    if row.connection_id != arming.connection_id or config.get("mechanism_id") != arming.mechanism_id:
-        row.connection_id = arming.connection_id
+    moved = bind_connection(row, arming.connection_id)
+    if moved or config.get("mechanism_id") != arming.mechanism_id:
         row.config = {**config, "mechanism_id": arming.mechanism_id}
         session.add(row)
 

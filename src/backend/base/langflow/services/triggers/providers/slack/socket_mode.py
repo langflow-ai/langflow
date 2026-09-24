@@ -53,6 +53,7 @@ from lfx.integrations.errors import (
     RateLimitedError,
 )
 from lfx.log.logger import logger
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 from websockets.asyncio.client import connect as ws_connect
 from websockets.exceptions import ConnectionClosed
@@ -63,6 +64,7 @@ from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.triggers.constants import (
     MECHANISM_SLACK_SOCKET_MODE,
     PROVIDER_SLACK,
+    SLACK_PROVIDER_STATE_APP_ID,
     SLACK_TRIGGER_KINDS,
     TRANSPORT_SOCKET,
 )
@@ -77,14 +79,14 @@ if TYPE_CHECKING:
 
     from websockets.asyncio.client import ClientConnection
 
-    from langflow.services.triggers.listeners.adapters import ListenerContext
+    from langflow.services.triggers.listeners.adapters import ListenerContext, ListenerTrigger
 
 SLACK_API_BASE_URL = "https://slack.com/api"
 APP_TOKEN_PREFIX = "xapp-"  # noqa: S105 - Slack's app-level token type prefix, not a credential
 
 #: ``trigger.provider_state`` key recording which Slack app a trigger's
 #: connection proved it belongs to, in that socket's ``hello``.
-PROVIDER_STATE_APP_ID = "slack_app_id"
+PROVIDER_STATE_APP_ID = SLACK_PROVIDER_STATE_APP_ID
 
 #: ``apps.connections.open`` errors that mean the token itself is no good, so
 #: only a human with a new token can fix it.
@@ -164,6 +166,8 @@ class _Socket:
     retiring: bool = False
     productive: bool = False
     drain: asyncio.Task | None = field(default=None, repr=False)
+    #: Reports the connection as working once this socket has held.
+    settle: asyncio.Task | None = field(default=None, repr=False)
 
     def held(self, now: float) -> bool:
         """Carried traffic, or stayed open long enough that its close is routine."""
@@ -173,6 +177,8 @@ class _Socket:
         await self.ws.send(json.dumps({"envelope_id": envelope_id}))
 
     async def close(self) -> None:
+        if self.settle is not None and not self.settle.done():
+            self.settle.cancel()
         with contextlib.suppress(Exception):
             await self.ws.close()
 
@@ -213,8 +219,11 @@ class SlackSocketModeAdapter:
         #: a reconnect that re-opens what it just closed.
         self._halt = asyncio.Event()
         self._app_id: str | None = None
-        #: Trigger ids whose ``provider_state`` already names ``_app_id``.
-        self._recorded: set[UUID] = set()
+        #: Trigger id -> the snapshot ``_app_id`` was last written against. The
+        #: supervisor re-reads every trigger each reconcile, so a *fresh*
+        #: snapshot that still lacks the app id means it was cleared - the
+        #: trigger moved to another connection and back - and is written again.
+        self._recorded: dict[UUID, ListenerTrigger] = {}
 
     # ------------------------------------------------------------------ #
     # ListenerAdapter
@@ -341,7 +350,7 @@ class SlackSocketModeAdapter:
 
     async def _discard(self, socket: _Socket) -> None:
         """Stop a socket's tasks and close it, waiting for the tasks to end."""
-        tasks = [task for task in (socket.reader, socket.drain) if task is not None]
+        tasks = [task for task in (socket.reader, socket.drain, socket.settle) if task is not None]
         for task in tasks:
             if not task.done():
                 task.cancel()
@@ -361,7 +370,24 @@ class SlackSocketModeAdapter:
         self._sockets.append(socket)
         await self._record_app_id(ctx)
         if ctx.mark_connected is not None:
+            socket.settle = asyncio.create_task(self._mark_connected_once_held(ctx, socket))
+
+    async def _mark_connected_once_held(self, ctx: ListenerContext, socket: _Socket) -> None:
+        """Report a working connection once ``socket`` has stayed up long enough to count.
+
+        Not at ``hello``. Slack can accept a socket and drop it straight away, and
+        reporting every hello as a success reset the supervisor's failure count on
+        each attempt: a connection that never held retried at the base backoff
+        forever and its owner never saw the banner. A socket that carries an
+        event proves itself sooner, through ``emit``.
+        """
+        await asyncio.sleep(_STABLE_SOCKET_S)
+        if self._stopped or socket not in self._sockets or ctx.mark_connected is None:
+            return
+        try:
             await ctx.mark_connected()
+        except Exception:  # noqa: BLE001 - clearing a banner is best effort; the socket itself is fine
+            await logger.awarning("Could not report connection %s as connected", ctx.connection_id, exc_info=True)
 
     async def _open(self, http: httpx.AsyncClient, token: str) -> _Socket:
         url = await self._issue_url(http, token)
@@ -496,7 +522,31 @@ class SlackSocketModeAdapter:
             await self._record_app_id(ctx)
             for trigger_id in await self._targets(ctx, event):
                 # Committed before the envelope is acknowledged (see module docstring).
-                await ctx.emit(trigger_id=trigger_id, dedupe_key=event.dedupe_key, payload=event.payload)
+                await self._emit(ctx, trigger_id, event)
+
+    async def _emit(self, ctx: ListenerContext, trigger_id: UUID, event: SlackEvent) -> None:
+        """Write one trigger's ledger row, skipping a trigger deleted since it was targeted.
+
+        Targets come from the last reconcile and from a same-app read up to
+        ``same_app_ttl_s`` old, so a trigger can be deleted in between - with the
+        cross-connection fan-out, by another person deleting their own flow. Its
+        ledger row then fails the foreign key (Postgres; SQLite does not enforce
+        it). Raising would close every socket on this connection over one
+        trigger that no longer exists, so only that trigger is skipped. Any other
+        write failure still raises, and the envelope stays unacknowledged.
+        """
+        try:
+            await ctx.emit(trigger_id=trigger_id, dedupe_key=event.dedupe_key, payload=event.payload)
+        except IntegrityError:
+            if await _trigger_exists(trigger_id):
+                raise
+            self._same_app_cache = None
+            await logger.ainfo(
+                "Slack event %s on connection %s skipped trigger %s: it was deleted",
+                event.event_id,
+                ctx.connection_id,
+                trigger_id,
+            )
 
     # ------------------------------------------------------------------ #
     # Targets
@@ -579,14 +629,22 @@ class SlackSocketModeAdapter:
         if self._app_id is None:
             return
         for trigger in list(ctx.triggers):
-            if trigger.id in self._recorded:
+            if (trigger.provider_state or {}).get(PROVIDER_STATE_APP_ID) == self._app_id:
                 continue
-            if (trigger.provider_state or {}).get(PROVIDER_STATE_APP_ID) != self._app_id:
-                await ctx.save_cursor(
-                    trigger_id=trigger.id,
-                    provider_state={**(trigger.provider_state or {}), PROVIDER_STATE_APP_ID: self._app_id},
-                )
-            self._recorded.add(trigger.id)
+            if self._recorded.get(trigger.id) is trigger:
+                continue
+            await ctx.save_cursor(
+                trigger_id=trigger.id,
+                provider_state={**(trigger.provider_state or {}), PROVIDER_STATE_APP_ID: self._app_id},
+            )
+            self._recorded[trigger.id] = trigger
+
+
+async def _trigger_exists(trigger_id: UUID) -> bool:
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        return await session.get(Trigger, trigger_id) is not None
 
 
 def _retry_after(value: str | None) -> float | None:
