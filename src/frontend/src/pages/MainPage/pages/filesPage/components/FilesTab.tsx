@@ -64,6 +64,9 @@ const FilesTab = ({
   const { mutate: rename } = usePostRenameFileV2();
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
   const handleRename = (params: NewValueParams<FileType, string>) => {
+    if (typeof params.newValue !== "string") {
+      return;
+    }
     rename(
       {
         id: params.data.id,
