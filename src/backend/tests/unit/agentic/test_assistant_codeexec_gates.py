@@ -72,25 +72,37 @@ def test_assistant_execution_denies_non_admin_when_custom_code_is_admin_only(pat
         response = TestClient(app).post(path, json=body)
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Assistant code execution is restricted to administrators."
+    assert response.json()["detail"] == "The Langflow Assistant is restricted to administrators on this server."
 
 
 def test_assistant_execution_allows_non_admin_when_policy_off():
     from types import SimpleNamespace
 
-    from langflow.agentic.api.router import require_agentic_component_admin
+    from langflow.agentic.api.deps import require_agentic_component_admin
 
-    with patch("langflow.agentic.api.router.get_settings_service", return_value=_settings(admin_only=False)):
+    with patch("lfx.services.deps.get_settings_service", return_value=_settings(admin_only=False)):
         assert require_agentic_component_admin(SimpleNamespace(is_superuser=False)) is None
 
 
 def test_assistant_execution_allows_admin_when_policy_on():
     from types import SimpleNamespace
 
-    from langflow.agentic.api.router import require_agentic_component_admin
+    from langflow.agentic.api.deps import require_agentic_component_admin
 
-    with patch("langflow.agentic.api.router.get_settings_service", return_value=_settings(admin_only=True)):
+    with patch("lfx.services.deps.get_settings_service", return_value=_settings(admin_only=True)):
         assert require_agentic_component_admin(SimpleNamespace(is_superuser=True)) is None
+
+
+def test_assistant_execution_denies_when_settings_unavailable():
+    from types import SimpleNamespace
+
+    from fastapi import HTTPException
+    from langflow.agentic.api.deps import require_agentic_component_admin
+
+    with patch("lfx.services.deps.get_settings_service", return_value=None), pytest.raises(HTTPException) as exc:
+        require_agentic_component_admin(SimpleNamespace(is_superuser=False))
+
+    assert exc.value.status_code == 403
 
 
 # --- (b) execution gate: allow_custom_components -------------------------------------------------

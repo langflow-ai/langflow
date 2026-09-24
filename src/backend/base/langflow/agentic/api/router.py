@@ -26,7 +26,7 @@ from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from langflow.agentic.api.deps import require_agentic_experience
+from langflow.agentic.api.deps import require_agentic_component_admin, require_agentic_experience
 from langflow.agentic.api.schemas import AssistantRequest, HeadlessAssistantRequest
 from langflow.agentic.helpers.sse import format_complete_event, format_error_event
 from langflow.agentic.services.assistant_service import (
@@ -49,13 +49,6 @@ from langflow.api.utils.core import CurrentActiveUser, DbSession, release_db_tra
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
-
-
-def require_agentic_component_admin(current_user: CurrentActiveUser) -> None:
-    """Enforce the caller-aware custom-code policy before assistant execution."""
-    settings = get_settings_service().settings
-    if getattr(settings, "custom_component_admin_only", False) is True and not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Assistant code execution is restricted to administrators.")
 
 
 _ASSISTANT_EXECUTION_DEPENDENCIES = [Depends(require_agentic_experience), Depends(require_agentic_component_admin)]
