@@ -26,6 +26,7 @@ from lfx.base.tools.constants import (
 from lfx.custom.annotation_validation import (
     resolve_method_return_annotation,
 )
+from lfx.custom.custom_component.input_names import ensure_inputs_not_shadowed_by_methods
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
@@ -176,6 +177,7 @@ class Component(CustomComponent):
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
+        ensure_inputs_not_shadowed_by_methods(type(self), self.inputs)
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
