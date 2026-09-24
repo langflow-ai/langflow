@@ -512,6 +512,8 @@ In a shared server where users you do not fully trust can build flows, set `LANG
 
 Connector validation covers Cassandra, MongoDB, Redis vector store, PGVector, Couchbase, Valkey, Supabase, and the other vector stores and tools listed above. Private service names in container networks (for example, `redis`, `mongo`, or `postgres` resolving to 172.x addresses) require an entry in `LANGFLOW_SSRF_ALLOWED_HOSTS`. MongoDB and Couchbase SRV targets are checked by their own hostnames; allowlisting only the seed name does not cover those targets. For a single Couchbase DNS seed with an explicit port, validation checks both the seed and any SRV targets. Allowlist the target names with a wildcard such as `*.cluster.internal`, or their address range with a CIDR.
 
+Use commas to separate Couchbase bootstrap hosts. With connector SSRF validation enabled, semicolons in the Couchbase connection-string authority are rejected because the SDK can interpret them as part of a DNS hostname.
+
 In 1.12.4, PGVector connections to `localhost` or `127.0.0.1` are blocked by default, matching the SQL Database components. To keep a trusted local PGVector flow working, set `LANGFLOW_SSRF_ALLOWED_HOSTS=localhost` (and include `127.0.0.1` if used). Connector checks validate bootstrap addresses, but MongoDB, Redis Sentinel, Couchbase, and Valkey clients can discover additional peers after connecting or resolve a validated name again. Use network egress controls to prevent those clients from reaching internal services.
 
 #### Model provider endpoints {#provider-allowed-hosts}

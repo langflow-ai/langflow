@@ -1,4 +1,3 @@
-import re
 from datetime import timedelta
 from ipaddress import ip_address
 from urllib.parse import parse_qsl, urlsplit
@@ -37,8 +36,12 @@ def _validate_couchbase_hosts(connection_string: str) -> None:
         msg = "Couchbase connection string must contain a host."
         raise SSRFProtectionError(msg)
 
-    # The C++ SDK accepts both separators for bootstrap nodes.
-    seeds = re.split(r"[,;]", parsed.netloc)
+    # The C++ SDK can treat a semicolon as part of a DNS hostname, but as a
+    # separator after an IP literal. Reject this ambiguous form outright.
+    if ";" in parsed.netloc:
+        msg = "Couchbase connection string host cannot contain a semicolon."
+        raise SSRFProtectionError(msg)
+    seeds = parsed.netloc.split(",")
     if query_keys & {"enable_dns_srv", "dns_nameserver"}:
         msg = "Couchbase connection string cannot override DNS discovery settings."
         raise SSRFProtectionError(msg)

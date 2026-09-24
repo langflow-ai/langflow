@@ -594,6 +594,22 @@ def test_couchbase_allows_public_multi_seed_url():
         _validate_couchbase_hosts("couchbases://8.8.8.8,1.1.1.1")
 
 
+def test_couchbase_rejects_semicolon_hostname_that_sdk_queries_as_one_srv_seed():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    # The C++ parser treats the semicolon as part of a DNS hostname, so the
+    # combined name could resolve through SRV to an internal target.
+    with (
+        ssrf_enabled(),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["8.8.8.8"]),
+        patch("dns.resolver.resolve", return_value=[MagicMock(target="10.0.0.5.")]) as mock_srv,
+        pytest.raises(SSRFProtectionError, match="semicolon"),
+    ):
+        _validate_couchbase_hosts("couchbase://a.8.8.8.8.nip.io;srvhit.1.1.1.1.nip.io")
+    mock_srv.assert_not_called()
+
+
 def test_couchbase_blocks_internal_srv_target():
     from lfx.utils.ssrf_protection import SSRFProtectionError
     from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
