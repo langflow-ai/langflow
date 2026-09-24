@@ -44,9 +44,11 @@ from lfx.memory.flow_context import (
     reset_current_flow_id,
     reset_current_message_executor_id,
     reset_current_message_owner_id,
+    reset_messages_persist,
     set_current_flow_id,
     set_current_message_executor_id,
     set_current_message_owner_id,
+    set_messages_persist,
     should_persist_messages,
 )
 from lfx.schema.data import Data
@@ -272,6 +274,32 @@ async def test_graph_without_flow_id_keeps_memory_store_ephemeral(client):  # no
     async with session_scope() as session:
         rows = (await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))).all()
     assert rows == []
+
+
+async def test_ephemeral_message_cleanup_does_not_delete_stored_rows(client):  # noqa: ARG001
+    flow_id, owner_id = uuid4(), uuid4()
+    session_id = "ephemeral-cleanup"
+    stored = (
+        await aadd_messages(
+            Message(text="stored", sender="User", sender_name="User", session_id=session_id),
+            flow_id=flow_id,
+            user_id=owner_id,
+        )
+    )[0]
+
+    flow_token = set_current_flow_id(None)
+    owner_token = set_current_message_owner_id(None)
+    persist_token = set_messages_persist(False)
+    try:
+        await delete_message(str(stored.id))
+        await delete_message("transient-message-id")
+    finally:
+        reset_messages_persist(persist_token)
+        reset_current_message_owner_id(owner_token)
+        reset_current_flow_id(flow_token)
+
+    rows = await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id)
+    assert [message.id for message in rows] == [stored.id]
 
 
 @pytest.mark.parametrize("missing_identity", ["flow", "owner"])
