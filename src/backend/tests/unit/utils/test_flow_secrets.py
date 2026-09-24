@@ -2,7 +2,325 @@
 
 from __future__ import annotations
 
-from langflow.utils.flow_secrets import strip_secret_field_values, strip_secret_field_values_in_place
+import pytest
+from langflow.utils.flow_secrets import (
+    HiddenFieldMetadataError,
+    restore_redacted_flow_values,
+    strip_secret_field_values,
+    strip_secret_field_values_in_place,
+)
+
+
+def _secret_node(node_id: str, secret: str) -> dict:
+    return {
+        "id": node_id,
+        "data": {
+            "node": {
+                "template": {
+                    "api_key": {"name": "api_key", "password": True, "value": secret},
+                    "model_name": {"name": "model_name", "value": "original"},
+                }
+            }
+        },
+    }
+
+
+def test_restore_redacted_values_matches_unique_node_ids_and_allows_layout_edits() -> None:
+    """A shared layout edit restores each key to its stored node despite reordering."""
+    stored = {"nodes": [_secret_node("one", "first-secret"), _secret_node("two", "second-secret")], "edges": []}
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"].reverse()
+    incoming["nodes"][0]["position"] = {"x": 20, "y": 30}
+
+    restored = restore_redacted_flow_values(incoming, stored)
+
+    assert restored["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "second-secret"
+    assert restored["nodes"][1]["data"]["node"]["template"]["api_key"]["value"] == "first-secret"
+    assert restored["nodes"][0]["position"] == {"x": 20, "y": 30}
+    assert incoming["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+
+
+def test_restored_owner_key_rejects_executable_setting_changes() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"]["model_name"]["value"] = "edited"
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restore_redacted_values_rejects_duplicate_node_and_row_identifiers() -> None:
+    """Ambiguous identities must not move or erase an owner's credential."""
+    stored = {"nodes": [_secret_node("one", "first-secret")], "edges": []}
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"].append(_secret_node("one", None))
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+    stored["nodes"][0]["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "value": [
+            {"key": "Authorization", "value": "Bearer first"},  # pragma: allowlist secret
+            {"key": "Authorization", "value": "Bearer second"},  # pragma: allowlist secret
+        ],
+    }
+    incoming = strip_secret_field_values(stored)
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+@pytest.mark.parametrize(
+    ("field_name", "metadata_change"),
+    [
+        ("api_key", {"password": False}),
+        ("api_key", {"name": "query"}),
+        ("api_key", {"load_from_db": True}),
+        ("api_key", {"type": "str"}),
+        ("api_key", {"_input_type": "StrInput"}),
+    ],
+)
+def test_restore_redacted_values_rejects_weakened_field_metadata(field_name: str, metadata_change: dict) -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    incoming = strip_secret_field_values(stored)
+    incoming_field = incoming["nodes"][0]["data"]["node"]["template"][field_name]
+    incoming_field.update(metadata_change)
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restore_redacted_values_rejects_weakened_header_row_metadata() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    stored["nodes"][0]["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "value": [
+            {"id": "stable-row", "key": "Authorization", "value": "Bearer owner-token"}
+        ],  # pragma: allowlist secret
+    }
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"]["headers"]["value"][0]["key"] = "X-Label"
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+@pytest.mark.parametrize(
+    ("destination_name", "original"),
+    [
+        ("bing_search_url", "https://www.bing.com/search"),
+        ("endpoint_url", "https://provider.example/v1"),
+        ("openai_api_base", "https://provider.example/v1"),
+    ],
+)
+def test_restore_redacted_values_rejects_changed_credential_destination(destination_name: str, original: str) -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    template = stored["nodes"][0]["data"]["node"]["template"]
+    template[destination_name] = {"name": destination_name, "value": original}
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"][destination_name]["value"] = "https://attacker.example"
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restore_redacted_values_rejects_changed_nested_destination() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    stored["nodes"][0]["data"]["node"]["template"]["options"] = {
+        "name": "options",
+        "value": {"transport": {"key": "target_url", "value": "https://provider.example"}},
+    }
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"]["options"]["value"]["transport"]["value"] = (
+        "https://attacker.example"
+    )
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restored_header_value_requires_unchanged_destination() -> None:
+    stored = {"nodes": [{"id": "one", "data": {"node": {"template": {}}}}], "edges": []}
+    template = stored["nodes"][0]["data"]["node"]["template"]
+    template["headers"] = {
+        "name": "headers",
+        "value": [{"key": "Authorization", "value": "Bearer owner-token"}],  # pragma: allowlist secret
+    }
+    template["endpoint_url"] = {"name": "endpoint_url", "value": "https://provider.example"}
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"]["endpoint_url"]["value"] = "https://attacker.example"
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restored_header_rejects_output_mode_change() -> None:
+    """API Request must not return the restored Authorization header as metadata."""
+    stored = {"nodes": [{"id": "request", "data": {"node": {"template": {}}}}], "edges": []}
+    template = stored["nodes"][0]["data"]["node"]["template"]
+    template["headers"] = {
+        "name": "headers",
+        "value": [{"key": "Authorization", "value": "owner-secret"}],  # pragma: allowlist secret
+    }
+    template["include_httpx_metadata"] = {"name": "include_httpx_metadata", "value": False}
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"]["include_httpx_metadata"]["value"] = True
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restored_header_rejects_changed_upstream_url_and_edges() -> None:
+    """An upstream Text Input can feed API Request's URL even if its own node is unchanged."""
+    stored = {
+        "nodes": [
+            {
+                "id": "source",
+                "data": {"node": {"template": {"text": {"name": "text", "value": "https://provider.example"}}}},
+            },
+            {
+                "id": "request",
+                "data": {
+                    "node": {
+                        "template": {
+                            "url_input": {"name": "url_input", "value": ""},
+                            "headers": {
+                                "name": "headers",
+                                "value": [
+                                    {"key": "Authorization", "value": "owner-secret"}
+                                ],  # pragma: allowlist secret
+                            },
+                        }
+                    }
+                },
+            },
+        ],
+        "edges": [{"source": "source", "target": "request"}],
+    }
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"]["text"]["value"] = "https://attacker.example"
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+    incoming = strip_secret_field_values(stored)
+    incoming["edges"] = []
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_explicit_new_credential_does_not_lock_destination() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    stored["nodes"][0]["data"]["node"]["template"]["endpoint_url"] = {
+        "name": "endpoint_url",
+        "value": "https://provider.example",
+    }
+    incoming = strip_secret_field_values(stored)
+    template = incoming["nodes"][0]["data"]["node"]["template"]
+    template["api_key"]["value"] = "editor-key"  # pragma: allowlist secret
+    template["endpoint_url"]["value"] = "https://editor.example"
+
+    restored = restore_redacted_flow_values(incoming, stored)
+
+    assert restored["nodes"][0]["data"]["node"]["template"] == template
+
+
+def test_explicit_new_credential_may_replace_hidden_binding_metadata() -> None:
+    stored = {"nodes": [_secret_node("one", "OWNER_VAR")], "edges": []}  # pragma: allowlist secret
+    stored_field = stored["nodes"][0]["data"]["node"]["template"]["api_key"]
+    stored_field["load_from_db"] = True
+    incoming = strip_secret_field_values(stored)
+    incoming_field = incoming["nodes"][0]["data"]["node"]["template"]["api_key"]
+    incoming_field["value"] = "editor-key"  # pragma: allowlist secret
+    incoming_field["load_from_db"] = False
+
+    restored = restore_redacted_flow_values(incoming, stored)
+
+    assert restored["nodes"][0]["data"]["node"]["template"]["api_key"] == incoming_field
+    assert stored_field["value"] == "OWNER_VAR"
+
+
+def test_frontend_cleared_hidden_binding_is_preserved_on_layout_save() -> None:
+    stored = {"nodes": [_secret_node("one", "OWNER_VAR")], "edges": []}  # pragma: allowlist secret
+    stored_field = stored["nodes"][0]["data"]["node"]["template"]["api_key"]
+    stored_field["load_from_db"] = True
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["position"] = {"x": 10, "y": 20}
+    incoming_field = incoming["nodes"][0]["data"]["node"]["template"]["api_key"]
+    incoming_field.update({"value": "", "load_from_db": False})
+
+    restored = restore_redacted_flow_values(incoming, stored)
+
+    assert restored["nodes"][0]["position"] == {"x": 10, "y": 20}
+    assert restored["nodes"][0]["data"]["node"]["template"]["api_key"] == stored_field
+
+
+def test_restore_redacted_value_preserves_anonymous_row_when_unchanged() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    stored["nodes"][0]["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "type": "table",
+        "table_schema": [{"name": "api_key", "load_from_db": True}],
+        "value": [{"api_key": "OWNER_VAR", "label": "old"}],  # pragma: allowlist secret
+    }
+    incoming = strip_secret_field_values(stored)
+    incoming_row = incoming["nodes"][0]["data"]["node"]["template"]["headers"]["value"][0]
+
+    restored = restore_redacted_flow_values(incoming, stored)
+    restored_row = restored["nodes"][0]["data"]["node"]["template"]["headers"]["value"][0]
+
+    assert restored_row == {"api_key": "OWNER_VAR", "label": "old"}  # pragma: allowlist secret
+    assert incoming_row["api_key"] is None
+
+
+def test_restore_redacted_value_rejects_changed_row_binding_metadata() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    stored["nodes"][0]["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "type": "table",
+        "table_schema": [{"name": "api_key", "load_from_db": True}],
+        "value": [
+            {"api_key": "OWNER_VAR", "label": "old", "__load_from_db_fields": {"api_key": True}}
+        ],  # pragma: allowlist secret
+    }
+    incoming = strip_secret_field_values(stored)
+    incoming_row = incoming["nodes"][0]["data"]["node"]["template"]["headers"]["value"][0]
+    incoming_row["__load_from_db_fields"] = {"api_key": False}
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restore_redacted_value_rejects_ambiguous_anonymous_row_edit() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    stored["nodes"][0]["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "type": "table",
+        "table_schema": [{"name": "api_key", "load_from_db": True}],
+        "value": [
+            {"api_key": "FIRST_VAR", "label": "first"},  # pragma: allowlist secret
+            {"api_key": "SECOND_VAR", "label": "second"},  # pragma: allowlist secret
+        ],
+    }
+    incoming = strip_secret_field_values(stored)
+    incoming["nodes"][0]["data"]["node"]["template"]["headers"]["value"][0]["label"] = "edited"
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
+
+
+def test_restore_redacted_value_rejects_removed_hidden_cell() -> None:
+    stored = {"nodes": [_secret_node("one", "owner-secret")], "edges": []}  # pragma: allowlist secret
+    stored["nodes"][0]["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "type": "table",
+        "table_schema": [{"name": "api_key", "load_from_db": True}],
+        "value": [{"api_key": "OWNER_VAR", "label": "old"}],  # pragma: allowlist secret
+    }
+    incoming = strip_secret_field_values(stored)
+    del incoming["nodes"][0]["data"]["node"]["template"]["headers"]["value"][0]["api_key"]
+
+    with pytest.raises(HiddenFieldMetadataError):
+        restore_redacted_flow_values(incoming, stored)
 
 
 def _flow_data(template: dict) -> dict:
@@ -292,8 +610,13 @@ def test_default_scrub_still_nulls_table_reference_columns() -> None:
             "headers": {
                 "name": "headers",
                 "type": "table",
-                "table_schema": [{"name": "api_key", "load_from_db": True}],
-                "value": [{"api_key": "TENANT_TOKEN", "note": "kept"}],  # pragma: allowlist secret
+                "table_schema": [
+                    {"name": "api_key", "load_from_db": True},
+                    {"name": "value", "load_from_db": True},
+                ],
+                "value": [
+                    {"api_key": "TENANT_TOKEN", "value": "OWNER_SECRET_VAR", "note": "kept"}  # pragma: allowlist secret
+                ],
             }
         }
     )
@@ -302,4 +625,5 @@ def test_default_scrub_still_nulls_table_reference_columns() -> None:
 
     rows = _template(flow_data)["headers"]["value"]
     assert rows[0]["api_key"] is None
+    assert rows[0]["value"] is None
     assert rows[0]["note"] == "kept"

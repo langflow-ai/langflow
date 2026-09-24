@@ -31,8 +31,10 @@ from langflow.services.deps import (
     get_auth_service,
     get_authorization_service,
     get_settings_service,
+    get_variable_service,
     session_scope,
 )
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 from ._policy_double import (
     assign_role,
@@ -270,6 +272,15 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
     bob_username = f"bob_{uuid4().hex}"
     alice_id = await _make_user(alice_username)
     bob_id = await _make_user(bob_username)
+    async with session_scope() as session:
+        await get_variable_service().create_variable(
+            alice_id,
+            "OWNER_API_KEY",
+            "stored-credential",  # pragma: allowlist secret
+            default_fields=[],
+            type_=CREDENTIAL_TYPE,
+            session=session,
+        )
     folder_id = await _make_project(alice_id, f"secrets_{uuid4().hex}")
     secret_value = "test-only-credential-value"  # noqa: S105  # pragma: allowlist secret
     flow_data = {
@@ -280,11 +291,77 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
                     "node": {
                         "template": {
                             "api_key": {"name": "api_key", "password": True, "value": secret_value},
+                            "bound_key": {
+                                "name": "bound_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": "OWNER_API_KEY",
+                            },
+                            "connection_url": {
+                                "name": "connection_url",
+                                "value": "postgres://user:testpw@db.internal/prod",  # pragma: allowlist secret
+                            },
+                            "headers": {
+                                "name": "headers",
+                                "value": [
+                                    {
+                                        "id": "owner-header",
+                                        "key": "Authorization",
+                                        "value": "Bearer owner-token",
+                                    },  # pragma: allowlist secret
+                                    {"key": "X-Label", "value": "visible"},
+                                ],
+                            },
+                            "tenant_headers": {
+                                "name": "tenant_headers",
+                                "type": "table",
+                                "table_schema": [{"name": "value", "load_from_db": True}],
+                                "value": [
+                                    {
+                                        "id": "tenant-header",
+                                        "key": "X-Tenant-Key",
+                                        "value": "OWNER_API_KEY",
+                                        "__load_from_db_fields": {"value": True},
+                                    }
+                                ],
+                            },
                             "model_name": {"name": "model_name", "value": "test-model"},
+                            "bing_search_url": {
+                                "name": "bing_search_url",
+                                "value": "https://provider.example/search",
+                            },
                         }
                     }
                 },
-            }
+            },
+            {
+                "id": "group-node",
+                "data": {
+                    "node": {
+                        "flow": {
+                            "data": {
+                                "nodes": [
+                                    {
+                                        "id": "nested-node",
+                                        "data": {
+                                            "node": {
+                                                "template": {
+                                                    "api_key": {
+                                                        "name": "api_key",
+                                                        "password": True,
+                                                        "value": "nested-owner-secret",  # pragma: allowlist secret
+                                                    }
+                                                }
+                                            }
+                                        },
+                                    }
+                                ],
+                                "edges": [],
+                            }
+                        }
+                    }
+                },
+            },
         ],
         "edges": [],
     }
@@ -362,6 +439,102 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
         )
         assert value(upserted) is None
         assert value(await client.get(f"api/v1/flows/{flow_id}", headers=alice_headers)) == secret_value
+
+        # Saving the complete redacted graph must keep the owner's hidden
+        # values on both write routes while accepting canvas layout edits.
+        shared_view = await client.get(f"api/v1/flows/{flow_id}", headers=bob_headers)
+        shared_graph = shared_view.json()["data"]
+        shared_template = shared_graph["nodes"][0]["data"]["node"]["template"]
+        assert shared_template["api_key"]["value"] is None
+        assert shared_template["bound_key"]["value"] is None
+        assert shared_template["connection_url"]["value"] is None
+        assert shared_template["headers"]["value"][0]["value"] is None
+        assert shared_template["tenant_headers"]["value"][0]["value"] is None
+        assert shared_template["model_name"]["value"] == "test-model"
+        downloaded = await client.post("api/v1/flows/download/", headers=bob_headers, json=[str(flow_id)])
+        assert downloaded.status_code == 200, downloaded.text
+        assert downloaded.json()["data"]["nodes"][0]["data"]["node"]["template"]["bound_key"]["value"] is None
+        owner_download = await client.post("api/v1/flows/download/", headers=alice_headers, json=[str(flow_id)])
+        assert owner_download.status_code == 200, owner_download.text
+        assert (
+            owner_download.json()["data"]["nodes"][0]["data"]["node"]["template"]["bound_key"]["value"]
+            == "OWNER_API_KEY"
+        )
+        shared_graph["nodes"][0]["position"] = {"x": 20, "y": 30}
+        # The current canvas may clear an unavailable owner's redacted
+        # variable reference while opening it. A layout save must preserve
+        # that binding in storage.
+        shared_template["bound_key"].update({"value": "", "load_from_db": False})
+        patched_graph = await client.patch(f"api/v1/flows/{flow_id}", headers=bob_headers, json={"data": shared_graph})
+        assert value(patched_graph) is None
+
+        shared_graph = (await client.get(f"api/v1/flows/{flow_id}", headers=bob_headers)).json()["data"]
+        shared_graph["nodes"][0]["position"] = {"x": 40, "y": 50}
+        shared_graph["nodes"][0]["data"]["node"]["template"]["bound_key"].update({"value": "", "load_from_db": False})
+        upserted_graph = await client.put(
+            f"api/v1/flows/{flow_id}",
+            headers=bob_headers,
+            json={"name": f"shared_put_{uuid4().hex}", "data": shared_graph},
+        )
+        assert value(upserted_graph) is None
+        for response in (patched_graph, upserted_graph):
+            returned_graph = response.json()["data"]
+            returned_template = returned_graph["nodes"][0]["data"]["node"]["template"]
+            assert returned_template["bound_key"]["value"] is None
+            assert returned_template["connection_url"]["value"] is None
+            assert returned_template["headers"]["value"][0]["value"] is None
+            assert returned_template["tenant_headers"]["value"][0]["value"] is None
+            returned_nested = returned_graph["nodes"][1]["data"]["node"]["flow"]["data"]["nodes"][0]["data"]["node"][
+                "template"
+            ]
+            assert returned_nested["api_key"]["value"] is None
+
+        owner_graph = (await client.get(f"api/v1/flows/{flow_id}", headers=alice_headers)).json()["data"]
+        owner_template = owner_graph["nodes"][0]["data"]["node"]["template"]
+        assert owner_template["api_key"]["value"] == secret_value
+        assert owner_template["bound_key"]["value"] == "OWNER_API_KEY"
+        assert owner_template["connection_url"]["value"] == "postgres://user:testpw@db.internal/prod"
+        assert owner_template["headers"]["value"][0]["value"] == "Bearer owner-token"
+        assert owner_template["tenant_headers"]["value"][0]["value"] == "OWNER_API_KEY"
+        assert owner_template["model_name"]["value"] == "test-model"
+        assert owner_graph["nodes"][0]["position"] == {"x": 40, "y": 50}
+        nested_template = owner_graph["nodes"][1]["data"]["node"]["flow"]["data"]["nodes"][0]["data"]["node"][
+            "template"
+        ]
+        assert nested_template["api_key"]["value"] == "nested-owner-secret"
+
+        # A shared editor must not weaken metadata so that restored owner
+        # secrets become visible in a write response or later shared read.
+        for method in ("PATCH", "PUT"):
+            for tampering in ("password", "field_name", "header_key", "table_schema", "destination", "model_name"):
+                graph = (await client.get(f"api/v1/flows/{flow_id}", headers=bob_headers)).json()["data"]
+                template = graph["nodes"][0]["data"]["node"]["template"]
+                if tampering == "password":
+                    template["api_key"]["password"] = False
+                elif tampering == "field_name":
+                    template["api_key"]["name"] = "query"
+                elif tampering == "header_key":
+                    template["headers"]["value"][0]["key"] = "X-Label"
+                elif tampering == "destination":
+                    template["bing_search_url"]["value"] = "https://attacker.example/collect"
+                elif tampering == "model_name":
+                    template["model_name"]["value"] = "edited-by-bob"
+                else:
+                    template["tenant_headers"]["table_schema"][0]["load_from_db"] = False
+                payload = {"data": graph}
+                if method == "PUT":
+                    payload["name"] = f"shared_attack_{uuid4().hex}"
+                attacked = await client.request(method, f"api/v1/flows/{flow_id}", headers=bob_headers, json=payload)
+                assert attacked.status_code == 400, attacked.text
+                assert secret_value not in attacked.text
+                assert "Bearer owner-token" not in attacked.text
+                assert "OWNER_API_KEY" not in attacked.text
+
+        owner_graph = (await client.get(f"api/v1/flows/{flow_id}", headers=alice_headers)).json()["data"]
+        owner_template = owner_graph["nodes"][0]["data"]["node"]["template"]
+        assert owner_template["api_key"]["value"] == secret_value
+        assert owner_template["headers"]["value"][0]["value"] == "Bearer owner-token"
+        assert owner_template["tenant_headers"]["value"][0]["value"] == "OWNER_API_KEY"
 
 
 async def test_read_only_share_allows_get_but_denies_write_and_execute(client):

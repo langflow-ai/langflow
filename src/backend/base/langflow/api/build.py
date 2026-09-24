@@ -101,6 +101,14 @@ def _project_event_to_v1(raw: str) -> str:
     return json.dumps(event) + "\n\n"
 
 
+def _vertex_build_data_for_event(response: VertexBuildResponse, *, redact_build_params: bool) -> dict:
+    """Serialize a vertex event while withholding raw parameters from shared callers."""
+    build_data = json.loads(response.model_dump_json())
+    if redact_build_params:
+        build_data["params"] = None
+    return build_data
+
+
 def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
     """Authoritative per-output metadata for the v2 ``output`` stream event.
 
@@ -199,6 +207,7 @@ async def start_flow_build(
     source_flow_id: uuid.UUID | None = None,
     source_flow_owner_id: uuid.UUID | None = None,
     expose_error_details: bool = False,
+    redact_build_params: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -221,6 +230,7 @@ async def start_flow_build(
             but the flow data must be loaded from the original flow in the database.
         source_flow_owner_id: Stored owner of the source flow, used to gate owner-scoped side effects.
         expose_error_details: Whether client events may include component errors and tracebacks.
+        redact_build_params: Hide raw vertex parameters from non-owner event consumers.
 
     Returns:
         the job_id.
@@ -249,6 +259,7 @@ async def start_flow_build(
             source_flow_id=source_flow_id,
             source_flow_owner_id=source_flow_owner_id,
             expose_error_details=expose_error_details,
+            redact_build_params=redact_build_params,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -469,6 +480,7 @@ async def _generate_flow_events(
     track_job_status: bool = True,
     tweaks: dict | None = None,
     expose_error_details: bool = False,
+    redact_build_params: bool = False,
     persist_messages: bool = True,
     end_user_id: str | None = None,
 ) -> None:
@@ -773,7 +785,7 @@ async def _generate_flow_events(
                     flow_id=flow_id_str,
                     vertex_id=vertex_id,
                     valid=valid,
-                    params=params,
+                    params=None if redact_build_params else params,
                     data=result_data_response,
                     artifacts=artifacts,
                     # Key the persisted build by the run id so job-tracked runs can
@@ -885,8 +897,7 @@ async def _generate_flow_events(
 
         # send built event or error event
         try:
-            vertex_build_response_json = vertex_build_response.model_dump_json()
-            build_data = json.loads(vertex_build_response_json)
+            build_data = _vertex_build_data_for_event(vertex_build_response, redact_build_params=redact_build_params)
         except Exception as exc:
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc

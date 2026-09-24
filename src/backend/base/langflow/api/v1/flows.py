@@ -1357,7 +1357,7 @@ async def download_multiple_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="No flows found.") from exc
 
-    return await _build_flows_download_response(db, flows)
+    return await _build_flows_download_response(db, flows, caller_id=user.id)
 
 
 # 5 minutes
