@@ -586,11 +586,11 @@ def _get_invalid_components(
     return blocked, outdated
 
 
-def _find_code_execution_components(nodes: list[dict]) -> list[str]:
-    """Return labels for every node whose type is a built-in code-execution component.
+def _find_code_execution_components(nodes: list[dict], blocked_hashes: frozenset[str]) -> list[str]:
+    """Return labels for nodes with a code-execution type or trusted source hash.
 
     Recurses into nested/sub-flow node payloads so a code-execution component cannot be
-    hidden inside an embedded flow definition.
+    hidden inside an embedded flow definition or relabelled with a benign type.
     """
     found: list[str] = []
 
@@ -613,7 +613,9 @@ def _find_code_execution_components(nodes: list[dict]) -> list[str]:
         display_name = node_info.get("display_name")
 
         component_type = node_data.get("type")
-        if is_code_execution_component(component_type, display_name):
+        if is_code_execution_component(component_type, display_name) or (
+            blocked_hashes and _node_code_hash(node_info) in blocked_hashes
+        ):
             display_name = display_name or component_type
             node_id = node_data.get("id") or node_id
             found.append(f"{display_name} ({node_id})")
@@ -629,7 +631,7 @@ def _find_code_execution_components(nodes: list[dict]) -> list[str]:
                 msg = f"Flow validation failed: malformed nested flow ({node_id})."
                 raise CustomComponentValidationError(msg)
             if nested_nodes:
-                found.extend(_find_code_execution_components(nested_nodes))
+                found.extend(_find_code_execution_components(nested_nodes, blocked_hashes))
         elif flow_data is not None:
             msg = f"Flow validation failed: malformed nested flow ({node_id})."
             raise CustomComponentValidationError(msg)
@@ -653,12 +655,25 @@ def check_code_execution_components_and_raise(flow_data: dict | None) -> None:
     if not nodes:
         return
 
-    found = _find_code_execution_components(nodes)
+    type_to_current_hash = get_component_hash_lookups_for_validation()
+    found = _find_code_execution_components(
+        nodes,
+        _blocked_code_hashes(CODE_EXECUTION_COMPONENT_TYPES, type_to_current_hash=type_to_current_hash or {}),
+    )
     if found:
         names = ", ".join(found)
         logger.warning(f"Flow build blocked: code-execution components are disabled: {names}")
         message = f"Flow build blocked: code-execution components are not allowed: {names}"
         raise CustomComponentValidationError(message)
+
+    # A code-bearing node can be relabelled with a benign type while carrying the source of
+    # an interpreter component. Without the registry hashes there is no way to distinguish
+    # that source, so hold execution until the templates are available. Codeless nodes remain
+    # usable while the registry initializes.
+    if not type_to_current_hash:
+        blocked, outdated = _get_invalid_components(nodes, {})
+        if blocked or outdated:
+            raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
 
 def code_hash_matches_any_template(code: str, all_known_hashes: set[str]) -> bool:
@@ -1469,7 +1484,7 @@ async def _ensure_public_component_lookup_snapshot(
     return type_to_code or {}, type_to_current_hash or {}
 
 
-def _restore_grouped_public_flow(grouped: dict, executable: dict) -> dict:
+def _restore_grouped_validated_flow(grouped: dict, executable: dict) -> dict:
     """Keep group identity while carrying validated code through its proxy fields."""
     import copy
 
@@ -1485,7 +1500,11 @@ def _restore_grouped_public_flow(grouped: dict, executable: dict) -> dict:
             node_id = node.get("id")
             if isinstance(node_id, str):
                 nodes_by_id[node_id] = node
-            nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
+            node_data = node.get("data")
+            node_info = node_data.get("node") if isinstance(node_data, dict) else None
+            flow = node_info.get("flow") if isinstance(node_info, dict) else None
+            flow_data = flow.get("data") if isinstance(flow, dict) else None
+            nested = flow_data.get("nodes") if isinstance(flow_data, dict) else None
             if isinstance(nested, list):
                 collect(nested)
 
@@ -1532,7 +1551,7 @@ def _restore_grouped_public_flow(grouped: dict, executable: dict) -> dict:
     # A second expansion must be identical to the graph we just checked. This catches proxy
     # chains or future substitutions that the projection does not cover.
     if process_flow(result) != executable:
-        msg = "Public flow validation failed: grouped graph differs from its validated executable graph."
+        msg = "Flow validation failed: grouped graph differs from its validated executable graph."
         raise CustomComponentValidationError(msg)
     return result
 
@@ -1599,12 +1618,16 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     # Group proxies overwrite child template fields during Graph.add_nodes_and_edges. Expand
     # those groups first, then validate and sanitize the exact executable graph. Restore the
     # grouped form afterwards so Graph still knows which children belong to a top-level group.
-    sanitized = process_flow(normalized_flow_data)
+    try:
+        sanitized = process_flow(normalized_flow_data)
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        msg = "Flow validation failed: malformed grouped graph."
+        raise CustomComponentValidationError(msg) from exc
 
     if settings.allow_public_custom_components and settings.allow_custom_components:
         validate_flow_for_current_settings(sanitized)
         validate_public_flow_no_code_execution(sanitized)
-        return _restore_grouped_public_flow(normalized_flow_data, sanitized)
+        return _restore_grouped_validated_flow(normalized_flow_data, sanitized)
 
     type_to_code, type_to_current_hash = await _ensure_public_component_lookup_snapshot(settings_service)
     if not type_to_code or not type_to_current_hash:
@@ -1642,7 +1665,7 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     # by route-level defense in depth. This central guarantee covers v1, v2, A2A start, and A2A
     # resume callers alike.
     validate_public_flow_no_code_execution(sanitized, type_to_current_hash=type_to_current_hash)
-    return _restore_grouped_public_flow(normalized_flow_data, sanitized)
+    return _restore_grouped_validated_flow(normalized_flow_data, sanitized)
 
 
 def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
@@ -2027,7 +2050,12 @@ def _sanitize_admin_only_flow_build(
             raise CustomComponentValidationError(msg)
         return None
 
-    sanitized = copy.deepcopy(normalized_flow_data)
+    # A group proxy can replace a child's code during expansion. Validate the stored shape
+    # first, then apply every hash check and trusted-source substitution to the executable
+    # graph. Project the result back onto the grouped payload for later graph construction.
+    from lfx.graph.graph.utils import process_flow
+
+    sanitized_grouped = copy.deepcopy(normalized_flow_data)
     # ``validate_flow_for_current_settings`` may have admitted known drift because restricted
     # mode will rebuild it with server code. Preserve that decision when admin-only mode adds its
     # own sanitizer; otherwise this second, strict hash check restores the very rejection the
@@ -2036,10 +2064,23 @@ def _sanitize_admin_only_flow_build(
     substitution_lookups = get_outdated_code_substitution_lookups()
     validation_hashes = type_to_current_hash
     if substitution_lookups:
-        nodes = sanitized.get("nodes", [])
+        nodes = sanitized_grouped.get("nodes", [])
         swapped = _substitute_outdated_node_code(nodes, *substitution_lookups) if isinstance(nodes, list) else []
         _log_outdated_component_code_substitution(swapped)
         validation_hashes = substitution_lookups[1].type_to_current_hash
+    check_flow_and_raise(
+        sanitized_grouped,
+        allow_custom_components=False,
+        type_to_current_hash=validation_hashes,
+    )
+    try:
+        sanitized = process_flow(sanitized_grouped)
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        msg = "Flow validation failed: malformed grouped graph."
+        raise CustomComponentValidationError(msg) from exc
+    # The code-interpreter policy also applies to proxy-injected executable code. Its type
+    # alone may still say ChatInput, so validate after expansion and after drift substitution.
+    validate_flow_for_current_settings(sanitized)
     check_flow_and_raise(
         sanitized,
         allow_custom_components=False,
@@ -2054,7 +2095,7 @@ def _sanitize_admin_only_flow_build(
         message = f"Flow build blocked: no trusted server component matches: {blocked_names}"
         raise CustomComponentValidationError(message)
 
-    return sanitized
+    return _restore_grouped_validated_flow(normalized_flow_data, sanitized)
 
 
 def _admin_only_build_required(settings: Any, *, is_superuser: bool) -> bool:
@@ -2120,7 +2161,9 @@ async def prepare_flow_build_for_user(
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
     admin_only = _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
-    type_to_current_hash = await ensure_component_hash_lookups_loaded(force=True) if admin_only else None
+    interpreter_policy = getattr(settings_service.settings, "block_code_interpreter_components", False)
+    policy_hashes_required = admin_only or interpreter_policy
+    type_to_current_hash = await ensure_component_hash_lookups_loaded(force=True) if policy_hashes_required else None
 
     # Policies are cumulative: the admin-only hash gate must not disable the
     # code-interpreter or global custom-component restrictions.

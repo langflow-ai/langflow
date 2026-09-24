@@ -185,6 +185,59 @@ async def test_prepare_admin_only_flow_build_fails_closed_without_trusted_source
         await fv.prepare_admin_only_flow_build(flow)
 
 
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_rejects_group_proxy_code(monkeypatch):
+    """A non-admin cannot smuggle request code through a grouped child's code proxy."""
+    from lfx.graph.graph.utils import process_flow
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    injected = "import os; os.system('id')"
+    hashes = {"ChatInput": {fv._compute_code_hash(trusted)}}
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(
+            settings=SimpleNamespace(
+                allow_custom_components=True,
+                block_code_interpreter_components=False,
+                custom_component_admin_only=True,
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=hashes))
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted)
+    raw = _group_with_proxy(_node("child", "ChatInput", trusted), "code", injected)
+    assert process_flow(raw)["nodes"][0]["data"]["node"]["template"]["code"]["value"] == injected
+
+    with pytest.raises(CustomComponentValidationError, match="outdated components"):
+        await fv.prepare_flow_build_for_user(raw, is_superuser=False)
+
+
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_preserves_safe_group(monkeypatch):
+    """Admin-only sanitization retains group identity and ordinary proxied inputs."""
+    from lfx.graph.graph.utils import process_flow
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    hashes = {"ChatInput": {fv._compute_code_hash(trusted)}}
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=hashes))
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted)
+    raw = _group_with_proxy(_node("child", "ChatInput", trusted), "input_value", "hello")
+
+    prepared = await fv.prepare_admin_only_flow_build(raw)
+
+    assert [node["id"] for node in prepared["nodes"]] == ["group"]
+    child = process_flow(prepared)["nodes"][0]
+    assert child["data"]["node"]["template"]["code"]["value"] == trusted
+    assert child["data"]["node"]["template"]["input_value"]["value"] == "hello"
+
+
 def _configure_admin_only_outdated_substitution(monkeypatch):
     """Configure the cumulative restricted + admin-only policy around one known component."""
     from lfx.utils import flow_validation as fv
@@ -988,15 +1041,49 @@ async def test_prepare_public_flow_build_sanitizes_nested_group_code_proxies(mon
     )
     inner = _group_with_proxy(_node("child", "ChatInput", trusted), "code", injected)["nodes"][0]
     inner["id"] = inner["data"]["id"] = "inner"
-    outer = _group_with_proxy(inner, "exposed", injected)
+    # Point the outer proxy at a different inner field. Proxying inner.exposed would replace
+    # its proxy metadata, so that setup never injected code into the child at all.
+    outer = _group_with_proxy(inner, "other", "keep")
+    assert process_flow(outer)["nodes"][0]["data"]["node"]["template"]["code"]["value"] == injected
 
     prepared = await fv.prepare_public_flow_build(outer)
 
-    assert prepared["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == trusted
+    assert prepared["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == "keep"
     prepared_inner = prepared["nodes"][0]["data"]["node"]["flow"]["data"]["nodes"][0]
     assert prepared_inner["data"]["node"]["template"]["exposed"]["value"] == trusted
     assert process_flow(prepared)["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted
-    assert outer["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == injected
+    assert outer["nodes"][0]["data"]["node"]["template"]["exposed"]["value"] == "keep"
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_rejects_regroup_mismatch(monkeypatch):
+    """Repeated child IDs cannot make grouping reconstruct a different executable graph."""
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    other_trusted = "# trusted ChatOutput code"
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": trusted, "ChatOutput": other_trusted})),
+    )
+    first = _group_with_proxy(_node("child", "ChatInput", trusted), "code", "first")["nodes"][0]
+    second = _group_with_proxy(_node("child", "ChatOutput", other_trusted), "code", "second")["nodes"][0]
+    first["id"] = first["data"]["id"] = "first-group"
+    second["id"] = second["data"]["id"] = "second-group"
+
+    with pytest.raises(CustomComponentValidationError, match="grouped graph differs"):
+        await fv.prepare_public_flow_build({"nodes": [first, second], "edges": []})
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_maps_malformed_group_to_policy_error(monkeypatch):
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    with pytest.raises(CustomComponentValidationError, match="malformed grouped graph"):
+        await fv.prepare_public_flow_build({"nodes": [{"id": "bad", "data": ["bad"]}], "edges": []})
 
 
 @pytest.mark.asyncio
@@ -1074,6 +1161,28 @@ def test_public_graph_rejects_proxy_mcp_stdio_before_initialization(monkeypatch)
     monkeypatch.setattr(component_cache, "all_types_ready", True)
     monkeypatch.setattr(component_cache, "type_to_code", {"MCPTools": trusted})
     monkeypatch.setattr(component_cache, "type_to_current_hash", _public_lookup_snapshot({"MCPTools": trusted})[1])
+    initialized = []
+    monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
+    raw = _group_with_proxy(_mcp_node({"url": "https://example.com"}), "mcp_server", {"command": "python"})
+    graph = Graph(user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID), instantiate_components=False)
+
+    with pytest.raises(PublicFlowValidationError, match="MCP server process"):
+        graph.add_nodes_and_edges(raw["nodes"], raw["edges"])
+
+    assert initialized == []
+
+
+def test_public_graph_opt_in_rejects_proxy_mcp_stdio_before_initialization(monkeypatch):
+    """The graph-time opt-in branch still blocks a proxy-created local MCP process."""
+    from lfx.graph.graph.base import Graph
+    from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _public_settings(allow_custom=True, allow_public_custom=True),
+    )
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
     initialized = []
     monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
     raw = _group_with_proxy(_mcp_node({"url": "https://example.com"}), "mcp_server", {"command": "python"})
@@ -1912,6 +2021,99 @@ def test_block_code_interpreter_components_detects_nested_flow(monkeypatch):
 
     with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
         validate_flow_for_current_settings(graph)
+
+
+def test_graph_rejects_proxy_injected_code_interpreter_before_initialization(monkeypatch):
+    """The restricted graph gate checks executable code identity after group expansion."""
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.graph.utils import process_flow
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+    from lfx.utils import flow_validation as fv
+
+    trusted_interpreter = "# trusted PythonREPL source"
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(allow_custom_components=True, block_code_interpreter_components=True)
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(
+        fv,
+        "get_component_hash_lookups_for_validation",
+        lambda: {"PythonREPLComponent": {fv._compute_code_hash(trusted_interpreter)}},
+    )
+    initialized = []
+    monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
+    raw = _group_with_proxy(_node("child", "ChatInput", "# benign ChatInput"), "code", trusted_interpreter)
+    assert process_flow(raw)["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted_interpreter
+    validate_flow_for_current_settings(raw)  # Stored child looks benign before the proxy runs.
+
+    with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
+        Graph.from_payload(raw, instantiate_components=False)
+
+    assert initialized == []
+
+
+def test_interpreter_policy_fails_closed_without_hash_registry(monkeypatch):
+    """Relabelled interpreter source cannot run while component hashes are unavailable."""
+    from lfx.graph.graph.base import Graph
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+    from lfx.utils import flow_validation as fv
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(allow_custom_components=True, block_code_interpreter_components=True)
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: None)
+    initialized = []
+    monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
+    raw = _group_with_proxy(_node("child", "ChatInput", "# benign code"), "code", "# interpreter code")
+
+    with pytest.raises(CustomComponentValidationError, match="component templates are still initializing"):
+        Graph(instantiate_components=False).add_nodes_and_edges(raw["nodes"], raw["edges"])
+
+    assert initialized == []
+    fv.validate_flow_for_current_settings({"nodes": [_node("note", "NoteNode", None)], "edges": []})
+
+
+@pytest.mark.asyncio
+async def test_interpreter_only_build_loads_hashes_before_validation(monkeypatch):
+    """A cold interpreter-policy registry warms before it validates an ordinary build."""
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    cached_hashes = None
+
+    async def load_hashes(*, force):
+        nonlocal cached_hashes
+        assert force is True
+        cached_hashes = {"ChatInput": {fv._compute_code_hash(trusted)}}
+        return cached_hashes
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=False,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: cached_hashes)
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", load_hashes)
+
+    raw = {"nodes": [_node("child", "ChatInput", trusted)]}
+    assert await fv.prepare_flow_build_for_user(raw, is_superuser=False) is None
 
 
 # --- Frontend mirror parity -------------------------------------------------
