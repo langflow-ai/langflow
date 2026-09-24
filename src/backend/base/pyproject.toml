@@ -253,7 +253,7 @@ google = [
     "google-api-python-client~=2.161",
 ]
 ollama = ["langchain-ollama~=0.3.10"]
-nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0"]
+nvidia = ["langchain-nvidia-ai-endpoints>=1.0,<1.5"]
 mistral = ["langchain-mistralai~=1.1.1"]
 sambanova = ["langchain-sambanova~=1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
