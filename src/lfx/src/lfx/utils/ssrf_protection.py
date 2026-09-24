@@ -357,15 +357,14 @@ def _validate_hostname_resolution(hostname: str) -> None:
         msg = f"Failed to resolve hostname {hostname}: {e}"
         raise SSRFProtectionError(msg) from e
 
-    # Check if any resolved IP is blocked
+    # Check every resolved IP before accepting the hostname. An allowlisted answer
+    # must not hide a different answer that points to a blocked destination.
     blocked_ips = []
     for ip in resolved_ips:
         # Check if this specific IP is in the allowlist
         if is_host_allowed(hostname, ip):
-            logger.debug("Resolved IP %s for hostname %s is in allowlist, bypassing SSRF checks", ip, hostname)
-            continue
-
-        if is_ip_blocked(ip):
+            logger.debug("Resolved IP %s for hostname %s is in allowlist", ip, hostname)
+        elif is_ip_blocked(ip):
             blocked_ips.append(ip)
 
     if blocked_ips:
