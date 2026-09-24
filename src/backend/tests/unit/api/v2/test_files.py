@@ -310,11 +310,16 @@ async def test_edit_file(files_client, files_created_api_key):
     assert file["name"] == "potato.txt"
 
 
-async def test_edit_file_rejects_unsafe_archive_names(files_client, files_created_api_key):
+async def test_edit_file_uses_upload_name_rules(files_client, files_created_api_key):
     headers = {"x-api-key": files_created_api_key.api_key}
-    upload = await files_client.post("api/v2/files", files={"file": ("safe.txt", b"content")}, headers=headers)
+    upload = await files_client.post("api/v2/files", files={"file": ("Meeting 10:30.txt", b"content")}, headers=headers)
     assert upload.status_code == 201, upload.text
     file_id = upload.json()["id"]
+
+    for name in ("Meeting 10:30", 'report?*"<>|', "a\tb", ".private", "trailing ", "a\x85b"):
+        response = await files_client.put(f"api/v2/files/{file_id}", params={"name": name}, headers=headers)
+        assert response.status_code == 200, name
+        assert response.json()["name"] == name
 
     for name in (
         "../escape",
@@ -322,21 +327,71 @@ async def test_edit_file_rejects_unsafe_archive_names(files_client, files_create
         "/absolute",
         "C:\\Windows\\file",
         "CON",
-        "CONIN$",
-        "CONOUT$",
-        "COM¹",
-        "LPT²",
-        "CON .txt",
         "a\x00b",
-        "a\x85b",
+        "a\nb",
+        "a\rb",
         "a..b",
+        "é" * 128,
     ):
         response = await files_client.put(f"api/v2/files/{file_id}", params={"name": name}, headers=headers)
-        assert response.status_code == 422, name
+        assert response.status_code == 400, name
 
-    response = await files_client.put(f"api/v2/files/{file_id}", params={"name": "safe_name"}, headers=headers)
+    maximum_length_name = "é" * 127 + "a"
+    response = await files_client.put(f"api/v2/files/{file_id}", params={"name": maximum_length_name}, headers=headers)
     assert response.status_code == 200
-    assert response.json()["name"] == "safe_name"
+    assert response.json()["name"] == maximum_length_name
+
+    response = await files_client.post("api/v2/files", files={"file": ("é" * 128, b"content")}, headers=headers)
+    assert response.status_code == 400
+
+
+async def test_batch_download_limits_legacy_names_with_collision_suffix(files_client, files_created_api_key):
+    from langflow.services.database.models.file.model import File as UserFile
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+    file_ids = []
+    for filename in ("first.txt", "second.txt"):
+        upload = await files_client.post("api/v2/files", files={"file": (filename, filename.encode())}, headers=headers)
+        assert upload.status_code == 201, upload.text
+        file_ids.append(upload.json()["id"])
+
+    async with session_scope() as session:
+        for index, file_id in enumerate(file_ids):
+            stored = await session.get(UserFile, uuid.UUID(file_id))
+            assert stored is not None
+            stored.name = "é" * 150 + str(index)
+            session.add(stored)
+        await session.commit()
+
+    response = await files_client.post("api/v2/files/batch/", json=file_ids, headers=headers)
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = archive.namelist()
+        assert len(names) == 2
+        assert len(set(names)) == 2
+        assert all(name.endswith(".txt") and len(name.encode("utf-8")) <= 255 for name in names)
+        assert {archive.read(name) for name in names} == {b"first.txt", b"second.txt"}
+
+
+async def test_batch_download_truncated_stem_is_not_windows_device(files_client, files_created_api_key):
+    headers = {"x-api-key": files_created_api_key.api_key}
+    file_ids = []
+    for original, display_name in (("a", "COM1extra"), ("b", "COM1extra2")):
+        filename = f"{original}.{'x' * 250}"
+        upload = await files_client.post("api/v2/files", files={"file": (filename, original.encode())}, headers=headers)
+        assert upload.status_code == 201, upload.text
+        file_id = upload.json()["id"]
+        rename = await files_client.put(f"api/v2/files/{file_id}", params={"name": display_name}, headers=headers)
+        assert rename.status_code == 200, rename.text
+        file_ids.append(file_id)
+
+    response = await files_client.post("api/v2/files/batch/", json=file_ids, headers=headers)
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = archive.namelist()
+        assert len(names) == len(set(names)) == 2
+        assert all(name.startswith("_COM") and len(name.encode("utf-8")) <= 255 for name in names)
+        assert {archive.read(name) for name in names} == {b"a", b"b"}
 
 
 async def test_batch_download_sanitizes_legacy_file_names(files_client, files_created_api_key):
