@@ -10,12 +10,14 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
 
 
 class S3BucketUploaderComponent(Component):
     """S3BucketUploaderComponent is a component responsible for uploading files to an S3 bucket.
 
-    It provides two strategies for file upload: "By Data" and "By File Name". The component
+    It provides two strategies for file upload: "Store Data" and "Store Original File". The component
     requires AWS credentials and bucket details as inputs and processes files accordingly.
 
     Attributes:
@@ -32,19 +34,18 @@ class S3BucketUploaderComponent(Component):
             based on the strategy attribute.
         process_files_by_data() -> None:
             Processes and uploads files to an S3 bucket based on the data inputs. Iterates
-            over the data inputs, logs the file path and text content, and uploads each file
-            to the specified S3 bucket if both file path and text content are available.
+            over the data inputs and uploads each file's text content to the specified S3
+            bucket. An input without a file path or text raises an error.
         process_files_by_name() -> None:
             Processes and uploads files to an S3 bucket based on their names. Iterates through
             the list of data inputs, retrieves the file path from each data item, and uploads
-            the file to the specified S3 bucket if the file path is available. Logs the file
-            path being uploaded.
+            the file to the specified S3 bucket. An input without a file path raises an error.
         _s3_client() -> Any:
             Creates and returns an S3 client using the provided AWS access key ID and secret
             access key.
 
         Please note that this component requires the boto3 library to be installed. It is designed
-        to work with File and Director components as inputs
+        to work with File and Directory components as inputs
     """
 
     display_name = "S3 Bucket Uploader"
@@ -79,16 +80,15 @@ class S3BucketUploaderComponent(Component):
             options=["Store Data", "Store Original File"],
             value="Store Data",
             info=(
-                "Choose the strategy to upload the file. By Data means that the source file "
-                "is parsed and stored as LangFlow data. By File Name means that the source "
-                "file is uploaded as is."
+                "Store Data uploads the parsed text content of each file. "
+                "Store Original File uploads each source file as is."
             ),
         ),
         HandleInput(
             name="data_inputs",
             display_name="Data Inputs",
-            info="The data to split.",
-            input_types=["Data", "JSON"],
+            info="Files or file data to upload.",
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             is_list=True,
             required=True,
         ),
@@ -115,10 +115,9 @@ class S3BucketUploaderComponent(Component):
         """Process files based on the selected strategy.
 
         This method uses a strategy pattern to process files. The strategy is determined
-        by the `self.strategy` attribute, which can be either "By Data" or "By File Name".
+        by the `self.strategy` attribute, which can be either "Store Data" or "Store Original File".
         Depending on the strategy, the corresponding method (`process_files_by_data` or
-        `process_files_by_name`) is called. If an invalid strategy is provided, an error
-        is logged.
+        `process_files_by_name`) is called. An invalid strategy raises an error.
 
         Returns:
             None
@@ -127,14 +126,34 @@ class S3BucketUploaderComponent(Component):
             "Store Data": self.process_files_by_data,
             "Store Original File": self.process_files_by_name,
         }
-        strategy_methods.get(self.strategy, lambda: self.log("Invalid strategy"))()
+        strategy = self.strategy
+        if strategy not in strategy_methods:
+            msg = f"Invalid S3 upload strategy {strategy!r}. Choose Store Data or Store Original File."
+            raise ValueError(msg)
+        strategy_methods[strategy]()
+
+    def _file_data_items(self) -> list[Data]:
+        """Expand file tables into records while preserving individual Data and Message inputs."""
+        inputs = self.data_inputs
+        if not isinstance(inputs, list):
+            inputs = [inputs]
+
+        items = []
+        for item in inputs:
+            if isinstance(item, DataFrame):
+                items.extend(item.to_data_list())
+            elif isinstance(item, Data):
+                items.append(item)
+            else:
+                msg = f"Unsupported S3 upload input: {type(item).__name__}"
+                raise TypeError(msg)
+        return items
 
     def process_files_by_data(self) -> None:
         """Processes and uploads files to an S3 bucket based on the data inputs.
 
-        This method iterates over the data inputs, logs the file path and text content,
-        and uploads each file to the specified S3 bucket if both file path and text content
-        are available.
+        This method iterates over the data inputs and uploads each file's text content
+        to the specified S3 bucket. An input without a file path or text raises an error.
 
         Args:
             None
@@ -142,30 +161,33 @@ class S3BucketUploaderComponent(Component):
         Returns:
             None
         """
-        for data_item in self.data_inputs:
+        for data_item in self._file_data_items():
             file_path = data_item.data.get("file_path")
             text_content = data_item.data.get("text")
-
-            if file_path and text_content:
-                self._s3_client().put_object(
-                    Bucket=self.bucket_name, Key=self._normalize_path(file_path), Body=text_content
-                )
+            if not file_path or text_content is None:
+                msg = "Store Data requires each input to contain file_path and text."
+                raise ValueError(msg)
+            self._s3_client().put_object(
+                Bucket=self.bucket_name, Key=self._normalize_path(file_path), Body=text_content
+            )
 
     def process_files_by_name(self) -> None:
         """Processes and uploads files to an S3 bucket based on their names.
 
         Iterates through the list of data inputs, retrieves the file path from each data item,
-        and uploads the file to the specified S3 bucket if the file path is available.
-        Logs the file path being uploaded.
+        and uploads the file to the specified S3 bucket. An input without a file path
+        raises an error.
 
         Returns:
             None
         """
-        for data_item in self.data_inputs:
+        for data_item in self._file_data_items():
             file_path = data_item.data.get("file_path")
+            if not file_path:
+                msg = "Store Original File requires each input to contain file_path."
+                raise ValueError(msg)
             self.log(f"Uploading file: {file_path}")
-            if file_path:
-                self._s3_client().upload_file(file_path, Bucket=self.bucket_name, Key=self._normalize_path(file_path))
+            self._s3_client().upload_file(file_path, Bucket=self.bucket_name, Key=self._normalize_path(file_path))
 
     def _s3_client(self) -> Any:
         """Creates and returns an S3 client using the provided AWS access key ID and secret access key.
