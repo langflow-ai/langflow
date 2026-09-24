@@ -54,7 +54,7 @@ Highlights of this release include the following changes. For all changes, see t
 
 - MCP stdio Node.js launch options (1.12.4)
 
-    MCP stdio configurations can no longer place Node.js runtime options or `inspect` before a server script, even when interpreter hardening is disabled. For example, `node --no-warnings server.js` must be changed to `node server.js` or replaced with an operator-approved launcher. Options intended for the server may still follow its script: `node server.js --server-option`. Shell-wrapped configurations also reject expansion and quoting characters; use an approved launcher directly with separate command and arguments instead.
+    MCP stdio configurations can no longer place Node.js runtime options or `inspect` before a server script, even when interpreter hardening is disabled. For example, `node --no-warnings server.js` must be changed to `node server.js` or replaced with an operator-approved launcher. Options intended for the server may still follow its script: `node server.js --server-option`. Shell wrappers now reject sh/bash globs and braces and cmd variable, caret, or double-quote syntax; use an approved launcher directly with separate command and arguments for those payloads.
 
 - `langflow-base` is now the minimal install
 
