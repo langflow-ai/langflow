@@ -57,6 +57,23 @@ class KBRelocationResult:
     warnings: list[str] = field(default_factory=list)
 
 
+def validate_relocation_target_config(target_backend_type: str, target_backend_config: dict[str, Any]) -> None:
+    """Reject collection overrides that would route multiple KBs into one store."""
+    if target_backend_type == "opensearch" and "index_name" in target_backend_config:
+        msg = "--target-config cannot set index_name: relocation needs a separate OpenSearch index for each KB"
+        raise ValueError(msg)
+    if (
+        target_backend_type == "chroma"
+        and str(target_backend_config.get("mode", "local")).lower() == "cloud"
+        and "collection_name" in target_backend_config
+    ):
+        msg = (
+            "--target-config cannot set collection_name: "
+            "relocation needs a separate Chroma Cloud collection for each KB"
+        )
+        raise ValueError(msg)
+
+
 async def relocate_knowledge_bases(
     *,
     target_backend_type: str,
@@ -70,6 +87,7 @@ async def relocate_knowledge_bases(
     Returns one result per knowledge base and never raises for a single
     knowledge base's failure, so one bad store does not stop the rest.
     """
+    validate_relocation_target_config(target_backend_type, target_backend_config)
     async with session_scope() as session:
         stmt = select(KnowledgeBaseRecord, User.username).join(User, User.id == KnowledgeBaseRecord.user_id)
         if username:
