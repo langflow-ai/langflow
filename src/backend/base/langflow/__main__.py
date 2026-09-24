@@ -64,7 +64,7 @@ from langflow.services.utils import get_auto_login_superuser_password, initializ
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 console = Console()
 if platform.system() == "Windows":
     console = Console(legacy_windows=True, emoji=False)
