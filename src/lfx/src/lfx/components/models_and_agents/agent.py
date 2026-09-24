@@ -611,21 +611,16 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         saved 0 or negative value cannot under-cap the graph below one full
         iteration.
 
-        In `langchain.agents.create_agent` with middleware (such as
-        `ModelCallLimitMiddleware` or `HumanInTheLoopMiddleware`), each iteration
-        decomposes into 4 distinct graph nodes per cycle:
-          1. ModelCallLimitMiddleware.before_model
-          2. model
-          3. ModelCallLimitMiddleware.after_model
-          4. tools
-        Therefore, each tool-calling iteration consumes up to 4 Pregel graph steps.
-        We scale by 4 with a +10 buffer for start/end/router transitions so
-        `ModelCallLimitMiddleware` gracefully governs model calls instead of
-        tripping LangGraph's raw `GraphRecursionError`.
+        A tool-calling cycle visits the model-call limiter's before_model and
+        after_model nodes, the model, and tools. When any tool requires approval,
+        HumanInTheLoopMiddleware adds another after_model node to every cycle,
+        even if the model repeatedly calls an ungated tool. Leave transition
+        room so the model-call limiter can end the run first.
         """
         raw = getattr(self, "max_iterations", None)
         run_limit = max(1, int(raw)) if raw is not None else 15
-        return run_limit * 4 + 10
+        steps_per_cycle = 4 + bool(self._gated_interrupt_on())
+        return run_limit * steps_per_cycle + 10
 
     def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
@@ -702,8 +697,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # middleware cap (ModelCallLimitMiddleware) is what bounds the loop —
         # not LangGraph's default 25-step guard, which fires at ~12 model+tool
         # iterations and raises a raw GraphRecursionError (QA UI-009/UI-010).
-        # Each iteration is ~2 graph steps (model node + tools node); add 5
-        # for start/end overhead.
+        # Include the extra after_model node when tool approval is configured.
         recursion_limit = self._compute_recursion_limit()
 
         agent_config: dict[str, Any] = {

@@ -1335,9 +1335,8 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
     would have taken effect. The graph guard MUST sit above the middleware so the
     middleware's user-facing cap is what bounds the loop.
 
-    Each iteration is roughly 2 graph steps (model node + tools node) plus a small
-    constant overhead, so `recursion_limit >= max_iterations * 2 + 5` is the bare
-    minimum that lets the middleware fire first.
+    Each iteration uses four graph steps with the model-call limiter, plus a
+    fifth when tool approval adds HumanInTheLoopMiddleware.
     """
     captured_config: dict = {}
 
@@ -1374,6 +1373,55 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
         f"recursion_limit must sit above max_iterations * 4 + safety; got "
         f"{captured_config['recursion_limit']} for max_iterations=15"
     )
+
+
+def test_gated_tool_budget_lets_model_call_limiter_end_an_ungated_tool_loop() -> None:
+    """A gated tool adds a graph node even when the model only calls an ungated tool."""
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.messages import AIMessage, HumanMessage
+    from langchain_core.outputs import ChatGeneration, ChatResult
+    from langchain_core.tools import tool
+
+    class RepeatingToolModel(BaseChatModel):
+        calls: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "repeating-tool"
+
+        def bind_tools(self, tools: Any, **kwargs: Any) -> BaseChatModel:  # noqa: ARG002
+            return self
+
+        def _generate(self, messages: list, stop: list[str] | None = None, **kwargs: Any) -> ChatResult:  # noqa: ARG002
+            self.calls += 1
+            response = AIMessage(content="", tool_calls=[{"name": "ping", "args": {}, "id": f"call_{self.calls}"}])
+            return ChatResult(generations=[ChatGeneration(message=response)])
+
+    @tool
+    def ping() -> str:
+        """Return pong."""
+        return "pong"
+
+    @tool
+    def gated() -> str:
+        """Require approval."""
+        return "approved"
+
+    gated.metadata = {"approval_actions": ["approve"]}
+    component = _build_component()
+    component.set_attributes({"tools": [ping, gated], "max_iterations": 15, "handle_parsing_errors": False})
+    model = RepeatingToolModel()
+
+    with patch.object(type(component), "_get_llm", return_value=model):
+        graph = component.create_agent_runnable()
+
+    result = graph.invoke(
+        {"messages": [HumanMessage(content="Keep calling ping")]},
+        config={"recursion_limit": component._compute_recursion_limit()},
+    )
+
+    assert model.calls == 15
+    assert "Model call limits exceeded" in result["messages"][-1].content
 
 
 @pytest.mark.asyncio
