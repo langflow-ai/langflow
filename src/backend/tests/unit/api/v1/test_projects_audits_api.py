@@ -154,9 +154,7 @@ async def test_an_owner_keeps_the_history_after_retention_sweeps_the_create(
     async with session_scope() as session:
         create_row = (
             await session.exec(
-                select(AuditEvent).where(
-                    AuditEvent.resource_id == UUID(mine["id"]), AuditEvent.operation == "create"
-                )
+                select(AuditEvent).where(AuditEvent.resource_id == UUID(mine["id"]), AuditEvent.operation == "create")
             )
         ).one()
         await session.delete(create_row)
