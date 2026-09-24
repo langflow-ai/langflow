@@ -2116,6 +2116,69 @@ async def test_interpreter_only_build_loads_hashes_before_validation(monkeypatch
     assert await fv.prepare_flow_build_for_user(raw, is_superuser=False) is None
 
 
+@pytest.mark.asyncio
+async def test_interpreter_only_build_loads_hashes_for_proxy_created_code(monkeypatch):
+    """An empty child code field may receive source through a group proxy."""
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    cached_hashes = None
+
+    async def load_hashes(*, force):
+        nonlocal cached_hashes
+        assert force is True
+        cached_hashes = {"ChatInput": {fv._compute_code_hash(trusted)}}
+        return cached_hashes
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=False,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: cached_hashes)
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", load_hashes)
+
+    raw = _group_with_proxy(_node("child", "ChatInput", ""), "code", trusted)
+    assert await fv.prepare_flow_build_for_user(raw, is_superuser=False) is None
+    assert cached_hashes is not None
+
+
+@pytest.mark.asyncio
+async def test_interpreter_only_build_skips_hash_loading_for_codeless_flow(monkeypatch):
+    """A codeless flow stays available if the component registry is unavailable."""
+    from lfx.utils import flow_validation as fv
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=False,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: None)
+    load_hashes = AsyncMock(side_effect=RuntimeError("registry unavailable"))
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", load_hashes)
+
+    for raw in (
+        {"nodes": [_node("note", "NoteNode", None)], "edges": []},
+        _group_with_proxy(_node("note", "NoteNode", None), "other", "plain input"),
+    ):
+        assert await fv.prepare_flow_build_for_user(raw, is_superuser=False) is None
+    load_hashes.assert_not_awaited()
+
+
 # --- Frontend mirror parity -------------------------------------------------
 # The parameters panel must not offer an "API" toggle on a field that
 # apply_tweaks would refuse, so the refusal rules are mirrored in

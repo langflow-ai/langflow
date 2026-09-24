@@ -586,6 +586,27 @@ def _get_invalid_components(
     return blocked, outdated
 
 
+def _contains_component_code(nodes: list[dict]) -> bool:
+    """Whether a graph or one of its inlined groups carries executable source."""
+    for node in nodes:
+        if not isinstance(node, dict) or not isinstance(node.get("data"), dict):
+            continue
+        node_info = node["data"].get("node")
+        if not isinstance(node_info, dict):
+            continue
+        template = node_info.get("template")
+        if isinstance(template, dict):
+            code = template.get("code")
+            if isinstance(code, dict) and code.get("value"):
+                return True
+        flow = node_info.get("flow")
+        flow_data = flow.get("data") if isinstance(flow, dict) else None
+        nested_nodes = flow_data.get("nodes") if isinstance(flow_data, dict) else None
+        if isinstance(nested_nodes, list) and _contains_component_code(nested_nodes):
+            return True
+    return False
+
+
 def _find_code_execution_components(nodes: list[dict], blocked_hashes: frozenset[str]) -> list[str]:
     """Return labels for nodes with a code-execution type or trusted source hash.
 
@@ -670,10 +691,8 @@ def check_code_execution_components_and_raise(flow_data: dict | None) -> None:
     # an interpreter component. Without the registry hashes there is no way to distinguish
     # that source, so hold execution until the templates are available. Codeless nodes remain
     # usable while the registry initializes.
-    if not type_to_current_hash:
-        blocked, outdated = _get_invalid_components(nodes, {})
-        if blocked or outdated:
-            raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
+    if not type_to_current_hash and _contains_component_code(nodes):
+        raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
 
 def code_hash_matches_any_template(code: str, all_known_hashes: set[str]) -> bool:
@@ -2162,7 +2181,32 @@ async def prepare_flow_build_for_user(
 
     admin_only = _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
     interpreter_policy = getattr(settings_service.settings, "block_code_interpreter_components", False)
-    policy_hashes_required = admin_only or interpreter_policy
+    normalized_flow_data = _extract_flow_data(target) if interpreter_policy and not admin_only else None
+    nodes = normalized_flow_data.get("nodes") if normalized_flow_data is not None else None
+    interpreter_hashes_required = interpreter_policy and isinstance(nodes, list) and _contains_component_code(nodes)
+    if interpreter_policy and not admin_only and isinstance(nodes, list) and not interpreter_hashes_required:
+        # A group proxy can populate a child's empty code field during expansion. Inspect
+        # that same effective graph before deciding that registry hashes are unnecessary.
+        has_group = any(
+            isinstance(node, dict)
+            and isinstance(node.get("data"), dict)
+            and isinstance(node["data"].get("node"), dict)
+            and isinstance(node["data"]["node"].get("flow"), dict)
+            for node in nodes
+        )
+        if has_group:
+            from lfx.graph.graph.utils import process_flow
+
+            try:
+                executable = process_flow(normalized_flow_data)
+            except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+                msg = "Flow validation failed: malformed grouped graph."
+                raise CustomComponentValidationError(msg) from exc
+            executable_nodes = executable.get("nodes")
+            interpreter_hashes_required = isinstance(executable_nodes, list) and _contains_component_code(
+                executable_nodes
+            )
+    policy_hashes_required = admin_only or interpreter_hashes_required
     type_to_current_hash = await ensure_component_hash_lookups_loaded(force=True) if policy_hashes_required else None
 
     # Policies are cumulative: the admin-only hash gate must not disable the
