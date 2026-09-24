@@ -118,13 +118,15 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
     try:
         job_owner = await queue_service.get_job_owner(job_id)
     except JobQueueBackendUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        await logger.aexception("Failed to read job owner")
+        raise HTTPException(status_code=503, detail="Job queue is temporarily unavailable.") from exc
     if job_owner is None:
         try:
             if await queue_service.is_public_job_async(job_id):
                 return
         except JobQueueBackendUnavailableError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            await logger.aexception("Failed to read public job marker")
+            raise HTTPException(status_code=503, detail="Job queue is temporarily unavailable.") from exc
     if job_owner is None or job_owner != current_user.id:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
@@ -147,11 +149,12 @@ async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: 
     try:
         await queue_service.register_job_owner(job_id, user_id)
     except JobQueueBackendUnavailableError as exc:
+        await logger.aexception("Failed to register job owner")
         try:
             await queue_service.cancel_job(job_id)
         except Exception as cancel_exc:  # noqa: BLE001
             await logger.awarning(f"Failed to cancel job {job_id} after owner registration failed: {cancel_exc!r}")
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail="Job queue is temporarily unavailable.") from exc
 
 
 def _compiled_from(graph: object, graph_data: dict) -> bool:
