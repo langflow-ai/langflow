@@ -33,19 +33,25 @@ SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 MAX_FILENAME_BYTES = 255
 _UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f-\x9f<>:"|?*]')
 _WINDOWS_DEVICE_NAME = re.compile(
-    r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?=[ .]|$)",
+    r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[0-9¹²³]|LPT[0-9¹²³])(?=[ .]|$)",
     re.IGNORECASE,
 )
+_UNSAFE_UNICODE_CATEGORIES = frozenset({"Cf", "Zl", "Zp"})
 
 
 def _truncate_utf8(value: str, max_bytes: int) -> str:
     return value.encode("utf-8")[:max_bytes].decode("utf-8", errors="ignore")
 
 
+def _replace_unsafe_archive_chars(value: str) -> str:
+    value = _UNSAFE_ARCHIVE_NAME_CHARS.sub("_", value)
+    return "".join("_" if unicodedata.category(char) in _UNSAFE_UNICODE_CATEGORIES else char for char in value)
+
+
 def _safe_archive_member_name(name: str, *, extension: str = "", collision_suffix: str = "") -> str:
     """Return a portable ZIP member name of at most 255 UTF-8 bytes."""
-    safe_name = _UNSAFE_ARCHIVE_NAME_CHARS.sub("_", name).replace("..", "_").strip(" .") or "file"
-    safe_extension = _UNSAFE_ARCHIVE_NAME_CHARS.sub("_", extension).replace("..", "_").rstrip(" .")
+    safe_name = _replace_unsafe_archive_chars(name).replace("..", "_").strip(" .") or "file"
+    safe_extension = _replace_unsafe_archive_chars(extension).replace("..", "_").rstrip(" .")
     # Long legacy extensions must leave room for a nonempty stem and the
     # collision suffix, which can be added to an otherwise 255-byte name.
     tail = collision_suffix + _truncate_utf8(
@@ -60,12 +66,14 @@ def _safe_archive_member_name(name: str, *, extension: str = "", collision_suffi
 
 def _validate_file_name(name: str | None) -> str:
     """Apply the same path and length rules to uploads and renames."""
-    if not name or any(char in name for char in ("..", "/", "\\", "\x00", "\n", "\r")):
+    if (
+        not name
+        or any(char in name for char in ("..", "/", "\\", "\x00", "\n", "\r"))
+        or any(unicodedata.category(char) in _UNSAFE_UNICODE_CATEGORIES for char in name)
+    ):
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Invalid file name. Filename must not contain directory paths, '..' sequences, or control characters."
-            ),
+            detail="Invalid file name: paths, '..', NUL, CR/LF, and unsafe Unicode formatting are forbidden.",
         )
     if len(name.encode("utf-8")) > MAX_FILENAME_BYTES:
         raise HTTPException(status_code=400, detail="File name is too long. Maximum 255 bytes allowed.")
@@ -74,19 +82,8 @@ def _validate_file_name(name: str | None) -> str:
     if not basename or basename in (".", ".."):
         raise HTTPException(status_code=400, detail="Invalid file name after sanitization")
 
-    reserved_names = {
-        "CON",
-        "PRN",
-        "AUX",
-        "NUL",
-        *(f"COM{i}" for i in range(1, 10)),
-        *(f"LPT{i}" for i in range(1, 10)),
-    }
-    name_without_ext = basename.rsplit(".", 1)[0].upper()
-    if name_without_ext in reserved_names:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid file name. '{name_without_ext}' is a reserved system name."
-        )
+    if _WINDOWS_DEVICE_NAME.match(basename):
+        raise HTTPException(status_code=400, detail=f"Invalid file name. '{basename}' is a reserved system name.")
     return basename
 
 
@@ -336,6 +333,10 @@ async def upload_user_file(
 
             # Create the unique filename with extension for storage
             unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
+
+        # The duplicate suffix can push an otherwise valid upload past the
+        # filesystem's single-segment byte limit.
+        _validate_file_name(unique_filename)
 
         # Read file content, save with unique filename, and compute file size in one routine
         try:

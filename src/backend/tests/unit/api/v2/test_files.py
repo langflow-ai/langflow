@@ -327,6 +327,14 @@ async def test_edit_file_uses_upload_name_rules(files_client, files_created_api_
         "/absolute",
         "C:\\Windows\\file",
         "CON",
+        "COM0",
+        "LPT0",
+        "COM0.foo.bar",
+        "CON.foo.bar",
+        "inv\u202etxt.exe",
+        "a\u2028b",
+        "a\u2029b",
+        "a\ufeffb",
         "a\x00b",
         "a\nb",
         "a\rb",
@@ -343,6 +351,10 @@ async def test_edit_file_uses_upload_name_rules(files_client, files_created_api_
 
     response = await files_client.post("api/v2/files", files={"file": ("é" * 128, b"content")}, headers=headers)
     assert response.status_code == 400
+
+    for name in ("inv\u202etxt.exe", "COM0.txt", "LPT0.txt"):
+        response = await files_client.post("api/v2/files", files={"file": (name, b"content")}, headers=headers)
+        assert response.status_code == 400, name
 
 
 async def test_batch_download_limits_legacy_names_with_collision_suffix(files_client, files_created_api_key):
@@ -407,6 +419,8 @@ async def test_batch_download_sanitizes_legacy_file_names(files_client, files_cr
         ("fifth.txt", b"fifth"),
         ("sixth.txt", b"sixth"),
         ("seventh.txt", b"seventh"),
+        ("eighth.txt", b"eighth"),
+        ("ninth.txt", b"ninth"),
     ):
         upload = await files_client.post("api/v2/files", files={"file": (filename, content)}, headers=headers)
         assert upload.status_code == 201, upload.text
@@ -414,7 +428,17 @@ async def test_batch_download_sanitizes_legacy_file_names(files_client, files_cr
 
     # Legacy rows may predate rename validation. They must be safe in new ZIPs.
     async with session_scope() as session:
-        legacy_names = ("../../escape", "..\\..\\escape", "Foo", "foo", "a\x85b", "é", "e\u0301")
+        legacy_names = (
+            "../../escape",
+            "..\\..\\escape",
+            "Foo",
+            "foo",
+            "a\x85b",
+            "é",
+            "e\u0301",
+            "inv\u202etxt.exe",
+            "COM0",
+        )
         for file_id, legacy_name in zip(file_ids, legacy_names, strict=True):
             stored = await session.get(UserFile, uuid.UUID(file_id))
             assert stored is not None
@@ -425,14 +449,16 @@ async def test_batch_download_sanitizes_legacy_file_names(files_client, files_cr
     response = await files_client.post("api/v2/files/batch/", json=file_ids, headers=headers)
     assert response.status_code == 200
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-        assert len(archive.namelist()) == 7
-        assert len({unicodedata.normalize("NFC", entry).casefold() for entry in archive.namelist()}) == 7
+        assert len(archive.namelist()) == 9
+        assert len({unicodedata.normalize("NFC", entry).casefold() for entry in archive.namelist()}) == 9
+        assert any(entry.startswith("_COM0") for entry in archive.namelist())
         for entry in archive.namelist():
             assert entry.endswith(".txt")
             assert "/" not in entry
             assert "\\" not in entry
             assert ".." not in entry
             assert "\x85" not in entry
+            assert "\u202e" not in entry
         assert {archive.read(entry) for entry in archive.namelist()} == {
             b"first",
             b"second",
@@ -441,6 +467,8 @@ async def test_batch_download_sanitizes_legacy_file_names(files_client, files_cr
             b"fifth",
             b"sixth",
             b"seventh",
+            b"eighth",
+            b"ninth",
         }
 
 
@@ -549,6 +577,22 @@ async def test_upload_files_with_same_name_creates_unique_names(files_client, fi
     assert "duplicate (1)" in file_names
     assert "duplicate (2)" in file_names
     assert len(files) == 3
+
+
+async def test_duplicate_upload_does_not_exceed_filename_byte_limit(files_client, files_created_api_key):
+    headers = {"x-api-key": files_created_api_key.api_key}
+    filename = f"{'é' * 125}a.txt"  # 255 UTF-8 bytes
+
+    first = await files_client.post("api/v2/files", files={"file": (filename, b"first")}, headers=headers)
+    assert first.status_code == 201, first.text
+
+    duplicate = await files_client.post("api/v2/files", files={"file": (filename, b"second")}, headers=headers)
+    assert duplicate.status_code == 400, duplicate.text
+    assert "too long" in duplicate.json()["detail"]
+
+    original = await files_client.get(f"api/v2/files/{first.json()['id']}", headers=headers)
+    assert original.status_code == 200
+    assert original.content == b"first"
 
 
 async def test_upload_files_without_extension_creates_unique_names(files_client, files_created_api_key):
