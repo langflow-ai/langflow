@@ -15,7 +15,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 from langflow.api.utils import knowledge_base_service
-from langflow.api.utils.knowledge_base_relocation import KBRelocationResult, relocate_knowledge_bases
+from langflow.api.utils.knowledge_base_relocation import (
+    KBRelocationResult,
+    relocate_knowledge_bases,
+    validate_relocation_target_config,
+)
 from langflow.services.database.models.knowledge_base import KnowledgeBaseStatus
 from langflow.services.deps import get_settings_service
 from lfx.base.knowledge_bases.backends import ChromaLocalBackend, IngestedDocument, create_backend
@@ -182,6 +186,17 @@ def test_relocation_line_shows_what_was_copied(status, copied, expected):
 async def test_relocation_rejects_shared_target_collection(backend_type, config, override):
     with pytest.raises(ValueError, match=override):
         await relocate_knowledge_bases(target_backend_type=backend_type, target_backend_config=config)
+
+
+@pytest.mark.parametrize(
+    ("backend_type", "config"),
+    [
+        ("opensearch", {"index_name": ""}),
+        ("chroma", {"mode": "cloud", "collection_name": ""}),
+    ],
+)
+def test_relocation_allows_empty_collection_override(backend_type, config):
+    validate_relocation_target_config(backend_type, config)
 
 
 @pytest.mark.api_key_required
