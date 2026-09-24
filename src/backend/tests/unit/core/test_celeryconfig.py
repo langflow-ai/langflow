@@ -1,8 +1,11 @@
 """Unit tests for langflow.core.celeryconfig module."""
 
 import importlib
+from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
+from dotenv import dotenv_values
 
 # Import the module to test
 from langflow.core import celeryconfig
@@ -95,6 +98,30 @@ class TestCeleryConfigVariables:
     def test_result_backend_not_empty(self):
         """Test that result_backend is not an empty string."""
         assert len(celeryconfig.result_backend) > 0
+
+    def test_deploy_sample_uses_credentialed_rabbitmq_broker(self, monkeypatch):
+        sample = dotenv_values(Path(__file__).resolve().parents[5] / "deploy/.env.example")
+        for name in (
+            "LANGFLOW_VALKEY_HOST",
+            "LANGFLOW_VALKEY_PORT",
+            "LANGFLOW_REDIS_HOST",
+            "LANGFLOW_REDIS_PORT",
+            "BROKER_URL",
+            "RESULT_BACKEND",
+        ):
+            monkeypatch.delenv(name, raising=False)
+            if sample.get(name):
+                monkeypatch.setenv(name, sample[name])
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == sample["BROKER_URL"]
+        broker = urlsplit(celeryconfig.broker_url)
+        assert broker.scheme == "amqp"
+        assert broker.hostname == "broker"
+        assert broker.username == sample["RABBITMQ_DEFAULT_USER"]
+        assert broker.password == sample["RABBITMQ_DEFAULT_PASS"]
+        assert celeryconfig.result_backend == sample["RESULT_BACKEND"]
 
 
 class TestCeleryConfigStructure:
