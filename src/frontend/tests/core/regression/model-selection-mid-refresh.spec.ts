@@ -16,11 +16,6 @@ test(
   "keeps a model picked while the flow-open model refresh is in flight",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to list more than one selectable model",
-    );
-
     let releaseRefresh: () => void = () => {};
     const refreshReleased = new Promise<void>((resolve) => {
       releaseRefresh = resolve;
