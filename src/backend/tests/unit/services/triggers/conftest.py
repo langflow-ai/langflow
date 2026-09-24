@@ -97,7 +97,7 @@ class FakeBackgroundExecutionService:
         from langflow.api.v2.workflow import _parse_persisted_workflow_request
 
         # Raises for any key WorkflowRunRequest does not declare, exactly as the
-        # real service's _enqueue -> frame-source factory does.
+        # real service's backend dispatch -> frame-source factory does.
         _parse_persisted_workflow_request(request)
         if self.fail_times > 0:
             self.fail_times -= 1
