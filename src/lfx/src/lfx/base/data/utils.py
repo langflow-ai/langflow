@@ -2,7 +2,7 @@ import contextlib
 import logging
 import tempfile
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from concurrent import futures
 from contextvars import copy_context
 from io import BytesIO
@@ -222,6 +222,87 @@ async def read_text_file_async(file_path: str) -> str:
     return raw_data.decode("latin-1")
 
 
+_W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+_MC_FALLBACK = "{http://schemas.openxmlformats.org/markup-compatibility/2006}Fallback"
+# Content controls and custom XML wrap paragraphs, tables, rows and cells without changing them.
+_DOCX_WRAPPERS = frozenset({f"{_W}sdt", f"{_W}customXml"})
+# Runs under these are not part of the text as the document reads: tracked deletions, text moved away,
+# the ruby guide printed over its base text, text boxes (read as paragraphs of their own), and the
+# fallback copy Word writes of every text box.
+_DOCX_SKIPPED_RUN_ANCESTORS = frozenset({f"{_W}del", f"{_W}moveFrom", f"{_W}rt", f"{_W}txbxContent", _MC_FALLBACK})
+
+
+def _docx_text(document) -> str:
+    """Return the text of a python-docx ``Document``, one block per paragraph, table or text box.
+
+    ``Document.paragraphs`` lists only the paragraphs directly under the body, and ``Paragraph.text`` reads
+    only the runs directly under a paragraph, so tables, text boxes, content controls, simple fields and
+    tracked insertions never reached the extracted text.
+    """
+    return "\n\n".join(_docx_blocks(document.element.body))
+
+
+def _docx_blocks(container) -> Iterator[str]:
+    for child in container:
+        if child.tag == f"{_W}p":
+            yield _docx_paragraph_text(child)
+            for text_box in _docx_text_boxes(child):
+                yield from _docx_blocks(text_box)
+        elif child.tag == f"{_W}tbl":
+            yield _docx_table_text(child)
+        elif child.tag in _DOCX_WRAPPERS:
+            yield from _docx_blocks(_docx_wrapped_content(child))
+
+
+def _docx_paragraph_text(paragraph) -> str:
+    return "".join(
+        run.text
+        for run in paragraph.iter(f"{_W}r")
+        if not _docx_has_ancestor(run, paragraph, _DOCX_SKIPPED_RUN_ANCESTORS)
+    )
+
+
+def _docx_text_boxes(paragraph) -> Iterator:
+    for text_box in paragraph.iter(f"{_W}txbxContent"):
+        # A nested text box is read with the box around it, and a fallback copy repeats the real one.
+        if not _docx_has_ancestor(text_box, paragraph, {f"{_W}txbxContent", _MC_FALLBACK}):
+            yield text_box
+
+
+def _docx_table_text(table) -> str:
+    rows = []
+    for row in _docx_children(table, "tr"):
+        cells = (
+            " ".join(block for block in _docx_blocks(cell) if block).replace("\n", " ")
+            for cell in _docx_children(row, "tc")
+        )
+        rows.append(" | ".join(cells))
+    return "\n".join(rows)
+
+
+def _docx_children(parent, tag: str) -> Iterator:
+    for child in parent:
+        if child.tag == f"{_W}{tag}":
+            yield child
+        elif child.tag in _DOCX_WRAPPERS:
+            yield from _docx_children(_docx_wrapped_content(child), tag)
+
+
+def _docx_wrapped_content(wrapper):
+    # A content control keeps its content in w:sdtContent; custom XML holds it directly.
+    content = wrapper.find(f"{_W}sdtContent")
+    return wrapper if content is None else content
+
+
+def _docx_has_ancestor(element, stop, tags) -> bool:
+    node = element.getparent()
+    while node is not None and node is not stop:
+        if node.tag in tags:
+            return True
+        node = node.getparent()
+    return False
+
+
 def read_docx_file(file_path: str) -> str:
     """Read a DOCX file and extract text.
 
@@ -237,7 +318,7 @@ def read_docx_file(file_path: str) -> str:
     from docx import Document
 
     doc = Document(file_path)
-    return "\n\n".join([p.text for p in doc.paragraphs])
+    return _docx_text(doc)
 
 
 async def read_docx_file_async(file_path: str) -> str:
@@ -261,7 +342,7 @@ async def read_docx_file_async(file_path: str) -> str:
     if settings.storage_type == "local":
         # Local storage - read directly
         doc = Document(file_path)
-        return "\n\n".join([p.text for p in doc.paragraphs])
+        return _docx_text(doc)
 
     # S3 storage - need temp file for python-docx (doesn't support BytesIO)
     content = await read_file_bytes(file_path)
@@ -275,7 +356,7 @@ async def read_docx_file_async(file_path: str) -> str:
 
     try:
         doc = Document(temp_path)
-        return "\n\n".join([p.text for p in doc.paragraphs])
+        return _docx_text(doc)
     finally:
         with contextlib.suppress(Exception):
             Path(temp_path).unlink()
@@ -302,7 +383,7 @@ def extract_text_from_bytes(file_name: str, file_content: bytes) -> str:
             from docx import Document
 
             doc = Document(BytesIO(file_content))
-            return "\n\n".join(p.text for p in doc.paragraphs)
+            return _docx_text(doc)
         except Exception as e:
             msg = f"Failed to parse DOCX file '{file_name}': {e}"
             raise ValueError(msg) from e
