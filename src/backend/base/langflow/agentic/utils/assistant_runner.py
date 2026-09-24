@@ -18,8 +18,8 @@ from uuid import UUID
 from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import get_working_flow
-from lfx.services.deps import get_settings_service
 
+from langflow.agentic.api.deps import enforce_agentic_component_admin
 from langflow.agentic.api.router import _resolve_assistant_context
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import execute_flow_with_validation_streaming
@@ -205,8 +205,7 @@ async def run_assistant_and_persist(
     # creates a row or the assistant loads any provider credentials.
     acting_user = await session.get(User, user_id)
     is_superuser = bool(getattr(acting_user, "is_superuser", False))
-    if getattr(get_settings_service().settings, "custom_component_admin_only", False) is True and not is_superuser:
-        raise HTTPException(status_code=403, detail="Assistant code execution is restricted to administrators.")
+    enforce_agentic_component_admin(is_superuser=is_superuser)
 
     flow, created_new = await _ensure_flow(session, user_id, flow_id)
     if not created_new:
