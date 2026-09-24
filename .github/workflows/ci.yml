@@ -374,7 +374,7 @@ jobs:
 
   test-object-storage:
     needs: [path-filter, set-ci-condition]
-    name: Object Storage Tests (MinIO)
+    name: Object Storage Tests (S3)
     if: |
       always() &&
       !cancelled() &&
@@ -391,19 +391,17 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      # A service container cannot pass MinIO its "server" command, so start it here.
-      - name: Start MinIO
-        env:
-          MINIO_ROOT_USER: langflow
-          MINIO_ROOT_PASSWORD: langflow-minio  # pragma: allowlist secret
+      # SeaweedFS's S3 gateway: MinIO no longer publishes pullable images. A service
+      # container cannot pass it the "server" command, so start it here. With no S3
+      # config it accepts any credentials.
+      - name: Start S3 server
         run: |
-          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
-            quay.io/minio/minio:latest server /data
+          docker run -d --name s3 -p 8333:8333 chrislusf/seaweedfs:4.47 server -s3 -s3.port=8333
           for _ in $(seq 30); do
-            curl -sf http://localhost:9000/minio/health/live && exit 0
+            curl -sf -o /dev/null http://localhost:8333/ && exit 0
             sleep 2
           done
-          docker logs minio
+          docker logs s3
           exit 1
 
       - name: Install uv
@@ -420,11 +418,11 @@ jobs:
         run: uv sync
 
       # These tests are marked api_key_required, so the unit lanes deselect them.
-      - name: Run object storage tests against MinIO
+      - name: Run object storage tests against S3
         env:
           AWS_ACCESS_KEY_ID: langflow
-          AWS_SECRET_ACCESS_KEY: langflow-minio  # pragma: allowlist secret
-          AWS_ENDPOINT_URL: http://localhost:9000
+          AWS_SECRET_ACCESS_KEY: langflow-s3  # pragma: allowlist secret
+          AWS_ENDPOINT_URL: http://localhost:8333
           AWS_DEFAULT_REGION: us-east-1
         run: uv run pytest src/backend/tests/unit/api/utils/test_file_relocation.py -v
 
@@ -587,7 +585,7 @@ jobs:
                 elif $job == "test-docker" then
                   "  - Docker Tests: Check Docker image builds and version verification"
                 elif $job == "test-object-storage" then
-                  "  - Object Storage Tests: Check S3 storage and file relocation against MinIO"
+                  "  - Object Storage Tests: Check S3 storage and file relocation against a real S3 server"
                 elif $job == "lint-design-md" then
                   "  - DESIGN.md Lint: Check token references, WCAG contrast, and spec compliance"
                 elif $job == "path-filter" then

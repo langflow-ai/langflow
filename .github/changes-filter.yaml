@@ -113,7 +113,7 @@ database:
   - "src/frontend/tests/core/features/**"
   - "src/frontend/tests/extended/features/**"
 
-# Code whose tests need a real S3-compatible server (MinIO in CI).
+# Code whose tests need a real S3-compatible server (SeaweedFS in CI).
 storage:
   - "src/backend/base/langflow/services/storage/**"
   - "src/backend/base/langflow/api/utils/file_relocation.py"
