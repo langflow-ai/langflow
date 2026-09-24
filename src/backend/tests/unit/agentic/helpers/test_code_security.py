@@ -3352,6 +3352,8 @@ class TestScanCodeSecurityUnsafeDeserialization:
             ("import pandas as pd\nvars(pd.compat)['pickle_compat'].pkl.loads(payload)", "pandas"),
             ("import pandas as pd\nvars(pd.compat).get('pickle_compat').pkl.loads(payload)", "pandas"),
             ("from pandas import *\nread_pickle(payload)", "pandas"),
+            ("from pandas import *\ndata = io.pickle.read_pickle(payload)", "pandas"),
+            ("from pandas.core import *\ndata = generic.pickle.loads(payload)", "pandas"),
             ("import joblib\njoblib.load(payload)", "joblib"),
             ("from dill import loads\nloads(payload)", "dill"),
             ("import cloudpickle\ncloudpickle.loads(payload)", "cloudpickle"),
@@ -3378,6 +3380,7 @@ class TestScanCodeSecurityUnsafeDeserialization:
             ("import numpy.lib._format_impl as fmt\nfmt.pickle.loads(payload)", "numpy"),
             ("import numpy.lib._npyio_impl as npio\nnpio.pickle.loads(payload)", "numpy"),
             ("import numpy as np\nnp.lib._format_impl.pickle.loads(payload)", "numpy"),
+            ("from numpy import *\ndata = lib._format_impl.pickle.loads(payload)", "numpy"),
             ("from numpy.lib._format_impl import pickle as p\np.loads(payload)", "numpy"),
             ("from numpy.lib._npyio_impl import pickle", "numpy"),
             ("from numpy.lib._format_impl import *\npickle.loads(payload)", "numpy"),
@@ -3421,6 +3424,258 @@ class TestScanCodeSecurityUnsafeDeserialization:
             "import numpy as np\nnp.load(payload, None, True)",
             "import numpy as np\nnp.load(payload, allow_pickle=flag)",
             "import numpy as np\nnp.load(payload, **options)",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    z.allow_pickle = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    setattr(z, 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    vars(z)['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "z = (lambda value: value)(np.load(payload, allow_pickle=False))\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "def identity(value):\n"
+            "    return value\n"
+            "z = identity(np.load(payload, allow_pickle=False))\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "z = next(iter([np.load(payload, allow_pickle=False)]))\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "z = {'reader': np.load(payload, allow_pickle=False)}.get('reader')\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "from types import SimpleNamespace\n"
+            "z = SimpleNamespace(reader=np.load(payload, allow_pickle=False)).reader\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "from builtins import vars as reflect\n"
+            "def expose(reader):\n"
+            "    reflect(reader)['allow_pickle'] = True\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "expose(z)",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    alias = z\n"
+            "    vars(alias)['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    vars([z][0])['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    vars({'reader': z}['reader'])['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    generated = (vars(z) for _ in (0,))\n"
+            "    next(generated)['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    getter = lambda: vars(z)\n"
+            "    getter()['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    namespace = vars(z)\n"
+            "    namespace['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    key = 'ALLOW_PICKLE'.lower()\n"
+            "    vars(z)[key] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    z.__dict__['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\nnp.load(payload, allow_pickle=False).__dict__['allow_pickle'] = True",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    setattr(z, 'ALLOW_PICKLE'.lower(), True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import operator\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    operator.setitem(vars(z), 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "from operator import *\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    setitem(vars(z), 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import operator\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    operator.ior(vars(z), {'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "from operator import *\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    ior(vars(z), {'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    dict.update(*[vars(z), {'allow_pickle': True}])\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import operator\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    operator.setitem(*[vars(z), 'allow_pickle', True])\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    args = [vars(z), {'allow_pickle': True}]\n"
+            "    dict.update(*args)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    write = vars(z).update\n"
+            "    write({'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    writes = [vars(z).update]\n"
+            "    writes[0]({'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    writes = {'mutate': vars(z).update}\n"
+            "    writes['mutate']({'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import functools\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    functools.partial(dict.update, vars(z), {'allow_pickle': True})()\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import functools\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    functools.partial(vars(z).update, {'allow_pickle': True})()\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "def mutate(namespace):\n"
+            "    namespace['allow_pickle'] = True\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    mutate(vars(z))\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    dict.update(vars(z), {'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    dict.setdefault(vars(z), 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    namespace = vars(z)\n"
+            "    namespace |= {'allow_pickle': True}\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "class Z(np.lib.npyio.NpzFile):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "Base = type(np.load(payload, allow_pickle=False))\n"
+            "class Z(Base):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "class Z(type(np.load(payload, allow_pickle=False))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "Base = type(z)\n"
+            "class Z(Base):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "Z = type('Z', (type(z),), {})\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z([type(z)][0]):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z((type(z),)[0]):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z({'base': type(z)}['base']):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(True and type(z)):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z((Base := type(z))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "from builtins import type as typ\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(typ(z)):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "def identity(value):\n"
+            "    return value\n"
+            "z = identity(np.load(payload, allow_pickle=False))\n"
+            "class Z(type(z)):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "def identity(value):\n"
+            "    return value\n"
+            "class Z(type(identity(np.load(payload, allow_pickle=False)))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "class Z(type((lambda value: value)(np.load(payload, allow_pickle=False)))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "class Z(type(next(iter([np.load(payload, allow_pickle=False)])))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(type(z, *[])):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(type(*[z], *[])):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "from builtins import type as typ\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(typ(z, *())):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
         ],
     )
     def test_rejects_numpy_load_when_pickle_may_be_enabled(self, code):
@@ -3431,8 +3686,25 @@ class TestScanCodeSecurityUnsafeDeserialization:
     @pytest.mark.parametrize(
         "code",
         [
+            "import numpy as np\nvalue_type = type(1)\nnp.load(payload, allow_pickle=False)",
+            "import numpy as np\nnp.load(payload, allow_pickle=False)\nvalue_type = type(1)",
+        ],
+    )
+    def test_rejects_type_with_numpy_archive_reader_regardless_of_source_order(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("type() is forbidden in code using numpy archive readers" in item for item in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
             "import numpy as np\nnp.load(payload)",
             "import numpy as np\nnp.load(payload, allow_pickle=False)",
+            "import numpy as np\narr = np.load(payload, allow_pickle=False)",
+            "import numpy as np\ndef read():\n    return np.load(payload)",
+            "import numpy as np\nvalue = np.load(payload).sum()",
+            "import numpy.lib.format as fmt\nvalue = fmt.read_array(payload)",
+            "import numpy.lib.format as fmt\nvalue = fmt.read_array(payload, allow_pickle=False)",
             "from numpy import load\nload(payload, None, False)",
             "from numpy import *\nload(payload, allow_pickle=False)",
             "from numpy.lib.npyio import *\nload(payload)",
