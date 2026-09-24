@@ -123,12 +123,17 @@ def _unbuild_needed_dropped_producers(graph: Graph) -> None:
     dropped = [
         vertex for vertex in graph.vertices if vertex.id in graph.checkpoint_opaque_dropped_ids and not vertex.is_input
     ]
+    # Match resume scheduling: a stopped branch (or an unused tool vertex)
+    # cannot consume the dropped output and must not revive its producer.
+    inactivated = graph.inactivated_vertices | graph.conditionally_excluded_vertices | graph._orphaned_tool_vertex_ids()  # noqa: SLF001
     changed = True
     while changed:
         changed = False
         built_ids = {vertex.id for vertex in graph.vertices if vertex.built}
         for vertex in dropped:
-            if vertex.built and any(s not in built_ids for s in graph.successor_map.get(vertex.id, [])):
+            if vertex.built and any(
+                s not in built_ids and s not in inactivated for s in graph.successor_map.get(vertex.id, [])
+            ):
                 vertex.built = False
                 changed = True
 

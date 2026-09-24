@@ -221,6 +221,20 @@ async def test_resume_keeps_dropped_producer_no_live_consumer_reads():
     assert resumed.get_vertex("mid").built is True
 
 
+@pytest.mark.parametrize("excluded_state", ["inactivated_vertices", "conditionally_excluded_vertices"])
+async def test_resume_keeps_dropped_producer_when_unbuilt_consumer_is_excluded(excluded_state):
+    """A stopped branch must not cause its already-built producer to execute again."""
+    _, checkpoint = await _three_node_checkpoint()
+    checkpoint.vertex_results["mid"].built_object = None
+    checkpoint.vertex_results["sink"].built = False
+    setattr(checkpoint, excluded_state, ["sink"])
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert resumed.get_vertex("mid").built is True
+    assert resumed.resume_first_layer() == []
+
+
 async def test_resume_keeps_dropped_input_vertex_built():
     """An input vertex is never re-run, even if its output was opaque-dropped."""
     _, checkpoint = await _paused_checkpoint()
