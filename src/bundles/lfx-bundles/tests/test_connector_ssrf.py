@@ -634,7 +634,7 @@ def test_couchbase_blocks_internal_fallback_seed_when_srv_is_absent():
     mock_srv.assert_called_once_with("_couchbases._tcp.cluster.example.com", "SRV")
 
 
-def test_couchbase_validates_explicit_port_seed_without_srv():
+def test_couchbase_validates_explicit_port_seed_even_with_public_srv():
     from lfx.utils.ssrf_protection import SSRFProtectionError
     from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
 
@@ -645,7 +645,21 @@ def test_couchbase_validates_explicit_port_seed_without_srv():
         pytest.raises(SSRFProtectionError),
     ):
         _validate_couchbase_hosts("couchbase://cluster.example.com:11210")
-    mock_srv.assert_not_called()
+    mock_srv.assert_not_called()  # A blocked seed is rejected before discovery.
+
+
+def test_couchbase_validates_explicit_port_srv_target():
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        ssrf_enabled(),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["8.8.8.8"]),
+        patch("dns.resolver.resolve", return_value=[MagicMock(target="169.254.169.254.")]) as mock_srv,
+        pytest.raises(SSRFProtectionError),
+    ):
+        _validate_couchbase_hosts("couchbase://cluster.example.com:11210")
+    mock_srv.assert_called_once_with("_couchbase._tcp.cluster.example.com", "SRV")
 
 
 @pytest.mark.parametrize("query", ["enable_dns_srv=false", "dns_nameserver=8.8.8.8"])

@@ -53,7 +53,13 @@ def _validate_couchbase_hosts(connection_string: str) -> None:
         except ValueError as e:
             msg = "Couchbase connection string contains an invalid host."
             raise SSRFProtectionError(msg) from e
-        if len(seeds) == 1 and host and port is None:
+        # An explicit port does not disable DNS SRV in the C++ SDK. Validate
+        # that seed as a possible direct target, then inspect any SRV targets.
+        # A portless single seed may have only SRV records and no A/AAAA record.
+        seed_needs_validation = len(seeds) > 1 or port is not None
+        if seed_needs_validation:
+            validate_connector_hostname_for_ssrf(host or "")
+        if len(seeds) == 1 and host:
             try:
                 ip_address(host)
             except ValueError:
@@ -69,9 +75,10 @@ def _validate_couchbase_hosts(connection_string: str) -> None:
                         for record in records:
                             validate_connector_hostname_for_ssrf(str(record.target).rstrip("."))
                         continue
-        # The SDK falls back to this seed when SRV is absent; multi-seed and IP
-        # connections use their seeds directly.
-        validate_connector_hostname_for_ssrf(host or "")
+        # The SDK falls back to this seed when SRV is absent. Multi-seed and
+        # explicit-port seeds were already checked as possible direct targets.
+        if not seed_needs_validation:
+            validate_connector_hostname_for_ssrf(host or "")
 
 
 class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
