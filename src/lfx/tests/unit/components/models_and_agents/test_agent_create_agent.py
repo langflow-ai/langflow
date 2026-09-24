@@ -1335,9 +1335,8 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
     would have taken effect. The graph guard MUST sit above the middleware so the
     middleware's user-facing cap is what bounds the loop.
 
-    Each iteration is roughly 2 graph steps (model node + tools node) plus a small
-    constant overhead, so `recursion_limit >= max_iterations * 2 + 5` is the bare
-    minimum that lets the middleware fire first.
+    Each iteration uses four graph steps with the model-call limiter, plus a
+    fifth when tool approval adds HumanInTheLoopMiddleware.
     """
     captured_config: dict = {}
 
@@ -1369,11 +1368,60 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
         "default of 25 fires before ModelCallLimitMiddleware reaches the user-set cap "
         "(UI-009/UI-010 regression)."
     )
-    # Each user-visible iteration is ~2 graph steps (model + tools), plus overhead.
-    assert captured_config["recursion_limit"] >= 15 * 2 + 5, (
-        f"recursion_limit must sit above max_iterations * 2 + safety; got "
+    # Each user-visible iteration is ~4 graph steps (before_model + model + after_model + tools), plus overhead.
+    assert captured_config["recursion_limit"] >= 15 * 4 + 10, (
+        f"recursion_limit must sit above max_iterations * 4 + safety; got "
         f"{captured_config['recursion_limit']} for max_iterations=15"
     )
+
+
+def test_gated_tool_budget_lets_model_call_limiter_end_an_ungated_tool_loop() -> None:
+    """A gated tool adds a graph node even when the model only calls an ungated tool."""
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.messages import AIMessage, HumanMessage
+    from langchain_core.outputs import ChatGeneration, ChatResult
+    from langchain_core.tools import tool
+
+    class RepeatingToolModel(BaseChatModel):
+        calls: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "repeating-tool"
+
+        def bind_tools(self, tools: Any, **kwargs: Any) -> BaseChatModel:  # noqa: ARG002
+            return self
+
+        def _generate(self, messages: list, stop: list[str] | None = None, **kwargs: Any) -> ChatResult:  # noqa: ARG002
+            self.calls += 1
+            response = AIMessage(content="", tool_calls=[{"name": "ping", "args": {}, "id": f"call_{self.calls}"}])
+            return ChatResult(generations=[ChatGeneration(message=response)])
+
+    @tool
+    def ping() -> str:
+        """Return pong."""
+        return "pong"
+
+    @tool
+    def gated() -> str:
+        """Require approval."""
+        return "approved"
+
+    gated.metadata = {"approval_actions": ["approve"]}
+    component = _build_component()
+    component.set_attributes({"tools": [ping, gated], "max_iterations": 15, "handle_parsing_errors": False})
+    model = RepeatingToolModel()
+
+    with patch.object(type(component), "_get_llm", return_value=model):
+        graph = component.create_agent_runnable()
+
+    result = graph.invoke(
+        {"messages": [HumanMessage(content="Keep calling ping")]},
+        config={"recursion_limit": component._compute_recursion_limit()},
+    )
+
+    assert model.calls == 15
+    assert "Model call limits exceeded" in result["messages"][-1].content
 
 
 @pytest.mark.asyncio
@@ -1468,9 +1516,9 @@ async def test_should_pass_recursion_limit_when_max_iterations_is_clamped_from_z
     ):
         await component.run_agent(fake_graph)
 
-    # Clamped max_iterations=1 → at least 1*2+5 = 7 graph steps must be allowed.
-    assert captured_config.get("recursion_limit", 0) >= 7, (
-        "Clamped max_iterations of 1 must still permit at least one model+tool round-trip"
+    # Clamped max_iterations=1 → at least 1*4+10 = 14 graph steps must be allowed.
+    assert captured_config.get("recursion_limit", 0) >= 14, (
+        "Clamped max_iterations of 1 must permit at least one full 4-step middleware+model+tools round-trip"
     )
 
 

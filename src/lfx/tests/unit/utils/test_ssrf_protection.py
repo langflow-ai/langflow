@@ -386,6 +386,37 @@ class TestURLValidation:
             validate_url_for_ssrf("http://192.168.1.5", warn_only=False)
             validate_url_for_ssrf("http://192.168.1.100", warn_only=False)
 
+    @pytest.mark.parametrize(
+        ("validator", "url"),
+        [
+            (validate_url_for_ssrf, "https://rebind.example/feed"),
+            (validate_database_url_for_ssrf, "postgresql://rebind.example/app"),
+            (validate_git_repository_url, "https://rebind.example/repo.git"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "resolved_ips",
+        [
+            ["169.254.169.254", "192.168.1.99"],
+            ["192.168.1.99", "169.254.169.254"],
+        ],
+    )
+    def test_allowlisted_dns_answer_does_not_hide_blocked_peer(self, validator, url, resolved_ips):
+        """An IP/CIDR allowlist applies per answer; a mixed DNS set must still fail."""
+        with (
+            mock_ssrf_settings(enabled=True, allowed_hosts=["192.168.1.0/24"]),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=resolved_ips),
+            pytest.raises(SSRFProtectionError, match=r"169\.254\.169\.254"),
+        ):
+            validator(url)
+
+    def test_hostname_with_only_allowlisted_dns_answers_still_passes(self):
+        with (
+            mock_ssrf_settings(enabled=True, allowed_hosts=["192.168.1.0/24"]),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["192.168.1.99"]),
+        ):
+            validate_url_for_ssrf("https://internal.example/api")
+
     def test_warn_only_mode_logs_warnings(self):
         """Test that warn_only mode logs warnings instead of raising errors."""
         with mock_ssrf_settings(enabled=True), patch("lfx.utils.ssrf_protection.logger") as mock_logger:
