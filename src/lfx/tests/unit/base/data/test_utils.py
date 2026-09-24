@@ -1,6 +1,6 @@
 from unittest.mock import Mock, patch
 
-from lfx.base.data.utils import parse_text_file_to_data, read_text_file
+from lfx.base.data.utils import parse_text_file_to_data, read_docx_file, read_text_file
 
 
 class TestReadTextFile:
@@ -48,6 +48,22 @@ class TestReadTextFile:
         # Should not raise, should fall back to latin-1
         result = read_text_file(str(f))
         assert len(result) == 128
+
+
+class TestReadDocxFile:
+    def test_keeps_tables_in_document_order(self, tmp_path):
+        from docx import Document
+
+        doc = Document()
+        doc.add_paragraph("Quarterly figures")
+        table = doc.add_table(rows=1, cols=2)
+        table.cell(0, 0).text = "Revenue"
+        table.cell(0, 1).text = "4.2M"
+        doc.add_paragraph("End of report")
+        path = tmp_path / "report.docx"
+        doc.save(path)
+
+        assert read_docx_file(str(path)) == "Quarterly figures\n\nRevenue | 4.2M\n\nEnd of report"
 
 
 class TestParseTextFileToDataS3Mode:
