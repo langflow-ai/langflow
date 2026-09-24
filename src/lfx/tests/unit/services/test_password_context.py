@@ -52,3 +52,19 @@ def test_passlib_size_limit_is_preserved() -> None:
     assert not context.verify(oversized, _LEGACY_SHORT_HASH)
     with pytest.raises(ValueError, match="maximum allowed size"):
         context.hash(oversized)
+
+
+def test_unicode_passwords_keep_passlib_character_limit() -> None:
+    context = PasswordContext()
+    secret = "ü" * 4096
+
+    assert context.verify(secret, _LEGACY_LONG_HASH)
+    assert context.verify(secret, context.hash(secret))
+    assert not context.verify(secret + "ü", _LEGACY_LONG_HASH)
+    with pytest.raises(ValueError, match="maximum allowed size"):
+        context.hash(secret + "ü")
+
+    oversized_bytes = ("ü" * 2049).encode()
+    assert not context.verify(oversized_bytes, _LEGACY_LONG_HASH)
+    with pytest.raises(ValueError, match="maximum allowed size"):
+        context.hash(oversized_bytes)
