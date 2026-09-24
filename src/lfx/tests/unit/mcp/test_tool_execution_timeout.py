@@ -121,7 +121,7 @@ def test_mcp_streamable_http_client_uses_resolved_timeout():
     ],
 )
 @pytest.mark.asyncio
-async def test_repeated_tool_timeout_preserves_the_root_error(client_class, connection_params):
+async def test_tool_timeout_preserves_the_root_error_without_retry(client_class, connection_params):
     client = client_class(tool_execution_timeout=0.01)
     client._connected = True
     client._connection_params = connection_params
@@ -130,11 +130,13 @@ async def test_repeated_tool_timeout_preserves_the_root_error(client_class, conn
 
     with (
         patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
-        patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
-        pytest.raises(ValueError, match="Maximum retries exceeded") as exc_info,
+        patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()) as sleep,
+        pytest.raises(ValueError, match=r"Tool 'slow'.*failed") as exc_info,
     ):
         await client._run_tool("slow", {})
 
+    session.call_tool.assert_awaited_once_with("slow", arguments={})
+    sleep.assert_not_awaited()
     assert isinstance(exc_info.value.__cause__, TimeoutError)
     assert _root_error_type(exc_info.value) == "TimeoutError"
 
