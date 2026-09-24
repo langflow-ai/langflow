@@ -469,6 +469,19 @@ class TestS3DeleteAfterProcessingSecurity:
         assert result[0].data["text"] == "SAFE_CANARY"
         assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
 
+    def test_silent_errors_skips_unsupported_local_file_with_s3_storage(self, tmp_path):
+        """S3 ignores the local-storage skip flag, so silent errors must still filter."""
+        canary = tmp_path / "private"
+        canary.write_text("SAFE_CANARY", encoding="utf-8")
+
+        component = TestFileComponent()
+        component.file_path = Data(data={"file_path": str(canary)})
+        component.silent_errors = True
+        component.delete_server_file_after_processing = False
+
+        assert component.load_files_base() == []
+        assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
+
     def test_s3_component_temp_file_uses_explicit_local_cleanup(self, monkeypatch, tmp_path):
         temp_file = tmp_path / "component-download.txt"
         temp_file.write_text("SAFE_CANARY", encoding="utf-8")
