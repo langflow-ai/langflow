@@ -216,6 +216,15 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-24 — Async file loader dispatch
+
+Graph outputs and the Read File tool now await `@delegates_to` coroutine methods
+directly. `BaseFileComponent` provides `aload_files_*` and `aprocess_files` for
+native async loaders; existing sync overrides still run in worker threads. Bundle
+coroutines should await these methods instead of calling their sync wrappers on
+the event loop. The public sync method signatures remain unchanged, and
+`BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
 
 `filter_plugin_entry_points()` and `filter_component_entry_points()` inspect

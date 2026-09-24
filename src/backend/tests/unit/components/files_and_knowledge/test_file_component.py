@@ -3,8 +3,10 @@ import json
 import subprocess
 import tempfile
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.io import Output
@@ -1297,3 +1299,246 @@ class TestFileComponentStorageLocation:
         """Test that storage_location is in advanced controls."""
         storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
         assert storage_input.advanced is True
+
+
+_LOADER_MODULES = (
+    "lfx.components.files_and_knowledge.file",
+    "lfx.base.data.base_file",
+    "lfx.base.data.utils",
+    "lfx.base.data.storage_utils",
+)
+
+
+def _forbid_run_until_complete(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fail the test if the loader chain falls back to a thread-plus-new-loop hop."""
+
+    def _hop(coro):
+        coro.close()
+        msg = "Read File loader chain fell back to run_until_complete"
+        raise AssertionError(msg)
+
+    for module in _LOADER_MODULES:
+        monkeypatch.setattr(f"{module}.run_until_complete", _hop)
+
+
+class TestFileComponentAsyncLoaderChain:
+    """The Read File loaders are awaited end to end instead of hopping threads per read."""
+
+    @pytest.fixture
+    def s3_storage(self, monkeypatch, tmp_path):
+        settings_service = SimpleNamespace(
+            settings=SimpleNamespace(
+                storage_type="s3",
+                restrict_local_file_access=False,
+                config_dir=str(tmp_path / "config"),
+                database_url="",
+            )
+        )
+        objects: dict[tuple[str, str], bytes] = {}
+        storage_service = SimpleNamespace(
+            objects=objects,
+            get_file=AsyncMock(side_effect=lambda namespace, name: objects[(namespace, name)]),
+            get_file_size=AsyncMock(side_effect=lambda namespace, name: len(objects[(namespace, name)])),
+            delete_file=AsyncMock(),
+        )
+        for module in (*_LOADER_MODULES, "lfx.utils.file_path_security"):
+            monkeypatch.setattr(f"{module}.get_settings_service", lambda: settings_service, raising=False)
+        for module in _LOADER_MODULES:
+            monkeypatch.setattr(f"{module}.get_storage_service", lambda: storage_service, raising=False)
+        return storage_service
+
+    @pytest.mark.asyncio
+    async def test_tool_awaits_loader_chain_without_thread_hop(self, monkeypatch, tmp_path):
+        text_file = tmp_path / "notes.txt"
+        text_file.write_text("read by the tool", encoding="utf-8")
+        component = FileComponent()
+        component._attributes["path"] = [str(text_file)]
+        component.path = [str(text_file)]
+        _forbid_run_until_complete(monkeypatch)
+
+        tool = (await component._get_tools())[0]
+
+        assert await tool.coroutine() == "read by the tool"
+
+    @pytest.mark.asyncio
+    async def test_graph_output_awaits_loader_chain_without_thread_hop(self, monkeypatch, tmp_path):
+        text_file = tmp_path / "notes.txt"
+        text_file.write_text("read by the graph", encoding="utf-8")
+        component = FileComponent()
+        component.path = [str(text_file)]
+        _forbid_run_until_complete(monkeypatch)
+
+        message = await component._get_output_result(component._outputs_map["message"])
+
+        assert message.text == "read by the graph"
+
+    @pytest.mark.asyncio
+    async def test_s3_tool_reads_through_storage_service_on_the_loop(self, monkeypatch, s3_storage):
+        s3_storage.objects[("user-id", "notes.txt")] = b"stored notes"
+        component = FileComponent()
+        component._user_id = "user-id"
+        component._attributes["path"] = ["user-id/notes.txt"]
+        component.path = ["user-id/notes.txt"]
+        _forbid_run_until_complete(monkeypatch)
+
+        tool = (await component._get_tools())[0]
+
+        assert await tool.coroutine() == "stored notes"
+        s3_storage.get_file.assert_awaited_once_with("user-id", "notes.txt")
+        s3_storage.get_file_size.assert_awaited_once_with("user-id", "notes.txt")
+        s3_storage.delete_file.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_s3_image_validation_awaits_storage_read(self, monkeypatch, s3_storage):
+        from lfx.base.data.base_file import BaseFileComponent
+        from lfx.schema.data import Data
+
+        # JPEG magic bytes behind a .png name: validation must read the object and reject it.
+        s3_storage.objects[("user-id", "photo.png")] = b"\xff\xd8\xff\xe0" + b"\x00" * 16
+        component = FileComponent()
+        component.silent_errors = False
+        _forbid_run_until_complete(monkeypatch)
+        image = BaseFileComponent.BaseFile(Data(data={"file_path": "user-id/photo.png"}), Path("user-id/photo.png"))
+
+        with pytest.raises(ValueError, match=r"photo\.png"):
+            await component.aprocess_files([image])
+
+        s3_storage.get_file.assert_awaited_once_with("user-id", "photo.png")
+
+    @pytest.mark.asyncio
+    @patch("subprocess.Popen")
+    async def test_s3_docling_download_is_awaited_and_temp_file_removed(self, mock_popen, monkeypatch, s3_storage):
+        s3_storage.objects[("user-id", "report.pdf")] = b"%PDF-1.4 fake"
+        component = FileComponent()
+        component.markdown = False
+        component.md_image_placeholder = "<!-- image -->"
+        component.md_page_break_placeholder = ""
+        component.pipeline = "standard"
+        component.ocr_engine = "None"
+        docling_threads: list[threading.Thread] = []
+        mock_proc = MagicMock()
+
+        def communicate(*args, **kwargs):  # noqa: ARG001
+            docling_threads.append(threading.current_thread())
+            local_path = json.loads(kwargs["input"])["file_path"]
+            assert Path(local_path).read_bytes() == b"%PDF-1.4 fake"
+            result = {"ok": True, "mode": "structured", "doc": [], "meta": {"file_path": local_path}}
+            return json.dumps(result).encode("utf-8"), b""
+
+        mock_proc.communicate.side_effect = communicate
+        mock_popen.return_value = mock_proc
+        _forbid_run_until_complete(monkeypatch)
+
+        result = await component._aprocess_docling_in_subprocess("user-id/report.pdf")
+
+        assert result.data["file_path"] == "user-id/report.pdf"
+        s3_storage.get_file.assert_awaited_once_with("user-id", "report.pdf")
+        local_path = json.loads(mock_proc.communicate.call_args.kwargs["input"])["file_path"]
+        assert not Path(local_path).exists(), "downloaded Docling temp file was not removed"
+        assert docling_threads
+        assert threading.current_thread() not in docling_threads
+
+    def test_cancelled_queued_docling_worker_removes_download(self, s3_storage, tmp_path):
+        """A cancelled graph call must leave a queued worker responsible for its temp file."""
+        from lfx.schema.data import Data
+
+        local_file = tmp_path / "download.pdf"
+        local_file.write_bytes(b"%PDF-1.4 fake")
+        component = FileComponent()
+        blocker_started = threading.Event()
+        release_blocker = threading.Event()
+        parser_ran = threading.Event()
+
+        def parse_file(*_args):
+            parser_ran.set()
+            return Data(data={"text": "parsed"})
+
+        async def run_case():
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                loop.set_default_executor(executor)
+                blocker = loop.run_in_executor(None, lambda: (blocker_started.set(), release_blocker.wait(5)))
+                assert blocker_started.wait(2)
+                try:
+                    with (
+                        patch.object(
+                            FileComponent,
+                            "_get_local_file_for_docling",
+                            new=AsyncMock(return_value=(str(local_file), True)),
+                        ),
+                        patch.object(FileComponent, "_process_docling_subprocess_impl", side_effect=parse_file),
+                    ):
+                        load = asyncio.create_task(component._aprocess_docling_in_subprocess("user-id/report.pdf"))
+                        await asyncio.sleep(0.05)
+                        assert not parser_ran.is_set()
+                        load.cancel()
+                        with pytest.raises(asyncio.CancelledError):
+                            await load
+                        assert local_file.exists()
+
+                        release_blocker.set()
+                        await blocker
+                        for _ in range(200):
+                            if parser_ran.is_set() and not local_file.exists():
+                                break
+                            await asyncio.sleep(0.01)
+                        assert parser_ran.is_set()
+                        assert not local_file.exists()
+                finally:
+                    release_blocker.set()
+
+        asyncio.run(run_case())
+        s3_storage.get_file.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_cancelled_native_loader_holds_admission_until_worker_exits(self, monkeypatch, tmp_path):
+        """Cancelling the tool must not free its slot while the parser thread is still running."""
+        from lfx.schema.data import Data
+
+        load_limiter = asyncio.Semaphore(1)
+        monkeypatch.setattr(file_component_module, "_get_file_tool_limiter", lambda: load_limiter)
+        first_started = threading.Event()
+        release_first = threading.Event()
+        first_finished = threading.Event()
+        second_started = threading.Event()
+
+        def blocking_parse(file_path: str) -> Data:
+            if file_path.endswith("first.txt"):
+                first_started.set()
+                assert release_first.wait(timeout=5), "cancelled parser was not released by the test"
+                first_finished.set()
+            else:
+                second_started.set()
+            return Data(data={"file_path": file_path, "text": Path(file_path).name})
+
+        async def fake_parse(file_path: str, *, silent_errors: bool) -> Data:  # noqa: ARG001
+            return await asyncio.to_thread(blocking_parse, file_path)
+
+        monkeypatch.setattr(file_component_module, "aparse_text_file_to_data", fake_parse)
+
+        async def tool_for(name: str):
+            file_path = tmp_path / name
+            file_path.write_text(name, encoding="utf-8")
+            component = FileComponent()
+            component._attributes["path"] = [str(file_path)]
+            component.path = [str(file_path)]
+            return (await component._get_tools())[0]
+
+        first_tool = await tool_for("first.txt")
+        second_tool = await tool_for("second.txt")
+        first_task = asyncio.create_task(first_tool.coroutine())
+        assert await asyncio.to_thread(first_started.wait, 2), "native loader did not start parsing"
+
+        first_task.cancel()
+        second_task = asyncio.create_task(second_tool.coroutine())
+        try:
+            assert not await asyncio.to_thread(second_started.wait, 0.1), (
+                "a second loader started before the cancelled parser released its admission slot"
+            )
+        finally:
+            release_first.set()
+
+        with pytest.raises(asyncio.CancelledError):
+            await first_task
+        assert first_finished.is_set()
+        assert await asyncio.wait_for(second_task, timeout=5) == "second.txt"

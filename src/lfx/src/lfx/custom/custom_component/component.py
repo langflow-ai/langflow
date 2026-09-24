@@ -43,7 +43,7 @@ from lfx.schema.token_usage import accumulate_usage, extract_usage_from_chunk
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
-from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.async_helpers import async_delegate_target, run_until_complete
 from lfx.utils.secrets import is_secret_value, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
@@ -1709,8 +1709,16 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         method = getattr(self, output.method)
+        # A sync output method that merely wraps a coroutine (``delegates_to``) is awaited
+        # directly instead of running in a thread that would spin up its own event loop.
+        async_method = async_delegate_target(self, output.method)
         try:
-            result = await method() if inspect.iscoroutinefunction(method) else await asyncio.to_thread(method)
+            if async_method is not None:
+                result = await async_method()
+            elif inspect.iscoroutinefunction(method):
+                result = await method()
+            else:
+                result = await asyncio.to_thread(method)
         except TypeError as e:
             msg = f'Error running method "{output.method}": {e}'
             raise TypeError(msg) from e
