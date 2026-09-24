@@ -6,9 +6,12 @@ model listing, so remediation is matched on the provider's ERROR TEXT and the
 winning overrides are remembered per model (discover-once).
 """
 
+from types import SimpleNamespace
+
 import pytest
 from lfx.base.models.model_remediation import (
     Remediation,
+    apply_overrides_to_model,
     cached_overrides,
     find_remediation,
     remember,
@@ -20,6 +23,17 @@ GPT56_ERROR = (
     '"Function tools with reasoning_effort are not supported for gpt-5.6-luna in '
     "/v1/chat/completions. To use function tools, use /v1/responses or set "
     "reasoning_effort to 'none'.\", 'type': 'invalid_request_error'}}"
+)
+
+# Verbatim Amazon Bedrock Converse responses from us.anthropic.claude-opus-5-5, which rejects
+# each field on its own 400 once the previous one is cleared.
+BEDROCK_TOP_K_ERROR = (
+    "An error occurred (ValidationException) when calling the Converse operation: "
+    "The model returned the following errors: `top_k` is deprecated for this model."
+)
+BEDROCK_TOP_P_ERROR = (
+    "An error occurred (ValidationException) when calling the Converse operation: "
+    "The model returned the following errors: `top_p` is deprecated for this model."
 )
 
 
@@ -63,6 +77,27 @@ class TestFindRemediation:
 
     def test_matches_is_case_insensitive(self):
         assert find_remediation(GPT56_ERROR.upper(), provider="OpenAI", already_applied=set()) is not None
+
+    @pytest.mark.parametrize(
+        ("error", "overrides"),
+        [(BEDROCK_TOP_K_ERROR, {"top_k": None}), (BEDROCK_TOP_P_ERROR, {"top_p": None})],
+        ids=["top_k", "top_p"],
+    )
+    def test_should_match_claude_top_k_and_top_p_rejections(self, error, overrides):
+        rem = find_remediation(error, provider=None, already_applied=set())
+        assert rem is not None
+        assert rem.overrides == overrides
+
+
+class TestApplyOverridesToModel:
+    def test_should_clear_a_field_carried_in_additional_model_request_fields(self):
+        """ChatBedrockConverse has no top_k attribute; it sends top_k from that dict."""
+        model = SimpleNamespace(additional_model_request_fields={"top_k": 250, "thinking": {"type": "adaptive"}})
+
+        assert apply_overrides_to_model(model, {"top_k": None}) is True
+        assert model.additional_model_request_fields == {"thinking": {"type": "adaptive"}}
+        # Nothing left to clear, so a repeat of the same error is not retried.
+        assert apply_overrides_to_model(model, {"top_k": None}) is False
 
 
 class TestRemediationCache:

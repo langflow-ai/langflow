@@ -1,6 +1,7 @@
 """Regression tests: the Top K input must reach models that support it, and only those."""
 
 import pytest
+from botocore.exceptions import ClientError
 from lfx_amazon.components.amazon.amazon_bedrock_converse import AmazonBedrockConverseComponent
 
 _FAKE_AWS_ACCESS_KEY_ID = "AKIAFAKEFAKEFAKEFAKE"  # pragma: allowlist secret
@@ -40,6 +41,41 @@ def test_top_k_omitted_when_unset():
     model = _component(top_k=None).build_model()
 
     assert not model.additional_model_request_fields
+
+
+class _ClaudeOpus55Client:
+    """bedrock-runtime as Claude Opus 5.5 answers it: one 400 per sampling field, in this order."""
+
+    def __init__(self):
+        self.requests = []
+
+    def converse(self, **request):
+        self.requests.append(request)
+        sent = {**request.get("inferenceConfig", {}), **(request.get("additionalModelRequestFields") or {})}
+        for key, field in (("temperature", "temperature"), ("top_k", "top_k"), ("topP", "top_p")):
+            if key in sent:
+                message = f"The model returned the following errors: `{field}` is deprecated for this model."
+                raise ClientError({"Error": {"Code": "ValidationException", "Message": message}}, "Converse")
+        return {
+            "output": {"message": {"role": "assistant", "content": [{"text": "pong"}]}},
+            "stopReason": "end_turn",
+            "usage": {"inputTokens": 1, "outputTokens": 1, "totalTokens": 2},
+            "metrics": {"latencyMs": 1},
+        }
+
+
+async def test_default_sampling_fields_are_cleared_when_the_model_rejects_them():
+    component = _component(model_id="us.anthropic.claude-opus-5-5")
+    model = component.build_model()
+    model.client = client = _ClaudeOpus55Client()
+
+    result = await component.get_chat_result(runnable=model, stream=False, input_value="ping")
+
+    assert result.text == "pong"
+    last = client.requests[-1]
+    assert "temperature" not in last["inferenceConfig"]
+    assert "topP" not in last["inferenceConfig"]
+    assert "additionalModelRequestFields" not in last
 
 
 # Meta, Amazon Titan and AI21 document no top_k at all and Cohere spells it "k", so

@@ -58,6 +58,18 @@ REMEDIATIONS: tuple[Remediation, ...] = (
         providers=("OpenAI",),
     ),
     Remediation(
+        # Claude Opus 4.7+ and Sonnet 5 also reject top_k and top_p, one field per 400 and in
+        # the words they use for temperature; the Bedrock Converse component sends both by default.
+        name="top-k-unsupported",
+        markers=("`top_k` is deprecated",),
+        overrides={"top_k": None},
+    ),
+    Remediation(
+        name="top-p-unsupported",
+        markers=("`top_p` is deprecated",),
+        overrides={"top_p": None},
+    ),
+    Remediation(
         # Claude 5 rejects a temperature its 4.x siblings accept (GH-14291); markers
         # stay narrow so an out-of-range value, which only the user can fix, surfaces.
         name="temperature-unsupported",
@@ -128,6 +140,8 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     fix re-raises the provider error instead of retrying an unchanged request.
     Unknown attributes are never created: silently attaching one would turn a
     clear provider error into a request that fails again for a hidden reason.
+    A field the model only carries in ``additional_model_request_fields`` is
+    cleared by dropping its key there.
 
     Mutating in place (rather than rebuilding) is what lets the fix reach a model
     already wrapped in a prompt chain or ``with_config`` binding — those hold a
@@ -136,10 +150,16 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     if not overrides:
         return False
     for key, value in overrides.items():
-        if not hasattr(model, key):
+        attr, new_value = key, value
+        fields = getattr(model, "additional_model_request_fields", None)
+        if value is None and not hasattr(model, key) and isinstance(fields, dict) and key in fields:
+            # ChatBedrockConverse has no top_k attribute: it forwards provider-specific
+            # fields from additional_model_request_fields as-is, so drop the key there.
+            attr, new_value = "additional_model_request_fields", {k: v for k, v in fields.items() if k != key}
+        if not hasattr(model, attr):
             return False
         try:
-            setattr(model, key, value)
+            setattr(model, attr, new_value)
         except (AttributeError, TypeError, ValueError):
             return False
     return True
