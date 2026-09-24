@@ -399,24 +399,25 @@ async def migrate_orphaned_mcp_servers_config(
         return True
 
 
-async def _rows_owned_by(session: AsyncSession, user_id) -> dict[str, int]:
-    """How many rows each table holds for this user, across every table that references ``user.id``."""
-    from sqlalchemy import func
+async def _first_table_owned_by(session: AsyncSession, user_id) -> str | None:
+    """The first table holding a row for this user, across every table that references ``user.id``.
+
+    Runs at every startup and shutdown, so it stops at the first hit instead of counting.
+    """
     from sqlmodel import SQLModel
 
     import langflow.services.database.models  # noqa: F401 - importing registers every table on the metadata
 
-    owned: dict[str, int] = {}
     for table in SQLModel.metadata.sorted_tables:
         for foreign_key in table.foreign_keys:
             if foreign_key.column.table.name != "user" or foreign_key.column.name != "id":
                 continue
-            count = (
-                await session.exec(select(func.count()).select_from(table).where(foreign_key.parent == user_id))
-            ).one()
-            if count:
-                owned[table.name] = owned.get(table.name, 0) + count
-    return owned
+            hit = (
+                await session.exec(select(1).select_from(table).where(foreign_key.parent == user_id).limit(1))
+            ).first()
+            if hit is not None:
+                return table.name
+    return None
 
 
 async def teardown_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
@@ -429,9 +430,12 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
 
     - it owns nothing: delete it, as before;
     - the configured superuser is this same account: keep it, with the configured password;
-    - otherwise: keep it and its data, and replace an empty or legacy default password with a
-      random one. Another superuser can set a new one from the Admin page, and that password
-      is kept on later restarts.
+    - otherwise: keep its data, and while its password is still empty or the legacy default,
+      replace the password with a random one and deactivate the account. Anyone could act as
+      this account while AUTO_LOGIN was on, so the API keys and tokens it holds must stop
+      working too, and they check ``is_active``, not the password. Another superuser can
+      reactivate it and set a password from the Admin page; neither is undone on later
+      restarts, because the password is no longer a default.
 
     An account that has signed in (``last_login_at`` set) is left alone.
     """
@@ -444,8 +448,8 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
         if not user or user.is_superuser is not True or user.last_login_at:
             return
 
-        owned = await _rows_owned_by(session, user.id)
-        if not owned:
+        owned = await _first_table_owned_by(session, user.id)
+        if owned is None:
             await session.delete(user)
             await logger.adebug("Default superuser removed successfully.")
             return
@@ -460,7 +464,7 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
                 user.password = auth.get_password_hash(password)
                 session.add(user)
                 await logger.awarning(
-                    f"Kept the default superuser '{DEFAULT_SUPERUSER}', which owns {owned}, "
+                    f"Kept the default superuser '{DEFAULT_SUPERUSER}', which owns rows in '{owned}', "
                     "and set its password to the configured LANGFLOW_SUPERUSER_PASSWORD."
                 )
             return
@@ -473,11 +477,13 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
             await logger.adebug("Default superuser owns data and has a non-default password; left as is.")
             return
         user.password = auth.get_password_hash(token_urlsafe(32))
+        user.is_active = False
         session.add(user)
         await logger.awarning(
-            f"AUTO_LOGIN is off, so the default superuser '{DEFAULT_SUPERUSER}' can no longer sign in "
-            f"with its old password. It owns {owned}, so it was kept rather than deleted. Another "
-            f"superuser can set a new password for it from the Admin page or PATCH /api/v1/users/{user.id}."
+            f"AUTO_LOGIN is off, so the default superuser '{DEFAULT_SUPERUSER}' was deactivated: its "
+            f"password, API keys and tokens no longer work. It owns rows in '{owned}', so it was kept "
+            "rather than deleted. Another superuser can reactivate it and set a password from the Admin "
+            f"page or PATCH /api/v1/users/{user.id}."
         )
     except Exception as exc:
         await logger.aexception("Could not retire default superuser.")
