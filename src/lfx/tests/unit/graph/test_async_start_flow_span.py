@@ -203,8 +203,14 @@ def test_a_caller_opened_span_parents_what_the_run_does():
     result = run_probe("caller_opens")
 
     flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
+    graph_spans = [s for s in result["spans"] if s["name"] == "langflow.graph.execute"]
+    vertex_spans = [s for s in result["spans"] if s["name"] == "langflow.vertex.execute"]
     assert len(flow_spans) == 1, "the caller's span should be the only flow span"
-    assert result["inner_parent"] == flow_spans[0]["span_id"]
+    assert len(graph_spans) == 1
+    assert graph_spans[0]["parent"] == flow_spans[0]["span_id"]
+    assert result["inner_parent"] == graph_spans[0]["span_id"]
+    assert vertex_spans
+    assert all(span["parent"] == graph_spans[0]["span_id"] for span in vertex_spans)
 
 
 def test_async_start_still_opens_its_own_span_when_the_caller_does_not():
@@ -216,7 +222,10 @@ def test_async_start_still_opens_its_own_span_when_the_caller_does_not():
     result = run_probe("async_start_opens")
 
     flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
+    graph_spans = [s for s in result["spans"] if s["name"] == "langflow.graph.execute"]
     assert len(flow_spans) == 1
+    assert len(graph_spans) == 1
+    assert graph_spans[0]["parent"] == flow_spans[0]["span_id"]
     assert result["inner_parent"] != flow_spans[0]["span_id"]
 
 
@@ -240,13 +249,16 @@ def test_the_sync_start_runs_under_the_caller_span():
     result = run_probe("sync_start_under_a_caller_span")
 
     flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
+    graph_spans = [s for s in result["spans"] if s["name"] == "langflow.graph.execute"]
     assert len(flow_spans) == 1, result["spans"]
+    assert len(graph_spans) == 1, result["spans"]
     assert result["caller_trace"], "the probe did not record a caller span"
 
     assert flow_spans[0]["trace_id"] == result["caller_trace"], (
         f"flow span is in trace {flow_spans[0]['trace_id']:032x}, caller is in {result['caller_trace']:032x}"
     )
     assert flow_spans[0]["parent"] == result["caller_span"]
+    assert graph_spans[0]["parent"] == flow_spans[0]["span_id"]
 
 
 @pytest.mark.parametrize(
@@ -274,6 +286,10 @@ def test_a_failing_sync_run_reaches_the_caller_and_the_span(mode: str, expected_
     assert result["raised"] == expected_raised, result
 
     flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
+    graph_spans = [s for s in result["spans"] if s["name"] == "langflow.graph.execute"]
     assert len(flow_spans) == 1, result["spans"]
+    assert len(graph_spans) == 1, result["spans"]
     assert flow_spans[0]["status"] == "error", flow_spans[0]
     assert flow_spans[0]["error_type"] == expected_error_type, flow_spans[0]
+    assert graph_spans[0]["status"] == "error", graph_spans[0]
+    assert graph_spans[0]["error_type"] == expected_error_type, graph_spans[0]

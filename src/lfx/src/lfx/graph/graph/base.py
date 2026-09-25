@@ -42,6 +42,7 @@ from lfx.log.logger import LogConfig, configure, logger
 from lfx.observability import (
     APPLICATION_TRACER_NAME,
     _root_error_type,
+    application_span,
     get_execution_client,
     get_execution_protocol,
     get_queued_trace_link,
@@ -63,6 +64,7 @@ except ImportError:
     OtelContext = None
 
 FLOW_EXECUTION_SPAN_NAME = "flow.execute"
+GRAPH_EXECUTION_SPAN_NAME = "langflow.graph.execute"
 
 
 class FlowSpanScope:
@@ -1027,6 +1029,12 @@ class Graph:
             )
         else:
             span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
+        graph_span = tracer.start_span(
+            GRAPH_EXECUTION_SPAN_NAME,
+            context=otel_trace.set_span_in_context(span),
+        )
+        span.set_attribute("langflow.phase", "flow.execute")
+        graph_span.set_attribute("langflow.phase", "graph.execute")
         status = "ok"
         try:
             with contextlib.ExitStack() as stack:
@@ -1037,6 +1045,11 @@ class Graph:
                     stack.enter_context(
                         otel_trace.use_span(
                             span, end_on_exit=False, record_exception=False, set_status_on_exception=False
+                        )
+                    )
+                    stack.enter_context(
+                        otel_trace.use_span(
+                            graph_span, end_on_exit=False, record_exception=False, set_status_on_exception=False
                         )
                     )
                 yield scope
@@ -1061,31 +1074,35 @@ class Graph:
         except Exception as exc:
             status = "error"
             error_type = _root_error_type(exc)
-            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, error_type))
-            span.set_attribute("error.type", error_type)
+            for current_span in (span, graph_span):
+                current_span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, error_type))
+                current_span.set_attribute("error.type", error_type)
+                current_span.add_event("exception", {"exception.type": error_type})
             raise
         finally:
-            if self.flow_id:
-                span.set_attribute("flow_id", str(self.flow_id))
-            if self._run_id:
-                span.set_attribute("run_id", self._run_id)
-            if self.session_id:
-                span.set_attribute("session_id", str(self.session_id))
-            # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
-            # gap the operator can see, an "unknown" value looks like a protocol we support.
-            if (protocol := get_execution_protocol()) is not None:
-                span.set_attribute("protocol", protocol)
-            # Absent when the caller did not identify itself, same rule as protocol: a missing
-            # attribute is "nobody said", which an operator can see and act on.
-            if (client := get_execution_client()) is not None:
-                span.set_attribute("client", client)
-            # A driver that swallowed its own component error exits this scope cleanly, so the
-            # only signal is what it recorded on the way out.
             if status == "ok" and scope.error_type is not None:
                 status = "error"
-                span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
-                span.set_attribute("error.type", scope.error_type)
-            span.set_attribute("status", status)
+                for current_span in (span, graph_span):
+                    current_span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
+                    current_span.set_attribute("error.type", scope.error_type)
+                    current_span.add_event("exception", {"exception.type": scope.error_type})
+            for current_span in (span, graph_span):
+                if self.flow_id:
+                    current_span.set_attribute("flow_id", str(self.flow_id))
+                if self._run_id:
+                    current_span.set_attribute("run_id", self._run_id)
+                if self.session_id:
+                    current_span.set_attribute("session_id", str(self.session_id))
+                # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
+                # gap the operator can see, an "unknown" value looks like a protocol we support.
+                if (protocol := get_execution_protocol()) is not None:
+                    current_span.set_attribute("protocol", protocol)
+                # Absent when the caller did not identify itself, same rule as protocol: a missing
+                # attribute is "nobody said", which an operator can see and act on.
+                if (client := get_execution_client()) is not None:
+                    current_span.set_attribute("client", client)
+                current_span.set_attribute("status", status)
+            graph_span.end()
             span.end()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
@@ -1792,6 +1809,40 @@ class Graph:
         instantiate_components: bool = True,
         emit_extension_events: bool = True,
     ) -> Graph:
+        """Create a graph while exposing payload parsing as a distinct phase."""
+        with application_span(
+            "langflow.flow.load",
+            {
+                "langflow.phase": "flow.load",
+                "langflow.flow.load.source": "payload",
+                "langflow.flow.instantiate_components": instantiate_components,
+            },
+        ) as span:
+            graph = cls._from_payload(
+                payload,
+                flow_id=flow_id,
+                flow_name=flow_name,
+                user_id=user_id,
+                context=context,
+                instantiate_components=instantiate_components,
+                emit_extension_events=emit_extension_events,
+            )
+            span.set_attribute("langflow.graph.vertex_count", len(graph.vertices))
+            span.set_attribute("langflow.graph.edge_count", len(graph.edges))
+            return graph
+
+    @classmethod
+    def _from_payload(
+        cls,
+        payload: dict,
+        flow_id: str | None = None,
+        flow_name: str | None = None,
+        user_id: str | None = None,
+        context: dict | None = None,
+        *,
+        instantiate_components: bool = True,
+        emit_extension_events: bool = True,
+    ) -> Graph:
         """Creates a graph from a payload.
 
         Args:
@@ -2312,6 +2363,38 @@ class Graph:
         return vertex_id
 
     async def build_vertex(
+        self,
+        vertex_id: str,
+        *,
+        get_cache: GetCache | None = None,
+        set_cache: SetCache | None = None,
+        inputs_dict: dict[str, str] | None = None,
+        files: list[str] | None = None,
+        user_id: str | None = None,
+        fallback_to_env_vars: bool = False,
+        event_manager: EventManager | None = None,
+    ) -> VertexBuildResult:
+        """Build one vertex under a low-cardinality application span."""
+        vertex = self.get_vertex(vertex_id)
+        attributes = {
+            "langflow.phase": "vertex.execute",
+            "langflow.component.type": str(vertex.vertex_type),
+            "langflow.vertex.kind": type(vertex).__name__,
+            "langflow.vertex.is_loop": bool(vertex.is_loop),
+        }
+        with application_span("langflow.vertex.execute", attributes):
+            return await self._build_vertex(
+                vertex_id,
+                get_cache=get_cache,
+                set_cache=set_cache,
+                inputs_dict=inputs_dict,
+                files=files,
+                user_id=user_id,
+                fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
+            )
+
+    async def _build_vertex(
         self,
         vertex_id: str,
         *,

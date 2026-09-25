@@ -29,6 +29,8 @@ from uuid import uuid4
 
 from filelock import FileLock, Timeout
 from lfx.log.logger import logger
+from lfx.observability import application_span
+from opentelemetry.trace import SpanKind
 
 from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
@@ -284,6 +286,23 @@ class BackgroundExecutionService(Service):
         return cancelled
 
     async def submit(
+        self, *, flow_id: UUID, request: dict[str, Any], user: UserRead, job_id: UUID | None = None
+    ) -> UUID:
+        """Publish a workflow job with producer semantics and a durable trace carrier."""
+        job_id = job_id or uuid4()
+        attributes = {
+            "messaging.system": "langflow",
+            "messaging.destination.name": "workflow.jobs",
+            "messaging.operation.type": "send",
+            "langflow.phase": "job.enqueue",
+            "langflow.job.id": str(job_id),
+            "langflow.job.type": "workflow",
+            "langflow.job.backend": "scaled" if self._scaled else "in_process",
+        }
+        with application_span("langflow.job.enqueue", attributes, kind=SpanKind.PRODUCER):
+            return await self._submit(flow_id=flow_id, request=request, user=user, job_id=job_id)
+
+    async def _submit(
         self, *, flow_id: UUID, request: dict[str, Any], user: UserRead, job_id: UUID | None = None
     ) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app

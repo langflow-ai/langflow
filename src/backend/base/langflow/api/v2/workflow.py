@@ -36,6 +36,7 @@ from fastapi.responses import EventSourceResponse, StreamingResponse
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.log.logger import logger
 from lfx.memory.flow_context import derive_message_owner_uuid
+from lfx.observability import detached_application_span
 from lfx.schema.workflow import (
     WORKFLOW_STATUS_RESPONSES,
     JobId,
@@ -1321,7 +1322,28 @@ async def reattach_workflow_events(
     if job is None or not _caller_owns_job_end_user(job, http_request, current_user):
         raise _not_found()
 
+    async def _event_frames():
+        with detached_application_span(
+            "langflow.stream.send",
+            {
+                "protocol": "v2.background",
+                "langflow.phase": "stream.send",
+                "langflow.stream.protocol": service._job_protocol(job),  # noqa: SLF001
+                "langflow.stream.kind": "reattach",
+            },
+        ) as span:
+            frame_count = 0
+            byte_count = 0
+            try:
+                async for frame in service.events(UUID(job_id), last_event_id=last_event_id, user=current_user):
+                    frame_count += 1
+                    byte_count += len(frame)
+                    yield frame
+            finally:
+                span.set_attribute("langflow.stream.frame_count", frame_count)
+                span.set_attribute("langflow.stream.byte_count", byte_count)
+
     return EventSourceResponse(
-        service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),
+        _event_frames(),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

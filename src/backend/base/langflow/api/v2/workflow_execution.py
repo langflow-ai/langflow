@@ -36,7 +36,14 @@ from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from lfx.observability import execution_protocol, extract_trace_link, queued_trace_link, tracing_is_available
+from lfx.observability import (
+    application_span,
+    detached_application_span,
+    execution_protocol,
+    extract_trace_link,
+    queued_trace_link,
+    tracing_is_available,
+)
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
@@ -562,23 +569,40 @@ def _execute_streaming_workflow(
     """
 
     async def _frames_only() -> AsyncIterator[bytes]:
-        async for frame, _event_type in _stream_event_frames(
-            adapter=adapter,
-            flow_id=flow.id,
-            flow_name=flow.name,
-            background_tasks=background_tasks,
-            parsed=parsed,
-            current_user=current_user,
-            provider_policy_flow=flow,
-            source_flow_owner_id=flow.user_id,
-            run_id=run_id,
-            # The live v2 stream. Which client sent it is a separate attribute, read from the
-            # X-Langflow-Client header, because the playground calls this same public endpoint.
-            protocol="v2",
-            execution_family=FAMILY_WORKFLOW_V2,
-            expose_error_details=caller_owns_flow(flow, current_user),
-        ):
-            yield frame
+        with detached_application_span(
+            "langflow.stream.send",
+            {
+                "protocol": "v2",
+                "langflow.phase": "stream.send",
+                "langflow.stream.protocol": adapter.name,
+                "langflow.stream.kind": "live",
+            },
+        ) as span:
+            frame_count = 0
+            byte_count = 0
+            try:
+                async for frame, _event_type in _stream_event_frames(
+                    adapter=adapter,
+                    flow_id=flow.id,
+                    flow_name=flow.name,
+                    background_tasks=background_tasks,
+                    parsed=parsed,
+                    current_user=current_user,
+                    provider_policy_flow=flow,
+                    source_flow_owner_id=flow.user_id,
+                    run_id=run_id,
+                    # The live v2 stream. Which client sent it is a separate attribute, read from the
+                    # X-Langflow-Client header, because the playground calls this same public endpoint.
+                    protocol="v2",
+                    execution_family=FAMILY_WORKFLOW_V2,
+                    expose_error_details=caller_owns_flow(flow, current_user),
+                ):
+                    frame_count += 1
+                    byte_count += len(frame)
+                    yield frame
+            finally:
+                span.set_attribute("langflow.stream.frame_count", frame_count)
+                span.set_attribute("langflow.stream.byte_count", byte_count)
 
     return EventSourceResponse(
         _frames_only(),
@@ -896,15 +920,19 @@ async def execute_sync_workflow(
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
         # Convert to WorkflowExecutionResponse
-        workflow_response = run_response_to_workflow_response(
-            run_response=run_response,
-            flow_id=parsed.flow_id,
-            job_id=str(job_id),
-            inputs=parsed.tweaks,
-            graph=graph,
-            effective_globals=request_variables,
-            selected_ids=parsed.output_ids,
-        )
+        with application_span(
+            "langflow.response.serialize",
+            {"protocol": "v2", "langflow.phase": "response.serialize", "langflow.response.mode": "sync"},
+        ):
+            workflow_response = run_response_to_workflow_response(
+                run_response=run_response,
+                flow_id=parsed.flow_id,
+                job_id=str(job_id),
+                inputs=parsed.tweaks,
+                graph=graph,
+                effective_globals=request_variables,
+                selected_ids=parsed.output_ids,
+            )
         if warnings:
             workflow_response.warnings = warnings
         # Optionally cache the completed run's outputs + request to the job row so a

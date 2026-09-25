@@ -86,6 +86,9 @@ async def main():
         tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
         with tracer.start_as_current_span("probe.control") as span:
             span.record_exception(RuntimeError("$EXC_MESSAGE"))
+    elif MODE == "load":
+        graph = build()
+        Graph.from_payload(graph.dump()["data"])
     else:
         graph = build()
         # arun, not async_start: async_start opens the span with make_current=False because it
@@ -141,11 +144,22 @@ def application_spans(spans: list[dict]) -> list[dict]:
     return [s for s in spans if s["scope"] == "langflow.observability"]
 
 
-def test_a_successful_run_is_one_flow_span_and_no_component_spans():
-    """The unit of work is the run. A per-component span would also carry component payloads."""
+def test_a_successful_run_has_flow_graph_and_payload_free_vertex_spans():
+    """Execution phases are visible without exporting component payloads."""
     spans = application_spans(run_probe("success"))
 
-    assert [s["name"] for s in spans] == ["flow.execute"], [s["name"] for s in spans]
+    names = [s["name"] for s in spans]
+    assert names.count("flow.execute") == 1, names
+    assert names.count("langflow.graph.execute") == 1, names
+    assert names.count("langflow.vertex.execute") == 3, names
+    graph_span = next(span for span in spans if span["name"] == "langflow.graph.execute")
+    vertex_spans = [span for span in spans if span["name"] == "langflow.vertex.execute"]
+    assert graph_span["attributes"]["langflow.phase"] == "graph.execute"
+    assert {span["attributes"]["langflow.component.type"] for span in vertex_spans} == {
+        "ChatInput",
+        "ChatOutput",
+        "Passthrough",
+    }
 
 
 def test_the_prompt_reaches_neither_an_attribute_nor_an_event():
@@ -158,6 +172,17 @@ def test_the_prompt_reaches_neither_an_attribute_nor_an_event():
     assert [s for s in application_spans(spans) if s["name"] == "flow.execute"], spans
 
     assert PROMPT not in json.dumps(spans)
+
+
+def test_flow_load_records_shape_but_not_payload():
+    spans = application_spans(run_probe("load"))
+    load_spans = [span for span in spans if span["name"] == "langflow.flow.load"]
+
+    assert len(load_spans) == 1, spans
+    assert load_spans[0]["attributes"]["langflow.phase"] == "flow.load"
+    assert load_spans[0]["attributes"]["langflow.graph.vertex_count"] == "3"
+    assert load_spans[0]["attributes"]["langflow.graph.edge_count"] == "2"
+    assert PROMPT not in json.dumps(load_spans)
 
 
 def test_a_failing_component_puts_its_message_in_no_event():
@@ -178,7 +203,7 @@ def test_a_failing_component_puts_its_message_in_no_event():
     # either message.
     assert flow_spans[0]["attributes"].get("error.type") == "RuntimeError"
 
-    assert flow_spans[0]["events"] == [], flow_spans[0]["events"]
+    assert flow_spans[0]["events"] == [{"name": "exception", "attributes": {"exception.type": "RuntimeError"}}]
     assert EXC_MESSAGE not in json.dumps(spans)
 
 
