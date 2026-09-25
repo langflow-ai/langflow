@@ -56,7 +56,7 @@ Connector SSRF validation now checks database and vector-store bootstrap targets
 
 With local file access restricted (the default), existing `mysql+mysqlconnector://` URLs now need `allow_local_infile=false`, and `mariadb+mariadbconnector://` URLs need `local_infile=false`. Add these to each URL's query string before upgrading. The [local file access setting](/api-keys-and-authentication) explains the trusted single-tenant opt-out.
 
-Database URLs that refer to local TLS certificate or key files, including PostgreSQL `sslrootcert`, `sslcert`, and `sslkey` parameters, are also blocked when local file access is restricted. Administrators using file-based TLS credentials should review affected flows before upgrading. A [directory-scoped exception for administrator-provided files](https://github.com/langflow-ai/langflow/issues/15402) is planned; until then, these URLs require a trusted single-tenant deployment with `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false`.
+Database URLs that refer to local TLS certificate or key files, including PostgreSQL `sslrootcert`, `sslcert`, and `sslkey` parameters, are blocked when local file access is restricted unless an administrator configures `LANGFLOW_DATABASE_TLS_FILES_DIR` with the needed files. Administrators using file-based TLS credentials should stage approved files in that directory before upgrading. See [component hardening](/api-keys-and-authentication#multi-tenant-component-hardening) for the supported URL options and directory requirements.
 
 ### Breaking changes
 

@@ -22,6 +22,7 @@ import functools
 import ipaddress
 import re
 import socket
+from pathlib import Path
 from urllib.parse import urlparse
 
 from sqlalchemy.engine import make_url
@@ -685,6 +686,48 @@ _DATABASE_LOCAL_FILE_QUERY_KEYS = frozenset(
 
 _MYSQL_LOCAL_INFILE_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
+_POSTGRES_TLS_FILE_QUERY_KEYS = frozenset({"sslrootcert", "sslcert", "sslkey"})
+_MYSQL_TLS_FILE_QUERY_KEYS = frozenset({"ssl_ca", "ssl_cert", "ssl_key"})
+
+
+def _database_tls_file_keys(dialect: str, driver: str) -> frozenset[str]:
+    """Return only DBAPI options known to read TLS files from the filesystem."""
+    if dialect == "postgresql" and driver in {"", "psycopg", "psycopg2"}:
+        return _POSTGRES_TLS_FILE_QUERY_KEYS
+    if dialect in {"mysql", "mariadb"} and driver in {"", "mysqldb", "pymysql", "mysqlconnector", "mariadbconnector"}:
+        return _MYSQL_TLS_FILE_QUERY_KEYS
+    return frozenset()
+
+
+def _database_tls_files_root() -> Path | None:
+    """Resolve the operator's TLS directory, failing closed for invalid settings."""
+    try:
+        configured = get_settings_service().settings.database_tls_files_dir
+        if configured is None:
+            return None
+        path = Path(configured)
+        if not path.is_absolute() or str(path).startswith("//") or str(path).startswith("\\\\"):
+            return None
+        root = path.resolve(strict=True)
+        return root if root.is_dir() and root != Path(root.anchor) else None
+    except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
+        return None
+
+
+def _is_admin_database_tls_file(value: str, root: Path | None) -> bool:
+    """Check the resolved target so traversal and symlink escapes are refused."""
+    if root is None or value.startswith(("//", "\\\\")):
+        return False
+    try:
+        path = Path(value)
+        if not path.is_absolute():
+            return False
+        target = path.resolve(strict=True)
+        return target.is_relative_to(root) and target.is_file()
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return False
+
+
 # ODBC drivers accept extensible connection-string attributes. Once either SSRF
 # or local-file policy is active, pass through only documented non-target,
 # non-file options; unknown attributes may be aliases defined by another driver.
@@ -803,6 +846,15 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
     # the connection string, and ODBC drivers may define their own aliases.
     is_odbc = "odbc" in driver or dialect.endswith("odbc") or (dialect == "mssql" and not driver)
 
+    tls_file_keys = _database_tls_file_keys(dialect, driver) if file_restricted and not is_odbc else frozenset()
+    for tls_key in tls_file_keys:
+        if sum(key.casefold() == tls_key for key, _value in query_items) > 1:
+            msg = f"Database URL has duplicate TLS file option {tls_key}."
+            raise SSRFProtectionError(msg)
+    tls_files_root = (
+        _database_tls_files_root() if any(key.casefold() in tls_file_keys for key, _value in query_items) else None
+    )
+
     local_file_options = sorted(
         {
             key.casefold()
@@ -818,6 +870,7 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
                 )
                 and value.casefold() in _MYSQL_LOCAL_INFILE_FALSE_VALUES
             )
+            and not (key.casefold() in tls_file_keys and _is_admin_database_tls_file(value, tls_files_root))
         }
     )
     if file_restricted and local_file_options:
