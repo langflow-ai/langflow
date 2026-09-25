@@ -200,5 +200,6 @@ def test_trigger_connection_fields_accept_either_transport(manifest: Integration
         assert connection.provider == "slack"
         assert connection.auth_profile_id == ""
         assert connection.required_scopes == []
+        assert connection.ownership_mode == "user"
         assert set(connection.capabilities) == set(component_class.capability_ids)
         assert {c.component_ref for c in manifest.capabilities if c.id in component_class.capability_ids} == {name}

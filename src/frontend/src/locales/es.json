@@ -2473,6 +2473,8 @@
   "connections.picker.missingScopes": "Falta: {{scopes}}",
   "connections.picker.userRequired": "Se ejecuta como instancia, no como usuario",
   "connections.picker.instanceRequired": "Se ejecuta como usuario, no como instancia",
+  "connections.picker.userOwnedRequired": "No pertenece al propietario del flujo",
+  "connections.picker.instanceOwnedRequired": "No es una conexión de instancia",
   "connections.picker.loadFailed": "No se pudieron cargar las conexiones.",
   "connections.account.bot": "Bot",
   "connections.account.notSignedIn": "Sin iniciar sesión todavía",

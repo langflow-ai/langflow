@@ -2473,6 +2473,8 @@
   "connections.picker.missingScopes": "Fehlend: {{scopes}}",
   "connections.picker.userRequired": "Wird als Instanz ausgeführt, nicht als Benutzer",
   "connections.picker.instanceRequired": "Wird als Benutzer ausgeführt, nicht als Instanz",
+  "connections.picker.userOwnedRequired": "Gehört nicht dem Flow-Eigentümer",
+  "connections.picker.instanceOwnedRequired": "Keine Instanzverbindung",
   "connections.picker.loadFailed": "Verbindungen konnten nicht geladen werden.",
   "connections.account.bot": "Bot",
   "connections.account.notSignedIn": "Noch nicht angemeldet",

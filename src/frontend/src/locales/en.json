@@ -2472,6 +2472,8 @@
   "connections.picker.missingScopes": "Missing {{scopes}}",
   "connections.picker.userRequired": "Runs as the instance, not a user",
   "connections.picker.instanceRequired": "Runs as a user, not the instance",
+  "connections.picker.userOwnedRequired": "Not owned by the flow owner",
+  "connections.picker.instanceOwnedRequired": "Not an instance connection",
   "connections.picker.loadFailed": "Could not load connections.",
   "connections.account.bot": "Bot",
   "connections.account.notSignedIn": "Not signed in yet",

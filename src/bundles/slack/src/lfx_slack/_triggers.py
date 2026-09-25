@@ -42,6 +42,8 @@ def trigger_connection_input(*, capabilities: tuple[str, ...]) -> ConnectionRefI
         required_scopes=[],
         # The picker's vocabulary, which maps bot identities to "instance".
         identity_kind="instance",
+        # Trigger arming requires a connection owned by the flow owner.
+        ownership_mode="user",
         capabilities=list(capabilities),
         required=False,
         info=(

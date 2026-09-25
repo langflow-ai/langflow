@@ -2472,6 +2472,8 @@
   "connections.picker.missingScopes": "缺少 {{scopes}}",
   "connections.picker.userRequired": "以实例身份运行，而非用户身份",
   "connections.picker.instanceRequired": "以用户身份运行，而非实例身份",
+  "connections.picker.userOwnedRequired": "不属于流程所有者",
+  "connections.picker.instanceOwnedRequired": "不是实例连接",
   "connections.picker.loadFailed": "无法加载连接。",
   "connections.account.bot": "机器人",
   "connections.account.notSignedIn": "尚未登录",

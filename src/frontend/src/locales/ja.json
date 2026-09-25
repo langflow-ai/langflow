@@ -2473,6 +2473,8 @@
   "connections.picker.missingScopes": "不足: {{scopes}}",
   "connections.picker.userRequired": "ユーザーではなくインスタンスとして実行",
   "connections.picker.instanceRequired": "インスタンスではなくユーザーとして実行",
+  "connections.picker.userOwnedRequired": "フローの所有者が所有する接続ではありません",
+  "connections.picker.instanceOwnedRequired": "インスタンス接続ではありません",
   "connections.picker.loadFailed": "接続を読み込めませんでした。",
   "connections.account.bot": "ボット",
   "connections.account.notSignedIn": "未サインイン",
