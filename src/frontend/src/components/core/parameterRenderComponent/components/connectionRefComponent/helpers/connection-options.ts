@@ -11,10 +11,16 @@ export type ConnectionOption = {
   connection: ConnectionRead;
   /** Required scopes this connection has not been granted. */
   missingScopes: string[];
-  /** True when the connection is ready and covers every required scope. */
+  /** True when status, ownership, identity, and scopes meet this field's requirements. */
   usable: boolean;
   /** The view translates this reason using the connection and missing scopes. */
-  unusableReason?: "status" | "userRequired" | "instanceRequired" | "scopes";
+  unusableReason?:
+    | "status"
+    | "userRequired"
+    | "instanceRequired"
+    | "userOwnedRequired"
+    | "instanceOwnedRequired"
+    | "scopes";
 };
 
 /**
@@ -85,8 +91,22 @@ function unusableReason(
   connection: ConnectionRead,
   missingScopes: string[],
   identityKind: string | undefined,
+  ownershipMode: string | undefined,
+  ownerId: string | undefined,
 ): ConnectionOption["unusableReason"] {
   if (connection.status !== "ready") return "status";
+  if (
+    ownershipMode === "user" &&
+    (connection.ownership_mode !== "user" || connection.owner_id !== ownerId)
+  ) {
+    return "userOwnedRequired";
+  }
+  if (
+    ownershipMode === "instance" &&
+    connection.ownership_mode !== "instance"
+  ) {
+    return "instanceOwnedRequired";
+  }
   if (!identityMatches(connection, identityKind)) {
     return identityKind === "user" ? "userRequired" : "instanceRequired";
   }
@@ -104,11 +124,19 @@ export function buildConnectionOptions(
   connections: ConnectionRead[],
   requiredScopes: string[] = [],
   identityKind?: string,
+  ownershipMode?: string,
+  ownerId?: string,
 ): ConnectionOption[] {
   return connections
     .map((connection) => {
       const missingScopes = missingScopesFor(connection, requiredScopes);
-      const reason = unusableReason(connection, missingScopes, identityKind);
+      const reason = unusableReason(
+        connection,
+        missingScopes,
+        identityKind,
+        ownershipMode,
+        ownerId,
+      );
       return {
         handle: connectionHandle(connection),
         connection,

@@ -154,7 +154,7 @@ The `session_key` blocks the adapters read from:
 
 | Provider | Session key |
 |---|---|
-| Slack (both mechanisms) | `slack:{team_id}:{channel}:{thread_ts or ts}` |
+| Slack (both mechanisms) | `slack:{team_id}:{channel}:{thread_ts or ts}`, where `team_id` is the receiving installation's (`authorizations[0].team_id`), not the envelope's |
 | Microsoft Outlook | `microsoft:outlook:{conversationId}` |
 | Microsoft calendar | `microsoft:calendar:{iCalUId or seriesMasterId}` |
 | Microsoft files | `microsoft:files:{driveItem id}` |
@@ -173,8 +173,8 @@ Two new families join `scripts/ci/execution_principal_matrix.json`, using the sa
 
 | Family | Source | Executes as | Interactive | Notes |
 |---|---|---|---|---|
-| `trigger_push` | `api/v1/trigger_ingress.py` (TRG-4); `api/v1/triggers.py` until it exists | `flow_owner` | no | provider-signed edge; the request never executes a flow |
-| `trigger_listener` | `services/triggers/dispatcher.py` and the listener adapters | `flow_owner` | no | also the only principal allowed to resolve the Slack app-level token |
+| `trigger_push` | `api/v1/trigger_ingress.py` (TRG-4, and TRG-5's per-app Slack route) | `flow_owner` | no | provider-signed edge; the request never executes a flow. The dispatcher stamps this family on any run whose trigger's mechanism is pushed (`principal.family_for`) |
+| `trigger_listener` | `services/triggers/dispatcher.py` and the listener adapters | `flow_owner` | no | every other trigger run (listener sources, schedules) |
 
 The dispatcher stamps `ExecutionPrincipal(kind="flow_owner", interactive=False, family=...)` with actor
 `trigger_dispatcher` on every submitted run, through its own frame source, so the warm-graph path cannot substitute a
@@ -210,7 +210,7 @@ authenticated by the provider's own signature or token, and audited on every rej
 | The INT-2 resolver is callable from a non-API process | INT-2 | required by `decisions/process-model.md`; the listener resolves through the registered `BaseConnectionResolverService` |
 | INT-5 single-flight refresh coordinates across processes | INT-5 | required: the listener process refreshes the same connection the API might |
 | Non-interactive rules apply to trigger families verbatim | INT-6 | this record adds two families, it does not weaken the rule |
-| The Slack app-level token is a third named profile (`slack-app-token`, kind `api_key`, identity `bot`, manual entry) resolvable only by `trigger_listener` principals | INT-5 + TRG-5 | new; the only credential-model change triggers ask for |
+| The Slack app-level token is a third named profile (`slack-app-token`, kind `api_key`, identity `bot`, manual entry) resolvable only inside the listener process | INT-5 + TRG-5 | delivered by TRG-5: marked server-side with its `connections:write` scope and refused outside the listener process with `connection-not-authorized` (`listener-only`). A principal family cannot enforce it, because a dispatched run carries a trigger family too |
 | A revoked connection cascades to its triggers and their provider subscriptions | INT-4 + TRG-4 | on-revoke hook registry in the connection service; triggers move to `needs_reconnect` |
 
 Triggers own no credential storage of their own. Everything a listener or a renewal job needs is resolved through the

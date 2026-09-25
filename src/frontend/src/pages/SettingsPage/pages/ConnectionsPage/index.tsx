@@ -308,6 +308,7 @@ export default function ConnectionsPage() {
           providers={integrationsQuery.data?.providers ?? []}
           canCreateInstance={isSuperuser}
           reauthorize={reauthorizing}
+          deploymentContext={integrationsQuery.data?.deployment_context}
         />
       )}
     </div>

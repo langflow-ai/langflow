@@ -56,7 +56,7 @@
       "title": "Slack: Event types reference",
       "kind": "provider_docs",
       "verified_on": "2026-09-05",
-      "notes": "message.channels, message.groups, message.im and message.mpim require the matching *:history scope; reaction_added requires reactions:read; app_mention requires app_mentions:read. Message events carry channel, ts, and thread_ts when the message is a threaded reply; subtype distinguishes edits (message_changed), deletions (message_deleted) and bot posts, and bot_id is set on messages posted by an app."
+      "notes": "message.channels, message.groups, message.im and message.mpim require the matching *:history scope; reaction_added and reaction_removed require reactions:read; app_mention requires app_mentions:read. Message events carry channel, ts, and thread_ts when the message is a threaded reply; subtype distinguishes edits (message_changed), deletions (message_deleted) and bot posts, and bot_id is set on messages posted by an app."
     },
     "slack-rate-limits": {
       "url": "https://docs.slack.dev/apis/web-api/rate-limits",
@@ -64,6 +64,13 @@
       "kind": "provider_docs",
       "verified_on": "2026-09-05",
       "notes": "Web API tiers 1 to 4 plus special tiers, applied per method per workspace per app; 429 responses carry Retry-After in seconds. These govern the calls a triggered flow makes back into Slack, not the inbound event stream."
+    },
+    "slack-enterprise-orgs": {
+      "url": "https://docs.slack.dev/enterprise/developing-for-enterprise-orgs/",
+      "title": "Slack: Developing apps for Enterprise orgs",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-23",
+      "notes": "In a channel shared between workspaces, the outer team_id of an event is the team through which the event is seen and can vary between events of one conversation. The Events API sends a single event for a shared-channel message however many of the workspaces have the app installed; its authorizations name one installation."
     },
     "slack-rtm": {
       "url": "https://docs.slack.dev/legacy/legacy-rtm-api/",
@@ -95,6 +102,7 @@
         "message.im",
         "message.mpim",
         "reaction_added",
+        "reaction_removed",
         "app_mention"
       ],
       "required_scopes": [
@@ -140,12 +148,12 @@
       "dedupe_key": {
         "field": "event_id",
         "stability": "stable_across_retries",
-        "details": "event_id is constant across the three retries and across a Socket Mode redelivery of the same event, so it is the dedupe key for both Slack mechanisms. X-Slack-Retry-Num and the Socket Mode envelope_id change per delivery and are recorded as delivery metadata only.",
+        "details": "event_id is constant across the three retries and across a Socket Mode redelivery of the same event, so it is the dedupe key for both Slack mechanisms: both producers write the ledger key slack:{event_id}. X-Slack-Retry-Num and X-Slack-Retry-Reason are recorded in the ingress audit row and the Socket Mode envelope_id and retry_attempt in the listener log; none of them reaches the flow-facing payload, which must be identical on both mechanisms.",
         "source": "slack-events-api"
       },
       "session_key": {
-        "details": "slack:{team_id}:{channel}:{thread_ts or ts} - a threaded reply reuses the parent's session, a new top-level message starts one, and a reaction uses the reacted-to message's thread_ts or ts.",
-        "source": "slack-events-reference"
+        "details": "slack:{team_id}:{channel}:{thread_ts or ts} - a threaded reply reuses the parent's session and a new top-level message starts one. team_id is the receiving installation's (authorizations[0].team_id, falling back to the envelope team_id when a body has none): in a shared channel the envelope team_id follows whoever posted, so keying on it would split one thread into a session per workspace. A reaction uses the reacted-to message's own ts: reaction events do not carry that message's thread_ts, and ingress performs no fetch-back to learn it, so a reaction on a threaded reply correlates with the reply rather than with its thread.",
+        "source": "slack-enterprise-orgs"
       },
       "open_questions": [
         "Re-verify the published per-workspace hourly event ceiling against the Slack docs before GA; the number gates how many workspaces one hosted app registration can serve."
@@ -169,6 +177,7 @@
         "message.im",
         "message.mpim",
         "reaction_added",
+        "reaction_removed",
         "app_mention"
       ],
       "required_scopes": [
@@ -219,10 +228,10 @@
         "source": "slack-socket-mode"
       },
       "session_key": {
-        "details": "Identical to the Events API: slack:{team_id}:{channel}:{thread_ts or ts}.",
+        "details": "Identical to the Events API: slack:{team_id}:{channel}:{thread_ts or ts}, with team_id the receiving installation's. If the app is installed on both sides of a shared channel, Slack names one installation per event; which one is not documented to be stable, so that case alone may split a thread.",
         "source": "slack-events-reference"
       },
-      "notes": "Not available on hosted: a Socket Mode app cannot be distributed through the Slack Marketplace, and hosted Langflow serves every tenant from one distributed registration. On Desktop it requires a customer-owned Slack app and two manually entered tokens (the bot token and the app-level token)."
+      "notes": "Not available on hosted: a Socket Mode app cannot be distributed through the Slack Marketplace, and hosted Langflow serves every tenant from one distributed registration. On Desktop it requires a customer-owned Slack app and its app-level token, entered manually; a flow that also replies needs the bot token entered the same way, as a second connection. Slack spreads an app's events across all of its open sockets, so the adapter writes each event for every armed Socket Mode trigger of that app (by the app_id each socket's hello reports), whichever socket received it. An app-level token is not workspace-scoped, so unlike an Events API trigger (scoped to its installation's workspace) a Socket Mode trigger hears every workspace the app is installed in; the token holder can read all of them anyway."
     },
     {
       "mechanism_id": "slack.rtm_api",

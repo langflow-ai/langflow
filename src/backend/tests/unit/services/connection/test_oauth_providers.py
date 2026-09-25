@@ -349,7 +349,9 @@ def test_slack_bundle_manifest_pins_the_same_endpoints_as_the_broker():
         config(provider="slack", redirect_uri="http://localhost/api/v1/connections/oauth/slack/callback")
     )
 
-    profiles = {profile["id"]: profile for profile in manifest["auth_profiles"]}
+    # The app-level token profile is entered by hand and never goes through the
+    # broker, so it declares no OAuth endpoints to pin.
+    profiles = {profile["id"]: profile for profile in manifest["auth_profiles"] if profile["kind"] != "api_key"}
     assert set(profiles) == {"slack-user-oauth", "slack-bot-install"}
     for profile in profiles.values():
         assert profile["authorization_url"] == authorize

@@ -256,17 +256,18 @@
     {
       "family": "trigger_push",
       "authz_family": "triggers",
-      "source": "src/backend/base/langflow/api/v1/triggers.py",
+      "source": "src/backend/base/langflow/api/v1/trigger_ingress.py",
       "actor": "trigger_dispatcher",
       "execution_principal": "flow_owner",
       "dependency_principal": "flow_owner",
       "tweaks": "server_generated",
       "revoke": "new_only",
       "error_policy": "owner_debug_delegated_sanitized",
-      "exception": "a trigger has no caller: the run executes as the trigger owner, non-interactively, and the event payload is server-generated from the provider delivery or the owner's own test/replay. Provider-signed ingress routes arrive in TRG-4 and will move this source; the identity contract does not change.",
+      "exception": "a trigger has no caller: the run executes as the trigger owner, non-interactively, and the event payload is server-generated from the provider delivery or the owner's own test/replay. The provider-signed ingress routes (per-trigger and the per-app Slack Events API route) only write the ledger; the dispatcher runs the event and stamps this family for any trigger whose mechanism is pushed (principal.family_for).",
       "test_references": [
         "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_principal_is_the_flow_owner_and_never_anonymous",
-        "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_tweaks_are_server_generated_and_never_caller_supplied"
+        "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_tweaks_are_server_generated_and_never_caller_supplied",
+        "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_a_pushed_event_runs_as_trigger_push_and_a_listened_one_as_trigger_listener"
       ],
       "connection_resolution": "owner_non_interactive_opt_in",
       "connection_resolution_note": "The stored flow owner runs non-interactively, including durable worker replay and resume; user connections require allow_non_interactive and explicit shares are not admitted."

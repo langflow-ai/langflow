@@ -1,0 +1,33 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "channel": "C0SUPPORT1",
+    "channel_type": "channel",
+    "deleted_ts": "1700000180.000400",
+    "event_ts": "1700000700.001400",
+    "hidden": true,
+    "previous_message": {
+      "text": "Wrong channel, sorry",
+      "ts": "1700000180.000400",
+      "type": "message",
+      "user": "U0BOB00001"
+    },
+    "subtype": "message_deleted",
+    "ts": "1700000700.001400",
+    "type": "message"
+  },
+  "event_id": "Ev0DEL00001",
+  "event_time": 1700000700,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}
