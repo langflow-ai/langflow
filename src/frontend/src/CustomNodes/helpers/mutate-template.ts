@@ -95,7 +95,12 @@ const keepUserEdits = (
       baseline && fieldName in baseline
         ? baseline[fieldName]
         : requestedField.value;
-    if (!isEqual(currentField.value, appliedValue)) {
+    // An edit already present in the request is the value the backend was
+    // asked to recompute. Only a newer edit should override its response.
+    if (
+      !isEqual(currentField.value, appliedValue) &&
+      !isEqual(currentField.value, requestedField.value)
+    ) {
       incomingField.value = cloneDeep(currentField.value);
     }
   }

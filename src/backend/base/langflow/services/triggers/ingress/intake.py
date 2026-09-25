@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 from sqlmodel import col, select
 
-from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import (
     DEDUPE_KEY_MAX_LENGTH,
@@ -38,7 +37,6 @@ from langflow.services.triggers.constants import (
     KIND_INBOUND_WEBHOOK,
     PROVIDER_GOOGLE,
     PROVIDER_MICROSOFT,
-    PROVIDER_SLACK,
     PROVIDER_WEBHOOK,
 )
 from langflow.services.triggers.ingress.verifiers import IngressSecrets
@@ -56,12 +54,12 @@ if TYPE_CHECKING:
 #: at a surprising moment later.
 ACCEPTING_STATES = frozenset({TriggerState.ACTIVE.value, TriggerState.PENDING.value})
 
-#: Provider to the trigger ``kind`` prefix it may deliver for. A Slack-signed
+#: Provider to the trigger ``kind`` prefix it may deliver for. A Google-signed
 #: request must not be able to drive a trigger armed against Microsoft, even if
-#: it somehow guessed the public id.
+#: it somehow guessed the public id. Slack has no entry: its deliveries arrive
+#: on the per-app route (``providers/slack/ingress.py``), never by public id.
 _PROVIDER_KINDS = {
     PROVIDER_WEBHOOK: (KIND_INBOUND_WEBHOOK,),
-    PROVIDER_SLACK: ("slack.",),
     PROVIDER_MICROSOFT: ("microsoft.",),
     PROVIDER_GOOGLE: ("google.",),
 }
@@ -94,29 +92,6 @@ async def _webhook_secret(row: Trigger) -> str | None:
     except Exception:  # noqa: BLE001 - a secret encrypted under another key is simply unusable
         await logger.awarning("Trigger %s has an unreadable signing secret", row.id)
         return None
-
-
-async def _slack_signing_secret(session: AsyncSession, row: Trigger) -> str | None:
-    """The app-level signing secret of the registration behind the connection.
-
-    Slack signs with a secret that belongs to the app, not to the user who
-    installed it, so the path runs trigger -> connection -> OAuth row ->
-    registration rather than reading anything off the trigger itself.
-    """
-    if row.connection_id is None:
-        return None
-    statement = select(ConnectionOAuth).where(ConnectionOAuth.connection_id == row.connection_id)
-    oauth = (await session.exec(statement)).first()
-    if oauth is None:
-        return None
-    from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
-
-    try:
-        registration = get_oauth_settings().registration(oauth.registration_id)
-    except OAuthError:
-        return None
-    secret = registration.signing_secret
-    return secret.get_secret_value() if secret is not None else None
 
 
 async def _subscription_secrets(session: AsyncSession, row: Trigger) -> IngressSecrets:
@@ -163,8 +138,6 @@ async def resolve_target(session: AsyncSession, *, provider: str, public_id: str
 
     if provider == PROVIDER_WEBHOOK:
         secrets = IngressSecrets(signing_secret=await _webhook_secret(row))
-    elif provider == PROVIDER_SLACK:
-        secrets = IngressSecrets(signing_secret=await _slack_signing_secret(session, row))
     else:
         secrets = await _subscription_secrets(session, row)
 

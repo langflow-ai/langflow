@@ -51,6 +51,8 @@ _IDENTITY_LABEL = {USER_IDENTITY: "user", BOT_IDENTITY: "bot"}
 # enabled carries ``xoxe.`` in front of that (``xoxe.xoxb-``, ``xoxe.xoxp-``).
 _TOKEN_PREFIX = {USER_IDENTITY: "xoxp-", BOT_IDENTITY: "xoxb-"}
 _ROTATING_TOKEN_MARKER = "xoxe."  # noqa: S105 - Slack token type marker, not a credential
+#: App-level tokens open Socket Mode sockets for triggers and can call no action.
+_APP_TOKEN_PREFIX = "xapp-"  # noqa: S105 - Slack token type marker, not a credential
 
 _CACHE_KEY = "_slack_cached_payload"
 
@@ -75,6 +77,28 @@ class SlackIdentityMismatchError(ConnectionNotAuthorizedError):
         )
         self.expected = expected
         self.actual = actual
+
+
+class SlackAppLevelTokenError(ConnectionNotAuthorizedError):
+    """A Slack app-level token (``xapp-``) handed to an action.
+
+    An app-level token is recorded with the app's ``bot`` identity and carries
+    no ``xoxb-``/``xoxp-`` prefix, so the two checks below would let it through
+    on a bot action - and Slack would then reject every call it makes. Refused
+    by name instead, pointing at what the token is actually for.
+    """
+
+    def __init__(self, *, expected: str) -> None:
+        expected_label = _IDENTITY_LABEL.get(expected, expected)
+        IntegrationError.__init__(
+            self,
+            "This Slack connection holds an app-level token (xapp-), which only opens Socket Mode "
+            f"connections for Slack triggers; this action requires a {expected_label} token.",
+            hint=f"Use a Slack connection created with the {expected_label} authorization profile.",
+            provider=PROVIDER_ID,
+            http_status=403,
+        )
+        self.expected = expected
 
 
 class SlackIdentityUnverifiedError(ConnectionNotAuthorizedError):
@@ -179,10 +203,13 @@ def require_identity(credential: ResolvedCredential, *, expected: str) -> None:
     The recorded identity and the token prefix must each agree with the action
     when present, and at least one of them must be present.
     """
+    token = credential.access_token.get_secret_value()
+    if token.startswith(_APP_TOKEN_PREFIX):
+        raise SlackAppLevelTokenError(expected=expected)
     recorded = getattr(credential, "identity", None)
     if recorded is not None and recorded != expected:
         raise SlackIdentityMismatchError(expected=expected, actual=recorded)
-    proven = token_identity(credential.access_token.get_secret_value())
+    proven = token_identity(token)
     if proven is not None and proven != expected:
         raise SlackIdentityMismatchError(expected=expected, actual=proven)
     if recorded is None and proven is None:

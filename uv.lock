@@ -7845,6 +7845,7 @@ dependencies = [
     { name = "uncurl" },
     { name = "uvicorn" },
     { name = "validators" },
+    { name = "websockets" },
     { name = "wheel" },
 ]
 
@@ -8449,6 +8450,7 @@ requires-dist = [
     { name = "vlmrun", extras = ["all"], marker = "extra == 'vlmrun'", specifier = ">=0.2.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
     { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
+    { name = "websockets", specifier = ">=13.0,<16.0" },
     { name = "wheel", specifier = ">=0.46.2,<1.0.0" },
     { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
     { name = "wolframalpha", marker = "extra == 'wolframalpha'", specifier = "==5.1.3" },
@@ -10088,7 +10090,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-slack"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "src/bundles/slack" }
 dependencies = [
     { name = "aiohttp" },

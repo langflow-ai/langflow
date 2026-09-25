@@ -347,6 +347,7 @@ export function ParameterRenderComponent({
             inputValues={templateInputValues(nodeClass?.template)}
             capabilities={templateData?.capabilities ?? []}
             identityKind={templateData?.identity_kind}
+            ownershipMode={templateData?.ownership_mode}
           />
         );
       case "tab":

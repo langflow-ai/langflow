@@ -31595,7 +31595,8 @@
               ],
               "total_dependencies": 1
             },
-            "module": "lfx.components.triggers.inbound_webhook_trigger.InboundWebhookTriggerComponent"
+            "module": "lfx.components.triggers.inbound_webhook_trigger.InboundWebhookTriggerComponent",
+            "trigger_kind": "inbound_webhook"
           },
           "minimized": false,
           "output_types": [],
@@ -31749,7 +31750,8 @@
               ],
               "total_dependencies": 1
             },
-            "module": "lfx.components.triggers.schedule_trigger.ScheduleTriggerComponent"
+            "module": "lfx.components.triggers.schedule_trigger.ScheduleTriggerComponent",
+            "trigger_kind": "schedule"
           },
           "minimized": false,
           "output_types": [],
@@ -32363,6 +32365,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "a6c8b8de67ca5cff9963386d023cac9ce8cdee4868906c619eddbf4f3fd8a441",
+  "sha256": "fb1ae249ef11e157415f7625118a36560269491a11fe391297a46064392289d4",
   "version": "1.13.0"
 }

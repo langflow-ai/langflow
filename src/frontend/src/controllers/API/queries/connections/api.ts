@@ -127,7 +127,10 @@ export async function listIntegrations(options?: {
   const { data } = await api.get<IntegrationListRead>(
     suffix ? `${integrations()}?${suffix}` : integrations(),
   );
-  return { providers: asArray(data?.providers) };
+  return {
+    providers: asArray(data?.providers),
+    deployment_context: data?.deployment_context,
+  };
 }
 
 export async function getEffectiveIntegrationPolicy(): Promise<EffectiveIntegrationPolicyRead> {
