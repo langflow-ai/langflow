@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from enum import Enum
 from importlib import import_module
 from pathlib import Path
@@ -429,15 +430,17 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
     row cascades to every flow and project it owns. So:
 
     - it owns nothing: delete it, as before;
-    - the configured superuser is this same account: keep it, with the configured password;
-    - otherwise: keep its data, and while its password is still empty or the legacy default,
-      replace the password with a random one and deactivate the account. Anyone could act as
-      this account while AUTO_LOGIN was on, so the API keys and tokens it holds must stop
-      working too, and they check ``is_active``, not the password. Another superuser can
-      reactivate it and set a password from the Admin page; neither is undone on later
-      restarts, because the password is no longer a default.
+    - the configured superuser is this same account: claim it. Set the configured password,
+      reactivate it, and clear ``retired_at``;
+    - otherwise: retire it once. Deactivate it and record ``retired_at``. Anyone could act as
+      this account while AUTO_LOGIN was on, and its API keys and tokens check ``is_active``,
+      not the password, so deactivating is what stops them. A password that is still empty
+      or the legacy default is also replaced with a random one, since reactivating the account
+      would otherwise bring it back usable by anyone who knows the default.
 
-    An account that has signed in (``last_login_at`` set) is left alone.
+    A retired account is left alone on later restarts, so an admin who reactivates it or sets
+    its password from the Admin page is not undone. An account that has signed in
+    (``last_login_at`` set) is left alone.
     """
     if settings_service.auth_settings.AUTO_LOGIN:
         return
@@ -447,6 +450,9 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
         user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
         if not user or user.is_superuser is not True or user.last_login_at:
             return
+        claimed = settings_service.auth_settings.SUPERUSER == DEFAULT_SUPERUSER
+        if user.retired_at and not claimed:
+            return
 
         owned = await _first_table_owned_by(session, user.id)
         if owned is None:
@@ -455,13 +461,15 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
             return
 
         auth = get_auth_service()
-        if settings_service.auth_settings.SUPERUSER == DEFAULT_SUPERUSER:
+        if claimed:
             # The operator asked for this account. A random password here would lock out the
             # only superuser. The password is scrubbed from settings after startup, so at
             # shutdown there is nothing to set and the account is left as startup made it.
             password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
             if password and password != LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
                 user.password = auth.get_password_hash(password)
+                user.is_active = True
+                user.retired_at = None
                 session.add(user)
                 await logger.awarning(
                     f"Kept the default superuser '{DEFAULT_SUPERUSER}', which owns rows in '{owned}', "
@@ -469,15 +477,11 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
                 )
             return
 
-        # Only a default password makes this account usable by anyone who knows the defaults.
-        # Any other password was set on purpose, e.g. by an admin after the last teardown, and a
-        # restart before its first sign-in must not undo that.
         defaults = ("", LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
-        if user.password and not any(auth.verify_password(default, user.password) for default in defaults):
-            await logger.adebug("Default superuser owns data and has a non-default password; left as is.")
-            return
-        user.password = auth.get_password_hash(token_urlsafe(32))
+        if not user.password or any(auth.verify_password(default, user.password) for default in defaults):
+            user.password = auth.get_password_hash(token_urlsafe(32))
         user.is_active = False
+        user.retired_at = datetime.now(timezone.utc)
         session.add(user)
         await logger.awarning(
             f"AUTO_LOGIN is off, so the default superuser '{DEFAULT_SUPERUSER}' was deactivated: its "
