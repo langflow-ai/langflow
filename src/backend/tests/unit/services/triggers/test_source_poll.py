@@ -9,11 +9,18 @@ import httpx
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.triggers.source_clients import (
     GOOGLE_CALENDAR_ORIGIN,
+    GOOGLE_DRIVE_ORIGIN,
     GOOGLE_GMAIL_ORIGIN,
     GRAPH_ORIGIN,
     SourceHTTP,
 )
-from langflow.services.triggers.source_poll import _calendar_changes, _canonical, _gmail_changes, _graph_changes
+from langflow.services.triggers.source_poll import (
+    _calendar_changes,
+    _canonical,
+    _drive_changes,
+    _gmail_changes,
+    _graph_changes,
+)
 
 
 class _Lease:
@@ -139,6 +146,74 @@ async def test_calendar_window_rolls_forward_before_it_expires() -> None:
     assert cursor["window"]["end"] != old["end"]
     assert baseline is False
     assert resync is False
+
+
+async def test_drive_change_feed_follows_pages_and_keeps_removals() -> None:
+    page_tokens: list[str] = []
+
+    def reply(request: httpx.Request) -> httpx.Response:
+        page_token = request.url.params["pageToken"]
+        page_tokens.append(page_token)
+        if page_token == "old":  # noqa: S105 - mock provider cursor
+            return httpx.Response(
+                200,
+                json={"changes": [{"fileId": "f1", "file": {"version": "2"}}], "nextPageToken": "next"},
+            )
+        return httpx.Response(
+            200,
+            json={"changes": [{"fileId": "f2", "removed": True}], "newStartPageToken": "current"},
+        )
+
+    trigger = _trigger(kind="google.drive", provider="google", state={"page_token": "old"})
+    async with SourceHTTP(_Lease(), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+        items, cursor, baseline, resync = await _drive_changes(client, trigger)
+
+    assert [(item["id"], item["version"], item["deleted"]) for item in items] == [
+        ("f1", "2", False),
+        ("f2", "deleted", True),
+    ]
+    assert cursor["page_token"] == "current"  # noqa: S105 - mock provider cursor
+    assert (baseline, resync) == (False, False)
+    assert page_tokens == ["old", "next"]
+
+
+async def test_drive_first_scan_records_watermark_without_replaying_old_files() -> None:
+    paths: list[str] = []
+
+    def reply(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        return httpx.Response(200, json={"startPageToken": "initial"})
+
+    async with SourceHTTP(_Lease(), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+        items, cursor, baseline, resync = await _drive_changes(client, _trigger(kind="google.drive", provider="google"))
+
+    assert items == []
+    assert cursor["page_token"] == "initial"  # noqa: S105 - mock provider cursor
+    assert (baseline, resync) == (True, False)
+    assert paths == ["/drive/v3/changes/startPageToken"]
+
+
+async def test_drive_expired_change_token_rescans_app_visible_files() -> None:
+    paths: list[str] = []
+
+    def reply(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        if request.url.path.endswith("/changes"):
+            return httpx.Response(410, json={"error": {"code": 410}})
+        if request.url.path.endswith("/startPageToken"):
+            return httpx.Response(200, json={"startPageToken": "fresh"})
+        if request.url.params.get("pageToken") == "second":
+            return httpx.Response(200, json={"files": [{"id": "f2", "version": "4"}]})
+        return httpx.Response(200, json={"files": [{"id": "f1", "version": "3"}], "nextPageToken": "second"})
+
+    trigger = _trigger(kind="google.drive", provider="google", state={"page_token": "expired"})
+    async with SourceHTTP(_Lease(), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+        items, cursor, baseline, resync = await _drive_changes(client, trigger)
+
+    assert [(item["id"], item["version"]) for item in items] == [("f1", "3"), ("f2", "4")]
+    assert cursor["page_token"] == "fresh"  # noqa: S105 - mock provider cursor
+    assert (baseline, resync) == (False, True)
+    assert paths == ["/drive/v3/changes", "/drive/v3/changes/startPageToken", "/drive/v3/files", "/drive/v3/files"]
 
 
 def test_source_items_use_provider_conversation_keys() -> None:

@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+import httpx
 import pytest
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
 from langflow.services.deps import session_scope
 from langflow.services.triggers import source_subscription, subscriptions
+from langflow.services.triggers.source_clients import SourceHTTP
 
 
 async def test_graph_drive_subscription_uses_updated_only(monkeypatch) -> None:
@@ -53,6 +56,97 @@ async def test_graph_drive_subscription_uses_updated_only(monkeypatch) -> None:
     assert requests[0][0:2] == ("POST", "v1.0/subscriptions")
     assert requests[0][2]["resource"] == "me/drive/root"
     assert requests[0][2]["changeType"] == "updated"
+
+
+async def test_graph_renewal_patches_the_existing_subscription(monkeypatch) -> None:
+    requests = []
+    provider_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
+
+    class Lease:
+        async def get_token(self):
+            return "test-token"
+
+    def reply(request: httpx.Request) -> httpx.Response:
+        requests.append((request.method, request.url.path, json.loads(request.content)))
+        return httpx.Response(200, json={"expirationDateTime": provider_expiry.isoformat()})
+
+    async def lease(_session, _trigger, *, family):
+        assert family == "trigger_push"
+        return Lease()
+
+    trigger = Trigger(id=uuid4(), flow_id=uuid4(), user_id=uuid4(), name="calendar", kind="microsoft.calendar")
+    subscription = TriggerSubscription(
+        trigger_id=trigger.id, provider="microsoft", provider_subscription_id="subscription-1"
+    )
+
+    class Session:
+        async def get(self, _model, _identifier):
+            return trigger
+
+    monkeypatch.setattr(source_subscription, "source_lease", lease)
+    monkeypatch.setattr(
+        source_subscription,
+        "SourceHTTP",
+        lambda credential, *, origin: SourceHTTP(credential, origin=origin, transport=httpx.MockTransport(reply)),
+    )
+    renewed_until = await source_subscription.renew_source(Session(), subscription)
+
+    assert renewed_until == provider_expiry
+    assert requests[0][:2] == ("PATCH", "/v1.0/subscriptions/subscription-1")
+    assert datetime.fromisoformat(requests[0][2]["expirationDateTime"]) > datetime.now(timezone.utc)
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_path"),
+    [
+        ("google.calendar", "/calendar/v3/calendars/primary/events/watch"),
+        ("google.drive", "/drive/v3/changes/watch"),
+    ],
+)
+async def test_google_watch_creates_a_verified_channel(kind, expected_path, monkeypatch) -> None:
+    requests = []
+    expiry_ms = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp() * 1000)
+
+    class Lease:
+        async def get_token(self):
+            return "test-token"
+
+    def reply(request: httpx.Request) -> httpx.Response:
+        requests.append((request.method, request.url.path, dict(request.url.params), json.loads(request.content)))
+        return httpx.Response(200, json={"resourceId": "resource-1", "expiration": str(expiry_ms)})
+
+    async def lease(_session, _trigger, *, family):
+        assert family == "trigger_push"
+        return Lease()
+
+    trigger = Trigger(
+        id=uuid4(),
+        flow_id=uuid4(),
+        user_id=uuid4(),
+        name="source",
+        kind=kind,
+        provider="google",
+        config={"calendar_id": "primary"},
+        provider_state={"page_token": "start"},
+    )
+    monkeypatch.setattr(source_subscription, "source_lease", lease)
+    monkeypatch.setattr(
+        source_subscription,
+        "SourceHTTP",
+        lambda credential, *, origin: SourceHTTP(credential, origin=origin, transport=httpx.MockTransport(reply)),
+    )
+    channel_id, token, state, expires_at = await source_subscription._google_watch(
+        object(), trigger, "https://example.com/ingress"
+    )
+
+    assert requests[0][:2] == ("POST", expected_path)
+    assert requests[0][3]["id"] == channel_id
+    assert requests[0][3]["address"] == "https://example.com/ingress"
+    assert requests[0][3]["token"] == token
+    assert state == {"channel_id": channel_id, "resource_id": "resource-1"}
+    assert expires_at == datetime.fromtimestamp(expiry_ms / 1000, tz=timezone.utc)
+    if kind == "google.drive":
+        assert requests[0][2]["pageToken"] == "start"
 
 
 @pytest.mark.parametrize(
