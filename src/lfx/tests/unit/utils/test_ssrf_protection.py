@@ -24,7 +24,9 @@ from lfx.utils.ssrf_protection import (
 
 
 @contextmanager
-def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=False, connector_validation=True):
+def mock_ssrf_settings(
+    *, enabled=False, allowed_hosts=None, restrict_files=False, connector_validation=True, tls_dir=None
+):
     """Context manager to mock SSRF settings."""
     if allowed_hosts is None:
         allowed_hosts = []
@@ -35,6 +37,7 @@ def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=Fals
     mock_settings.settings.connector_ssrf_validation_enabled = connector_validation
     # Explicit (not a truthy MagicMock) so DB local-file checks behave deterministically.
     mock_settings.settings.restrict_local_file_access = restrict_files
+    mock_settings.settings.database_tls_files_dir = tls_dir
     # The local-file-restriction read lives in file_path_security (is_local_file_access_restricted,
     # reused by the DB/git validators here), so patch its settings source too.
     with (
@@ -611,7 +614,7 @@ class TestDatabaseURLValidation:
 
     @pytest.mark.parametrize("delimiter", ["?", "#"])
     def test_sqlalchemy_username_delimiter_cannot_hide_blocked_host(self, delimiter):
-        uri = f"postgresql://8.8.8.8{delimiter}x:pw@169.254.169.254:5432/db"
+        uri = f"postgresql://8.8.8.8{delimiter}x:pw@169.254.169.254:5432/db"  # pragma: allowlist secret
         with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
             validate_database_url_for_ssrf(uri)
 
@@ -676,6 +679,102 @@ class TestDatabaseURLValidation:
             pytest.raises(SSRFProtectionError, match="local filesystem"),
         ):
             validate_database_url_for_ssrf(f"{dialect}://db.example.com/app?{key}=/tmp/client")
+
+    @pytest.mark.parametrize(
+        ("scheme", "key", "required_option"),
+        [
+            ("postgresql+psycopg2", "sslrootcert", ""),
+            ("postgresql+psycopg", "sslcert", ""),
+            ("postgresql", "sslkey", ""),
+            ("mysql+pymysql", "ssl_ca", ""),
+            ("mysql+mysqlconnector", "ssl_cert", "allow_local_infile=false"),
+            ("mariadb+mariadbconnector", "ssl_key", "local_infile=false"),
+        ],
+    )
+    def test_admin_scoped_database_tls_file_allowed(self, tmp_path, scheme, key, required_option):
+        tls_dir = tmp_path / "operator tls"
+        tls_dir.mkdir()
+        cert = tls_dir / "client cert.pem"
+        cert.write_text("test certificate")
+        query = urlencode({key: str(cert)})
+        if required_option:
+            query += f"&{required_option}"
+        with mock_ssrf_settings(enabled=False, restrict_files=True, tls_dir=tls_dir):
+            validate_database_url_for_ssrf(f"{scheme}://db.example.com/app?{query}")
+
+    @pytest.mark.parametrize("path_kind", ["traversal", "symlink", "relative", "missing", "unc"])
+    def test_admin_scoped_database_tls_file_rejects_escaping_or_invalid_path(self, tmp_path, path_kind):
+        tls_dir = tmp_path / "operator-tls"
+        tls_dir.mkdir()
+        outside = tmp_path / "outside.pem"
+        outside.write_text("not approved")
+        if path_kind == "traversal":
+            candidate = tls_dir / ".." / outside.name
+        elif path_kind == "symlink":
+            candidate = tls_dir / "link.pem"
+            try:
+                candidate.symlink_to(outside)
+            except (NotImplementedError, OSError):
+                pytest.skip("symlinks unavailable")
+        elif path_kind == "relative":
+            candidate = "client.pem"
+        elif path_kind == "missing":
+            candidate = tls_dir / "missing.pem"
+        else:
+            candidate = r"\\server\share\client.pem"
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True, tls_dir=tls_dir),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(
+                f"postgresql://db.example.com/app?{urlencode({'sslrootcert': str(candidate)})}"
+            )
+
+    @pytest.mark.parametrize("configured_dir", [None, "missing", "relative"])
+    def test_admin_scoped_database_tls_file_requires_valid_configured_directory(self, tmp_path, configured_dir):
+        cert = tmp_path / "client.pem"
+        cert.write_text("test certificate")
+        tls_dir = tmp_path / "missing" if configured_dir == "missing" else configured_dir
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True, tls_dir=tls_dir),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(f"postgresql://db.example.com/app?{urlencode({'sslrootcert': str(cert)})}")
+
+    def test_admin_scoped_database_tls_file_rejects_duplicate_key_aliases(self, tmp_path):
+        tls_dir = tmp_path / "operator-tls"
+        tls_dir.mkdir()
+        cert = tls_dir / "client.pem"
+        cert.write_text("test certificate")
+        query = f"sslrootcert={cert}&ssl%72ootcert={cert}"
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True, tls_dir=tls_dir),
+            pytest.raises(SSRFProtectionError, match="duplicate"),
+        ):
+            validate_database_url_for_ssrf(f"postgresql://db.example.com/app?{query}")
+
+    @pytest.mark.parametrize("key", ["passfile", "sslkeylogfile", "option_files", "sslcrldir"])
+    def test_admin_scoped_database_tls_dir_does_not_allow_other_file_options(self, tmp_path, key):
+        tls_dir = tmp_path / "operator-tls"
+        tls_dir.mkdir()
+        file = tls_dir / "file.pem"
+        file.write_text("test certificate")
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True, tls_dir=tls_dir),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(f"postgresql://db.example.com/app?{urlencode({key: str(file)})}")
+
+    def test_admin_scoped_database_tls_file_does_not_bypass_host_ssrf(self, tmp_path):
+        tls_dir = tmp_path / "operator-tls"
+        tls_dir.mkdir()
+        cert = tls_dir / "ca.pem"
+        cert.write_text("test certificate")
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=True, tls_dir=tls_dir),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_database_url_for_ssrf(f"postgresql://169.254.169.254/app?{urlencode({'sslrootcert': str(cert)})}")
 
     @pytest.mark.parametrize(
         ("scheme", "disable_option"),

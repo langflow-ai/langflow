@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -251,6 +252,10 @@ class SecuritySettings(BaseModel):
     workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
     Only used when sandbox_backend is not "none"."""
 
+    database_tls_files_dir: Path | None = None
+    """Operator-managed directory for database connector TLS certificate and key files.
+    Files in this directory may be referenced by tenant database URLs while local file
+    access remains restricted. Keep it outside tenant-writable storage."""
     restrict_local_file_access: bool = True
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
     may only read paths that resolve inside the authenticated user's or executing flow's storage
