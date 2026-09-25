@@ -291,6 +291,14 @@ def _raise_disallowed(command: str, value: str) -> None:
     raise ValueError(msg)
 
 
+def _raise_unsafe_shell_character(command: str, char: str) -> None:
+    msg = (
+        f"Shell wrapper '{command}' contains unsupported character {char!r} and is not allowed for MCP stdio; "
+        "set the executable directly as 'command' (for example, 'uvx') and pass its arguments separately in 'args'"
+    )
+    raise ValueError(msg)
+
+
 def _option_value(args: list[str], index: int, command: str) -> tuple[str, int]:
     _, separator, inline_value = args[index].partition("=")
     if separator:
@@ -707,8 +715,9 @@ def _parse_shell_payload(command: str, payload: str) -> tuple[str, list[str]]:
         raise ValueError(msg)
     # Brace expansion and filename globs can turn a validated script operand
     # into a Node option such as -p after this parser has checked it.
-    if any(char in payload for char in POSIX_SHELL_EXPANSION_CHARS):
-        _raise_disallowed(command, payload)
+    unsafe_char = next((char for char in payload if char in POSIX_SHELL_EXPANSION_CHARS), None)
+    if unsafe_char is not None:
+        _raise_unsafe_shell_character(command, unsafe_char)
     return parts[0], parts[1:]
 
 
@@ -752,8 +761,12 @@ def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[st
             # cmd expands %VAR%/!VAR! and strips carets/quotes before launching
             # the wrapped command. Those forms can supply a Node option or
             # `inspect` after validation, so reject them before parsing.
-            if any(char in " ".join(payload) for char in SHELL_CONTROL_CHARS | CMD_TOKEN_TRANSFORM_CHARS):
-                _raise_disallowed(command, " ".join(payload))
+            payload_text = " ".join(payload)
+            unsafe_char = next((char for char in payload_text if char in CMD_TOKEN_TRANSFORM_CHARS), None)
+            if unsafe_char is not None:
+                _raise_unsafe_shell_character(command, unsafe_char)
+            if any(char in payload_text for char in SHELL_CONTROL_CHARS):
+                _raise_disallowed(command, payload_text)
             return split_mcp_stdio_command(payload[0], payload[1:])
 
         is_exec_flag = arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]

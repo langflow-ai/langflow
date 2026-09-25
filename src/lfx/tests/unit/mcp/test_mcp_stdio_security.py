@@ -612,6 +612,29 @@ def test_cmd_wrapper_rejects_token_transformation_before_node(option, payload_as
         validate_mcp_stdio_config("cmd", ["/c", *payload], {}, interpreter_hardening=False)
 
 
+@pytest.mark.parametrize(
+    ("command", "args", "character"),
+    [
+        ("sh", ["-c", "uvx mcp-proxy https://host.invalid/sse?token=abc"], "?"),
+        ("cmd", ["/c", "uvx", "mcp-proxy", "https://host.invalid/a%20b"], "%"),
+    ],
+)
+def test_shell_wrapper_url_error_identifies_character_and_direct_form(command, args, character):
+    with pytest.raises(MCPStdioSecurityError) as exc_info:
+        validate_mcp_stdio_config(command, args, {}, interpreter_hardening=False)
+
+    message = str(exc_info.value)
+    assert f"character {character!r}" in message
+    assert "directly as 'command'" in message
+    assert "separately in 'args'" in message
+    assert "token=abc" not in message
+
+
+@pytest.mark.parametrize("url", ["https://host.invalid/sse?token=abc", "https://host.invalid/a%20b"])
+def test_direct_package_runner_preserves_url_characters(url):
+    validate_mcp_stdio_config("uvx", ["mcp-proxy", url], {}, interpreter_hardening=False)
+
+
 def test_configured_package_allowlist_is_enforced_at_validation_sink(monkeypatch):
     settings_service = SimpleNamespace(settings=SimpleNamespace(mcp_server_allowed_packages="mcp-proxy,lfx"))
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
