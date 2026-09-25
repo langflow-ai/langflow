@@ -12,6 +12,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
 import useAlertStore from "@/stores/alertStore";
 import type { FileType } from "@/types/file_management";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { cn } from "@/utils/utils";
 import FilesRendererComponent from "../filesRendererComponent";
 import FileRendererComponent from "../filesRendererComponent/components/fileRendererComponent";
@@ -207,7 +208,17 @@ export default function RecentFilesComponent({
   );
 
   const handleRename = (id: string, name: string) => {
-    renameFile({ id, name });
+    renameFile(
+      { id, name },
+      {
+        onError: (error) => {
+          setErrorData({
+            title: t("files.errorRenaming"),
+            list: extractApiErrorMessages(error),
+          });
+        },
+      },
+    );
   };
 
   const handleBulkDelete = () => {

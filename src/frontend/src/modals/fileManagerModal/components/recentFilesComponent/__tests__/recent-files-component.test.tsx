@@ -22,6 +22,9 @@ type AlertStoreState = {
   setSuccessData: (args: unknown) => void;
 };
 
+const mockRenameFile = jest.fn();
+const mockSetErrorData = jest.fn();
+
 jest.mock("@/components/ui/input", () => ({
   Input: ({ value, onChange, ...props }: InputProps) => (
     <input value={value} onChange={onChange} {...props} />
@@ -32,7 +35,7 @@ jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: (selector: (state: AlertStoreState) => unknown) =>
     selector({
-      setErrorData: jest.fn(),
+      setErrorData: mockSetErrorData,
       setSuccessData: jest.fn(),
     }),
 }));
@@ -48,7 +51,7 @@ jest.mock(
   "@/controllers/API/queries/file-management/use-put-rename-file",
   () => ({
     usePostRenameFileV2: () => ({
-      mutate: jest.fn(),
+      mutate: mockRenameFile,
     }),
   }),
 );
@@ -86,8 +89,19 @@ jest.mock("@/components/ui/checkbox", () => ({
 
 jest.mock("../../filesRendererComponent", () => ({
   __esModule: true,
-  default: ({ files }: { files: FileType[] }) => (
-    <div data-testid="files-renderer">{files.map((f) => f.path).join("|")}</div>
+  default: ({
+    files,
+    handleRename,
+  }: {
+    files: FileType[];
+    handleRename: (id: string, name: string) => void;
+  }) => (
+    <div data-testid="files-renderer">
+      {files.map((f) => f.path).join("|")}
+      <button onClick={() => handleRename(files[0].id, "bad name")}>
+        Rename
+      </button>
+    </div>
   ),
 }));
 
@@ -166,6 +180,31 @@ describe("RecentFilesComponent", () => {
     });
 
     expect(screen.getByTestId("files-renderer")).toBeInTheDocument();
+  });
+
+  it("shows the API error when a recent file rename is rejected", () => {
+    const file = makeServerFile({
+      id: "a",
+      name: "alpha",
+      path: "/server/a.txt",
+    });
+    render(
+      <RecentFilesComponent
+        files={[file]}
+        selectedFiles={[]}
+        setSelectedFiles={jest.fn()}
+        types={["txt"]}
+        isList={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    const options = mockRenameFile.mock.calls[0][1];
+    options.onError({ response: { data: { detail: "Invalid file name" } } });
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "Error renaming file",
+      list: ["Invalid file name"],
+    });
   });
 
   it("links the empty-state 'My Files' shortcut to the /assets/files route", () => {
