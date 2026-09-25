@@ -90,7 +90,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
         # tests stay on the retrieval/caching behavior.
         with (
             patch(
-                "lfx.base.tools.run_flow.scoped_model_provider_policy_for_target_flow",
+                "lfx.base.tools.run_flow._model_provider_policy",
                 _authorized_target_scope,
             ),
             patch(
