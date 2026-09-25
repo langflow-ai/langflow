@@ -2034,7 +2034,8 @@ class Component(CustomComponent):
         - Error handling and cleanup
 
         Message ID Rules:
-        - Messages only have an ID after being stored in the database
+        - Persisted messages get an ID from storage; ephemeral messages get an
+          in-memory ID so streaming events can be correlated
         - If _should_skip_message() returns True, the message is not stored and will not have an ID
         - Always use message.get_id() or message.has_id() to safely check for ID existence
         - Never access message.id directly without checking if it exists first
@@ -2044,8 +2045,8 @@ class Component(CustomComponent):
             id_: Optional message ID (used for event emission, not database storage)
             skip_db_update: If True, only update in-memory and send event, skip DB write.
                            Useful during streaming to avoid excessive DB round-trips.
-                           Note: When skip_db_update=True, the message must already have an ID
-                           (i.e., it must have been stored previously).
+                           Persistent messages must already have a stored ID;
+                           ephemeral messages use their in-memory ID.
 
         Returns:
             Message: The stored message (with ID if stored in database, without ID if skipped)
@@ -2062,23 +2063,25 @@ class Component(CustomComponent):
         # Ensure required fields for message storage are set
         self._ensure_message_required_fields(message)
 
-        # If skip_db_update is True and message already has an ID, skip the DB write
-        # This path is used during agent streaming to avoid excessive DB round-trips
-        # When skip_db_update=True, we require the message to already have an ID
-        # because we're updating an existing message, not creating a new one
-        if skip_db_update:
-            if not message.has_id():
-                from lfx.memory.flow_context import should_persist_messages
+        from lfx.memory.flow_context import should_persist_messages
 
-                if should_persist_messages():
-                    msg = (
-                        "skip_db_update=True requires the message to already have an ID. "
-                        "The message must have been stored in the database previously."
-                    )
-                    raise ValueError(msg)
-                # Ephemeral (anonymous serving) run: messages are never stored, so
-                # no ID can exist. There is no DB row to protect — fall through and
-                # emit the in-memory event only, keeping agent streaming working.
+        # Ephemeral runs still need a stable ID to correlate streamed message
+        # events. This ID stays in memory; astore_message skips the DB write.
+        persist_messages = should_persist_messages()
+        if not persist_messages and not message.has_id():
+            message.id = nanoid.generate()
+
+        # This path avoids DB round-trips during agent streaming. Persisting
+        # runs require an existing stored ID; ephemeral runs use the ID above.
+        if skip_db_update:
+            if not message.has_id() and persist_messages:
+                msg = (
+                    "skip_db_update=True requires the message to already have an ID. "
+                    "The message must have been stored in the database previously."
+                )
+                raise ValueError(msg)
+            # Ephemeral runs use the in-memory ID assigned above, so their
+            # streaming events remain correlated without a DB row.
 
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())

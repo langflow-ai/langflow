@@ -54,14 +54,19 @@ async def created_messages(async_session):  # noqa: ARG001
 
 @pytest.mark.usefixtures("client")
 def test_get_messages():
+    flow_id, user_id = uuid4(), uuid4()
     add_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
     limit = 2
-    messages = get_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
+    messages = get_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -69,14 +74,19 @@ def test_get_messages():
 
 @pytest.mark.usefixtures("client")
 async def test_aget_messages():
+    flow_id, user_id = uuid4(), uuid4()
     await aadd_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
     limit = 2
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
+    messages = await aget_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -232,33 +242,36 @@ async def test_aadd_messagetables_allows_cancellation_to_interrupt_rollback():
 @pytest.mark.usefixtures("client")
 def test_delete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    add_messages([message])
-    messages = get_messages(sender="User", session_id=session_id)
+    add_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    delete_messages(session_id)
-    messages = get_messages(sender="User", session_id=session_id)
+    delete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_adelete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    await aadd_messages([message])
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await aadd_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    await adelete_messages(session_id)
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await adelete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_store_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -266,9 +279,10 @@ async def test_store_message():
 @pytest.mark.usefixtures("client")
 async def test_astore_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
