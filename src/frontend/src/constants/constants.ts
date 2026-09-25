@@ -1004,6 +1004,15 @@ export const OPENAI_VOICES = [
   { name: "verse", value: "verse" },
 ];
 
+export const GANDR_VOICES = [
+  { name: "gandr-mia", value: "gandr-mia" },
+  { name: "gandr-ava", value: "gandr-ava" },
+  { name: "gandr-jenny", value: "gandr-jenny" },
+  { name: "gandr-dane", value: "gandr-dane" },
+  { name: "gandr-leo", value: "gandr-leo" },
+  { name: "gandr-lewis", value: "gandr-lewis" },
+];
+
 /**
  * Fallback for the Assistant composer's character cap, used until /config replies.
  * Matches the backend default of LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH so the two
