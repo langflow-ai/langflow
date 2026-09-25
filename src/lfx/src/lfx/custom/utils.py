@@ -539,6 +539,24 @@ def _stamp_integration_policy_identity(frontend_node, custom_component) -> None:
     frontend_node.metadata["integration_capability_ids"] = sorted(set(capability_ids))
 
 
+def _stamp_trigger_kind(frontend_node, custom_component) -> None:
+    """Mark a trigger node with its trigger kind, from the loaded class.
+
+    Core triggers sit in the palette's ``triggers`` category, but provider
+    triggers (``Slack: On Message``) sit in their provider's group, next to its
+    actions. The marker is what lets the frontend recognise every trigger,
+    wherever it is listed, without parsing class names - and it is produced
+    from the loaded class, never inferred from the serialized source field. A
+    stale marker from a reused template is always cleared.
+    """
+    from lfx.base.triggers.base import BaseTriggerComponent
+
+    if isinstance(custom_component, BaseTriggerComponent) and custom_component.trigger_kind:
+        frontend_node.metadata["trigger_kind"] = custom_component.trigger_kind
+    else:
+        frontend_node.metadata.pop("trigger_kind", None)
+
+
 def build_component_metadata(
     frontend_node: CustomComponentFrontendNode, custom_component: CustomComponent, module_name: str, ctype_name: str
 ):
@@ -592,6 +610,7 @@ def build_component_metadata(
     # stamp is produced from the loaded class, never inferred from the
     # serialized source field.
     _stamp_integration_policy_identity(frontend_node, custom_component)
+    _stamp_trigger_kind(frontend_node, custom_component)
 
     # Generate code hash for cache invalidation and debugging
     try:

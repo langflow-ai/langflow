@@ -367,8 +367,14 @@ A worked two-registration example, covering every action above:
 }
 ```
 
+To receive [Slack trigger](../Components/bundles-slack.mdx#slack-triggers) events
+through the Events API as well, add the app's `signing_secret` to the bot registration
+and the event scopes (`channels:history`, `groups:history`, `im:history`,
+`mpim:history`, `app_mentions:read`, `reactions:read`) to its `scopes`.
+
 Slack desktop redirects may not request bot scopes, so the Desktop PKCE app carries
-only the user scopes; bot actions are unavailable there. For headless runtimes,
+only the user scopes. On Desktop, paste the bot token (`xoxb-`) instead, under
+**Add connection** > **Paste a token**. For headless runtimes,
 provide the token directly as `LF_CONNECTION__SLACK__<NAME>` instead of registering
 an OAuth app. That path records no executing identity, so the bundle trusts the
 operator to supply the right token type.

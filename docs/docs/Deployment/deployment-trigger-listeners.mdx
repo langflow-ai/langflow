@@ -115,6 +115,18 @@ LANGFLOW_LISTENERS_MODE=subprocess
 
 Langflow then spawns `langflow listeners` as a child process and stops it on shutdown. Exactly one API worker does this, even when `LANGFLOW_WORKERS` is greater than one: the workers elect a host through a database lease, so you never get one listener per worker.
 
+## Slack Socket Mode
+
+Slack's no-ingress transport runs here. For each Slack app-level token connection that an armed Slack trigger uses, the listener opens a [Socket Mode](https://docs.slack.dev/apis/socket-mode/) WebSocket and holds it. See [Slack triggers](../Components/bundles-slack.mdx#slack-triggers) for the app and connection setup.
+
+- **Write, then acknowledge.** Each event is written to the ledger of every trigger it matches before Slack is told it arrived. If the write fails, Slack redelivers the event, and the ledger collapses the copy.
+- **Reconnects overlap.** When Slack warns that it will close a socket, the listener opens the replacement first and closes the old one after it drains, so events arriving on either socket are written once. A connection never holds more than two sockets.
+- **One app, many connections.** Slack spreads an app's events across all of its open sockets. When several people connect the same Slack app, whichever socket receives an event writes it for every armed trigger of that app.
+- **Slack's ten-socket limit.** Slack allows ten Socket Mode connections per app. A socket that would pass `LANGFLOW_TRIGGER_SLACK_SOCKET_MAX_CONNECTIONS` (default `10`) is closed and retried later; the app's other sockets keep carrying its events.
+- **Failures surface.** A revoked or rejected token moves the triggers to **needs reconnect**. Socket Mode turned off in the app's settings is retried with backoff, and the trigger shows why.
+
+The app-level token is resolved only inside the listener process. A flow component that names the connection is refused.
+
 ## Health endpoints
 
 The listener serves two paths on `LANGFLOW_LISTENERS_HEALTH_PORT` (default `7861`) and nothing else.
@@ -163,7 +175,7 @@ A replica that can't see any peer keeps everything, which is what makes this a n
 
 Langflow includes one built-in listener source, `listener_selftest`, that emits an event on an interval without contacting any provider. Use it to prove that the process boots, takes a lease, emits events, and stops cleanly, before any OAuth consent exists.
 
-Arm a trigger of kind `listener_selftest` on any connection, start the listener, and watch events appear on that trigger's event list.
+Arm a trigger of kind `listener_selftest` on any connection you own (a trigger can only use its owner's own connections), start the listener, and watch events appear on that trigger's event list.
 
 ## Configuration reference
 
@@ -176,6 +188,7 @@ Arm a trigger of kind `listener_selftest` on any connection, start the listener,
 | `LANGFLOW_LISTENER_HEARTBEAT_INTERVAL_S` | `10` | How often a held lease is renewed. |
 | `LANGFLOW_LISTENER_RECONCILE_INTERVAL_S` | `5` | How often the listener compares your triggers with the connections it holds. |
 | `LANGFLOW_LISTENER_POLL_INTERVAL_S` | `30` | Default interval for polling sources. |
+| `LANGFLOW_TRIGGER_SLACK_SOCKET_MAX_CONNECTIONS` | `10` | Slack Socket Mode connections one Slack app may hold, as Slack counts them. A socket past it is closed and retried. |
 | `LANGFLOW_LISTENER_BACKOFF_BASE_S` | `2` | First delay after a connection fails. |
 | `LANGFLOW_LISTENER_BACKOFF_CAP_S` | `300` | Maximum reconnect delay. |
 | `LANGFLOW_LISTENER_FAILURE_THRESHOLD` | `5` | Consecutive failures before the error appears on the trigger. |

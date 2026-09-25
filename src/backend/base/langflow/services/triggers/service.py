@@ -30,8 +30,10 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerUpdate,
 )
 from langflow.services.triggers.cleanup import delete_triggers
+from langflow.services.triggers.constants import CANVAS_ONLY_KINDS, SLACK_TRIGGER_KINDS
 from langflow.services.triggers.errors import TriggerNotFoundError
-from langflow.services.triggers.reconciliation import apply_schedule_verdict
+from langflow.services.triggers.ownership import require_owned_connection
+from langflow.services.triggers.reconciliation import apply_config_verdict
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
 if TYPE_CHECKING:
@@ -68,6 +70,45 @@ _ENABLEABLE_STATES = frozenset(
         TriggerState.NEEDS_RECONNECT.value,
     }
 )
+
+
+def _reject_mechanism(config: dict | None) -> None:
+    """``config.mechanism_id`` is derived by the server, never chosen by a client.
+
+    It decides which transport and which verifier a trigger is armed against, so
+    accepting it from a request would let a caller point a trigger at a
+    mechanism its connection cannot prove.
+    """
+    if config and "mechanism_id" in config:
+        msg = "mechanism_id is derived from the trigger's connection and cannot be set."
+        raise ValueError(msg)
+
+
+async def _arm_slack(session: AsyncSession, row: Trigger) -> None:
+    """Re-check a Slack trigger's filters, re-derive its connection and transport, and check it may run unattended.
+
+    Re-derived rather than trusted: the connection can change between the save
+    that recorded it and this enable (reinstalled, swapped for an app-level
+    token, its background-runs consent withdrawn). The filters are re-checked
+    too: a save that refused them stored them as entered, and arming those
+    would leave an ``active`` trigger that can never match. Raises a
+    ``ValueError`` with the owner-facing reason, which the route answers with 409.
+    """
+    from langflow.services.connection.oauth.config import deployment_context
+    from langflow.services.triggers.providers.slack.arming import (
+        bind_connection,
+        check_ready_to_arm,
+        resolve_arming,
+    )
+    from langflow.services.triggers.providers.slack.config import normalize_slack_config
+
+    config = normalize_slack_config(row.kind, row.config or {})
+    arming = await resolve_arming(session, owner_id=row.user_id, config=config, context=deployment_context())
+    await check_ready_to_arm(session, kind=row.kind, config=config, arming=arming)
+    moved = bind_connection(row, arming.connection_id)
+    if moved or config.get("mechanism_id") != arming.mechanism_id:
+        row.config = {**config, "mechanism_id": arming.mechanism_id}
+        session.add(row)
 
 
 class TriggerService(Service):
@@ -125,7 +166,13 @@ class TriggerService(Service):
         return (await session.exec(statement)).first()
 
     async def create(self, session: AsyncSession, *, payload: TriggerCreate, owner_id: UUID) -> Trigger:
+        if payload.kind in CANVAS_ONLY_KINDS:
+            msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
+            raise ValueError(msg)
+        _reject_mechanism(payload.config)
         await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
+        if payload.connection_id is not None:
+            await require_owned_connection(session, connection_id=payload.connection_id, owner_id=owner_id)
         config = payload.config
         if payload.kind == "schedule" and (config or payload.state is TriggerState.ACTIVE):
             config = validate_schedule_config(config)
@@ -160,6 +207,13 @@ class TriggerService(Service):
         an explicit null, without every other omitted field being nulled too.
         """
         changes = payload.model_dump(exclude_unset=True)
+        if row.kind in CANVAS_ONLY_KINDS and ({"config", "connection_id"} & changes.keys()):
+            msg = "This trigger's configuration and connection are set on its component in the flow."
+            raise ValueError(msg)
+        if "config" in changes:
+            _reject_mechanism(changes["config"])
+        if changes.get("connection_id") is not None:
+            await require_owned_connection(session, connection_id=changes["connection_id"], owner_id=row.user_id)
         if "flow_version_id" in changes:
             await self._validate_flow_version(session, flow_id=row.flow_id, flow_version_id=payload.flow_version_id)
         if "config" in changes and row.kind == "schedule":
@@ -167,7 +221,7 @@ class TriggerService(Service):
             if schedule_timing_changed(row.config or {}, changes["config"]):
                 row.next_fire_at = None
             # A schedule that validates clears the error a broken one left.
-            apply_schedule_verdict(row, None)
+            apply_config_verdict(row, None)
         for field, value in changes.items():
             setattr(row, field, value.value if hasattr(value, "value") else value)
         row.updated_at = datetime.now(timezone.utc)
@@ -192,6 +246,8 @@ class TriggerService(Service):
             raise ValueError(msg)
         if row.kind == "schedule":
             validate_schedule_config(row.config or {})
+        if row.kind in SLACK_TRIGGER_KINDS:
+            await _arm_slack(session, row)
         # Re-arming starts from now rather than replaying paused ticks. An
         # idempotent enable on an active trigger must preserve its due tick.
         if row.state != TriggerState.ACTIVE.value:

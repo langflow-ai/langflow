@@ -59,6 +59,8 @@ on:
       - "docs/docs/Components/bundles-google.mdx"
       - "docs/docs/Components/bundles-microsoft.mdx"
       - "docs/docs/Components/bundles-slack.mdx"
+      - "docs/static/files/slack/**"
+      - "src/backend/base/langflow/api/v1/trigger_ingress.py"
       - "docs/docs/Develop/api-keys-and-authentication.mdx"
       - "docs/docs/Develop/connection-oauth.mdx"
       - "docs/docs/Develop/entra-app-registration.mdx"

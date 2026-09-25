@@ -8,7 +8,7 @@ deny-list, so a client that ignores it still fails closed at execution.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from lfx.integrations.models import PROVIDER_ID_PATTERN
@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from langflow.api.utils import CurrentActiveUser, DbSessionReadOnly
 from langflow.api.v1.connections import ConnectionService
 from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
+from langflow.services.connection.oauth.config import deployment_context
 from langflow.services.rate_limit import check_rate_limit, get_metadata_read_limit, get_user_limiter_key
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
@@ -73,6 +74,14 @@ class IntegrationProviderRead(BaseModel):
 
 class IntegrationListRead(BaseModel):
     providers: list[IntegrationProviderRead]
+    deployment_context: Literal["self_managed", "hosted", "desktop"] = Field(
+        default="self_managed",
+        description=(
+            "Which deployment this instance is, from LANGFLOW_CONNECTION_OAUTH_CONTEXT. A capability or auth "
+            "profile whose deployment contexts exclude it is not offered here (hosted has no Slack Socket Mode, "
+            "Desktop no Slack Events API)."
+        ),
+    )
 
 
 class EffectiveIntegrationPolicyRead(BaseModel):
@@ -129,7 +138,7 @@ async def list_integrations(
         if provider is None or integration.provider_id == provider
     }
     if not manifests:
-        return IntegrationListRead(providers=[])
+        return IntegrationListRead(providers=[], deployment_context=deployment_context())
 
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
@@ -184,7 +193,7 @@ async def list_integrations(
                 capabilities=capabilities,
             )
         )
-    return IntegrationListRead(providers=providers)
+    return IntegrationListRead(providers=providers, deployment_context=deployment_context())
 
 
 @router.get("/policy/effective", response_model=EffectiveIntegrationPolicyRead)

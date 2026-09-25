@@ -98,6 +98,45 @@ describe("missingScopesFor", () => {
 });
 
 describe("buildConnectionOptions", () => {
+  it("flags an instance-owned Slack bot despite its matching execution identity", () => {
+    const instance = connection({
+      provider_key: "slack",
+      name: "instbot",
+      owner_id: null,
+      ownership_mode: "instance",
+      executing_identity: { identity: "bot" },
+    });
+    const owned = connection({
+      provider_key: "slack",
+      name: "mine",
+      executing_identity: { identity: "bot" },
+    });
+    const options = buildConnectionOptions(
+      [instance, owned],
+      [],
+      "instance",
+      "user",
+      "u1",
+    );
+    expect(options.map((option) => option.handle)).toEqual([
+      "slack/mine",
+      "slack/instbot",
+    ]);
+    expect(options[0].usable).toBe(true);
+    expect(options[1].unusableReason).toBe("userOwnedRequired");
+  });
+
+  it("flags a user connection owned by someone other than the flow owner", () => {
+    const [option] = buildConnectionOptions(
+      [connection({ owner_id: "u2" })],
+      [],
+      "user",
+      "user",
+      "u1",
+    );
+    expect(option.unusableReason).toBe("userOwnedRequired");
+  });
+
   it("marks a ready connection that covers every scope as usable", () => {
     const [option] = buildConnectionOptions([connection()], [CALENDAR_READ]);
     expect(option).toMatchObject({
