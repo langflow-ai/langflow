@@ -1268,7 +1268,7 @@ async def import_extension_components(
             if (
                 result.bundle == "google"
                 and loaded.class_name == "GoogleOnGmailTriggerComponent"
-                and os.getenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT") == "hosted"
+                and os.getenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT") in {"hosted", "desktop"}
             ):
                 # The hosted registration does not carry gmail.readonly. Keep
                 # the restricted-scope trigger out of the palette altogether.

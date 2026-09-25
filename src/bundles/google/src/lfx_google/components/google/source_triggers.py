@@ -25,7 +25,7 @@ def _connection(scope: str, capability: str) -> ConnectionRefInput:
     )
 
 
-class _GoogleSource(BaseTriggerComponent):
+class _GoogleSource:
     provider = "google"
     needs_connection = True
     icon = "Google"
@@ -39,7 +39,7 @@ class _GoogleSource(BaseTriggerComponent):
         }
 
 
-class GoogleOnCalendarTriggerComponent(_GoogleSource):
+class GoogleOnCalendarTriggerComponent(_GoogleSource, BaseTriggerComponent):
     display_name = "Google Calendar: On Event"
     description = "Run when an event on the selected calendar changes."
     name = "GoogleOnCalendarTrigger"
@@ -50,7 +50,7 @@ class GoogleOnCalendarTriggerComponent(_GoogleSource):
     ]
 
 
-class GoogleOnDriveTriggerComponent(_GoogleSource):
+class GoogleOnDriveTriggerComponent(_GoogleSource, BaseTriggerComponent):
     display_name = "Google Drive: On File"
     description = "Run when a file visible under drive.file changes."
     name = "GoogleOnDriveTrigger"
@@ -58,7 +58,7 @@ class GoogleOnDriveTriggerComponent(_GoogleSource):
     inputs = [_connection(_DRIVE_SCOPE, "google.trigger.drive")]
 
 
-class GoogleOnGmailTriggerComponent(_GoogleSource):
+class GoogleOnGmailTriggerComponent(_GoogleSource, BaseTriggerComponent):
     display_name = "Gmail: On Message"
     description = "Run on mailbox changes through a customer-owned Gmail watch and Pub/Sub topic."
     name = "GoogleOnGmailTrigger"

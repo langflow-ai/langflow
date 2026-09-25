@@ -21,7 +21,7 @@ def _connection(scope: str, capability: str) -> ConnectionRefInput:
     )
 
 
-class _MicrosoftSource(BaseTriggerComponent):
+class _MicrosoftSource:
     provider = "microsoft"
     needs_connection = True
     icon = "Microsoft"
@@ -33,7 +33,7 @@ class _MicrosoftSource(BaseTriggerComponent):
         }
 
 
-class MicrosoftOnMailTriggerComponent(_MicrosoftSource):
+class MicrosoftOnMailTriggerComponent(_MicrosoftSource, BaseTriggerComponent):
     display_name = "Outlook: On Message"
     description = "Run when a message in the owner's Inbox changes."
     name = "MicrosoftOnMailTrigger"
@@ -41,7 +41,7 @@ class MicrosoftOnMailTriggerComponent(_MicrosoftSource):
     inputs = [_connection("Mail.Read", "microsoft.trigger.mail")]
 
 
-class MicrosoftOnCalendarTriggerComponent(_MicrosoftSource):
+class MicrosoftOnCalendarTriggerComponent(_MicrosoftSource, BaseTriggerComponent):
     display_name = "Outlook: On Calendar Event"
     description = "Run when an Outlook calendar event changes."
     name = "MicrosoftOnCalendarTrigger"
@@ -49,7 +49,7 @@ class MicrosoftOnCalendarTriggerComponent(_MicrosoftSource):
     inputs = [_connection("Calendars.Read", "microsoft.trigger.calendar")]
 
 
-class MicrosoftOnFileTriggerComponent(_MicrosoftSource):
+class MicrosoftOnFileTriggerComponent(_MicrosoftSource, BaseTriggerComponent):
     display_name = "OneDrive or SharePoint: On File"
     description = "Run when a file in the owner's drive or the specified SharePoint site changes."
     name = "MicrosoftOnFileTrigger"

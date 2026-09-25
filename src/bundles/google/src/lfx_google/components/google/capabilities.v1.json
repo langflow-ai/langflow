@@ -138,7 +138,7 @@
       "policy_keys": ["integrations.google.trigger.gmail"],
       "substrate": "rest",
       "maturity": "ga",
-      "deployment_contexts": ["self_managed", "desktop"],
+      "deployment_contexts": ["self_managed"],
       "risk": "read",
       "component_ref": "GoogleOnGmailTriggerComponent"
     }
