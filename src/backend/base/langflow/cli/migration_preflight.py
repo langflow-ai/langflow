@@ -3,7 +3,8 @@
 The integrity check answers questions about one instance. A migration adds the
 questions that need a source and a target together: will the target's migrations
 run forward from the source's schema, will the target's key open the source's
-credentials, and will the default superuser survive the target's first boot.
+credentials, will the default superuser survive the target's first boot, and will
+the role grants be enforced once it has.
 Several of these failed silently in a rehearsal against the IBM Langflow operator,
 so each is checked here instead.
 
@@ -49,6 +50,7 @@ async def run_preflight(
             await check_default_superuser(session),
             await check_target_key(session, target_secret_key),
             await check_embedding_models(session),
+            await check_role_assignments(session),
         ]
         await session.rollback()
     source = await check_instance()
@@ -142,11 +144,27 @@ async def check_target_key(session: AsyncSession, target_secret_key: str | None)
     if not target_secret_key:
         return CheckResult(name, "warn", f"not checked: pass --target-secret-key-file. {operator_note}")
 
-    result = await check_credentials(session, _settings_with_key(target_secret_key))
+    # A key file usually ends in a newline. Fernet ignores it, so every credential
+    # opens, but a Secret made from the file with --from-file keeps it, and the SSO
+    # client secret is keyed on the raw bytes. That breaks SSO sign-in and nothing else.
+    key = target_secret_key.strip()
+    padded = ""
+    if key != target_secret_key:
+        padded = (
+            ". The key file has whitespace around the key, such as a trailing newline. A Secret created from it "
+            "with --from-file keeps that whitespace: credentials still decrypt, but the SSO client secret does not. "
+            "Create the Secret with --from-literal"
+        )
+
+    result = await check_credentials(session, _settings_with_key(key))
     if result.status == "ok":
-        return replace(result, name=name, summary=result.summary.replace("the configured", "the target's"))
+        summary = result.summary.replace("the configured", "the target's") + padded
+        return CheckResult(name, "warn" if padded else "ok", summary, result.problems)
     return CheckResult(
-        name, "fail", f"{result.summary.replace('the configured', 'the target')}. {operator_note}", result.problems
+        name,
+        "fail",
+        f"{result.summary.replace('the configured', 'the target')}. {operator_note}{padded}",
+        result.problems,
     )
 
 
@@ -178,6 +196,30 @@ async def check_embedding_models(session: AsyncSession) -> CheckResult:
         "warn",
         f"{copyable} knowledge base{plural} record their model; {len(unknown)} record none and may need re-ingesting",
         unknown,
+    )
+
+
+async def check_role_assignments(session: AsyncSession) -> CheckResult:
+    """Will the role grants that move with the database be enforced on the target?
+
+    Grants live in authz_role_assignment and move with the database, but they are
+    enforced from casbin_rule, which an authorization plugin compiles from them. Some
+    IBM Langflow builds compile only when a role changes, so adopted grants do nothing
+    until a superuser asks for a sync.
+    """
+    from langflow.services.database.models.auth.authz import AuthzRoleAssignment
+
+    name = "role assignments"
+    count = (await session.exec(select(func.count()).select_from(AuthzRoleAssignment))).one()
+    if not count:
+        return CheckResult(name, "ok", "no role assignments to carry over")
+    plural = "" if count == 1 else "s"
+    return CheckResult(
+        name,
+        "warn",
+        f"{count} role assignment{plural} move with the database, but the target may not enforce them until its "
+        "policy is compiled. After the first boot, sign in as a superuser, send POST /api/v1/authz/policy/sync, "
+        "and check that casbin_rule has rows",
     )
 
 
