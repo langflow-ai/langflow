@@ -64,7 +64,7 @@ from langflow.services.utils import get_auto_login_superuser_password, initializ
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 console = Console()
 if platform.system() == "Windows":
     console = Console(legacy_windows=True, emoji=False)
@@ -1169,6 +1169,34 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
     scope = f"user '{username}'" if username else "all users"
     verb = "would adopt" if dry_run else "adopted"
     typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
+
+
+@app.command(name="convert-sqlite-to-postgres")
+def convert_sqlite_to_postgres(
+    source: str = typer.Option(..., help="SQLite database URL to read, e.g. sqlite:////data/langflow.db."),
+    target: str = typer.Option(..., help="Postgres database URL to write. It is upgraded to the latest schema first."),
+    batch_size: int = typer.Option(1000, help="Rows per insert batch."),
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+) -> None:
+    """Copy every row of a Langflow SQLite database into Postgres.
+
+    Stop Langflow before running this. The source must already be on the latest
+    schema (start this Langflow version against it once). The copy runs in one
+    transaction and is checked table by table, so it either lands whole or not at
+    all, and running it again is safe. Nothing in the source is changed.
+    """
+    from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
+
+    configure(log_level=log_level)
+    report = convert(source, target, batch_size=batch_size)
+    if not report.ok:
+        # A failed copy is rolled back, so per-table counts would describe rows that are gone.
+        for problem in report.problems:
+            typer.echo(f"Problem: {problem}", err=True)
+        raise typer.Exit(1)
+    for table in report.tables:
+        typer.echo(f"{table.name}: {table.target_rows} row(s)")
+    typer.echo(f"Converted {len(report.tables)} table(s) at revision {report.revision}.")
 
 
 # command to copy the langflow database from the cache to the current directory
