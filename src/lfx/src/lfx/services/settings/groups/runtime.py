@@ -131,6 +131,27 @@ class RuntimeSettings(BaseModel):
     """How often the scaled worker's periodic watchdog scans for orphaned leases
     (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
     restart. Must be > 0."""
+    background_claim_candidates: int = Field(default=5, gt=0)
+    """How many oldest QUEUED jobs a scaled worker reads per claim attempt before
+    lease-racing them in order. Size it roughly to the worker fleet: with more
+    workers than candidates the extras lose every race and back off a full idle
+    window. Must be > 0."""
+    background_backend: Literal["default", "scaled"] = "default"
+    """Which background-execution backend runs v2 background workflow jobs.
+
+    ``default`` runs jobs in-process inside the API (bounded by
+    ``background_max_concurrency``). ``scaled`` turns the durable job table into
+    the work queue: the API only persists the QUEUED row, and separate
+    ``langflow worker`` processes lease-claim and run jobs against the SAME
+    database, so background load runs off the API workers and scales
+    horizontally. No broker is needed — the database is the queue. Every worker
+    must reach that one database: use Postgres for multi-host fleets (SQLite's
+    WAL is host-local, so scaled + SQLite only works on a single machine)."""
+    background_poll_interval_s: float = Field(default=0.5, gt=0)
+    """How often a scaled-mode event tail polls ``job_events`` for new durable
+    frames while a job is live. Bounds the added reattach latency per milestone.
+    Must be > 0."""
+
     # Triggers (TRG-2): the leased dispatcher, the schedule tick producer, and
     # the ledger retention windows.
     trigger_dispatcher_enabled: bool = True
@@ -286,13 +307,6 @@ class RuntimeSettings(BaseModel):
     app past this closes it and backs off, leaving the sockets already open to
     carry the app's events."""
 
-    test_redis_url: str | None = Field(default=None)
-    """Redis URL used by tests that exercise the scaled background backend.
-
-    Mirrors LANGFLOW_TEST_DATABASE_URI: when set, lease/watchdog/Streams/pubsub
-    timing tests run against this real Redis; when unset they skip. Read from
-    the LANGFLOW_TEST_REDIS_URL environment variable via the env_prefix."""
-
     event_delivery: Literal["polling", "streaming", "direct"] = "streaming"
     """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
 
@@ -398,11 +412,11 @@ class RuntimeSettings(BaseModel):
 
     @property
     def background_backend_is_scaled(self) -> bool:
-        """True when the background executor should use the redis-backed queue.
+        """True when separate ``langflow worker`` processes run background jobs.
 
-        Backend selection follows the existing job_queue_type/redis settings:
-        a redis job queue means a separate `langflow worker` process drains
-        jobs, so the scaled background backend is used. Otherwise the default
-        in-process executor runs jobs inside the API process.
+        Selection is the explicit ``background_backend`` setting: ``scaled``
+        means the API only persists QUEUED job rows and workers lease-claim them
+        off the shared database. Independent of ``job_queue_type`` — the
+        database is the queue, no redis is involved.
         """
-        return self.job_queue_type == "redis"
+        return self.background_backend == "scaled"

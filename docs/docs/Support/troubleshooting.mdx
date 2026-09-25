@@ -766,6 +766,18 @@ If the deployment is headless and never uses the visual editor or MCP over SSE, 
 
 The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
 
+### Background runs stay queued
+
+With `LANGFLOW_BACKGROUND_BACKEND=scaled`, the API only queues background runs, and `langflow worker` processes execute them. If no worker is running against the same database, runs stay `queued` indefinitely.
+
+Start at least one `langflow worker` with the same `LANGFLOW_DATABASE_URL` and `LANGFLOW_SECRET_KEY` as the API. For more information, see [Scale background runs](./deployment-multi-worker#scale-background-runs).
+
+### Background runs fail with `worker_lost`
+
+The worker running the job stopped sending heartbeats for longer than `LANGFLOW_BACKGROUND_LEASE_TTL_S` (45 seconds by default), so the run was marked failed. This usually means the worker process crashed or was killed, for example by the out-of-memory killer.
+
+Check the worker logs around the time of the failure. If workers are healthy but under heavy load, increase `LANGFLOW_BACKGROUND_LEASE_TTL_S`, keeping it well above `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S`.
+
 ## Voice mode {#voice-mode}
 
 Voice mode is deprecated as of Langflow 1.10.

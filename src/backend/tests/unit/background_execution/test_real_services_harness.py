@@ -1,8 +1,8 @@
 """Phase 0 harness tests: the real_services marker + real-instance fixtures.
 
 These prove the harness itself works before any background-execution code exists:
-the marker is registered, the DB fixture backs a real engine on sqlite and
-postgres, and the redis fixture pings a real server.
+the marker is registered and the DB fixture backs a real engine on sqlite and
+postgres — the database is the only real service the scaled backend needs.
 """
 
 from __future__ import annotations
@@ -35,19 +35,3 @@ async def test_real_services_db_url_yields_real_engine(real_services_db_url: str
             assert result.scalar_one() == 1
     finally:
         await engine.dispose()
-
-
-@pytest.mark.real_services
-@pytest.mark.no_blockbuster
-async def test_real_services_redis_url_pings_real_server(real_services_redis_url: str) -> None:
-    """real_services_redis_url must back a reachable, real Redis server."""
-    from redis.asyncio import StrictRedis
-
-    assert os.environ.get("LANGFLOW_TEST_REDIS_URL"), "redis fixture ran without URL set"
-    client = StrictRedis.from_url(real_services_redis_url)
-    try:
-        assert await client.ping() is True
-        await client.set("real_services:probe", "1")
-        assert await client.get("real_services:probe") == b"1"
-    finally:
-        await client.aclose()
