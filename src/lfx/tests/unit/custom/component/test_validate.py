@@ -523,13 +523,14 @@ class Comp(Component):
         assert result.__name__ == "Comp"
 
 
-def test_extract_class_name_rejects_multiple_component_subclasses():
+@pytest.mark.parametrize("base", ["Component", "LCBase"])
+def test_extract_class_name_rejects_multiple_component_subclasses(base):
     code = dedent(
-        """
-        class FirstComponent(Component):
+        f"""
+        class FirstComponent({base}):
             pass
 
-        class SecondComponent(Component):
+        class SecondComponent({base}):
             pass
         """
     )
