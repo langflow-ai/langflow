@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import type { ProjectTypeType } from "@/pages/MainPage/entities";
 import type { FlowType } from "@/types/flow";
+import { editorDraft } from "../editor-draft";
 import HarnessPage from "../harness-page";
 
 const mockPatch = jest.fn();
@@ -13,6 +14,30 @@ let projectFlows: FlowType[] | undefined;
 let isLoadingFlows = false;
 let isFlowsError = false;
 const mockRefetchFlows = jest.fn();
+const instructionsBinding = {
+  flow_id: "source",
+  node_id: "terminal",
+  output_name: "instructions",
+  revision: "reviewed",
+};
+
+jest.mock("../components/instructions-flow-picker", () => ({
+  InstructionsFlowPicker: ({
+    value,
+    onChange,
+  }: {
+    value?: unknown;
+    onChange: (value: unknown) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="bind-instructions"
+      onClick={() => onChange(value ? undefined : instructionsBinding)}
+    >
+      {value ? "Unbind" : "Bind"}
+    </button>
+  ),
+}));
 
 jest.mock("@/controllers/API/queries/folders/use-get-project-types", () => ({
   useGetProjectTypesQuery: () => ({ data: projectTypes, isLoading }),
@@ -495,4 +520,86 @@ it("offers a retry instead of treating a failed flow query as an empty project",
   expect(screen.queryByTestId("harness-save-btn")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(mockRefetchFlows).toHaveBeenCalledTimes(1);
+});
+
+it("saves an Instructions binding separately from the preserved form value", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        system_prompt: {
+          ...HARNESS.template.system_prompt,
+          supports_flow_binding: true,
+          renders: "long_text",
+        },
+      },
+    },
+  ];
+  projectFlows = [agentFlow("main")];
+  renderPage({ projectConfig: { system_prompt: "Saved form instructions" } });
+  fireEvent.click(screen.getByTestId("bind-instructions"));
+  expect(
+    screen.queryByTestId("long-text-system_prompt"),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config).toMatchObject({
+    system_prompt: "Saved form instructions",
+    flow_bindings: { system_prompt: instructionsBinding },
+  });
+});
+
+it("removes a saved binding and re-enables its preserved form value", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        system_prompt: {
+          ...HARNESS.template.system_prompt,
+          supports_flow_binding: true,
+          renders: "long_text",
+        },
+      },
+    },
+  ];
+  projectFlows = [agentFlow("main")];
+  renderPage({
+    projectConfig: {
+      system_prompt: "Saved form instructions",
+      flow_bindings: { system_prompt: instructionsBinding },
+    },
+  });
+  fireEvent.click(screen.getByTestId("bind-instructions"));
+  expect(screen.getByTestId("long-text-system_prompt")).toBeEnabled();
+  expect(screen.getByTestId("long-text-system_prompt")).toHaveValue(
+    "Saved form instructions",
+  );
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config.flow_bindings).toEqual(
+    {},
+  );
+});
+
+it("restores the explicit editor draft and consumes it once", () => {
+  editorDraft.keep("project-1", {
+    system_prompt: "Unsaved research instructions",
+    n_messages: 25,
+    flow_bindings: { system_prompt: instructionsBinding },
+  });
+  projectFlows = [agentFlow("main")];
+  const first = renderPage();
+  expect(screen.getByTestId("input-n_messages")).toHaveValue("25");
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config).toMatchObject({
+    system_prompt: "Unsaved research instructions",
+    n_messages: 25,
+    flow_bindings: { system_prompt: instructionsBinding },
+  });
+  first.unmount();
+  renderPage({ projectId: "project-2" });
+  expect(screen.getByTestId("input-system_prompt")).not.toHaveValue(
+    "Unsaved research instructions",
+  );
+  expect(editorDraft.get("project-1")).toEqual({});
 });

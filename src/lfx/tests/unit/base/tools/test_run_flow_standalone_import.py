@@ -113,7 +113,7 @@ async def test_standalone_sibling_graph_still_passes_component_policy(tmp_path, 
     component.cache_flow = False
     parent = Graph()
     parent.context["project_dir"] = str(tmp_path)
-    component._vertex = SimpleNamespace(graph=parent)
+    component._vertex = SimpleNamespace(graph=parent, data={})
 
     graph = await component.get_graph(flow_name_selected="child")
     assert isinstance(graph, Graph)

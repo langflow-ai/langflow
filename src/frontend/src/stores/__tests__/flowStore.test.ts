@@ -1981,3 +1981,30 @@ describe("useFlowStore", () => {
     });
   });
 });
+
+it("preserves flow contract metadata when canvas nodes are edited or removed", () => {
+  const contract = { slot: "Instructions", field_name: "system_prompt" };
+  useFlowStore.setState({
+    currentFlow: {
+      id: "instructions",
+      name: "Instructions",
+      description: "",
+      data: {
+        nodes: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+        harness_contract: contract,
+      },
+    } as NonNullable<ReturnType<typeof useFlowStore.getState>["currentFlow"]>,
+  });
+  useFlowStore.getState().updateCurrentFlow({ nodes: [] });
+  expect(useFlowStore.getState().currentFlow?.data).toMatchObject({
+    harness_contract: contract,
+    nodes: [],
+  });
+  useFlowStore.getState().updateCurrentFlow({ edges: [] });
+  expect(useFlowStore.getState().currentFlow?.data).toMatchObject({
+    harness_contract: contract,
+    edges: [],
+  });
+});
