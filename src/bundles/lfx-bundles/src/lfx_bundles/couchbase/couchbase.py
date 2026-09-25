@@ -19,6 +19,7 @@ from lfx.utils.ssrf_protection import (
 )
 
 _COUCHBASE_SEED = re.compile(r"(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]+)?")
+_IPV4_PREFIX = re.compile(r"^[0-9]+(?:\.[0-9]+){3}")
 
 
 def _validate_couchbase_hosts(connection_string: str) -> None:
@@ -61,6 +62,16 @@ def _validate_couchbase_hosts(connection_string: str) -> None:
         except ValueError as e:
             msg = "Couchbase connection string contains an invalid host."
             raise SSRFProtectionError(msg) from e
+        # The SDK can parse a complete IPv4 prefix as the seed even when more
+        # hostname characters follow. Validate only names it will dial in full.
+        if host and (ipv4_prefix := _IPV4_PREFIX.match(host)) and host != ipv4_prefix.group():
+            try:
+                ip_address(ipv4_prefix.group())
+            except ValueError:
+                pass  # An out-of-range numeric label is a DNS name to the SDK.
+            else:
+                msg = "Couchbase connection string contains an invalid host."
+                raise SSRFProtectionError(msg)
         # An explicit port does not disable DNS SRV in the C++ SDK. Validate
         # that seed as a possible direct target, then inspect any SRV targets.
         # A portless single seed may have only SRV records and no A/AAAA record.
