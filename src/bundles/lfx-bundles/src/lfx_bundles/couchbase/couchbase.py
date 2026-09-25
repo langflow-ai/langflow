@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 from ipaddress import ip_address
 from urllib.parse import parse_qsl, urlsplit
@@ -17,6 +18,8 @@ from lfx.utils.ssrf_protection import (
     validate_connector_hostname_for_ssrf,
 )
 
+_COUCHBASE_SEED = re.compile(r"(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]+)?")
+
 
 def _validate_couchbase_hosts(connection_string: str) -> None:
     parsed = urlsplit(connection_string)
@@ -32,21 +35,23 @@ def _validate_couchbase_hosts(connection_string: str) -> None:
     if not ssrf_enabled:
         return
 
+    # urlsplit strips leading spaces and control characters, plus tabs and newlines
+    # anywhere in the URL, while the SDK receives the original string.
+    if any(char.isspace() or not char.isprintable() for char in connection_string):
+        msg = "Couchbase connection string contains an invalid host."
+        raise SSRFProtectionError(msg)
     if parsed.scheme not in {"couchbase", "couchbases"} or not parsed.netloc:
         msg = "Couchbase connection string must contain a host."
         raise SSRFProtectionError(msg)
 
-    # The C++ SDK can treat a semicolon as part of a DNS hostname, but as a
-    # separator after an IP literal. Reject this ambiguous form outright.
-    if ";" in parsed.netloc:
-        msg = "Couchbase connection string host cannot contain a semicolon."
-        raise SSRFProtectionError(msg)
     seeds = parsed.netloc.split(",")
     if query_keys & {"enable_dns_srv", "dns_nameserver"}:
         msg = "Couchbase connection string cannot override DNS discovery settings."
         raise SSRFProtectionError(msg)
     for seed in seeds:
-        if not seed or any(char in seed for char in "@\\/%?#"):
+        # Reject characters the SDK might treat as a host terminator, since
+        # validating a longer string could approve a different dial target.
+        if not _COUCHBASE_SEED.fullmatch(seed):
             msg = "Couchbase connection string contains an invalid host."
             raise SSRFProtectionError(msg)
         try:

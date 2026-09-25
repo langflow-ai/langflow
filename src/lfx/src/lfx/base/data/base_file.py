@@ -452,7 +452,7 @@ class BaseFileComponent(Component, ABC):
         return str(data_item)
 
     def load_files_message(self) -> Message:
-        """Load files and return as Message.
+        """Load files as one Message, retaining each source file's parsed text when there are multiple.
 
         Returns:
           Message: Message containing all file data
@@ -466,23 +466,39 @@ class BaseFileComponent(Component, ABC):
 
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
         parts: list[str] = []
+        source_files: list[dict[str, str | None]] = []
+        source_file_indexes: dict[str, int] = {}
         for d in data_list:
             try:
                 data_text = self._extract_text(d)
                 if data_text and isinstance(data_text, str):
-                    parts.append(data_text)
+                    part = data_text
                 elif data_text:
                     # get_text() returned non-string, convert it
-                    parts.append(str(data_text))
+                    part = str(data_text)
                 elif isinstance(d.data, dict):
                     # convert the data dict to a readable string
-                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
+                    part = orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode()
                 else:
-                    parts.append(str(d))
+                    part = str(d)
             except Exception:  # noqa: BLE001
                 # Final fallback - just try to convert to string
                 # TODO: Consider downstream error case more. Should this raise an error?
-                parts.append(str(d))
+                part = str(d)
+            parts.append(part)
+            if len(data_list) > 1:
+                file_path = d.data.get(self.SERVER_FILE_PATH_FIELDNAME) if isinstance(d.data, dict) else None
+                file_path = str(file_path) if file_path else None
+                if file_path and file_path in source_file_indexes:
+                    source_file = source_files[source_file_indexes[file_path]]
+                    source_file["text"] = f"{source_file['text']}{sep}{part}"
+                else:
+                    if file_path:
+                        source_file_indexes[file_path] = len(source_files)
+                    source_files.append({"file_path": file_path, "text": part})
+
+        if source_files:
+            metadata["source_files"] = source_files
 
         return Message(text=sep.join(parts), **metadata)
 
@@ -1023,6 +1039,7 @@ class BaseFileComponent(Component, ABC):
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
+                continue
 
             final_files.append(file)
 

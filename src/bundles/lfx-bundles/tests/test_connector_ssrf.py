@@ -594,19 +594,27 @@ def test_couchbase_allows_public_multi_seed_url():
         _validate_couchbase_hosts("couchbases://8.8.8.8,1.1.1.1")
 
 
-def test_couchbase_rejects_semicolon_hostname_that_sdk_queries_as_one_srv_seed():
+def test_couchbase_allows_public_bracketed_ipv6_seed_with_port():
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with ssrf_enabled(), patch("dns.resolver.resolve") as mock_srv:
+        _validate_couchbase_hosts("couchbase://[2606:4700:4700::1111]:11210")
+    mock_srv.assert_not_called()
+
+
+@pytest.mark.parametrize("separator", [";", "|", "^", "\uff1b", "\t", "\n"])
+def test_couchbase_rejects_ambiguous_seed_host_before_srv_lookup(separator):
     from lfx.utils.ssrf_protection import SSRFProtectionError
     from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
 
-    # The C++ parser treats the semicolon as part of a DNS hostname, so the
-    # combined name could resolve through SRV to an internal target.
+    # The SDK can consume only a prefix of a seed containing these characters.
     with (
         ssrf_enabled(),
         patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["8.8.8.8"]),
         patch("dns.resolver.resolve", return_value=[MagicMock(target="10.0.0.5.")]) as mock_srv,
-        pytest.raises(SSRFProtectionError, match="semicolon"),
+        pytest.raises(SSRFProtectionError, match="invalid host"),
     ):
-        _validate_couchbase_hosts("couchbase://a.8.8.8.8.nip.io;srvhit.1.1.1.1.nip.io")
+        _validate_couchbase_hosts(f"couchbase://127.0.0.1{separator}x.8.8.8.8.nip.io")
     mock_srv.assert_not_called()
 
 

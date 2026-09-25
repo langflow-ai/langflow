@@ -586,11 +586,32 @@ def _get_invalid_components(
     return blocked, outdated
 
 
-def _find_code_execution_components(nodes: list[dict]) -> list[str]:
-    """Return labels for every node whose type is a built-in code-execution component.
+def _contains_component_code(nodes: list[dict]) -> bool:
+    """Whether a graph or one of its inlined groups carries executable source."""
+    for node in nodes:
+        if not isinstance(node, dict) or not isinstance(node.get("data"), dict):
+            continue
+        node_info = node["data"].get("node")
+        if not isinstance(node_info, dict):
+            continue
+        template = node_info.get("template")
+        if isinstance(template, dict):
+            code = template.get("code")
+            if isinstance(code, dict) and code.get("value"):
+                return True
+        flow = node_info.get("flow")
+        flow_data = flow.get("data") if isinstance(flow, dict) else None
+        nested_nodes = flow_data.get("nodes") if isinstance(flow_data, dict) else None
+        if isinstance(nested_nodes, list) and _contains_component_code(nested_nodes):
+            return True
+    return False
+
+
+def _find_code_execution_components(nodes: list[dict], blocked_hashes: frozenset[str]) -> list[str]:
+    """Return labels for nodes with a code-execution type or trusted source hash.
 
     Recurses into nested/sub-flow node payloads so a code-execution component cannot be
-    hidden inside an embedded flow definition.
+    hidden inside an embedded flow definition or relabelled with a benign type.
     """
     found: list[str] = []
 
@@ -613,7 +634,9 @@ def _find_code_execution_components(nodes: list[dict]) -> list[str]:
         display_name = node_info.get("display_name")
 
         component_type = node_data.get("type")
-        if is_code_execution_component(component_type, display_name):
+        if is_code_execution_component(component_type, display_name) or (
+            blocked_hashes and _node_code_hash(node_info) in blocked_hashes
+        ):
             display_name = display_name or component_type
             node_id = node_data.get("id") or node_id
             found.append(f"{display_name} ({node_id})")
@@ -629,7 +652,7 @@ def _find_code_execution_components(nodes: list[dict]) -> list[str]:
                 msg = f"Flow validation failed: malformed nested flow ({node_id})."
                 raise CustomComponentValidationError(msg)
             if nested_nodes:
-                found.extend(_find_code_execution_components(nested_nodes))
+                found.extend(_find_code_execution_components(nested_nodes, blocked_hashes))
         elif flow_data is not None:
             msg = f"Flow validation failed: malformed nested flow ({node_id})."
             raise CustomComponentValidationError(msg)
@@ -653,12 +676,23 @@ def check_code_execution_components_and_raise(flow_data: dict | None) -> None:
     if not nodes:
         return
 
-    found = _find_code_execution_components(nodes)
+    type_to_current_hash = get_component_hash_lookups_for_validation()
+    found = _find_code_execution_components(
+        nodes,
+        _blocked_code_hashes(CODE_EXECUTION_COMPONENT_TYPES, type_to_current_hash=type_to_current_hash or {}),
+    )
     if found:
         names = ", ".join(found)
         logger.warning(f"Flow build blocked: code-execution components are disabled: {names}")
         message = f"Flow build blocked: code-execution components are not allowed: {names}"
         raise CustomComponentValidationError(message)
+
+    # A code-bearing node can be relabelled with a benign type while carrying the source of
+    # an interpreter component. Without the registry hashes there is no way to distinguish
+    # that source, so hold execution until the templates are available. Codeless nodes remain
+    # usable while the registry initializes.
+    if not type_to_current_hash and _contains_component_code(nodes):
+        raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
 
 def code_hash_matches_any_template(code: str, all_known_hashes: set[str]) -> bool:
@@ -1469,6 +1503,78 @@ async def _ensure_public_component_lookup_snapshot(
     return type_to_code or {}, type_to_current_hash or {}
 
 
+def _restore_grouped_validated_flow(grouped: dict, executable: dict) -> dict:
+    """Keep group identity while carrying validated code through its proxy fields."""
+    import copy
+
+    from lfx.graph.graph.utils import process_flow
+
+    result = copy.deepcopy(grouped)
+    nodes_by_id: dict[str, dict] = {}
+
+    def collect(nodes: list) -> None:
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            node_id = node.get("id")
+            if isinstance(node_id, str):
+                nodes_by_id[node_id] = node
+            node_data = node.get("data")
+            node_info = node_data.get("node") if isinstance(node_data, dict) else None
+            flow = node_info.get("flow") if isinstance(node_info, dict) else None
+            flow_data = flow.get("data") if isinstance(flow, dict) else None
+            nested = flow_data.get("nodes") if isinstance(flow_data, dict) else None
+            if isinstance(nested, list):
+                collect(nested)
+
+    collect(result["nodes"])
+    executable_code = {}
+    for node in executable["nodes"]:
+        code = node.get("data", {}).get("node", {}).get("template", {}).get("code")
+        if isinstance(code, dict) and isinstance(node.get("id"), str):
+            executable_code[node["id"]] = code.get("value")
+
+    def resolved_code(node_id: str, field_name: str) -> Any | None:
+        seen = set()
+        while (node_id, field_name) not in seen:
+            seen.add((node_id, field_name))
+            node = nodes_by_id.get(node_id)
+            if node is None:
+                return None
+            field = node.get("data", {}).get("node", {}).get("template", {}).get(field_name)
+            if not isinstance(field, dict):
+                return None
+            proxy = field.get("proxy")
+            if isinstance(proxy, dict) and isinstance(proxy.get("id"), str) and isinstance(proxy.get("field"), str):
+                node_id, field_name = proxy["id"], proxy["field"]
+            else:
+                return executable_code.get(node_id) if field_name == "code" else None
+        return None
+
+    for node_id, node in nodes_by_id.items():
+        template = node.get("data", {}).get("node", {}).get("template", {})
+        if not isinstance(template, dict):
+            continue
+        code = template.get("code")
+        if isinstance(code, dict) and node_id in executable_code:
+            code["value"] = executable_code[node_id]
+        for field in template.values():
+            if not isinstance(field, dict) or not isinstance(field.get("proxy"), dict):
+                continue
+            proxy = field["proxy"]
+            if isinstance(proxy.get("id"), str) and isinstance(proxy.get("field"), str):
+                safe_code = resolved_code(proxy["id"], proxy["field"])
+                if safe_code is not None:
+                    field["value"] = safe_code
+
+    # A second expansion must be identical to the graph we just checked. This catches proxy
+    # chains or future substitutions that the projection does not cover.
+    if process_flow(result) != executable:
+        msg = "Flow validation failed: grouped graph differs from its validated executable graph."
+        raise CustomComponentValidationError(msg)
+    return result
+
+
 async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> dict | None:
     """Return server-trusted, build-ready flow data for the unauthenticated public build path.
 
@@ -1486,10 +1592,9 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     graph dict for the caller to build from.
 
     Opt-in (``allow_public_custom_components`` is True): preserves stored custom code only when
-    the global custom-component policy is also permissive; that combination validates public
-    code-execution surfaces and returns ``None`` so the caller builds from the database. When the
-    global policy is restricted, this helper mirrors its trusted-code substitution on a copy,
-    validates the effective graph, and returns it for the caller to build.
+    the global custom-component policy is also permissive. When the global policy is restricted,
+    this helper mirrors its trusted-code substitution. Both paths validate the expanded graph
+    and return its grouped form, preserving group IDs in build status and graph snapshots.
 
     The code-execution check is intentionally repeated after default-mode substitution. A
     namespaced extension identity may not itself appear in the public blocklist, while its
@@ -1497,8 +1602,7 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     let stale code evade the hash check and become blocked code during trusted substitution.
 
     Returns:
-        The sanitized graph dict to build from, or ``None`` to fall back to the default
-        database-loaded build (fully permissive opt-in, or no flow data to sanitize).
+        The sanitized graph dict to build from, or ``None`` if there is no graph to sanitize.
 
     Raises:
         CustomComponentValidationError: if the flow contains an unrecognized custom component, or
@@ -1506,8 +1610,7 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
         PublicFlowValidationError: if the executable graph contains a code-execution or
             flow-invoking component.
     """
-    import copy
-
+    from lfx.graph.graph.utils import process_flow
     from lfx.services.deps import get_settings_service
 
     settings_service = get_settings_service()
@@ -1515,13 +1618,6 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
     settings = settings_service.settings
-
-    # Fully permissive opt-in: honor the global custom-component policy and build from the
-    # database as before. No later trusted-code substitution can change what is checked here.
-    if settings.allow_public_custom_components and settings.allow_custom_components:
-        validate_flow_for_current_settings(target)
-        validate_public_flow_no_code_execution(target)
-        return None
 
     normalized_flow_data = _extract_flow_data(target)
     if normalized_flow_data is None:
@@ -1538,17 +1634,30 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     if not isinstance(nodes, list) or not nodes:
         return None
 
+    # Group proxies overwrite child template fields during Graph.add_nodes_and_edges. Expand
+    # those groups first, then validate and sanitize the exact executable graph. Restore the
+    # grouped form afterwards so Graph still knows which children belong to a top-level group.
+    try:
+        sanitized = process_flow(normalized_flow_data)
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        msg = "Flow validation failed: malformed grouped graph."
+        raise CustomComponentValidationError(msg) from exc
+
+    if settings.allow_public_custom_components and settings.allow_custom_components:
+        validate_flow_for_current_settings(sanitized)
+        validate_public_flow_no_code_execution(sanitized)
+        return _restore_grouped_validated_flow(normalized_flow_data, sanitized)
+
     type_to_code, type_to_current_hash = await _ensure_public_component_lookup_snapshot(settings_service)
     if not type_to_code or not type_to_current_hash:
         # Templates unavailable — do not let unverified code through.
         raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
-    sanitized = copy.deepcopy(normalized_flow_data)
     if settings.allow_public_custom_components:
         # Public custom-code opt-in does not override the global restricted-mode policy. Mirror
         # the substitution Graph.from_payload would otherwise perform later, then return this
         # effective graph so the public code-execution check covers the bytes that will run.
-        validate_flow_for_current_settings(target)
+        validate_flow_for_current_settings(sanitized)
         if getattr(settings, "substitute_outdated_component_code", True):
             substitutable_types = SubstitutableComponentTypes(type_to_current_hash, type_to_code)
             swapped = _substitute_outdated_node_code(sanitized.get("nodes", []), type_to_code, substitutable_types)
@@ -1575,7 +1684,46 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     # by route-level defense in depth. This central guarantee covers v1, v2, A2A start, and A2A
     # resume callers alike.
     validate_public_flow_no_code_execution(sanitized, type_to_current_hash=type_to_current_hash)
-    return sanitized
+    return _restore_grouped_validated_flow(normalized_flow_data, sanitized)
+
+
+def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
+    """Enforce anonymous-build policy on the graph after all group proxies are applied.
+
+    This is the last synchronous gate before Graph.initialize instantiates component code.
+    The route-level preparation rejects bad flows before queuing a job, while this check
+    covers direct Graph construction, extension migration, and registry reloads after that
+    preparation. The default policy replaces any proxy-injected code with a fresh trusted
+    registry copy; explicit public-custom opt-in preserves only what its global policy allows.
+    """
+    from lfx.interface.components import component_cache
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+    settings = settings_service.settings
+
+    type_to_current_hash = None
+    if not settings.allow_public_custom_components:
+        with component_cache.state_lock:
+            type_to_code = get_component_code_lookups_for_validation()
+            type_to_current_hash = get_component_hash_lookups_for_validation()
+        if not type_to_code or not type_to_current_hash:
+            raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
+        blocked = _substitute_trusted_node_code(flow_data.get("nodes", []), type_to_code)
+        if blocked:
+            blocked_names = ", ".join(blocked)
+            message = (
+                "Public flows cannot be built without authentication when they contain custom components: "
+                f"{blocked_names}"
+            )
+            raise CustomComponentValidationError(message)
+    else:
+        substitute_outdated_component_code_in_place(flow_data, validate_public_execution=True)
+        validate_flow_for_current_settings(flow_data)
+
+    validate_public_flow_no_code_execution(flow_data, type_to_current_hash=type_to_current_hash)
 
 
 def _node_code_hash(node_info: Any) -> str | None:
@@ -1687,15 +1835,20 @@ def _selects_mcp_stdio_transport(config: Any) -> bool:
 
 def _mcp_configs_in_field_value(value: Any) -> list[Any]:
     """Return the MCP server configurations reachable from one template field value."""
-    if not isinstance(value, Mapping):
-        return []
-    # ``McpInput`` stores ``{"name": ..., "config": {...}}``; a raw config may also be stored
-    # directly, and an imported ``mcpServers`` map carries one config per server name.
-    configs: list[Any] = [value, value.get("config")]
-    servers = value.get("mcpServers")
-    if isinstance(servers, Mapping):
-        configs.extend(servers.values())
-    return configs
+    # A selection can be a raw config, a named ``McpInput`` selection, an imported
+    # ``mcpServers`` map, or a list of selections. Walk each shape so an array cannot
+    # conceal a subprocess-spawning selection from the public-flow gate.
+    if isinstance(value, Mapping):
+        configs = [value]
+        configs.extend(_mcp_configs_in_field_value(value.get("config")))
+        servers = value.get("mcpServers")
+        if isinstance(servers, Mapping):
+            for server in servers.values():
+                configs.extend(_mcp_configs_in_field_value(server))
+        return configs
+    if isinstance(value, list):
+        return [config for item in value for config in _mcp_configs_in_field_value(item)]
+    return []
 
 
 def _is_mcp_server_field(field_name: Any, field: Mapping[str, Any]) -> bool:
@@ -1916,7 +2069,12 @@ def _sanitize_admin_only_flow_build(
             raise CustomComponentValidationError(msg)
         return None
 
-    sanitized = copy.deepcopy(normalized_flow_data)
+    # A group proxy can replace a child's code during expansion. Validate the stored shape
+    # first, then apply every hash check and trusted-source substitution to the executable
+    # graph. Project the result back onto the grouped payload for later graph construction.
+    from lfx.graph.graph.utils import process_flow
+
+    sanitized_grouped = copy.deepcopy(normalized_flow_data)
     # ``validate_flow_for_current_settings`` may have admitted known drift because restricted
     # mode will rebuild it with server code. Preserve that decision when admin-only mode adds its
     # own sanitizer; otherwise this second, strict hash check restores the very rejection the
@@ -1925,10 +2083,23 @@ def _sanitize_admin_only_flow_build(
     substitution_lookups = get_outdated_code_substitution_lookups()
     validation_hashes = type_to_current_hash
     if substitution_lookups:
-        nodes = sanitized.get("nodes", [])
+        nodes = sanitized_grouped.get("nodes", [])
         swapped = _substitute_outdated_node_code(nodes, *substitution_lookups) if isinstance(nodes, list) else []
         _log_outdated_component_code_substitution(swapped)
         validation_hashes = substitution_lookups[1].type_to_current_hash
+    check_flow_and_raise(
+        sanitized_grouped,
+        allow_custom_components=False,
+        type_to_current_hash=validation_hashes,
+    )
+    try:
+        sanitized = process_flow(sanitized_grouped)
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        msg = "Flow validation failed: malformed grouped graph."
+        raise CustomComponentValidationError(msg) from exc
+    # The code-interpreter policy also applies to proxy-injected executable code. Its type
+    # alone may still say ChatInput, so validate after expansion and after drift substitution.
+    validate_flow_for_current_settings(sanitized)
     check_flow_and_raise(
         sanitized,
         allow_custom_components=False,
@@ -1943,7 +2114,7 @@ def _sanitize_admin_only_flow_build(
         message = f"Flow build blocked: no trusted server component matches: {blocked_names}"
         raise CustomComponentValidationError(message)
 
-    return sanitized
+    return _restore_grouped_validated_flow(normalized_flow_data, sanitized)
 
 
 def _admin_only_build_required(settings: Any, *, is_superuser: bool) -> bool:
@@ -2009,7 +2180,34 @@ async def prepare_flow_build_for_user(
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
     admin_only = _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
-    type_to_current_hash = await ensure_component_hash_lookups_loaded(force=True) if admin_only else None
+    interpreter_policy = getattr(settings_service.settings, "block_code_interpreter_components", False)
+    normalized_flow_data = _extract_flow_data(target) if interpreter_policy and not admin_only else None
+    nodes = normalized_flow_data.get("nodes") if normalized_flow_data is not None else None
+    interpreter_hashes_required = interpreter_policy and isinstance(nodes, list) and _contains_component_code(nodes)
+    if interpreter_policy and not admin_only and isinstance(nodes, list) and not interpreter_hashes_required:
+        # A group proxy can populate a child's empty code field during expansion. Inspect
+        # that same effective graph before deciding that registry hashes are unnecessary.
+        has_group = any(
+            isinstance(node, dict)
+            and isinstance(node.get("data"), dict)
+            and isinstance(node["data"].get("node"), dict)
+            and isinstance(node["data"]["node"].get("flow"), dict)
+            for node in nodes
+        )
+        if has_group:
+            from lfx.graph.graph.utils import process_flow
+
+            try:
+                executable = process_flow(normalized_flow_data)
+            except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+                msg = "Flow validation failed: malformed grouped graph."
+                raise CustomComponentValidationError(msg) from exc
+            executable_nodes = executable.get("nodes")
+            interpreter_hashes_required = isinstance(executable_nodes, list) and _contains_component_code(
+                executable_nodes
+            )
+    policy_hashes_required = admin_only or interpreter_hashes_required
+    type_to_current_hash = await ensure_component_hash_lookups_loaded(force=True) if policy_hashes_required else None
 
     # Policies are cumulative: the admin-only hash gate must not disable the
     # code-interpreter or global custom-component restrictions.
