@@ -7,8 +7,10 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
+from lfx.projects import all_project_types
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
+from pydantic import BaseModel
 from sqlalchemy import literal, null, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -78,6 +80,7 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.database.models.folder.utils import validate_project_type
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
@@ -138,6 +141,7 @@ async def _new_project(
     )
 
     new_project = Folder.model_validate(project, from_attributes=True)
+    new_project.project_type = validate_project_type(new_project.project_type)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
     if project_id is not None:
@@ -306,6 +310,41 @@ async def create_project(
             log_message="op=create_project",
         )
         raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_CREATE_FAILED)) from e
+
+
+class ProjectTypeRead(BaseModel):
+    """A project type and the form the UI renders for it."""
+
+    name: str
+    display_name: str
+    icon: str
+    description: str
+    #: The form, keyed by field name, in the same shape as a component's template. The frontend
+    #: renders it with the field renderer it already uses on the canvas.
+    template: dict[str, dict]
+
+
+# Declared before ``/{project_id}`` so "types" is not parsed as a project id.
+@router.get("/types", response_model=list[ProjectTypeRead], status_code=200)
+async def read_project_types(
+    *,
+    current_user: CurrentActiveUser,  # noqa: ARG001
+):
+    """The project types a project may be set to.
+
+    Read straight out of the lfx registry. There is no database and no component cache behind
+    this, so it answers before the component index is built.
+    """
+    return [
+        ProjectTypeRead(
+            name=project_type.name,
+            display_name=project_type.display_name,
+            icon=project_type.icon,
+            description=project_type.description,
+            template=project_type.to_template(),
+        )
+        for project_type in all_project_types()
+    ]
 
 
 @router.get("/", response_model=list[FolderListRead], status_code=200)
@@ -654,6 +693,23 @@ async def _apply_project_update(
     if project.description is not None:
         existing_project.description = project.description
 
+    # An omitted project_type means "leave it alone". An explicit null is a value the caller
+    # asked for, and the column is NOT NULL, so it cannot be honoured. Answering 200 for a
+    # request that changed nothing is the same silent no-op this endpoint already avoids
+    # elsewhere, and `validate_project_type` already refuses every other invalid value.
+    if "project_type" in project.model_fields_set:
+        if project.project_type is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="project_type must not be null.",
+            )
+        existing_project.project_type = validate_project_type(project.project_type)
+
+    # project_config uses model_fields_set, not a None check: clearing the config and leaving
+    # it untouched are different requests, and a None check cannot tell them apart.
+    if "project_config" in project.model_fields_set:
+        existing_project.project_config = project.project_config
+
     if project.parent_id is not None:
         # Validate the supplied parent references a folder owned by the project owner, so
         # shared-project writes cannot create cross-owner folder hierarchies.
@@ -809,9 +865,11 @@ def _folder_create_to_update(project: FolderCreate) -> FolderUpdate:
     mapped because ``_apply_project_update`` recomputes them from the project's current DB
     contents; ``parent_id`` is not part of ``FolderCreate``.
     """
-    # exclude_unset carries only fields explicitly set on the body; include restricts to the three
+    # exclude_unset carries only fields explicitly set on the body; include restricts to the
     # fields FolderUpdate shares with FolderCreate (flows/components/parent_id handled per docstring).
-    data = project.model_dump(include={"name", "description", "auth_settings"}, exclude_unset=True)
+    data = project.model_dump(
+        include={"name", "description", "auth_settings", "project_type", "project_config"}, exclude_unset=True
+    )
     return FolderUpdate(**data)
 
 

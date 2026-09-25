@@ -116,7 +116,9 @@ async def test_shared_project_download_filters_flows_by_read_permission():
 
     body = b"".join([chunk async for chunk in response.body_iterator])
     with zipfile.ZipFile(io.BytesIO(body), "r") as archive:
-        assert archive.namelist() == ["Allowed Flow.json"]
+        # The archive also carries the reserved project metadata member; this test is about
+        # which flows are visible, so compare the flow entries only.
+        assert [n for n in archive.namelist() if n.endswith(".json")] == ["Allowed Flow.json"]
 
     filter_visible.assert_awaited_once()
     assert filter_visible.await_args.kwargs["candidates"] == [allowed_flow, denied_flow]
@@ -2155,9 +2157,9 @@ async def test_download_file_starter_project(client: AsyncClient, logged_in_head
     # Verify zip file contents
     zip_content = response.content
     with zipfile.ZipFile(io.BytesIO(zip_content), "r") as zip_file:
-        file_names = zip_file.namelist()
-        # Should have 3 flow files
-        assert len(file_names) == 3, f"Expected 3 files in zip, got {len(file_names)}: {file_names}"
+        file_names = [n for n in zip_file.namelist() if n.endswith(".json")]
+        # Should have 3 flow files, alongside the reserved project metadata member
+        assert len(file_names) == 3, f"Expected 3 flow files in zip, got {len(file_names)}: {file_names}"
 
         # Verify each basic flow file exists and contains valid JSON
         for i in range(2):
@@ -2255,7 +2257,7 @@ async def test_download_project_sanitizes_windows_path_characters(
     assert response.status_code == status.HTTP_200_OK
 
     with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_file:
-        file_names = zip_file.namelist()
+        file_names = [n for n in zip_file.namelist() if n.endswith(".json")]
         assert len(file_names) == 1
         assert "/" not in file_names[0]
         assert "\\" not in file_names[0]
@@ -2718,6 +2720,338 @@ async def test_upsert_project_update_rejects_flows_list(client: AsyncClient, log
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
     assert "flows_list" in response.json()["detail"]
+
+
+async def test_create_project_defaults_project_type_to_flows(client: AsyncClient, logged_in_headers, basic_case):
+    """A project created without a project_type is a plain flows project."""
+    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert response.json()["project_type"] == "flows"
+
+
+async def test_create_project_persists_explicit_project_type(client: AsyncClient, logged_in_headers):
+    """POST carries project_type and project_config through to the stored row."""
+    body = {
+        "name": "harness_on_create",
+        "description": "",
+        "project_type": "agent-harness",
+        "project_config": {"Instructions": "be careful"},
+    }
+    create_response = await client.post("api/v1/projects/", json=body, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    assert create_response.json()["project_type"] == "agent-harness"
+    assert create_response.json()["project_config"] == {"Instructions": "be careful"}
+
+    # Re-read rather than trusting the create response, so this asserts persistence.
+    project_id = create_response.json()["id"]
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_200_OK, read_response.text
+    assert read_response.json()["project_type"] == "agent-harness"
+    assert read_response.json()["project_config"] == {"Instructions": "be careful"}
+
+
+async def test_patch_project_updates_project_type(client: AsyncClient, logged_in_headers):
+    """PATCH re-types an existing project."""
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "patch_retype", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/projects/{project_id}",
+        json={"project_type": "agent-harness", "project_config": {"Model": "openai/gpt-4o"}},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["project_type"] == "agent-harness"
+    assert response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_200_OK, read_response.text
+    assert read_response.json()["project_type"] == "agent-harness"
+    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+
+
+async def test_patch_project_clears_project_config_with_explicit_null(client: AsyncClient, logged_in_headers):
+    """Sending null clears project_config; omitting it leaves the stored value alone.
+
+    This is the whole reason the apply block reads ``model_fields_set`` instead of checking for
+    None. A None check cannot tell "clear this" from "do not touch this".
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "clear_config", "description": "", "project_config": {"Model": "openai/gpt-4o"}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    # Omitting project_config must not disturb it.
+    untouched = await client.patch(
+        f"api/v1/projects/{project_id}", json={"description": "touched"}, headers=logged_in_headers
+    )
+    assert untouched.status_code == status.HTTP_200_OK, untouched.text
+    assert untouched.json()["project_config"] == {"Model": "openai/gpt-4o"}
+
+    # Sending null must clear it.
+    cleared = await client.patch(
+        f"api/v1/projects/{project_id}", json={"project_config": None}, headers=logged_in_headers
+    )
+    assert cleared.status_code == status.HTTP_200_OK, cleared.text
+    assert cleared.json()["project_config"] is None
+
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.json()["project_config"] is None
+
+
+async def test_upsert_project_updates_project_type(client: AsyncClient, logged_in_headers):
+    """PUT re-types an existing project.
+
+    This is the case that catches the silent drop: ``_folder_create_to_update`` restricts the
+    PUT body to an explicit include set, so a project_type missing from that set is accepted,
+    discarded, and still answered with 200.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "put_retype", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}",
+        json={
+            "name": "put_retype",
+            "description": "",
+            "project_type": "agent-harness",
+            "project_config": {"Model": "openai/gpt-4o"},
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["project_type"] == "agent-harness"
+    assert response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_200_OK, read_response.text
+    assert read_response.json()["project_type"] == "agent-harness"
+    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+
+
+@pytest.mark.parametrize("bad_type", ["totally-not-a-real-type", ""])
+async def test_project_type_rejects_unknown_values(client: AsyncClient, logged_in_headers, bad_type):
+    """An unregistered project_type is refused on both create and update.
+
+    The empty string is the case a NOT NULL column does not catch on its own.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": f"reject_{bad_type or 'empty'}", "description": "", "project_type": bad_type},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, create_response.text
+
+    ok_response = await client.post(
+        "api/v1/projects/",
+        json={"name": f"reject_patch_{bad_type or 'empty'}", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert ok_response.status_code == status.HTTP_201_CREATED, ok_response.text
+    project_id = ok_response.json()["id"]
+
+    patch_response = await client.patch(
+        f"api/v1/projects/{project_id}",
+        json={"project_type": bad_type},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, patch_response.text
+
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.json()["project_type"] == "flows"
+
+
+async def test_patch_project_rejects_explicit_null_project_type(client: AsyncClient, logged_in_headers):
+    """An explicit null is a value the caller asked for, and project_type cannot be null.
+
+    Omitting the field means "leave it alone"; sending null means "set it to null", which the
+    NOT NULL column cannot honour. Ignoring it would answer 200 for a request that did nothing.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "null_type", "description": "", "project_type": "agent-harness"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/projects/{project_id}",
+        json={"project_type": None},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
+
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.json()["project_type"] == "agent-harness"
+
+
+async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_in_headers, json_flow):
+    """A typed project exported as a zip re-imports with its type and config intact.
+
+    The zip carries the type in a reserved ``project.json`` member. Without it the round trip
+    silently downgrades every imported project to the default type.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={
+            "name": "roundtrip_source",
+            "description": "",
+            "project_type": "agent-harness",
+            "project_config": {"Model": "openai/gpt-4o"},
+        },
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={**json.loads(json_flow), "name": "roundtrip_flow", "folder_id": project_id},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED, flow_response.text
+
+    download_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert download_response.status_code == status.HTTP_200_OK, download_response.text
+
+    # The metadata member must be present, and must not be mistaken for a flow.
+    with zipfile.ZipFile(io.BytesIO(download_response.content)) as zf:
+        assert "project.meta" in zf.namelist()
+        metadata = json.loads(zf.read("project.meta"))
+    assert metadata["project_type"] == "agent-harness"
+    assert metadata["project_config"] == {"Model": "openai/gpt-4o"}
+
+    # Remove the source project first. Re-importing the same flows into the same account
+    # otherwise collides on flow ids, which is a property of this test, not of the round trip.
+    delete_response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), delete_response.text
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("roundtrip.zip", download_response.content, "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("roundtrip")]
+    assert imported, f"no imported project found in {[p['name'] for p in projects]}"
+    assert imported[0]["project_type"] == "agent-harness"
+
+    # The metadata member must not have been imported as a flow.
+    imported_detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
+    flow_names = [f["name"] for f in imported_detail.get("flows", [])]
+    assert "project" not in flow_names, f"the metadata member leaked in as a flow: {flow_names}"
+
+
+async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient, logged_in_headers, json_flow):
+    """An archive naming a project type this deployment does not have still imports.
+
+    Refusing the whole upload would lose the flows too, so the type degrades to the default.
+    """
+    flow_payload = json.loads(json_flow)
+    zip_stream = io.BytesIO()
+    with zipfile.ZipFile(zip_stream, "w") as zf:
+        zf.writestr("project.meta", json.dumps({"project_type": "from-the-future", "project_config": {"a": 1}}))
+        zf.writestr("a_flow.json", json.dumps({**flow_payload, "name": "future_flow"}))
+    zip_stream.seek(0)
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("future.zip", zip_stream.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("future")]
+    assert imported, f"no imported project found in {[p['name'] for p in projects]}"
+    assert imported[0]["project_type"] == "flows"
+
+
+async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, logged_in_headers, json_flow):
+    """A flow called "project" must not be eaten by the reserved metadata member.
+
+    Flows export as ``{name}.json``, so a metadata member named ``project.json`` collides with
+    a flow named "project" and the loss is silent: the import answers 201 having dropped it.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "collide_src", "description": "", "project_type": "agent-harness"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    for flow_name in ("project", "keeper"):
+        flow_payload = json.loads(json_flow)
+        flow_payload.pop("id", None)  # let the server assign ids; the fixture reuses one
+        flow_response = await client.post(
+            "api/v1/flows/",
+            json={**flow_payload, "name": flow_name, "folder_id": project_id},
+            headers=logged_in_headers,
+        )
+        assert flow_response.status_code == status.HTTP_201_CREATED, flow_response.text
+
+    download_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert download_response.status_code == status.HTTP_200_OK, download_response.text
+
+    names = zipfile.ZipFile(io.BytesIO(download_response.content)).namelist()
+    assert sorted(names) == ["keeper.json", "project.json", "project.meta"], names
+
+    delete_response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), delete_response.text
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("collide.zip", download_response.content, "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("collide")]
+    assert imported, f"no imported project in {[p['name'] for p in projects]}"
+    assert imported[0]["project_type"] == "agent-harness"
+
+    detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
+    assert sorted(f["name"] for f in detail.get("flows", [])) == ["keeper", "project"]
+
+
+@pytest.mark.parametrize("bad_config", ["junk", 123, ["a"]])
+async def test_zip_import_ignores_malformed_project_config(client, logged_in_headers, json_flow, bad_config):
+    """A wrong-shaped project_config degrades to none; it must not 500 the whole upload."""
+    zip_stream = io.BytesIO()
+    with zipfile.ZipFile(zip_stream, "w") as zf:
+        zf.writestr("project.meta", json.dumps({"project_type": "flows", "project_config": bad_config}))
+        zf.writestr("a_flow.json", json.dumps({**json.loads(json_flow), "name": f"badcfg_{type(bad_config).__name__}"}))
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("badcfg.zip", zip_stream.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("badcfg")]
+    assert imported, f"no imported project in {[p['name'] for p in projects]}"
+    assert imported[0]["project_config"] is None
 
 
 class TestProjectNameValidation:
