@@ -18,6 +18,7 @@ import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable
 
+from lfx.application_observability import observe_in_process_job_enqueue
 from lfx.log.logger import logger
 
 CoroFactory = Callable[[], Awaitable[None]]
@@ -70,7 +71,11 @@ class InProcessExecutor:
         if self._closed:
             msg = "Executor is closed"
             raise RuntimeError(msg)
-        await self._queue.put((key, coro_factory))
+        await observe_in_process_job_enqueue(
+            key,
+            coro_factory,
+            lambda observed: self._queue.put((key, observed)),
+        )
 
     async def cancel(self, key: str) -> bool:
         """Cancel the in-flight task for ``key``. Returns False if not in flight."""

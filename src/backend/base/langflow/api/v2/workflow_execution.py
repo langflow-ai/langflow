@@ -30,6 +30,7 @@ from ag_ui.core import CustomEvent
 from fastapi import BackgroundTasks, Request
 from fastapi.responses import EventSourceResponse
 from fastapi.sse import format_sse_event
+from lfx.application_observability import observe_stream_send
 from lfx.events.event_manager import create_default_event_manager
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.checkpoint.store import CheckpointStore
@@ -560,28 +561,29 @@ def _execute_streaming_workflow(
     the adapter. A failure during the run becomes a terminal protocol event
     routed through the adapter rather than an HTTP error.
     """
-
-    async def _frames_only() -> AsyncIterator[bytes]:
-        async for frame, _event_type in _stream_event_frames(
-            adapter=adapter,
-            flow_id=flow.id,
-            flow_name=flow.name,
-            background_tasks=background_tasks,
-            parsed=parsed,
-            current_user=current_user,
-            provider_policy_flow=flow,
-            source_flow_owner_id=flow.user_id,
-            run_id=run_id,
-            # The live v2 stream. Which client sent it is a separate attribute, read from the
-            # X-Langflow-Client header, because the playground calls this same public endpoint.
-            protocol="v2",
-            execution_family=FAMILY_WORKFLOW_V2,
-            expose_error_details=caller_owns_flow(flow, current_user),
-        ):
-            yield frame
-
     return EventSourceResponse(
-        _frames_only(),
+        observe_stream_send(
+            _stream_event_frames(
+                adapter=adapter,
+                flow_id=flow.id,
+                flow_name=flow.name,
+                background_tasks=background_tasks,
+                parsed=parsed,
+                current_user=current_user,
+                provider_policy_flow=flow,
+                source_flow_owner_id=flow.user_id,
+                run_id=run_id,
+                # The live v2 stream. Which client sent it is a separate attribute, read from the
+                # X-Langflow-Client header, because the playground calls this same public endpoint.
+                protocol="v2",
+                execution_family=FAMILY_WORKFLOW_V2,
+                expose_error_details=caller_owns_flow(flow, current_user),
+            ),
+            protocol="v2",
+            stream_protocol=adapter.name,
+            kind="live",
+            frame_selector=lambda item: item[0],
+        ),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 

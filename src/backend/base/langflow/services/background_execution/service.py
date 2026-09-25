@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from filelock import FileLock, Timeout
+from lfx.application_observability import observe_job_enqueue
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.executor import InProcessExecutor
@@ -324,7 +325,11 @@ class BackgroundExecutionService(Service):
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
             # queue; the worker hydrates the request from the job row.
-            await self._backend.enqueue(str(job_id))
+            await observe_job_enqueue(
+                self._backend.enqueue(str(job_id)),
+                job_id=str(job_id),
+                backend="scaled",
+            )
         else:
             await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
         return job_id
@@ -632,7 +637,7 @@ class BackgroundExecutionService(Service):
         # The durable replay must serialize with the SAME separators the live
         # adapter used (agui = compact, langflow = spaced) so replayed bytes are
         # byte-identical. The protocol is on the persisted submit request.
-        protocol = self._job_protocol(job)
+        protocol = self.job_protocol(job)
 
         async def read_durable(after_seq: int) -> list[LiveFrame]:
             rows = await job_service.read_events(job_id, after_seq=after_seq)
@@ -955,7 +960,7 @@ class BackgroundExecutionService(Service):
         return job
 
     @staticmethod
-    def _job_protocol(job: Job) -> str:
+    def job_protocol(job: Job) -> str:
         """The stream protocol the run used, read off the persisted submit request.
 
         ``submit`` persists the request (incl. ``stream_protocol``) under

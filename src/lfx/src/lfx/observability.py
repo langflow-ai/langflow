@@ -1242,6 +1242,32 @@ def extract_trace_link(metadata: dict[str, Any] | None) -> Link | None:
         return None
 
 
+class ApplicationSpanScope:
+    """Leak-safe handle for an application span.
+
+    Application telemetry must not copy exception messages, stack traces, request
+    bodies, or component values into OTLP.  This scope therefore records only the
+    root exception type and lets call sites add deliberately selected attributes.
+    """
+
+    __slots__ = ("error_type", "span")
+
+    def __init__(self, span: Span | None = None) -> None:
+        self.error_type: str | None = None
+        self.span = span
+
+    def record_error(self, error_type: str) -> None:
+        if self.error_type is None:
+            self.error_type = error_type
+
+    def set_attribute(self, key: str, value: Any) -> None:
+        if self.span is not None:
+            self.span.set_attribute(key, value)
+
+    def is_recording(self) -> bool:
+        return self.span is not None and self.span.is_recording()
+
+
 class OutboundCallScope:
     """Handle for a caller that learns the outcome after the call returns.
 
@@ -1276,7 +1302,7 @@ class OutboundCallScope:
             self.span.set_attribute(key, value)
 
 
-def _root_error_type(exc: BaseException) -> str:
+def root_error_type(exc: BaseException) -> str:
     """Name the exception that actually failed, not the one the retry loop wrapped it in.
 
     Both MCP retry loops re-raise as ``ValueError(f"Failed to run tool ...")`` with ``from e``,
@@ -1309,6 +1335,109 @@ def _root_error_type(exc: BaseException) -> str:
         root = next_error
         seen.add(id(root))
     return type(root).__name__
+
+
+# Backward compatibility for existing internal users. New application code goes through
+# ``lfx.application_observability`` and never imports this implementation detail.
+_root_error_type = root_error_type
+
+
+def _finish_application_span(scope: ApplicationSpanScope, exc: BaseException | None = None) -> None:
+    """Set a safe terminal status and exception event on an application span."""
+    span = scope.span
+    if span is None:
+        return
+    if exc is not None:
+        scope.record_error(_root_error_type(exc))
+    if scope.error_type is not None:
+        span.set_status(trace.Status(trace.StatusCode.ERROR, scope.error_type))
+        span.set_attribute("error.type", scope.error_type)
+        # The standard SDK's record_exception also writes the message and stack,
+        # either of which may contain prompts or credentials.  Keep the semantic
+        # exception event but limit it to the type.
+        span.add_event("exception", {"exception.type": scope.error_type})
+
+
+@contextlib.contextmanager
+def application_span(
+    name: str,
+    attributes: dict[str, Any] | None = None,
+    *,
+    kind: Any = None,
+    links: list[Any] | None = None,
+    root: bool = False,
+    start_time: int | None = None,
+) -> Iterator[ApplicationSpanScope]:
+    """Open a current application span without exporting sensitive exception data.
+
+    ``root=True`` starts a new trace and relies on ``links`` for asynchronous
+    producer/consumer relationships.  This avoids making a worker the child of an
+    HTTP request that necessarily ended while the job was waiting in a queue.
+    """
+    if not _OTEL_AVAILABLE:
+        yield ApplicationSpanScope()
+        return
+    kwargs: dict[str, Any] = {
+        "record_exception": False,
+        "set_status_on_exception": False,
+    }
+    if kind is not None:
+        kwargs["kind"] = kind
+    if links:
+        kwargs["links"] = links
+    if root:
+        from opentelemetry.context import Context
+
+        kwargs["context"] = Context()
+    if start_time is not None:
+        kwargs["start_time"] = start_time
+    tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
+    with tracer.start_as_current_span(name, **kwargs) as span:
+        scope = ApplicationSpanScope(span)
+        for key, value in (attributes or {}).items():
+            span.set_attribute(key, value)
+        try:
+            yield scope
+        except asyncio.CancelledError:
+            span.set_attribute("status", "cancelled")
+            raise
+        except BaseException as exc:
+            _finish_application_span(scope, exc)
+            raise
+        else:
+            _finish_application_span(scope)
+
+
+@contextlib.contextmanager
+def detached_application_span(
+    name: str,
+    attributes: dict[str, Any] | None = None,
+) -> Iterator[ApplicationSpanScope]:
+    """Open a span without attaching it to the current context.
+
+    Intended for async generators: their suspension points must not leave an OTel
+    context token attached to whichever task happens to resume them.
+    """
+    if not _OTEL_AVAILABLE:
+        yield ApplicationSpanScope()
+        return
+    tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
+    span = tracer.start_span(name)
+    scope = ApplicationSpanScope(span)
+    for key, value in (attributes or {}).items():
+        span.set_attribute(key, value)
+    try:
+        yield scope
+    except asyncio.CancelledError:
+        span.set_attribute("status", "cancelled")
+        raise
+    except BaseException as exc:
+        _finish_application_span(scope, exc)
+        raise
+    else:
+        _finish_application_span(scope)
+    finally:
+        span.end()
 
 
 @contextlib.contextmanager

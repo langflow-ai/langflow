@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
+from lfx.application_observability import observe_auth
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
@@ -149,6 +150,7 @@ def get_jwt_signing_key(settings_service: SettingsService) -> str:
     return settings_service.auth_settings.SECRET_KEY.get_secret_value()
 
 
+@observe_auth("api_key")
 async def api_key_security(
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
@@ -156,6 +158,7 @@ async def api_key_security(
     return await _auth_service().api_key_security(query_param, header_param)
 
 
+@observe_auth("websocket_api_key")
 async def ws_api_key_security(api_key: str | None) -> UserRead:
     return await _auth_service().ws_api_key_security(api_key)
 
@@ -181,6 +184,7 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
 
 
+@observe_auth("http")
 async def get_current_user(
     request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
@@ -202,6 +206,7 @@ async def get_current_user(
         raise _auth_error_to_http(e) from e
 
 
+@observe_auth("access_token")
 async def get_current_user_from_access_token(
     token: str | Coroutine | None,
     db: AsyncSession,
@@ -227,6 +232,7 @@ async def get_current_user_from_access_token(
 WS_AUTH_REASON = "Missing or invalid credentials (cookie, token or API key)."
 
 
+@observe_auth("websocket")
 async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: AsyncSession,
@@ -254,6 +260,7 @@ async def get_current_user_for_websocket(
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
 
+@observe_auth("sse")
 async def get_current_user_for_sse(
     request: Request,
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
@@ -280,6 +287,7 @@ async def get_current_user_for_sse(
         ) from e
 
 
+@observe_auth("workflow")
 async def get_current_user_for_workflow(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
@@ -334,6 +342,7 @@ async def get_optional_user(
         return None
 
 
+@observe_auth("webhook")
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     """Get the user for webhook execution.
 
@@ -353,6 +362,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     return await _auth_service().get_webhook_user(flow_id, request)
 
 
+@observe_auth("optional")
 async def get_current_user_optional(
     request: Request,
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
@@ -506,6 +516,7 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple:
     return await _auth_service().create_user_longterm_token(db)
 
 
+@observe_auth("mcp")
 async def get_current_user_mcp(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
