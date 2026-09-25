@@ -1729,8 +1729,10 @@ def _parse_ts_protected_fields(source: str) -> dict[str, set[str]]:
     start = source.index("export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT")
     body = source[source.index("{", source.index("=", start)) : source.index("};", start)]
     return {
-        component: set(re.findall(r'"([^"]+)"', fields))
-        for component, fields in re.findall(r"(\w+):\s*new Set\(\[([^\]]*)\]\)", body)
+        quoted_component or bare_component: set(re.findall(r'"([^"]+)"', fields))
+        for quoted_component, bare_component, fields in re.findall(
+            r'(?:"([^"]+)"|(\w+)):\s*new Set\(\[([^\]]*)\]\)', body
+        )
     }
 
 

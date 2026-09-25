@@ -14,6 +14,7 @@ from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
 from lfx.utils.env_var_security import safe_getenv
+from lfx.utils.flow_validation import is_protected_tweak_field
 
 TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
 
@@ -150,7 +151,7 @@ def convert_kwargs(params):
     return params
 
 
-def load_from_env_vars(params, load_from_db_fields, context=None):
+def load_from_env_vars(params, load_from_db_fields, context=None, *, component_type: str | None = None):
     no_env_fallback = bool(context and context.get("no_env_fallback"))
     for field in load_from_db_fields:
         if field not in params or not params[field]:
@@ -159,7 +160,7 @@ def load_from_env_vars(params, load_from_db_fields, context=None):
         key = None
 
         # Check request_variables in context first
-        if context and "request_variables" in context:
+        if context and "request_variables" in context and not is_protected_tweak_field(component_type, field):
             request_variables = context["request_variables"]
             if variable_name in request_variables:
                 key = request_variables[variable_name]
@@ -324,7 +325,9 @@ async def update_params_with_load_from_db_fields(
             context = None
             if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
                 context = custom_component.graph.context
-            return load_from_env_vars(params, load_from_db_fields, context=context)
+            return load_from_env_vars(
+                params, load_from_db_fields, context=context, component_type=type(custom_component).__name__
+            )
         for field in load_from_db_fields:
             # Check if this is a table field (using our naming convention)
             if field.startswith("table:"):
