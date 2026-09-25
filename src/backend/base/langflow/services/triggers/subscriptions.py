@@ -238,7 +238,8 @@ async def apply_lifecycle(session: AsyncSession, *, trigger_id: UUID, subscripti
 
     Graph sends these instead of - not alongside - the notification you were
     expecting, so ignoring them means a trigger that has stopped firing looks
-    healthy. ``reauthorizationRequired`` needs a reconnect. A removed
+    healthy. ``reauthorizationRequired`` schedules a renewal, which also
+    reauthorizes the subscription with a fresh access token. A removed
     subscription is marked expired and queued for replacement; ``missed``
     requests a source resync.
 
@@ -261,9 +262,12 @@ async def apply_lifecycle(session: AsyncSession, *, trigger_id: UUID, subscripti
         return True
 
     if event == LIFECYCLE_REAUTHORIZATION_REQUIRED:
-        await _set_trigger_state(
-            session, trigger_id=row.trigger_id, state=TriggerState.NEEDS_RECONNECT.value, reason=_NEEDS_RECONNECT_REASON
-        )
+        # Graph can send this when an access token is about to expire. A PATCH
+        # renewal reauthorizes the subscription with the refreshed credential;
+        # a user reconnect is only needed if the connection actually fails.
+        row.renew_after = _now()
+        session.add(row)
+        await session.flush()
         return True
 
     if event == LIFECYCLE_SUBSCRIPTION_REMOVED:

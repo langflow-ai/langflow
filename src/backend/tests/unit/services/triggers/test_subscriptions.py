@@ -330,8 +330,10 @@ async def test_an_expired_subscription_stops_consuming_renewal_attempts(make_sub
 # --------------------------------------------------------------------------- #
 
 
-async def test_reauthorization_required_moves_the_trigger_to_needs_reconnect(make_subscription) -> None:
-    trigger_id, _connection_id, _subscription_id, provider_subscription_id = await make_subscription()
+async def test_reauthorization_required_queues_renewal_without_stopping_trigger(
+    make_subscription, fake_renewer
+) -> None:
+    trigger_id, _connection_id, subscription_id, provider_subscription_id = await make_subscription()
 
     async with session_scope() as session:
         changed = await subscriptions.apply_lifecycle(
@@ -342,9 +344,11 @@ async def test_reauthorization_required_moves_the_trigger_to_needs_reconnect(mak
         )
 
     assert changed is True
-    row = await _trigger(trigger_id)
-    assert row.state == TriggerState.NEEDS_RECONNECT.value
-    assert "re-authorized" in (row.last_error or "")
+    assert (await _trigger(trigger_id)).state == TriggerState.ACTIVE.value
+    row = await _subscription(subscription_id)
+    assert row.renew_after.replace(tzinfo=timezone.utc) <= _now()
+    assert await subscriptions.run_renewal_pass(owner="replica-a") == 1
+    assert fake_renewer == [provider_subscription_id]
 
 
 async def test_subscription_removed_keeps_trigger_ready_for_resubscribe(make_subscription) -> None:
