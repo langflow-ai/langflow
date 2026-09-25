@@ -1,3 +1,8 @@
+---
+name: frontend-testing
+description: Write, review, or debug Langflow frontend tests for React components, hooks, utilities, and Zustand stores.
+---
+
 # Frontend Testing Skill - Langflow
 
 ## When to Apply
