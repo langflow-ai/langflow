@@ -632,6 +632,48 @@ async def test_kept_default_superuser_api_keys_stop_working(services_on):  # noq
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
+async def test_an_auto_login_account_with_a_generated_password_is_retired(services_on):  # noqa: ARG001
+    """AUTO_LOGIN gives the account a random password, so a default-password check never sees it."""
+    from secrets import token_urlsafe
+
+    from langflow.services.database.models.api_key.crud import check_key, create_api_key
+    from langflow.services.database.models.api_key.model import ApiKeyCreate
+
+    user_id = await _default_superuser_owning_work(password=token_urlsafe(32))
+    async with session_scope() as session:
+        key = (await create_api_key(session, ApiKeyCreate(name="minted under auto login"), user_id)).api_key
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    assert await check_key(key) is None
+    assert (await _default_superuser()).is_active is False
+    assert await _work_owned_by(user_id) == (1, 1, 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_claiming_a_retired_default_superuser_reactivates_it(services_on, monkeypatch):  # noqa: ARG001
+    """Retired by an earlier teardown, then named in LANGFLOW_SUPERUSER: the operator must be able to sign in."""
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+    assert (await _default_superuser()).is_active is False
+
+    settings = get_settings_service()
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", DEFAULT_SUPERUSER)
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER_PASSWORD", SecretStr("claimed-password"))
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
+
+    kept = await _default_superuser()
+    assert kept.id == user_id
+    assert kept.is_active is True
+    assert verify_password("claimed-password", kept.password)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_an_admin_reactivation_survives_the_next_teardown(services_on):  # noqa: ARG001
     """An admin turns the retired account back on; a restart must not turn it off again."""
     user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
