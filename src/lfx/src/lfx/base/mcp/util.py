@@ -1358,6 +1358,42 @@ class MCPSessionManager:
             return server_data["sessions"]
         return server_data  # legacy flat structure
 
+    def _assign_context_session(self, context_id: str, session_key: tuple[str, str]) -> None:
+        """Move a context's single ownership reference to ``session_key``.
+
+        The mapping and both reference counts are updated synchronously so
+        concurrent coroutines cannot observe a half-applied handoff. Cleanup of
+        the previous session is scheduled separately because acquiring its
+        server lock while the new server lock is held can deadlock two contexts
+        switching servers in opposite directions.
+        """
+        previous_key = self._context_to_session.get(context_id)
+        if previous_key == session_key:
+            return
+
+        self._context_to_session[context_id] = session_key
+        self._session_refcount[session_key] = self._session_refcount.get(session_key, 0) + 1
+
+        if previous_key is None:
+            return
+
+        remaining = self._session_refcount.get(previous_key, 1) - 1
+        if remaining > 0:
+            self._session_refcount[previous_key] = remaining
+            return
+
+        self._session_refcount.pop(previous_key, None)
+        cleanup_task = asyncio.create_task(self._cleanup_session_if_unreferenced(previous_key))
+        self._background_tasks.add(cleanup_task)
+        cleanup_task.add_done_callback(self._background_tasks.discard)
+
+    async def _cleanup_session_if_unreferenced(self, session_key: tuple[str, str]) -> None:
+        """Clean up a handed-off session unless another context acquired it."""
+        server_key, session_id = session_key
+        async with self._server_lock(server_key):
+            if self._session_refcount.get(session_key, 0) <= 0:
+                await self._cleanup_session_by_id(server_key, session_id)
+
     def _start_cleanup_task(self):
         """Start the periodic cleanup task.
 
@@ -1532,11 +1568,12 @@ class MCPSessionManager:
                     # Background task is still alive — treat the session as healthy.
                     session_info["last_used"] = asyncio.get_event_loop().time()
                     await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                    # record mapping & bump ref-count for backwards compatibility
-                    self._context_to_session[context_id] = (server_key, session_id)
-                    self._session_refcount[(server_key, session_id)] = (
-                        self._session_refcount.get((server_key, session_id), 0) + 1
-                    )
+                    # A context owns at most one reference to a pooled session. Clients
+                    # reach this path before every tool call, so treating repeated access
+                    # as a new acquisition inflates the refcount and makes one disconnect
+                    # unable to release the context's session.
+                    session_key = (server_key, session_id)
+                    self._assign_context_session(context_id, session_key)
                     return session
                 # Background task finished — session is dead, clean it up.
                 await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
@@ -1583,9 +1620,10 @@ class MCPSessionManager:
                 "last_used": asyncio.get_event_loop().time(),
             }
 
-            # register mapping & initial ref-count for the new session
-            self._context_to_session[context_id] = (server_key, session_id)
-            self._session_refcount[(server_key, session_id)] = 1
+            # Register the context's single ownership reference. If this context
+            # switched servers, its previous reference is released as part of
+            # the handoff.
+            self._assign_context_session(context_id, (server_key, session_id))
 
             return session
 
@@ -1993,12 +2031,17 @@ class MCPSessionManager:
 
         server_key, session_id = mapping
         async with self._server_lock(server_key):
+            # A concurrent handoff already released the old reference. Do not
+            # decrement it twice or disturb the context's newer mapping.
+            if self._context_to_session.get(context_id) != mapping:
+                return
+
             ref_key = (server_key, session_id)
             remaining = self._session_refcount.get(ref_key, 1) - 1
 
             if remaining <= 0:
-                await self._cleanup_session_by_id(server_key, session_id)
                 self._session_refcount.pop(ref_key, None)
+                await self._cleanup_session_by_id(server_key, session_id)
             else:
                 self._session_refcount[ref_key] = remaining
 
