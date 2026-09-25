@@ -46,6 +46,11 @@ class OAuthRegistration(BaseModel):
     scopes: list[str] = Field(min_length=1, max_length=512)
     tenant: str | None = None
     allowed_tenants: list[str] = Field(default_factory=list)
+    # TRG-4. Slack signs every Events API delivery with an app-level secret that
+    # is not the OAuth client secret and is not per user, so it belongs to the
+    # registration rather than to a connection or a trigger. It is optional
+    # because a registration used only for actions never receives an event.
+    signing_secret: SecretStr | None = None
 
     @model_validator(mode="after")
     def validate_registration(self) -> OAuthRegistration:
@@ -87,6 +92,13 @@ class OAuthRegistration(BaseModel):
         if self.profile == "bot" and (self.provider != "slack" or self.client_type == "public"):
             msg = "Only confidential Slack clients support the bot profile"
             raise OAuthError(msg)
+        if self.signing_secret is not None and self.provider != "slack":
+            # Microsoft and Google authenticate their notifications with a
+            # per-subscription secret Langflow mints (clientState, channel
+            # token), so a registration-level signing secret would be a second,
+            # weaker path to the same trust decision.
+            msg = "Only Slack registrations carry a signing secret"
+            raise OAuthError(msg)
         if not self.scopes or any(not s or any(c.isspace() or c == "," for c in s) for s in self.scopes):
             msg = "OAuth scopes must be nonempty individual scope names"
             raise OAuthError(msg)
@@ -110,7 +122,7 @@ class OAuthRegistration(BaseModel):
     def fingerprint(self) -> str:
         # Exclude rotatable secrets, but bind consent and existing grants to their
         # provider, client, tenant, profile, redirect and configured scope ceiling.
-        value = self.model_dump(exclude={"client_secret", "private_key", "certificate_thumbprint"})
+        value = self.model_dump(exclude={"client_secret", "private_key", "certificate_thumbprint", "signing_secret"})
         return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
@@ -188,3 +200,17 @@ def get_oauth_settings() -> OAuthSettings:
     except ValueError:
         msg = "OAuth instance configuration is invalid."
         raise OAuthError(msg, reason="registration-unavailable") from None
+
+
+def deployment_context() -> Literal["self_managed", "hosted", "desktop"]:
+    """Which deployment this process is, as ``LANGFLOW_CONNECTION_OAUTH_CONTEXT`` says.
+
+    Hosted must set it: Langflow-owned registrations are only valid in the
+    ``hosted`` context, so a hosted deployment that left it unset could not
+    connect anything. An unreadable configuration answers ``self_managed``,
+    the context with no hosted-only restriction to wrongly apply.
+    """
+    try:
+        return get_oauth_settings().context
+    except OAuthError:
+        return "self_managed"

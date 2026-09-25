@@ -148,9 +148,9 @@
       "providers": [
         "lfx-slack"
       ],
-      "requested": ">=0.1.1,<1.0.0",
-      "requirement": "lfx-slack==0.1.1",
-      "resolved_version": "0.1.1"
+      "requested": ">=0.2.0,<1.0.0",
+      "requirement": "lfx-slack==0.2.0",
+      "resolved_version": "0.2.0"
     },
     {
       "distribution": "lfx-toolguard",
@@ -180,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:5a7ca5be73fcc98c",
+  "profile_digest": "sha256:04f71ce38e22ab3b",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

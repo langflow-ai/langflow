@@ -213,6 +213,79 @@ class RuntimeSettings(BaseModel):
     """Consecutive failures on one connection before the error is surfaced on
     every trigger that connection feeds. A success resets the counter."""
 
+    # Triggers (TRG-4): the provider-signed ingress route on the API process and
+    # the leased job that keeps provider subscriptions alive.
+    trigger_ingress_enabled: bool = True
+    """Serve the provider ingress route. Turn it off on an instance that accepts
+    no inbound provider deliveries at all (a firewalled install using Track B
+    listeners only); every ingress request then answers 404 exactly as an
+    unknown trigger id does, so disabling it leaks nothing either."""
+    trigger_ingress_max_body_bytes: int = Field(default=1_048_576, gt=0)
+    """Per-route body cap for an ingress delivery, independent of the global
+    request limit. Provider notifications are small - Graph basic notifications
+    carry ids only - and this route is unauthenticated, so it reads a bounded
+    body and rejects anything larger before parsing it."""
+    trigger_ingress_rate_limit_per_minute: int = Field(default=600, gt=0)
+    """Per-trigger ingress ceiling. Ten deliveries a second is far above any
+    wave-1 provider's own cap (Slack allows 30,000 per workspace per app per
+    hour) and far below what an abusive caller would need to hurt the API."""
+    trigger_ingress_unknown_rate_limit_per_minute: int = Field(default=60, gt=0)
+    """Per-client ceiling for deliveries that name no known trigger. Separate
+    from the per-trigger counter so probing for valid ids is bounded without a
+    real provider's retries ever consuming the same budget."""
+    trigger_ingress_signature_tolerance_s: int = Field(default=300, gt=0)
+    """How stale a signed request's timestamp may be. Slack's own guidance is
+    five minutes; a shorter window rejects legitimate retries, a longer one
+    widens the replay window."""
+    trigger_subscription_renew_fraction: float = Field(default=0.5, gt=0, le=1)
+    """Fraction of a subscription's lifetime after which renewal is attempted."""
+    trigger_subscription_renew_lead_cap_s: float = Field(default=86_400.0, gt=0)
+    """Upper bound on how far ahead of expiry a subscription is renewed. With
+    the fraction above, a seven-day Graph mail subscription renews a day early
+    and a one-day rich-notification subscription renews twelve hours early."""
+    trigger_subscription_renew_interval_s: float = Field(default=300.0, gt=0)
+    """How often the leased renewal job scans for subscriptions coming due."""
+    trigger_subscription_max_per_poll: int = Field(default=25, gt=0)
+    """Upper bound on how many subscriptions one renewal pass claims. Separate
+    from the dispatcher's ``trigger_max_events_per_poll`` on purpose: one is an
+    event budget measured against flow execution, the other a provider-call
+    budget measured against an HTTP round trip per row, and an operator tuning
+    one should not silently change the other."""
+    trigger_subscription_retry_backoff_base_s: float = Field(default=60.0, gt=0)
+    """First delay before a failed renewal is retried. Subsequent consecutive
+    failures back off exponentially up to the cap. A renewal failure is never
+    terminal while the subscription still has time on it - only expiry is."""
+    trigger_subscription_retry_backoff_cap_s: float = Field(default=3600.0, gt=0)
+    """Ceiling on the renewal retry backoff. Well under every wave-1 provider's
+    shortest subscription lifetime (one day), so a subscription that is failing
+    still gets many attempts before it expires."""
+    trigger_subscription_failure_threshold: int = Field(default=3, gt=0)
+    """Consecutive renewal failures before the problem is surfaced on the
+    trigger the subscription feeds. A success clears it."""
+
+    # Slack sources (TRG-5). One Events API Request URL serves every workspace
+    # the app is installed in, so its budgets are per app and per workspace
+    # rather than per trigger; Socket Mode is bounded by Slack's per-app cap.
+    trigger_ingress_slack_app_rate_limit_per_minute: int = Field(default=20_000, gt=0)
+    """Ceiling on verified deliveries to one Slack app's Request URL. A flood
+    guard, not a quota: it sits well above what a hosted app installed in many
+    workspaces receives, because a verified Slack delivery that is refused is
+    retried, and one that keeps being refused gets the app's event delivery
+    disabled by Slack. Before the signature is checked each client has its own
+    counter at the same ceiling, so unsigned traffic - the Request URL is not a
+    secret - can never spend the app's budget."""
+    trigger_ingress_slack_team_rate_limit_per_hour: int = Field(default=60_000, gt=0)
+    """Ceiling on verified deliveries for one workspace of one Slack app,
+    counted over an hour because Slack's own delivery cap is hourly (30,000 per
+    workspace per app). Twice that cap, and over the same window, so a burst
+    Slack permits is never refused - only a leaked signing secret replaying
+    forged events ever reaches it."""
+    trigger_slack_socket_max_connections: int = Field(default=10, gt=0, le=10)
+    """Slack Socket Mode connections one app may hold open, as Slack counts
+    them. Slack allows ten per app; a listener whose new socket would take the
+    app past this closes it and backs off, leaving the sockets already open to
+    carry the app's events."""
+
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.
 

@@ -1,0 +1,29 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "event_ts": "1700000430.001000",
+    "item": {
+      "channel": "C0RELEASE1",
+      "ts": "1700000400.000700",
+      "type": "message"
+    },
+    "item_user": "U0ALICE001",
+    "reaction": "thumbsup::skin-tone-3",
+    "type": "reaction_added",
+    "user": "U0ALICE001"
+  },
+  "event_id": "Ev0REA00003",
+  "event_time": 1700000430,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

@@ -1,0 +1,27 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "channel": "C0SHARED01",
+    "channel_type": "channel",
+    "event_ts": "1700000950.001700",
+    "team": "T0TEAM0002",
+    "text": "Posted from the partner's workspace",
+    "ts": "1700000950.001700",
+    "type": "message",
+    "user": "U0DAVE0001"
+  },
+  "event_id": "Ev0SHC00001",
+  "event_time": 1700000950,
+  "is_ext_shared_channel": true,
+  "team_id": "T0TEAM0002",
+  "type": "event_callback"
+}
