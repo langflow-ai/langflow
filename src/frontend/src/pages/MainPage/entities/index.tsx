@@ -53,6 +53,19 @@ export type AddFolderType = {
   project_config?: ProjectConfig | null;
 };
 
+/**
+ * What a save returns: the project row, plus what the save did beyond it.
+ *
+ * `flows_updated` counts the flows the project's form was written into, so the UI can say what
+ * actually happened rather than only that the row was stored.
+ */
+export type ProjectSaveResult = FolderType & {
+  flows_updated?: number;
+  fields_skipped?: number;
+  flows_locked?: number;
+  restore_version_ids?: Record<string, string>;
+};
+
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */
 export type ProjectTypeType = {
   name: string;

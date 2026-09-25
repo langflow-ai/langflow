@@ -2741,14 +2741,14 @@ async def test_create_project_persists_explicit_project_type(client: AsyncClient
     create_response = await client.post("api/v1/projects/", json=body, headers=logged_in_headers)
     assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
     assert create_response.json()["project_type"] == "agent-harness"
-    assert create_response.json()["project_config"] == {"Instructions": "be careful"}
+    assert create_response.json()["project_config"] == {"Instructions": "be careful", "_applied": {}}
 
     # Re-read rather than trusting the create response, so this asserts persistence.
     project_id = create_response.json()["id"]
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.status_code == status.HTTP_200_OK, read_response.text
     assert read_response.json()["project_type"] == "agent-harness"
-    assert read_response.json()["project_config"] == {"Instructions": "be careful"}
+    assert read_response.json()["project_config"] == {"Instructions": "be careful", "_applied": {}}
 
 
 async def test_patch_project_updates_project_type(client: AsyncClient, logged_in_headers):
@@ -2768,12 +2768,12 @@ async def test_patch_project_updates_project_type(client: AsyncClient, logged_in
     )
     assert response.status_code == status.HTTP_200_OK, response.text
     assert response.json()["project_type"] == "agent-harness"
-    assert response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+    assert response.json()["project_config"] == {"Model": "openai/gpt-4o", "_applied": {}}
 
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.status_code == status.HTTP_200_OK, read_response.text
     assert read_response.json()["project_type"] == "agent-harness"
-    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o", "_applied": {}}
 
 
 async def test_patch_project_clears_project_config_with_explicit_null(client: AsyncClient, logged_in_headers):
@@ -2835,12 +2835,12 @@ async def test_upsert_project_updates_project_type(client: AsyncClient, logged_i
     )
     assert response.status_code == status.HTTP_200_OK, response.text
     assert response.json()["project_type"] == "agent-harness"
-    assert response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+    assert response.json()["project_config"] == {"Model": "openai/gpt-4o", "_applied": {}}
 
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.status_code == status.HTTP_200_OK, read_response.text
     assert read_response.json()["project_type"] == "agent-harness"
-    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o", "_applied": {}}
 
 
 @pytest.mark.parametrize("bad_type", ["totally-not-a-real-type", ""])
@@ -2934,7 +2934,7 @@ async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_
         assert "project.meta" in zf.namelist()
         metadata = json.loads(zf.read("project.meta"))
     assert metadata["project_type"] == "agent-harness"
-    assert metadata["project_config"] == {"Model": "openai/gpt-4o"}
+    assert metadata["project_config"] == {"Model": "openai/gpt-4o", "_applied": {}}
 
     # Remove the source project first. Re-importing the same flows into the same account
     # otherwise collides on flow ids, which is a property of this test, not of the round trip.
@@ -2955,6 +2955,7 @@ async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_
 
     # The metadata member must not have been imported as a flow.
     imported_detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
+    assert imported_detail["project_config"] == metadata["project_config"]
     flow_names = [f["name"] for f in imported_detail.get("flows", [])]
     assert "project" not in flow_names, f"the metadata member leaked in as a flow: {flow_names}"
 
