@@ -3,13 +3,14 @@ from __future__ import annotations
 import base64
 import hashlib
 import random
-from typing import TYPE_CHECKING, Annotated, Final
+from typing import TYPE_CHECKING, Annotated, Final, TypeVar
 
 from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
+from lfx.observability import application_span
 from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
 
@@ -23,8 +24,10 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.external import extract_external_token
 from langflow.services.deps import get_auth_service, get_settings_service
 
+_AuthResultT = TypeVar("_AuthResultT")
+
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Awaitable, Coroutine
     from datetime import timedelta
 
     from lfx.services.settings.service import SettingsService
@@ -91,6 +94,15 @@ def _auth_service():
     return get_auth_service()
 
 
+async def _trace_auth(surface: str, operation: Awaitable[_AuthResultT]) -> _AuthResultT:
+    """Trace one credential resolution without recording credential material."""
+    with application_span(
+        "langflow.request.auth",
+        {"langflow.phase": "request.auth", "langflow.auth.surface": surface},
+    ):
+        return await operation
+
+
 REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
 ACCESS_TOKEN_TYPE: Final[str] = "access"  # noqa: S105
 
@@ -153,11 +165,11 @@ async def api_key_security(
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
 ) -> UserRead | None:
-    return await _auth_service().api_key_security(query_param, header_param)
+    return await _trace_auth("api_key", _auth_service().api_key_security(query_param, header_param))
 
 
 async def ws_api_key_security(api_key: str | None) -> UserRead:
-    return await _auth_service().ws_api_key_security(api_key)
+    return await _trace_auth("websocket_api_key", _auth_service().ws_api_key_security(api_key))
 
 
 def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
@@ -195,8 +207,9 @@ async def get_current_user(
     # falls back to the external credential when it differs from the token.
     external_token = _get_external_token(request.headers, request.cookies)
     try:
-        return await _auth_service().get_current_user(
-            token, query_param, header_param, db, external_token=external_token
+        return await _trace_auth(
+            "http",
+            _auth_service().get_current_user(token, query_param, header_param, db, external_token=external_token),
         )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
@@ -219,7 +232,10 @@ async def get_current_user_from_access_token(
     instead of importing this function.
     """
     try:
-        return await _auth_service().get_current_user_from_access_token(token, db, external_token=external_token)
+        return await _trace_auth(
+            "access_token",
+            _auth_service().get_current_user_from_access_token(token, db, external_token=external_token),
+        )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
@@ -245,7 +261,10 @@ async def get_current_user_for_websocket(
     )
 
     try:
-        return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
+        return await _trace_auth(
+            "websocket",
+            _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token),
+        )
     except AuthBackendUnavailableError as e:
         # The credential was never judged, so closing as a policy violation
         # would tell the client to fix a credential that is not the problem.
@@ -270,7 +289,10 @@ async def get_current_user_for_sse(
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+        return await _trace_auth(
+            "sse",
+            _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token),
+        )
     except AuthBackendUnavailableError as e:
         raise _auth_error_to_http(e) from e
     except AuthenticationError as e:
@@ -298,7 +320,10 @@ async def get_current_user_for_workflow(
 
     async with session_scope() as db:
         try:
-            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+            user = await _trace_auth(
+                "workflow",
+                _auth_service().get_current_user(token, query_param, header_param, db),
+            )
         except AuthenticationError as e:
             raise _auth_error_to_http(e) from e
         active_user = await _auth_service().get_current_active_user(user)
@@ -350,7 +375,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     Raises:
         HTTPException: If authentication fails or user doesn't have permission
     """
-    return await _auth_service().get_webhook_user(flow_id, request)
+    return await _trace_auth("webhook", _auth_service().get_webhook_user(flow_id, request))
 
 
 async def get_current_user_optional(
@@ -376,7 +401,10 @@ async def get_current_user_optional(
         return None
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+        return await _trace_auth(
+            "optional",
+            _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token),
+        )
     except (AuthenticationError, HTTPException):
         return None
 
@@ -513,7 +541,10 @@ async def get_current_user_mcp(
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
     try:
-        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
+        return await _trace_auth(
+            "mcp",
+            _auth_service().get_current_user_mcp(token, query_param, header_param, db),
+        )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 

@@ -16,9 +16,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import time
 from collections.abc import Awaitable, Callable
 
 from lfx.log.logger import logger
+from lfx.observability import _root_error_type, application_span
+from opentelemetry import trace
+from opentelemetry.trace import Link, SpanContext, SpanKind
 
 CoroFactory = Callable[[], Awaitable[None]]
 
@@ -28,7 +32,7 @@ class InProcessExecutor:
 
     def __init__(self, max_concurrency: int = 5) -> None:
         self._max_concurrency = max(int(max_concurrency), 1)
-        self._queue: asyncio.Queue[tuple[str, CoroFactory]] = asyncio.Queue()
+        self._queue: asyncio.Queue[tuple[str, CoroFactory, int, SpanContext | None]] = asyncio.Queue()
         self._workers: list[asyncio.Task] = []
         # Maps a job key to its in-flight task so cancel() can reach it.
         self._in_flight: dict[str, asyncio.Task] = {}
@@ -70,7 +74,9 @@ class InProcessExecutor:
         if self._closed:
             msg = "Executor is closed"
             raise RuntimeError(msg)
-        await self._queue.put((key, coro_factory))
+        span_context = trace.get_current_span().get_span_context()
+        origin = span_context if span_context.is_valid else None
+        await self._queue.put((key, coro_factory, time.time_ns(), origin))
 
     async def cancel(self, key: str) -> bool:
         """Cancel the in-flight task for ``key``. Returns False if not in flight."""
@@ -97,27 +103,65 @@ class InProcessExecutor:
     async def _worker(self, worker_id: int) -> None:
         while True:
             try:
-                key, coro_factory = await self._queue.get()
+                key, coro_factory, enqueued_at, origin = await self._queue.get()
             except asyncio.CancelledError:
                 return
-            task = asyncio.create_task(coro_factory())
-            self._in_flight[key] = task
-            try:
-                await self._await_task(task)
-            except asyncio.CancelledError:
-                # A cancelled job must not take the worker down with it — but a
-                # cancel aimed at the WORKER (stop()) must. ``Task.cancelling()``
-                # is Python 3.11+; the project supports 3.10, so we distinguish
-                # the two with an explicit ``_closed`` flag set by ``stop()``
-                # rather than that version-specific API. When ``stop()`` ran, the
-                # cancel targets the worker — re-raise to exit. Otherwise it was
-                # a ``cancel(key)`` aimed at the job — swallow and keep serving.
-                if self._closed:
-                    raise
-                await logger.adebug(f"Background job {key} cancelled on worker {worker_id}")
-            except Exception as exc:  # noqa: BLE001
-                await logger.aerror(f"Background job {key} failed on worker {worker_id}: {exc}", exc_info=True)
-            finally:
-                if self._in_flight.get(key) is task:
-                    self._in_flight.pop(key, None)
-                self._queue.task_done()
+            links = [Link(origin)] if origin is not None else None
+            attributes = {
+                "messaging.system": "langflow",
+                "messaging.destination.name": "workflow.jobs",
+                "langflow.job.id": key,
+                "langflow.job.type": "workflow",
+                "langflow.job.backend": "in_process",
+            }
+            with application_span(
+                "langflow.job.queue_wait",
+                {**attributes, "messaging.operation.type": "settle", "langflow.phase": "job.queue_wait"},
+                links=links,
+                root=True,
+                start_time=enqueued_at,
+            ):
+                pass
+            with application_span(
+                "langflow.job.dequeue",
+                {**attributes, "messaging.operation.type": "receive", "langflow.phase": "job.dequeue"},
+                kind=SpanKind.CONSUMER,
+                links=links,
+                root=True,
+            ):
+                pass
+            with application_span(
+                "langflow.job.execute",
+                {
+                    **attributes,
+                    "messaging.operation.type": "process",
+                    "langflow.phase": "job.execute",
+                    "langflow.worker.id": worker_id,
+                },
+                kind=SpanKind.CONSUMER,
+                links=links,
+                root=True,
+            ) as execute_span:
+                task = asyncio.create_task(coro_factory())
+                self._in_flight[key] = task
+                try:
+                    await self._await_task(task)
+                except asyncio.CancelledError:
+                    # A cancelled job must not take the worker down with it — but a
+                    # cancel aimed at the WORKER (stop()) must. ``Task.cancelling()``
+                    # is Python 3.11+; the project supports 3.10, so we distinguish
+                    # the two with an explicit ``_closed`` flag set by ``stop()``
+                    # rather than that version-specific API. When ``stop()`` ran, the
+                    # cancel targets the worker — re-raise to exit. Otherwise it was
+                    # a ``cancel(key)`` aimed at the job — swallow and keep serving.
+                    if self._closed:
+                        raise
+                    execute_span.set_attribute("langflow.job.status", "cancelled")
+                    await logger.adebug(f"Background job {key} cancelled on worker {worker_id}")
+                except Exception as exc:  # noqa: BLE001
+                    execute_span.record_error(_root_error_type(exc))
+                    await logger.aerror(f"Background job {key} failed on worker {worker_id}: {exc}", exc_info=True)
+                finally:
+                    if self._in_flight.get(key) is task:
+                        self._in_flight.pop(key, None)
+                    self._queue.task_done()
