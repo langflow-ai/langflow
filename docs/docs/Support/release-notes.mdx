@@ -46,94 +46,24 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
-## 1.12.x
+## 1.13.x
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
 ### Breaking changes
 
-- `langflow-base` is now the minimal install
+- Official packages require authentication by default
 
-    Langflow 1.12 makes `langflow-base` a complete, version-aligned installation of the Langflow application.
-    Replace any `langflow-base~=0.x` pins with `langflow-base~=1.12.0` pins.
+    Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
+    Set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
+    Development branches and local builds from those branches still default to automatic login.
+    For trusted local development with a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true`.
 
-- Ongoing breaking change: bundle separation
+    For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
-    Bundle separation concludes in 1.12.
-    `uv pip install langflow` no longer installs all provider bundles, and includes only a curated list of providers.
+## 1.12.x
 
-    Saved flows continue to operate as expected, and existing component class names remain compatible.
-    If a required provider package is not installed, the component is visible in the visual editor, but the flow won't build or run until you install the package.
-
-    Langflow displays an error that names the missing package, so you can install it.
-    To install a package, such as Exa, run `uv pip install lfx-exa` in your virtual environment.
-
-    For more information, see [Additional bundles](extensions-bundle-list#additional-bundles).
-
-- Admin Page removed
-
-    Langflow OSS no longer includes an **Admin Page**.
-    The `/admin` route, the account-menu **Admin Page** link, and the user-management page are gone.
-    Superusers can no longer manage users or passwords in the visual editor.
-
-    To manage users, use the [Users API](/api-users).
-    `/login/admin` is still the admin sign-in endpoint and page.
-
-    For more information, see [Manage users as an administrator](/api-keys-and-authentication#manage-users-as-an-administrator).
-
-### New features
-
-- OpenTelemetry export
-
-    Langflow can export health traces, metrics, and logs over OTLP to your own backend.
-
-    For more information, see [OpenTelemetry](./observability-opentelemetry), [New Relic](./observability-new-relic), and [Instana](./observability-instana).
-
-- Python Interpreter microVM sandbox
-
-    Set `LANGFLOW_SANDBOX_BACKEND=exec-sandbox` to run the [**Python Interpreter** component](/python-interpreter) in a dedicated [QEMU microVM](https://www.qemu.org/docs/master/system/i386/microvm.html) instead of in the Langflow server process.
-    The microVM is not included in a default `uv pip install langflow` installation.
-    To install it, run `uv pip install 'langflow[sandbox]'`.
-
-    For more information, see [Isolate executions in a microVM](/python-interpreter#sandbox).
-
-- Production preflight checks
-
-    Set `LANGFLOW_DEPLOYMENT_PROFILE=prod` to probe your Langflow deployment before any workers start.
-    The default remains `dev`, which skips prod checks.
-
-    For more information, see [Production preflight checks](/deployment-prod-best-practices#production-preflight).
-
-- Disable the legacy MCP SSE transport
-
-    Set `LANGFLOW_MCP_SSE_ENABLED=false` to return a `404` from the legacy SSE transport endpoint.
-    Streamable HTTP is not affected.
-
-    For more information, see [Disable the legacy MCP SSE transport](/mcp-server#disable-legacy-sse).
-
-- OrcaRouter bundle
-
-    The **OrcaRouter** bundle adds an OrcaRouter language model component.
-
-    For more information, see [OrcaRouter](./bundles-orcarouter).
-
-- IBM Confluent bundle
-
-    The **IBM Confluent** bundle adds Kafka, Tableflow, and Real-Time Context Engine components.
-
-    For more information, see [IBM Confluent](./bundles-confluent).
-
-- Deployment tweak policy
-
-    Set `LANGFLOW_TWEAKS_POLICY` to control which component fields an API caller can override at run time.
-
-    For more information, see [Restrict API tweaks](./deployment-tweaks-policy).
-
-- Catalog and model policy APIs
-
-    Superusers can block or allow components, starter templates, model providers, and specific models.
-
-    For more information, see [Catalog and model policy](./api-governance-policy).
+For 1.12.x release notes, see the [1.12.x documentation](https://docs.langflow.org/1.12.0/release-notes).
 
 - Guardrails checking methods (1.12.2)
 
