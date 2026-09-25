@@ -1066,9 +1066,22 @@ async def upload_file(
     file: Annotated[UploadFile | None, File()] = None,
     current_user: CurrentActiveUser,
     folder_id: UUID | None = None,
+    strict: bool = False,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
-    """Upload flows from a JSON or ZIP file (upsert semantics for flows with stable IDs)."""
+    """Upload flows from a JSON or ZIP file (upsert semantics for flows with stable IDs).
+
+    By default, a flow-name collision on the create path is resolved by silently
+    appending "(N)" to the name, and a stable ID that belongs to another user is
+    silently cleared and replaced with a freshly generated one -- both preserve the
+    long-standing lenient behavior existing callers may depend on.
+
+    ``strict=true`` fails those cases instead of resolving them silently: a name
+    collision raises 409 rather than being renamed, and an ID owned by another user
+    raises 409 rather than being replaced. Callers that need the response to reflect
+    exactly what they asked for (e.g. batch upserts that report the requested name/ID
+    back to their own caller) should set this.
+    """
     # Authorization is enforced per-flow below, after parsing — the per-flow
     # check uses the actual workspace_id/folder_id each uploaded flow targets.
     # A coarse pre-parse check here would over-reject (it would authorize the
@@ -1205,12 +1218,19 @@ async def upload_file(
                     storage_service=storage_service,
                 )
             elif stable_id is not None and stable_id in foreign_existing_ids:
+                if strict:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Flow id {stable_id} belongs to another user and cannot be upserted",
+                    )
                 flow.id = None
                 flow_read = await _new_flow(
                     session=session,
                     flow=flow,
                     user_id=current_user.id,
                     storage_service=storage_service,
+                    fail_on_name_conflict=strict,
+                    fail_on_endpoint_conflict=strict,
                 )
             else:
                 flow_read = await _new_flow(
@@ -1219,12 +1239,20 @@ async def upload_file(
                     user_id=current_user.id,
                     storage_service=storage_service,
                     flow_id=stable_id,
+                    fail_on_name_conflict=strict,
+                    fail_on_endpoint_conflict=strict,
                 )
             flow_reads.append(flow_read)
     except HTTPException:
         raise
     except Exception as e:
-        raise _handle_unique_constraint_error(e) from e
+        # A uniqueness violation reaching here is a race lost against a concurrent
+        # writer between the dedup/ownership checks above and this flush -- the same
+        # conflict the explicit 409 branches elsewhere in this module report. Match
+        # their status rather than falling back to _handle_unique_constraint_error's
+        # generic 400 default, so callers see one consistent status for "the name/ID
+        # you asked for is taken" regardless of which check caught it.
+        raise _handle_unique_constraint_error(e, status_code=409) from e
     else:
         return flow_reads
 
