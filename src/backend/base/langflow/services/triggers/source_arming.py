@@ -36,6 +36,10 @@ _SCOPES = {
     "google.drive": {"https://www.googleapis.com/auth/drive.file"},
     "google.gmail": {"https://www.googleapis.com/auth/gmail.readonly"},
 }
+_SCOPE_ALTERNATIVES = {
+    "Calendars.Read": {"Calendars.ReadWrite"},
+    "https://www.googleapis.com/auth/calendar.events.readonly": {"https://www.googleapis.com/auth/calendar.events"},
+}
 _PUBSUB_TOPIC = re.compile(r"^projects/[A-Za-z0-9_.~+%-]+/topics/[A-Za-z0-9_.~+%-]+$")
 _SERVICE_ACCOUNT = re.compile(r"^[A-Za-z0-9_.-]+@[A-Za-z0-9.-]+\.iam\.gserviceaccount\.com$")
 
@@ -145,7 +149,9 @@ async def check_ready(
     granted = set(row.granted_scopes or [])
     if kind in MICROSOFT_SOURCE_KINDS:
         granted |= {scope.removeprefix("https://graph.microsoft.com/") for scope in granted}
-    missing = needed - granted
+    missing = {
+        scope for scope in needed if scope not in granted and not (_SCOPE_ALTERNATIVES.get(scope, set()) & granted)
+    }
     if missing:
         msg = f"The source connection is missing required scopes: {', '.join(sorted(missing))}."
         raise ValueError(msg)

@@ -95,3 +95,20 @@ async def test_full_resync_emits_only_changed_and_removed_items_after_ledger_pur
             await session.exec(select(TriggerSourceVersion).where(TriggerSourceVersion.trigger_id == trigger_id))
         ).all()
         assert len(versions) == 3
+
+
+async def test_readded_item_can_emit_a_second_removal(make_trigger) -> None:
+    trigger_id = await make_trigger(kind="google.calendar", provider="google")
+    removed = {**_item("e1", "deleted"), "deleted": True, "data": {}}
+    async with session_scope() as session:
+        await append_and_advance(session, trigger_id=trigger_id, items=[_item("e1", "v1")], cursor=None, baseline=True)
+    async with session_scope() as session:
+        assert await append_and_advance(session, trigger_id=trigger_id, items=[removed], cursor=None) == 1
+    async with session_scope() as session:
+        assert await append_and_advance(session, trigger_id=trigger_id, items=[_item("e1", "v2")], cursor=None) == 1
+    async with session_scope() as session:
+        assert await append_and_advance(session, trigger_id=trigger_id, items=[removed], cursor=None) == 1
+        assert await append_and_advance(session, trigger_id=trigger_id, items=[removed], cursor=None) == 0
+        rows = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all()
+        removal_keys = [row.dedupe_key for row in rows if row.payload["deleted"]]
+        assert len(removal_keys) == len(set(removal_keys)) == 2

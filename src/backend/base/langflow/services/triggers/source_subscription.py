@@ -25,7 +25,7 @@ from langflow.services.triggers.source_clients import (
     SourceHTTP,
     source_lease,
 )
-from langflow.services.triggers.subscriptions import upsert_subscription
+from langflow.services.triggers.subscriptions import revoke_for_trigger, upsert_subscription
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -171,6 +171,8 @@ async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSu
     ).first()
     if existing is not None and existing.connection_id == trigger.connection_id:
         return existing
+    if existing is not None:
+        await revoke_for_trigger(session, trigger_id=trigger.id)
     address = await source_ingress_url(session, trigger)
     if trigger.provider == PROVIDER_MICROSOFT:
         return await _graph_create(session, trigger, address)
@@ -271,6 +273,10 @@ async def revoke_source(session: AsyncSession, subscription: TriggerSubscription
     trigger = await session.get(Trigger, subscription.trigger_id)
     if trigger is None:
         return
+    if subscription.connection_id and subscription.connection_id != trigger.connection_id:
+        # Re-arming may already have switched the trigger to a new connection.
+        # The old provider watch must be stopped with the credential that made it.
+        trigger = trigger.model_copy(update={"connection_id": subscription.connection_id})
     lease = await source_lease(session, trigger, family=FAMILY_TRIGGER_PUSH)
     if subscription.provider == PROVIDER_MICROSOFT:
         async with SourceHTTP(lease, origin=GRAPH_ORIGIN) as client:

@@ -134,6 +134,7 @@ async def append_and_advance(
         version = str(item["version"])
         if prior is not None and prior.version == version:
             continue
+        removed_version = prior.version if version == "deleted" and prior is not None else None
         if prior is None:
             prior = TriggerSourceVersion(
                 trigger_id=trigger_id,
@@ -153,7 +154,7 @@ async def append_and_advance(
             provider=str(item["provider"]),
             resource=str(item["resource"]),
             item_id=str(item["id"]),
-            version=version,
+            version=f"deleted:{removed_version}" if removed_version is not None else version,
         )
         _event, inserted = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key=key, payload=item)
         created += int(inserted)
