@@ -1,0 +1,38 @@
+---
+title: UniRate
+slug: /bundles-unirate
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="unirate" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **UniRate** bundle.
+
+## UniRate Currency Converter
+
+This component converts an amount from one currency to another using live exchange rates from the [UniRate API](https://unirateapi.com) and returns the converted amount and rate.
+
+Get an API key from [unirateapi.com](https://unirateapi.com); a free tier is available. For details on the underlying API, see the [UniRate website](https://unirateapi.com).
+
+It outputs a [`Table`](/data-types#table) with `from`, `to`, `amount`, `rate`, and `result` columns. The `text` of the row is a human-readable summary, for example `100 USD = 92.5 EUR`.
+If the request fails, for example because the API key is missing or invalid or the target currency is unknown, the table contains a single row with an `error` column that describes the problem.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `convert_currency` that an [**Agent** component](/agents) can call with a source currency, target currency, and amount.
+
+### UniRate Currency Converter parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| To Currency (`to_currency`) | String | Input parameter. ISO 4217 code of the target currency, for example `EUR`, `GBP`, or `JPY`. |
+| Amount (`amount`) | Float | Input parameter. The amount of the source currency to convert. Default: `1`. |
+| From Currency (`from_currency`) | String | Input parameter. ISO 4217 code of the source currency. Default: `USD`. |
+| UniRate API Key (`unirate_api_key`) | SecretString | Input parameter. Your UniRate API key. |
+
+## See also
+
+* [**Bundles** overview](/components-bundle-components)
+* [**Agents and tools**](/agents-tools)
