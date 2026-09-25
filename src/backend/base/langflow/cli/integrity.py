@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.settings.service import SettingsService
+
 Status = Literal["ok", "warn", "fail"]
 
 # A failing check names this many examples, enough to find the pattern.
@@ -78,17 +80,19 @@ def _result(name: str, problems: list[str], ok_summary: str, fail_summary: str) 
 # ---- credentials ---------------------------------------------------------------
 
 
-async def check_credentials(session: AsyncSession) -> CheckResult:
+async def check_credentials(session: AsyncSession, settings_service: SettingsService | None = None) -> CheckResult:
     """Can the configured secret key open every encrypted value?
 
     The app's own decryption returns an empty string on failure and logs below the
     default level, so a wrong key looks like a blank credential. This decrypts each
-    value itself and counts the ones that do not open.
+    value itself and counts the ones that do not open. Pass ``settings_service`` to
+    ask the same question of another key, such as the one a migration target holds.
     """
     from langflow.services.auth.utils import get_fernet_for_decryption
     from langflow.services.deps import get_settings_service
 
-    fernet = get_fernet_for_decryption(get_settings_service())
+    settings_service = settings_service or get_settings_service()
+    fernet = get_fernet_for_decryption(settings_service)
     counted = 0
     problems = []
     for column, row_id, value in await _encrypted_values(session):
@@ -97,7 +101,7 @@ async def check_credentials(session: AsyncSession) -> CheckResult:
             if column == "sso_config.client_secret_encrypted":
                 from langflow.services.database.models.auth.sso_secret import decrypt_sso_client_secret
 
-                decrypt_sso_client_secret(value)
+                decrypt_sso_client_secret(value, settings_service)
             else:
                 fernet.decrypt(value.encode())
         except (InvalidToken, ValueError, TypeError):

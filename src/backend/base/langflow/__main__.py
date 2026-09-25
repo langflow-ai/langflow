@@ -1203,6 +1203,48 @@ async def _check_integrity() -> bool:
     return report.ok
 
 
+@app.command(name="migration-preflight")
+def migration_preflight(
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    target_revision: str = typer.Option(
+        "", help="Alembic revision the target image runs. Refuses a target older than this database."
+    ),
+    target_secret_key_file: Path | None = typer.Option(
+        None,
+        help="File holding the LANGFLOW_SECRET_KEY the target will run with.",
+        envvar="LANGFLOW_TARGET_SECRET_KEY_FILE",
+        exists=True,
+        dir_okay=False,
+    ),
+) -> None:
+    """Refuse a migration from this instance that cannot succeed, before anything moves.
+
+    Checks that the target's schema is not older than this database's, that the
+    default superuser will survive a target with AUTO_LOGIN off, that the target's
+    key opens every stored credential, and which knowledge bases record the model
+    their vectors need. Then runs check-integrity against this instance.
+
+    Read-only. Exits non-zero if any check fails.
+    """
+    configure(log_level=log_level)
+    # Not stripped: the preflight warns about whitespace a Secret made from this file would carry.
+    key = target_secret_key_file.read_text() if target_secret_key_file else None
+    if not asyncio.run(_migration_preflight(target_revision or None, key)):
+        raise typer.Exit(1)
+
+
+async def _migration_preflight(target_revision: str | None, target_secret_key: str | None) -> bool:
+    from langflow.cli.migration_preflight import run_preflight
+
+    await initialize_services()
+    report = await run_preflight(target_revision=target_revision, target_secret_key=target_secret_key)
+    for check in report.checks:
+        typer.echo(f"{check.status:5} {check.name:24} {check.summary}")
+        for problem in check.problems:
+            typer.echo(f"        - {problem}")
+    return report.ok
+
+
 # command to copy the langflow database from the cache to the current directory
 # because now the database is stored per installation
 @app.command()
