@@ -485,3 +485,270 @@ async def test_setup_superuser_auto_login_lock_timeout_ok_when_superuser_exists(
         user = (await session.exec(stmt)).first()
         assert user is not None
         assert user.is_superuser is True
+
+
+# ---------------------------------------------------------------------------
+# A default superuser that owns work must survive AUTO_LOGIN being turned off.
+# Found adopting an existing database into a deployment with AUTO_LOGIN off: the
+# delete cascaded on Postgres and took every flow and project the user owned.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["sqlite", "postgres"])
+async def services_on(request, monkeypatch, tmp_path):
+    """Services on SQLite, and on Postgres when LANGFLOW_TEST_DATABASE_URI is set."""
+    import os
+    import uuid as uuid_module
+
+    import sqlalchemy as sa
+    from langflow.services.utils import initialize_services, teardown_services
+    from lfx.services.manager import get_service_manager
+
+    base = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+    if request.param == "postgres" and not base:
+        pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
+
+    admin_engine = None
+    db_name = None
+    started = False
+    try:
+        if request.param == "sqlite":
+            url = f"sqlite:///{tmp_path / 'test.db'}"
+        else:
+            admin_url = sa.engine.make_url(base).set(drivername="postgresql+psycopg")
+            db_name = f"lf_su_{uuid_module.uuid4().hex[:10]}"
+            admin_engine = sa.create_engine(admin_url, isolation_level="AUTOCOMMIT")
+            with admin_engine.connect() as conn:
+                conn.execute(sa.text(f'CREATE DATABASE "{db_name}"'))
+            url = admin_url.set(database=db_name).render_as_string(hide_password=False)
+
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", url)
+        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER", "admin")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "admin-password")
+        get_service_manager().factories.clear()
+        get_service_manager().services.clear()
+        started = True
+        await initialize_services()
+        yield request.param
+    finally:
+        # The database goes even when teardown fails, or the next run inherits it.
+        try:
+            if started:
+                await teardown_services()
+        finally:
+            if admin_engine is not None:
+                with admin_engine.connect() as conn:
+                    conn.execute(sa.text(f'DROP DATABASE IF EXISTS "{db_name}" WITH (FORCE)'))
+                admin_engine.dispose()
+
+
+async def _default_superuser_owning_work(
+    *,
+    owns_work: bool = True,
+    logged_in: bool = False,
+    password: str = "old-password",  # noqa: S107  # pragma: allowlist secret
+):
+    """The account an AUTO_LOGIN instance leaves behind, as it looks after a migration."""
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.variable.model import Variable
+
+    async with session_scope() as session:
+        user = User(
+            username=DEFAULT_SUPERUSER,
+            password=get_auth_service().get_password_hash(password),
+            is_superuser=True,
+            is_active=True,
+            last_login_at=datetime.now(timezone.utc) if logged_in else None,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        if owns_work:
+            folder = Folder(name="team work", user_id=user.id)
+            session.add(folder)
+            await session.commit()
+            await session.refresh(folder)
+            session.add(Flow(name="the flow that matters", user_id=user.id, folder_id=folder.id, data={}))
+            session.add(Variable(name="MY_KEY", value="encrypted", type="Credential", user_id=user.id))
+            await session.commit()
+        return user.id
+
+
+async def _work_owned_by(user_id) -> tuple[int, int, int]:
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.variable.model import Variable
+
+    async with session_scope() as session:
+        flows = len((await session.exec(select(Flow).where(Flow.user_id == user_id))).all())
+        folders = len((await session.exec(select(Folder).where(Folder.user_id == user_id))).all())
+        variables = len((await session.exec(select(Variable).where(Variable.user_id == user_id))).all())
+    return flows, folders, variables
+
+
+async def _default_superuser():
+    async with session_scope() as session:
+        return (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_default_superuser_that_owns_work_is_kept_and_locked(services_on):  # noqa: ARG001
+    """Another superuser is configured, so the old account keeps its data and loses its default password."""
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    kept = await _default_superuser()
+    assert kept is not None
+    assert kept.id == user_id
+    assert await _work_owned_by(user_id) == (1, 1, 1)
+    for guess in ("", LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(), "admin-password"):
+        assert not verify_password(guess, kept.password)
+    assert kept.is_active is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_kept_default_superuser_api_keys_stop_working(services_on):  # noqa: ARG001
+    """Anyone could mint keys as this account while AUTO_LOGIN was on; they must not outlive it."""
+    from langflow.services.database.models.api_key.crud import check_key, create_api_key
+    from langflow.services.database.models.api_key.model import ApiKeyCreate
+
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    async with session_scope() as session:
+        key = (await create_api_key(session, ApiKeyCreate(name="minted under auto login"), user_id)).api_key
+    assert (await check_key(key)).id == user_id
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    assert await check_key(key) is None
+    assert await _work_owned_by(user_id) == (1, 1, 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_an_auto_login_account_with_a_generated_password_is_retired(services_on):  # noqa: ARG001
+    """AUTO_LOGIN gives the account a random password, so a default-password check never sees it."""
+    from secrets import token_urlsafe
+
+    from langflow.services.database.models.api_key.crud import check_key, create_api_key
+    from langflow.services.database.models.api_key.model import ApiKeyCreate
+
+    user_id = await _default_superuser_owning_work(password=token_urlsafe(32))
+    async with session_scope() as session:
+        key = (await create_api_key(session, ApiKeyCreate(name="minted under auto login"), user_id)).api_key
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    assert await check_key(key) is None
+    assert (await _default_superuser()).is_active is False
+    assert await _work_owned_by(user_id) == (1, 1, 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_claiming_a_retired_default_superuser_reactivates_it(services_on, monkeypatch):  # noqa: ARG001
+    """Retired by an earlier teardown, then named in LANGFLOW_SUPERUSER: the operator must be able to sign in."""
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+    assert (await _default_superuser()).is_active is False
+
+    settings = get_settings_service()
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", DEFAULT_SUPERUSER)
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER_PASSWORD", SecretStr("claimed-password"))
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
+
+    kept = await _default_superuser()
+    assert kept.id == user_id
+    assert kept.is_active is True
+    assert verify_password("claimed-password", kept.password)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_an_admin_reactivation_survives_the_next_teardown(services_on):  # noqa: ARG001
+    """An admin turns the retired account back on; a restart must not turn it off again."""
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    async with session_scope() as session:
+        user = await session.get(User, user_id)
+        user.is_active = True
+        session.add(user)
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    assert (await _default_superuser()).is_active is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_a_password_an_admin_set_survives_the_next_teardown(services_on):  # noqa: ARG001
+    """An admin resets the locked account; a restart before its first sign-in must not undo that."""
+    user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    async with session_scope() as session:
+        user = await session.get(User, user_id)
+        user.password = get_auth_service().get_password_hash("set-by-an-admin")
+        session.add(user)
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    assert verify_password("set-by-an-admin", (await _default_superuser()).password)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_configured_default_superuser_is_claimed_with_its_data(services_on, monkeypatch):  # noqa: ARG001
+    """LANGFLOW_SUPERUSER names the default account: the operator gets it, with the configured password."""
+    settings = get_settings_service()
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", DEFAULT_SUPERUSER)
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER_PASSWORD", SecretStr("claimed-password"))
+    user_id = await _default_superuser_owning_work()
+
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
+
+    kept = await _default_superuser()
+    assert kept.id == user_id
+    assert verify_password("claimed-password", kept.password)
+    assert await _work_owned_by(user_id) == (1, 1, 1)
+    assert kept.is_active is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_default_superuser_that_owns_nothing_is_still_removed(services_on):  # noqa: ARG001
+    await _default_superuser_owning_work(owns_work=False)
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    assert await _default_superuser() is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_default_superuser_that_signed_in_is_untouched(services_on):  # noqa: ARG001
+    user_id = await _default_superuser_owning_work(logged_in=True)
+
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+
+    kept = await _default_superuser()
+    assert kept.id == user_id
+    assert verify_password("old-password", kept.password)
+    assert await _work_owned_by(user_id) == (1, 1, 1)
