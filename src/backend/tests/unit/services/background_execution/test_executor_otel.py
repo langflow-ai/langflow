@@ -16,12 +16,12 @@ pytest.importorskip("opentelemetry.sdk.trace.export.in_memory_span_exporter")
 PROBE = r"""
 import asyncio
 import json
+import os
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from opentelemetry.trace import SpanKind
 
 exporter = InMemorySpanExporter()
 provider = TracerProvider()
@@ -36,20 +36,23 @@ async def main():
     executor = InProcessExecutor(max_concurrency=1)
     await executor.start()
     done = asyncio.Event()
+    mode = os.environ.get("PROBE_MODE", "success")
 
     async def work():
-        with application_span("work.child"):
+        if mode == "failure":
+            raise RuntimeError("private job payload")
+        if mode == "cancel":
             done.set()
+            await asyncio.Event().wait()
+        else:
+            with application_span("work.child"):
+                done.set()
 
-    attributes = {
-        "messaging.system": "langflow",
-        "messaging.destination.name": "workflow.jobs",
-        "messaging.operation.type": "send",
-        "langflow.job.id": "job-1",
-    }
-    with application_span("langflow.job.enqueue", attributes, kind=SpanKind.PRODUCER):
-        await executor.submit("job-1", work)
-    await asyncio.wait_for(done.wait(), timeout=2)
+    await executor.submit("job-1", work)
+    if mode != "failure":
+        await asyncio.wait_for(done.wait(), timeout=2)
+    if mode == "cancel":
+        await executor.cancel("job-1")
     await executor._queue.join()
     await executor.stop()
     provider.force_flush()
@@ -62,6 +65,11 @@ async def main():
             "links": [link.context.span_id for link in span.links],
             "kind": span.kind.name,
             "attributes": dict(span.attributes or {}),
+            "status": span.status.status_code.name,
+            "events": [
+                {"name": event.name, "attributes": dict(event.attributes or {})}
+                for event in span.events
+            ],
             "duration": span.end_time - span.start_time,
         }
         for span in exporter.get_finished_spans()
@@ -73,8 +81,9 @@ asyncio.run(main())
 """
 
 
-def test_queue_spans_use_producer_consumer_links_and_parent_execution_work():
+def _run_probe(mode: str = "success") -> list[dict]:
     env = {key: value for key, value in os.environ.items() if not key.startswith("OTEL_")}
+    env["PROBE_MODE"] = mode
     with tempfile.TemporaryDirectory() as tmp:
         probe_path = Path(tmp) / "probe.py"
         probe_path.write_text(PROBE, encoding="utf-8")
@@ -88,7 +97,11 @@ def test_queue_spans_use_producer_consumer_links_and_parent_execution_work():
         )
     assert completed.returncode == 0, completed.stderr
     line = next(line for line in completed.stdout.splitlines() if line.startswith("PROBE_RESULT "))
-    spans = json.loads(line.removeprefix("PROBE_RESULT "))
+    return json.loads(line.removeprefix("PROBE_RESULT "))
+
+
+def test_queue_spans_use_producer_consumer_links_and_parent_execution_work():
+    spans = _run_probe()
     by_name = {span["name"]: span for span in spans}
 
     producer = by_name["langflow.job.enqueue"]
@@ -98,6 +111,7 @@ def test_queue_spans_use_producer_consumer_links_and_parent_execution_work():
     child = by_name["work.child"]
 
     assert producer["kind"] == "PRODUCER"
+    assert [span["name"] for span in spans].count("langflow.job.enqueue") == 1
     assert dequeue["kind"] == "CONSUMER"
     assert execute["kind"] == "CONSUMER"
     assert producer["span_id"] in queue_wait["links"]
@@ -110,3 +124,21 @@ def test_queue_spans_use_producer_consumer_links_and_parent_execution_work():
     assert dequeue["attributes"]["langflow.phase"] == "job.dequeue"
     assert execute["attributes"]["langflow.phase"] == "job.execute"
     assert execute["attributes"]["messaging.operation.type"] == "process"
+
+
+def test_failed_job_records_only_the_exception_type():
+    execute = next(span for span in _run_probe("failure") if span["name"] == "langflow.job.execute")
+
+    assert execute["status"] == "ERROR"
+    assert execute["attributes"]["error.type"] == "RuntimeError"
+    assert execute["events"] == [{"name": "exception", "attributes": {"exception.type": "RuntimeError"}}]
+    assert "private job payload" not in json.dumps(execute)
+
+
+def test_cancelled_job_is_not_reported_as_an_error():
+    execute = next(span for span in _run_probe("cancel") if span["name"] == "langflow.job.execute")
+
+    assert execute["status"] == "UNSET"
+    assert execute["attributes"]["status"] == "cancelled"
+    assert execute["attributes"]["langflow.job.status"] == "cancelled"
+    assert execute["events"] == []

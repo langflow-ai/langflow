@@ -1264,6 +1264,9 @@ class ApplicationSpanScope:
         if self.span is not None:
             self.span.set_attribute(key, value)
 
+    def is_recording(self) -> bool:
+        return self.span is not None and self.span.is_recording()
+
 
 class OutboundCallScope:
     """Handle for a caller that learns the outcome after the call returns.
@@ -1299,7 +1302,7 @@ class OutboundCallScope:
             self.span.set_attribute(key, value)
 
 
-def _root_error_type(exc: BaseException) -> str:
+def root_error_type(exc: BaseException) -> str:
     """Name the exception that actually failed, not the one the retry loop wrapped it in.
 
     Both MCP retry loops re-raise as ``ValueError(f"Failed to run tool ...")`` with ``from e``,
@@ -1332,6 +1335,11 @@ def _root_error_type(exc: BaseException) -> str:
         root = next_error
         seen.add(id(root))
     return type(root).__name__
+
+
+# Backward compatibility for existing internal users. New application code goes through
+# ``lfx.application_observability`` and never imports this implementation detail.
+_root_error_type = root_error_type
 
 
 def _finish_application_span(scope: ApplicationSpanScope, exc: BaseException | None = None) -> None:
