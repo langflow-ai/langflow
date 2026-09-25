@@ -10,7 +10,7 @@ from langflow.services.telemetry.opentelemetry import (
     OpenTelemetry,
     ThreadSafeSingletonMetaUsingWeakref,
 )
-from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload
+from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload, RunPayload
 from langflow.services.telemetry.service import TelemetryService
 
 
@@ -26,6 +26,21 @@ def mock_settings_service(mocker):
 @pytest.fixture
 def telemetry_service(mock_settings_service):
     return TelemetryService(mock_settings_service)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("do_not_track", [False, True])
+async def test_run_completion_is_recorded_before_tracking_consent(telemetry_service, do_not_track):
+    from langflow.services.telemetry.run_event_store import pop_all
+
+    pop_all()
+    telemetry_service.do_not_track = do_not_track
+    payload = RunPayload(run_seconds=1, run_success=True)
+    await telemetry_service.log_package_run(payload)
+    events = pop_all()
+    assert len(events) == 1
+    assert events[0].run_completed_at is not None
+    assert telemetry_service.telemetry_queue.empty() is do_not_track
 
 
 @pytest.mark.asyncio
