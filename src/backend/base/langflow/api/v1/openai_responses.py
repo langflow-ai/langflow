@@ -19,7 +19,13 @@ from lfx.workflow.end_user_identity import (
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import SAFE_TOOL_ERROR_MESSAGE, error_for_client
-from langflow.api.v1.endpoints import _caller_owns_flow, consume_and_yield, run_flow_generator, simple_run_flow
+from langflow.api.v1.endpoints import (
+    _caller_owns_flow,
+    _reject_shared_secret_variable_overrides,
+    consume_and_yield,
+    run_flow_generator,
+    simple_run_flow,
+)
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -149,6 +155,7 @@ async def run_flow_for_openai_responses(
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
     expose_error_details = _caller_owns_flow(flow, api_key_user)
+    _reject_shared_secret_variable_overrides(flow, api_key_user, variables)
     # Check if flow has chat input
     if not has_chat_input(flow.data):
         msg = "Flow must have a ChatInput component to be compatible with OpenAI Responses API"
@@ -864,6 +871,8 @@ async def create_response(
         if exc.status_code == status.HTTP_403_FORBIDDEN:
             return _flow_not_found_response(request.model)
         raise
+
+    _reject_shared_secret_variable_overrides(flow, api_key_user, variables)
 
     # Required-identity gate must fire BEFORE the run: create_response wraps the run in a blanket
     # ``except Exception`` (below) that converts any raise — including the identity 401 from

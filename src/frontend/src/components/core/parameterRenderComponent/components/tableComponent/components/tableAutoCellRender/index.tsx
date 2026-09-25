@@ -65,7 +65,11 @@ export default function TableAutoCellRender({
   }
 
   function getCellType() {
-    let format: string = formatter ? formatter : typeof value;
+    let format: string = formatter
+      ? formatter
+      : value === null && colDef?.context?.globalVariable
+        ? "string"
+        : typeof value;
     //convert text to string to bind to the string reader
     format = format === "text" ? "string" : format;
     format = format === "json" ? "object" : format;
@@ -108,7 +112,7 @@ export default function TableAutoCellRender({
           return (
             <InputGlobalComponent
               id="string-reader-global"
-              value={localValue}
+              value={value === null ? null : localValue}
               editNode={false}
               handleOnNewValue={(newValue) => {
                 updateGlobalVariableCell(

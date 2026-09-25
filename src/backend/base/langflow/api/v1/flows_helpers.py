@@ -47,6 +47,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.storage.service import StorageService
+from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -623,6 +624,13 @@ async def _update_existing_flow(
 
     # None-valued inputs are treated as omitted by default for updates.
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+    if not is_owner_edit and isinstance(update_data.get("data"), dict):
+        try:
+            update_data["data"] = restore_redacted_flow_values(update_data["data"], existing_flow.data)
+        except HiddenFieldMetadataError as exc:
+            raise HTTPException(
+                status_code=400, detail="Cannot change hidden fields or executable graph data in a shared flow."
+            ) from exc
 
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
@@ -696,6 +704,13 @@ async def _patch_flow(
     # PATCH follows the same rule: None-valued fields are omitted unless
     # explicitly reintroduced below (for example endpoint_name clear).
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+    if not is_owner_edit and isinstance(update_data.get("data"), dict):
+        try:
+            update_data["data"] = restore_redacted_flow_values(update_data["data"], db_flow.data)
+        except HiddenFieldMetadataError as exc:
+            raise HTTPException(
+                status_code=400, detail="Cannot change hidden fields or executable graph data in a shared flow."
+            ) from exc
 
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
@@ -811,6 +826,8 @@ async def _export_variable_names(session: AsyncSession, owner_id: UUID | None) -
 async def _build_flows_download_response(
     session: AsyncSession,
     flows: list[Flow],
+    *,
+    caller_id: UUID,
 ) -> StreamingResponse | dict:
     """Build a download response (ZIP or single JSON) for the given flows.
 
@@ -821,12 +838,15 @@ async def _build_flows_download_response(
     variable bindings survive only when they name one of the flow owner's
     variables.
     """
-    variable_names_by_owner = {
-        owner_id: await _export_variable_names(session, owner_id) for owner_id in {flow.user_id for flow in flows}
-    }
+    # A shared reader's in-app view hides even variable names. The download
+    # must follow that same rule; only an owner may export their bindings.
+    owner_variable_names = await _export_variable_names(session, caller_id)
     normalised_flows = [
         normalize_flow_for_export(
-            strip_flow_secrets(flow.model_dump(), known_variable_names=variable_names_by_owner[flow.user_id])
+            strip_flow_secrets(
+                flow.model_dump(),
+                known_variable_names=owner_variable_names if flow.user_id == caller_id else frozenset(),
+            )
         )
         for flow in flows
     ]
