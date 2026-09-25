@@ -7,7 +7,8 @@ from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
-from lfx.custom.custom_component.component import Component, get_component_toolkit
+from lfx.custom import Component
+from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
@@ -524,6 +525,9 @@ class RunFlowBaseComponent(Component):
                 output_name=output_name,
             )
 
+        # ComponentToolkit rebinds by __name__ on its per-call copy. Without the
+        # registered name it falls back to the original instance and loses tool arguments.
+        _dynamic_resolver.__name__ = method_name
         setattr(self, method_name, MethodType(_dynamic_resolver, self))
         self._flow_output_methods.add(method_name)
         return method_name
