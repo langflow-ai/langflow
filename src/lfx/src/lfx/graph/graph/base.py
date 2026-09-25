@@ -18,6 +18,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
+from lfx.application_observability import (
+    application_span_missing_current,
+    observe_flow_load,
+    observe_graph_execution,
+    observe_vertex_execution,
+)
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.exceptions import GraphPausedException
@@ -39,54 +45,12 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import (
-    APPLICATION_TRACER_NAME,
-    _root_error_type,
-    application_span,
-    get_execution_client,
-    get_execution_protocol,
-    get_queued_trace_link,
-)
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
-
-try:
-    from opentelemetry import trace as otel_trace
-    from opentelemetry.context import Context as OtelContext
-except ImportError:
-    # lfx does not depend on opentelemetry. Under langflow it is installed and the application
-    # span is emitted; under bare lfx this stays None and the span code path is a no-op.
-    otel_trace = None
-    OtelContext = None
-
-FLOW_EXECUTION_SPAN_NAME = "flow.execute"
-GRAPH_EXECUTION_SPAN_NAME = "langflow.graph.execute"
-
-
-class FlowSpanScope:
-    """Lets a driver that handles its own component errors still mark the run as failed.
-
-    The /build vertex walk catches a component exception, turns it into an error output for the
-    client and stops walking, rather than re-raising. The span's own except clauses therefore
-    never see it, and without this the run would be exported as a success. Callers that let
-    exceptions propagate (arun, async_start, process) need none of this and ignore the scope.
-
-    Only the exception *type* is accepted, never the message: component output ends up in those
-    messages and must not reach the operator's APM.
-    """
-
-    __slots__ = ("error_type",)
-
-    def __init__(self) -> None:
-        self.error_type: str | None = None
-
-    def record_error(self, error_type: str) -> None:
-        self.error_type = error_type
-
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -488,7 +452,7 @@ class Graph:
             with self.flow_execution_span(make_current=False):
                 yield
             return
-        if otel_trace is not None and not otel_trace.get_current_span().is_recording():
+        if application_span_missing_current():
             logger.warning(
                 "async_start was told the caller owns the flow span, but no span is current, "
                 "so this run will not be recorded. The caller should open "
@@ -990,120 +954,21 @@ class Graph:
         keeps the v2 stream correct for free: its server span stays open for the whole response, so
         it is still a real parent and is left as one.
 
-        Yields a :class:`FlowSpanScope`. Callers that let exceptions propagate can ignore it; a
-        driver that catches component failures itself must call ``record_error`` or its run is
+        Yields an opaque observation handle. Callers that let exceptions propagate can ignore it;
+        a driver that catches component failures itself must call ``record_error`` or its run is
         exported as a success.
         """
-        scope = FlowSpanScope()
-        if otel_trace is None or self._is_subgraph:
-            yield scope
-            return
-        tracer = otel_trace.get_tracer(APPLICATION_TRACER_NAME)
-        # is_recording() goes False once a span has ended, which is the signal that this run
-        # outlived its request. An empty Context is what makes the replacement a root; without it
-        # start_span would pick the dead span up as parent anyway.
-        parent = otel_trace.get_current_span()
-        parent_context = parent.get_span_context()
-        queued_link = get_queued_trace_link()
-        if queued_link is not None and not parent.is_recording():
-            # A run picked off a queue, carrying the context of the request that queued it on
-            # the job row.
-            #
-            # Checked before the ended-parent branch, and gated on the parent not recording
-            # rather than on no span being current. Whatever ended span the worker happens to
-            # be holding is not necessarily this run's originator: a worker task started from
-            # a request inherits that request's context permanently, so every later run it
-            # serves would link back to that first request. The carrier was written for this
-            # specific job and is the authoritative answer; an ambient ended span is only a
-            # good guess. A live parent still wins over both, below.
-            span = tracer.start_span(
-                FLOW_EXECUTION_SPAN_NAME,
-                context=OtelContext(),
-                links=[queued_link],
-            )
-        elif parent_context.is_valid and not parent.is_recording():
-            span = tracer.start_span(
-                FLOW_EXECUTION_SPAN_NAME,
-                context=OtelContext(),
-                links=[otel_trace.Link(parent_context)],
-            )
-        else:
-            span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
-        graph_span = tracer.start_span(
-            GRAPH_EXECUTION_SPAN_NAME,
-            context=otel_trace.set_span_in_context(span),
-        )
-        span.set_attribute("langflow.phase", "flow.execute")
-        graph_span.set_attribute("langflow.phase", "graph.execute")
-        status = "ok"
-        try:
-            with contextlib.ExitStack() as stack:
-                if make_current:
-                    # Not end_on_exit: the finally below ends it after the attributes are set.
-                    # Neither recording nor status-setting is delegated, because the SDK's version
-                    # of both writes the exception message onto the span and that can carry flow data.
-                    stack.enter_context(
-                        otel_trace.use_span(
-                            span, end_on_exit=False, record_exception=False, set_status_on_exception=False
-                        )
-                    )
-                    stack.enter_context(
-                        otel_trace.use_span(
-                            graph_span, end_on_exit=False, record_exception=False, set_status_on_exception=False
-                        )
-                    )
-                yield scope
-        except GraphPausedException:
-            # A HITL pause suspends the unit of work; it is not a failed request. The resume is
-            # driven through Graph.process by the durable runner, which opens its own span.
-            status = "paused"
-            raise
-        except asyncio.CancelledError:
-            # CancelledError is a BaseException, so the handler below does not see it and the
-            # span would otherwise report the run as "ok". Reached by a user pressing stop (the
-            # job service marks the job CANCELLED and re-raises) and by any asyncio.wait_for
-            # ceiling wrapped around a span-carrying run: the v2 build driver, a2a, and the
-            # agentic assistant all have one. The run did not finish, so it gets its own value.
-            #
-            # Span status stays UNSET, which is right for a stop button and arguable for a
-            # timeout: a server-imposed ceiling is closer to a fault, and an operator alerting
-            # on span error rate will not see it. Left as one value for now because the two are
-            # indistinguishable here; the job row (CANCELLED vs FAILED) still tells them apart.
-            status = "cancelled"
-            raise
-        except Exception as exc:
-            status = "error"
-            error_type = _root_error_type(exc)
-            for current_span in (span, graph_span):
-                current_span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, error_type))
-                current_span.set_attribute("error.type", error_type)
-                current_span.add_event("exception", {"exception.type": error_type})
-            raise
-        finally:
-            if status == "ok" and scope.error_type is not None:
-                status = "error"
-                for current_span in (span, graph_span):
-                    current_span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
-                    current_span.set_attribute("error.type", scope.error_type)
-                    current_span.add_event("exception", {"exception.type": scope.error_type})
-            for current_span in (span, graph_span):
-                if self.flow_id:
-                    current_span.set_attribute("flow_id", str(self.flow_id))
-                if self._run_id:
-                    current_span.set_attribute("run_id", self._run_id)
-                if self.session_id:
-                    current_span.set_attribute("session_id", str(self.session_id))
-                # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
-                # gap the operator can see, an "unknown" value looks like a protocol we support.
-                if (protocol := get_execution_protocol()) is not None:
-                    current_span.set_attribute("protocol", protocol)
-                # Absent when the caller did not identify itself, same rule as protocol: a missing
-                # attribute is "nobody said", which an operator can see and act on.
-                if (client := get_execution_client()) is not None:
-                    current_span.set_attribute("client", client)
-                current_span.set_attribute("status", status)
-            graph_span.end()
-            span.end()
+        with observe_graph_execution(
+            is_subgraph=self._is_subgraph,
+            make_current=make_current,
+            identifiers=lambda: {
+                "flow_id": str(self.flow_id) if self.flow_id else None,
+                "run_id": self._run_id,
+                "session_id": str(self.session_id) if self.session_id else None,
+            },
+            paused_exception=GraphPausedException,
+        ) as observation:
+            yield observation
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         # Subgraphs don't end traces - the parent graph owns the trace lifecycle
@@ -1798,41 +1663,8 @@ class Graph:
         self.set_run_id(self._run_id)
 
     @classmethod
+    @observe_flow_load
     def from_payload(
-        cls,
-        payload: dict,
-        flow_id: str | None = None,
-        flow_name: str | None = None,
-        user_id: str | None = None,
-        context: dict | None = None,
-        *,
-        instantiate_components: bool = True,
-        emit_extension_events: bool = True,
-    ) -> Graph:
-        """Create a graph while exposing payload parsing as a distinct phase."""
-        with application_span(
-            "langflow.flow.load",
-            {
-                "langflow.phase": "flow.load",
-                "langflow.flow.load.source": "payload",
-                "langflow.flow.instantiate_components": instantiate_components,
-            },
-        ) as span:
-            graph = cls._from_payload(
-                payload,
-                flow_id=flow_id,
-                flow_name=flow_name,
-                user_id=user_id,
-                context=context,
-                instantiate_components=instantiate_components,
-                emit_extension_events=emit_extension_events,
-            )
-            span.set_attribute("langflow.graph.vertex_count", len(graph.vertices))
-            span.set_attribute("langflow.graph.edge_count", len(graph.edges))
-            return graph
-
-    @classmethod
-    def _from_payload(
         cls,
         payload: dict,
         flow_id: str | None = None,
@@ -2362,39 +2194,8 @@ class Graph:
             return f"flow:{flow_scope}:{vertex_id}"
         return vertex_id
 
+    @observe_vertex_execution
     async def build_vertex(
-        self,
-        vertex_id: str,
-        *,
-        get_cache: GetCache | None = None,
-        set_cache: SetCache | None = None,
-        inputs_dict: dict[str, str] | None = None,
-        files: list[str] | None = None,
-        user_id: str | None = None,
-        fallback_to_env_vars: bool = False,
-        event_manager: EventManager | None = None,
-    ) -> VertexBuildResult:
-        """Build one vertex under a low-cardinality application span."""
-        vertex = self.get_vertex(vertex_id)
-        attributes = {
-            "langflow.phase": "vertex.execute",
-            "langflow.component.type": str(vertex.vertex_type),
-            "langflow.vertex.kind": type(vertex).__name__,
-            "langflow.vertex.is_loop": bool(vertex.is_loop),
-        }
-        with application_span("langflow.vertex.execute", attributes):
-            return await self._build_vertex(
-                vertex_id,
-                get_cache=get_cache,
-                set_cache=set_cache,
-                inputs_dict=inputs_dict,
-                files=files,
-                user_id=user_id,
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-
-    async def _build_vertex(
         self,
         vertex_id: str,
         *,

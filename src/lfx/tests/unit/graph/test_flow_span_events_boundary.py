@@ -158,7 +158,7 @@ def test_a_successful_run_has_flow_graph_and_payload_free_vertex_spans():
     assert {span["attributes"]["langflow.component.type"] for span in vertex_spans} == {
         "ChatInput",
         "ChatOutput",
-        "Passthrough",
+        "custom_or_unknown",
     }
 
 
