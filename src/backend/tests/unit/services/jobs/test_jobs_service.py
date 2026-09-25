@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from uuid import uuid4
 
 import pytest
-from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType, SignalType
 from langflow.services.jobs.service import JobService
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.mark.usefixtures("client")
@@ -75,6 +77,44 @@ async def test_end_user_survives_later_metadata_merge():
     meta = fetched.job_metadata or {}
     assert meta.get("end_user_id") == "alice"  # preserved by the shallow merge
     assert meta.get("request") == {"input_value": "hi"}
+
+
+@pytest.mark.usefixtures("client")
+async def test_concurrent_metadata_patches_preserve_unrelated_keys(monkeypatch):
+    """Two writers that read the same JSON snapshot must both survive the merge."""
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await service.update_job_metadata(job_id, {"request": {"input_value": "hi"}})
+
+    original_get = AsyncSession.get
+    both_read = asyncio.Event()
+    coordinated_reads = 0
+
+    async def coordinated_get(session, entity, ident, *args, **kwargs):
+        nonlocal coordinated_reads
+        job = await original_get(session, entity, ident, *args, **kwargs)
+        if entity is Job and ident == job_id and coordinated_reads < 2:
+            coordinated_reads += 1
+            if coordinated_reads == 2:
+                both_read.set()
+            await both_read.wait()
+        return job
+
+    monkeypatch.setattr(AsyncSession, "get", coordinated_get)
+
+    await asyncio.gather(
+        service.update_job_metadata(job_id, {"card_message_id": "card-1"}),
+        service.update_job_metadata(job_id, {"owner": "worker-1", "heartbeat_at": "now"}),
+    )
+
+    fetched = await service.get_job_by_job_id(job_id)
+    assert fetched.job_metadata == {
+        "request": {"input_value": "hi"},
+        "card_message_id": "card-1",
+        "owner": "worker-1",
+        "heartbeat_at": "now",
+    }
 
 
 @pytest.mark.usefixtures("client")
