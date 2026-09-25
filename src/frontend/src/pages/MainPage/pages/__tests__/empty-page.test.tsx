@@ -80,9 +80,13 @@ jest.mock("@/stores/authStore", () => ({
 }));
 
 jest.mock("@/stores/darkStore", () => ({
-  useDarkStore: (
-    selector: (s: { stars: number; discordCount: number }) => unknown,
-  ) => selector({ stars: 149000, discordCount: 25000 }),
+  useDarkStore: (selector: (s: Record<string, unknown>) => unknown) =>
+    selector({
+      stars: 149000,
+      discordCount: 25000,
+      refreshStars: jest.fn(),
+      refreshDiscordCount: jest.fn(),
+    }),
 }));
 
 jest.mock("@/stores/foldersStore", () => ({
