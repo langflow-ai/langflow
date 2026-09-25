@@ -20,6 +20,14 @@ export const usePostFolders: useMutationFunctionType<
       description: newFolder.data.description,
       flows_list: newFolder.data.flows ?? [],
       components_list: newFolder.data.components ?? [],
+      // Omitted rather than sent as null: the backend takes the default type when the key is
+      // absent and rejects an explicit null.
+      ...(newFolder.data.project_type
+        ? { project_type: newFolder.data.project_type }
+        : {}),
+      ...(newFolder.data.project_config
+        ? { project_config: newFolder.data.project_config }
+        : {}),
     };
 
     const res = await api.post(`${getURL("PROJECTS")}/`, payload);

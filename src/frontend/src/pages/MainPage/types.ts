@@ -1,1 +1,6 @@
-export type FlowTabType = "flows" | "components" | "mcp" | "deployments";
+export type FlowTabType =
+  | "flows"
+  | "components"
+  | "mcp"
+  | "deployments"
+  | "harness";
