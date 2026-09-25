@@ -426,6 +426,7 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `False` | Open the system web browser on startup. |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
+| `LANGFLOW_REQUIRED_PLUGINS` | String | Not set | Comma-separated names from the `langflow.plugins` entry-point group that must load and register successfully. Langflow aborts startup if a required plugin is missing or fails; plugins not listed here retain best-effort loading. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
 | `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | Enables Gunicorn `preload_app`. Non-Windows only. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
 | `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` for multi-worker deployments. See [Deploy Langflow with multiple workers](./deployment-multi-worker#configuration-reference). |

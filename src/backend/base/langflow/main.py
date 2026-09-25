@@ -1117,7 +1117,7 @@ def create_app():
     app.include_router(log_router)
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
-    load_plugin_routes(app)
+    load_plugin_routes(app, required_plugins=settings.required_plugins)
 
     # Replaces FastAPI's default 422 handler, which echoes each submitted value
     # (credentials included) back in the error body.
