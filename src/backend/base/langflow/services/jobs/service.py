@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -13,6 +14,7 @@ from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
+from sqlalchemy import false, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
 
@@ -159,6 +161,24 @@ class JobService(Service):
 
         async with session_scope() as session:
             if dedupe_key is not None:
+                dialect = session.get_bind().dialect.name
+                if dialect == "postgresql":
+                    # A waiting creator must see the previous creator's commit, even when
+                    # the engine defaults to REPEATABLE READ. This fresh, owned transaction
+                    # alone uses READ COMMITTED; the pooled connection's default is restored.
+                    await session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+                    lock_key = int.from_bytes(
+                        hashlib.sha256(f"langflow.job.dedupe:{user_id}:{dedupe_key}".encode()).digest()[:8],
+                        "big",
+                        signed=True,
+                    )
+                    await session.exec(select(func.pg_advisory_xact_lock(lock_key)))
+                elif dialect == "sqlite":
+                    # Reserve SQLite's writer before reading. No rows change, but the
+                    # reservation prevents another creator from passing the same check.
+                    # Unlike BEGIN IMMEDIATE, this also works with an explicit BEGIN.
+                    await session.exec(update(Job).where(false()).values(job_id=Job.job_id))
+
                 # Why: scope uniqueness to the owner — a client-controlled idempotency_key flows into
                 # dedupe_key, so a global count would let user A collide with / DoS user B's key (and leak
                 # its existence). Ownerless rows (single-tenant AUTO_LOGIN, user_id None) share one space.
