@@ -39,7 +39,12 @@ from langflow.services.database.models.trigger.schemas import (
 )
 from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.triggers import ledger
-from langflow.services.triggers.constants import KIND_INBOUND_WEBHOOK, PROVIDER_WEBHOOK, TEST_DEDUPE_PREFIX
+from langflow.services.triggers.constants import (
+    KIND_INBOUND_WEBHOOK,
+    PROVIDER_WEBHOOK,
+    PUSH_MECHANISMS,
+    TEST_DEDUPE_PREFIX,
+)
 from langflow.services.triggers.errors import (
     ReplayWindowExpiredError,
     TriggerEventNotFoundError,
@@ -411,7 +416,11 @@ async def get_trigger_ingress(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
-    if row.provider in {"microsoft", "google"} and row.public_id:
+    if (
+        row.provider in {"microsoft", "google"}
+        and row.public_id
+        and (row.config or {}).get("mechanism_id") in PUSH_MECHANISMS
+    ):
         from langflow.services.triggers.source_subscription import source_ingress_url
 
         return TriggerIngressRead(

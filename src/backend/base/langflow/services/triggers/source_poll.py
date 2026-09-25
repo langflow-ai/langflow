@@ -335,7 +335,12 @@ async def _gmail_changes(client: SourceHTTP, trigger: Trigger) -> tuple[list[dic
                     message_id = message.get("id") if isinstance(message, dict) else None
                     if not isinstance(message_id, str) or not message_id:
                         continue
-                    if source_key.startswith("labels") and "INBOX" not in (entry.get("labelIds") or []):
+                    if source_key in {"labelsAdded", "labelsRemoved", "messagesDeleted"} and "INBOX" not in (
+                        entry.get("labelIds") or message.get("labelIds") or []
+                    ):
+                        # A deleted message cannot be fetched back. Without an
+                        # Inbox label in the history entry, its mailbox-wide
+                        # deletion is not evidence of an Inbox change.
                         continue
                     if source_key in {"messagesDeleted", "labelsRemoved"}:
                         normalized = _canonical(
@@ -354,6 +359,8 @@ async def _gmail_changes(client: SourceHTTP, trigger: Trigger) -> tuple[list[dic
                         except httpx.HTTPStatusError as exc:
                             if exc.response.status_code != httpx.codes.NOT_FOUND:
                                 raise
+                            continue
+                        if "INBOX" not in (full.get("labelIds") or []):
                             continue
                         normalized = _canonical(
                             PROVIDER_GOOGLE,

@@ -620,6 +620,9 @@ async def reconcile_push_sources(*, limit: int = 5) -> int:
                 if trigger is None or trigger.state != TriggerState.ACTIVE.value:
                     continue
                 await poll_source(session, trigger, family=FAMILY_TRIGGER_PUSH)
+                if (trigger.last_error or "").startswith("Source reconciliation failed:"):
+                    trigger.last_error = None
+                    session.add(trigger)
                 completed += 1
         except Exception as exc:  # noqa: BLE001 - one source must not stall the others
             async with session_scope() as session:

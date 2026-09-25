@@ -15,6 +15,9 @@ from langflow.services.triggers.dispatcher import reconcile_push_sources
 async def test_due_push_source_is_scanned_without_a_hint(make_trigger, monkeypatch) -> None:
     trigger_id = await make_trigger(kind="google.calendar", provider="google")
     async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        trigger.last_error = "Source reconciliation failed: RateLimitedError"
+        session.add(trigger)
         session.add(
             TriggerSubscription(
                 trigger_id=trigger_id,
@@ -36,3 +39,5 @@ async def test_due_push_source_is_scanned_without_a_hint(make_trigger, monkeypat
     assert await reconcile_push_sources() == 1
     assert calls == [(trigger_id, FAMILY_TRIGGER_PUSH)]
     assert await reconcile_push_sources() == 0
+    async with session_scope() as session:
+        assert (await session.get(Trigger, trigger_id)).last_error is None

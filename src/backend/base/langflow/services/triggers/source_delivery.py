@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.services.database.models.trigger.model import Trigger, TriggerSourceVersion
 from langflow.services.triggers import ledger
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 SOURCE_HINT_FIELD = "_source_hint"
 SOURCE_DEDUPE_PREFIX = "source"
+_VERSION_LOOKUP_BATCH = 500
 
 
 def canonical_key(*, provider: str, resource: str, item_id: str, version: str) -> str:
@@ -76,9 +77,37 @@ async def append_and_advance(
     if previous_cursor is not None and state != previous_cursor:
         msg = "The source cursor changed while this page was fetched."
         raise RuntimeError(msg)
-    prior_items = (
-        await session.exec(select(TriggerSourceVersion).where(TriggerSourceVersion.trigger_id == trigger_id))
-    ).all()
+    keys = {
+        item_key(provider=str(item["provider"]), resource=str(item["resource"]), item_id=str(item["id"]))
+        for item in items
+    }
+    prior_items: list[TriggerSourceVersion] = []
+    if snapshot_resource is not None and not baseline:
+        # A full snapshot needs every prior item in this resource to detect
+        # removals. Ordinary polls need only the items returned by the provider.
+        prior_items = list(
+            (
+                await session.exec(
+                    select(TriggerSourceVersion).where(
+                        TriggerSourceVersion.trigger_id == trigger_id,
+                        TriggerSourceVersion.resource == snapshot_resource,
+                    )
+                )
+            ).all()
+        )
+    keys.difference_update(prior.item_key for prior in prior_items)
+    lookup_keys = list(keys)
+    for start in range(0, len(lookup_keys), _VERSION_LOOKUP_BATCH):
+        prior_items.extend(
+            (
+                await session.exec(
+                    select(TriggerSourceVersion).where(
+                        TriggerSourceVersion.trigger_id == trigger_id,
+                        col(TriggerSourceVersion.item_key).in_(lookup_keys[start : start + _VERSION_LOOKUP_BATCH]),
+                    )
+                )
+            ).all()
+        )
     prior_by_key = {prior.item_key: prior for prior in prior_items}
     if snapshot_resource is not None and not baseline:
         present = {

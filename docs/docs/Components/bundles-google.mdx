@@ -206,6 +206,8 @@ With public HTTPS ingress enabled, Calendar and Drive use Google push channels; 
 
 Gmail triggers are unavailable on hosted Langflow. On a customer deployment, use a customer-owned OAuth registration and a public HTTPS ingress. Create a Pub/Sub topic in the customer's Google Cloud project, grant Gmail permission to publish to it, and configure an authenticated **push subscription** to the trigger's URL. Use `GET /api/v1/triggers/{trigger_id}/ingress` to get that URL after saving the flow. Set **Customer Pub/Sub Topic** to the full `projects/.../topics/...` name and **Pub/Sub Push Service Account** to the service account email whose Google-signed identity token Pub/Sub sends. Configure the push subscription's audience as that exact ingress URL. Langflow verifies the token and audience before recording a delivery, renews the Gmail watch daily, and acknowledges only after the hint is in the ledger. Gmail's restricted `gmail.readonly` scope must be approved for the customer's OAuth app.
 
+If Gmail history expires before Langflow reads it, Langflow resumes from the current watermark; changes in the expired gap cannot be recovered.
+
 ### Drive reach on the drive.file scope
 
 `drive.file` is a non-sensitive scope that grants access **only to files this application

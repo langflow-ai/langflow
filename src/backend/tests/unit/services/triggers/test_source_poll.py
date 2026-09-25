@@ -170,7 +170,7 @@ async def test_gmail_history_expansion_includes_inbox_removal_and_thread_key() -
                     ],
                 },
             )
-        return httpx.Response(200, json={"id": "m1", "threadId": "t1", "historyId": "104"})
+        return httpx.Response(200, json={"id": "m1", "threadId": "t1", "historyId": "104", "labelIds": ["INBOX"]})
 
     trigger = _trigger(kind="google.gmail", provider="google", state={"history_id": "100"})
     async with SourceHTTP(_Lease(), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
@@ -180,6 +180,31 @@ async def test_gmail_history_expansion_includes_inbox_removal_and_thread_key() -
         ("m2", True, "google:gmail:t2"),
     ]
     assert cursor["history_id"] == "105"
+    assert baseline is False
+    assert resync is False
+
+
+async def test_gmail_history_ignores_messages_outside_the_inbox() -> None:
+    def reply(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/history"):
+            return httpx.Response(
+                200,
+                json={
+                    "historyId": "103",
+                    "history": [
+                        {"id": "101", "messagesAdded": [{"message": {"id": "sent"}}]},
+                        {"id": "102", "messagesDeleted": [{"message": {"id": "deleted-elsewhere"}}]},
+                        {"id": "103", "labelsRemoved": [{"message": {"id": "archived"}, "labelIds": ["INBOX"]}]},
+                    ],
+                },
+            )
+        return httpx.Response(200, json={"id": "sent", "threadId": "thread", "labelIds": ["SENT"]})
+
+    trigger = _trigger(kind="google.gmail", provider="google", state={"history_id": "100"})
+    async with SourceHTTP(_Lease(), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+        items, cursor, baseline, resync = await _gmail_changes(client, trigger)
+    assert [(item["id"], item["deleted"]) for item in items] == [("archived", True)]
+    assert cursor["history_id"] == "103"
     assert baseline is False
     assert resync is False
 
