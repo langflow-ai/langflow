@@ -2697,6 +2697,30 @@ class TestMCPSseClientUnit:
             mock_manager.invalidate_server_key.assert_called_once_with("streamable_http_testkey")
 
 
+@pytest.mark.parametrize("client_type", [MCPStdioClient, MCPStreamableHttpClient])
+async def test_run_tool_does_not_retry_timeout(client_type):
+    """A timed-out tool may have run remotely, so repeating it can duplicate side effects."""
+    client = client_type()
+    client._connected = True
+    client._session_context = "test_context"
+    if client_type is MCPStdioClient:
+        client._connection_params = MagicMock(command="test-server", args=[])
+    else:
+        client._connection_params = {"url": "http://test.url", "headers": {}}
+
+    session = AsyncMock()
+    session.call_tool = AsyncMock(side_effect=TimeoutError())
+
+    with (
+        patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
+        pytest.raises(ValueError, match=r"Tool 'create_record'.*failed"),
+    ):
+        await client._run_tool("create_record", {"value": "once"}, timeout=0.01)
+
+    session.call_tool.assert_awaited_once_with("create_record", arguments={"value": "once"})
+
+
 class TestMCPStructuredTool:
     """Test the MCPStructuredTool inner methods."""
 

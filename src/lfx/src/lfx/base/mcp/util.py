@@ -2269,13 +2269,6 @@ class MCPStdioClient:
                     await asyncio.sleep(0.5)
                     continue
 
-                # If it's a timeout error and we have retries left, try once more
-                if is_timeout_error and attempt < max_retries - 1:
-                    await logger.awarning(f"Tool '{tool_name}' timed out, retrying...")
-                    # Don't clean up session for timeouts, might just be a slow response
-                    await asyncio.sleep(1.0)
-                    continue
-
                 # For other errors or no retries left, handle as before
                 if (
                     isinstance(e, ConnectionError | TimeoutError | OSError | ValueError)
@@ -2610,13 +2603,6 @@ class MCPStreamableHttpClient:
                         sk = session_manager._get_server_key(self._connection_params, "streamable_http")
                         await session_manager.invalidate_server_key(sk)
                     await asyncio.sleep(0.5)
-                    continue
-
-                # If it's a timeout error and we have retries left, try once more
-                if is_timeout_error and attempt < max_retries - 1:
-                    await logger.awarning(f"Tool '{tool_name}' timed out, retrying...")
-                    # Don't clean up session for timeouts, might just be a slow response
-                    await asyncio.sleep(1.0)
                     continue
 
                 # For other errors or no retries left, handle as before
