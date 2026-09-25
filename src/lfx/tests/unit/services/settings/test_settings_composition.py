@@ -60,6 +60,7 @@ EXPECTED_FIELDS = {
     "port",
     "runtime_port",
     "workers",
+    "required_plugins",
     "log_level",
     "log_file",
     "alembic_log_file",
@@ -456,6 +457,14 @@ def test_warm_registry_reads_environment(monkeypatch):
     assert settings.warm_registry_max_entries == 16
     assert settings.warm_registry_max_flow_bytes == 100_000
     assert settings.warm_registry_max_total_bytes == 1_000_000
+
+
+def test_required_plugins_reads_and_normalizes_environment(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_REQUIRED_PLUGINS", "enterprise, audit,enterprise")
+
+    settings = Settings()
+
+    assert settings.required_plugins == ["enterprise", "audit"]
 
 
 def test_database_url_sees_config_dir(monkeypatch, tmp_path):
