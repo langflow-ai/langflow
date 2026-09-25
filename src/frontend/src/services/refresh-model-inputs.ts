@@ -131,6 +131,18 @@ export async function refreshAllModelInputs(
   }
 }
 
+// The template serves an unset model as "" while the store normalizes it to [].
+const isEmptyModelValue = (value: unknown): boolean =>
+  value === undefined ||
+  value === null ||
+  value === "" ||
+  (Array.isArray(value) && value.length === 0);
+
+function isSameModelSelection(left: unknown, right: unknown): boolean {
+  if (isEmptyModelValue(left) && isEmptyModelValue(right)) return true;
+  return isEqual(left, right);
+}
+
 function buildProviderConfiguration(
   providers: ModelProviderWithStatus[],
 ): ProviderConfiguration {
@@ -232,7 +244,7 @@ async function refreshSingleNode(
       .nodes.find((candidate) => candidate.id === node.id);
     const liveModelValue = (liveNode?.data?.node as APIClassType | undefined)
       ?.template?.[modelFieldKey]?.value;
-    if (!isEqual(liveModelValue, currentModelValue)) {
+    if (!isSameModelSelection(liveModelValue, currentModelValue)) {
       return;
     }
 

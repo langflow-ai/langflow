@@ -962,6 +962,45 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     ]);
   });
 
+  it("should apply the refresh when an empty model only changed representation in flight", async () => {
+    mockNodes = [createMockModelNodeWithValue("node-1", "")];
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    (api.post as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    const refresh = refreshAllModelInputs(mockQueryClient as any, {
+      silent: true,
+    });
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+
+    mockNodes = [createMockModelNodeWithValue("node-1", [])];
+    resolveResponse?.({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: [],
+            options: [OPENAI_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+    await refresh;
+
+    expect(getRefreshedModelValue()).toEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
+  });
+
   it("should keep the saved model when it is still enabled", async () => {
     const savedValue = [
       { name: "gpt-5.6", provider: "OpenAI", icon: "OpenAI" },

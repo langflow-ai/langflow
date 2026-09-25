@@ -1,4 +1,4 @@
-import type { Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
@@ -12,28 +12,58 @@ const isMountRefresh = (route: Route): boolean => {
   }
 };
 
+async function holdMountRefresh(page: Page) {
+  let releaseRefresh: () => void = () => {};
+  const refreshReleased = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  let heldRefreshes = 0;
+  await page.route("**/api/v1/custom_component/update**", async (route) => {
+    if (!isMountRefresh(route)) {
+      await route.continue();
+      return;
+    }
+    heldRefreshes += 1;
+    const response = await route.fetch();
+    await refreshReleased;
+    await route.fulfill({ response });
+  });
+
+  return {
+    held: () => heldRefreshes,
+    release: async () => {
+      const refreshApplied = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/custom_component/update") &&
+          response.request().postDataJSON()?.template?.is_refresh === true,
+      );
+      releaseRefresh();
+      await refreshApplied;
+      // The app applies the response after the network event; let it land first.
+      await page.waitForTimeout(2000);
+    },
+  };
+}
+
+async function persistedModelName(page: Page): Promise<string | undefined> {
+  const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
+  const flow = await (await page.request.get(`/api/v1/flows/${flowId}`)).json();
+  const modelNode = flow.data?.nodes?.find(
+    (node: { data: { node: { template: { model?: unknown } } } }) =>
+      node.data.node.template.model,
+  );
+  const value = modelNode?.data.node.template.model.value as ModelValue;
+  return value?.[0]?.name;
+}
+
 test(
   "keeps a model picked while the flow-open model refresh is in flight",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    let releaseRefresh: () => void = () => {};
-    const refreshReleased = new Promise<void>((resolve) => {
-      releaseRefresh = resolve;
-    });
-    let heldRefreshes = 0;
-    await page.route("**/api/v1/custom_component/update**", async (route) => {
-      if (!isMountRefresh(route)) {
-        await route.continue();
-        return;
-      }
-      heldRefreshes += 1;
-      const response = await route.fetch();
-      await refreshReleased;
-      await route.fulfill({ response });
-    });
+    const refresh = await holdMountRefresh(page);
 
     await openStarterProject(page, "Basic Prompting");
-    await expect.poll(() => heldRefreshes).toBeGreaterThan(0);
+    await expect.poll(refresh.held).toBeGreaterThan(0);
 
     const trigger = page.getByTestId("model_model").first();
     await expect(trigger).toBeVisible({ timeout: 30000 });
@@ -57,33 +87,32 @@ test(
     await expect(trigger).toContainText(pickedModel);
     await pickUpdated;
 
-    const refreshApplied = page.waitForResponse(
-      (response) =>
-        response.url().includes("/api/v1/custom_component/update") &&
-        response.request().postDataJSON()?.template?.is_refresh === true,
-    );
-    releaseRefresh();
-    await refreshApplied;
-    // The app applies the response after the network event; let it land first.
-    await page.waitForTimeout(2000);
+    await refresh.release();
 
     await expect(trigger).toContainText(pickedModel);
-    const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
     await expect
-      .poll(
-        async () => {
-          const flow = await (
-            await page.request.get(`/api/v1/flows/${flowId}`)
-          ).json();
-          const modelNode = flow.data?.nodes?.find(
-            (node: { data: { node: { template: { model?: unknown } } } }) =>
-              node.data.node.template.model,
-          );
-          const value = modelNode?.data.node.template.model.value as ModelValue;
-          return value?.[0]?.name;
-        },
-        { timeout: 15000 },
-      )
+      .poll(() => persistedModelName(page), { timeout: 15000 })
       .toBe(pickedModel);
+  },
+);
+
+test(
+  "applies a delayed flow-open model refresh when no model was picked",
+  { tag: ["@release", "@components"] },
+  async ({ page }) => {
+    const refresh = await holdMountRefresh(page);
+
+    await openStarterProject(page, "Basic Prompting");
+    await expect.poll(refresh.held).toBeGreaterThan(0);
+
+    const trigger = page.getByTestId("model_model").first();
+    await expect(trigger).toBeVisible({ timeout: 30000 });
+
+    await refresh.release();
+
+    await expect(trigger).not.toContainText("Select a model");
+    await expect
+      .poll(() => persistedModelName(page), { timeout: 15000 })
+      .toBeTruthy();
   },
 );
