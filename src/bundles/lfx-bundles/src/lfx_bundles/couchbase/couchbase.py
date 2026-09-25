@@ -1,10 +1,92 @@
+import re
 from datetime import timedelta
+from ipaddress import ip_address
+from urllib.parse import parse_qsl, urlsplit
 
+import dns.exception
+import dns.resolver
 from langchain_community.vectorstores import CouchbaseVectorStore
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import is_local_file_access_restricted
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_connector_ssrf_validation_enabled,
+    is_ssrf_protection_enabled,
+    validate_connector_hostname_for_ssrf,
+)
+
+_COUCHBASE_SEED = re.compile(r"(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]+)?")
+
+
+def _validate_couchbase_hosts(connection_string: str) -> None:
+    parsed = urlsplit(connection_string)
+    file_restricted = is_local_file_access_restricted()
+    ssrf_enabled = is_connector_ssrf_validation_enabled() and is_ssrf_protection_enabled()
+    if parsed.fragment and (file_restricted or ssrf_enabled):
+        msg = "Couchbase connection string fragments are not permitted."
+        raise SSRFProtectionError(msg)
+    query_keys = {key.casefold() for key, _value in parse_qsl(parsed.query.replace(";", "&"), keep_blank_values=True)}
+    if file_restricted and "trust_certificate" in query_keys:
+        msg = "Couchbase trust_certificate can access the local filesystem and is not permitted."
+        raise SSRFProtectionError(msg)
+    if not ssrf_enabled:
+        return
+
+    # urlsplit strips leading spaces and control characters, plus tabs and newlines
+    # anywhere in the URL, while the SDK receives the original string.
+    if any(char.isspace() or not char.isprintable() for char in connection_string):
+        msg = "Couchbase connection string contains an invalid host."
+        raise SSRFProtectionError(msg)
+    if parsed.scheme not in {"couchbase", "couchbases"} or not parsed.netloc:
+        msg = "Couchbase connection string must contain a host."
+        raise SSRFProtectionError(msg)
+
+    seeds = parsed.netloc.split(",")
+    if query_keys & {"enable_dns_srv", "dns_nameserver"}:
+        msg = "Couchbase connection string cannot override DNS discovery settings."
+        raise SSRFProtectionError(msg)
+    for seed in seeds:
+        # Reject characters the SDK might treat as a host terminator, since
+        # validating a longer string could approve a different dial target.
+        if not _COUCHBASE_SEED.fullmatch(seed):
+            msg = "Couchbase connection string contains an invalid host."
+            raise SSRFProtectionError(msg)
+        try:
+            address = urlsplit(f"//{seed}")
+            host = address.hostname
+            port = address.port  # Check for an invalid port before the SDK interprets the seed.
+        except ValueError as e:
+            msg = "Couchbase connection string contains an invalid host."
+            raise SSRFProtectionError(msg) from e
+        # An explicit port does not disable DNS SRV in the C++ SDK. Validate
+        # that seed as a possible direct target, then inspect any SRV targets.
+        # A portless single seed may have only SRV records and no A/AAAA record.
+        seed_needs_validation = len(seeds) > 1 or port is not None
+        if seed_needs_validation:
+            validate_connector_hostname_for_ssrf(host or "")
+        if len(seeds) == 1 and host:
+            try:
+                ip_address(host)
+            except ValueError:
+                try:
+                    records = dns.resolver.resolve(f"_{parsed.scheme}._tcp.{host}", "SRV")
+                except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+                    pass  # The SDK falls back to the seed host when no SRV record exists.
+                except dns.exception.DNSException as e:
+                    msg = "Could not verify Couchbase bootstrap nodes."
+                    raise SSRFProtectionError(msg) from e
+                else:
+                    if records:
+                        for record in records:
+                            validate_connector_hostname_for_ssrf(str(record.target).rstrip("."))
+                        continue
+        # The SDK falls back to this seed when SRV is absent. Multi-seed and
+        # explicit-port seeds were already checked as possible direct targets.
+        if not seed_needs_validation:
+            validate_connector_hostname_for_ssrf(host or "")
 
 
 class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
@@ -36,6 +118,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> CouchbaseVectorStore:
+        _validate_couchbase_hosts(self.couchbase_connection_string)
         try:
             from couchbase.auth import PasswordAuthenticator
             from couchbase.cluster import Cluster

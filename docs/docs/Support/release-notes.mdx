@@ -50,6 +50,14 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
+### Connector security in 1.12.4
+
+Connector SSRF validation now checks database and vector-store bootstrap targets, including PGVector. PGVector connections to `localhost` or `127.0.0.1` are blocked by default. For a trusted local PGVector flow, add the hostname or address to `LANGFLOW_SSRF_ALLOWED_HOSTS`. See [SSRF protection](/api-keys-and-authentication#ssrf-protection) for container-network and SRV target guidance.
+
+With local file access restricted (the default), existing `mysql+mysqlconnector://` URLs now need `allow_local_infile=false`, and `mariadb+mariadbconnector://` URLs need `local_infile=false`. Add these to each URL's query string before upgrading. The [local file access setting](/api-keys-and-authentication) explains the trusted single-tenant opt-out.
+
+Database URLs that refer to local TLS certificate or key files, including PostgreSQL `sslrootcert`, `sslcert`, and `sslkey` parameters, are also blocked when local file access is restricted. Administrators using file-based TLS credentials should review affected flows before upgrading. A [directory-scoped exception for administrator-provided files](https://github.com/langflow-ai/langflow/issues/15402) is planned; until then, these URLs require a trusted single-tenant deployment with `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false`.
+
 ### Breaking changes
 
 - `langflow-base` is now the minimal install

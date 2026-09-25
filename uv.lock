@@ -8830,6 +8830,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
     { name = "setuptools" },
+    { name = "sqlalchemy" },
     { name = "structlog" },
     { name = "toml" },
     { name = "tomli" },
@@ -8943,6 +8944,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
     { name = "setuptools", specifier = ">=83.0.0,<84.0.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.38,<2.1.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "toml", specifier = ">=0.10.2,<1.0.0" },
     { name = "tomli", specifier = ">=2.2.1,<3.0.0" },
@@ -9046,7 +9048,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.31"
+version = "1.1.32"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9070,6 +9072,7 @@ all = [
     { name = "composio-langchain" },
     { name = "couchbase" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "dnspython" },
     { name = "elasticsearch" },
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "faiss-cpu", version = "1.14.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
@@ -9139,6 +9142,7 @@ all-no-torch = [
     { name = "composio" },
     { name = "composio-langchain" },
     { name = "couchbase" },
+    { name = "dnspython" },
     { name = "elasticsearch" },
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "faiss-cpu", version = "1.14.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
@@ -9245,6 +9249,7 @@ confluence = [
 ]
 couchbase = [
     { name = "couchbase" },
+    { name = "dnspython" },
     { name = "langchain-community" },
 ]
 cuga = [
@@ -9444,6 +9449,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cuga", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
     { name = "cuga", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
+    { name = "dnspython", marker = "extra == 'couchbase'", specifier = ">=2.6,<3" },
     { name = "elasticsearch", marker = "extra == 'elastic'", specifier = "~=8.19" },
     { name = "faiss-cpu", marker = "python_full_version >= '3.14' and extra == 'faiss'", specifier = ">=1.13.2" },
     { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
@@ -9717,7 +9723,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.8"
+version = "0.1.9"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10069,7 +10075,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-valkey"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "src/bundles/valkey" }
 dependencies = [
     { name = "langchain-aws" },
