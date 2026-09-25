@@ -119,6 +119,38 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("yaml", "CLoader", "yaml.CLoader is forbidden in components — use yaml.SafeLoader"),
     ("yaml", "CUnsafeLoader", "yaml.CUnsafeLoader is forbidden in components — use yaml.SafeLoader"),
     ("yaml", "CFullLoader", "yaml.CFullLoader is forbidden in components — use yaml.SafeLoader"),
+    (
+        "pandas.compat",
+        "pickle_compat",
+        "pandas.compat.pickle_compat is forbidden — unsafe pickle deserialization",
+    ),
+    ("pandas.io", "pickle", "pandas.io.pickle is forbidden — unsafe pickle deserialization"),
+    ("pandas.core.generic", "pickle", "pandas.core.generic.pickle is forbidden — unsafe pickle deserialization"),
+    # These stdlib modules re-export pickle (or multiprocessing) without an
+    # explicit import of the blocked module in generated component code.
+    ("pickletools", "pickle", "pickletools.pickle is forbidden — unsafe pickle deserialization"),
+    ("trace", "pickle", "trace.pickle is forbidden — unsafe pickle deserialization"),
+    ("tracemalloc", "pickle", "tracemalloc.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "concurrent.futures.process",
+        "mp",
+        "concurrent.futures.process.mp is forbidden — multiprocessing exposes unsafe pickle deserialization",
+    ),
+    # NumPy's array modules re-export the stdlib pickle module while also
+    # exposing safe readers. Deny the re-export without blocking those readers.
+    ("numpy.lib.format", "pickle", "numpy.lib.format.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "numpy.lib._format_impl",
+        "pickle",
+        "numpy.lib._format_impl.pickle is forbidden — unsafe pickle deserialization",
+    ),
+    ("numpy.lib.npyio", "pickle", "numpy.lib.npyio.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "numpy.lib._npyio_impl",
+        "pickle",
+        "numpy.lib._npyio_impl.pickle is forbidden — unsafe pickle deserialization",
+    ),
+    ("numpy._core._methods", "pickle", "numpy._core._methods.pickle is forbidden — unsafe pickle deserialization"),
 ]
 
 # Dangerous attribute calls: (module, method, violation_message)
@@ -190,7 +222,40 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     # constructor-invocation surface reachable through a plain function call.
     ("yaml", "full_load", "yaml.full_load() is forbidden — use yaml.safe_load()"),
     ("yaml", "full_load_all", "yaml.full_load_all() is forbidden — use yaml.safe_load_all()"),
+    # pandas.read_pickle delegates to pickle.load, so it can invoke a callable
+    # while the generated component is being validated in the backend process.
+    ("pandas", "read_pickle", "pandas.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas.io.api", "read_pickle", "pandas.io.api.read_pickle() is forbidden — unsafe pickle deserialization"),
 ]
+
+# NumPy's array readers are safe by default, but allow_pickle=True enables
+# object constructors. The value's positional index differs between APIs.
+_NUMPY_PICKLE_READER_ARG_INDEX = {
+    "numpy.load": 2,
+    "numpy.lib.npyio.load": 2,
+    "numpy.lib._npyio_impl.load": 2,
+    "numpy.lib.format.read_array": 1,
+    "numpy.lib._format_impl.read_array": 1,
+    "numpy.lib.npyio.NpzFile": 2,
+    "numpy.lib._npyio_impl.NpzFile": 2,
+}
+_NUMPY_WILDCARD_READERS = {
+    "numpy": (("load", "numpy.load"),),
+    "numpy.lib.npyio": (("load", "numpy.lib.npyio.load"), ("NpzFile", "numpy.lib.npyio.NpzFile")),
+    "numpy.lib._npyio_impl": (
+        ("load", "numpy.lib._npyio_impl.load"),
+        ("NpzFile", "numpy.lib._npyio_impl.NpzFile"),
+    ),
+    "numpy.lib.format": (("read_array", "numpy.lib.format.read_array"),),
+    "numpy.lib._format_impl": (("read_array", "numpy.lib._format_impl.read_array"),),
+}
+_NUMPY_NPZ_CLASSES = frozenset(name for name in _NUMPY_PICKLE_READER_ARG_INDEX if name.endswith(".NpzFile"))
+_NUMPY_ARCHIVE_READER_CALLS = frozenset(
+    name for name in _NUMPY_PICKLE_READER_ARG_INDEX if name.endswith((".load", ".NpzFile"))
+)
+_NUMPY_ARCHIVE_RESULT = "<numpy-archive-reader-result>"
+_SETATTR_CALLABLE_NAMES = frozenset({"setattr", "builtins.setattr", "__builtins__.setattr"})
 
 # Imports that are forbidden entirely
 DANGEROUS_IMPORTS: set[str] = {
@@ -203,6 +268,12 @@ DANGEROUS_IMPORTS: set[str] = {
     "cffi",
     "_cffi_backend",
     "pickle",
+    "_pickle",
+    # These loaders also deserialize pickle objects; blocking their imports is
+    # safer than trying to enumerate each package's load/loads aliases.
+    "joblib",
+    "dill",
+    "cloudpickle",
     "shelve",
     "marshal",
     "code",
@@ -247,6 +318,12 @@ DANGEROUS_SUBMODULES: tuple[str, ...] = (
     "urllib.error",
     "http.client",
     "http.server",
+    # All useful members of this module are pickle entry points or re-exports
+    # of pickle / pandas.compat.pickle_compat, not just read_pickle().
+    "pandas.io.pickle",
+    # This compatibility module exposes several pickle entry points, including
+    # Unpickler and the underlying pickle module. Block its whole namespace.
+    "pandas.compat.pickle_compat",
 )
 
 # Imports where only specific names are dangerous (module -> set of dangerous names)
@@ -302,6 +379,7 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "full_load",
         "full_load_all",
     },
+    "pandas": {"read_pickle"},
 }
 
 
@@ -573,6 +651,51 @@ def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]
 
 _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 
+# Importing arbitrary packages to inspect ``__all__`` would execute code during
+# the scan. These are verified star exports from packages with nested sinks;
+# the sink tables below determine which of the exported names need binding.
+_KNOWN_WILDCARD_SUBMODULE_EXPORTS: dict[str, frozenset[str]] = {
+    "concurrent": frozenset({"futures"}),
+    "numpy": frozenset({"lib"}),
+    "numpy.lib": frozenset({"format", "npyio"}),
+    "os": frozenset({"path"}),
+    "pandas": frozenset({"io"}),
+    "pandas.io": frozenset({"api", "pickle"}),
+    "pandas.core": frozenset({"generic"}),
+    "urllib": frozenset({"error", "request"}),
+}
+
+
+def _build_wildcard_submodule_bindings() -> dict[str, dict[str, str]]:
+    """Bind verified star-exported submodules along known dangerous paths.
+
+    A star import from ``numpy.lib`` exposes ``format`` and ``npyio`` as bare
+    names. A path alone does not prove an export: ``pandas.core`` is reachable
+    by name but is absent from ``pandas.__all__``.
+    """
+    sink_paths = {
+        f"{module}.{member}"
+        for table in (_DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS)
+        for module, members in table.items()
+        for member in members
+    }
+    sink_paths.update(_NUMPY_PICKLE_READER_ARG_INDEX)
+    module_paths = {path.rpartition(".")[0] for path in sink_paths}
+    module_paths.update(DANGEROUS_SUBMODULES)
+
+    bindings: dict[str, dict[str, str]] = {}
+    for module_path in module_paths:
+        parts = module_path.split(".")
+        for index in range(1, len(parts)):
+            package = ".".join(parts[:index])
+            if parts[index] not in _KNOWN_WILDCARD_SUBMODULE_EXPORTS.get(package, ()):
+                continue
+            bindings.setdefault(package, {})[parts[index]] = ".".join(parts[: index + 1])
+    return bindings
+
+
+_WILDCARD_SUBMODULE_BINDINGS = _build_wildcard_submodule_bindings()
+
 # Modules importable under a second name that yields the *same* objects. ``io``
 # is a thin Python wrapper over the C module ``_io``: ``io.FileIO is _io.FileIO``
 # is true at runtime, so a rule written for ``io`` has to cover both spellings or
@@ -766,6 +889,11 @@ class _SecurityChecker(ast.NodeVisitor):
         # Names declared ``global`` / ``nonlocal`` in the current function scope:
         # their bindings outlive the alias state restored at scope exit.
         self._escaping_names: set[str] = set()
+        # A reader result can pass through arbitrary Python helpers before vars()
+        # or type() is called. Track these calls for an order-independent refusal.
+        self.saw_numpy_archive_reader = False
+        self.saw_vars_call = False
+        self.saw_one_arg_type_call = False
 
     def _resolved_names(self, name: str) -> frozenset[str]:
         """Return possible canonical values for a local name."""
@@ -812,13 +940,23 @@ class _SecurityChecker(ast.NodeVisitor):
             return frozenset(
                 {*self._resolved_assignment_value(node.body), *self._resolved_assignment_value(node.orelse)}
             )
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            values = {name for element in node.elts for name in self._resolved_assignment_value(element)}
+            markers = {_NUMPY_ARCHIVE_RESULT} if _NUMPY_ARCHIVE_RESULT in values else set()
+            if any(name.endswith(".__dict__") for name in values):
+                markers.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
+            return frozenset(markers)
         if isinstance(node, ast.Attribute):
             base_names = self._resolved_assignment_value(node.value)
             if not base_names and node.attr == "__dict__":
                 return frozenset({_UNRESOLVED_REFLECTIVE_NAMESPACE})
             return self._resolved_member_names(base_names, node.attr)
-        if isinstance(node, ast.Subscript) and (member_name := self._static_name(node.slice)) is not None:
+        if isinstance(node, ast.Subscript):
             module_dicts = self._resolved_assignment_value(node.value)
+            if _NUMPY_ARCHIVE_RESULT in module_dicts:
+                return frozenset({_NUMPY_ARCHIVE_RESULT})
+            if (member_name := self._static_name(node.slice)) is None:
+                return frozenset()
             module_names = frozenset(
                 mapping_name.removesuffix(".__dict__")
                 for mapping_name in module_dicts
@@ -828,6 +966,12 @@ class _SecurityChecker(ast.NodeVisitor):
         if isinstance(node, ast.Call):
             function_names = self._resolved_assignment_value(node.func)
             resolved: set[str] = set()
+            if function_names & _NUMPY_ARCHIVE_READER_CALLS:
+                resolved.add(_NUMPY_ARCHIVE_RESULT)
+            if {"type", "builtins.type", "__builtins__.type"} & function_names and len(node.args) == 1:
+                instance_names = self._resolved_assignment_value(node.args[0])
+                if _NUMPY_ARCHIVE_RESULT in instance_names:
+                    resolved.update(_NUMPY_NPZ_CLASSES)
 
             if (
                 {"getattr", "builtins.getattr", "__builtins__.getattr"} & function_names
@@ -887,13 +1031,11 @@ class _SecurityChecker(ast.NodeVisitor):
 
             return frozenset(resolved)
         if isinstance(node, ast.Dict):
-            # ``{**ns, ...}`` copies a namespace wholesale.
-            if any(
-                key is None and any(name.endswith(".__dict__") for name in self._resolved_assignment_value(value))
-                for key, value in zip(node.keys, node.values, strict=True)
-            ):
-                return frozenset({_UNRESOLVED_REFLECTIVE_NAMESPACE})
-            return frozenset()
+            values = {name for value in node.values for name in self._resolved_assignment_value(value)}
+            markers = {_NUMPY_ARCHIVE_RESULT} if _NUMPY_ARCHIVE_RESULT in values else set()
+            if any(name.endswith(".__dict__") for name in values):
+                markers.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
+            return frozenset(markers)
         return frozenset()
 
     def _call_reaches_namespace_mapping(self, node: ast.Call) -> bool:
@@ -973,6 +1115,10 @@ class _SecurityChecker(ast.NodeVisitor):
 
         resolved_names = self._resolved_assignment_value(node)
         for resolved_name in resolved_names:
+            if resolved_name in _SETATTR_CALLABLE_NAMES:
+                return "Indirect setattr() reference is forbidden in components (numpy pickle risk)"
+            if resolved_name in _NUMPY_PICKLE_READER_ARG_INDEX:
+                return f"Indirect {resolved_name}() reference is forbidden — allow_pickle cannot be verified"
             if _is_restricted_module_reference(resolved_name):
                 return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
             if _is_restricted_reflective_capability(resolved_name):
@@ -981,6 +1127,20 @@ class _SecurityChecker(ast.NodeVisitor):
                 return violation
         if resolved_names:
             return None
+
+        if isinstance(node, ast.Call):
+            # visit_Call checks the callee (including NumPy allow_pickle) directly.
+            # A call result is not an indirect reference to its function: assigning
+            # ``np.load(path, allow_pickle=False)`` must remain allowed. Its arguments
+            # can still carry restricted references through this opaque boundary.
+            return next(
+                (
+                    violation
+                    for argument in (*node.args, *(keyword.value for keyword in node.keywords))
+                    if (violation := self._opaque_reference_violation(argument))
+                ),
+                None,
+            )
 
         return next(
             (
@@ -1086,6 +1246,12 @@ class _SecurityChecker(ast.NodeVisitor):
         if not self._binding_escapes(name):
             return
         for value in sorted(values):
+            if value in _SETATTR_CALLABLE_NAMES:
+                self.violations.append("Indirect setattr() reference is forbidden in components (numpy pickle risk)")
+                return
+            if value in _NUMPY_PICKLE_READER_ARG_INDEX:
+                self.violations.append(f"Indirect {value}() reference is forbidden — allow_pickle cannot be verified")
+                return
             if _is_restricted_module_reference(value):
                 self.violations.append(f"Indirect reference to restricted module '{value}' is forbidden in components")
                 return
@@ -1206,15 +1372,18 @@ class _SecurityChecker(ast.NodeVisitor):
 
         if root_module in DANGEROUS_IMPORTS or _is_dangerous_submodule(node.module):
             self.violations.append(f"Import from '{node.module}' is forbidden in components")
-        elif root_module in RESTRICTED_IMPORT_NAMES and node.names:
-            restricted = RESTRICTED_IMPORT_NAMES[root_module]
+        else:
+            restricted = (
+                RESTRICTED_IMPORT_NAMES.get(root_module, set())
+                | _DANGEROUS_READ_MEMBERS.get(node.module, set())
+                | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
+            )
             for alias in node.names:
                 if alias.name in restricted:
                     self.violations.append(f"Import of '{root_module}.{alias.name}' is forbidden in components")
-        elif node.names:
-            # `from urllib import request` / `from http import client`: the
-            # imported name *is* a blocked submodule.
-            for alias in node.names:
+                # `from urllib import request` / `from http import client`:
+                # the imported name *is* a blocked submodule. This also
+                # applies to packages with other restricted member names.
                 if _is_dangerous_submodule(f"{node.module}.{alias.name}"):
                     self.violations.append(f"Import of '{node.module}.{alias.name}' is forbidden in components")
 
@@ -1223,10 +1392,17 @@ class _SecurityChecker(ast.NodeVisitor):
                 # Both defaults must be sets: "tuple | set" is a TypeError, so a
                 # wildcard import from any module absent from the call table
                 # (``from typing import *``) crashed the scan out to the caller.
-                for name in _DANGEROUS_CALL_MEMBERS.get(root_module, set()) | _DANGEROUS_READ_MEMBERS.get(
-                    root_module, set()
+                for name in (
+                    _DANGEROUS_CALL_MEMBERS.get(root_module, set())
+                    | _DANGEROUS_READ_MEMBERS.get(root_module, set())
+                    | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
+                    | _DANGEROUS_READ_MEMBERS.get(node.module, set())
                 ):
-                    self._bind_name(name, frozenset({f"{root_module}.{name}"}))
+                    self._bind_name(name, frozenset({f"{node.module}.{name}"}))
+                for reader_name, reader_path in _NUMPY_WILDCARD_READERS.get(node.module, ()):
+                    self._bind_name(reader_name, frozenset({reader_path}))
+                for binding, submodule in _WILDCARD_SUBMODULE_BINDINGS.get(node.module, {}).items():
+                    self._bind_name(binding, frozenset({submodule}))
             else:
                 binding = alias.asname or alias.name
                 imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
@@ -1363,8 +1539,9 @@ class _SecurityChecker(ast.NodeVisitor):
             self.visit(item.context_expr)
             if item.optional_vars is not None:
                 self.visit(item.optional_vars)
+                archive_result = _NUMPY_ARCHIVE_RESULT in self._resolved_assignment_value(item.context_expr)
                 for name in self._assignment_target_names(item.optional_vars):
-                    self._bind_name(name, frozenset())
+                    self._bind_name(name, frozenset({_NUMPY_ARCHIVE_RESULT}) if archive_result else frozenset())
         for statement in node.body:
             self.visit(statement)
 
@@ -1579,6 +1756,11 @@ class _SecurityChecker(ast.NodeVisitor):
         for decorator in node.decorator_list:
             self.visit(decorator)
         for base in node.bases:
+            if self._resolved_assignment_value(base) & _NUMPY_NPZ_CLASSES:
+                self.violations.append("Subclassing numpy.NpzFile is forbidden — allow_pickle cannot be verified")
+            # Container, Boolean, and call expressions can hide a NumPy reader class
+            # even when the base expression itself has no resolvable name.
+            self._check_opaque_reference(base)
             self.visit(base)
         for keyword in node.keywords:
             self.visit(keyword)
@@ -1603,6 +1785,12 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_Attribute(self, node: ast.Attribute):
         """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
+        if isinstance(node.ctx, ast.Store) and node.attr == "allow_pickle":
+            self.violations.append("Assignment to numpy allow_pickle is forbidden — unsafe pickle deserialization")
+        if node.attr == "__dict__" and _NUMPY_ARCHIVE_RESULT in self._resolved_assignment_value(node.value):
+            self.violations.append(
+                "Access to numpy archive reader internals is forbidden — unsafe pickle deserialization"
+            )
         if _is_blocked_attribute(node.attr):
             self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
         else:
@@ -1724,6 +1912,9 @@ class _SecurityChecker(ast.NodeVisitor):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
         if isinstance(node.ctx, ast.Load):
             for resolved_name in self._resolved_names(node.id):
+                if resolved_name in DANGEROUS_SUBMODULES:
+                    self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
+                    break
                 if violation := next(
                     (message for mod, attr, message in DANGEROUS_ATTRIBUTE_READS if resolved_name == f"{mod}.{attr}"),
                     None,
@@ -1745,8 +1936,38 @@ class _SecurityChecker(ast.NodeVisitor):
         self._check_dunder_mapping_read(node)
         self._check_namespace_mapping_method(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
+        self._check_numpy_pickle_load(node, resolved_call_names)
+        if resolved_call_names & _NUMPY_ARCHIVE_READER_CALLS:
+            self.saw_numpy_archive_reader = True
+        if {"type", "builtins.type", "__builtins__.type"} & resolved_call_names and (
+            len(node.args) == 1 or any(isinstance(argument, ast.Starred) for argument in node.args)
+        ):
+            self.saw_one_arg_type_call = True
+        if _SETATTR_CALLABLE_NAMES & resolved_call_names:
+            if any(isinstance(argument, ast.Starred) for argument in node.args) or any(
+                keyword.arg is None for keyword in node.keywords
+            ):
+                self.violations.append("Unpacked setattr() arguments are forbidden in components (sandbox escape)")
+            elif len(node.args) > 1:
+                attribute_name = self._static_name(node.args[1])
+                if attribute_name is None:
+                    self.violations.append(
+                        "Dynamic setattr() attribute names are forbidden in components (numpy pickle risk)"
+                    )
+                elif attribute_name == "allow_pickle":
+                    self.violations.append(
+                        "Assignment to numpy allow_pickle is forbidden — unsafe pickle deserialization"
+                    )
         reflective_arguments_validated = self._check_restricted_reflection_access(node, resolved_call_names)
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
+        if vars_names & resolved_call_names:
+            self.saw_vars_call = True
+            positional = _expand_static_arguments(node.args)
+            if positional and _NUMPY_ARCHIVE_RESULT in self._resolved_assignment_value(positional[0]):
+                self.violations.append(
+                    "Access to numpy archive reader internals through vars() is forbidden "
+                    "— unsafe pickle deserialization"
+                )
         if vars_names & resolved_call_names and _static_positional_argument_count(node.args) != 1:
             self.violations.append(
                 "Use of vars() without exactly one statically known positional argument is forbidden in components"
@@ -1772,6 +1993,30 @@ class _SecurityChecker(ast.NodeVisitor):
         for argument in (*node.args[exempt_arguments:], *(keyword.value for keyword in node.keywords)):
             self._check_opaque_reference(argument)
         self.generic_visit(node)
+
+    def _check_numpy_pickle_load(self, node: ast.Call, resolved_call_names: frozenset[str]) -> None:
+        loader_names = resolved_call_names.intersection(_NUMPY_PICKLE_READER_ARG_INDEX)
+        if not loader_names:
+            return
+        positional = _expand_static_arguments(node.args)
+        keyword_value = next((keyword.value for keyword in node.keywords if keyword.arg == "allow_pickle"), None)
+        for loader_name in sorted(loader_names):
+            if positional is None or any(keyword.arg is None for keyword in node.keywords):
+                self.violations.append(
+                    f"{loader_name}() with dynamic arguments may enable unsafe pickle deserialization"
+                )
+                return
+            allow_pickle = keyword_value
+            allow_pickle_arg_index = _NUMPY_PICKLE_READER_ARG_INDEX[loader_name]
+            if allow_pickle is None and len(positional) > allow_pickle_arg_index:
+                allow_pickle = positional[allow_pickle_arg_index]
+            if allow_pickle is not None and not (
+                isinstance(allow_pickle, ast.Constant) and allow_pickle.value is False
+            ):
+                self.violations.append(
+                    f"{loader_name}() with allow_pickle enabled is forbidden — unsafe pickle deserialization"
+                )
+                return
 
     def _check_name_call(self, node: ast.Call):
         """Check bare-name calls: builtins (exec) and wildcard-imported members.
@@ -1891,6 +2136,17 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
             elif _is_blocked_attribute(member_name):
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+            else:
+                module_owners = {name.removesuffix(".__dict__") for name in module_names}
+                if violation := next(
+                    (
+                        message
+                        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                        if mod in module_owners and attr == member_name
+                    ),
+                    None,
+                ):
+                    self.violations.append(violation)
 
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
         if function_names & vars_names and len(node.args) == 1 and _restricted_names(node.args[0]):
@@ -2034,6 +2290,10 @@ def scan_code_security(code: str) -> SecurityScanResult:
     checker.visit(tree)
 
     violations = list(checker.violations)
+    if checker.saw_numpy_archive_reader and checker.saw_vars_call:
+        violations.append("vars() is forbidden in code using numpy archive readers — unsafe pickle deserialization")
+    if checker.saw_numpy_archive_reader and checker.saw_one_arg_type_call:
+        violations.append("type() is forbidden in code using numpy archive readers — unsafe pickle deserialization")
 
     # The AST checks look at what the code DOES; a slur baked into a prompt or a string literal
     # is invisible to them, and this code is about to be saved into the user's flow.
