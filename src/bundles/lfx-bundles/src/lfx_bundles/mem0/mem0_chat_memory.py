@@ -123,7 +123,10 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
             if not self.mem0_api_key:
                 return mem0.Memory.from_config(config_dict=config) if config else mem0.Memory()
             if self.mem0_config:
-                return mem0.MemoryClient.from_config(api_key=self.mem0_api_key, config_dict=dict(self.mem0_config))
+                logger.warning(
+                    "Mem0 Configuration has no effect on the Mem0 Platform client; "
+                    "MemoryClient takes no config dict. Manage platform settings from the Mem0 dashboard instead."
+                )
             return mem0.MemoryClient(api_key=self.mem0_api_key)
         except ImportError as e:
             msg = "Mem0 is not properly installed. Please install it with 'pip install -U mem0ai'."
