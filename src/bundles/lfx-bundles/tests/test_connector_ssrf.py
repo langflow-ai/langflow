@@ -618,6 +618,42 @@ def test_couchbase_rejects_ambiguous_seed_host_before_srv_lookup(separator):
     mock_srv.assert_not_called()
 
 
+@pytest.mark.parametrize("suffix", ["x.8.8.8.8.nip.io", ".attacker.test", "-attacker.test"])
+@pytest.mark.parametrize("seed_format", ["{host}", "{host}:11210", "8.8.8.8,{host}"])
+def test_couchbase_rejects_ipv4_prefix_host_before_dns_or_sdk(suffix, seed_format):
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    seed = seed_format.format(host=f"127.0.0.1{suffix}")
+    with (
+        ssrf_enabled(),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", side_effect=AssertionError("A lookup")),
+        patch("dns.resolver.resolve", side_effect=AssertionError("SRV lookup")),
+        pytest.raises(SSRFProtectionError, match="invalid host"),
+    ):
+        _validate_couchbase_hosts(f"couchbase://{seed}")
+
+
+@pytest.mark.parametrize("seed", ["8.8.8.8", "8.8.8.8:11210"])
+def test_couchbase_allows_public_ipv4_seed_without_srv_lookup(seed):
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with ssrf_enabled(), patch("dns.resolver.resolve", side_effect=AssertionError("SRV lookup")):
+        _validate_couchbase_hosts(f"couchbase://{seed}")
+
+
+def test_couchbase_allows_numeric_dns_name_that_is_not_an_ipv4_literal():
+    import dns.resolver
+    from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
+
+    with (
+        ssrf_enabled(),
+        patch("dns.resolver.resolve", side_effect=dns.resolver.NoAnswer),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["8.8.8.8"]),
+    ):
+        _validate_couchbase_hosts("couchbase://256.1.1.1")
+
+
 def test_couchbase_blocks_internal_srv_target():
     from lfx.utils.ssrf_protection import SSRFProtectionError
     from lfx_bundles.couchbase.couchbase import _validate_couchbase_hosts
