@@ -48,6 +48,63 @@ def test_validate_watsonx_uses_live_model_when_static_catalog_has_no_active_mode
     assert calls["prompt"] == "test"
 
 
+def test_validate_watsonx_uses_regional_model_instead_of_static_seed():
+    from lfx.base.models import model_utils
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    calls = {}
+
+    class FakeChatWatsonx:
+        def __init__(self, **kwargs):
+            calls["kwargs"] = kwargs
+
+        def invoke(self, _prompt):
+            return "ok"
+
+    variables = {**WATSONX_VARIABLES, "WATSONX_URL": "https://au-syd.ml.cloud.ibm.com"}
+    with (
+        patch.dict("sys.modules", {"langchain_ibm": SimpleNamespace(ChatWatsonx=FakeChatWatsonx)}),
+        patch(
+            "lfx.base.models.unified_models.model_catalog.get_unified_models_detailed",
+            return_value=[{"models": [{"model_name": "ibm/granite-4-h-small"}]}],
+        ),
+        patch("lfx.base.models.unified_models.credentials.validate_connector_url_for_ssrf"),
+        patch.object(
+            model_utils,
+            "get_watsonx_llm_models",
+            return_value=["meta-llama/llama-3-3-70b-instruct"],
+        ) as get_live_models,
+    ):
+        validate_model_provider_key("IBM WatsonX", variables)
+
+    get_live_models.assert_called_once_with("https://au-syd.ml.cloud.ibm.com", default_models=[])
+    assert calls["kwargs"]["model_id"] == "meta-llama/llama-3-3-70b-instruct"
+
+
+def test_validate_watsonx_preserves_explicit_model_selection():
+    from lfx.base.models import model_utils
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    calls = {}
+
+    class FakeChatWatsonx:
+        def __init__(self, **kwargs):
+            calls["kwargs"] = kwargs
+
+        def invoke(self, _prompt):
+            return "ok"
+
+    with (
+        patch.dict("sys.modules", {"langchain_ibm": SimpleNamespace(ChatWatsonx=FakeChatWatsonx)}),
+        patch("lfx.base.models.unified_models.credentials.validate_connector_url_for_ssrf"),
+        patch.object(model_utils, "get_watsonx_llm_models") as get_live_models,
+    ):
+        validate_model_provider_key("IBM WatsonX", WATSONX_VARIABLES, model_name="meta-llama/llama-3-3-70b-instruct")
+
+    get_live_models.assert_not_called()
+    assert calls["kwargs"]["model_id"] == "meta-llama/llama-3-3-70b-instruct"
+
+
 def test_validate_watsonx_rejects_ibm_iam_error():
     from lfx.base.models import model_utils
     from lfx.base.models.unified_models import validate_model_provider_key
