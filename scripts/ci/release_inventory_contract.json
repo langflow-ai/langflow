@@ -83,6 +83,7 @@
         "lfx-duckduckgo",
         "lfx-empiriolabs",
         "lfx-exa",
+        "lfx-fxmacrodata",
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
@@ -204,6 +205,7 @@
         "lfx-duckduckgo",
         "lfx-empiriolabs",
         "lfx-exa",
+        "lfx-fxmacrodata",
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
@@ -218,6 +220,7 @@
         "lfx-duckduckgo",
         "lfx-empiriolabs",
         "lfx-exa",
+        "lfx-fxmacrodata",
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
@@ -238,6 +241,7 @@
           "lfx-duckduckgo",
           "lfx-empiriolabs",
           "lfx-exa",
+          "lfx-fxmacrodata",
           "lfx-firecrawl",
           "lfx-google",
           "lfx-ibm",
@@ -370,6 +374,11 @@
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-fxmacrodata": [
+          "lfx_fxmacrodata/extension.json",
+          "lfx_fxmacrodata/components/fxmacrodata/query.py",
+          "lfx_fxmacrodata/components/fxmacrodata/tools.py"
         ]
       },
       "module_checks": [
