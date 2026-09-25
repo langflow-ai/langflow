@@ -192,7 +192,7 @@ keep their connection handle.
 
 ## Google Workspace source triggers
 
-Add **Google Calendar: On Event**, **Google Drive: On File**, or **Gmail: On Message** at the start of a flow. Save the flow, then enable its trigger through the Triggers API. The connection must belong to the flow owner and have **Allow background runs** enabled; shared and instance connections cannot arm these sources.
+Add **Google Calendar: On Event**, **Google Drive: On File**, or **Gmail: On Message** at the start of a Flow. Save the Flow, then enable its trigger through the Triggers API. The connection must belong to the Flow owner and have **Allow background runs** enabled; shared and instance connections cannot arm these sources.
 
 | Trigger | Scope | Reach |
 |---|---|---|
@@ -200,11 +200,11 @@ Add **Google Calendar: On Event**, **Google Drive: On File**, or **Gmail: On Mes
 | Google Drive: On File | `https://www.googleapis.com/auth/drive.file` | Files created or explicitly opened with this app |
 | Gmail: On Message | `https://www.googleapis.com/auth/gmail.readonly` | Inbox messages through a customer-owned Gmail watch |
 
-With public HTTPS ingress enabled, Calendar and Drive use Google push channels; Desktop deployments use Calendar sync and Drive changes polling. Push notifications only wake a change-feed scan, and Langflow also scans every five minutes in case a notification is missed. The flow receives the changed item. Enabling starts from the current state, so existing items do not fire the flow. A rejected sync token causes a fresh snapshot comparison against stored item versions.
+With public HTTPS ingress enabled, Calendar and Drive use Google push channels; Desktop deployments use Calendar sync and Drive changes polling. Push notifications only wake a change-feed scan, and Langflow also scans every five minutes in case a notification is missed. The Flow receives the changed item. Enabling starts from the current state, so existing items do not fire the Flow. A rejected sync token causes a fresh snapshot comparison against stored item versions.
 
 ### Gmail customer setup
 
-Gmail triggers are unavailable on hosted Langflow. On a customer deployment, use a customer-owned OAuth registration and a public HTTPS ingress. Create a Pub/Sub topic in the customer's Google Cloud project, grant Gmail permission to publish to it, and configure an authenticated **push subscription** to the trigger's URL. Use `GET /api/v1/triggers/{trigger_id}/ingress` to get that URL after saving the flow. Set **Customer Pub/Sub Topic** to the full `projects/.../topics/...` name and **Pub/Sub Push Service Account** to the service account email whose Google-signed identity token Pub/Sub sends. Configure the push subscription's audience as that exact ingress URL. Langflow verifies the token and audience before recording a delivery, renews the Gmail watch daily, and acknowledges only after the hint is in the ledger. Gmail's restricted `gmail.readonly` scope must be approved for the customer's OAuth app.
+Gmail triggers are unavailable on hosted Langflow. On a customer deployment, use a customer-owned OAuth registration and a public HTTPS ingress. Create a Pub/Sub topic in the customer's Google Cloud project, grant Gmail permission to publish to it, and configure an authenticated **push subscription** to the trigger's URL. Use `GET /api/v1/triggers/{trigger_id}/ingress` to get that URL after saving the Flow. Set **Customer Pub/Sub Topic** to the full `projects/.../topics/...` name and **Pub/Sub Push Service Account** to the service account email whose Google-signed identity token Pub/Sub sends. Configure the push subscription's audience as that exact ingress URL. Langflow verifies the token and audience before recording a delivery, renews the Gmail watch daily, and acknowledges only after the hint is in the ledger. Gmail's restricted `gmail.readonly` scope must be approved for the customer's OAuth app.
 
 If Gmail history expires before Langflow reads it, Langflow resumes from the current watermark; changes in the expired gap cannot be recovered.
 
