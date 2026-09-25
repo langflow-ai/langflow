@@ -7,7 +7,7 @@ owner's access token to another host.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
@@ -19,6 +19,7 @@ from langflow.services.triggers.principal import trigger_execution_principal
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
+    from typing_extensions import Self
 
     from langflow.services.database.models.trigger.model import Trigger
 
