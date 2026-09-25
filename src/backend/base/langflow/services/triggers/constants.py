@@ -120,6 +120,15 @@ SLACK_TRIGGER_KINDS = frozenset({KIND_SLACK_MESSAGE, KIND_SLACK_REACTION})
 MECHANISM_SLACK_EVENTS_API = "slack.events_api"
 MECHANISM_SLACK_SOCKET_MODE = "slack.socket_mode"
 
+MICROSOFT_SOURCE_KINDS = frozenset({"microsoft.mail", "microsoft.calendar", "microsoft.file"})
+GOOGLE_SOURCE_KINDS = frozenset({"google.calendar", "google.drive", "google.gmail"})
+MECHANISM_GRAPH_NOTIFICATIONS = "microsoft.graph_change_notifications"
+MECHANISM_GRAPH_DELTA = "microsoft.graph_delta_poll"
+GOOGLE_PUSH_MECHANISMS = frozenset({"google.calendar_push", "google.drive_push", "google.gmail_watch_pubsub_push"})
+GOOGLE_POLL_MECHANISMS = frozenset(
+    {"google.calendar_sync_poll", "google.drive_changes_poll", "google.gmail_watch_pubsub_pull"}
+)
+
 #: ``trigger.provider_state`` key recording which Slack app a Socket Mode
 #: trigger's connection proved it belongs to, in that socket's ``hello``. It is a
 #: fact about the connection, so it goes whenever the trigger's connection changes.
@@ -128,10 +137,10 @@ SLACK_PROVIDER_STATE_APP_ID = "slack_app_id"
 #: Mechanisms a provider pushes to Langflow's ingress (Track A). A run started
 #: by one executes as the ``trigger_push`` family; everything else a trigger
 #: runs - listener sources and the schedule - as ``trigger_listener``.
-PUSH_MECHANISMS = frozenset({MECHANISM_SLACK_EVENTS_API})
+PUSH_MECHANISMS = frozenset({MECHANISM_SLACK_EVENTS_API, MECHANISM_GRAPH_NOTIFICATIONS}) | GOOGLE_PUSH_MECHANISMS
 
 #: Kinds whose configuration, connection and mechanism are owned by a canvas
 #: node and written only by flow-save reconciliation. The owner API never
 #: creates them or edits those fields: that is the one writer who normalizes
 #: the configuration and proves the connection belongs to the trigger owner.
-CANVAS_ONLY_KINDS = SLACK_TRIGGER_KINDS
+CANVAS_ONLY_KINDS = SLACK_TRIGGER_KINDS | MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS

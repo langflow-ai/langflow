@@ -41,7 +41,14 @@ from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
-from .trigger import Trigger, TriggerEvent, TriggerLease, TriggerListenerLease, TriggerSubscription
+from .trigger import (
+    Trigger,
+    TriggerEvent,
+    TriggerLease,
+    TriggerListenerLease,
+    TriggerSourceVersion,
+    TriggerSubscription,
+)
 from .user import User
 from .variable import Variable
 
@@ -104,6 +111,7 @@ __all__ = [
     "TriggerEvent",
     "TriggerLease",
     "TriggerListenerLease",
+    "TriggerSourceVersion",
     "TriggerSubscription",
     "User",
     "Variable",

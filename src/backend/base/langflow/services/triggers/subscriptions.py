@@ -73,7 +73,6 @@ _FAILURE_KEYS = frozenset({_FAILURE_COUNT_KEY, _FAILURE_REASON_KEY, _FAILURE_AT_
 _DEFERRED_AUDITS_KEY = "trigger_subscription_deferred_audits"
 
 _NEEDS_RECONNECT_REASON = "The provider subscription needs to be re-authorized. Reconnect the connection."
-_REMOVED_REASON = "The provider deleted this subscription. Re-enable the trigger to subscribe again."
 
 
 def _now() -> datetime:
@@ -117,6 +116,16 @@ _RENEWERS: dict[str, SubscriptionRenewer] = {}
 _REVOKERS: dict[str, SubscriptionRevoker] = {}
 
 
+def _ensure_source_handlers(provider: str) -> None:
+    """Install the built-in source handlers after import cycles have settled."""
+    if provider not in {"microsoft", "google"}:
+        return
+    from langflow.services.triggers.source_subscription import renew_source, revoke_source
+
+    _RENEWERS.setdefault(provider, renew_source)
+    _REVOKERS.setdefault(provider, revoke_source)
+
+
 def register_renewer(provider: str, renewer: SubscriptionRenewer) -> None:
     """Register a provider's renewal call. TRG-6 supplies the wave-1 ones."""
     _RENEWERS[provider] = renewer
@@ -152,6 +161,7 @@ async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> Non
     regardless, so Langflow stops acting on the subscription immediately, but
     the provider may keep delivering until its TTL runs out.
     """
+    _ensure_source_handlers(row.provider)
     revoker = _REVOKERS.get(row.provider)
     if revoker is None:
         return
@@ -228,9 +238,9 @@ async def apply_lifecycle(session: AsyncSession, *, trigger_id: UUID, subscripti
 
     Graph sends these instead of - not alongside - the notification you were
     expecting, so ignoring them means a trigger that has stopped firing looks
-    healthy. ``reauthorizationRequired`` and ``subscriptionRemoved`` both need a
-    human, so both move the trigger to ``needs_reconnect``; ``missed`` is a
-    resync hint recorded on the subscription for the provider adapter to use.
+    healthy. ``reauthorizationRequired`` needs a reconnect. A removed
+    subscription is marked expired and queued for replacement; ``missed``
+    requests a source resync.
 
     ``trigger_id`` is the trigger whose ``clientState`` verified the delivery.
     The subscription id comes from the body, so without that scope a delivery
@@ -260,9 +270,9 @@ async def apply_lifecycle(session: AsyncSession, *, trigger_id: UUID, subscripti
         row.state = TriggerSubscriptionState.EXPIRED.value
         row.updated_at = _now()
         session.add(row)
-        await _set_trigger_state(
-            session, trigger_id=row.trigger_id, state=TriggerState.NEEDS_RECONNECT.value, reason=_REMOVED_REASON
-        )
+        # A removed subscription is not evidence that consent was revoked.
+        # The ingress route enqueues a durable resubscribe hint; leave the
+        # trigger active so its dispatcher can process that work.
         return True
 
     return False
@@ -410,6 +420,7 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
     row = await session.get(TriggerSubscription, subscription_id)
     if row is None:
         return False
+    _ensure_source_handlers(row.provider)
     renewer = _RENEWERS.get(row.provider)
     if renewer is None:
         row.lease_owner = None
@@ -425,7 +436,11 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
 
     expires_at = _as_aware(expires_at) or _now()
     row.expires_at = expires_at
-    row.renew_after = renew_after_for(created_at=_now(), expires_at=expires_at)
+    row.renew_after = (
+        _now() + timedelta(days=1)
+        if (row.provider_state or {}).get("kind") == "gmail"
+        else renew_after_for(created_at=_now(), expires_at=expires_at)
+    )
     row.state = TriggerSubscriptionState.ACTIVE.value
     row.provider_state = {key: value for key, value in (row.provider_state or {}).items() if key not in _FAILURE_KEYS}
     row.lease_owner = None

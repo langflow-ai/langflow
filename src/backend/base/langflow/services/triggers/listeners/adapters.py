@@ -37,10 +37,15 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, runtime_checkable
 from lfx.log.logger import logger
 
 from langflow.services.triggers.constants import (
+    FAMILY_TRIGGER_LISTENER,
+    GOOGLE_POLL_MECHANISMS,
+    GOOGLE_SOURCE_KINDS,
     LISTENER_FAKE_DEDUPE_PREFIX,
     LISTENER_FAKE_KIND,
     LISTENER_FAKE_MECHANISM,
+    MECHANISM_GRAPH_DELTA,
     MECHANISM_SLACK_SOCKET_MODE,
+    MICROSOFT_SOURCE_KINDS,
     SLACK_TRIGGER_KINDS,
     TRANSPORT_POLL,
     TRANSPORT_SOCKET,
@@ -180,6 +185,33 @@ class SelfTestAdapter(PollingListenerAdapter):
         return appended
 
 
+class ProviderSourcePollAdapter(PollingListenerAdapter):
+    """Poll every active source on one connection through its owner credential."""
+
+    async def poll(self, ctx: ListenerContext) -> int:
+        from langflow.services.database.models.trigger.model import Trigger
+        from langflow.services.deps import session_scope, session_scope_readonly
+        from langflow.services.triggers.source_clients import source_lease
+        from langflow.services.triggers.source_poll import collect_source, commit_source
+
+        appended = 0
+        for snapshot in ctx.triggers:
+            if ctx.stopping.is_set() or snapshot.mechanism_id not in ({MECHANISM_GRAPH_DELTA} | GOOGLE_POLL_MECHANISMS):
+                continue
+            async with session_scope_readonly() as session:
+                row = await session.get(Trigger, snapshot.id)
+                if row is None or row.connection_id != ctx.connection_id or row.state != "active":
+                    continue
+                lease = await source_lease(session, row, family=FAMILY_TRIGGER_LISTENER)
+                detached = Trigger(**row.model_dump())
+            source_round = await collect_source(detached, lease)
+            if ctx.stopping.is_set():
+                break
+            async with session_scope() as session:
+                appended += await commit_source(session, trigger_id=snapshot.id, source_round=source_round)
+        return appended
+
+
 #: What a bundle hands :func:`register_adapter`: given one trigger snapshot,
 #: build the adapter that will hold its connection.
 AdapterFactory: TypeAlias = "Callable[[ListenerTrigger], ListenerAdapter]"
@@ -295,6 +327,12 @@ def _slack_socket_mode_factory(_trigger: ListenerTrigger) -> ListenerAdapter:
     )
 
 
+def _provider_source_factory(_trigger: ListenerTrigger) -> ListenerAdapter:
+    from langflow.services.deps import get_settings_service
+
+    return ProviderSourcePollAdapter(interval_s=max(get_settings_service().settings.listener_poll_interval_s, 30.0))
+
+
 def register_builtin_adapters() -> None:
     """Register the adapters langflow-base owns. Idempotent."""
     if (LISTENER_FAKE_KIND, None) not in _REGISTRY:
@@ -309,6 +347,13 @@ def register_builtin_adapters() -> None:
                 factory=_slack_socket_mode_factory,
                 rebuild_on_config_change=False,
             )
+    for kind in sorted(MICROSOFT_SOURCE_KINDS):
+        if (kind, MECHANISM_GRAPH_DELTA) not in _REGISTRY:
+            register_adapter(kind=kind, mechanism=MECHANISM_GRAPH_DELTA, factory=_provider_source_factory)
+    for kind in sorted(GOOGLE_SOURCE_KINDS):
+        for mechanism in sorted(GOOGLE_POLL_MECHANISMS):
+            if (kind, mechanism) not in _REGISTRY:
+                register_adapter(kind=kind, mechanism=mechanism, factory=_provider_source_factory)
 
 
 __all__ = [

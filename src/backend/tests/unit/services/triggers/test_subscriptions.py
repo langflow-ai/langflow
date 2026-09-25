@@ -347,7 +347,7 @@ async def test_reauthorization_required_moves_the_trigger_to_needs_reconnect(mak
     assert "re-authorized" in (row.last_error or "")
 
 
-async def test_subscription_removed_retires_the_row_and_asks_for_a_reconnect(make_subscription) -> None:
+async def test_subscription_removed_keeps_trigger_ready_for_resubscribe(make_subscription) -> None:
     trigger_id, _connection_id, subscription_id, provider_subscription_id = await make_subscription()
 
     async with session_scope() as session:
@@ -359,7 +359,7 @@ async def test_subscription_removed_retires_the_row_and_asks_for_a_reconnect(mak
         )
 
     assert (await _subscription(subscription_id)).state == TriggerSubscriptionState.EXPIRED.value
-    assert (await _trigger(trigger_id)).state == TriggerState.NEEDS_RECONNECT.value
+    assert (await _trigger(trigger_id)).state == TriggerState.ACTIVE.value
 
 
 async def test_a_missed_notification_is_recorded_without_disarming_the_trigger(make_subscription) -> None:

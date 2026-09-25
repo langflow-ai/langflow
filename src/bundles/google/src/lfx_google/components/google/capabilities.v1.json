@@ -99,6 +99,48 @@
       "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
       "risk": "write",
       "component_ref": "GoogleCalendarCreateComponent"
+    },
+    {
+      "id": "google.trigger.calendar",
+      "display_name": "Google Calendar: On Event",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/calendar.events.readonly"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.trigger.calendar"],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop"],
+      "risk": "read",
+      "component_ref": "GoogleOnCalendarTriggerComponent"
+    },
+    {
+      "id": "google.trigger.drive",
+      "display_name": "Google Drive: On File (app files)",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/drive.file"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.trigger.drive"],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop"],
+      "risk": "read",
+      "component_ref": "GoogleOnDriveTriggerComponent"
+    },
+    {
+      "id": "google.trigger.gmail",
+      "display_name": "Gmail: On Message",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.trigger.gmail"],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": ["self_managed", "desktop"],
+      "risk": "read",
+      "component_ref": "GoogleOnGmailTriggerComponent"
     }
   ]
 }

@@ -30,7 +30,13 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerUpdate,
 )
 from langflow.services.triggers.cleanup import delete_triggers
-from langflow.services.triggers.constants import CANVAS_ONLY_KINDS, SLACK_TRIGGER_KINDS
+from langflow.services.triggers.constants import (
+    CANVAS_ONLY_KINDS,
+    GOOGLE_SOURCE_KINDS,
+    MICROSOFT_SOURCE_KINDS,
+    PUSH_MECHANISMS,
+    SLACK_TRIGGER_KINDS,
+)
 from langflow.services.triggers.errors import TriggerNotFoundError
 from langflow.services.triggers.ownership import require_owned_connection
 from langflow.services.triggers.reconciliation import apply_config_verdict
@@ -248,6 +254,35 @@ class TriggerService(Service):
             validate_schedule_config(row.config or {})
         if row.kind in SLACK_TRIGGER_KINDS:
             await _arm_slack(session, row)
+        if row.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+            from langflow.services.triggers.source_arming import check_ready, normalize_source_config, resolve_arming
+
+            config = normalize_source_config(row.kind, row.config or {})
+            arming = await resolve_arming(session, kind=row.kind, owner_id=row.user_id, config=config)
+            await check_ready(session, kind=row.kind, arming=arming, config=config)
+            changed = (
+                row.connection_id != arming.connection_id
+                or (row.config or {}).get("mechanism_id") != arming.mechanism_id
+            )
+            row.connection_id = arming.connection_id
+            row.config = {**config, "mechanism_id": arming.mechanism_id}
+            if changed:
+                row.provider_state = {}
+            if arming.mechanism_id in PUSH_MECHANISMS:
+                from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
+                from langflow.services.triggers.source_poll import poll_source
+                from langflow.services.triggers.source_subscription import provision_source
+
+                if not row.public_id:
+                    row.public_id = mint_public_id()
+                await session.flush()
+                if not (row.provider_state or {}).get("baseline_complete"):
+                    await poll_source(session, row, family=FAMILY_TRIGGER_PUSH)
+                await provision_source(session, row)
+                # Read once more after watch creation to cover the gap between
+                # establishing the cursor and registering with the provider.
+                await poll_source(session, row, family=FAMILY_TRIGGER_PUSH)
+            session.add(row)
         # Re-arming starts from now rather than replaying paused ticks. An
         # idempotent enable on an active trigger must preserve its due tick.
         if row.state != TriggerState.ACTIVE.value:

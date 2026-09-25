@@ -37,6 +37,20 @@ Use **short** permission names such as `Mail.Read`; execution checks also accept
 
 The JSON form accepts only `access_token`, `token_type`, `expires_at`, `scopes`, and `account`. Refresh tokens and client secrets are rejected. A bare token lacks verified scope metadata and cannot run these permission-scoped actions. Use the JSON form with the token's granted permissions.
 
+## Microsoft 365 source triggers
+
+Add **Outlook: On Message**, **Outlook: On Calendar Event**, or **OneDrive or SharePoint: On File** at the start of a flow. Save the flow, then enable its trigger through the Triggers API. The connection must belong to the flow owner and have **Allow background runs** enabled. The trigger uses the owner's delegated credential; a shared or instance connection cannot arm it.
+
+| Trigger | Delegated scopes | Changes observed |
+|---|---|---|
+| Outlook: On Message | `Mail.Read` | Messages in the owner's Inbox |
+| Outlook: On Calendar Event | `Calendars.Read` | Events in a rolling calendar window |
+| OneDrive or SharePoint: On File | `Files.Read`; add `Files.Read.All` and `Sites.Read.All` when **SharePoint Site ID** is set | Files in the owner's drive or selected site's default drive |
+
+With public HTTPS ingress enabled, Langflow creates a Microsoft Graph change notification subscription. Desktop deployments use Graph delta polling. Notifications only wake a delta scan; the flow receives the changed item. Langflow stores the item version and delta cursor together, renews subscriptions, and scans push sources every five minutes to recover missed notifications. Enabling starts from the current state, so existing items do not fire the flow.
+
+The Graph subscription callback uses the public origin of the connection's OAuth registration. That registration must have an HTTPS redirect URI reachable by Graph. `GET /api/v1/triggers/{trigger_id}/ingress` shows the exact callback for an enabled push trigger. If Graph expires a delta cursor, Langflow compares a fresh snapshot with stored item versions before resuming.
+
 ## Components
 
 Listing actions return complete pages until they reach **Result Budget**. The final page can take the count above that budget. **Next Link** resumes after the returned rows; both outputs share one listing per run.

@@ -411,6 +411,15 @@ async def get_trigger_ingress(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
+    if row.provider in {"microsoft", "google"} and row.public_id:
+        from langflow.services.triggers.source_subscription import source_ingress_url
+
+        return TriggerIngressRead(
+            trigger_id=row.id,
+            public_id=row.public_id,
+            ingress_url=await source_ingress_url(session, row),
+            has_signing_secret=False,
+        )
     _require_ingress_kind(row)
     return _ingress_read(row, request)
 

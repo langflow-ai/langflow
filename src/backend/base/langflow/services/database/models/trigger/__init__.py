@@ -3,6 +3,7 @@ from langflow.services.database.models.trigger.model import (
     TriggerEvent,
     TriggerLease,
     TriggerListenerLease,
+    TriggerSourceVersion,
     TriggerSubscription,
 )
 from langflow.services.database.models.trigger.schemas import (
@@ -35,6 +36,7 @@ __all__ = [
     "TriggerRead",
     "TriggerReplayRequest",
     "TriggerSessionPolicy",
+    "TriggerSourceVersion",
     "TriggerState",
     "TriggerSubscription",
     "TriggerSubscriptionState",

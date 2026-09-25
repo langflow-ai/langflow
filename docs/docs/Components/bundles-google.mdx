@@ -179,9 +179,9 @@ the worker that uses it, and never places a token in flow JSON.
 | **Calendar: List Events** | `events.list` | `https://www.googleapis.com/auth/calendar.events.readonly` |
 | **Calendar: Create Event** | `events.insert` | `https://www.googleapis.com/auth/calendar.events` |
 
-Each component requests exactly one scope, the one its action needs. No component asks
-for a scope Google classifies as restricted, so the Langflow-managed OAuth app does not
-require a security assessment.
+Each action component requests exactly one scope, the one its action needs. These
+actions do not request restricted scopes. Gmail source triggers have separate
+customer-owned OAuth requirements described below.
 
 :::important
 The visual editor does not yet have a control for the **Google Connection** field, so these
@@ -189,6 +189,22 @@ five components are not offered in the component menu in this release. Flows tha
 contain them, such as flows created through the API or run with `lfx run`, keep working and
 keep their connection handle.
 :::
+
+## Google Workspace source triggers
+
+Add **Google Calendar: On Event**, **Google Drive: On File**, or **Gmail: On Message** at the start of a flow. Save the flow, then enable its trigger through the Triggers API. The connection must belong to the flow owner and have **Allow background runs** enabled; shared and instance connections cannot arm these sources.
+
+| Trigger | Scope | Reach |
+|---|---|---|
+| Google Calendar: On Event | `https://www.googleapis.com/auth/calendar.events.readonly` | The selected calendar, or `primary` by default |
+| Google Drive: On File | `https://www.googleapis.com/auth/drive.file` | Files created or explicitly opened with this app |
+| Gmail: On Message | `https://www.googleapis.com/auth/gmail.readonly` | Inbox messages through a customer-owned Gmail watch |
+
+With public HTTPS ingress enabled, Calendar and Drive use Google push channels; Desktop deployments use Calendar sync and Drive changes polling. Push notifications only wake a change-feed scan, and Langflow also scans every five minutes in case a notification is missed. The flow receives the changed item. Enabling starts from the current state, so existing items do not fire the flow. A rejected sync token causes a fresh snapshot comparison against stored item versions.
+
+### Gmail customer setup
+
+Gmail triggers are unavailable on hosted Langflow. On a customer deployment, use a customer-owned OAuth registration and a public HTTPS ingress. Create a Pub/Sub topic in the customer's Google Cloud project, grant Gmail permission to publish to it, and configure an authenticated **push subscription** to the trigger's URL. Use `GET /api/v1/triggers/{trigger_id}/ingress` to get that URL after saving the flow. Set **Customer Pub/Sub Topic** to the full `projects/.../topics/...` name and **Pub/Sub Push Service Account** to the service account email whose Google-signed identity token Pub/Sub sends. Configure the push subscription's audience as that exact ingress URL. Langflow verifies the token and audience before recording a delivery, renews the Gmail watch daily, and acknowledges only after the hint is in the ledger. Gmail's restricted `gmail.readonly` scope must be approved for the customer's OAuth app.
 
 ### Drive reach on the drive.file scope
 
