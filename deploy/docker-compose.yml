@@ -125,8 +125,6 @@ services:
     image: redis:6.2.5
     env_file:
       - .env
-    ports:
-      - 6379:6379
     healthcheck:
       test: "exit 0"
 
@@ -149,20 +147,10 @@ services:
     environment:
       - FLOWER_PORT=5555
 
-    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
+    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app --broker=${BROKER_URL:?Set a broker URL with your RabbitMQ credentials} flower --port=5555"
     deploy:
       labels:
-        - traefik.enable=true
-        - traefik.docker.network=${TRAEFIK_PUBLIC_NETWORK?Variable not set}
-        - traefik.constraint-label=${TRAEFIK_PUBLIC_TAG?Variable not set}
-        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-http.rule=Host(`flower.${DOMAIN?Variable not set}`)
-        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-http.entrypoints=http
-        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-http.middlewares=${STACK_NAME?Variable not set}-https-redirect
-        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.rule=Host(`flower.${DOMAIN?Variable not set}`)
-        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.entrypoints=https
-        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.tls=true
-        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.tls.certresolver=le
-        - traefik.http.services.${STACK_NAME?Variable not set}-flower.loadbalancer.server.port=5555
+        - traefik.enable=false
 
   frontend:
     image: "langflowai/langflow-frontend:latest"
@@ -177,18 +165,15 @@ services:
         - traefik.http.services.${STACK_NAME?Variable not set}-frontend.loadbalancer.server.port=80
 
   broker:
-    # RabbitMQ management console
+    # The worker and Flower reach RabbitMQ over the internal Compose network.
     image: rabbitmq:3-management
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-admin}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-admin}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:?Set a RabbitMQ username}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:?Set a unique RabbitMQ password}
     volumes:
       - rabbitmq_data:/etc/rabbitmq/
       - rabbitmq_data:/var/lib/rabbitmq/
       - rabbitmq_log:/var/log/rabbitmq/
-    ports:
-      - 5672:5672
-      - 15672:15672
 
   prometheus:
     image: prom/prometheus:v2.37.9

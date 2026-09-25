@@ -48,6 +48,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "celery>=5.6,<5.7",
     "pytest-instafail>=0.5.0",
     "ipykernel>=6.29.0",
     "ruff~=0.13.1",
