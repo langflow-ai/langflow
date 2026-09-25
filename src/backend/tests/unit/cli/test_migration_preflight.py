@@ -16,6 +16,7 @@ import sqlalchemy as sa
 from cryptography.fernet import Fernet
 from langflow.cli.migration_preflight import run_preflight
 from langflow.services.auth.utils import encrypt_api_key
+from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
@@ -163,6 +164,38 @@ class TestTargetKey:
 
     async def test_no_target_key_is_a_warning(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "target key").status == "warn"
+
+    async def test_a_key_file_ending_in_a_newline_is_a_warning(self, safe_superuser):
+        # Fernet ignores the newline, so every credential still opens; a Secret made
+        # from this file keeps it, and the SSO client secret, keyed on the raw bytes, does not.
+        await _add(
+            Variable(
+                name=f"KEY_{uuid.uuid4().hex[:6]}",
+                value=encrypt_api_key("sk-real"),
+                type=CREDENTIAL_TYPE,
+                user_id=safe_superuser.id,
+            )
+        )
+
+        check = _check(await run_preflight(target_secret_key=_current_key() + "\n"), "target key")
+
+        assert check.status == "warn"
+        assert "--from-literal" in check.summary
+
+
+class TestRoleAssignments:
+    async def test_role_grants_come_with_the_policy_sync_step(self, safe_superuser):
+        async with session_scope() as session:
+            admin_id = (await session.exec(select(AuthzRole).where(AuthzRole.name == "admin"))).one().id
+        await _add(AuthzRoleAssignment(user_id=safe_superuser.id, role_id=admin_id, domain_type="global"))
+
+        check = _check(await run_preflight(), "role assignments")
+
+        assert check.status == "warn"
+        assert "POST /api/v1/authz/policy/sync" in check.summary
+
+    async def test_no_role_grants_pass(self, safe_superuser):  # noqa: ARG002
+        assert _check(await run_preflight(), "role assignments").status == "ok"
 
 
 class TestEmbeddingModels:
