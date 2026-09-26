@@ -9880,7 +9880,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
@@ -9947,7 +9947,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-microsoft"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/microsoft" }
 dependencies = [
     { name = "lfx" },

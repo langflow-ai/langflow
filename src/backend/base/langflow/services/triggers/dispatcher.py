@@ -30,7 +30,7 @@ from uuid import NAMESPACE_URL, uuid5
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
-from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
+from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import (
     IN_FLIGHT_EVENT_STATES,
     TriggerEventState,
@@ -42,12 +42,16 @@ from langflow.services.triggers.binding import resolve_binding
 from langflow.services.triggers.constants import (
     DISPATCHER_LEASE_NAME,
     FAMILY_TRIGGER_LISTENER,
+    FAMILY_TRIGGER_PUSH,
+    GOOGLE_SOURCE_KINDS,
+    MICROSOFT_SOURCE_KINDS,
     TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
 from langflow.services.triggers.errors import BindingUnsupportedError
 from langflow.services.triggers.ledger import purge_events
 from langflow.services.triggers.principal import connection_preflight, family_for
+from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -238,7 +242,9 @@ async def _terminalize(
     await session.flush()
 
 
-async def _schedule_retry(session: AsyncSession, *, event: TriggerEvent, max_attempts: int, error: str) -> None:
+async def _schedule_retry(
+    session: AsyncSession, *, event: TriggerEvent, max_attempts: int, error: str, retry_after: float | None = None
+) -> None:
     """Return a failed attempt to the queue, or dead-letter it at the limit."""
     attempt = event.attempt + 1
     if attempt >= max_attempts:
@@ -251,7 +257,7 @@ async def _schedule_retry(session: AsyncSession, *, event: TriggerEvent, max_att
     event.error = error
     event.lease_owner = None
     event.lease_expires_at = None
-    event.available_at = _now() + timedelta(seconds=_backoff_seconds(attempt))
+    event.available_at = _now() + timedelta(seconds=max(_backoff_seconds(attempt), retry_after or 0))
     event.updated_at = _now()
     session.add(event)
     await session.flush()
@@ -484,6 +490,32 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=f"trigger_{trigger.state}")
         return
 
+    if (event.payload or {}).get(SOURCE_HINT_FIELD):
+        # A thin Graph/Google notification is a durable wakeup. Expanding it
+        # through the owner's connection produces canonical ledger rows; it
+        # must never submit a flow with the notification headers as its event.
+        from langflow.services.triggers.source_poll import poll_source
+
+        try:
+            await poll_source(session, trigger, family=family)
+            delivery = (event.payload or {}).get("delivery") or {}
+            if delivery.get("lifecycleEvent") == "subscriptionRemoved":
+                from langflow.services.triggers.source_subscription import provision_source
+
+                await provision_source(session, trigger)
+        except Exception as exc:  # noqa: BLE001 - the hint remains retryable
+            retry_after = getattr(exc, "retry_after", None)
+            await _schedule_retry(
+                session,
+                event=event,
+                max_attempts=trigger.max_attempts,
+                error=f"expand_failed:{type(exc).__name__}",
+                retry_after=retry_after,
+            )
+            return
+        await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
+        return
+
     try:
         binding = await resolve_binding(session, trigger)
     except BindingUnsupportedError as exc:
@@ -559,6 +591,50 @@ async def run_once(*, owner: str) -> int:
     return dispatched
 
 
+async def reconcile_push_sources(*, limit: int = 5) -> int:
+    """Scan due push sources even when the provider sent no notification."""
+    from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
+    from langflow.services.triggers.source_poll import poll_source
+
+    now = _now()
+    async with session_scope() as session:
+        due = (
+            await session.exec(
+                select(Trigger.id)
+                .join(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
+                .where(
+                    Trigger.state == TriggerState.ACTIVE.value,
+                    col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS),
+                    TriggerSubscription.state == TriggerSubscriptionState.ACTIVE.value,
+                    (col(Trigger.next_fire_at).is_(None)) | (Trigger.next_fire_at <= now),
+                )
+                .order_by(col(Trigger.next_fire_at))
+                .limit(limit)
+            )
+        ).all()
+    completed = 0
+    for trigger_id in due:
+        try:
+            async with session_scope() as session:
+                trigger = await session.get(Trigger, trigger_id)
+                if trigger is None or trigger.state != TriggerState.ACTIVE.value:
+                    continue
+                await poll_source(session, trigger, family=FAMILY_TRIGGER_PUSH)
+                if (trigger.last_error or "").startswith("Source reconciliation failed:"):
+                    trigger.last_error = None
+                    session.add(trigger)
+                completed += 1
+        except Exception as exc:  # noqa: BLE001 - one source must not stall the others
+            async with session_scope() as session:
+                trigger = await session.get(Trigger, trigger_id)
+                if trigger is not None:
+                    trigger.next_fire_at = _now() + timedelta(minutes=1)
+                    trigger.last_error = f"Source reconciliation failed: {type(exc).__name__}"
+                    session.add(trigger)
+            await logger.awarning("Push source %s reconciliation failed: %s", trigger_id, type(exc).__name__)
+    return completed
+
+
 class TriggerDispatcher:
     """The lifespan-owned loop that holds the dispatcher lease and drains the ledger.
 
@@ -632,6 +708,7 @@ class TriggerDispatcher:
         if not held:
             return 0
         dispatched = await run_once(owner=self.owner)
+        await reconcile_push_sources()
         await self._maybe_purge()
         return dispatched
 

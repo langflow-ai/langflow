@@ -274,3 +274,27 @@ class TriggerSubscription(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
     )
+
+
+class TriggerSourceVersion(SQLModel, table=True):  # type: ignore[call-arg]
+    """Last observed provider version, retained independently of ledger purges.
+
+    A rejected delta/sync token forces a full scan. Comparing against this
+    durable high-water mark keeps that scan from replaying unchanged resources
+    even after the 30-day event ledger retention window has elapsed.
+    """
+
+    __tablename__ = "trigger_source_version"
+
+    trigger_id: UUID = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("trigger.id", ondelete="CASCADE"), primary_key=True, nullable=False),
+    )
+    item_key: str = Field(sa_column=Column(sa.String(64), primary_key=True, nullable=False))
+    provider: str = Field(sa_column=Column(sa.String(32), nullable=False))
+    resource: str = Field(sa_column=Column(sa.String(512), nullable=False))
+    provider_item_id: str = Field(sa_column=Column(sa.String(512), nullable=False))
+    version: str = Field(sa_column=Column(sa.String(255), nullable=False))
+    updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
+    )

@@ -40,6 +40,7 @@ from langflow.services.triggers.constants import (
     PROVIDER_WEBHOOK,
 )
 from langflow.services.triggers.ingress.verifiers import IngressSecrets
+from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -120,6 +121,9 @@ async def _subscription_secrets(session: AsyncSession, row: Trigger) -> IngressS
         client_state_digest=subscription.client_state_digest,
         channel_token_digest=subscription.client_state_digest,
         channel_id=provider_state.get("channel_id"),
+        resource_id=provider_state.get("resource_id"),
+        pubsub_service_account=provider_state.get("pubsub_service_account"),
+        pubsub_audience=provider_state.get("audience"),
     )
 
 
@@ -190,11 +194,15 @@ async def record_event(
     provider is taught to retry forever.
     """
     key = dedupe_key(provider=provider, suffix=suffix, fallback=fallback)
+    is_source_hint = provider in {PROVIDER_MICROSOFT, PROVIDER_GOOGLE}
+    envelope = {"provider": provider, "delivery": payload}
+    if is_source_hint:
+        envelope[SOURCE_HINT_FIELD] = True
     return await ledger.append_event(
         session,
         trigger_id=target.trigger_id,
         dedupe_key=key,
-        payload={"provider": provider, "delivery": payload},
+        payload=envelope,
     )
 
 

@@ -250,6 +250,51 @@
       ],
       "risk": "read",
       "component_ref": "SharePointFetchComponent"
+    },
+    {
+      "id": "microsoft.trigger.mail",
+      "display_name": "Outlook: On Message",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["Mail.Read"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.microsoft.trigger.mail"],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop"],
+      "risk": "read",
+      "component_ref": "MicrosoftOnMailTriggerComponent"
+    },
+    {
+      "id": "microsoft.trigger.calendar",
+      "display_name": "Outlook: On Calendar Event",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["Calendars.Read"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.microsoft.trigger.calendar"],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop"],
+      "risk": "read",
+      "component_ref": "MicrosoftOnCalendarTriggerComponent"
+    },
+    {
+      "id": "microsoft.trigger.file",
+      "display_name": "OneDrive or SharePoint: On File",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["Files.Read"],
+      "conditional_scopes": [
+        {"scope": "Files.Read.All", "role": "optional", "condition": {"kind": "input_truthy", "input": "site_id"}},
+        {"scope": "Sites.Read.All", "role": "optional", "condition": {"kind": "input_truthy", "input": "site_id"}}
+      ],
+      "policy_keys": ["integrations.microsoft.trigger.file"],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop"],
+      "risk": "read",
+      "component_ref": "MicrosoftOnFileTriggerComponent"
     }
   ]
 }

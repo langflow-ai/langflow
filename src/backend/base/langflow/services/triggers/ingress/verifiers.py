@@ -36,6 +36,9 @@ whether a trigger exists.
 
 from __future__ import annotations
 
+import asyncio
+import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -133,6 +136,9 @@ class IngressSecrets:
     client_state_digest: str | None = None
     channel_token_digest: str | None = None
     channel_id: str | None = None
+    resource_id: str | None = None
+    pubsub_service_account: str | None = None
+    pubsub_audience: str | None = None
 
 
 def _utf8(value: str) -> bytes:
@@ -297,19 +303,20 @@ def verify_microsoft(request: IngressRequest, secrets: IngressSecrets, *, tolera
         for notification in notifications
         if notification.get("lifecycleEvent")
     )
-    if lifecycle:
-        return Verified(payload=payload, lifecycle=lifecycle)
+    notifications = [entry for entry in notifications if not entry.get("lifecycleEvent")]
+    if not notifications:
+        return Verified(lifecycle=lifecycle)
 
     # Graph basic notifications carry ids only; the run fetches the resource back
     # with the owner's connection. Nothing is fetched in this request.
     identities = [_graph_identity(notification) for notification in notifications]
     if len(identities) == 1:
-        return Verified(payload=payload, dedupe_suffix=identities[0] or None)
+        return Verified(payload={"value": notifications}, dedupe_suffix=identities[0] or None, lifecycle=lifecycle)
     # One ledger row per batch, so the key covers the whole batch: keyed on its
     # first entry alone, a batch whose head was delivered before would be
     # dropped as a duplicate along with everything behind it.
     batch = hashlib.sha256(_utf8("\n".join(identities))).hexdigest()[:32]
-    return Verified(payload=payload, dedupe_suffix=f"batch:{batch}")
+    return Verified(payload={"value": notifications}, dedupe_suffix=f"batch:{batch}", lifecycle=lifecycle)
 
 
 def _graph_identity(notification: dict[str, Any]) -> str:
@@ -347,7 +354,13 @@ def verify_google(request: IngressRequest, secrets: IngressSecrets, *, tolerance
 
     message_number = request.header("X-Goog-Message-Number")
     resource_id = request.header("X-Goog-Resource-ID")
+    if secrets.resource_id and not _same(secrets.resource_id, resource_id or ""):
+        raise IngressRejected(REASON_BAD_STATE)
     resource_state = request.header("X-Goog-Resource-State")
+    if resource_state == "sync":
+        # The first channel message announces watch creation. It represents
+        # no resource change and must not enqueue a flow or a fetch-back job.
+        return Verified(payload={}, dedupe_suffix=None, handshake="")
     payload: dict[str, Any] = {
         "channel_id": channel_id,
         "resource_id": resource_id,
@@ -360,6 +373,41 @@ def verify_google(request: IngressRequest, secrets: IngressSecrets, *, tolerance
         payload["body"] = _json_body(request.body)
     parts = [str(part) for part in (channel_id, message_number or resource_state) if part]
     return Verified(payload=payload, dedupe_suffix=":".join(parts) or None)
+
+
+async def verify_gmail_pubsub(request: IngressRequest, secrets: IngressSecrets) -> Verified:
+    """Verify Google's OIDC push identity before accepting a Gmail history hint."""
+    authorization = request.header("Authorization") or ""
+    if not authorization.startswith("Bearer ") or not authorization[7:]:
+        raise IngressRejected(REASON_MISSING_SIGNATURE)
+    expected_email = _require(secrets.pubsub_service_account)
+    audience = _require(secrets.pubsub_audience)
+    try:
+        from google.auth.transport.requests import Request
+        from google.oauth2 import id_token
+
+        claims = await asyncio.to_thread(id_token.verify_oauth2_token, authorization[7:], Request(), audience)
+    except Exception as exc:
+        raise IngressRejected(REASON_BAD_SIGNATURE) from exc
+    if not isinstance(claims, dict) or not _same(str(claims.get("email") or ""), expected_email):
+        raise IngressRejected(REASON_BAD_SIGNATURE)
+    if claims.get("email_verified") not in {True, "true"}:
+        raise IngressRejected(REASON_BAD_SIGNATURE)
+    envelope = _json_body(request.body)
+    message = envelope.get("message")
+    if not isinstance(message, dict):
+        raise IngressRejected(REASON_BAD_PAYLOAD)
+    message_id = message.get("messageId") or message.get("message_id")
+    encoded = message.get("data")
+    if not isinstance(message_id, str) or not message_id or not isinstance(encoded, str):
+        raise IngressRejected(REASON_BAD_PAYLOAD)
+    try:
+        update = json.loads(base64.b64decode(encoded, validate=True))
+    except (ValueError, TypeError, binascii.Error) as exc:
+        raise IngressRejected(REASON_BAD_PAYLOAD) from exc
+    if not isinstance(update, dict) or not isinstance(update.get("historyId"), str):
+        raise IngressRejected(REASON_BAD_PAYLOAD)
+    return Verified(payload={"history_id": update["historyId"]}, dedupe_suffix=f"pubsub:{message_id}")
 
 
 def verify_webhook(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int) -> Verified:
