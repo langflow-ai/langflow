@@ -58,6 +58,18 @@ REMEDIATIONS: tuple[Remediation, ...] = (
         providers=("OpenAI",),
     ),
     Remediation(
+        # Claude Opus 4.7+ and Sonnet 5 also reject top_k and top_p, one field per 400 and in
+        # the words they use for temperature; the Bedrock Converse component sends both by default.
+        name="top-k-unsupported",
+        markers=("`top_k` is deprecated",),
+        overrides={"top_k": None},
+    ),
+    Remediation(
+        name="top-p-unsupported",
+        markers=("`top_p` is deprecated",),
+        overrides={"top_p": None},
+    ),
+    Remediation(
         # Claude 5 rejects a temperature its 4.x siblings accept (GH-14291); markers
         # stay narrow so an out-of-range value, which only the user can fix, surfaces.
         name="temperature-unsupported",
@@ -128,6 +140,8 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     fix re-raises the provider error instead of retrying an unchanged request.
     Unknown attributes are never created: silently attaching one would turn a
     clear provider error into a request that fails again for a hidden reason.
+    A field being cleared is also dropped from ``additional_model_request_fields``
+    when that dict carries it, whether or not the model has an attribute of that name.
 
     Mutating in place (rather than rebuilding) is what lets the fix reach a model
     already wrapped in a prompt chain or ``with_config`` binding — those hold a
@@ -136,10 +150,17 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     if not overrides:
         return False
     for key, value in overrides.items():
-        if not hasattr(model, key):
+        fields = getattr(model, "additional_model_request_fields", None)
+        in_fields = value is None and isinstance(fields, dict) and key in fields
+        if not in_fields and not hasattr(model, key):
             return False
         try:
-            setattr(model, key, value)
+            if in_fields:
+                # ChatBedrockConverse forwards this dict as-is: top_k only lives here, and
+                # Additional Model Fields can put top_p here next to the top_p attribute.
+                model.additional_model_request_fields = {k: v for k, v in fields.items() if k != key}
+            if hasattr(model, key):
+                setattr(model, key, value)
         except (AttributeError, TypeError, ValueError):
             return False
     return True
