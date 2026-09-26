@@ -106,6 +106,10 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
     The default port for the Prometheus metrics is 9090.
     To change the port, set `LANGFLOW_PROMETHEUS_PORT`.
 
+    With Prometheus enabled, Langflow also exports background job metrics prefixed with `langflow_bg_`: counts of queued, running, and suspended jobs, the age of the oldest queued job, cumulative started, completed, and failed totals, and p50 and p95 run durations over the last five minutes.
+    Only the process that serves the Prometheus port collects them, by querying the job table every 15 seconds.
+    To change the interval, set `LANGFLOW_BACKGROUND_METRICS_INTERVAL` to a number of seconds greater than zero.
+
 * **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
 * **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.
 
@@ -185,7 +189,7 @@ If this plane does not serve MCP, set `LANGFLOW_MCP_SERVER_ENABLED=false`. Other
 ### Local Chroma in `prod`
 
 The `prod` profile blocks new knowledge bases and memory bases that use local Chroma.
-For local storage, use a shared pgVector, OpenSearch, or Chroma Cloud store, or run Langflow with `LANGFLOW_DEPLOYMENT_PROFILE=dev` 
+For local storage, use a shared pgVector, OpenSearch, or Chroma Cloud store, or run Langflow with `LANGFLOW_DEPLOYMENT_PROFILE=dev`
 
 ## See also
 

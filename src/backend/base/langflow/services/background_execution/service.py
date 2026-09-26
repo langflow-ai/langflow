@@ -127,6 +127,15 @@ class BackgroundExecutionService(Service):
         """True when a redis-backed scaled backend is wired behind this facade."""
         return self._backend is not None
 
+    @property
+    def is_scaled(self) -> bool:
+        """Whether jobs run on a scaled backend rather than this process's executor.
+
+        Reflects the backend actually wired, not ``background_backend_is_scaled``:
+        a scaled request whose modules are unavailable degrades to in-process.
+        """
+        return self._scaled
+
     def _build_scaled_backend(self) -> Any:
         """Build the redis-backed scaled backend from settings.
 
