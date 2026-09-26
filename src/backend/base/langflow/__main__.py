@@ -1171,6 +1171,38 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
     typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
 
 
+@app.command(name="check-integrity")
+def check_integrity(
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+) -> None:
+    """Report where this instance's database disagrees with what lives outside it.
+
+    Checks that the secret key opens every encrypted value, that every file row has
+    bytes in storage, that every knowledge base's store can be reached and holds as
+    many vectors as its row records, that memory bases with ingested messages have
+    vectors behind them, and that role assignments resolve and match the compiled
+    policy.
+
+    Read-only: it reports and never repairs, so it is safe to run on production.
+    Exits non-zero if any check fails.
+    """
+    configure(log_level=log_level)
+    if not asyncio.run(_check_integrity()):
+        raise typer.Exit(1)
+
+
+async def _check_integrity() -> bool:
+    from langflow.cli.integrity import check_instance
+
+    await initialize_services()
+    report = await check_instance()
+    for check in report.checks:
+        typer.echo(f"{check.status:5} {check.name:16} {check.summary}")
+        for problem in check.problems:
+            typer.echo(f"        - {problem}")
+    return report.ok
+
+
 # command to copy the langflow database from the cache to the current directory
 # because now the database is stored per installation
 @app.command()
