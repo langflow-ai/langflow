@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
@@ -36,6 +36,12 @@ from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, Duplic
 # Bounded retries for append_event's optimistic seq assignment — contention is at most a
 # couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
+
+# Statuses that mean the run is over and the row is retention-eligible. Every
+# other status (QUEUED, IN_PROGRESS, SUSPENDED) is live work: a SUSPENDED run
+# is waiting on a human who may answer weeks later, so age never makes it
+# eligible.
+_RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT)
 
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
@@ -749,6 +755,78 @@ class JobService(Service):
 
         msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
         raise RuntimeError(msg) from last_exc
+
+    async def purge_terminal_jobs(self, *, older_than_days: float, limit: int = 5000) -> int:
+        """Delete terminal jobs older than the window plus their child rows. Returns rows deleted.
+
+        Retention for the durable job store: every flow run writes a job row
+        (v1 runs and builds, v2 workflow runs, ingestion, trigger firings) and
+        nothing else deletes it, while ``job_events`` grows a row per durable
+        milestone of a background run. Only terminal runs are eligible (see
+        ``_RETAINABLE_STATUSES``); live work is never purged at any age.
+
+        The child tables (``job_events``, ``execution_signals``,
+        ``job_checkpoints``) carry ``job_id`` as a plain indexed column with NO
+        foreign key, so nothing cascades: they are deleted explicitly here, or
+        they survive as orphans no query can reach again.
+
+        Age comes from the terminal timestamp, falling back to creation for a
+        row that reached a terminal status without one. Deletes are chunked by
+        ``limit`` so a pass never takes a long lock or bloats one transaction;
+        a caller with a backlog loops until a pass returns fewer than ``limit``.
+
+        Every API worker runs the sweep, so concurrent callers are expected. On
+        Postgres the batch is selected ``FOR UPDATE SKIP LOCKED``: a second
+        sweep skips rows the first has locked and takes a disjoint batch instead
+        of queueing behind it (or deadlocking on the child deletes), and a
+        selected row cannot change status before it is deleted. SQLite renders
+        no lock clause and serializes writers on its own.
+
+        A job a trigger ledger row still marks DISPATCHED is skipped until the
+        dispatcher records its outcome: ``reconcile_dispatched`` reads that
+        outcome by joining the job, so purging the job first would leave the
+        ledger row DISPATCHED forever. A later sweep purges it once reconciled.
+
+        Both arguments must be positive. A zero window makes every terminal job
+        eligible and a negative one dates the cutoff in the future, and SQLite
+        reads a negative ``LIMIT`` as unbounded, so either would turn a
+        retention pass into a wholesale delete. The sweep never passes them
+        (retention is off at 0), but this method is public, so it guards itself.
+        """
+        if older_than_days <= 0:
+            msg = f"older_than_days must be positive, got {older_than_days!r}"
+            raise ValueError(msg)
+        if limit <= 0:
+            msg = f"limit must be positive, got {limit!r}"
+            raise ValueError(msg)
+
+        from sqlalchemy import exists
+        from sqlmodel import delete
+
+        from langflow.services.database.models.trigger.model import TriggerEvent
+        from langflow.services.database.models.trigger.schemas import TriggerEventState
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        aged_at = func.coalesce(col(Job.finished_timestamp), col(Job.created_timestamp))
+        awaiting_reconcile = exists().where(
+            col(TriggerEvent.job_id) == col(Job.job_id),
+            col(TriggerEvent.state) == TriggerEventState.DISPATCHED.value,
+        )
+        async with session_scope() as session:
+            result = await session.exec(
+                select(Job.job_id)
+                .where(col(Job.status).in_(_RETAINABLE_STATUSES), aged_at < cutoff, ~awaiting_reconcile)
+                .limit(limit)
+                .with_for_update(skip_locked=True)
+            )
+            job_ids = list(result.all())
+            if not job_ids:
+                return 0
+            for child in (JobEvent, ExecutionSignal, JobCheckpoint):
+                await session.exec(delete(child).where(col(child.job_id).in_(job_ids)))  # type: ignore[call-overload]
+            await session.exec(delete(Job).where(col(Job.job_id).in_(job_ids)))  # type: ignore[call-overload]
+            await session.flush()
+            return len(job_ids)
 
     async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
         """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.

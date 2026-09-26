@@ -131,6 +131,21 @@ class RuntimeSettings(BaseModel):
     """How often the scaled worker's periodic watchdog scans for orphaned leases
     (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
     restart. Must be > 0."""
+    background_retention_days: int = Field(default=0, ge=0)
+    """How many days to keep TERMINAL job rows (and their events, signals and
+    checkpoints) before deleting them. ``0``, the default, disables retention
+    entirely and keeps every row forever.
+
+    Enable this on any long-lived deployment: the job table records every flow
+    run (v1 runs and playground builds, v2 workflow runs, knowledge-base and
+    memory ingestion, trigger firings) and nothing else ever deletes those rows,
+    while ``job_events`` grows a row per durable milestone of a background run.
+    Live runs are never deleted at any age: QUEUED, IN_PROGRESS and SUSPENDED
+    rows are excluded (a suspended run is waiting on a human who may answer
+    weeks later).
+
+    A request ``idempotency_key`` blocks a duplicate run only while the original
+    job row exists, so once that row is purged the same key starts a new run."""
     # Triggers (TRG-2): the leased dispatcher, the schedule tick producer, and
     # the ledger retention windows.
     trigger_dispatcher_enabled: bool = True

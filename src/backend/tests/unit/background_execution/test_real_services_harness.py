@@ -51,3 +51,22 @@ async def test_real_services_redis_url_pings_real_server(real_services_redis_url
         assert await client.get("real_services:probe") == b"1"
     finally:
         await client.aclose()
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_real_services_job_service_binds_session_scope_to_the_param_engine(
+    real_services_job_service,  # noqa: ARG001
+    real_services_db_url: str,
+) -> None:
+    """session_scope() must reach the parametrized engine, not the default database.
+
+    Settings re-validates ``database_url`` on assignment and substitutes
+    LANGFLOW_DATABASE_URL or the default SQLite path, so binding the fixture by
+    assignment alone left the postgres param running every store test on SQLite.
+    """
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        dialect = session.bind.dialect.name
+    assert dialect == ("postgresql" if real_services_db_url.startswith("postgresql") else "sqlite")
