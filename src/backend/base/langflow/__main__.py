@@ -1171,6 +1171,80 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
     typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
 
 
+@app.command(name="relocate-files")
+def relocate_files(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    bucket: str = typer.Option(..., help="Target S3 bucket to copy stored files into."),
+    prefix: str = typer.Option("files", help="Key prefix inside the bucket."),
+    username: str = typer.Option("", help="Only copy this user's files."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be copied without writing."),  # noqa: FBT001
+    concurrency: int = typer.Option(
+        4, min=1, help="Files copied at once. Each holds at most one 8 MiB part in memory."
+    ),
+) -> None:
+    """Copy stored file bytes into an S3 bucket, keeping each file's key.
+
+    Run this with LANGFLOW_STORAGE_TYPE=local, the setting the instance had before
+    the switch, so it reads the files on local disk. Credentials come from the
+    environment, the same way the S3 storage backend reads them.
+
+    A file counts as copied only once the bucket reports an object of the same
+    size, and files already there are skipped, so a run can be repeated.
+
+    Nothing is deleted from the source and no database row changes: readers
+    address a file by its owner and name, which the copy preserves.
+
+    Uploads, chat attachments and files attached to flows are copied. Profile
+    pictures and knowledge bases live outside the storage backend and stay where
+    they are.
+
+    Files stream across, so memory scales with --concurrency alone.
+
+    Exits non-zero if any file could not be copied.
+    """
+    from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError
+
+    configure(log_level=log_level)
+    try:
+        failed = asyncio.run(
+            _relocate_files(
+                bucket=bucket,
+                prefix=prefix,
+                username=username or None,
+                dry_run=dry_run,
+                concurrency=concurrency,
+            )
+        )
+    except (SourceNotLocalError, NoSuchUserError) as exc:
+        typer.echo(f"Cannot copy files: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if failed:
+        raise typer.Exit(1)
+
+
+async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry_run: bool, concurrency: int) -> int:
+    from langflow.api.utils.file_relocation import relocate_files
+
+    await initialize_services()
+    results = await relocate_files(
+        target_bucket=bucket,
+        target_prefix=prefix,
+        username=username,
+        dry_run=dry_run,
+        concurrency=concurrency,
+    )
+    for result in results:
+        line = f"{result.status:12} {result.owner}/{result.file_name}  {result.size} bytes  -> {result.key}"
+        typer.echo(f"{line}  ({result.reason})" if result.reason else line)
+    counts: dict[str, int] = {}
+    for result in results:
+        counts[result.status] = counts.get(result.status, 0) + 1
+    scope = f"user '{username}'" if username else "all users"
+    summary = ", ".join(f"{count} {status}" for status, count in sorted(counts.items())) or "no files found"
+    typer.echo(f"File relocation complete for {scope}: {summary}.")
+    return counts.get("failed", 0)
+
+
 # command to copy the langflow database from the cache to the current directory
 # because now the database is stored per installation
 @app.command()

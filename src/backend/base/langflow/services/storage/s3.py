@@ -15,6 +15,27 @@ from langflow.logging.logger import logger
 
 from .service import StorageReadiness, StorageService
 
+# S3 parts are 5 MiB at least, except the last one.
+STREAM_PART_SIZE = 8 * 1024 * 1024
+# Server-side encryption modes whose ETag is not the body's MD5.
+_ETAG_NOT_MD5_ENCRYPTION = {"aws:kms", "aws:kms:dsse"}
+
+
+def md5_from_head(head: dict[str, Any]) -> str | None:
+    """The body's MD5 when a HeadObject response's ETag is one, otherwise None.
+
+    S3 sets the ETag to the MD5 of the body only for a single-part upload stored in
+    plain or SSE-S3 form. A multipart ETag carries a ``-``, and objects under SSE-KMS or
+    customer-provided keys (SSE-C) get an ETag that is not an MD5 at all.
+    """
+    etag = head.get("ETag", "").strip('"')
+    if not etag or "-" in etag:
+        return None
+    if head.get("ServerSideEncryption") in _ETAG_NOT_MD5_ENCRYPTION or head.get("SSECustomerAlgorithm"):
+        return None
+    return etag
+
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -451,6 +472,74 @@ class S3StorageService(StorageService):
             raise
         else:
             return file_size
+
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:
+        """The object's MD5 when its ETag is one (see ``md5_from_head``), otherwise None.
+
+        Raises:
+            FileNotFoundError: If the object does not exist, as ``get_file_size`` does.
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+        try:
+            async with self._get_client() as s3_client:
+                response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
+        except Exception as e:
+            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+                msg = f"File not found: {file_name}"
+                raise FileNotFoundError(msg) from e
+            raise
+        return md5_from_head(response)
+
+    async def save_file_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """Save a file from a stream of chunks, holding one part in memory at a time.
+
+        A body smaller than one part is a single ``put_object``; anything larger is a
+        multipart upload, aborted if any part fails so no partial object is left behind.
+        Returns the number of bytes written.
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+        extra: dict[str, Any] = {}
+        if self.tags:
+            extra["Tagging"] = "&".join([f"{k}={v}" for k, v in self.tags.items()])
+
+        async with self._get_client() as s3_client:
+            buffer = bytearray()
+            written = 0
+            upload_id: str | None = None
+            parts: list[dict[str, Any]] = []
+
+            async def upload_part(body: bytes) -> None:
+                response = await s3_client.upload_part(
+                    Bucket=self.bucket_name, Key=key, UploadId=upload_id, PartNumber=len(parts) + 1, Body=body
+                )
+                parts.append({"ETag": response["ETag"], "PartNumber": len(parts) + 1})
+
+            try:
+                async for chunk in chunks:
+                    buffer += chunk
+                    written += len(chunk)
+                    while len(buffer) >= STREAM_PART_SIZE:
+                        if upload_id is None:
+                            created = await s3_client.create_multipart_upload(Bucket=self.bucket_name, Key=key, **extra)
+                            upload_id = created["UploadId"]
+                        await upload_part(bytes(buffer[:STREAM_PART_SIZE]))
+                        del buffer[:STREAM_PART_SIZE]
+                if upload_id is None:
+                    await s3_client.put_object(Bucket=self.bucket_name, Key=key, Body=bytes(buffer), **extra)
+                    return written
+                if buffer:
+                    await upload_part(bytes(buffer))
+                await s3_client.complete_multipart_upload(
+                    Bucket=self.bucket_name, Key=key, UploadId=upload_id, MultipartUpload={"Parts": parts}
+                )
+            except BaseException:
+                if upload_id is not None:
+                    with contextlib.suppress(Exception):
+                        await s3_client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=upload_id)
+                raise
+        return written
 
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down.

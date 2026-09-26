@@ -180,6 +180,28 @@ This example policy allows basic CRUD operations on S3 objects.
 }
 ```
 
+### Copy existing files to S3
+
+Changing `LANGFLOW_STORAGE_TYPE` to `s3` doesn't bring the files you already have.
+Langflow reads and writes new files in the bucket, the previously uploaded bytes stay on local disk, and nothing reports an error until someone opens a flow that reads one.
+
+To copy them, stop Langflow and run the following command.
+Set `LANGFLOW_STORAGE_TYPE=local` for this command, the value the instance had before the switch, so that it reads the files on local disk.
+The command needs the same AWS credentials Langflow uses.
+
+```bash
+LANGFLOW_STORAGE_TYPE=local langflow relocate-files --bucket S3_BUCKET_NAME --prefix S3_BUCKET_DIRECTORY
+```
+
+Each file keeps its key, so no database row changes.
+Nothing is deleted from local disk, files already in the bucket are skipped, and a file counts as copied only when the bucket reports an object of the same size, so you can run the command again after an interrupted run.
+A file already in the bucket with the same size but different content, such as a file edited between runs, is reported rather than skipped. The content comparison uses the object's MD5, which S3 provides for files uploaded in one part without SSE-KMS or customer-provided keys. For other objects, including files larger than 8 MiB, which the command uploads in parts, it compares size only and says so.
+Files stream from disk to the bucket, so a large file isn't loaded into memory. The command copies 4 files at a time. Set `--concurrency` to change that; each file in flight holds at most 8 MiB.
+Add `--dry-run` to see what it would copy, and `--username` to limit it to one user's files.
+
+The command copies uploads, chat attachments and files attached to flows.
+Profile pictures and knowledge bases are stored outside the file storage backend, so they stay on local disk.
+
 Replace the following placeholders with the actual values for your IAM policy and S3 instance:
 
 * `S3_BUCKET_NAME`: The name of your S3 bucket.
