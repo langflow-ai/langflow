@@ -39,6 +39,37 @@ def _snake_to_camel(name: str) -> str:
     return leading + camel + trailing
 
 
+def _safe_field_name(name: str, used: set[str]) -> str:
+    """Return a Pydantic-safe field name for a JSON Schema property name.
+
+    Pydantic reserves leading-underscore names for private attributes, so a
+    property such as Glean's ``_user_goal`` (a legal JSON Schema name) makes
+    ``create_model`` raise ``NameError``. Strip the leading underscores and
+    de-duplicate deterministically; the original wire name is kept reachable
+    through ``validation_alias``.
+    """
+    base = name.lstrip("_") or "field"
+    candidate = base
+    i = 1
+    while candidate in used:
+        candidate = f"{base}_{i}"
+        i += 1
+    used.add(candidate)
+    return candidate
+
+
+def _alias_choices(safe_name: str, wire_name: str) -> AliasChoices:
+    """Build validation aliases: safe field name first, then wire and camelCase."""
+    aliases = [safe_name]
+    if safe_name != wire_name:
+        aliases.append(wire_name)
+    if "_" in wire_name:
+        camel_case_name = _snake_to_camel(wire_name)
+        if camel_case_name != wire_name and camel_case_name not in aliases:
+            aliases.append(camel_case_name)
+    return AliasChoices(*aliases)
+
+
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
     """Dynamically build a Pydantic model from a JSON schema (with $defs).
 
@@ -194,7 +225,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
             fields: dict[str, Any] = {}
 
+            used_names: set[str] = set()
             for prop_name, prop_schema in props.items():
+                safe_name = _safe_field_name(prop_name, used_names)
                 py_type = parse_type(prop_schema)
                 is_required = prop_name in reqs
                 if not is_required:
@@ -206,11 +239,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 # Add alias for camelCase if field name is snake_case
                 field_kwargs = {"description": prop_schema.get("description")}
                 if "_" in prop_name:
-                    camel_case_name = _snake_to_camel(prop_name)
-                    if camel_case_name != prop_name:  # Only add alias if it's different
-                        field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
+                    field_kwargs["validation_alias"] = _alias_choices(safe_name, prop_name)
 
-                fields[prop_name] = (py_type, Field(default, **field_kwargs))
+                fields[safe_name] = (py_type, Field(default, **field_kwargs))
 
             # Preserve extras unless schema sets additionalProperties:false (#9881, #10975).
             extra_mode = "ignore" if subschema.get("additionalProperties") is False else "allow"
@@ -225,7 +256,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     top_reqs = {r for r in (schema.get("required") or []) if isinstance(r, str)}
     top_fields: dict[str, Any] = {}
 
+    top_used_names: set[str] = set()
     for fname, fdef in top_props.items():
+        safe_name = _safe_field_name(fname, top_used_names)
         py_type = parse_type(fdef)
         if fname not in top_reqs:
             py_type = py_type | None
@@ -236,11 +269,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         # Add alias for camelCase if field name is snake_case
         field_kwargs = {"description": fdef.get("description")}
         if "_" in fname:
-            camel_case_name = _snake_to_camel(fname)
-            if camel_case_name != fname:  # Only add alias if it's different
-                field_kwargs["validation_alias"] = AliasChoices(fname, camel_case_name)
+            field_kwargs["validation_alias"] = _alias_choices(safe_name, fname)
 
-        top_fields[fname] = (py_type, Field(default, **field_kwargs))
+        top_fields[safe_name] = (py_type, Field(default, **field_kwargs))
 
     # Same JSON Schema rule applies at the root: preserve extras unless explicitly forbidden.
     top_extra_mode = "ignore" if schema.get("additionalProperties") is False else "allow"
