@@ -39,7 +39,6 @@ def _snake_to_camel(name: str) -> str:
     return leading + camel + trailing
 
 
-
 def _safe_field_name(name: str, used: set[str]) -> str:
     """Return a Pydantic-safe field name for a JSON Schema property name.
 
@@ -69,6 +68,7 @@ def _alias_choices(safe_name: str, wire_name: str) -> AliasChoices:
         if camel_case_name != wire_name and camel_case_name not in aliases:
             aliases.append(camel_case_name)
     return AliasChoices(*aliases)
+
 
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
     """Dynamically build a Pydantic model from a JSON schema (with $defs).
