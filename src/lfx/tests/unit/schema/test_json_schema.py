@@ -291,6 +291,84 @@ class TestCreateInputSchemaFromJsonSchema:
         assert instance.first.a == "x"
         assert instance.second.b == 1
 
+    def test_leading_underscore_property_name(self):
+        """A leading-underscore property name (legal JSON Schema, e.g. MCP "_meta" keys).
+
+        Must not make model building raise.
+
+        Regression: create_model() previously received the property name verbatim,
+        and Pydantic rejects leading-underscore field names outright, so any tool
+        schema declaring one silently dropped the whole tool (#15407).
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"},
+                "_user_goal": {"type": "string", "description": "why"},
+            },
+            "required": ["message", "_user_goal"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+        assert "_user_goal" not in model.model_fields
+        assert "user_goal" in model.model_fields
+
+        # Still constructible from the original wire name...
+        instance = model.model_validate({"message": "hi", "_user_goal": "train"})
+        assert instance.user_goal == "train"
+        # ...and round-trips back to it on serialization.
+        assert instance.model_dump(by_alias=True)["_user_goal"] == "train"
+
+    def test_leading_underscore_property_name_collision(self):
+        """Two properties colliding after their leading underscores are stripped.
+
+        Must not silently overwrite each other.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "_id": {"type": "string"},
+                "__id": {"type": "integer"},
+            },
+            "required": ["_id", "__id"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+        assert {"id", "id_1"} <= model.model_fields.keys()
+
+    def test_leading_underscore_property_does_not_take_an_ordinary_name(self):
+        """A stripped "_id" must not claim "id" when a later property is "id"."""
+        schema = {
+            "type": "object",
+            "properties": {"_id": {"type": "string"}, "id": {"type": "integer"}},
+            "required": ["_id", "id"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+        # Both properties are declared fields; neither silently became an extra.
+        assert len(model.model_fields) == 2
+        with pytest.raises(ValidationError):
+            model.model_validate({"id": 1})  # "_id" is still required
+        instance = model.model_validate({"_id": "abc", "id": 1})
+        assert instance.model_dump(by_alias=True) == {"_id": "abc", "id": 1}
+
+    def test_mcp_tool_call_sends_original_property_name(self):
+        """The MCP dispatcher must send the wire name ("_id"), not the field name."""
+        from lfx.base.mcp.util import create_tool_func
+
+        schema = {
+            "type": "object",
+            "properties": {"_id": {"type": "string"}},
+            "required": ["_id"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+        sent = {}
+
+        class FakeClient:
+            async def run_tool(self, _tool_name, arguments):
+                sent.update(arguments)
+                return type("Result", (), {"isError": False, "content": []})()
+
+        create_tool_func("tool", model, FakeClient())(_id="abc")
+        assert sent == {"_id": "abc"}
+
 
 class TestFlattenSchema:
     """Tests for flatten_schema self-referential handling."""

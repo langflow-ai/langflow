@@ -22,7 +22,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import ArgsSchema, StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
-from pydantic import BaseModel, SkipValidation
+from pydantic import AliasChoices, BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
@@ -399,12 +399,23 @@ def _camel_to_snake(name: str) -> str:
 def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema: type[BaseModel]) -> dict[str, Any]:
     """Convert camelCase field names to snake_case if the schema expects snake_case fields."""
     schema_fields = set(arg_schema.model_fields.keys())
+    # A field whose JSON Schema name is not a legal field name (e.g. "_id") is
+    # renamed and keeps the original as a validation alias; map it back.
+    alias_to_field = {
+        choice: name
+        for name, field in arg_schema.model_fields.items()
+        if isinstance(field.validation_alias, AliasChoices)
+        for choice in field.validation_alias.choices
+        if isinstance(choice, str) and choice not in schema_fields
+    }
     converted_args = {}
 
     for key, value in provided_args.items():
         # If the key already exists in schema, use it as-is
         if key in schema_fields:
             converted_args[key] = value
+        elif key in alias_to_field:
+            converted_args[alias_to_field[key]] = value
         else:
             # Try converting camelCase to snake_case
             snake_key = _camel_to_snake(key)
@@ -716,7 +727,7 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True, by_alias=True))
             result = await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
@@ -748,7 +759,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True, by_alias=True))
             result = run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
