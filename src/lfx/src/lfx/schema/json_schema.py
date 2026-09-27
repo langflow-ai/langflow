@@ -211,7 +211,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             props = subschema.get("properties", {})
             reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
             fields: dict[str, Any] = {}
-            used_names: set[str] = set()
+            # Reserve ordinary names first, so a stripped "_id" never takes "id".
+            used_names = {p for p in props if not p.startswith("_")}
 
             for prop_name, prop_schema in props.items():
                 py_type = parse_type(prop_schema)
@@ -234,8 +235,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 if prop_name.startswith("_"):
                     field_name = _safe_field_name(prop_name, used_names)
                     field_kwargs["serialization_alias"] = prop_name
-                else:
-                    used_names.add(prop_name)
 
                 if len(aliases) > 1 or field_name != prop_name:
                     field_kwargs["validation_alias"] = AliasChoices(*dict.fromkeys([*aliases, field_name]))
@@ -254,7 +253,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     top_props = schema.get("properties", {})
     top_reqs = {r for r in (schema.get("required") or []) if isinstance(r, str)}
     top_fields: dict[str, Any] = {}
-    top_used_names: set[str] = set()
+    top_used_names = {p for p in top_props if not p.startswith("_")}
 
     for fname, fdef in top_props.items():
         py_type = parse_type(fdef)
@@ -276,8 +275,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         if fname.startswith("_"):
             field_name = _safe_field_name(fname, top_used_names)
             field_kwargs["serialization_alias"] = fname
-        else:
-            top_used_names.add(fname)
 
         if len(aliases) > 1 or field_name != fname:
             field_kwargs["validation_alias"] = AliasChoices(*dict.fromkeys([*aliases, field_name]))

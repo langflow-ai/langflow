@@ -334,6 +334,41 @@ class TestCreateInputSchemaFromJsonSchema:
         model = create_input_schema_from_json_schema(schema)
         assert {"id", "id_1"} <= model.model_fields.keys()
 
+    def test_leading_underscore_property_does_not_take_an_ordinary_name(self):
+        """A stripped "_id" must not claim "id" when a later property is "id"."""
+        schema = {
+            "type": "object",
+            "properties": {"_id": {"type": "string"}, "id": {"type": "integer"}},
+            "required": ["_id", "id"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+        # Both properties are declared fields; neither silently became an extra.
+        assert len(model.model_fields) == 2
+        with pytest.raises(ValidationError):
+            model.model_validate({"id": 1})  # "_id" is still required
+        instance = model.model_validate({"_id": "abc", "id": 1})
+        assert instance.model_dump(by_alias=True) == {"_id": "abc", "id": 1}
+
+    def test_mcp_tool_call_sends_original_property_name(self):
+        """The MCP dispatcher must send the wire name ("_id"), not the field name."""
+        from lfx.base.mcp.util import create_tool_func
+
+        schema = {
+            "type": "object",
+            "properties": {"_id": {"type": "string"}},
+            "required": ["_id"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+        sent = {}
+
+        class FakeClient:
+            async def run_tool(self, _tool_name, arguments):
+                sent.update(arguments)
+                return type("Result", (), {"isError": False, "content": []})()
+
+        create_tool_func("tool", model, FakeClient())(_id="abc")
+        assert sent == {"_id": "abc"}
+
 
 class TestFlattenSchema:
     """Tests for flatten_schema self-referential handling."""
