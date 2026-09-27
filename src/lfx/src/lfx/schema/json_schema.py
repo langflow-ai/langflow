@@ -39,7 +39,7 @@ def _snake_to_camel(name: str) -> str:
     return leading + camel + trailing
 
 
-def _safe_field_name(name: str, used: set[str]) -> str:
+def _safe_field_name(name: str, used: set[str], reserved: set[str] | None = None) -> str:
     """Return a Pydantic-safe field name for a JSON Schema property name.
 
     Pydantic reserves leading-underscore names for private attributes, so a
@@ -47,20 +47,34 @@ def _safe_field_name(name: str, used: set[str]) -> str:
     ``create_model`` raise ``NameError``. Strip the leading underscores and
     de-duplicate deterministically; the original wire name is kept reachable
     through ``validation_alias``.
+
+    ``reserved`` lists every wire property name of this object. When stripping
+    the leading underscore would collide with another property's wire name
+    (``_foo`` sanitized to ``foo`` while ``foo`` is also a real property), the
+    candidate is shifted so the sanitized field name cannot capture input
+    intended for the other property.
     """
     base = name.lstrip("_") or "field"
     candidate = base
     i = 1
-    while candidate in used:
+    while candidate in used or (
+        reserved is not None and candidate in reserved and candidate != name
+    ):
         candidate = f"{base}_{i}"
         i += 1
     used.add(candidate)
     return candidate
 
 
-def _alias_choices(safe_name: str, wire_name: str) -> AliasChoices:
-    """Build validation aliases: safe field name first, then wire and camelCase."""
-    aliases = [safe_name]
+def _alias_choices(safe_name: str, wire_name: str, exclude_safe: bool = False) -> AliasChoices:
+    """Build validation aliases: safe field name first, then wire and camelCase.
+
+    ``exclude_safe`` is set when the safe name collides with another property's
+    wire name (e.g. ``_foo`` sanitized to ``foo`` while ``foo`` is also a real
+    property). In that case the safe name must not be accepted as an alias, or
+    input for ``foo`` would be captured by the ``_foo`` field.
+    """
+    aliases = [] if exclude_safe else [safe_name]
     if safe_name != wire_name:
         aliases.append(wire_name)
     if "_" in wire_name:
@@ -226,8 +240,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             fields: dict[str, Any] = {}
 
             used_names: set[str] = set()
+            wire_names = set(props)
             for prop_name, prop_schema in props.items():
-                safe_name = _safe_field_name(prop_name, used_names)
+                safe_name = _safe_field_name(prop_name, used_names, wire_names)
                 py_type = parse_type(prop_schema)
                 is_required = prop_name in reqs
                 if not is_required:
@@ -239,7 +254,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 # Add alias for camelCase if field name is snake_case
                 field_kwargs = {"description": prop_schema.get("description")}
                 if "_" in prop_name:
-                    field_kwargs["validation_alias"] = _alias_choices(safe_name, prop_name)
+                    exclude_safe = (
+                        prop_name.lstrip("_") in wire_names
+                        and prop_name.lstrip("_") != prop_name
+                    )
+                    field_kwargs["validation_alias"] = _alias_choices(
+                        safe_name, prop_name, exclude_safe=exclude_safe
+                    )
+                    # Emit the original wire name (including leading underscores)
+                    # on model_dump(by_alias=True), not the sanitized field name.
+                    field_kwargs["serialization_alias"] = prop_name
 
                 fields[safe_name] = (py_type, Field(default, **field_kwargs))
 
@@ -257,8 +281,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     top_fields: dict[str, Any] = {}
 
     top_used_names: set[str] = set()
+    top_wire_names = set(top_props)
     for fname, fdef in top_props.items():
-        safe_name = _safe_field_name(fname, top_used_names)
+        safe_name = _safe_field_name(fname, top_used_names, top_wire_names)
         py_type = parse_type(fdef)
         if fname not in top_reqs:
             py_type = py_type | None
@@ -269,7 +294,13 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         # Add alias for camelCase if field name is snake_case
         field_kwargs = {"description": fdef.get("description")}
         if "_" in fname:
-            field_kwargs["validation_alias"] = _alias_choices(safe_name, fname)
+            exclude_safe = (
+                fname.lstrip("_") in top_wire_names and fname.lstrip("_") != fname
+            )
+            field_kwargs["validation_alias"] = _alias_choices(
+                safe_name, fname, exclude_safe=exclude_safe
+            )
+            field_kwargs["serialization_alias"] = fname
 
         top_fields[safe_name] = (py_type, Field(default, **field_kwargs))
 
