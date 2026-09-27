@@ -64,7 +64,7 @@ def _safe_field_name(name: str, used: set[str], reserved: set[str] | None = None
     return candidate
 
 
-def _alias_choices(safe_name: str, wire_name: str, exclude_safe: bool = False) -> AliasChoices:
+def _alias_choices(safe_name: str, wire_name: str, *, exclude_safe: bool = False) -> AliasChoices:
     """Build validation aliases: safe field name first, then wire and camelCase.
 
     ``exclude_safe`` is set when the safe name collides with another property's
