@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import httpx
 import pytest
 
 pytest.importorskip("lfx_bundles")
@@ -60,6 +61,91 @@ class TestAPIRouteIntegration:
         mock_chat_openai.assert_called_once()
         _, kwargs = mock_chat_openai.call_args
         assert kwargs["model"] == "claude-3-7-sonnet-20250219"
+        assert kwargs["openai_api_key"] == mock_api_key
         assert kwargs["openai_api_base"] == "https://global.api-route.com/v1"
         assert kwargs["temperature"] == 0.7
         assert kwargs["max_tokens"] == 1000
+
+    @patch("lfx_bundles.apiroute.apiroute.httpx.get")
+    def test_fetch_models_sorts_valid_response(self, mock_get, component, mock_api_key):
+        component.api_key = mock_api_key
+        mock_get.return_value.json.return_value = {
+            "data": [
+                {"id": "z-model", "name": "Zed", "context_length": 1000},
+                {"id": "a-model", "name": "Alpha"},
+            ]
+        }
+
+        assert component.fetch_models() == [
+            {"id": "a-model", "name": "Alpha", "context": 0},
+            {"id": "z-model", "name": "Zed", "context": 1000},
+        ]
+        mock_get.assert_called_once_with(
+            "https://global.api-route.com/v1/models",
+            headers={"Authorization": f"Bearer {mock_api_key}"},
+            timeout=10.0,
+        )
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            None,
+            [],
+            {},
+            {"data": None},
+            {"data": {}},
+            {"data": [None]},
+            {"data": [{"id": 123}]},
+            {"data": [{"id": "valid"}, {"name": "missing id"}]},
+            {"data": [{"id": "valid", "name": 123}]},
+        ],
+    )
+    @patch("lfx_bundles.apiroute.apiroute.httpx.get")
+    def test_fetch_models_rejects_invalid_payload(self, mock_get, component, payload):
+        mock_get.return_value.json.return_value = payload
+
+        assert component.fetch_models() == []
+
+    @patch("lfx_bundles.apiroute.apiroute.httpx.get")
+    def test_update_build_config_uses_fallback_after_invalid_response(self, mock_get, component):
+        mock_get.return_value.json.return_value = {"data": [None]}
+        build_config = {"model_name": {"options": [], "value": ""}}
+
+        updated = component.update_build_config(build_config, "", "model_name")
+
+        assert updated["model_name"]["options"][0] == "claude-3-7-sonnet-20250219"
+        assert updated["model_name"]["value"] == "claude-3-7-sonnet-20250219"
+
+    def test_update_build_config_uses_live_models(self, component):
+        build_config = {"model_name": {"options": [], "value": ""}}
+        models = [{"id": "test-model", "name": "Test Model", "context": 0}]
+
+        with patch.object(component, "fetch_models", return_value=models):
+            updated = component.update_build_config(build_config, "", "model_name")
+
+        assert updated["model_name"]["options"] == ["test-model"]
+        assert updated["model_name"]["tooltips"] == {"test-model": "Test Model"}
+
+    @pytest.mark.parametrize(
+        ("api_key", "model_name", "error"),
+        [
+            ("", "test-model", "API key is required"),
+            ("test-key", "", "Please select a model"),
+            ("test-key", "Loading...", "Please select a model"),
+        ],
+    )
+    def test_build_model_rejects_missing_configuration(self, component, api_key, model_name, error):
+        component.api_key = api_key
+        component.model_name = model_name
+
+        with pytest.raises(ValueError, match=error):
+            component.build_model()
+
+    @patch("lfx_bundles.apiroute.apiroute.httpx.get")
+    def test_fetch_models_handles_http_error(self, mock_get, component):
+        request = httpx.Request("GET", "https://global.api-route.com/v1/models")
+        mock_get.return_value.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Bad response", request=request, response=httpx.Response(500, request=request)
+        )
+
+        assert component.fetch_models() == []

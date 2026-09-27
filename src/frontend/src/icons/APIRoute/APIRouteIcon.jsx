@@ -1,10 +1,11 @@
-const SvgAPIRoute = (props) => (
+const SvgAPIRoute = ({ isDark, style, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="1em"
     height="1em"
     viewBox="0 0 120 120"
     fill="none"
+    style={{ ...style, filter: isDark ? "brightness(1.15)" : style?.filter }}
     {...props}
   >
     <image

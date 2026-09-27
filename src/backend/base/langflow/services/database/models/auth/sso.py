@@ -724,7 +724,7 @@ class SSOSettings(SQLModel, table=True):  # type: ignore[call-arg]
     """Singleton instance-level SSO policy settings."""
 
     __tablename__ = "sso_settings"
-    __table_args__ = (CheckConstraint("id = 1", name="ck_sso_settings_singleton"),)
+    __table_args__ = (CheckConstraint("id = 1", name=conv("ck_sso_settings_singleton")),)
 
     id: int = Field(default=1, primary_key=True)
     enforce_sso: bool = Field(default=False)

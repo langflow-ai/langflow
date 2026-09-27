@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import platform
+import re
 from asyncio.subprocess import create_subprocess_exec
 from collections.abc import Awaitable, Callable, Sequence
 from contextvars import ContextVar
@@ -17,8 +18,7 @@ from anyio import BrokenResourceError
 from anyio.abc import TaskGroup, TaskStatus
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
@@ -48,6 +48,7 @@ from langflow.api.utils.mcp import (
     get_project_sse_url,
     get_project_streamable_http_url,
     get_url_by_os,
+    project_mcp_server_name_candidates,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
@@ -91,6 +92,7 @@ from langflow.services.rate_limit.service import get_last_forwarded_for_hop
 
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
+_PROJECT_URL_ID_PATTERN = re.compile(r"/api/v1/mcp/project/([0-9a-fA-F-]{36})")
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -307,6 +309,7 @@ async def _build_project_tools_response(
 ) -> MCPProjectResponse:
     """Return tool metadata for a project."""
     tools: list[MCPSettings] = []
+    server_name: str | None = None
     try:
         async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
@@ -320,6 +323,10 @@ async def _build_project_tools_response(
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
+
+            # Sent to clients so they show the backend's name, instead of each client
+            # deriving its own and disagreeing about non-Latin names.
+            server_name = project_mcp_server_name(project.name)
 
             # Query flows in the project
             flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
@@ -372,12 +379,15 @@ async def _build_project_tools_response(
                         masked_settings["api_key"] = "*******"
                     auth_settings = AuthSettings(**masked_settings)
 
+    except HTTPException:
+        # A missing project is a 404, not a 500
+        raise
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return MCPProjectResponse(tools=tools, auth_settings=auth_settings)
+    return MCPProjectResponse(tools=tools, auth_settings=auth_settings, server_name=server_name)
 
 
 @router.get("/{project_id}")
@@ -963,18 +973,10 @@ async def install_mcp_config(
             args = ["/c", "uvx", *args]
             await logger.adebug("Windows detected, using cmd command")
 
-        name = project.name
-        server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
-
-        # Create the MCP configuration
         server_config: dict[str, Any] = {
             "command": command,
             "args": args,
         }
-
-        mcp_config = {"mcpServers": {server_name: server_config}}
-
-        await logger.adebug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
 
         # Get the config file path and check if client is available
         try:
@@ -1013,8 +1015,18 @@ async def install_mcp_config(
         if removed_servers:
             await logger.adebug("Removed existing MCP servers with same SSE URL for reinstall: %s", removed_servers)
 
-        # Merge new config with existing config
-        existing_config["mcpServers"].update(mcp_config["mcpServers"])
+        # Distinct project names can share the truncated base name; never overwrite another project's entry.
+        candidate_names = project_mcp_server_name_candidates(project_id, project.name)
+        server_name = next(
+            (
+                name
+                for name in candidate_names
+                if not _entry_targets_other_project(existing_config["mcpServers"].get(name, {}), project_id)
+            ),
+            candidate_names[0],
+        )
+        await logger.adebug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
+        existing_config["mcpServers"][server_name] = server_config
 
         # Write the updated config
         with config_path.open("w") as f:
@@ -1311,6 +1323,21 @@ async def get_config_path(client: str) -> Path:
 
     msg = "Unsupported client"
     raise ValueError(msg)
+
+
+def _entry_targets_other_project(server_config: dict[str, Any], project_id: UUID) -> bool:
+    """Return whether a client config entry points at a different Langflow project's MCP endpoint.
+
+    Entries that reference no project URL (e.g. an MCP Composer entry) are not treated as taken, so a
+    reinstall after an auth-mode switch still replaces them instead of adding a duplicate.
+    """
+    referenced_ids = {
+        project_ref.lower()
+        for arg in server_config.get("args", [])
+        if isinstance(arg, str)
+        for project_ref in _PROJECT_URL_ID_PATTERN.findall(arg)
+    }
+    return bool(referenced_ids) and str(project_id) not in referenced_ids
 
 
 def remove_server_by_urls(config_data: dict, urls: Sequence[str] | str) -> tuple[dict, list[str]]:

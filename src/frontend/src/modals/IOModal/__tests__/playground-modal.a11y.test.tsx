@@ -107,9 +107,9 @@ const sessionsFromFlowResult = {
   refetch: jest.fn(),
 };
 
-jest.mock("@/controllers/API/queries/messages", () => ({
+jest.mock("@/controllers/API/queries/messages/use-get-message-history", () => ({
   __esModule: true,
-  useGetMessagesQuery: () => messagesQueryResult,
+  useGetMessageHistory: () => messagesQueryResult,
 }));
 
 jest.mock("@/controllers/API/queries/messages/use-delete-sessions", () => ({

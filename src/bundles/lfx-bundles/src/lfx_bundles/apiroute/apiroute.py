@@ -47,20 +47,31 @@ class APIRouteComponent(LCModelComponent):
                 headers["Authorization"] = f"Bearer {key}"
             response = httpx.get("https://global.api-route.com/v1/models", headers=headers, timeout=10.0)
             response.raise_for_status()
-            models = response.json().get("data", [])
+            payload = response.json()
+            if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
+                return []
+
+            models = payload["data"]
+            if any(
+                not isinstance(model, dict)
+                or not isinstance(model.get("id"), str)
+                or not model["id"]
+                or not isinstance(model.get("name", model["id"]), str)
+                for model in models
+            ):
+                return []
             return sorted(
                 [
                     {
                         "id": m["id"],
                         "name": m.get("name", m["id"]),
-                        "context": m.get("context_length", 0),
+                        "context": m.get("context_length") if isinstance(m.get("context_length"), int) else 0,
                     }
                     for m in models
-                    if m.get("id")
                 ],
                 key=lambda x: x["name"],
             )
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
             self.log(f"Error fetching models: {e}")
             return []
 

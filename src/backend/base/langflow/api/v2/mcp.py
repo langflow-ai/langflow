@@ -382,7 +382,10 @@ async def get_server_endpoint(
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     """Get a specific server."""
-    return await get_server(server_name, current_user, session, storage_service, settings_service)
+    server = await get_server(server_name, current_user, session, storage_service, settings_service)
+    if server is None:
+        raise HTTPException(status_code=404, detail="Server not found.")
+    return server
 
 
 def _derive_transport(config: dict) -> str | None:
@@ -467,6 +470,8 @@ async def update_server(
 
     result = await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name))
     existing = result.first()
+    if merge_existing and existing is None:
+        raise HTTPException(status_code=404, detail="Server not found.")
 
     for _ in range(_MAX_UPSERT_RETRIES):
         if check_existing and existing is not None:

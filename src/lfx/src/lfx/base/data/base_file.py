@@ -12,7 +12,12 @@ from zipfile import ZipFile, is_zipfile
 import orjson
 import pandas as pd
 
-from lfx.base.data.storage_utils import get_file_size, parse_storage_path, read_file_bytes
+from lfx.base.data.storage_utils import (
+    StorageServiceUnavailableError,
+    get_file_size,
+    parse_storage_path,
+    read_file_bytes,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
@@ -354,7 +359,7 @@ class BaseFileComponent(Component, ABC):
             storage_service = get_storage_service()
             if storage_service is None:
                 msg = "Storage service is unavailable; could not delete processed S3 file."
-                raise RuntimeError(msg)
+                raise StorageServiceUnavailableError(msg)
             run_until_complete(storage_service.delete_file(namespace_id, file_name))
             return
 

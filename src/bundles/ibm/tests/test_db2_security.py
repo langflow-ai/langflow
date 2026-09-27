@@ -136,6 +136,16 @@ def _restricted_file_access(config_dir: str):
         yield
 
 
+@contextmanager
+def _unrestricted_file_access():
+    """Turn off LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS containment for the duration (opt-out)."""
+    with patch("lfx.utils.file_path_security.get_settings_service") as mock_get:
+        settings = MagicMock()
+        settings.settings.restrict_local_file_access = False
+        mock_get.return_value = settings
+        yield
+
+
 @pytest.mark.parametrize("url", _INTERNAL_TARGETS)
 def test_download_certificate_blocks_internal_targets(url):
     """A certificate URL pointing at an internal host must not be fetched."""
@@ -241,12 +251,13 @@ def test_local_path_containment_allows_path_inside_scope(tmp_path):
     assert resolved == str(inside.resolve())
 
 
-def test_local_path_unrestricted_default_is_unchanged(tmp_path):
-    """With containment off (OSS default) an absolute path keeps working."""
+def test_local_path_unrestricted_opt_out_is_unchanged(tmp_path):
+    """With containment explicitly disabled (single-tenant opt-out) an absolute path keeps working."""
     cert = tmp_path / "ca.pem"
     cert.write_bytes(b"-----BEGIN CERTIFICATE-----\n")
 
-    resolved, error = validate_ssl_certificate_path(str(cert))
+    with _unrestricted_file_access():
+        resolved, error = validate_ssl_certificate_path(str(cert))
 
     assert error is None
     assert resolved == str(cert.resolve())

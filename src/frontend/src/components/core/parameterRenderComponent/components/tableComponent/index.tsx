@@ -6,7 +6,7 @@ import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import type { CellKeyDownEvent, ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
 import { suppressAutofillOnElement } from "@/utils/inputAutofill";
-import { cn } from "@/utils/utils";
+import { cn, isTruthyCellValue } from "@/utils/utils";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
@@ -90,12 +90,9 @@ const TableComponent = forwardRef<
       currentRowValue: any,
     ) => {
       try {
-        // Check if this is a single-toggle column (Vectorize or Identifier)
+        // Vectorize flags are independent; only Identifier is single-toggle.
         const isSingleToggleColumn =
-          colField === "Vectorize" ||
-          colField === "vectorize" ||
-          colField === "Identifier" ||
-          colField === "identifier";
+          colField === "Identifier" || colField === "identifier";
 
         if (!isSingleToggleColumn) return true;
 
@@ -104,25 +101,18 @@ const TableComponent = forwardRef<
           return true;
         }
 
-        // Normalize the current value to boolean
-        const normalizedCurrentValue =
-          currentRowValue === true ||
-          currentRowValue === "true" ||
-          currentRowValue === 1;
-
         // If current row is true, always allow editing (to turn it off)
-        if (normalizedCurrentValue) {
+        if (isTruthyCellValue(currentRowValue)) {
           return true;
         }
 
         // If current row is false, only allow editing if no other row is true
-        const hasAnyTrue = props.rowData.some((row) => {
-          if (!row || typeof row !== "object") return false;
-          const value = row[colField];
-          const normalizedValue =
-            value === true || value === "true" || value === 1;
-          return normalizedValue;
-        });
+        const hasAnyTrue = props.rowData.some(
+          (row) =>
+            !!row &&
+            typeof row === "object" &&
+            isTruthyCellValue(row[colField]),
+        );
 
         return !hasAnyTrue;
       } catch (_error) {
@@ -169,12 +159,9 @@ const TableComponent = forwardRef<
             props.editable.every((field) => typeof field === "string") &&
             (props.editable as Array<string>).includes(newCol.field ?? ""))
         ) {
-          // Special handling for single-toggle columns (Vectorize and Identifier)
+          // Special handling for single-toggle Identifier columns
           const isSingleToggleColumn =
-            newCol.field === "Vectorize" ||
-            newCol.field === "vectorize" ||
-            newCol.field === "Identifier" ||
-            newCol.field === "identifier";
+            newCol.field === "Identifier" || newCol.field === "identifier";
 
           if (isSingleToggleColumn) {
             newCol = {
@@ -226,12 +213,9 @@ const TableComponent = forwardRef<
             }>
           ).find((field) => field.field === newCol.field);
           if (field) {
-            // Special handling for single-toggle columns (Vectorize and Identifier)
+            // Special handling for single-toggle Identifier columns
             const isSingleToggleColumn =
-              newCol.field === "Vectorize" ||
-              newCol.field === "vectorize" ||
-              newCol.field === "Identifier" ||
-              newCol.field === "identifier";
+              newCol.field === "Identifier" || newCol.field === "identifier";
 
             if (isSingleToggleColumn) {
               newCol = {
@@ -285,6 +269,10 @@ const TableComponent = forwardRef<
               newCol = {
                 ...newCol,
                 editable: field.editableCell,
+                cellRendererParams: {
+                  ...newCol.cellRendererParams,
+                  editableCell: field.editableCell,
+                },
                 onCellValueChanged: (e) => field.onUpdate(e),
               };
             }
@@ -666,10 +654,8 @@ const TableComponent = forwardRef<
           onCellValueChanged={
             props.onCellValueChanged
               ? (e) => {
-                  // Handle single-toggle column changes (Vectorize and Identifier) to refresh grid editability
+                  // Refresh grid editability after single-toggle Identifier changes
                   const isSingleToggleField =
-                    e.colDef.field === "Vectorize" ||
-                    e.colDef.field === "vectorize" ||
                     e.colDef.field === "Identifier" ||
                     e.colDef.field === "identifier";
 
@@ -692,10 +678,7 @@ const TableComponent = forwardRef<
                           ?.filter((col) => {
                             const field = col.getColDef().field;
                             return (
-                              field === "Vectorize" ||
-                              field === "vectorize" ||
-                              field === "Identifier" ||
-                              field === "identifier"
+                              field === "Identifier" || field === "identifier"
                             );
                           });
                         if (

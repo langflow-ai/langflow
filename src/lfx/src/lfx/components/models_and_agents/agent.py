@@ -225,9 +225,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
-            info="Maximum number of tokens to generate. Field name varies by provider.",
+            info="Maximum number of tokens to generate. Set to 0 for no explicit limit. Field name varies by provider.",
             advanced=True,
-            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
+            range_spec=RangeSpec(min=0, max=128000, step=1, step_type="int"),
         ),
         MultilineInput(
             name="format_instructions",

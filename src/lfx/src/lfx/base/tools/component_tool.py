@@ -102,6 +102,29 @@ def patch_components_send_message(component: Component):
     return old_send_message
 
 
+def _resolve_local_method(component: Component, output_method: Callable, method_name: str) -> Callable:
+    """Resolve an output method against the per-invocation component copy.
+
+    ``method_name`` is ``output_method.__name__``, which only names an attribute
+    for a method declared on the class. Run Flow registers its per-selected-flow
+    resolvers on the *instance*, under a name the closure itself does not carry,
+    so the lookup misses; ``Component.__deepcopy__`` also rebuilds the component
+    rather than copying its ``__dict__``, so the copy need not have it at all.
+    Falling back to ``output_method`` then ran the component the toolkit was
+    built from -- the call's arguments had been set on the copy, so the method
+    that ran never saw them, the sub-flow ran with no tweak, and the tool
+    answered with empty content (#15034). Bind the captured function to the copy
+    instead, so the object that received the arguments is the object that runs.
+    """
+    local_method = getattr(component, method_name, None)
+    if local_method is not None:
+        return local_method
+    function = getattr(output_method, "__func__", None)
+    if function is None:
+        return output_method
+    return function.__get__(component, type(component))
+
+
 def _build_output_function(
     component: Component,
     output_method: Callable,
@@ -125,7 +148,7 @@ def _build_output_function(
         # overlapping calls: the second call recorded the first call's no-op as the method
         # to restore, and restored it once the first call had put the real one back.
         # Suppressing the tool run's own messages is a separate change, tracked on its own.
-        local_method = getattr(comp, method_name, output_method)
+        local_method = _resolve_local_method(comp, output_method, method_name)
         build_started = False
         result = None
         try:
@@ -183,7 +206,7 @@ def _build_output_async_function(
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
         # See _build_output_function: a tool call must not patch send_message anywhere.
-        local_method = getattr(comp, method_name, output_method)
+        local_method = _resolve_local_method(comp, output_method, method_name)
         build_started = False
         result = None
         try:

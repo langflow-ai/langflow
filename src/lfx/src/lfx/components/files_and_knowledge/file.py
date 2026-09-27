@@ -25,7 +25,12 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
-from lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type
+from lfx.base.data.storage_utils import (
+    parse_storage_path,
+    read_file_bytes,
+    require_storage_service,
+    validate_image_content_type,
+)
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
@@ -816,16 +821,20 @@ class FileComponent(BaseFileComponent):
         # Get file extension from S3 key
         file_extension = Path(self.s3_file_key).suffix or ""
 
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            try:
+        temp_file_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+                temp_file_path = temp_file.name
                 s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
-            except Exception as e:
-                # Clean up temp file on failure
+        except Exception as e:
+            # The context manager has already closed the handle by the time this runs, which is
+            # what Windows requires before the partial download can be deleted. Keeping the
+            # cleanup here also covers a failure raised by the closing flush itself.
+            if temp_file_path is not None:
                 with contextlib.suppress(OSError):
                     Path(temp_file_path).unlink()
-                msg = f"Failed to download file from S3: {e}"
-                raise RuntimeError(msg) from e
+            msg = f"Failed to download file from S3: {e}"
+            raise RuntimeError(msg) from e
 
         # Create BaseFile object
         from lfx.schema.data import Data
@@ -877,20 +886,24 @@ class FileComponent(BaseFileComponent):
 
         # Download file to temp location
         file_extension = Path(file_name).suffix or ""
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            try:
+        temp_file_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+                temp_file_path = temp_file.name
                 request = drive_service.files().get_media(fileId=self.file_id)
                 downloader = MediaIoBaseDownload(temp_file, request)
                 done = False
                 while not done:
                     _status, done = downloader.next_chunk()
-            except Exception as e:
-                # Clean up temp file on failure
+        except Exception as e:
+            # The context manager has already closed the handle by the time this runs, which is
+            # what Windows requires before the partial download can be deleted. Keeping the
+            # cleanup here also covers a failure raised by the closing flush itself.
+            if temp_file_path is not None:
                 with contextlib.suppress(OSError):
                     Path(temp_file_path).unlink()
-                msg = f"Failed to download file from Google Drive: {e}"
-                raise RuntimeError(msg) from e
+            msg = f"Failed to download file from Google Drive: {e}"
+            raise RuntimeError(msg) from e
 
         # Create BaseFile object
         from lfx.schema.data import Data
@@ -972,7 +985,7 @@ class FileComponent(BaseFileComponent):
             msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
             raise ValueError(msg)
 
-        storage_service = get_storage_service()
+        storage_service = require_storage_service(get_storage_service())
         flow_id, filename = parsed
 
         # Get file content from S3

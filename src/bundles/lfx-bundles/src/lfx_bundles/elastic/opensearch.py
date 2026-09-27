@@ -109,8 +109,9 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             options=["nmslib", "faiss", "lucene", "jvector"],
             value="jvector",
             info=(
-                "Vector search engine for similarity calculations. 'nmslib' works with standard "
-                "OpenSearch. 'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true. "
+                "Vector search engine for similarity calculations. 'faiss' and 'lucene' work with standard "
+                "OpenSearch. 'jvector' requires the opensearch-jvector plugin. 'nmslib' cannot create new "
+                "indexes on OpenSearch 3.0+. "
                 "Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
             ),
             advanced=True,
@@ -261,6 +262,16 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     # ---------- helper functions for index management ----------
+    @staticmethod
+    def _knn_method_name(engine: str) -> str:
+        """Return the k-NN method name OpenSearch accepts for the given engine.
+
+        ``disk_ann`` is provided only by the opensearch-jvector plugin; the stock engines
+        (nmslib, faiss, lucene) reject it and build HNSW graphs instead. OpenSearch matches
+        engine names case-insensitively.
+        """
+        return "disk_ann" if (engine or "").lower() == "jvector" else "hnsw"
+
     def _default_text_mapping(
         self,
         dim: int,
@@ -296,7 +307,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                         "type": "knn_vector",
                         "dimension": dim,
                         "method": {
-                            "name": "disk_ann",
+                            "name": self._knn_method_name(engine),
                             "space_type": space_type,
                             "engine": engine,
                             "parameters": {"ef_construction": ef_construction, "m": m},
@@ -566,7 +577,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 if "jvector" in error_msg:
                     msg = (
                         "The 'jvector' engine is not available in your OpenSearch installation. "
-                        "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+."
+                        "It requires the opensearch-jvector plugin; use 'faiss' or 'lucene' with standard OpenSearch."
                     )
                     raise ValueError(msg) from creation_error
                 if "index.knn" in error_msg:

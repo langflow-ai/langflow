@@ -49,6 +49,23 @@ class SecuritySettings(BaseModel):
     networks can either allowlist those hosts or set this to False. For the SQL Database
     components, the separate LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS toggle still governs local-file
     dialects (e.g. sqlite) independently of this flag."""
+    provider_credential_allowed_hosts: list[str] = []
+    """Comma-separated list of hosts that may receive server-environment provider credentials.
+
+    Model-provider components whose API key resolves to a value provisioned in the server
+    process environment (seeded credential variables or the load-from-DB env fallback) only
+    send that key to the provider's own default endpoint. A tenant who points the
+    component's base URL at any other host gets the request refused, because the operator —
+    not the tenant — owns that credential and never sanctioned the destination.
+
+    List a host here (exact hostname, 'host:port', or wildcard '*.example.com') when the
+    deployment legitimately fronts a provider with a proxy/gateway and provisions the key
+    via the environment, e.g. 'llm-gateway.corp.example'. A listed host is still required to
+    be reached over HTTPS; prefix the entry with 'http://' to also accept the credential
+    travelling there in cleartext, e.g. 'http://llm-gateway.internal:8000'. Tenants' own keys
+    (typed or stored as their own global variables) are unaffected by this setting and follow
+    the ordinary SSRF policy above."""
+
     connector_ssrf_allow_loopback: bool = True
     """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for ordinary HTTP
     CONNECTOR URLs, even while connector SSRF validation is on.
@@ -65,6 +82,30 @@ class SecuritySettings(BaseModel):
     ``lfx.base.models.provider_ssrf`` use the strict path and require an explicit
     ``ssrf_allowed_hosts`` entry for loopback. Has no effect on the API Request component,
     database URLs, or git URLs, which validate loopback independently."""
+
+    kb_allowed_hosts: list[str] = []
+    """Comma-separated EXCLUSIVE allow-list of destination hosts for the network Knowledge Base
+    backends (OpenSearch, Chroma Cloud). Supports the same patterns as ssrf_allowed_hosts:
+    exact hostnames, wildcard domains (*.corp.example), exact IPs, and CIDR ranges.
+
+    Unlike ssrf_allowed_hosts — an *exception* list that widens the SSRF blocklist and still
+    admits every unlisted public host — this list is exclusive: a KB destination a tenant
+    supplied is refused unless its host appears here. That is deliberate. Both KB SDKs re-resolve
+    DNS when they connect and expose no seam to pin the address that was validated (chromadb
+    builds its own httpx client and dials during construction; langchain's OpenSearchVectorSearch
+    hands one kwargs dict to both its urllib3 and aiohttp clients), so a tenant-chosen hostname
+    whose answer flips between validation and connection can still land on an internal address.
+    Requiring the operator to name the host closes that, where merely "looks public" does not.
+
+    A destination resolved from a process environment variable is already operator-controlled
+    and does not need to be listed: an operator who sets OPENSEARCH_URL on the server keeps
+    working with no configuration change. Only values written through the Langflow variables
+    UI/API, or posted in a request body (Chroma's cloud_host), consult this list. Chroma Cloud's
+    fixed default host is not tenant input and is always permitted.
+
+    This is a second gate, not a replacement: an approved host must still satisfy the IP/DNS
+    policy in ssrf_protection_enabled / ssrf_allowed_hosts. Both gates share the
+    connector_ssrf_validation_enabled kill switch."""
 
     # API key handling
     disable_track_apikey_usage: bool = False
@@ -209,20 +250,24 @@ class SecuritySettings(BaseModel):
     workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
     Only used when sandbox_backend is not "none"."""
 
-    restrict_local_file_access: bool = False
+    restrict_local_file_access: bool = True
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
     may only read paths that resolve inside the authenticated user's or executing flow's storage
     subdirectory under ``config_dir``, where uploaded files live.
 
-    These components accept a filesystem path from a tenant-controlled input field. With the
-    default (False) a tenant can set that path to an absolute server path (``/etc/passwd``, the
+    These components accept a filesystem path from a tenant-controlled input field. Without the
+    restriction a tenant can set that path to an absolute server path (``/etc/passwd``, the
     SQLite DB, secrets) or a traversal string and read arbitrary server files — or another
-    tenant's uploads. Multi-tenant / untrusted-user deployments that disallow user-authored
-    components should set this to True (alongside ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so
-    these components cannot read server files or storage belonging to another user or flow.
+    tenant's uploads. The same flag also blocks the local-file SQL dialects (``sqlite``,
+    ``duckdb``) in the SQL Database components, which would otherwise turn an arbitrary path
+    such as ``sqlite:////etc/passwd`` or ``sqlite:////app/data/.cache/langflow/secret_key``
+    into an arbitrary file read.
 
-    Defaults to False to preserve existing single-tenant behavior, where reading local server
-    files by absolute path is a legitimate feature."""
+    Defaults to True (secure by default): tenant-controlled components cannot read server
+    files or storage belonging to another user or flow out of the box. Single-tenant
+    self-hosted deployments that intentionally read local server files by absolute path can
+    set ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false`` to restore the previous behavior —
+    note that this re-enables arbitrary local file reads for any authenticated user."""
 
     mcp_server_docker_hardening: bool = False
     """If set to True, applies a strict docker-argument policy to MCP stdio servers (both
