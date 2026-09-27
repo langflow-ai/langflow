@@ -48,6 +48,7 @@ This telemetry event is sent once when the telemetry service starts.
 - **AutoLogin**: Indicates whether the auto-login feature is enabled, reflecting user preference settings.
 - **CacheType**: Type of caching mechanism used, which impacts performance and efficiency.
 - **BackendOnly**: Boolean indicating whether Langflow is running in backend-only mode, useful for understanding deployment configurations.
+- **DatabaseDialect**: The database engine Langflow is configured to use, such as `sqlite` or `postgresql`. Only the engine name is sent, never the database URL, host, or credentials.
 - **Desktop**: Indicates whether Langflow is running in desktop mode (Langflow Desktop), helping to understand usage patterns across different deployment types.
 
 ### Email

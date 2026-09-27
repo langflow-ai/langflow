@@ -15,6 +15,7 @@ const CustomConnectionRefComponent = ({
   inputValues,
   capabilities = [],
   identityKind,
+  ownershipMode,
   ...baseInputProps
 }: InputProps<string, ConnectionRefComponentType>) => {
   return (
@@ -26,6 +27,7 @@ const CustomConnectionRefComponent = ({
       inputValues={inputValues}
       capabilities={capabilities}
       identityKind={identityKind}
+      ownershipMode={ownershipMode}
     />
   );
 };

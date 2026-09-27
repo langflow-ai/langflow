@@ -29,13 +29,33 @@ from pydantic import ValidationError
 
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.deps import get_connection_resolver_service
-from langflow.services.triggers.constants import ACTOR_TRIGGER_DISPATCHER, FAMILY_TRIGGER_LISTENER
+from langflow.services.triggers.constants import (
+    ACTOR_TRIGGER_DISPATCHER,
+    FAMILY_TRIGGER_LISTENER,
+    FAMILY_TRIGGER_PUSH,
+    KIND_INBOUND_WEBHOOK,
+    PUSH_MECHANISMS,
+)
 
 if TYPE_CHECKING:
     from lfx.integrations.errors import IntegrationError
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.trigger.model import Trigger
+
+
+def family_for(trigger: Trigger) -> str:
+    """The execution-principal family a run of ``trigger`` belongs to (trigger contract section 5).
+
+    ``trigger_push`` for anything a provider (or a third-party caller) pushes to
+    the ingress route; ``trigger_listener`` for everything else. The two share
+    their rules today - both execute as the flow owner, non-interactively - so
+    this is about an audit row saying where a run truly came from.
+    """
+    mechanism = (trigger.config or {}).get("mechanism_id")
+    if trigger.kind == KIND_INBOUND_WEBHOOK or mechanism in PUSH_MECHANISMS:
+        return FAMILY_TRIGGER_PUSH
+    return FAMILY_TRIGGER_LISTENER
 
 
 def trigger_execution_principal(trigger: Trigger, *, family: str = FAMILY_TRIGGER_LISTENER) -> ExecutionPrincipal:

@@ -228,3 +228,25 @@ class TriggerEventRead(BaseModel):
     def _default_payload(cls, value: Any) -> Any:
         """Legacy/NULL payloads read back as ``{}`` rather than failing the response."""
         return {} if value is None else value
+
+
+class TriggerIngressRead(BaseModel):
+    """Where a caller posts to a trigger. Never carries the secret."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    trigger_id: UUID
+    public_id: str | None
+    ingress_url: str | None
+    has_signing_secret: bool
+
+
+class TriggerSigningSecretRead(TriggerIngressRead):
+    """The one response that carries a signing secret, on the way out.
+
+    Nothing reads the secret back: the stored form is encrypted, the GET route
+    reports only whether one is set, and a lost secret is rotated rather than
+    recovered.
+    """
+
+    signing_secret: str
