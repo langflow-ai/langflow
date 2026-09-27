@@ -3,7 +3,8 @@
 Gauges refresh every tick; all-time outcome counters refresh every five minutes
 because their aggregate still scans job history. Prometheus callbacks read only
 the cached values. Background submissions are identified by the persisted request
-marker, not by events that orphan reconciliation can also append to other jobs.
+marker, excluding stored sync results and events that orphan reconciliation can
+also append to other jobs.
 
 Query functions accept an injected aware-UTC ``now`` for deterministic age and
 submission-to-finish duration calculations. SQLite returns naive datetimes, which
@@ -44,9 +45,16 @@ def _is_background_job():
     Sync runs and ingestion jobs can acquire events during orphan cleanup, so
     events alone cannot identify submissions. ``as_string`` emits a JSON text
     extraction on both SQLite and Postgres, excluding missing and JSON-null
-    requests while accepting an empty request object.
+    requests while accepting an empty request object. Stored sync results also
+    carry a request marker, so exclude their explicit ``mode="sync"``. Coalescing
+    the mode preserves background requests with a missing or JSON-null mode.
     """
-    return (Job.type == JobType.WORKFLOW) & col(Job.job_metadata)["request"].as_string().is_not(None)
+    request = col(Job.job_metadata)["request"]
+    return (
+        (Job.type == JobType.WORKFLOW)
+        & request.as_string().is_not(None)
+        & (func.coalesce(request["mode"].as_string(), "") != "sync")
+    )
 
 
 def _has_job_events():

@@ -608,7 +608,43 @@ async def test_orphan_sweep_does_not_turn_other_jobs_into_background_jobs():
     assert durations == (10.0, 10.0)
 
 
-async def test_background_marker_identifies_queued_and_suspended_jobs_without_events():
+@pytest.mark.parametrize("background_request", [{}, {"mode": None}, {"mode": "background"}])
+async def test_stored_sync_results_do_not_count_as_background_jobs(background_request):
+    """Persisting a sync result must not change background totals or durations."""
+    from langflow.api.v2.workflow_execution import _persist_sync_result
+    from lfx.schema.workflow import WorkflowExecutionResponse
+
+    service = JobService()
+    background = await _seed_terminal(service, JobStatus.COMPLETED)
+    await service.update_job_metadata(background, {"request": background_request})
+    sync_job = await _seed_run_job(service)
+    now = datetime.now(timezone.utc)
+    async with session_scope() as session:
+        for job_id, duration in ((background, 10), (sync_job, 3600)):
+            row = await session.get(Job, job_id)
+            row.created_timestamp = now - timedelta(seconds=duration)
+            row.finished_timestamp = now
+            session.add(row)
+        await session.flush()
+        before = await terminal_counts(session)
+        assert before["started"] == before["completed"] == 1
+        assert await duration_percentiles(session, now, window_seconds=300) == (10.0, 10.0)
+
+    sync_row = await service.get_job_by_job_id(sync_job)
+    request = {"mode": "sync", "flow_id": str(sync_row.flow_id), "session_id": "sync-session"}
+    response = WorkflowExecutionResponse(flow_id=str(sync_row.flow_id), status="completed")
+    await _persist_sync_result(service, sync_job, response, request, sync_row.flow_id)
+
+    async with session_scope() as session:
+        stored = await session.get(Job, sync_job)
+        assert stored.job_metadata["request"] == request
+        assert stored.result == {"status": "completed", "outputs": []}
+        assert await terminal_counts(session) == before
+        assert await duration_percentiles(session, now, window_seconds=300) == (10.0, 10.0)
+
+
+@pytest.mark.parametrize("sync_metadata", [None, {"request": {"mode": "sync"}}])
+async def test_background_marker_identifies_queued_and_suspended_jobs_without_events(sync_metadata):
     """Only submissions contribute even before an event is appended."""
     service = JobService()
     now = datetime.now(timezone.utc)
@@ -616,13 +652,15 @@ async def test_background_marker_identifies_queued_and_suspended_jobs_without_ev
     suspended = uuid4()
     await _create_background_job(service, job_id=suspended, flow_id=uuid4())
     await service.update_job_status(suspended, JobStatus.SUSPENDED)
-    sync_job = uuid4()
-    await service.create_job(job_id=sync_job, flow_id=uuid4())
+    for status in (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED):
+        sync_job = uuid4()
+        await service.create_job(job_id=sync_job, flow_id=uuid4(), initial_metadata=sync_metadata)
+        await service.update_job_status(sync_job, status)
+        async with session_scope() as session:
+            row = await session.get(Job, sync_job)
+            row.created_timestamp = now - timedelta(hours=1)
+            session.add(row)
     async with session_scope() as session:
-        row = await session.get(Job, sync_job)
-        row.created_timestamp = now - timedelta(hours=1)
-        session.add(row)
-        await session.flush()
         assert await count_nonterminal_jobs(session) == {"queued": 1, "suspended": 1}
         assert await oldest_queued_seconds(session, now) < 60
         await BackgroundMetricsCollector(interval=15).collect_once(session, now=now)
