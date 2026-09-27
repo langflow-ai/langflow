@@ -57,9 +57,7 @@ def _safe_field_name(name: str, used: set[str], reserved: set[str] | None = None
     base = name.lstrip("_") or "field"
     candidate = base
     i = 1
-    while candidate in used or (
-        reserved is not None and candidate in reserved and candidate != name
-    ):
+    while candidate in used or (reserved is not None and candidate in reserved and candidate != name):
         candidate = f"{base}_{i}"
         i += 1
     used.add(candidate)
@@ -254,13 +252,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 # Add alias for camelCase if field name is snake_case
                 field_kwargs = {"description": prop_schema.get("description")}
                 if "_" in prop_name:
-                    exclude_safe = (
-                        prop_name.lstrip("_") in wire_names
-                        and prop_name.lstrip("_") != prop_name
-                    )
-                    field_kwargs["validation_alias"] = _alias_choices(
-                        safe_name, prop_name, exclude_safe=exclude_safe
-                    )
+                    exclude_safe = prop_name.lstrip("_") in wire_names and prop_name.lstrip("_") != prop_name
+                    field_kwargs["validation_alias"] = _alias_choices(safe_name, prop_name, exclude_safe=exclude_safe)
                     # Emit the original wire name (including leading underscores)
                     # on model_dump(by_alias=True), not the sanitized field name.
                     field_kwargs["serialization_alias"] = prop_name
@@ -294,12 +287,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         # Add alias for camelCase if field name is snake_case
         field_kwargs = {"description": fdef.get("description")}
         if "_" in fname:
-            exclude_safe = (
-                fname.lstrip("_") in top_wire_names and fname.lstrip("_") != fname
-            )
-            field_kwargs["validation_alias"] = _alias_choices(
-                safe_name, fname, exclude_safe=exclude_safe
-            )
+            exclude_safe = fname.lstrip("_") in top_wire_names and fname.lstrip("_") != fname
+            field_kwargs["validation_alias"] = _alias_choices(safe_name, fname, exclude_safe=exclude_safe)
             field_kwargs["serialization_alias"] = fname
 
         top_fields[safe_name] = (py_type, Field(default, **field_kwargs))
