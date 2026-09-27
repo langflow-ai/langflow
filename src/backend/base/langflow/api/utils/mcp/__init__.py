@@ -8,6 +8,7 @@ from langflow.api.utils.mcp.config_utils import (
     get_project_sse_url,
     get_project_streamable_http_url,
     get_url_by_os,
+    project_mcp_server_name_candidates,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "get_project_sse_url",
     "get_project_streamable_http_url",
     "get_url_by_os",
+    "project_mcp_server_name_candidates",
 ]

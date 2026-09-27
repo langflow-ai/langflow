@@ -3,6 +3,7 @@ import json
 import subprocess
 import tempfile
 import threading
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +12,15 @@ from lfx.components.files_and_knowledge import file as file_component_module
 from lfx.components.files_and_knowledge.file import FileComponent
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+@pytest.fixture(autouse=True)
+def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise file-loading mechanics against tmp_path, not containment; opt out of restriction."""
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
 
 
 class TestFileComponentFrontendMetadata:

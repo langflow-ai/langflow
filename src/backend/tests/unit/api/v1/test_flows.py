@@ -1064,6 +1064,103 @@ async def test_create_flows_with_explicit_folder(client: AsyncClient, logged_in_
     assert all(item["folder_id"] == project_id for item in result), "All flows must be created in the target folder"
 
 
+async def test_create_flows_rejects_absolute_fs_path_outside_allowed_directory(client: AsyncClient, logged_in_headers):
+    """Regression (H1-4006600): the batch route must apply the same fs_path containment check as siblings."""
+    malicious_name = f"batch-leak-{uuid.uuid4()}"
+    response = await client.post(
+        "api/v1/flows/batch/",
+        json={"flows": [{"name": malicious_name, "data": {}, "fs_path": "/etc/passwd"}]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "within" in response.json()["detail"].lower() or "outside" in response.json()["detail"].lower()
+
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    persisted_names = {flow["name"] for flow in listed.json()}
+    assert malicious_name not in persisted_names
+
+
+async def test_create_flows_rejects_fs_path_directory_traversal(client: AsyncClient, logged_in_headers):
+    malicious_name = f"batch-traversal-{uuid.uuid4()}"
+    response = await client.post(
+        "api/v1/flows/batch/",
+        json={"flows": [{"name": malicious_name, "data": {}, "fs_path": "../../etc/passwd"}]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+async def test_create_flows_rejects_empty_fs_path(client: AsyncClient, logged_in_headers):
+    response = await client.post(
+        "api/v1/flows/batch/",
+        json={"flows": [{"name": f"batch-empty-{uuid.uuid4()}", "data": {}, "fs_path": ""}]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+async def test_create_flows_fs_path_preflight_is_atomic(client: AsyncClient, logged_in_headers):
+    """A malicious fs_path anywhere in the batch must reject the whole request before any row is persisted."""
+    allowed_name = f"batch-preflight-allowed-{uuid.uuid4()}"
+    malicious_name = f"batch-preflight-leak-{uuid.uuid4()}"
+    response = await client.post(
+        "api/v1/flows/batch/",
+        json={
+            "flows": [
+                {"name": allowed_name, "data": {}},
+                {"name": malicious_name, "data": {}, "fs_path": "/etc/passwd"},
+            ]
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    persisted_names = {flow["name"] for flow in listed.json()}
+    assert allowed_name not in persisted_names
+    assert malicious_name not in persisted_names
+
+
+async def test_create_flows_accepts_relative_fs_path(client: AsyncClient, logged_in_headers):
+    flow_name = f"batch-relative-{uuid.uuid4()}"
+    response = await client.post(
+        "api/v1/flows/batch/",
+        json={"flows": [{"name": flow_name, "data": {}, "fs_path": "batch_flow.json"}]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    result = response.json()
+    assert len(result) == 1
+    assert result[0]["name"] == flow_name
+
+
+async def test_upload_project_zip_rejects_out_of_tenant_fs_path(client: AsyncClient, logged_in_headers):
+    """Regression (H1-4006600): the ZIP project-upload route reaches create_flows and must reject bad fs_path."""
+    import io
+    import json
+    import zipfile
+
+    flow_name = f"zip-leak-{uuid.uuid4()}"
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        zf.writestr(
+            f"{flow_name}.json",
+            json.dumps({"name": flow_name, "description": "", "data": {}, "fs_path": "/etc/passwd"}),
+        )
+    zip_buffer.seek(0)
+
+    response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("evil.zip", zip_buffer.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    persisted_names = {flow["name"] for flow in listed.json()}
+    assert flow_name not in persisted_names
+
+
 async def test_read_basic_examples(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
     result = response.json()

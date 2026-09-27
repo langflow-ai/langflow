@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tabs-button";
 import { Textarea } from "@/components/ui/textarea";
 import { MAX_MCP_SERVER_NAME_LENGTH } from "@/constants/constants";
+import { McpServerNotFoundError } from "@/controllers/API/queries/mcp/mcp-server-not-found-error";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-server";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -116,6 +117,12 @@ export default function AddMcpServerModal({
   const raiseError = (message: string, fields: string[] = []) => {
     setError(message);
     setErrorFields(fields);
+  };
+  const submitErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof McpServerNotFoundError) {
+      return t("mcp.servers.errorNoLongerExists");
+    }
+    return err instanceof Error ? err.message : fallback;
   };
   const clearError = () => {
     setError(null);
@@ -257,9 +264,7 @@ export default function AddMcpServerModal({
         setStdioHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
         clearError();
       } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : t("mcp.modal.errorFailedAdd"),
-        );
+        setError(submitErrorMessage(err, t("mcp.modal.errorFailedAdd")));
       }
       return;
     }
@@ -325,9 +330,7 @@ export default function AddMcpServerModal({
         setHttpHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
         clearError();
       } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : t("mcp.modal.errorFailedAdd"),
-        );
+        setError(submitErrorMessage(err, t("mcp.modal.errorFailedAdd")));
       }
       return;
     }
@@ -371,11 +374,7 @@ export default function AddMcpServerModal({
       setJsonValue("");
       clearError();
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t("mcp.modal.errorFailedAddMultiple"),
-      );
+      setError(submitErrorMessage(err, t("mcp.modal.errorFailedAddMultiple")));
     }
   }
 

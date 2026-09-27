@@ -25,7 +25,12 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
-from lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type
+from lfx.base.data.storage_utils import (
+    parse_storage_path,
+    read_file_bytes,
+    require_storage_service,
+    validate_image_content_type,
+)
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
@@ -980,7 +985,7 @@ class FileComponent(BaseFileComponent):
             msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
             raise ValueError(msg)
 
-        storage_service = get_storage_service()
+        storage_service = require_storage_service(get_storage_service())
         flow_id, filename = parsed
 
         # Get file content from S3

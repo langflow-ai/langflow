@@ -1,7 +1,15 @@
 schema_version: 1
 release: 1.12.x
 
-entries: []
+entries:
+  - id: GH-15261
+    title: CIDR-allowlisted provider IP endpoints rejected over HTTP
+    status: resolved
+    area: components
+    first_bad_version: 1.12.3rc0
+    last_known_good_version: 1.12.2
+    resolved_in_version: 1.12.3
+    workaround: Add the endpoint's exact IP address to LANGFLOW_SSRF_ALLOWED_HOSTS.
 
 # To add an entry, copy the template below and fill in the fields.
 # For more information, see regressions/README.md.

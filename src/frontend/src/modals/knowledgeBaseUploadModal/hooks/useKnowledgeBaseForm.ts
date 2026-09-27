@@ -66,9 +66,9 @@ function validateBackendConfig(
     return null;
   }
   // OpenSearch no longer requires an ``index_name``: the backend derives a
-  // unique index per Knowledge Base from its name when one isn't supplied, so
-  // each KB is isolated in its own index instead of sharing a single global
-  // one. An explicitly-set ``index_name`` is still honored downstream as an
+  // unique index per Knowledge Base from its owner and name when one isn't
+  // supplied, so each KB is isolated in its own index instead of sharing a
+  // single global one. An explicitly-set ``index_name`` is still honored downstream as an
   // external-index override.
   return null;
 }

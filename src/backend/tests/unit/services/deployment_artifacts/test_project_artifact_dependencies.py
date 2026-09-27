@@ -48,6 +48,20 @@ def test_scrub_backend_config_keeps_routing_and_variable_name_pointers():
 
 
 @pytest.mark.parametrize(
+    ("cfg", "name_key"),
+    [
+        ({"mode": "cloud", "collection_name": "docs", "collection_name_origin": "legacy_kb_name"}, "collection_name"),
+        ({"index_name": "docs", "index_name_origin": "legacy_kb_name"}, "index_name"),
+    ],
+)
+def test_scrub_backend_config_keeps_pinned_storage_names(cfg, name_key):
+    # A knowledge base pinned to its pre-scoping storage must deploy pointing at it.
+    scrubbed = _scrub_backend_config(cfg)
+    assert scrubbed[name_key] == "docs"
+    assert f"{name_key}_origin" not in scrubbed
+
+
+@pytest.mark.parametrize(
     "secret_key",
     ["api_key", "apikey", "password", "auth_token", "connection_string", "db_secret", "private_key"],
 )

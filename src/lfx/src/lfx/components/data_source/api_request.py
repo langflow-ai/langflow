@@ -34,7 +34,7 @@ from lfx.utils.ssrf_protection import (
     is_ssrf_protection_enabled,
     validate_and_resolve_url,
 )
-from lfx.utils.ssrf_transport import create_ssrf_protected_client
+from lfx.utils.ssrf_transport import create_ssrf_protected_client, pin_host_for_url
 
 # Define fields for each mode
 MODE_FIELDS = {
@@ -621,9 +621,11 @@ class APIRequestComponent(Component):
             hostname extraction failure).
         """
         if is_ssrf_protection_enabled() and validated_ips:
-            # Extract hostname from the URL so the custom transport can pin it while
-            # preserving the Host header for virtual hosting / TLS SNI.
-            hostname = urlparse(url).hostname
+            # Extract the host in the IDNA/punycode form httpx connects with, so the
+            # custom transport can pin it while preserving the Host header for virtual
+            # hosting / TLS SNI. A Unicode hostname here would miss the pin at connect
+            # time for IDN hosts.
+            hostname = pin_host_for_url(url)
             if hostname:
                 # The custom transport tries validated IPs in order (dual-stack / LB).
                 return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)

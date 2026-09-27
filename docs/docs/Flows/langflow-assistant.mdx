@@ -282,6 +282,25 @@ For example, to prompt **Langflow Assistant** to update the system prompt field 
 Update @Agent.System Prompt to always respond in bullet points.
 ```
 
+## Use slash commands
+
+Slash commands change how **Langflow Assistant** behaves in your browser session.
+Commands run locally and are never sent to the model.
+
+In the **Langflow Assistant** prompt input, enter `/` to list the available commands.
+Use the arrow keys to highlight a command, and then press <kbd>Enter</kbd> or <kbd>Tab</kbd>, or click the command, to insert it into the input.
+Add an argument if the command takes one, and then press <kbd>Enter</kbd> to run it.
+To close the list without inserting a command, press <kbd>Esc</kbd>.
+
+| Command | Description |
+|---------|-------------|
+| `/skip-all` | Turns automatic approval on or off for plans, flow proposals, and validated components. The setting persists across sessions. |
+| `/history [0–100 \| off]` | Sets how many past messages the Assistant remembers. The minimum is `0` and the maximum is `100`. `/history off` restores the default. Without an argument, the command reports the current value. |
+| `/iterations [1–200 \| off]` | Sets the maximum number of steps the Assistant can take for each request. The default is `100`, the minimum is `1`, and the maximum is `200`. `/iterations off` restores the default. Without an argument, the command reports the current value. |
+
+If **Langflow Assistant** stops with `The agent ran out of steps before finishing`, the request needed more steps than the `/iterations` limit allows.
+For more information, see [The agent ran out of steps before finishing](#the-agent-ran-out-of-steps-before-finishing).
+
 ## Use a local or OpenAI-compatible model
 
 **Langflow Assistant** can run on a model served from your own machine or from any OpenAI-compatible endpoint, so your prompts never leave your environment.
@@ -322,6 +341,36 @@ For an MCP client, point it at `$LANGFLOW_URL/api/v1/agentic/mcp` with your API 
 Every tool call is authorized as your own user, so a client can only reach the flows your API key can reach.
 
 For more information on creating an API key, see [API keys](/api-keys-and-authentication).
+
+## Troubleshoot Langflow Assistant
+
+### The agent ran out of steps before finishing
+
+**Langflow Assistant** stops a request and shows the following error:
+
+```text
+The agent ran out of steps before finishing. Try again, or break the request into smaller parts.
+```
+
+When you expand **Error details**, the **Component** is **Agent**, and the **Step** shows what the Assistant was doing when it stopped, such as `generating_flow`.
+
+This error means the request needed more steps than the step limit allows.
+Each step is one model call, and each tool the Assistant uses, such as searching for components, generating a custom component, or building and running the flow, takes a step.
+Requests that create several custom components and a flow with many components in a single prompt use the most steps.
+Because the model chooses a different path each time, the same prompt can finish on one attempt and run out of steps on another.
+
+To resolve this error, do any of the following:
+
+* Raise the step limit for your browser session, and then send the request again.
+For example, enter `/iterations 150` in the **Langflow Assistant** prompt input, and then press <kbd>Enter</kbd>.
+The default limit is `100`, and the maximum is `200`.
+To check the current limit, enter `/iterations` without an argument.
+* To raise the default limit for every user of your Langflow server, set the [`LANGFLOW_ASSISTANT_ITERATIONS`](/environment-variables) environment variable, and then restart Langflow.
+A value set with `/iterations` still overrides the server default for that browser session.
+* Split the request into smaller prompts. For example, ask **Langflow Assistant** to create the custom components first, and then ask it to build the flow that uses them.
+
+A higher step limit doesn't make simple requests more expensive, because the Assistant stops as soon as the request is done.
+It only lets long requests use more model calls and tokens before they stop.
 
 ## See also
 

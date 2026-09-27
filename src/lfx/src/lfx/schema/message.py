@@ -70,6 +70,21 @@ def _is_text_like_extension(file_path: Any) -> bool:
     return suffix in TEXT_FILE_TYPES
 
 
+def _is_image_attachment(file_path: str) -> bool:
+    """Return True for image attachments, including ones that only exist in remote storage.
+
+    On local storage the file is checked by its content, so a mislabelled binary is never sent as
+    an image. On S3 the path is a bucket key that PIL can't open, so it is judged by its extension —
+    the same image list ChatInput accepts.
+    """
+    from lfx.base.data.utils import IMG_FILE_TYPES
+    from lfx.services.deps import get_settings_service
+
+    if get_settings_service().settings.storage_type != "s3":
+        return is_image_file(file_path)
+    return Path(file_path).suffix.lstrip(".").lower() in IMG_FILE_TYPES
+
+
 class Message(Data):
     """Message schema for Langflow.
 
@@ -532,7 +547,7 @@ class Message(Data):
                 continue
 
             try:
-                if is_image_file(file):
+                if _is_image_attachment(file):
                     content_dicts.append(create_image_content_dict(file, None, model_name))
                     continue
 
@@ -549,8 +564,12 @@ class Message(Data):
                     )
                     continue
 
+                from lfx.base.data.storage_utils import get_file_size, to_storage_path
+                from lfx.base.data.utils import parse_text_file_to_data
+
+                storage_path = to_storage_path(file)
                 try:
-                    file_size_bytes = Path(file).stat().st_size
+                    file_size_bytes = get_file_size(storage_path)
                 except (OSError, ValueError) as exc:
                     logger.warning(
                         "Skipping attachment during message conversion: could not stat file",
@@ -562,9 +581,7 @@ class Message(Data):
                 if file_size_bytes > MAX_ATTACHMENT_SIZE_BYTES:
                     continue
 
-                from lfx.base.data.utils import parse_text_file_to_data
-
-                parsed_file = parse_text_file_to_data(file, silent_errors=True)
+                parsed_file = parse_text_file_to_data(storage_path, silent_errors=True)
                 parsed_data = parsed_file.data if parsed_file else {}
                 parsed_text = parsed_data.get("text") if isinstance(parsed_data, dict) else None
                 if not parsed_text:
@@ -597,6 +614,21 @@ class Message(Data):
                     "Skipping unsupported attachment during message conversion",
                     error_type=type(exc).__name__,
                     file_name=_safe_attachment_name(file),
+                )
+                continue
+            except Exception as exc:  # noqa: BLE001
+                # Storage backends raise their own error types, outside this hierarchy: S3 only
+                # translates a 404 into FileNotFoundError and re-raises everything else (an
+                # AccessDenied from a role without GetObject, throttling, a network blip) as a
+                # botocore ClientError, which is not an OSError. One unreadable attachment must
+                # not take the whole message down with it, so it is skipped like any other
+                # failure — loudly, with the traceback, because an unexpected error here is
+                # usually a storage misconfiguration an operator needs to see.
+                logger.error(
+                    "Skipping attachment during message conversion: storage backend error",
+                    error_type=type(exc).__name__,
+                    file_name=_safe_attachment_name(file),
+                    exc_info=True,
                 )
                 continue
         return content_dicts
