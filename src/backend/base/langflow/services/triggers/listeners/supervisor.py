@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -55,7 +54,6 @@ from pydantic import ValidationError
 from sqlmodel import col, select, update
 
 from langflow.services.database.models.connection.model import Connection
-from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
@@ -65,9 +63,11 @@ from langflow.services.triggers.listeners import connection_leases, replicas
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
     ListenerTrigger,
+    adapter_spec,
     build_adapter,
     is_listener_kind,
 )
+from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, owned_by_trigger_owner
 from langflow.services.triggers.principal import trigger_execution_principal
 
 if TYPE_CHECKING:
@@ -79,9 +79,7 @@ if TYPE_CHECKING:
 
 #: Connection statuses that no amount of retrying fixes. The owner has to
 #: re-consent, so the triggers say so and the listener stops dialling.
-_UNUSABLE_CONNECTION_STATUSES = frozenset(
-    {PersistedConnectionStatus.REVOKED.value, PersistedConnectionStatus.EXPIRED.value}
-)
+_UNUSABLE_CONNECTION_STATUSES = UNUSABLE_CONNECTION_STATUSES
 
 #: Adapter failures that mean the same thing.
 _NEEDS_RECONNECT_ERRORS = (
@@ -143,9 +141,13 @@ async def load_desired_state(session: AsyncSession) -> dict[UUID, list[ListenerT
     """
     statement = (
         select(Trigger)
+        # Only through a connection the trigger's owner owns: a row that names a
+        # colleague's or an instance connection is never dialled, however it was
+        # written (``ownership.py``).
+        .join(Connection, col(Connection.id) == col(Trigger.connection_id))
         .where(
             Trigger.state == TriggerState.ACTIVE.value,
-            col(Trigger.connection_id).is_not(None),
+            owned_by_trigger_owner(),
         )
         # Ordered so the *first* trigger on a connection is the same row on
         # every pass: it is the one ``build_adapter`` is given, so an unordered
@@ -227,9 +229,10 @@ def _adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
     later edit to that trigger - a new mechanism, a new poll interval - cannot
     reach a socket that is already open. Comparing this spec is how the
     supervisor notices and rebuilds instead of running yesterday's config
-    forever.
+    forever. An adapter registered as reading its configuration per event
+    leaves the configuration out, so editing a filter never re-opens a socket.
     """
-    return (trigger.kind, trigger.mechanism_id, json.dumps(trigger.config or {}, sort_keys=True, default=str))
+    return adapter_spec(trigger)
 
 
 @dataclass
@@ -622,13 +625,17 @@ class ListenerSupervisor:
             """
             target = next((t for t in worker.triggers if trigger_id is None or t.id == trigger_id), None)
             if target is None:
-                msg = "No trigger on this connection to resolve a credential for."
-                raise ConnectionUnresolvedError(provider=None, hint=msg)
+                # A trigger id that is not armed on this connection (or none at
+                # all). Typed, so the supervisor classifies it rather than
+                # treating a programming slip as a transient failure.
+                handle = f"connection:{worker.connection_id}"
+                raise ConnectionUnresolvedError(handle)
             async with session_scope() as session:
                 row = await session.get(Connection, worker.connection_id)
                 trigger_row = await session.get(Trigger, target.id)
             if row is None or trigger_row is None:
-                raise ConnectionUnresolvedError(provider=None)
+                handle = f"connection:{worker.connection_id}"
+                raise ConnectionUnresolvedError(handle)
             try:
                 request = ConnectionResolutionRequest(
                     ref=ConnectionRef(provider=row.provider_key, name=row.name),
@@ -641,8 +648,14 @@ class ListenerSupervisor:
                 # reconnect" instead of retrying a row that can never work -
                 # the same treatment ``principal.connection_preflight`` gives it
                 # on the dispatch side.
-                raise ConnectionUnresolvedError(provider=row.provider_key) from exc
+                handle = f"{row.provider_key}/{row.name}"
+                raise ConnectionUnresolvedError(handle, provider=row.provider_key) from exc
             return await get_connection_resolver_service().resolve(request)
+
+        async def mark_connected() -> None:
+            """The connection has held: forget its failures and clear a stale banner."""
+            if not worker.succeeded_since_failure:
+                await self._succeeded(worker)
 
         return ListenerContext(
             connection_id=worker.connection_id,
@@ -651,6 +664,7 @@ class ListenerSupervisor:
             save_cursor=save_cursor,
             resolve_credential=resolve_credential,
             stopping=worker.stopping,
+            mark_connected=mark_connected,
         )
 
     # ------------------------------------------------------------------ #

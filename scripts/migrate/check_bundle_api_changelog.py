@@ -74,6 +74,8 @@ IN_SCOPE_PATHS: tuple[str, ...] = (
     "src/lfx/src/lfx/io/__init__.py",
     "src/lfx/src/lfx/custom/custom_component/component.py",
     "src/lfx/src/lfx/services/connection",
+    # Trigger base class provider bundles subclass (lfx-slack's trigger nodes)
+    "src/lfx/src/lfx/base/triggers",
 )
 
 
