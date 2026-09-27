@@ -251,6 +251,10 @@ export default function FlowBuildingComponent() {
                   <AnimatePresence>
                     {buildInfo?.error && (
                       <motion.div
+                        role="region"
+                        aria-label={t("flowBuild.buildFailed")}
+                        tabIndex={0}
+                        className="max-h-48 overflow-y-auto"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
@@ -258,7 +262,7 @@ export default function FlowBuildingComponent() {
                       >
                         <Markdown
                           remarkPlugins={[remarkGfm]}
-                          className="my-1.5 align-text-top truncate-doubleline"
+                          className="my-1.5 break-words [&>p+p]:mt-2"
                           components={{
                             a: ({ node, ...props }) => (
                               <a
@@ -270,13 +274,6 @@ export default function FlowBuildingComponent() {
                                 {props.children}
                               </a>
                             ),
-                            p({ node, ...props }) {
-                              return (
-                                <span className="inline-block w-fit max-w-full align-text-top truncate-doubleline">
-                                  {props.children}
-                                </span>
-                              );
-                            },
                           }}
                         >
                           {buildInfo?.error?.join("\n")}

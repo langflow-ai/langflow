@@ -40,6 +40,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy import JSON, BigInteger, CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 # JSONB on Postgres for GIN indexability + binary storage; JSON on
@@ -143,6 +144,6 @@ class KnowledgeBaseRecord(KnowledgeBaseRecordBase, table=True):  # type: ignore[
         UniqueConstraint("user_id", "name", name="uq_knowledge_base_user_name"),
         CheckConstraint(
             "status IN (" + ", ".join(f"'{v}'" for v in _KB_STATUS_VALUES) + ")",
-            name="ck_knowledge_base_status",
+            name=conv("ck_knowledge_base_status"),
         ),
     )

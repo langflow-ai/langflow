@@ -2,6 +2,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage
 from lfx.components.llm_operations.guardrails import GuardrailsComponent
 from lfx.schema import Data
 from lfx.schema.message import Message
@@ -288,6 +289,50 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         passed, _explanation = component._check_guardrail(mock_llm, "test input", "PII", "personal info")
 
         assert passed is True  # Defaults to pass when can't determine
+
+    # Gemini 3 (langchain-google-genai >= 4) returns AIMessage.content as a list
+    # of content blocks, never a plain string.
+
+    def test_parse_list_content_blocks_detects_violation(self, default_kwargs):
+        """A YES carried in a text content block must still fail the check."""
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = AIMessage(
+            content=[{"type": "text", "text": "YES\nPII detected: email address", "extras": {"signature": "sig"}}]
+        )
+
+        component = GuardrailsComponent(**default_kwargs)
+        passed, explanation = component._check_guardrail(mock_llm, "test input", "PII", "personal info")
+
+        assert passed is False
+        assert explanation == "PII detected: email address"
+
+    def test_reasoning_blocks_do_not_decide_the_verdict(self, default_kwargs):
+        """Only text blocks are the answer; a YES inside model reasoning must be ignored."""
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = AIMessage(
+            content=[
+                {"type": "thinking", "thinking": "YES it might contain PII, let me check again"},
+                {"type": "text", "text": "NO\nNo personal data present"},
+            ]
+        )
+
+        component = GuardrailsComponent(**default_kwargs)
+        passed, explanation = component._check_guardrail(mock_llm, "test input", "PII", "personal info")
+
+        assert passed is True
+        assert explanation == "No personal data present"
+
+    @patch("lfx.components.llm_operations.guardrails.get_llm")
+    def test_validation_passes_with_list_content_blocks(self, mock_get_llm, default_kwargs):
+        """The default AI-checks path must not die on a Gemini 3 shaped reply."""
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = AIMessage(content=[{"type": "text", "text": "NO\nNo issues detected."}])
+        mock_get_llm.return_value = mock_llm
+        component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
+
+        assert component._run_validation() is True
+        assert component._failed_checks == []
 
     # ===================
     # Input Sanitization Tests

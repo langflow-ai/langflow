@@ -1,3 +1,5 @@
+import type { MessageHistoryControls } from "../components/message-history-loader";
+
 export type ChatViewWrapperProps = {
   selectedViewField: { type: string; id: string } | undefined;
   visibleSession: string | undefined;
@@ -12,6 +14,7 @@ export type ChatViewWrapperProps = {
   ) => void;
   haveChat: { type: string; id: string; displayName: string } | undefined;
   messagesFetched: boolean;
+  messageHistory: MessageHistoryControls;
   sessionId: string;
   sendMessage: (options: { repeat: number; files?: string[] }) => Promise<void>;
   canvasOpen: boolean | undefined;

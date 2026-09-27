@@ -2310,12 +2310,23 @@ class Component(CustomComponent):
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         if not session_id:
             return None
+        # AG-UI treats this first error event as terminal, before Vertex can enrich
+        # the raised exception. Include the same diagnosis on the emitted message.
+        from lfx.utils.flow_validation import explain_restricted_component_mismatch
+
+        vertex_data = getattr(self._vertex, "data", None)
+        context_note = (
+            explain_restricted_component_mismatch(vertex_data.get("type"), vertex_data.get("node"))
+            if isinstance(vertex_data, Mapping)
+            else None
+        )
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=exception,
             session_id=session_id,
             trace_name=trace_name,
             source=source,
+            context_note=context_note,
         )
         await self.send_message(error_message)
         return error_message

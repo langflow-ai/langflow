@@ -42,10 +42,7 @@ export default function NoticeAlert({
       leaveFrom={"transform translate-x-0"}
       leaveTo={"transform translate-x-[-100%]"}
     >
-      <div
-        onClick={handleClick}
-        className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
-      >
+      <div className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl">
         <div className="flex">
           <div className="flex-shrink-0 cursor-help">
             <IconComponent
@@ -54,10 +51,24 @@ export default function NoticeAlert({
               aria-hidden="true"
             />
           </div>
-          <div className="ml-3 flex-1 md:flex md:justify-between">
+          <div className="ml-3 min-w-0 flex-1">
             <p className="text-sm text-info-foreground word-break-break-word">
               {title}
             </p>
+            {list.length > 0 && (
+              <div
+                role="region"
+                aria-label={title}
+                tabIndex={0}
+                className="mt-2 max-h-48 overflow-y-auto text-sm text-info-foreground"
+              >
+                {list.map((item, index) => (
+                  <p key={index} className="whitespace-pre-wrap break-words">
+                    {item}
+                  </p>
+                ))}
+              </div>
+            )}
             <p className="mt-3 text-sm md:ml-6 md:mt-0">
               {link && (
                 <CustomLink
@@ -71,10 +82,7 @@ export default function NoticeAlert({
           </div>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClick();
-            }}
+            onClick={handleClick}
             aria-label={t("alerts.dismissAlert")}
             className="ml-3 flex-shrink-0 self-start"
           >

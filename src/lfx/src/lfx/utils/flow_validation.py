@@ -1322,6 +1322,33 @@ def _log_outdated_component_code_substitution(swapped: list[str]) -> None:
     )
 
 
+def describe_component_code_substitution(flow_data: dict | None, *, include_component_names: bool = True) -> str | None:
+    """Describe the restricted-mode substitutions before sanitization discards the saved code.
+
+    Use the same substitution rule as the build, including nested flows and ambiguous types.
+    Work on a detached copy so collecting a warning never changes the saved flow or logs a build.
+    """
+    from copy import deepcopy
+
+    lookups = get_outdated_code_substitution_lookups()
+    if lookups is None or not flow_data or not isinstance(flow_data.get("nodes"), list):
+        return None
+    swapped = _substitute_outdated_node_code(deepcopy(flow_data["nodes"]), *lookups)
+    if not swapped:
+        return None
+    affected = f" for {', '.join(swapped)}" if include_component_names else ""
+    next_step = (
+        "Review and update the affected components in the flow editor to use the server version."
+        if include_component_names
+        else "Ask the flow owner to review and update the affected components to use the server version."
+    )
+    return (
+        "Custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). "
+        f"This run uses the server's component code instead of the code saved in the flow{affected}. "
+        f"The saved flow is unchanged. {next_step}"
+    )
+
+
 RESTRICTED_MODE_MISMATCH_HINT = (
     "Note: custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false), so "
     'the build ran this server\'s "{component_type}" component instead of the component code saved in '
@@ -1408,7 +1435,7 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
 def explain_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
     """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
 
-    The only caller is a build-error handler, where a diagnostic that raises would replace the
+    Callers are build-error handlers, where a diagnostic that raises would replace the
     component's real error with an unrelated one.
     """
     try:
@@ -1938,6 +1965,22 @@ def admin_only_build_required(*, is_superuser: bool) -> bool:
         # Fail closed: without settings we cannot prove the policy is off.
         return True
     return _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
+
+
+def custom_component_admin_only_enabled() -> bool | None:
+    """Whether the admin-only component policy is configured on, caller-independent.
+
+    Returns ``None`` when settings cannot be read, so callers that would fail
+    closed through :func:`admin_only_build_required` can keep doing so without a
+    second settings lookup. When this returns ``False`` the policy cannot apply
+    to any caller, and the caller's superuser flag need not be resolved.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        return None
+    return getattr(settings_service.settings, "custom_component_admin_only", False) is True
 
 
 async def prepare_admin_only_flow_build(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
