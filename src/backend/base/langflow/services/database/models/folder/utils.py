@@ -19,6 +19,7 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
             name=DEFAULT_FOLDER_NAME,
             user_id=user_id,
             description=DEFAULT_FOLDER_DESCRIPTION,
+            is_personal=True,
         )
         session.add(folder)
         await session.flush()
