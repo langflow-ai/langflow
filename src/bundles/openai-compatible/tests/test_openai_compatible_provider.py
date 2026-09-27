@@ -291,12 +291,56 @@ def test_fetch_returns_empty_when_no_base_url():
         assert discovery.fetch_live_openai_compatible_models("user-id", "llm") == []
 
 
+@pytest.mark.parametrize("api_key", [None, "configured-compatible-key"])
+@pytest.mark.parametrize("disable_env_fallback", [False, True])
+def test_fetch_resolves_optional_environment_key(monkeypatch, api_key, disable_env_fallback):
+    """Discovery shares runtime credential resolution and cannot leak a forbidden env key."""
+    from lfx.base.models import provider_registry
+    from lfx.extension import load_extension
+    from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
+
+    provider_registry.clear()
+    token = activate_no_env_fallback(disabled=disable_env_fallback)
+    try:
+        root = Path(__file__).resolve().parents[1] / "src" / "lfx_openai_compatible"
+        result = load_extension(root)
+        assert result.ok, (result.errors, result.warnings)
+        monkeypatch.setenv("OPENAI_API_KEY", "unrelated-openai-key")
+        monkeypatch.delenv("OPENAI_COMPATIBLE_API_KEY", raising=False)
+        if api_key:
+            monkeypatch.setenv("OPENAI_COMPATIBLE_API_KEY", api_key)
+
+        response = _ok_response({"data": [{"id": "configured-model"}]})
+        get_variable = discovery.get_provider_variable_value
+        with (
+            # Keep the URL available even when env fallback is disabled, so
+            # the test checks the outbound credential, not an early return.
+            patch.object(
+                discovery,
+                "get_provider_variable_value",
+                side_effect=lambda user, key: "https://compatible.example/v1"
+                if key == "OPENAI_COMPATIBLE_BASE_URL"
+                else get_variable(user, key),
+            ),
+            patch.object(discovery, "ssrf_safe_httpx_get", return_value=response) as get,
+        ):
+            models = discovery.fetch_live_openai_compatible_models(None)
+
+        assert [model["name"] for model in models] == ["configured-model"]
+        expected = {"Authorization": f"Bearer {api_key}"} if api_key and not disable_env_fallback else {}
+        assert get.call_args.kwargs["headers"] == expected
+    finally:
+        reset_no_env_fallback(token)
+        provider_registry.clear()
+
+
 def test_fetch_allows_literal_loopback_by_default(monkeypatch):
     _set_loopback_policy(monkeypatch, allowed=True)
     response = _ok_response({"data": [{"id": "local-model"}]})
 
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://127.0.0.1:1234/v1", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://127.0.0.1:1234/v1"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch("httpx.Client.get", return_value=response) as mock_get,
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -310,7 +354,8 @@ def test_fetch_blocks_literal_loopback_when_connector_policy_opts_out(monkeypatc
     _set_loopback_policy(monkeypatch, allowed=False)
 
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://127.0.0.1:1234/v1", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://127.0.0.1:1234/v1"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch("httpx.Client.get") as mock_get,
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -325,7 +370,8 @@ def test_fetch_does_not_follow_redirects(monkeypatch):
     redirect = httpx.Response(302, headers={"location": "http://169.254.169.254/latest/meta-data/"}, request=request)
 
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://127.0.0.1:1234/v1", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://127.0.0.1:1234/v1"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch("httpx.Client.get", return_value=redirect) as mock_get,
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -338,7 +384,8 @@ def test_fetch_does_not_follow_redirects(monkeypatch):
 def test_fetch_openai_dict_format():
     response = _ok_response({"data": [{"id": "meta-llama/llama-3.1-8b"}, {"id": "mistral-7b"}]})
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["https://openrouter.ai/api/v1", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="https://openrouter.ai/api/v1"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -350,7 +397,8 @@ def test_fetch_openai_dict_format():
 def test_fetch_plain_list_format():
     response = _ok_response(["qwen2-7b", "deepseek-r1"])
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://localhost:8000"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -360,7 +408,8 @@ def test_fetch_plain_list_format():
 def test_fetch_sorts_alphabetically():
     response = _ok_response({"data": [{"id": "zzz"}, {"id": "aaa"}, {"id": "mmm"}]})
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://localhost:8000"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -385,7 +434,8 @@ def test_fetch_models_url_normalization(base_url, expected):
         return response
 
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=[base_url, None]),
+        patch.object(discovery, "get_provider_variable_value", return_value=base_url),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", side_effect=fake_get),
     ):
         discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -404,8 +454,9 @@ def test_fetch_forwards_api_key_as_bearer():
         patch.object(
             discovery,
             "get_provider_variable_value",
-            side_effect=["http://localhost:8000", "secret-key"],  # pragma: allowlist secret
+            return_value="http://localhost:8000",
         ),
+        patch.object(discovery, "get_api_key_for_provider", return_value="secret-key"),  # pragma: allowlist secret
         patch.object(discovery, "ssrf_safe_httpx_get", side_effect=fake_get),
     ):
         discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -421,7 +472,8 @@ def test_fetch_no_auth_header_when_no_key():
         return response
 
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://localhost:8000"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", side_effect=fake_get),
     ):
         discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -430,7 +482,8 @@ def test_fetch_no_auth_header_when_no_key():
 
 def test_fetch_swallows_connection_error():
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://localhost:8000"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", side_effect=httpx.ConnectError("refused")),
     ):
         assert discovery.fetch_live_openai_compatible_models("user-id", "llm") == []
@@ -439,7 +492,8 @@ def test_fetch_swallows_connection_error():
 def test_fetch_swallows_bad_payload():
     response = _ok_response({"unexpected": "shape"})
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://localhost:8000"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", return_value=response),
     ):
         assert discovery.fetch_live_openai_compatible_models("user-id", "llm") == []
@@ -449,14 +503,9 @@ def test_fetch_swallows_api_key_lookup_error():
     """A failing API-key lookup falls back to anonymous discovery instead of blocking it."""
     response = _ok_response({"data": [{"id": "llama-3"}]})
 
-    def fake_get_var(_user_id, key):
-        if key == "OPENAI_COMPATIBLE_BASE_URL":
-            return "http://localhost:8000"
-        msg = "variable not found"
-        raise RuntimeError(msg)
-
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=fake_get_var),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://localhost:8000"),
+        patch.object(discovery, "get_api_key_for_provider", side_effect=RuntimeError("variable not found")),
         patch.object(discovery, "ssrf_safe_httpx_get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -466,7 +515,8 @@ def test_fetch_swallows_api_key_lookup_error():
 def test_fetch_embeddings_tagged_embeddings():
     response = _ok_response({"data": [{"id": "bge-m3"}]})
     with (
-        patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(discovery, "get_provider_variable_value", return_value="http://localhost:8000"),
+        patch.object(discovery, "get_api_key_for_provider", return_value=None),
         patch.object(discovery, "ssrf_safe_httpx_get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "embeddings")
