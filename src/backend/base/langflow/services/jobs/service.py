@@ -782,6 +782,13 @@ class JobService(Service):
         selected row cannot change status before it is deleted. SQLite renders
         no lock clause and serializes writers on its own.
 
+        On SQLite, each DELETE uses at most 500 job IDs to stay below older
+        builds' 999-variable limit; the selected batch remains one transaction.
+
+        Ingestion jobs referenced by memory workflow runs are retained while
+        those references exist: their ON DELETE SET NULL foreign key would
+        otherwise make already-ingested runs count as pending again.
+
         A job a trigger ledger row still marks DISPATCHED is skipped until the
         dispatcher records its outcome: ``reconcile_dispatched`` reads that
         outcome by joining the job, so purging the job first would leave the
@@ -803,6 +810,7 @@ class JobService(Service):
         from sqlalchemy import exists
         from sqlmodel import delete
 
+        from langflow.services.database.models.memory_base.model import MemoryBaseWorkflowRun
         from langflow.services.database.models.trigger.model import TriggerEvent
         from langflow.services.database.models.trigger.schemas import TriggerEventState
 
@@ -812,19 +820,28 @@ class JobService(Service):
             col(TriggerEvent.job_id) == col(Job.job_id),
             col(TriggerEvent.state) == TriggerEventState.DISPATCHED.value,
         )
+        preserves_memory_state = exists().where(col(MemoryBaseWorkflowRun.ingestion_job_id) == col(Job.job_id))
         async with session_scope() as session:
             result = await session.exec(
                 select(Job.job_id)
-                .where(col(Job.status).in_(_RETAINABLE_STATUSES), aged_at < cutoff, ~awaiting_reconcile)
+                .where(
+                    col(Job.status).in_(_RETAINABLE_STATUSES),
+                    aged_at < cutoff,
+                    ~awaiting_reconcile,
+                    ~preserves_memory_state,
+                )
                 .limit(limit)
                 .with_for_update(skip_locked=True)
             )
             job_ids = list(result.all())
             if not job_ids:
                 return 0
-            for child in (JobEvent, ExecutionSignal, JobCheckpoint):
-                await session.exec(delete(child).where(col(child.job_id).in_(job_ids)))  # type: ignore[call-overload]
-            await session.exec(delete(Job).where(col(Job.job_id).in_(job_ids)))  # type: ignore[call-overload]
+            delete_batch_size = 500 if session.get_bind().dialect.name == "sqlite" else len(job_ids)
+            for start in range(0, len(job_ids), delete_batch_size):
+                batch_ids = job_ids[start : start + delete_batch_size]
+                for child in (JobEvent, ExecutionSignal, JobCheckpoint):
+                    await session.exec(delete(child).where(col(child.job_id).in_(batch_ids)))  # type: ignore[call-overload]
+                await session.exec(delete(Job).where(col(Job.job_id).in_(batch_ids)))  # type: ignore[call-overload]
             await session.flush()
             return len(job_ids)
 

@@ -157,3 +157,59 @@ async def test_purge_leaves_child_rows_of_retained_jobs_alone():
     assert await _child_counts(service, old) == (0, 0, 0)
     assert await _child_counts(service, fresh) == (1, 1, 1)
     assert await _child_counts(service, suspended) == (1, 1, 1)
+
+
+async def test_purge_ages_jobs_from_completion_not_creation():
+    """A long-lived run that finished recently keeps its full retention window."""
+    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.deps import session_scope
+    from sqlmodel import update
+
+    service = JobService()
+    job_id = await _aged_job(service, status=JobStatus.COMPLETED, age_days=90, with_children=True)
+    recent = datetime.now(timezone.utc) - timedelta(days=1)
+    async with session_scope() as session:
+        await session.exec(update(Job).where(Job.job_id == job_id).values(finished_timestamp=recent))
+
+    await service.purge_terminal_jobs(older_than_days=30, limit=100)
+
+    assert await service.get_job_by_job_id(job_id) is not None
+    assert await _child_counts(service, job_id) == (1, 1, 1)
+
+
+async def test_sqlite_purge_bounds_delete_parameters():
+    """Large batches stay within SQLite's legacy 999-variable statement limit."""
+    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.deps import session_scope
+    from sqlalchemy import event
+
+    service = JobService()
+    with_children = await _aged_job(service, status=JobStatus.COMPLETED, age_days=90, with_children=True)
+    old = datetime.now(timezone.utc) - timedelta(days=90)
+    jobs = [
+        Job(job_id=uuid4(), flow_id=uuid4(), status=JobStatus.COMPLETED, created_timestamp=old, finished_timestamp=old)
+        for _ in range(1000)
+    ]
+    async with session_scope() as session:
+        engine = session.get_bind()
+        if engine.dialect.name != "sqlite":
+            pytest.skip("SQLite bind limit")
+        session.add_all(jobs)
+
+    delete_parameter_counts = []
+
+    def check_delete_parameters(_conn, _cursor, statement, parameters, _context, _executemany):
+        if statement.startswith("DELETE"):
+            delete_parameter_counts.append(len(parameters))
+            assert len(parameters) <= 999
+
+    event.listen(engine, "before_cursor_execute", check_delete_parameters)
+    try:
+        assert await service.purge_terminal_jobs(older_than_days=30, limit=5000) == 1001
+    finally:
+        event.remove(engine, "before_cursor_execute", check_delete_parameters)
+
+    assert delete_parameter_counts
+    assert await service.get_job_by_job_id(with_children) is None
+    assert await _child_counts(service, with_children) == (0, 0, 0)
+    assert all([await service.get_job_by_job_id(job.job_id) is None for job in jobs])

@@ -225,7 +225,7 @@ async def test_retention_sweep_starts_when_a_window_is_set(monkeypatch):
 
 
 class _TickCounter:
-    """Stands in for the service module's ``random``: counts sweep ticks, skips the wait.
+    """Stands in for the service module's ``random``: counts ticks with fixed jitter.
 
     The retention loop draws its jitter exactly once per tick, so counting draws tells
     a batch purged inside one tick apart from one purged on the next tick.
@@ -236,7 +236,7 @@ class _TickCounter:
 
     def uniform(self, _low: float, _high: float) -> float:
         self.ticks += 1
-        return 0.0
+        return 1.0
 
 
 class _ScriptedPurges:
@@ -263,12 +263,18 @@ class _ScriptedPurges:
 class _RecordingLogger:
     def __init__(self) -> None:
         self.exceptions: list[str] = []
+        self.infos: list[tuple[str, dict]] = []
 
     async def aexception(self, msg: str, *_args, **_kwargs) -> None:
         self.exceptions.append(msg)
 
+    async def ainfo(self, msg: str, **kwargs) -> None:
+        self.infos.append((msg, kwargs))
 
-async def _run_scripted_sweep(monkeypatch, outcomes: list[int | Exception]) -> tuple[_ScriptedPurges, _RecordingLogger]:
+
+async def _run_scripted_sweep(
+    monkeypatch, outcomes: list[int | Exception]
+) -> tuple[_ScriptedPurges, _RecordingLogger, list[float]]:
     from langflow.services.background_execution import service as service_module
 
     ticks = _TickCounter()
@@ -279,13 +285,22 @@ async def _run_scripted_sweep(monkeypatch, outcomes: list[int | Exception]) -> t
     monkeypatch.setattr(service_module, "logger", recording_logger)
     monkeypatch.setattr(get_settings_service().settings, "background_retention_days", 7)
 
+    delays = []
+    original_sleep = asyncio.sleep
+
+    async def record_sleep(delay):
+        delays.append(delay)
+        await original_sleep(0)
+
     svc = _make_service()
-    svc._start_retention_sweep()
-    try:
-        await asyncio.wait_for(purges.exhausted.wait(), timeout=5)
-    finally:
-        await svc.stop()
-    return purges, recording_logger
+    with monkeypatch.context() as clock_patch:
+        clock_patch.setattr(asyncio, "sleep", record_sleep)
+        svc._start_retention_sweep()
+        try:
+            await asyncio.wait_for(purges.exhausted.wait(), timeout=5)
+        finally:
+            await svc.stop()
+    return purges, recording_logger, delays
 
 
 async def test_retention_sweep_drains_a_backlog_within_one_tick(monkeypatch):
@@ -296,17 +311,39 @@ async def test_retention_sweep_drains_a_backlog_within_one_tick(monkeypatch):
     """
     from langflow.services.background_execution.service import _RETENTION_BATCH_SIZE
 
-    purges, _ = await _run_scripted_sweep(monkeypatch, [_RETENTION_BATCH_SIZE, _RETENTION_BATCH_SIZE, 3, 0])
+    purges, recording_logger, _ = await _run_scripted_sweep(
+        monkeypatch, [_RETENTION_BATCH_SIZE, _RETENTION_BATCH_SIZE, 3, 0]
+    )
 
     assert purges.calls == [(1, _RETENTION_BATCH_SIZE), (1, _RETENTION_BATCH_SIZE), (1, 3), (2, 0)]
+    assert len(recording_logger.infos) == 1  # No noise for the empty tick.
+    message, summary = recording_logger.infos[0]
+    assert message == "Background job retention sweep completed"
+    assert summary["deleted_jobs"] == 2 * _RETENTION_BATCH_SIZE + 3
+    assert summary["batches"] == 3
+    assert summary["elapsed_s"] >= 0
 
 
 async def test_retention_sweep_logs_a_failed_pass_and_runs_the_next_tick(monkeypatch):
     """A purge that raises is logged loudly, and the loop survives to try again."""
-    purges, recording_logger = await _run_scripted_sweep(monkeypatch, [RuntimeError("database unavailable"), 0])
+    from langflow.services.background_execution.service import _RETENTION_BATCH_SIZE
 
-    assert purges.calls == [(1, "raised"), (2, 0)]
+    purges, recording_logger, _ = await _run_scripted_sweep(
+        monkeypatch, [_RETENTION_BATCH_SIZE, RuntimeError("database unavailable"), 0]
+    )
+
+    assert purges.calls == [(1, _RETENTION_BATCH_SIZE), (1, "raised"), (2, 0)]
     assert recording_logger.exceptions == ["Background job retention sweep failed"]
+    assert len(recording_logger.infos) == 1
+    assert recording_logger.infos[0][1]["deleted_jobs"] == _RETENTION_BATCH_SIZE
+    assert recording_logger.infos[0][1]["batches"] == 1
+
+
+async def test_retention_sweep_runs_soon_after_start_then_hourly(monkeypatch):
+    """Short-lived replicas get a first sweep without waiting an entire hour."""
+    _, _, delays = await _run_scripted_sweep(monkeypatch, [0, 0])
+
+    assert delays == [300.0, 3600.0, 3600.0]
 
 
 async def test_retention_sweep_purges_real_rows_and_spares_live_work(monkeypatch):
@@ -333,6 +370,7 @@ async def test_retention_sweep_purges_real_rows_and_spares_live_work(monkeypatch
     terminal = [await _aged_job(JobStatus.COMPLETED) for _ in range(3)]
     suspended = await _aged_job(JobStatus.SUSPENDED)
 
+    monkeypatch.setattr(service_module, "_RETENTION_INITIAL_DELAY_S", 0.01)
     monkeypatch.setattr(service_module, "_RETENTION_INTERVAL_S", 0.01)
     monkeypatch.setattr(service_module, "_RETENTION_BATCH_SIZE", 2)
     monkeypatch.setattr(get_settings_service().settings, "background_retention_days", 30)

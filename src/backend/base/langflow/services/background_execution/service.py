@@ -25,6 +25,7 @@ import random
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from time import monotonic
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -59,9 +60,10 @@ if TYPE_CHECKING:
     # runtime alias here crashes service initialization on those interpreters.
     FrameSourceFactory = Callable[..., Any]
 
-# Retention sweep cadence. Purging is never urgent, so it runs hourly in
-# chunks: 5k jobs a batch, up to 50 batches a tick, which clears 250k terminal
-# jobs an hour without any single DELETE holding a long lock.
+# Retention starts after a short jittered delay, then runs hourly in chunks:
+# 5k jobs a batch, up to 50 batches a tick, clearing up to 250k terminal jobs
+# without keeping the entire backlog in one transaction.
+_RETENTION_INITIAL_DELAY_S = 300.0
 _RETENTION_INTERVAL_S = 3600.0
 _RETENTION_BATCH_SIZE = 5000
 _RETENTION_MAX_BATCHES_PER_TICK = 50
@@ -237,6 +239,9 @@ class BackgroundExecutionService(Service):
         so an install that enables retention against a large backlog catches up
         over a few ticks instead of issuing one enormous DELETE.
 
+        The first tick runs after about five minutes, with jitter, so replicas
+        that restart more often than once an hour can still make progress.
+
         Skipped entirely when ``background_retention_days`` is 0 (the default),
         so deployments that have not opted in spawn no extra task.
         """
@@ -246,9 +251,14 @@ class BackgroundExecutionService(Service):
 
         async def _loop() -> None:
             job_service = get_job_service()
+            delay = _RETENTION_INITIAL_DELAY_S
             while True:
                 # Jitter so replicas running this loop do not all purge at once.
-                await asyncio.sleep(_RETENTION_INTERVAL_S * random.uniform(0.75, 1.25))  # noqa: S311
+                await asyncio.sleep(delay * random.uniform(0.75, 1.25))  # noqa: S311
+                delay = _RETENTION_INTERVAL_S
+                started = monotonic()
+                total_deleted = 0
+                batches = 0
                 for _ in range(_RETENTION_MAX_BATCHES_PER_TICK):
                     try:
                         deleted = await job_service.purge_terminal_jobs(
@@ -259,8 +269,17 @@ class BackgroundExecutionService(Service):
                         # visible, not silently skipped until the table is huge.
                         await logger.aexception("Background job retention sweep failed")
                         break
+                    total_deleted += deleted
+                    batches += 1
                     if deleted < _RETENTION_BATCH_SIZE:
                         break
+                if total_deleted:
+                    await logger.ainfo(
+                        "Background job retention sweep completed",
+                        deleted_jobs=total_deleted,
+                        batches=batches,
+                        elapsed_s=round(monotonic() - started, 3),
+                    )
 
         self._retention_task = asyncio.create_task(_loop())
 

@@ -17,7 +17,7 @@ from uuid import UUID, uuid4
 import pytest
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType, SignalType
 from langflow.services.deps import session_scope
-from sqlmodel import col, select, update
+from sqlmodel import col, delete, select, update
 
 if TYPE_CHECKING:
     from langflow.services.jobs.service import JobService
@@ -90,3 +90,65 @@ async def test_concurrent_purge_skips_rows_another_sweep_holds(real_services_job
 
     assert await service.purge_terminal_jobs(older_than_days=_WINDOW_DAYS, limit=100) == len(held)
     assert [job_id for job_id in held if await service.get_job_by_job_id(job_id) is not None] == []
+
+
+async def test_purge_preserves_memory_ingestion_state(real_services_job_service, real_services_db_url):
+    """Deleting an ingestion job must not turn covered workflow runs pending again.
+
+    Postgres enforces the migrated ON DELETE SET NULL foreign keys. Also run on
+    SQLite to pin retention eligibility independently of FK enforcement.
+    """
+    from langflow.services.database.models.memory_base.model import (
+        MemoryBase,
+        MemoryBaseSession,
+        MemoryBaseWorkflowRun,
+    )
+    from langflow.services.memory_base.ingestion import count_pending_messages
+
+    service = real_services_job_service
+    workflow_job = await _aged_job(service, status=JobStatus.COMPLETED)
+    ingestion_job = await _aged_job(service, status=JobStatus.COMPLETED)
+    mb = MemoryBase(name=f"retention-{uuid4()}", flow_id=uuid4(), user_id=uuid4())
+    mbs = MemoryBaseSession(memory_base_id=mb.id, session_id=str(uuid4()))
+    covered = MemoryBaseWorkflowRun(
+        memory_base_id=mb.id,
+        session_id=mbs.session_id,
+        workflow_job_id=workflow_job,
+        ingestion_job_id=ingestion_job,
+        recorded_at=datetime.now(timezone.utc),
+    )
+    pending = MemoryBaseWorkflowRun(
+        memory_base_id=mb.id, session_id=mbs.session_id, recorded_at=datetime.now(timezone.utc)
+    )
+    async with session_scope() as session:
+        await session.exec(update(Job).where(Job.job_id == ingestion_job).values(type=JobType.INGESTION))
+        session.add(mb)
+        await session.flush()
+        session.add_all([mbs, covered, pending])
+        await session.flush()
+        assert await count_pending_messages(session, mb, mbs) == 1
+
+    try:
+        await service.purge_terminal_jobs(older_than_days=_WINDOW_DAYS, limit=100)
+
+        async with session_scope() as session:
+            assert await count_pending_messages(session, mb, mbs) == 1
+            retained = await session.get(MemoryBaseWorkflowRun, covered.id)
+            assert retained.ingestion_job_id == ingestion_job
+            if real_services_db_url.startswith("postgresql"):
+                # Prove the real FK is active: unrelated workflow history is
+                # purged and SET NULL still applies to its display-only link.
+                assert retained.workflow_job_id is None
+        assert await service.get_job_by_job_id(ingestion_job) is not None
+        assert await service.get_job_by_job_id(workflow_job) is None
+        assert len(await service.read_events(ingestion_job)) == 1
+    finally:
+        async with session_scope() as session:
+            await session.exec(delete(MemoryBaseWorkflowRun).where(MemoryBaseWorkflowRun.memory_base_id == mb.id))
+            await session.exec(delete(MemoryBaseSession).where(MemoryBaseSession.memory_base_id == mb.id))
+            await session.exec(delete(MemoryBase).where(MemoryBase.id == mb.id))
+
+    # Once memory tracking is removed, the ingestion job is eligible too.
+    await service.purge_terminal_jobs(older_than_days=_WINDOW_DAYS, limit=100)
+    assert await service.get_job_by_job_id(ingestion_job) is None
+    assert await service.read_events(ingestion_job) == []
