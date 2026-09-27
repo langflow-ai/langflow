@@ -2152,6 +2152,11 @@
       "0.3.1": "8b5ca1f38f6e"
     }
   },
+  "AvianModel": {
+    "versions": {
+      "0.3.0": "a0791149622e"
+    }
+  },
   "policies": {
     "versions": {
       "0.3.0": "9bf5e6f39e2d"

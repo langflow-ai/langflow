@@ -1392,6 +1392,26 @@
       "added_in": "1.11.0"
     },
     {
+      "bare_class_name": "AvianModelComponent",
+      "target": "ext:avian:AvianModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.avian.avian.AvianModelComponent",
+      "target": "ext:avian:AvianModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.avian.AvianModelComponent",
+      "target": "ext:avian:AvianModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:avian:AvianModelComponent@official-pre-a",
+      "target": "ext:avian:AvianModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
       "bare_class_name": "DeepSeekModelComponent",
       "target": "ext:deepseek:DeepSeekModelComponent@official",
       "added_in": "1.11.0"

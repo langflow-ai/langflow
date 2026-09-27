@@ -6,6 +6,7 @@ aiml
 altk
 amazon
 anthropic
+avian
 apify
 arxiv
 assemblyai
