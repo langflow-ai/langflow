@@ -106,9 +106,13 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
     The default port for the Prometheus metrics is 9090.
     To change the port, set `LANGFLOW_PROMETHEUS_PORT`.
 
-    With Prometheus enabled, Langflow also exports background job metrics prefixed with `langflow_bg_`: counts of queued, running, and suspended jobs, the age of the oldest queued job, cumulative started, completed, and failed totals, and p50 and p95 run durations over the last five minutes.
-    Only the process that serves the Prometheus port collects them, by querying the job table every 15 seconds.
-    To change the interval, set `LANGFLOW_BACKGROUND_METRICS_INTERVAL` to a number of seconds greater than zero.
+    With Prometheus enabled, Langflow also exports background job metrics prefixed with `langflow_bg_`: counts of queued, running, and suspended jobs, the age of the oldest queued job, cumulative started, completed, and failed totals, and p50 and p95 submission-to-finish times for jobs finished over the last five minutes.
+    These durations include queue wait and time suspended on human input. The percentile gauges use a fixed window and cannot be combined into a percentile over a different window or across independent databases.
+    Only the process that serves the Prometheus port collects them. Gauges refresh every 15 seconds by default; to change that interval, set `LANGFLOW_BACKGROUND_METRICS_INTERVAL` to a number of seconds greater than zero.
+    All-time totals refresh on the first tick and then on the first tick at least five minutes after the previous successful refresh, reducing full-history scans. Use rate windows longer than this refresh cadence.
+    Counters preserve the largest count observed per label set during the process lifetime, so terminal-state corrections do not appear as counter resets. They are sampled totals, not an exact event ledger; a restart seeds them from the current database counts.
+    Failed totals distinguish `error`, `worker_lost`, `input_timeout` (an expired human-input deadline), `timeout` (an execution timeout), and `cancelled`.
+    With multiple replicas sharing a database, each replica exports the same database-wide snapshot and adds collection load. Scrape one replica for these metrics or deduplicate with `max` while retaining the `backend`, `status`, and `reason` labels where present; summing replicas multiplies the counts.
 
 * **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
 * **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.

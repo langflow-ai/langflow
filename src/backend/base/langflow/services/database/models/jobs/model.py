@@ -95,7 +95,8 @@ class Job(JobBase, table=True):  # type: ignore[call-arg]
     # The background metrics collector filters on status every tick, takes a MIN over
     # created_timestamp for the oldest queued job, and ranges over finished_timestamp for the
     # duration window. This table has no retention, so without these each tick's cost grows
-    # with the whole job history rather than with the work in flight.
+    # with the whole job history rather than with the work in flight. The all-time
+    # outcome aggregate still scans history and is collected less frequently.
     __table_args__ = (
         Index("ix_job_status_created", "status", "created_timestamp"),
         Index("ix_job_finished_timestamp", "finished_timestamp"),

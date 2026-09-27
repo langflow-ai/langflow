@@ -98,10 +98,10 @@ class ObservableCounterWrapper:
     """Wrapper class for ObservableCounter.
 
     Like ObservableGauge, OpenTelemetry exposes observable counters via a callback
-    rather than a setter, so we keep the latest absolute value per label-set and
-    report it from the callback. Callers (e.g. the DB-derived collector) must feed
-    monotonically non-decreasing cumulative values per label-set for correct
-    Prometheus rate() semantics.
+    rather than a setter. Keep the largest absolute value observed per label-set
+    for this process lifetime. Durable rows can be reclassified after completion;
+    exporting a lower count would look like a counter reset to Prometheus.
+    This high-water mark is not an exact count of state-transition events.
     """
 
     def __init__(self, name: str, description: str, unit: str, meter: Meter):
@@ -119,7 +119,8 @@ class ObservableCounterWrapper:
         return [Observation(value, attributes=dict(labels)) for labels, value in self._values.items()]
 
     def set_value(self, value: float, labels: Mapping[str, str]) -> None:
-        self._values[tuple(sorted(labels.items()))] = value
+        key = tuple(sorted(labels.items()))
+        self._values[key] = max(self._values.get(key, 0.0), value)
 
 
 class Metric:
@@ -274,14 +275,20 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         )
         self._add_metric(
             name="langflow_bg_job_duration_p50_seconds",
-            description="Median background job run duration over a recent window",
+            description=(
+                "Median background job submission-to-finish time, including queue and human-input waits, "
+                "over a recent window"
+            ),
             unit="s",
             metric_type=MetricType.OBSERVABLE_GAUGE,
             labels={"backend": mandatory_label},
         )
         self._add_metric(
             name="langflow_bg_job_duration_p95_seconds",
-            description="p95 background job run duration over a recent window",
+            description=(
+                "p95 background job submission-to-finish time, including queue and human-input waits, "
+                "over a recent window"
+            ),
             unit="s",
             metric_type=MetricType.OBSERVABLE_GAUGE,
             labels={"backend": mandatory_label},

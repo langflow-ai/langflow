@@ -4,7 +4,9 @@ The collector runs every tick against a table with no retention, filtering on ``
 taking a MIN over ``created_timestamp`` for queued jobs and a range over
 ``finished_timestamp`` for the duration window. None of those columns were indexed, and
 ``status`` was explicitly ``index=False``, so each tick's cost grew with the whole job
-history rather than with the work in flight.
+history rather than with the work in flight. These indexes bound the non-terminal and
+duration-window queries; the all-time outcome aggregate still scans history and runs
+on a slower cadence.
 
 Additive only. Creating an index carries no data with it, and the down path drops it again.
 

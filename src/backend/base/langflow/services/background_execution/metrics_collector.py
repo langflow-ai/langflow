@@ -1,19 +1,13 @@
-"""DB-derived metric queries for background execution observability.
+"""Collect cached background-job metrics from read-only database aggregates.
 
-Pure, read-only aggregates over the durable job model. Each function takes a
-session and (where time matters) an injected ``now`` so the math is
-deterministic in tests and the loop owns the clock. No side effects, no gauge
-writes — Task 7 wires these into the OTel gauges.
+Gauges refresh every tick; all-time outcome counters refresh every five minutes
+because their aggregate still scans job history. Prometheus callbacks read only
+the cached values. Background submissions are identified by the persisted request
+marker, not by events that orphan reconciliation can also append to other jobs.
 
-``now`` is timezone-aware UTC. ``created_timestamp`` is stored as a
-timezone-aware column, but SQLite hands it back naive; we normalize to aware
-UTC before subtracting so the math is valid on both SQLite and Postgres.
-
-Worker fleet gauges (online/busy/idle) are deliberately not here. They read the
-``worker_registry`` table, which only the scaled backend populates, so they ship
-with that work rather than reporting a structural zero. A row is
-online while ``last_heartbeat >= now - online_window`` (online_window = 3x the
-worker's registry interval). The collector also prunes rows past retention.
+Query functions accept an injected aware-UTC ``now`` for deterministic age and
+submission-to-finish duration calculations. SQLite returns naive datetimes, which
+are normalized to UTC before subtraction.
 """
 
 from __future__ import annotations
@@ -22,6 +16,7 @@ import asyncio
 import contextlib
 import math
 from datetime import datetime, timedelta, timezone
+from time import monotonic
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -40,45 +35,35 @@ if TYPE_CHECKING:
 # out made those jobs vanish from a gauge documented as a count by status. COMPLETED /
 # FAILED / TIMED_OUT / CANCELLED are terminal.
 NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED)
+TERMINAL_COUNTS_INTERVAL_SECONDS = 300.0
+
+
+def _is_background_job():
+    """Match the workflow request marker written atomically by ``submit``.
+
+    Sync runs and ingestion jobs can acquire events during orphan cleanup, so
+    events alone cannot identify submissions. ``as_string`` emits a JSON text
+    extraction on both SQLite and Postgres, excluding missing and JSON-null
+    requests while accepting an empty request object.
+    """
+    return (Job.type == JobType.WORKFLOW) & col(Job.job_metadata)["request"].as_string().is_not(None)
 
 
 def _has_job_events():
-    """EXISTS subquery: the job has at least one ``job_events`` row.
-
-    Distinguishes a TRUE background job from a Memory-Base "run job". Every flow
-    build writes a second ``job`` row keyed by the graph run_id (``build.py``,
-    predates the bg work); it is ``type=workflow`` too, so a naive status query
-    double-counts it. The background runner uniquely appends ``job_events`` rows,
-    while run jobs never have any (they go straight IN_PROGRESS->terminal via
-    ``execute_with_status`` and never QUEUED). So a background job is
-    ``status == QUEUED`` OR EXISTS(job_events). ``job_id`` is indexed
-    (UNIQUE(job_id, seq)), so the EXISTS is cheap and dialect-agnostic.
-    """
+    """Remember a submission that has run even if it was requeued for retry."""
     return select(JobEvent.id).where(col(JobEvent.job_id) == Job.job_id).exists()
 
 
 async def count_nonterminal_jobs(session) -> dict[str, int]:
-    """Return counts of non-terminal background jobs keyed by status string.
+    """Count queued, running, and suspended background submissions by status.
 
-    ``{"queued": 3, "in_progress": 1}``. Only workflow jobs belong to this
-    background runner. Queued workflow jobs count as-is (run jobs are never
-    queued). IN_PROGRESS adds the EXISTS(job_events) filter because a run job is
-    briefly IN_PROGRESS with no events — without the filter it would inflate the
-    in_progress count. A status with zero rows is omitted (the collector loop
-    fills in the canonical set with 0 when it sets gauges).
+    Sync workflow rows briefly start as QUEUED too; the persisted request marker
+    excludes them at every stage. Missing statuses are zero-filled by the collector.
     """
-    # One grouped scan rather than one per status. This runs every tick against a table
-    # with no retention, so the number of passes over it is the cost that matters.
-    #
-    # QUEUED is exempt from the events filter and the others are not, which is why the
-    # predicate is a disjunction rather than a plain WHERE: a queued background job has not
-    # emitted anything yet, while a run job is briefly IN_PROGRESS with no events and would
-    # otherwise inflate that count. Restrict to workflows because other job types can queue.
     stmt = (
         select(Job.status, func.count())
         .where(col(Job.status).in_(NONTERMINAL_STATUSES))
-        .where(Job.type == JobType.WORKFLOW)
-        .where((Job.status == JobStatus.QUEUED) | _has_job_events())
+        .where(_is_background_job())
         .group_by(Job.status)
     )
     rows = (await session.exec(stmt)).all()
@@ -86,16 +71,12 @@ async def count_nonterminal_jobs(session) -> dict[str, int]:
 
 
 async def oldest_queued_seconds(session, now: datetime) -> float:
-    """Age in seconds of the oldest queued workflow job: ``now - min(created_timestamp)``.
+    """Age in seconds of the oldest queued background submission: ``now - min(created_timestamp)``.
 
     Returns ``0.0`` when nothing is queued. ``now`` is injected (aware UTC) for
     determinism.
     """
-    stmt = (
-        select(func.min(Job.created_timestamp))
-        .where(Job.status == JobStatus.QUEUED)
-        .where(Job.type == JobType.WORKFLOW)
-    )
+    stmt = select(func.min(Job.created_timestamp)).where(Job.status == JobStatus.QUEUED).where(_is_background_job())
     result = await session.exec(stmt)
     oldest = result.first()
     if oldest is None:
@@ -131,63 +112,54 @@ def _error_type_expr(session):
 
 
 async def terminal_counts(session) -> dict[str, int]:
-    """Cumulative all-time outcome counts derived from the durable job table.
+    """Read all-time outcome counts for background submissions.
 
-    Returns ``{"started", "completed", "failed_error", "failed_worker_lost",
-    "timed_out", "cancelled"}``:
+    Started jobs include non-queued submissions and event-bearing retries that
+    have returned to QUEUED. FAILED rows are split into worker loss, human-input
+    deadline expiry, and other errors. Missing error types count as other errors.
 
-    * ``started`` — every background job that has begun: ``status != QUEUED``
-      AND EXISTS(job_events) (IN_PROGRESS plus every terminal state).
-    * ``completed`` — ``status == COMPLETED``.
-    * FAILED jobs split by ``error->>'type'``: ``failed_worker_lost`` is FAILED
-      AND ``type == 'worker_lost'``; ``failed_error`` is every other FAILED row.
-    * ``timed_out`` / ``cancelled`` — the matching terminal statuses.
-
-    Every non-queued count adds the EXISTS(job_events) filter so a Memory-Base
-    "run job" (build.py's second workflow row, which never appends job_events)
-    is excluded — without it the counts double (see ``_has_job_events``). The
-    worker_lost split uses a dialect-aware JSON extract (see ``_error_type_expr``)
-    so it stays a single bounded SQL aggregate on both SQLite and Postgres.
+    This aggregate still scans historical rows, so the collector runs it less
+    often than the indexed gauges. Status reclassification can lower its raw
+    counts; the observable counter wrapper preserves each series' high-water mark.
     """
-    # One grouped scan, with worker_lost as a conditional sum inside it. This replaced six
-    # separate counts, each of which was its own pass over an unbounded table.
-    has_events = _has_job_events()
     error_type = _error_type_expr(session)
     worker_lost_flag = case((error_type == "worker_lost", 1), else_=0)
-
+    input_timeout_flag = case((error_type == "input_timed_out", 1), else_=0)
     stmt = (
-        select(Job.status, func.count(), func.coalesce(func.sum(worker_lost_flag), 0))
-        .where(Job.status != JobStatus.QUEUED)
-        .where(has_events)
+        select(
+            Job.status,
+            func.count(),
+            func.coalesce(func.sum(worker_lost_flag), 0),
+            func.coalesce(func.sum(input_timeout_flag), 0),
+        )
+        .where(_is_background_job())
+        .where((Job.status != JobStatus.QUEUED) | _has_job_events())
         .group_by(Job.status)
     )
     rows = (await session.exec(stmt)).all()
 
     by_status: dict[str, int] = {}
-    worker_lost_by_status: dict[str, int] = {}
-    for status, count, worker_lost in rows:
+    failed_worker_lost = failed_input_timeout = 0
+    for status, count, worker_lost, input_timeout in rows:
         key = status.value if hasattr(status, "value") else str(status)
         by_status[key] = int(count)
-        worker_lost_by_status[key] = int(worker_lost or 0)
-
-    failed_total = by_status.get(JobStatus.FAILED.value, 0)
-    failed_worker_lost = worker_lost_by_status.get(JobStatus.FAILED.value, 0)
+        if key == JobStatus.FAILED.value:
+            failed_worker_lost = int(worker_lost or 0)
+            failed_input_timeout = int(input_timeout or 0)
 
     return {
-        # Everything past QUEUED has started, which is the sum of the grouped rows.
         "started": sum(by_status.values()),
         "completed": by_status.get(JobStatus.COMPLETED.value, 0),
-        # error_type != 'worker_lost' is NULL for FAILED rows with a NULL error or no type
-        # key, so the plain-error count is the complement rather than its own predicate.
-        "failed_error": failed_total - failed_worker_lost,
+        "failed_error": by_status.get(JobStatus.FAILED.value, 0) - failed_worker_lost - failed_input_timeout,
         "failed_worker_lost": failed_worker_lost,
+        "failed_input_timeout": failed_input_timeout,
         "timed_out": by_status.get(JobStatus.TIMED_OUT.value, 0),
         "cancelled": by_status.get(JobStatus.CANCELLED.value, 0),
     }
 
 
 async def duration_percentiles(session, now: datetime, window_seconds: float) -> tuple[float, float]:
-    """p50/p95 run duration (seconds) over jobs finished within the window.
+    """p50/p95 submission-to-finish time (seconds) over jobs finished within the window.
 
     Considers rows with ``finished_timestamp`` not null AND
     ``finished_timestamp >= now - window_seconds``; duration is
@@ -204,8 +176,8 @@ async def duration_percentiles(session, now: datetime, window_seconds: float) ->
     format. Naive SQLite datetimes are still normalized to aware UTC before
     subtracting, the same way ``oldest_queued_seconds`` does.
 
-    Only TRUE background jobs are considered (EXISTS(job_events)) so a run job's
-    near-instant duration does not skew p50/p95 — see ``_has_job_events``.
+    Only marked background submissions are considered. Durations include queue
+    wait and time suspended on human input, since resume preserves the same row.
     """
     cutoff = now - timedelta(seconds=window_seconds)
     # Bind the cutoff in the form the stored column uses: aware for postgres,
@@ -216,7 +188,7 @@ async def duration_percentiles(session, now: datetime, window_seconds: float) ->
         select(Job.created_timestamp, Job.finished_timestamp)
         .where(col(Job.finished_timestamp).is_not(None))
         .where(col(Job.finished_timestamp) >= sql_cutoff)
-        .where(_has_job_events())
+        .where(_is_background_job())
     )
     result = await session.exec(stmt)
     durations: list[float] = []
@@ -243,10 +215,10 @@ def _nearest_rank(sorted_values: list[float], percentile: float) -> float:
 class BackgroundMetricsCollector:
     """Periodically pushes DB-derived bg-execution gauges to the OTel registry.
 
-    The collector owns the clock: each tick computes one aware-UTC ``now``,
-    runs the three query functions against a short-lived session, and writes the
-    gauges via ``get_telemetry_service().ot.update_gauge``. It is the only writer
-    of these gauges; an ObservableGauge reports the last value set per label-set,
+    Each tick computes one aware-UTC ``now``, queries the current gauges in a
+    short-lived session, and writes them to the telemetry registry. All-time
+    counters refresh on the first tick and at most once every five minutes. It is
+    the only writer of these gauges; an ObservableGauge reports the last value set per label-set,
     so each tick zero-fills the canonical non-terminal status set to make a status
     dropping to 0 overwrite a stale prior value.
 
@@ -267,6 +239,7 @@ class BackgroundMetricsCollector:
         self.duration_window_seconds = duration_window_seconds
         self._stopped = False
         self._task: asyncio.Task | None = None
+        self._last_totals_refresh: float | None = None
 
     async def collect_once(self, session, *, now: datetime | None = None) -> None:
         """Run the queries and push the gauges. Never raises.
@@ -292,28 +265,36 @@ class BackgroundMetricsCollector:
                 )
             ot.update_gauge("langflow_bg_oldest_queued_seconds", oldest, {"backend": backend})
 
-            # Cumulative all-time throughput/outcome counts, set as observable
-            # counters (last-absolute-value-wins per label-set). The worker runs
-            # in separate processes that never expose :9090, so the API-side
-            # collector is the single writer of these from the durable table.
+            p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
+            ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
+            ot.update_gauge("langflow_bg_job_duration_p95_seconds", p95, {"backend": backend})
+
+            # Full-history aggregates are more expensive than the indexed gauges.
+            # Keep their last exported values between refreshes; a monotonic clock
+            # prevents wall-clock adjustments from changing the polling cadence.
+            if (
+                self._last_totals_refresh is not None
+                and monotonic() - self._last_totals_refresh < TERMINAL_COUNTS_INTERVAL_SECONDS
+            ):
+                return
             tc = await terminal_counts(session)
             ot.set_observable_counter("langflow_bg_jobs_started_total", tc["started"], {"backend": backend})
             ot.set_observable_counter("langflow_bg_jobs_completed_total", tc["completed"], {"backend": backend})
-            # Zero-fill every reason each tick so a reason whose count stops
+            # Zero-fill every reason on refresh so a reason whose count stops
             # growing still reports its cumulative value (and a never-seen reason
             # reports 0 rather than vanishing).
             for reason, count in (
                 ("error", tc["failed_error"]),
                 ("worker_lost", tc["failed_worker_lost"]),
+                ("input_timeout", tc["failed_input_timeout"]),
                 ("timeout", tc["timed_out"]),
                 ("cancelled", tc["cancelled"]),
             ):
                 ot.set_observable_counter(
                     "langflow_bg_jobs_failed_total", count, {"reason": reason, "backend": backend}
                 )
-            p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
-            ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
-            ot.update_gauge("langflow_bg_job_duration_p95_seconds", p95, {"backend": backend})
+            # Only a successful refresh advances the clock; failures retry next tick.
+            self._last_totals_refresh = monotonic()
         except Exception as exc:  # noqa: BLE001 - observability must never crash the loop
             logger.warning(f"bg metrics collection tick skipped: {exc}")
 

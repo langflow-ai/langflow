@@ -5,10 +5,9 @@ They run against the REAL test DB (the ``client`` fixture; SQLite locally,
 Postgres in CI) with NO mocking. ``now`` is injected so the time math is
 deterministic and never races the wall clock.
 
-Worker fleet gauges are not covered here: they read ``worker_registry``, which
-only the scaled backend populates, so they ship with that work. ``worker_lost``
-survives as a *failure reason* on ``langflow_bg_jobs_failed_total`` because it is
-a label value the schema already supports, and it reads zero until then.
+Background submissions carry the persisted request marker. Tests also exercise
+orphan cleanup, human-input expiry, retries, and status corrections through the
+real JobService to keep their metric semantics pinned.
 """
 
 from __future__ import annotations
@@ -33,6 +32,11 @@ from langflow.services.jobs.service import JobService
 pytestmark = pytest.mark.usefixtures("client")
 
 
+async def _create_background_job(service: JobService, **kwargs):
+    """Persist the same submission marker as BackgroundExecutionService.submit."""
+    return await service.create_job(initial_metadata={"request": {}}, **kwargs)
+
+
 async def test_count_nonterminal_jobs_excludes_terminal():
     """Only non-terminal background statuses are counted, keyed by status string."""
     service = JobService()
@@ -43,10 +47,10 @@ async def test_count_nonterminal_jobs_excludes_terminal():
     completed = uuid4()
     run_in_progress = uuid4()
 
-    await service.create_job(job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
 
-    await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
     await service.append_event(in_progress, "run_started", {})
     await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
 
@@ -55,7 +59,7 @@ async def test_count_nonterminal_jobs_excludes_terminal():
     await service.update_job_status(run_in_progress, JobStatus.IN_PROGRESS)
 
     # Terminal: must be excluded from the non-terminal aggregate.
-    await service.create_job(job_id=completed, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=completed, flow_id=uuid4(), user_id=uuid4())
     await service.update_job_status(completed, JobStatus.COMPLETED, finished_timestamp=True)
 
     async with session_scope() as session:
@@ -72,13 +76,13 @@ async def test_queued_metrics_exclude_non_workflow_jobs():
     ingestion_queued = uuid4()
     ingestion_running = uuid4()
 
-    await service.create_job(job_id=workflow_queued, flow_id=uuid4())
-    await service.create_job(job_id=workflow_running, flow_id=uuid4())
+    await _create_background_job(service, job_id=workflow_queued, flow_id=uuid4())
+    await _create_background_job(service, job_id=workflow_running, flow_id=uuid4())
     await service.append_event(workflow_running, "run_started", {})
     await service.update_job_status(workflow_running, JobStatus.IN_PROGRESS)
 
-    await service.create_job(job_id=ingestion_queued, flow_id=uuid4(), job_type=JobType.INGESTION)
-    await service.create_job(job_id=ingestion_running, flow_id=uuid4(), job_type=JobType.INGESTION)
+    await _create_background_job(service, job_id=ingestion_queued, flow_id=uuid4(), job_type=JobType.INGESTION)
+    await _create_background_job(service, job_id=ingestion_running, flow_id=uuid4(), job_type=JobType.INGESTION)
     await service.append_event(ingestion_running, "run_started", {})
     await service.update_job_status(ingestion_running, JobStatus.IN_PROGRESS)
 
@@ -106,8 +110,8 @@ async def test_oldest_queued_seconds_uses_injected_now():
 
     older = uuid4()
     newer = uuid4()
-    await service.create_job(job_id=older, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=newer, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=older, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=newer, flow_id=uuid4(), user_id=uuid4())
 
     # Read back the actual stored created_timestamp of the oldest QUEUED job so
     # the expected age is exact regardless of insert latency.
@@ -129,7 +133,7 @@ async def test_oldest_queued_seconds_zero_when_none_queued():
     service = JobService()
 
     done = uuid4()
-    await service.create_job(job_id=done, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=done, flow_id=uuid4(), user_id=uuid4())
     await service.update_job_status(done, JobStatus.COMPLETED, finished_timestamp=True)
 
     now = datetime.now(timezone.utc)
@@ -160,14 +164,14 @@ async def test_collect_once_sets_gauges():
     in_progress = uuid4()
     completed = uuid4()
 
-    await service.create_job(job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
 
-    await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
     await service.append_event(in_progress, "run_started", {})
     await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
 
-    await service.create_job(job_id=completed, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=completed, flow_id=uuid4(), user_id=uuid4())
     await service.update_job_status(completed, JobStatus.COMPLETED, finished_timestamp=True)
 
     collector = BackgroundMetricsCollector(interval=15.0)
@@ -186,8 +190,8 @@ async def test_collect_once_zero_fills_dropped_status():
 
     queued_a = uuid4()
     queued_b = uuid4()
-    await service.create_job(job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
 
     collector = BackgroundMetricsCollector(interval=15.0)
     async with session_scope() as session:
@@ -219,7 +223,7 @@ async def test_run_stop_lifecycle():
     backend = current_backend()
 
     queued = uuid4()
-    await service.create_job(job_id=queued, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=queued, flow_id=uuid4(), user_id=uuid4())
 
     sentinel = -1.0
     gauge = get_telemetry_service().ot._metrics["langflow_bg_jobs"]
@@ -241,8 +245,7 @@ async def test_run_stop_lifecycle():
 async def _seed_failed(service: JobService, *, error: dict):
     """Create a BACKGROUND job (with a job_events row), flip FAILED, stamp error."""
     job_id = uuid4()
-    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
-    # A job_events row is what marks this as a TRUE background job (vs a run job).
+    await _create_background_job(service, job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     await service.append_event(job_id, "run_started", {})
     await service.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
     await service.set_error(job_id, error)
@@ -252,7 +255,7 @@ async def _seed_failed(service: JobService, *, error: dict):
 async def _seed_terminal(service: JobService, status: JobStatus):
     """Create a BACKGROUND job (with a job_events row) and flip it terminal."""
     job_id = uuid4()
-    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     await service.append_event(job_id, "run_started", {})
     await service.update_job_status(job_id, status, finished_timestamp=True)
     return job_id
@@ -261,8 +264,7 @@ async def _seed_terminal(service: JobService, status: JobStatus):
 async def _seed_run_job(service: JobService, status: JobStatus = JobStatus.COMPLETED):
     """Create a Memory-Base RUN job: created directly, terminal, NO job_events.
 
-    Mimics build.py's second workflow row — it must be excluded by the collector's
-    EXISTS(job_events) filter.
+    Mimics build.py's second workflow row, which lacks the submission request marker.
     """
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
@@ -277,9 +279,9 @@ async def test_terminal_counts_splits_outcomes():
     service = JobService()
 
     # 1 QUEUED (excluded from started), 1 IN_PROGRESS (counts toward started).
-    await service.create_job(job_id=uuid4(), flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=uuid4(), flow_id=uuid4(), user_id=uuid4())
     in_progress = uuid4()
-    await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
     await service.append_event(in_progress, "run_started", {})
     await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
 
@@ -336,7 +338,7 @@ async def test_terminal_counts_excludes_run_jobs():
 
     This is the 2x-inflation guard: build.py writes a second workflow row per
     flow build that goes straight to COMPLETED with no job_events. The collector
-    must count only the TRUE background job (EXISTS(job_events)).
+    must count only the marked background submission.
     """
     service = JobService()
 
@@ -369,7 +371,7 @@ async def test_duration_percentiles_deterministic():
     job_ids = []
     for _ in durations:
         jid = uuid4()
-        await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+        await _create_background_job(service, job_id=jid, flow_id=uuid4(), user_id=uuid4())
         await service.append_event(jid, "run_started", {})
         await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
         job_ids.append(jid)
@@ -411,12 +413,12 @@ async def test_duration_percentiles_excludes_jobs_outside_window():
     old = uuid4()
     recent = uuid4()
     for jid in (old, recent):
-        await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+        await _create_background_job(service, job_id=jid, flow_id=uuid4(), user_id=uuid4())
         await service.append_event(jid, "run_started", {})
         await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
 
     # A RUN job (no job_events) finished AT base with a 5000s duration — inside
-    # the window but must be excluded by EXISTS(job_events), so it never skews p95.
+    # the window but lacks the request marker, so it never skews p95.
     run_job = await _seed_run_job(service, JobStatus.COMPLETED)
 
     async with session_scope() as session:
@@ -436,7 +438,7 @@ async def test_duration_percentiles_excludes_jobs_outside_window():
 
     # 60s window back from ``base``: the recent job (finished AT base) is in; the
     # old job (finished an hour earlier) is out by the SQL cutoff; the run job is
-    # out by EXISTS(job_events). Only the 7s sample remains, so p50 == p95 == 7
+    # out by its missing request marker. Only the 7s sample remains, so p50 == p95 == 7
     # and neither the 999s nor the 5000s duration leaks in.
     async with session_scope() as session:
         p50, p95 = await duration_percentiles(session, base, window_seconds=60.0)
@@ -451,7 +453,7 @@ async def test_duration_percentiles_zero_when_none_in_window():
     service = JobService()
 
     jid = uuid4()
-    await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=jid, flow_id=uuid4(), user_id=uuid4())
     await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
 
     # Anchor ``now`` far in the FUTURE with a tiny window so the cutoff
@@ -488,7 +490,7 @@ async def test_collect_once_sets_counters_and_duration_gauges():
     # A COMPLETED BACKGROUND job (with a job_events row) with a known 12s
     # duration finished now so the duration gauges are non-zero with a tight window.
     dur_job = uuid4()
-    await service.create_job(job_id=dur_job, flow_id=uuid4(), user_id=uuid4())
+    await _create_background_job(service, job_id=dur_job, flow_id=uuid4(), user_id=uuid4())
     await service.append_event(dur_job, "run_started", {})
     await service.update_job_status(dur_job, JobStatus.COMPLETED, finished_timestamp=True)
     async with session_scope() as session:
@@ -573,3 +575,179 @@ async def test_a_failing_tick_does_not_end_the_collector_loop(client):  # noqa: 
         mc.session_scope = real_session_scope
 
     assert calls["n"] >= 3, f"the loop stopped after the failing tick (only {calls['n']} attempts)"
+
+
+async def test_orphan_sweep_does_not_turn_other_jobs_into_background_jobs():
+    """Swept sync and ingestion rows have events but no background request marker."""
+    service = JobService()
+    background = await _seed_terminal(service, JobStatus.COMPLETED)
+    others = []
+    for job_type, metadata in (
+        (JobType.WORKFLOW, None),
+        (JobType.WORKFLOW, {"request": None}),
+        (JobType.INGESTION, {"request": {}}),
+    ):
+        job_id = uuid4()
+        await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=job_type, initial_metadata=metadata)
+        await service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+        others.append(job_id)
+
+    assert set(await service.sweep_orphans()) == set(others)
+    now = datetime.now(timezone.utc)
+    async with session_scope() as session:
+        for job_id in [background, *others]:
+            job = await session.get(Job, job_id)
+            job.finished_timestamp = now
+            job.created_timestamp = now - timedelta(seconds=10 if job_id == background else 3600)
+            session.add(job)
+        await session.flush()
+        counts = await terminal_counts(session)
+        durations = await duration_percentiles(session, now, window_seconds=300)
+    assert counts["started"] == counts["completed"] == 1
+    assert counts["failed_worker_lost"] == 0
+    assert durations == (10.0, 10.0)
+
+
+async def test_background_marker_identifies_queued_and_suspended_jobs_without_events():
+    """Only submissions contribute even before an event is appended."""
+    service = JobService()
+    now = datetime.now(timezone.utc)
+    await _create_background_job(service, job_id=uuid4(), flow_id=uuid4())
+    suspended = uuid4()
+    await _create_background_job(service, job_id=suspended, flow_id=uuid4())
+    await service.update_job_status(suspended, JobStatus.SUSPENDED)
+    sync_job = uuid4()
+    await service.create_job(job_id=sync_job, flow_id=uuid4())
+    async with session_scope() as session:
+        row = await session.get(Job, sync_job)
+        row.created_timestamp = now - timedelta(hours=1)
+        session.add(row)
+        await session.flush()
+        assert await count_nonterminal_jobs(session) == {"queued": 1, "suspended": 1}
+        assert await oldest_queued_seconds(session, now) < 60
+        await BackgroundMetricsCollector(interval=15).collect_once(session, now=now)
+    assert _gauge_value("langflow_bg_jobs", {"status": "suspended", "backend": current_backend()}) == 1
+
+
+async def test_started_count_survives_retry_requeue():
+    """Requeueing a started submission must not reduce started_total."""
+    service = JobService()
+    job_id = uuid4()
+    await _create_background_job(service, job_id=job_id, flow_id=uuid4())
+    await service.update_job_metadata(job_id, {"attempt": 0})
+    await service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    await service.append_event(job_id, "run_started", {})
+    assert await service.retry_requeue_claim(job_id, expected_attempt=0)
+    async with session_scope() as session:
+        assert (await terminal_counts(session))["started"] == 1
+
+
+async def test_input_deadline_expiry_has_its_own_failure_reason():
+    """A missed approval deadline is distinct from execution errors and timeouts."""
+    service = JobService()
+    job_id = uuid4()
+    await _create_background_job(service, job_id=job_id, flow_id=uuid4())
+    await service.update_job_status(job_id, JobStatus.SUSPENDED)
+    await service.update_job_metadata(
+        job_id, {"input_deadline_at": (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()}
+    )
+    assert await service.sweep_input_deadlines() == [job_id]
+    async with session_scope() as session:
+        counts = await terminal_counts(session)
+        await BackgroundMetricsCollector(interval=15).collect_once(session)
+    assert counts["failed_input_timeout"] == 1
+    assert counts["failed_error"] == counts["timed_out"] == 0
+    assert (
+        _counter_value("langflow_bg_jobs_failed_total", {"reason": "input_timeout", "backend": current_backend()}) == 1
+    )
+
+
+async def test_totals_refresh_less_often_than_gauges(monkeypatch):
+    """Fast ticks update gauges without re-querying all historical outcomes."""
+    import langflow.services.background_execution.metrics_collector as mc
+
+    clock = [0.0]
+    monkeypatch.setattr(mc, "monotonic", lambda: clock[0])
+    calls = 0
+    real_counts = mc.terminal_counts
+
+    async def tracked_counts(session):
+        nonlocal calls
+        calls += 1
+        return await real_counts(session)
+
+    monkeypatch.setattr(mc, "terminal_counts", tracked_counts)
+    service = JobService()
+    job_id = uuid4()
+    await _create_background_job(service, job_id=job_id, flow_id=uuid4())
+    collector = BackgroundMetricsCollector(interval=15)
+    backend = current_backend()
+    async with session_scope() as session:
+        await collector.collect_once(session)
+    await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+    for instant in (15, 150, 299):
+        clock[0] = instant
+        async with session_scope() as session:
+            await collector.collect_once(session)
+    assert calls == 1
+    assert _gauge_value("langflow_bg_jobs", {"status": "queued", "backend": backend}) == 0
+    assert _counter_value("langflow_bg_jobs_completed_total", {"backend": backend}) == 0
+    clock[0] = 300
+    async with session_scope() as session:
+        await collector.collect_once(session)
+    assert calls == 2
+    assert _counter_value("langflow_bg_jobs_completed_total", {"backend": backend}) == 1
+
+
+async def test_totals_query_failure_retries_next_tick(monkeypatch):
+    """A failed full scan must not delay the retry for another five minutes."""
+    import langflow.services.background_execution.metrics_collector as mc
+
+    monkeypatch.setattr(mc, "monotonic", lambda: 0.0)
+    calls = 0
+    real_counts = mc.terminal_counts
+
+    async def flaky_counts(session):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            msg = "temporary query failure"
+            raise RuntimeError(msg)
+        return await real_counts(session)
+
+    monkeypatch.setattr(mc, "terminal_counts", flaky_counts)
+    collector = BackgroundMetricsCollector(interval=15)
+    async with session_scope() as session:
+        await collector.collect_once(session)
+        await collector.collect_once(session)
+    assert calls == 2
+
+
+async def test_status_corrections_do_not_lower_exported_counters(monkeypatch):
+    """Late cancellation and worker-loss correction cannot look like counter resets."""
+    import langflow.services.background_execution.metrics_collector as mc
+
+    clock = [0.0]
+    monkeypatch.setattr(mc, "monotonic", lambda: clock[0])
+    service = JobService()
+    completed = await _seed_terminal(service, JobStatus.COMPLETED)
+    lost = await _seed_failed(service, error={"type": "worker_lost"})
+    collector = BackgroundMetricsCollector(interval=15)
+    labels = {"backend": current_backend()}
+    async with session_scope() as session:
+        await collector.collect_once(session)
+    assert _counter_value("langflow_bg_jobs_completed_total", labels) == 1
+    assert _counter_value("langflow_bg_jobs_failed_total", {**labels, "reason": "worker_lost"}) == 1
+    await service.update_job_status(completed, JobStatus.CANCELLED)
+    clock[0] = 300
+    async with session_scope() as session:
+        assert (await terminal_counts(session))["completed"] == 0
+        await collector.collect_once(session)
+    assert _counter_value("langflow_bg_jobs_completed_total", labels) == 1
+    await service.update_job_status(lost, JobStatus.COMPLETED)
+    clock[0] = 600
+    async with session_scope() as session:
+        assert (await terminal_counts(session))["failed_worker_lost"] == 0
+        await collector.collect_once(session)
+    assert _counter_value("langflow_bg_jobs_failed_total", {**labels, "reason": "worker_lost"}) == 1
+    assert _counter_value("langflow_bg_jobs_failed_total", {**labels, "reason": "cancelled"}) == 1
