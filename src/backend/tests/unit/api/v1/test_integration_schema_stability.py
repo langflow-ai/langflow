@@ -208,7 +208,9 @@ def test_integration_catalog_schemas_are_frozen() -> None:
         "connection_count",
         "capabilities",
     }
-    assert _fields(IntegrationListRead) == {"providers"}
+    # ``deployment_context`` (TRG-5) is additive: the connection dialog reads it
+    # to keep Slack's app-level-token option off hosted.
+    assert _fields(IntegrationListRead) == {"providers", "deployment_context"}
 
 
 def test_effective_policy_schema_is_frozen() -> None:

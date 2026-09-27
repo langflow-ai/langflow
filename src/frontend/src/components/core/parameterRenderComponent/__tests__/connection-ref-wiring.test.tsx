@@ -119,6 +119,7 @@ const connectionField = {
   conditional_scopes: CONDITIONAL_SCOPES,
   capabilities: ["microsoft.files.list"],
   identity_kind: "user",
+  ownership_mode: "user",
   value: "microsoft/work",
 };
 
@@ -163,6 +164,7 @@ describe("ParameterRenderComponent - connection_ref wiring", () => {
         }),
         capabilities: ["microsoft.files.list"],
         identityKind: "user",
+        ownershipMode: "user",
       }),
     );
   });

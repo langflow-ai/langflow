@@ -147,8 +147,13 @@ export interface IntegrationProviderRead {
   capabilities: IntegrationCapabilityRead[];
 }
 
+/** Which deployment this instance is (`LANGFLOW_CONNECTION_OAUTH_CONTEXT`). */
+export type DeploymentContext = "self_managed" | "hosted" | "desktop";
+
 export interface IntegrationListRead {
   providers: IntegrationProviderRead[];
+  /** Hosted has no Slack Socket Mode, Desktop no Slack Events API. */
+  deployment_context?: DeploymentContext;
 }
 
 /** What the caller may use, and whether a plugin owns the decision. */

@@ -141,7 +141,7 @@ def _capability(manifest: dict, capability_id: str) -> dict:
             "outside integrations.slack.",
         ),
         (
-            lambda m: _capability(m, "slack.user.search").__setitem__("auth_profile_id", "slack-app-token"),
+            lambda m: _capability(m, "slack.user.search").__setitem__("auth_profile_id", "slack-no-such-profile"),
             "unknown auth profile",
         ),
         (
