@@ -104,6 +104,23 @@ describe("conflict drafts", () => {
     expect(readConflictDraft("user-1", "flow-1")?.secretsCleared).toBe(false);
   });
 
+  it("should keep the graph the work was built on, scrubbed like the work", () => {
+    saveConflictDraft(
+      "user-1",
+      flow("flow-1", { note: { value: "mine" } }),
+      "token-a",
+      flow("flow-1", { api_key: { value: "sk-live", password: true } }).data,
+    );
+
+    const draft = readConflictDraft("user-1", "flow-1");
+    const template = (
+      draft?.baseData?.nodes[0] as unknown as {
+        data: { node: { template: Record<string, { value: unknown }> } };
+      }
+    ).data.node.template;
+    expect(template.api_key.value).toBe("");
+  });
+
   it("should forget a draft once it is cleared", () => {
     saveConflictDraft("user-1", flow("flow-1"), "token-a");
 

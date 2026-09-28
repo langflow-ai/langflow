@@ -21,6 +21,12 @@ export type ConflictDraft = {
   versionToken: string | null;
   savedAt: string;
   data: FlowType["data"];
+  /**
+   * The graph at ``versionToken``. A reload replaces the baseline with the
+   * server's newer version, and diffing the restored work against that credits
+   * the other person's changes to the draft.
+   */
+  baseData?: FlowType["data"];
   /** True when the scrubber cleared secret fields, so the restore can say so. */
   secretsCleared: boolean;
 };
@@ -97,16 +103,22 @@ export const saveConflictDraft = (
   userId: string | null | undefined,
   flow: FlowType,
   versionToken: string | null,
+  baseData?: FlowType["data"],
 ): boolean => {
   if (!userId || !flow?.id) return false;
   try {
     const scrubbed = clearRemainingSecrets(removeApiKeys({ ...flow }));
+    // Scrubbed the same way, so a cleared secret reads as unchanged on my side.
+    const scrubbedBase = baseData
+      ? clearRemainingSecrets(removeApiKeys({ ...flow, data: baseData })).data
+      : undefined;
     const draft: ConflictDraft = {
       flowId: flow.id,
       userId,
       versionToken,
       savedAt: new Date().toISOString(),
       data: scrubbed.data,
+      ...(scrubbedBase && { baseData: scrubbedBase }),
       secretsCleared: anyValueWasCleared(flow, scrubbed),
     };
     const payload = JSON.stringify(draft);

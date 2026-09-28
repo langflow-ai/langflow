@@ -56,7 +56,7 @@ Presence. Nobody is warned *before* a conflict happens — two people can work u
 | **Update flow** | Exit that writes the merge to the original and archives the replaced version. | `POST /flows/{id}/overwrite` |
 | **Duplicate** | Exit that writes the merge to a new, inert flow. | `POST /flows/{id}/fork`, `build_fork_payload` |
 | **Take latest** | Exit that drops the person's own changes and reloads the server's version. | `onDiscard`, `fetchAndAdoptServerVersion` |
-| **Draft** | The refused work, kept in browser storage so a reload cannot lose it. | `saveConflictDraft`, `lf_draft_{userId}_{flowId}` |
+| **Draft** | The refused work, kept in browser storage so a reload cannot lose it, together with the graph it was built on. Restoring it makes that graph the baseline again, so the dialog does not credit the other person's changes to the draft. | `saveConflictDraft`, `lf_draft_{userId}_{flowId}` |
 | **Abandoned flow** | A flow duplicated out of; further writes to it are refused locally. | `abandonedFlowIds` |
 
 ---
@@ -174,7 +174,7 @@ Each scenario maps to a spec in `src/frontend/tests/core/regression/` (`multi-ed
 ### ADR-003 — The graph travels only when the person edited it
 **Status:** Accepted
 **Context:** Opening a flow rewrites nodes (component refreshes, model inputs), and clicking a node writes `selected` into the graph. Comparing the payload against the baseline therefore called a plain rename a competing graph write — the rename was refused and silently discarded.
-**Decision:** A save carries `data` only when the person edited the canvas, or when a caller supplies a graph the canvas does not hold (applying a template). Canvas state that belongs to the viewer — viewport, `selected`, `dragging`, `resizing` — is excluded from the comparison.
+**Decision:** A save carries `data` only when the person edited the canvas, or when a caller supplies a graph that neither the canvas nor the baseline holds (applying a template). The graph as it was loaded is never such a graph, even when hydration has since rewritten the canvas. Canvas state that belongs to the viewer — viewport, `selected`, `dragging`, `resizing` — is excluded from the comparison. A save that sent no graph adopts only the metadata from its response: the graph and token stay the ones the client built on, so a graph change made by someone else in the meantime still surfaces as a conflict on the next edit.
 **Consequences:** Renames, project moves and lock toggles never conflict. Automatic hydration changes are persisted by the next real edit rather than on their own.
 
 ### ADR-004 — A blocked save fails loudly
@@ -215,7 +215,7 @@ Each scenario maps to a spec in `src/frontend/tests/core/regression/` (`multi-ed
 |---|---|
 | `200` + `version_token` | Accepted; the token is new when `data` changed |
 | `409` | Precondition failed — body below |
-| `400` | `If-Match` is not a UUID |
+| `400` | `If-Match` is present but blank or not a UUID |
 
 ```json
 {
@@ -239,7 +239,7 @@ Each scenario maps to a spec in `src/frontend/tests/core/regression/` (`multi-ed
 |---|---|---|---|
 | `flow_version_conflict` | Precondition mismatch | "The version you're editing is out of date" | Update flow / Duplicate / Take latest |
 | `428` | Overwrite without `If-Match` | — (client always sends it) | Reopen the dialog |
-| `400` | Malformed `If-Match` | Generic save error | Fix the client |
+| `400` | Malformed or blank `If-Match` | Generic save error | Fix the client |
 | `409` (fork) | Copy name taken concurrently | "Could not duplicate the flow" | Retry |
 | `503` | Database busy on version restore | "The database is busy" | The client retries once |
 

@@ -3,12 +3,14 @@ import useFlowConflictStore from "@/stores/flowConflictStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
+import type { ConflictDraft } from "@/utils/conflict-draft";
 import {
   adoptServerVersion,
   attachTheirFlow,
   fetchAndAdoptServerVersion,
   readFlowVersionState,
   registerConflictState,
+  reinstateDraftBaseline,
 } from "../conflict-actions";
 
 jest.mock("@/controllers/API/api", () => ({
@@ -266,11 +268,114 @@ describe("keeping refused work recoverable", () => {
     expect(stored.versionToken).toBe("token-a");
   });
 
+  it("should record the graph the work was built on, so a reload can diff against it", () => {
+    // After a reload the baseline is the server's newer version. Diffing the
+    // restored work against that listed the other person's changes as mine, and
+    // overwriting then erased them.
+    liveCanvas();
+    const builtOn = {
+      nodes: [{ id: "n0", data: {} }],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+    useFlowsManagerStore.setState({
+      currentFlow: {
+        id: "flow-1",
+        version_token: "token-a",
+        data: builtOn,
+      } as unknown as FlowType,
+    });
+
+    registerConflictState(conflictInput({ expectedToken: "token-a" }));
+
+    const stored = JSON.parse(
+      localStorage.getItem("lf_draft_user-1_flow-1") as string,
+    );
+    expect(stored.baseData.nodes).toEqual(builtOn.nodes);
+  });
+
+  it("should not record a baseline the work was not built on", () => {
+    liveCanvas();
+    useFlowsManagerStore.setState({
+      currentFlow: {
+        id: "flow-1",
+        version_token: "token-newer",
+        data: { nodes: [], edges: [] },
+      } as unknown as FlowType,
+    });
+
+    registerConflictState(conflictInput({ expectedToken: "token-a" }));
+
+    const stored = JSON.parse(
+      localStorage.getItem("lf_draft_user-1_flow-1") as string,
+    );
+    expect(stored.baseData).toBeUndefined();
+  });
+
   it("should not write a draft for a flow that is not the one on screen", () => {
     liveCanvas("another-flow");
 
     registerConflictState(conflictInput());
 
     expect(localStorage.getItem("lf_draft_user-1_flow-1")).toBeNull();
+  });
+});
+
+describe("restoring a draft after a reload", () => {
+  const builtOn = {
+    nodes: [{ id: "n0", data: {} }],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+  const draft = (overrides = {}): ConflictDraft =>
+    ({
+      flowId: "flow-1",
+      userId: "user-1",
+      versionToken: "token-a",
+      savedAt: "2026-09-28T10:00:00Z",
+      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      baseData: builtOn,
+      secretsCleared: false,
+      ...overrides,
+    }) as unknown as ConflictDraft;
+
+  beforeEach(() => {
+    useFlowsManagerStore.setState({
+      currentFlow: {
+        id: "flow-1",
+        name: "reloaded",
+        version_token: "token-b",
+        data: { nodes: [{ id: "theirs", data: {} }], edges: [] },
+      } as unknown as FlowType,
+      currentFlowId: "flow-1",
+    });
+    useFlowStore.setState({
+      nodes: [{ id: "on-canvas", data: {} }] as never,
+    });
+  });
+
+  it("should make the version the work was built on the baseline again", () => {
+    reinstateDraftBaseline(draft());
+
+    const baseline = useFlowsManagerStore.getState().currentFlow;
+    expect(baseline?.data).toEqual(builtOn);
+    expect(baseline?.version_token).toBe("token-a");
+    expect(baseline?.name).toBe("reloaded");
+  });
+
+  it("should leave the canvas alone", () => {
+    reinstateDraftBaseline(draft());
+
+    expect(useFlowStore.getState().nodes).toEqual([
+      { id: "on-canvas", data: {} },
+    ]);
+  });
+
+  it("should keep the loaded baseline when the draft does not carry one", () => {
+    reinstateDraftBaseline(draft({ baseData: undefined }));
+
+    expect(useFlowsManagerStore.getState().currentFlow?.version_token).toBe(
+      "token-b",
+    );
   });
 });

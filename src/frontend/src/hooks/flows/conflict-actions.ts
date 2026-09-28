@@ -5,7 +5,7 @@ import useFlowConflictStore from "@/stores/flowConflictStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
-import { saveConflictDraft } from "@/utils/conflict-draft";
+import { type ConflictDraft, saveConflictDraft } from "@/utils/conflict-draft";
 import { processFlows } from "@/utils/reactflowUtils";
 
 /**
@@ -111,6 +111,13 @@ export const persistConflictDraft = (
   const live = useFlowStore.getState();
   const liveFlow = live.currentFlow;
   if (liveFlow?.id !== flowId) return false;
+  const baseline = useFlowsManagerStore.getState().currentFlow;
+  const builtOn =
+    baseline?.id === flowId &&
+    builtOnToken !== null &&
+    baseline.version_token === builtOnToken
+      ? baseline.data
+      : undefined;
   return saveConflictDraft(
     currentUserId,
     {
@@ -118,7 +125,28 @@ export const persistConflictDraft = (
       data: { ...liveFlow.data, nodes: live.nodes, edges: live.edges },
     } as FlowType,
     builtOnToken,
+    builtOn,
   );
+};
+
+/**
+ * Put back the version a restored draft was built on as the baseline.
+ *
+ * A reload loads the server's newer version as the baseline. Left there, the
+ * conflict dialog diffs the draft against it: the other person's changes show up
+ * as mine, reversed, and overwriting erases them. The canvas is left alone; only
+ * what the next diff and the next save compare against moves.
+ */
+export const reinstateDraftBaseline = (draft: ConflictDraft): void => {
+  const baseline = useFlowsManagerStore.getState().currentFlow;
+  if (!draft.baseData || baseline?.id !== draft.flowId) return;
+  useFlowsManagerStore.setState({
+    currentFlow: {
+      ...baseline,
+      data: cloneDeep(draft.baseData),
+      version_token: draft.versionToken,
+    },
+  });
 };
 
 /** Fetch the other version so the dialog can diff against it; the dialog degrades without it. */

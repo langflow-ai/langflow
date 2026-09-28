@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { reinstateDraftBaseline } from "@/hooks/flows/conflict-actions";
 import { raiseConflictForStaleWork } from "@/hooks/flows/use-check-flow-version";
 import useAuthStore from "@/stores/authStore";
 import useFlowConflictStore from "@/stores/flowConflictStore";
@@ -53,6 +54,9 @@ export function RestoreDraftBanner({ flowId }: { flowId: string }) {
     // it as theirs — and a later run would adopt the server's version straight
     // over the top of what was just restored.
     useFlowStore.setState({ userEditedSinceLoad: true });
+    // Before the stale check: the conflict it raises re-saves the draft and
+    // feeds the dialog, and both must compare against what the work was built on.
+    reinstateDraftBaseline(draft);
     setDraft(null);
 
     // The stored copy is dropped only when the restored work is no longer at
