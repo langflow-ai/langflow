@@ -65,7 +65,11 @@ const FlowSettingsComponent = ({
     flowData ? undefined : state.currentFlow,
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-  const pendingAutoSave = useFlowStore((state) => state.autoSaveFlow);
+  // A flow card (`flowData`) must not use the registered autosave: it may
+  // belong to an unmounted editor, whose save never settles.
+  const pendingAutoSave = useFlowStore((state) =>
+    flowData ? undefined : state.autoSaveFlow,
+  );
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
@@ -94,10 +98,8 @@ const FlowSettingsComponent = ({
     if (autoSaving) {
       const persistSettings = async () => {
         try {
-          // Queue behind the editor's saves: a pending canvas save lands
-          // first, and one triggered while this is in flight waits for its
-          // result. Run alongside a lock change, a canvas save still carries
-          // the old lock state and the server rejects it.
+          // Queue behind the editor's saves: a canvas save run alongside a
+          // lock change carries the old lock state and the server rejects it.
           if (pendingAutoSave) {
             await pendingAutoSave.enqueue(newFlow);
           } else {

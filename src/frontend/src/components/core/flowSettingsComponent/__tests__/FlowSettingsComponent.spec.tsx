@@ -155,7 +155,7 @@ describe("FlowSettingsComponent", () => {
     mockAutoSaving = true;
     const onClose = jest.fn();
 
-    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
+    render(<FlowSettingsComponent open close={onClose} />);
 
     fireEvent.click(screen.getByTestId("set-name-new"));
     const saveBtn = screen.getByTestId("save-flow-settings");
@@ -187,7 +187,7 @@ describe("FlowSettingsComponent", () => {
     );
     const onClose = jest.fn();
 
-    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
+    render(<FlowSettingsComponent open close={onClose} />);
 
     fireEvent.click(screen.getByTestId("toggle-lock"));
     fireEvent.click(screen.getByTestId("save-flow-settings"));
@@ -224,12 +224,33 @@ describe("FlowSettingsComponent", () => {
     });
   });
 
+  it("saves a flow card directly even when an editor autosave is registered", async () => {
+    // The registered autosave may belong to an editor that has unmounted; its
+    // save never settles, which left the home page modal spinning.
+    mockAutoSaving = true;
+    mockSave.mockResolvedValueOnce(undefined);
+    const onClose = jest.fn();
+
+    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
+
+    fireEvent.click(screen.getByTestId("set-name-new"));
+    fireEvent.click(screen.getByTestId("save-flow-settings"));
+
+    await waitFor(() => {
+      expect(mockSave).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "New Name" }),
+      );
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(mockAutoSaveEnqueue).not.toHaveBeenCalled();
+  });
+
   it("keeps the modal open when the queued save fails", async () => {
     mockAutoSaving = true;
     mockAutoSaveEnqueue.mockRejectedValueOnce(new Error("boom"));
     const onClose = jest.fn();
 
-    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
+    render(<FlowSettingsComponent open close={onClose} />);
 
     fireEvent.click(screen.getByTestId("toggle-lock"));
     fireEvent.click(screen.getByTestId("save-flow-settings"));
