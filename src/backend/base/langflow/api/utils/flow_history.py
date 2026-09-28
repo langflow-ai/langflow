@@ -12,6 +12,7 @@ from langflow.services.flow_history.errors import (
     FlowHistoryError,
     FlowRevisionMismatchError,
     FlowRevisionNotFoundError,
+    FlowRevisionNotRetainedError,
     FlowVersionConflictError,
     RestoreFixNotAllowedError,
 )
@@ -75,6 +76,14 @@ def history_http_error(exc: FlowHistoryError) -> HTTPException:
         return HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"code": exc.code, "message": str(exc)},
+        )
+    if isinstance(exc, FlowRevisionNotRetainedError):
+        return HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail={
+                "code": exc.code,
+                "message": "This point in the flow's history is older than the history Langflow keeps.",
+            },
         )
     if isinstance(exc, FlowRevisionNotFoundError):
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": exc.code, "message": str(exc)})
