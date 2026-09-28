@@ -8,6 +8,8 @@ import { useGetMessageHistory } from "../use-get-message-history";
 const mockGet = jest.fn();
 let mockPlayground = false;
 let mockAuthenticated = false;
+// Rows the mock server no longer has, like a real delete.
+const serverDeleted = new Set<string>();
 
 jest.mock("@/controllers/API/api", () => ({
   api: { get: (...args: unknown[]) => mockGet(...args) },
@@ -58,11 +60,28 @@ beforeEach(() => {
   mockAuthenticated = false;
   useMessagesStore.getState().clearMessages();
   sessionStorage.clear();
-  mockGet.mockImplementation(async (_url, { params }) => ({
-    data: Array.from({ length: 250 }, (_, i) =>
+  serverDeleted.clear();
+  mockGet.mockImplementation(async (_url, { params }) => {
+    const newestFirst = Array.from({ length: 250 }, (_, i) =>
       message(249 - i, decodeURIComponent(params.session_id ?? "session-a")),
-    ).slice(params.offset, params.offset + params.limit),
-  }));
+    ).filter((m) => !serverDeleted.has(m.id ?? ""));
+    let start = 0;
+    if (params.before_id) {
+      start = newestFirst.findIndex((m) => m.id === params.before_id) + 1;
+      if (start === 0) {
+        throw {
+          isAxiosError: true,
+          response: {
+            status: 400,
+            data: {
+              detail: "before_id does not match a message in this history.",
+            },
+          },
+        };
+      }
+    }
+    return { data: newestFirst.slice(start, start + params.limit) };
+  });
 });
 
 it.each([false, true])(
@@ -95,8 +114,8 @@ it.each([false, true])(
       new Set(useMessagesStore.getState().messages.map((m) => m.id)).size,
     ).toBe(250);
     expect(
-      mockGet.mock.calls.map(([, config]) => config.params.offset),
-    ).toEqual([0, 100, 200]);
+      mockGet.mock.calls.map(([, config]) => config.params.before_id),
+    ).toEqual([undefined, "session-a-150", "session-a-50"]);
     for (const [url, { params }] of mockGet.mock.calls) {
       expect(url.endsWith(shared ? "/messages/shared" : "/messages")).toBe(
         true,
@@ -106,6 +125,7 @@ it.each([false, true])(
         order: "DESC",
         session_id: "session-a",
       });
+      expect(params).not.toHaveProperty("offset");
       expect(params).toHaveProperty(
         shared ? "source_flow_id" : "flow_id",
         shared ? "source-flow" : "flow",
@@ -181,10 +201,9 @@ it("resets pagination for a different session without mixing histories", async (
     ).toBe(true),
   );
   expect(useMessagesStore.getState().messages).toHaveLength(100);
-  expect(mockGet.mock.calls.at(-1)?.[1].params).toMatchObject({
-    session_id: "session-b",
-    offset: 0,
-  });
+  const lastParams = mockGet.mock.calls.at(-1)?.[1].params;
+  expect(lastParams).toMatchObject({ session_id: "session-b" });
+  expect(lastParams).not.toHaveProperty("before_id");
 });
 
 it("preserves every anonymous session when the playground saves its message store", async () => {
@@ -267,4 +286,98 @@ it("stops at exactly one page and honors disabled queries", async () => {
   rerender({ enabled: true });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
   expect(result.current.hasNextPage).toBe(false);
+});
+
+describe("after the cursor row is deleted", () => {
+  const loadFirstPage = async () => {
+    const hook = renderHook(
+      () => useGetMessageHistory({ id: "flow", sessionId: "session-a" }),
+      { wrapper: wrapper() },
+    );
+    await waitFor(() =>
+      expect(useMessagesStore.getState().messages).toHaveLength(100),
+    );
+    return hook;
+  };
+  const storedIds = () =>
+    new Set(
+      useMessagesStore.getState().messages.flatMap((m) => (m.id ? [m.id] : [])),
+    );
+  const requestedCursors = () =>
+    mockGet.mock.calls.map(([, config]) => config.params.before_id);
+
+  it("anchors on the oldest row still shown when this view deleted it", async () => {
+    const { result } = await loadFirstPage();
+    serverDeleted.add("session-a-150");
+    await act(async () => {
+      await useMessagesStore.getState().removeMessages(["session-a-150"]);
+    });
+
+    await act(async () => {
+      await result.current.fetchNextPage();
+    });
+
+    await waitFor(() => expect(storedIds().size).toBe(199));
+    expect(requestedCursors()).toEqual([undefined, "session-a-151"]);
+    expect(storedIds().has("session-a-149")).toBe(true);
+    expect(storedIds().has("session-a-50")).toBe(true);
+  });
+
+  it("falls back to the next-oldest row when it was deleted elsewhere", async () => {
+    const { result } = await loadFirstPage();
+    serverDeleted.add("session-a-150");
+
+    await act(async () => {
+      await result.current.fetchNextPage();
+    });
+
+    await waitFor(() => expect(storedIds().size).toBe(200));
+    expect(requestedCursors()).toEqual([
+      undefined,
+      "session-a-150",
+      "session-a-151",
+    ]);
+    expect(result.current.isError).toBe(false);
+    expect(storedIds().has("session-a-149")).toBe(true);
+  });
+
+  it("continues from the newest page when every loaded row was deleted", async () => {
+    const { result } = await loadFirstPage();
+    const loaded = [...storedIds()];
+    for (const id of loaded) serverDeleted.add(id);
+    await act(async () => {
+      await useMessagesStore.getState().removeMessages(loaded);
+    });
+
+    await act(async () => {
+      await result.current.fetchNextPage();
+    });
+
+    await waitFor(() => expect(storedIds().size).toBe(100));
+    expect(requestedCursors()).toEqual([undefined, undefined]);
+    expect(storedIds().has("session-a-149")).toBe(true);
+    expect(storedIds().has("session-a-50")).toBe(true);
+  });
+
+  it("fails without retrying once no fallback anchor is left", async () => {
+    const { result } = await loadFirstPage();
+    for (const id of ["session-a-150", "session-a-151", "session-a-152"]) {
+      serverDeleted.add(id);
+    }
+
+    let outcome: Awaited<ReturnType<typeof result.current.fetchNextPage>>;
+    await act(async () => {
+      outcome = await result.current.fetchNextPage();
+    });
+
+    // The server's own 400 surfaces, so the query layer does not retry it.
+    expect(outcome!.isFetchNextPageError).toBe(true);
+    expect(outcome!.error).toMatchObject({ response: { status: 400 } });
+    expect(requestedCursors()).toEqual([
+      undefined,
+      "session-a-150",
+      "session-a-151",
+      "session-a-152",
+    ]);
+  });
 });
