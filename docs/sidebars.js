@@ -295,6 +295,11 @@ module.exports = {
           items: [
             {
               type: "doc",
+              id: "Deployment/deployment-easypanel",
+              label: "Easypanel"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-gcp",
               label: "Google Cloud Platform"
             },
