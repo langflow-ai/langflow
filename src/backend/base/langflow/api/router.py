@@ -24,6 +24,7 @@ from langflow.api.v1 import (
     files_router,
     flow_conflict_router,
     flow_events_router,
+    flow_revisions_router,
     flow_version_router,
     flows_audits_router,
     flows_router,
@@ -92,6 +93,7 @@ router_v1.include_router(audits_router)
 router_v1.include_router(flows_audits_router)
 router_v1.include_router(flows_router)
 router_v1.include_router(flow_events_router)
+router_v1.include_router(flow_revisions_router)
 router_v1.include_router(flow_version_router)
 router_v1.include_router(data_subjects_self_router)
 router_v1.include_router(users_router)

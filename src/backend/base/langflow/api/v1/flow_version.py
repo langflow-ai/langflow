@@ -180,7 +180,7 @@ async def list_flow_versions(
 
     max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
     return FlowVersionListResponse(
-        entries=list(await attach_usernames(session, entries)),
+        entries=list(await attach_usernames(session, entries, author_id=lambda entry: entry.saved_by_user_id)),
         max_entries=max_entries,
     )
 
@@ -253,9 +253,10 @@ async def create_snapshot(
         entry = await create_flow_version_entry(
             session,
             flow_id=flow.id,
-            user_id=current_user.id,
+            user_id=flow.user_id,
             data=data,
             description=description,
+            saved_by_user_id=current_user.id,
             **checkpoint,
         )
     except FlowVersionError as exc:
@@ -350,9 +351,10 @@ async def activate_version(
                     await create_flow_version_entry(
                         session,
                         flow_id=flow.id,
-                        user_id=current_user.id,
+                        user_id=flow.user_id,
                         data=current_data,
                         description=f"Auto-saved before activating v{target_entry.version_number}",
+                        saved_by_user_id=current_user.id,
                         **await checkpoint_fields(session, flow),
                     )
 

@@ -36,7 +36,15 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     flow_id: UUID = Field(
         sa_column=Column(ForeignKey("flow.id", ondelete="CASCADE"), index=True, nullable=False),
     )
+    # The owner of the parent flow: ownership scopes version queries.
     user_id: UUID | None = Field(
+        sa_column=Column(ForeignKey("user.id", ondelete="SET NULL"), index=True, nullable=True),
+    )
+    # Who saved this version, which on a shared flow need not be its owner.
+    # NULL for system checkpoints, which summarize work by any number of people
+    # whose attribution stays on the recorded operations.
+    saved_by_user_id: UUID | None = Field(
+        default=None,
         sa_column=Column(ForeignKey("user.id", ondelete="SET NULL"), index=True, nullable=True),
     )
     data: dict | None = Field(default=None, sa_column=Column(JSON))
@@ -77,12 +85,13 @@ class FlowVersionRead(BaseModel):
     id: UUID
     flow_id: UUID
     user_id: UUID | None
+    saved_by_user_id: UUID | None = PydanticField(default=None, description="Who saved this version")
     version_number: int = PydanticField(ge=1)
     description: str | None
     created_at: datetime
     username: str | None = PydanticField(
         default=None,
-        description="Display name of whoever authored this version, resolved from user_id.",
+        description="Display name of whoever saved this version, resolved from saved_by_user_id.",
     )
     operation_revision: int | None = PydanticField(
         default=None,

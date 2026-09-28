@@ -193,7 +193,7 @@ async def write_flow_graph(
         if violations:
             if not repair_invalid:
                 raise FlowGraphInvalidError(violations, graph="stored")
-            await _keep_repaired_original(session, flow)
+            await _keep_repaired_original(session, flow, actor_id)
             repaired = repair_flow_data(base)
             base = repaired.flow_data
             stored_repaired = True
@@ -305,7 +305,7 @@ def _checkpoint(flow: Flow, flow_data: dict[str, Any], *, revision: int) -> Flow
     )
 
 
-async def _keep_repaired_original(session: AsyncSession, flow: Flow) -> None:
+async def _keep_repaired_original(session: AsyncSession, flow: Flow, actor_id: UUID) -> None:
     await create_flow_version_entry(
         session,
         flow_id=flow.id,
@@ -313,6 +313,7 @@ async def _keep_repaired_original(session: AsyncSession, flow: Flow) -> None:
         data=copy.deepcopy(flow.data),
         description=REPAIRED_ORIGINAL_DESCRIPTION,
         view_only=True,
+        saved_by_user_id=actor_id,
     )
 
 

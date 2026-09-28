@@ -51,6 +51,7 @@ async def create_flow_version_entry(
     operation_revision: int | None = None,
     graph_hash: str | None = None,
     view_only: bool = False,
+    saved_by_user_id: UUID | None = None,
 ) -> FlowVersion:
     """Create a version entry with retry on version number collision.
 
@@ -58,6 +59,7 @@ async def create_flow_version_entry(
     checkpoint; pass them only when ``data`` is exactly the flow's graph at that
     revision (see ``flow_history.recorder.checkpoint_fields``). ``view_only``
     marks the kept original of a repaired flow, which is never pruned.
+    ``user_id`` is the flow's owner; ``saved_by_user_id`` is who saved it.
 
     NOTE: This function does NOT verify that user_id owns the flow.
     Callers are responsible for checking ownership before calling this.
@@ -74,6 +76,7 @@ async def create_flow_version_entry(
             operation_revision=operation_revision,
             graph_hash=graph_hash,
             view_only=view_only,
+            saved_by_user_id=saved_by_user_id,
         )
         try:
             async with session.begin_nested():

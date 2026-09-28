@@ -526,6 +526,11 @@ def _strip_structured_secret_values_in_place(value: object) -> object:
     return value
 
 
+def strip_structured_secret_values(value: object) -> object:
+    """Return a copy of an arbitrary JSON value with secret-named and credential-bearing values nulled."""
+    return _strip_structured_secret_values_in_place(deepcopy(value))
+
+
 def _cell_loads_from_db(row_metadata: object, column: str) -> bool | None:
     """Return one row's explicit ``load_from_db`` choice for a column.
 
@@ -868,4 +873,5 @@ __all__ = [
     "strip_flow_secrets",
     "strip_secret_field_values",
     "strip_secret_field_values_in_place",
+    "strip_structured_secret_values",
 ]
