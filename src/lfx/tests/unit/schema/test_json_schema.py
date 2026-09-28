@@ -295,6 +295,32 @@ class TestCreateInputSchemaFromJsonSchema:
 class TestUnderscorePropertyNames:
     """JSON Schema allows names such as Glean's ``_user_goal``; Pydantic reserves leading underscores."""
 
+    @pytest.mark.parametrize("nested", [False, True])
+    @pytest.mark.parametrize(("snake_name", "camel_key"), [("_foo_bar", "_fooBar"), ("foo_bar", "fooBar")])
+    def test_camel_alias_cannot_supply_a_different_wire_property(self, nested, snake_name, camel_key):
+        schema = {
+            "type": "object",
+            "properties": {snake_name: {"type": "string"}, "_fooBar": {"type": "string"}},
+            "required": [snake_name, "_fooBar"],
+        }
+        values = {camel_key: "only the camel-named property"}
+        if nested:
+            schema = {"type": "object", "properties": {"opts": schema}}
+            values = {"opts": values}
+
+        model = create_input_schema_from_json_schema(schema)
+
+        with pytest.raises(ValidationError) as exc_info:
+            model.model_validate(values)
+
+        assert exc_info.value.errors()[0]["type"] == "missing"
+        assert exc_info.value.errors()[0]["loc"] == (("opts", "foo_bar") if nested else ("foo_bar",))
+
+        payload = values["opts"] if nested else values
+        payload[snake_name] = "the snake-named property"
+        expected = {snake_name: "the snake-named property", "_fooBar": "only the camel-named property"}
+        assert model.model_validate(values).model_dump(by_alias=True) == ({"opts": expected} if nested else expected)
+
     def test_underscore_property_builds_and_accepts_field_or_wire_name(self):
         schema = {
             "type": "object",
