@@ -64,15 +64,15 @@ def _safe_field_name(name: str, used: set[str], reserved: set[str] | None = None
     return candidate
 
 
-def _alias_choices(safe_name: str, wire_name: str, *, exclude_safe: bool = False) -> AliasChoices:
+def _alias_choices(safe_name: str, wire_name: str) -> AliasChoices:
     """Build validation aliases: safe field name first, then wire and camelCase.
 
-    ``exclude_safe`` is set when the safe name collides with another property's
-    wire name (e.g. ``_foo`` sanitized to ``foo`` while ``foo`` is also a real
-    property). In that case the safe name must not be accepted as an alias, or
-    input for ``foo`` would be captured by the ``_foo`` field.
+    The safe name must stay first: it is the name the UI and the LLM-facing JSON
+    schema use. It can never shadow a sibling property, because
+    ``_safe_field_name`` already skips any candidate that is another property's
+    wire name (``_foo`` next to ``foo`` becomes ``foo_1``).
     """
-    aliases = [] if exclude_safe else [safe_name]
+    aliases = [safe_name]
     if safe_name != wire_name:
         aliases.append(wire_name)
     if "_" in wire_name:
@@ -252,8 +252,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 # Add alias for camelCase if field name is snake_case
                 field_kwargs = {"description": prop_schema.get("description")}
                 if "_" in prop_name:
-                    exclude_safe = prop_name.lstrip("_") in wire_names and prop_name.lstrip("_") != prop_name
-                    field_kwargs["validation_alias"] = _alias_choices(safe_name, prop_name, exclude_safe=exclude_safe)
+                    field_kwargs["validation_alias"] = _alias_choices(safe_name, prop_name)
                     # Emit the original wire name (including leading underscores)
                     # on model_dump(by_alias=True), not the sanitized field name.
                     field_kwargs["serialization_alias"] = prop_name
@@ -287,8 +286,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         # Add alias for camelCase if field name is snake_case
         field_kwargs = {"description": fdef.get("description")}
         if "_" in fname:
-            exclude_safe = fname.lstrip("_") in top_wire_names and fname.lstrip("_") != fname
-            field_kwargs["validation_alias"] = _alias_choices(safe_name, fname, exclude_safe=exclude_safe)
+            field_kwargs["validation_alias"] = _alias_choices(safe_name, fname)
             field_kwargs["serialization_alias"] = fname
 
         top_fields[safe_name] = (py_type, Field(default, **field_kwargs))

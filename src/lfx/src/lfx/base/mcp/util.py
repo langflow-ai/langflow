@@ -716,7 +716,8 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            # by_alias: send the server's own property names (e.g. `_user_goal`), not sanitized field names.
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True, by_alias=True))
             result = await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
@@ -748,7 +749,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True, by_alias=True))
             result = run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
