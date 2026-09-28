@@ -6,6 +6,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import CompareVersionsDialog from "./components/CompareVersionsDialog";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 import VersionListItem from "./components/VersionListItem";
 import { CURRENT_DRAFT_ID } from "./constants";
@@ -29,23 +30,51 @@ export default function FlowVersionSidebarContent({
     processedPreview,
     isDeleting,
     isViewingDraft,
+    compareBaseId,
+    compareTargetId,
+    isComparePickMode,
     handleSelectEntry,
+    handleCompareClick,
+    handleCancelCompare,
+    handleSwapCompare,
     handleExport,
     handleDelete,
   } = useFlowVersionSidebar(flowId);
 
+  const compareBaseTag =
+    versions?.find((entry) => entry.id === compareBaseId)?.version_tag ?? "";
+
   return (
     <>
       <div className="flex h-full flex-col">
-        <SidebarGroupLabel className="flex items-center justify-between px-3 pt-3">
-          <span>{t("sidebar.nav.versionHistory")}</span>
-          {versions && versions.length > 0 && (
-            <span className="font-normal text-foreground/50">
-              {versions.length}
-              {maxEntries ? ` / ${maxEntries}` : ""}
+        {isComparePickMode ? (
+          <div className="flex items-center justify-between gap-2 bg-muted px-3 py-2">
+            <span className="text-xs text-muted-foreground">
+              {t("flowVersion.comparePickTarget", {
+                versionTag: compareBaseTag,
+              })}
             </span>
-          )}
-        </SidebarGroupLabel>
+            <button
+              type="button"
+              onClick={handleCancelCompare}
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+              aria-label={t("flowVersion.compareCancel")}
+              title={t("flowVersion.compareCancel")}
+            >
+              <ForwardedIconComponent name="X" className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <SidebarGroupLabel className="flex items-center justify-between px-3 pt-3">
+            <span>{t("sidebar.nav.versionHistory")}</span>
+            {versions && versions.length > 0 && (
+              <span className="font-normal text-foreground/50">
+                {versions.length}
+                {maxEntries ? ` / ${maxEntries}` : ""}
+              </span>
+            )}
+          </SidebarGroupLabel>
+        )}
 
         {isEntryError && (
           <div className="flex items-center gap-2 bg-destructive/10 px-2 py-2">
@@ -114,7 +143,10 @@ export default function FlowVersionSidebarContent({
                 entry={entry}
                 isSelected={entry.id === selectedId}
                 isAnimating={entry.id === animatingId}
+                compareMode={isComparePickMode}
+                isCompareBase={entry.id === compareBaseId}
                 onSelect={handleSelectEntry}
+                onCompareClick={handleCompareClick}
                 onExport={handleExport}
                 onDeleteClick={setDeleteDialogEntry}
               />
@@ -129,6 +161,16 @@ export default function FlowVersionSidebarContent({
         onConfirm={handleDelete}
         isDeleting={isDeleting}
       />
+
+      {compareBaseId && compareTargetId && (
+        <CompareVersionsDialog
+          flowId={flowId}
+          baseVersionId={compareBaseId}
+          against={compareTargetId}
+          onClose={handleCancelCompare}
+          onSwap={handleSwapCompare}
+        />
+      )}
     </>
   );
 }
