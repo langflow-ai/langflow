@@ -291,7 +291,7 @@ export function useCreateMemoryModal({
 
     if (preprocessingEnabled && !preprocessingPrompt.trim()) {
       setErrorData({
-        title: "Validation error",
+        title: t("memory.validationError"),
         list: ["Please provide preprocessing instructions"],
       });
       return;
