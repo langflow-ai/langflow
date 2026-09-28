@@ -149,6 +149,11 @@ class BaseVectorStoreBackend(ABC):
 
     backend_type: BackendType
 
+    # The metric nearest-neighbour search ranks by: "cosine", "l2" or "inner_product".
+    # None means the backend does not say. Vectors copied between backends keep their
+    # values but not their metric, so a relocation compares the two.
+    distance_metric: str | None = None
+
     def __init__(
         self,
         kb_name: str,
