@@ -94,11 +94,15 @@ const FlowSettingsComponent = ({
     if (autoSaving) {
       const persistSettings = async () => {
         try {
-          // Canvas edits use a debounced save. Flush and await that exact save
-          // before persisting settings so a stale canvas snapshot cannot land
-          // after a lock-state update.
-          await pendingAutoSave?.flush();
-          await saveFlow(newFlow);
+          // Queue behind the editor's saves: a pending canvas save lands
+          // first, and one triggered while this is in flight waits for its
+          // result. Run alongside a lock change, a canvas save still carries
+          // the old lock state and the server rejects it.
+          if (pendingAutoSave) {
+            await pendingAutoSave.enqueue(newFlow);
+          } else {
+            await saveFlow(newFlow);
+          }
           setIsSaving(false);
           setSuccessData({ title: t("success.changesSaved") });
           close();
