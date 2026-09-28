@@ -2436,6 +2436,7 @@
   "connections.search": "이름, 식별자, 계정 검색",
   "connections.loading": "연결 불러오는 중…",
   "connections.empty": "연결이 없습니다.",
+  "connections.noProviders": "사용할 수 있는 연동이 없습니다. 사용 가능한 연동 제공자와 작업은 관리자가 관리합니다.",
   "connections.emptyTab": "이 탭에 연결이 없습니다.",
   "connections.emptyInstance": "인스턴스 연결이 없습니다.",
   "connections.emptyOthers": "다른 사용자의 연결이 없습니다.",

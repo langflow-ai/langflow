@@ -132,6 +132,9 @@ export function AddConnectionDialog({
       ),
     [registrations.data, providerId, identity],
   );
+  // Policy can leave a user with no provider at all; that is not a missing
+  // OAuth registration, so it gets its own explanation instead of the form.
+  const noProviders = !reauthorize && providers.length === 0;
   const resolvedRegistration = resolveRegistrationId({
     provider: providerId,
     identity,
@@ -140,6 +143,7 @@ export function AddConnectionDialog({
   });
   // A listed backend that offers nothing for this provider cannot start consent.
   const noRegistration =
+    !!provider &&
     registrations.data !== null &&
     registrations.isSuccess &&
     resolvedRegistration === null;
@@ -429,7 +433,23 @@ export function AddConnectionDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {step === "details" && (
+        {step === "details" && noProviders && (
+          <div
+            className="flex flex-col gap-4"
+            data-testid="connection-no-providers"
+          >
+            <p className="text-sm text-muted-foreground">
+              {t("connections.noProviders")}
+            </p>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => close(false)}>
+                {t("connections.add.cancel")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "details" && !noProviders && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               <div className="flex flex-col gap-1.5">
@@ -582,7 +602,7 @@ export function AddConnectionDialog({
                     onToggle={toggleScope}
                   />
                   {unavailable.length > 0 && (
-                    <span className="text-xs text-warning-foreground">
+                    <span className="text-xs text-accent-amber-foreground">
                       {t("connections.add.scopesOutsideCeiling", {
                         scopes: unavailable.map(shortScope).join(", "),
                       })}
@@ -638,7 +658,7 @@ export function AddConnectionDialog({
                   granted={grantedOptions}
                 />
                 {notRequestable.length > 0 && (
-                  <span className="text-xs text-warning-foreground">
+                  <span className="text-xs text-accent-amber-foreground">
                     {t("connections.add.scopesOutsideCeiling", {
                       scopes: notRequestable.map(shortScope).join(", "),
                     })}

@@ -73,6 +73,11 @@ export default function ConnectionsPage() {
   );
 
   const connections = connectionsQuery.data ?? EMPTY_CONNECTIONS;
+  // Integration policy can leave nothing to connect; say so rather than open
+  // a dialog with an empty provider list.
+  const noProviders =
+    integrationsQuery.isSuccess &&
+    (integrationsQuery.data?.providers ?? []).length === 0;
 
   // A superuser lists every user's connections, so "not instance-owned" is not
   // the same as "mine" for them: the rest belong to other people and are only
@@ -239,12 +244,23 @@ export default function ConnectionsPage() {
             setReauthorizing(undefined);
             setDialogOpen(true);
           }}
+          disabled={noProviders}
+          title={noProviders ? t("connections.noProviders") : undefined}
           data-testid="add-connection"
         >
           <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
           {t("connections.add.title")}
         </Button>
       </div>
+
+      {noProviders && (
+        <p
+          className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
+          data-testid="connections-no-providers"
+        >
+          {t("connections.noProviders")}
+        </p>
+      )}
 
       {/*
         Every trigger needs a TabsContent with the matching value: Radix points

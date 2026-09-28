@@ -124,6 +124,24 @@ describe("AddConnectionDialog ownership", () => {
     await act(() => i18n.changeLanguage("en"));
   });
 
+  it("explains an empty provider list instead of blaming the OAuth registration", () => {
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[]}
+        canCreateInstance={false}
+      />,
+    );
+    expect(screen.getByTestId("connection-no-providers")).toHaveTextContent(
+      /administrator controls/i,
+    );
+    expect(screen.queryByTestId("connection-provider")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/No OAuth registration is configured/i),
+    ).not.toBeInTheDocument();
+  });
+
   it.each([
     "gmail-qa",
     "g-1",

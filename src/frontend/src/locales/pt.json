@@ -2437,6 +2437,7 @@
   "connections.search": "Pesquisar nome, identificador ou conta",
   "connections.loading": "Carregando conexões…",
   "connections.empty": "Nenhuma conexão ainda.",
+  "connections.noProviders": "Nenhuma integração está disponível para você. Um administrador controla quais provedores de integração e ações podem ser usados.",
   "connections.emptyTab": "Nenhuma conexão nesta aba ainda.",
   "connections.emptyInstance": "Nenhuma conexão da instância ainda.",
   "connections.emptyOthers": "Nenhuma conexão de outros usuários ainda.",
