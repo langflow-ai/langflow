@@ -287,6 +287,8 @@ class _PostgresVectorStore(VectorStore):
 class PostgresBackend(BaseVectorStoreBackend):
     """Postgres + pgvector as a Langflow KB backend (environment-driven)."""
 
+    distance_metric = "cosine"  # the HNSW index is built with vector_cosine_ops
+
     backend_type = BackendType.POSTGRES
 
     # ---- config / secret resolution -------------------------------------

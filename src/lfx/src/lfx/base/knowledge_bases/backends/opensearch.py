@@ -210,6 +210,12 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """The resolved cluster URL and index."""
         return (self._resolved_url, self._resolve_index_name())
 
+    @property
+    def distance_metric(self) -> str:
+        """The configured ``space_type``, named the way the other backends name metrics."""
+        space_type = self.backend_config.get("space_type") or DEFAULT_SPACE_TYPE
+        return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
+
     def _resolve_index_name(self) -> str:
         """Resolve the effective index for this KB.
 

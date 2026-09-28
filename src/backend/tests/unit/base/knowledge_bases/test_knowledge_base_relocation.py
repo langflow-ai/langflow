@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import math
 import os
 import uuid
 from datetime import datetime, timezone
@@ -72,15 +73,30 @@ def during_copy(monkeypatch: pytest.MonkeyPatch):
     return install
 
 
+def _vector(i: int, *, unit: bool) -> list[float]:
+    raw = [1.0] + [i / 100] * (DIM - 1)
+    if not unit:
+        return raw
+    norm = math.sqrt(sum(x * x for x in raw))
+    return [x / norm for x in raw]
+
+
 async def _seed_sqlite_kb(
-    user_id, kb_name: str, n: int, *, chunks: int | None = None, model_selection: dict | None = MODEL
+    user_id,
+    kb_name: str,
+    n: int,
+    *,
+    chunks: int | None = None,
+    model_selection: dict | None = MODEL,
+    unit: bool = True,
 ) -> tuple[KnowledgeBaseRecord, list[IngestedDocument]]:
     """Create a SQLite knowledge base the way the app does, then write ``n`` chunks to it.
 
-    ``chunks`` is what the row records, ``n`` unless given.
+    ``chunks`` is what the row records, ``n`` unless given. Unit-length vectors by
+    default, like most hosted embedding models.
     """
     docs = [
-        IngestedDocument(id=f"chunk-{i}", content=f"doc {i}", metadata={"i": i}, embedding=[i / 100] * DIM)
+        IngestedDocument(id=f"chunk-{i}", content=f"doc {i}", metadata={"i": i}, embedding=_vector(i, unit=unit))
         for i in range(n)
     ]
     record = await knowledge_base_service.create_record(
@@ -345,6 +361,20 @@ async def test_relocation_refuses_a_local_target(backend_type):
 
 
 @pytest.mark.api_key_required
+@pytest.mark.parametrize(
+    ("backend_type", "config", "metric"),
+    [
+        ("postgres", {}, "cosine"),
+        ("opensearch", {"url_variable": "OPENSEARCH_URL"}, "l2"),
+        ("opensearch", {"url_variable": "OPENSEARCH_URL", "space_type": "cosinesimil"}, "cosine"),
+        ("opensearch", {"url_variable": "OPENSEARCH_URL", "space_type": "innerproduct"}, "inner_product"),
+    ],
+)
+def test_backends_report_the_metric_they_rank_by(tmp_path: Path, backend_type, config, metric):
+    backend = create_backend(backend_type, kb_name="kb", kb_path=tmp_path, backend_config=config, user_id=uuid.uuid4())
+    assert backend.distance_metric == metric
+
+
 @pytest.mark.usefixtures("kb_root")
 class TestRelocationToPostgresLive:
     @pytest.fixture(autouse=True)
@@ -381,6 +411,41 @@ class TestRelocationToPostgresLive:
             # The row now names the target, so a second run leaves it alone.
             rerun = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
             assert next(r for r in rerun if r.kb_id == record.id).status == "skipped"
+        finally:
+            with contextlib.suppress(Exception):
+                await target.delete_collection()
+            await target.teardown()
+
+    async def test_vectors_that_are_not_unit_length_are_not_moved_to_another_metric(self, active_user):
+        # SQLite ranks by l2 unless configured otherwise, and pgvector by cosine. For
+        # vectors that are not unit length the two disagree on neighbours, and every
+        # count would still match.
+        kb_name = f"kb_metric_{uuid.uuid4().hex[:6]}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6, unit=False)
+
+        for dry_run in (True, False):
+            results = await relocate_knowledge_bases(
+                target_backend_type="postgres", target_backend_config={}, dry_run=dry_run
+            )
+            result = next(r for r in results if r.kb_id == record.id)
+            assert result.status == "failed"
+            assert "ranks by l2 distance and the target by cosine" in result.reason
+            assert "not unit length" in result.reason
+            assert result.copied == 0
+
+        assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+
+    async def test_unit_length_vectors_move_with_a_warning_about_scores(self, active_user, tmp_path: Path):
+        kb_name = f"kb_unit_{uuid.uuid4().hex[:6]}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6)
+        target = create_backend(
+            "postgres", kb_name=kb_name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
+        )
+        try:
+            results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
+            result = next(r for r in results if r.kb_id == record.id)
+            assert result.status == "relocated", result.reason
+            assert any("scores change scale" in warning for warning in result.warnings), result.warnings
         finally:
             with contextlib.suppress(Exception):
                 await target.delete_collection()
