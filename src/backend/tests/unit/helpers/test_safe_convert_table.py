@@ -5,6 +5,7 @@ to the full table width, so a multiline cell used to inflate a 242 KB row into 1
 markdown (Loop.done -> Chat Output took workers down with OOMKilled).
 """
 
+import pytest
 from lfx.helpers.data import safe_convert
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -37,6 +38,17 @@ def test_should_render_one_physical_line_per_row_when_cells_contain_newlines():
     assert len(lines) == 4
     assert "line one<br/>line two<br/>line three" in lines[2]
     assert "single" in lines[3]
+
+
+@pytest.mark.parametrize("line_break", ["\n", "\r\n", "\r"], ids=["lf", "crlf", "cr"])
+def test_should_render_one_physical_line_per_row_for_any_line_break(line_break):
+    table = DataFrame([{"name": "a", "notes": line_break.join(["line one", "line two", "line three"])}])
+
+    markdown = safe_convert(table)
+
+    assert len(markdown.split("\n")) == 3
+    assert "\r" not in markdown
+    assert "line one<br/>line two<br/>line three" in markdown
 
 
 def test_should_collapse_blank_lines_before_joining_when_clean_data_is_set():
