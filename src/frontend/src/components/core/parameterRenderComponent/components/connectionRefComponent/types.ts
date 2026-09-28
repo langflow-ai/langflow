@@ -24,4 +24,6 @@ export type ConnectionRefComponentType = {
   capabilities?: string[];
   /** Identity the connection must execute as, e.g. "user" or "bot". */
   identityKind?: string;
+  /** Ownership the field requires, independently of execution identity. */
+  ownershipMode?: "user" | "instance" | "any";
 };

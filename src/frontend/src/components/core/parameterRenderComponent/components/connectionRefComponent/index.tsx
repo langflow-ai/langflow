@@ -10,6 +10,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useGetConnections } from "@/controllers/API/queries/connections/use-get-connections";
+import useAuthStore from "@/stores/authStore";
+import useFlowStore from "@/stores/flowStore";
 import { activeRequiredScopes } from "@/utils/connection-scopes";
 import { cn } from "@/utils/utils";
 import type { InputProps } from "../../types";
@@ -50,9 +52,13 @@ export default function ConnectionRefComponent({
   conditionalScopes,
   inputValues,
   identityKind,
+  ownershipMode,
   ariaLabelledBy,
 }: InputProps<string, ConnectionRefComponentType>) {
   const { t } = useTranslation();
+  const currentUserId = useAuthStore((state) => state.userData?.id);
+  const flowOwnerId = useFlowStore((state) => state.currentFlow?.user_id);
+  const ownerId = flowOwnerId ?? currentUserId;
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -72,8 +78,15 @@ export default function ConnectionRefComponent({
     [provider, requiredScopes, conditionalScopes, inputValues],
   );
   const options = useMemo(
-    () => buildConnectionOptions(data ?? [], scopes, identityKind),
-    [data, scopes, identityKind],
+    () =>
+      buildConnectionOptions(
+        data ?? [],
+        scopes,
+        identityKind,
+        ownershipMode,
+        ownerId,
+      ),
+    [data, scopes, identityKind, ownershipMode, ownerId],
   );
   const selectedHandle = typeof value === "string" ? value : "";
   const selected = options.find((option) => option.handle === selectedHandle);

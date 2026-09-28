@@ -677,3 +677,18 @@ class LMStudioModelComponent(LCModelComponent):
         # assert mock_frontend.metadata["module"] == "custom_components.my_test_component"
         # assert "code_hash" in mock_frontend.metadata
         # assert len(mock_frontend.metadata["code_hash"]) == 12
+
+
+def test_trigger_components_are_marked_with_their_kind_and_other_components_are_not():
+    """The palette hides every trigger behind one flag by this marker, wherever it is listed."""
+    from lfx.components.triggers.schedule_trigger import ScheduleTriggerComponent
+    from lfx.custom.utils import _stamp_trigger_kind
+
+    trigger_node = SimpleNamespace(metadata={})
+    _stamp_trigger_kind(trigger_node, ScheduleTriggerComponent())
+    assert trigger_node.metadata == {"trigger_kind": "schedule"}
+
+    # A reused template never keeps a stale marker.
+    reused = SimpleNamespace(metadata={"trigger_kind": "schedule", "module": "keep.this.module"})
+    _stamp_trigger_kind(reused, object())
+    assert reused.metadata == {"module": "keep.this.module"}

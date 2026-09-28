@@ -36,8 +36,13 @@ from langflow.services.authorization.listing import (
     restrict_to_owned_or_visible_scope,
 )
 from langflow.services.connection.oauth import broker
-from langflow.services.connection.oauth.config import OAuthError
+from langflow.services.connection.oauth.config import OAuthError, deployment_context
 from langflow.services.connection.oauth.locking import lock_connection
+from langflow.services.connection.slack_credentials import (
+    is_app_token_connection,
+    prepare_manual_credential,
+    refuse_outside_listener,
+)
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
@@ -272,6 +277,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         # creating a connection for a provider outside the ceiling is refused
         # before any credential material is encrypted or stored.
         await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id)
+        payload = prepare_manual_credential(payload, context=deployment_context())
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)
@@ -463,6 +469,18 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         principal: ExecutionPrincipal,
         required_scopes: frozenset[str] = frozenset(),
     ) -> ConnectionRead:
+        if is_app_token_connection(row):
+            # Only the listener may read an app-level token, and only Slack can
+            # say whether it still works - by accepting a Socket Mode socket.
+            # Reporting "unhealthy" for a token this process is not allowed to
+            # read would be wrong, so its health is simply unknown here; the
+            # trigger's own state carries the listener's verdict.
+            row.health = ConnectionHealth.UNKNOWN.value
+            row.health_checked_at = _utc_now()
+            session.add(row)
+            await session.flush()
+            await session.refresh(row)
+            return self.to_read(row, has_credentials=await self.has_credentials(session, row.id))
         try:
             await self._check_row_credential(session, row=row, principal=principal, required_scopes=required_scopes)
         except AuthExpiredError:
@@ -780,6 +798,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         handle = ConnectionRef(provider=row.provider_key, name=row.name).to_handle()
         if row.status == PersistedConnectionStatus.REVOKED.value:
             raise ConnectionUnresolvedError(handle, provider=row.provider_key)
+        # Before anything is decrypted: a Slack app-level token never leaves the
+        # listener process (``slack_credentials``).
+        refuse_outside_listener(row)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is None:
             raise ConnectionUnresolvedError(handle, provider=row.provider_key)
@@ -815,6 +836,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                     handle, provider=row.provider_key, reason="registration-unavailable"
                 ) from None
             raise AuthExpiredError(provider=row.provider_key) from None
+        refuse_outside_listener(row, access_token=payload["access_token"])
         expires_at = _parse_expiry(payload.get("expires_at"))
         if expires_at is not None and expires_at <= _utc_now():
             raise AuthExpiredError(provider=row.provider_key)
