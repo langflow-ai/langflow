@@ -80,6 +80,7 @@ from langflow.services.job_queue.service import (
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.rate_limit import check_rate_limit
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
+from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
 if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
@@ -418,6 +419,16 @@ async def build_flow(
     try:
         if data:
             raw_data = data.model_dump()
+            if (
+                flow.user_id != current_user.id
+                and flow.access_type != AccessTypeEnum.PUBLIC
+                and isinstance(flow.data, dict)
+            ):
+                # V1 API clients may still submit the shared editor's redacted
+                # graph. Restore only at build time, after the write override
+                # gate, so a visible unsaved edit can run with stored keys.
+                raw_data = restore_redacted_flow_values(raw_data, flow.data)
+                data = FlowDataRequest.model_validate(raw_data)
             sanitized_data = await prepare_flow_build_for_user(
                 raw_data,
                 is_superuser=current_user.is_superuser,
@@ -442,6 +453,10 @@ async def build_flow(
                     edges=sanitized_data.get("edges", []),
                     viewport=sanitized_data.get("viewport"),
                 )
+    except HiddenFieldMetadataError as exc:
+        raise HTTPException(
+            status_code=400, detail="Cannot change hidden fields or executable graph data in a shared flow."
+        ) from exc
     except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except CustomComponentValidationError as exc:
@@ -473,6 +488,7 @@ async def build_flow(
             flow_name=flow_name,
             source_flow_owner_id=flow.user_id,
             expose_error_details=flow.user_id == current_user.id,
+            redact_build_params=flow.user_id != current_user.id,
         )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
