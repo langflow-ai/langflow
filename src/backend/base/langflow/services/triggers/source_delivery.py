@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
-from sqlmodel import col, select
+from sqlmodel import col, select, update
 
 from langflow.services.database.models.trigger.model import Trigger, TriggerSourceVersion
 from langflow.services.triggers import ledger
@@ -56,6 +56,7 @@ async def append_and_advance(
     expected_connection_id: UUID | None = None,
     expected_mechanism_id: str | None = None,
     snapshot_resource: str | None = None,
+    expected_config: dict[str, Any] | None = None,
 ) -> int:
     """Append normalized items and advance a cursor in the caller's transaction.
 
@@ -64,6 +65,10 @@ async def append_and_advance(
     database uniqueness constraint collapses replays, including a push and a
     poll of the same provider item.
     """
+    if session.get_bind().dialect.name == "sqlite":
+        # FOR UPDATE is ignored by SQLite. Serialize before reading the cursor
+        # so a second collector cannot commit against the same stale version.
+        await session.exec(update(Trigger).where(Trigger.id == trigger_id).values(updated_at=Trigger.updated_at))
     row = await session.get(Trigger, trigger_id, populate_existing=True, with_for_update=True)
     if row is None:
         return 0
@@ -72,6 +77,9 @@ async def append_and_advance(
         raise RuntimeError(msg)
     if expected_mechanism_id is not None and (row.config or {}).get("mechanism_id") != expected_mechanism_id:
         msg = "The source mechanism changed while this page was fetched."
+        raise RuntimeError(msg)
+    if expected_config is not None and (row.config != expected_config or row.state not in {"active", "pending"}):
+        msg = "Source settings or state changed while this page was fetched."
         raise RuntimeError(msg)
     state = dict(row.provider_state or {})
     if previous_cursor is not None and state != previous_cursor:
@@ -127,7 +135,7 @@ async def append_and_advance(
             for prior in prior_items
             if prior.resource == snapshot_resource and prior.item_key not in present and prior.version != "deleted"
         )
-    created = 0
+    events: list[tuple[str, dict[str, Any]]] = []
     for item in items:
         identity = item_key(provider=str(item["provider"]), resource=str(item["resource"]), item_id=str(item["id"]))
         prior = prior_by_key.get(identity)
@@ -156,8 +164,8 @@ async def append_and_advance(
             item_id=str(item["id"]),
             version=f"deleted:{removed_version}" if removed_version is not None else version,
         )
-        _event, inserted = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key=key, payload=item)
-        created += int(inserted)
+        events.append((key, item))
+    created = await ledger.append_events(session, trigger_id=trigger_id, events=events)
     if cursor is not None:
         row.provider_state = {**state, **cursor}
         row.updated_at = datetime.now(timezone.utc)

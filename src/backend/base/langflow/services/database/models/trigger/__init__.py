@@ -1,5 +1,6 @@
 from langflow.services.database.models.trigger.model import (
     Trigger,
+    TriggerCleanup,
     TriggerEvent,
     TriggerLease,
     TriggerListenerLease,
@@ -26,6 +27,7 @@ __all__ = [
     "Trigger",
     "TriggerBindingTarget",
     "TriggerCatchupPolicy",
+    "TriggerCleanup",
     "TriggerCreate",
     "TriggerEvent",
     "TriggerEventRead",

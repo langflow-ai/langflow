@@ -387,6 +387,7 @@ class SourceRound:
     snapshot_resource: str | None
     connection_id: UUID | None
     mechanism_id: str | None
+    config: dict[str, Any] | None = None
 
 
 async def collect_source(trigger: Trigger, lease: CredentialLease) -> SourceRound:
@@ -417,6 +418,7 @@ async def collect_source(trigger: Trigger, lease: CredentialLease) -> SourceRoun
         snapshot_resource=(items[0]["resource"] if items else _source_resource(trigger)) if resync else None,
         connection_id=expected_connection_id,
         mechanism_id=expected_mechanism_id,
+        config=dict(trigger.config or {}),
     )
 
 
@@ -431,6 +433,7 @@ async def commit_source(session: AsyncSession, *, trigger_id: UUID, source_round
         expected_connection_id=source_round.connection_id,
         expected_mechanism_id=source_round.mechanism_id,
         snapshot_resource=source_round.snapshot_resource,
+        expected_config=source_round.config,
     )
 
 

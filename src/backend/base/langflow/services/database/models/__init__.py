@@ -43,6 +43,7 @@ from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .trigger import (
     Trigger,
+    TriggerCleanup,
     TriggerEvent,
     TriggerLease,
     TriggerListenerLease,
@@ -108,6 +109,7 @@ __all__ = [
     "TraceTable",
     "TransactionTable",
     "Trigger",
+    "TriggerCleanup",
     "TriggerEvent",
     "TriggerLease",
     "TriggerListenerLease",

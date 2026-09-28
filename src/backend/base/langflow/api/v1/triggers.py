@@ -276,6 +276,15 @@ async def enable_trigger(
     )
     try:
         updated = await service.enable(session, row=row)
+        if (
+            updated.provider in {"microsoft", "google"}
+            and (updated.config or {}).get("mechanism_id") in PUSH_MECHANISMS
+        ):
+            from langflow.services.triggers.source_runtime import initialize_source
+
+            await session.commit()
+            await initialize_source(updated.id)
+            await session.refresh(updated)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return TriggerRead.model_validate(updated)

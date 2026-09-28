@@ -42,9 +42,9 @@ from langflow.services.triggers.binding import resolve_binding
 from langflow.services.triggers.constants import (
     DISPATCHER_LEASE_NAME,
     FAMILY_TRIGGER_LISTENER,
-    FAMILY_TRIGGER_PUSH,
     GOOGLE_SOURCE_KINDS,
     MICROSOFT_SOURCE_KINDS,
+    PUSH_MECHANISMS,
     TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
@@ -94,7 +94,7 @@ def _backoff_seconds(attempt: int) -> float:
 # --------------------------------------------------------------------------- #
 
 
-async def _due_trigger_ids(session: AsyncSession, *, limit: int) -> list[UUID]:
+async def _due_trigger_ids(session: AsyncSession, *, limit: int, source_hints: bool | None = None) -> list[UUID]:
     """Triggers with at least one due pending event, longest-waiting first.
 
     The scan is per *trigger*, not per event, because the per-trigger
@@ -124,10 +124,24 @@ async def _due_trigger_ids(session: AsyncSession, *, limit: int) -> list[UUID]:
         .order_by(func.min(col(TriggerEvent.available_at)))
         .limit(limit)
     )
+    # Pending source activations may receive hints, but cannot execute until
+    # baseline collection and watch creation have both committed.
+    statement = statement.where(
+        ~col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS)
+        | ~col(Trigger.state).in_(
+            [TriggerState.PENDING.value, TriggerState.ERROR.value, TriggerState.NEEDS_RECONNECT.value]
+        )
+    )
+    if source_hints is not None:
+        statement = statement.where(
+            func.coalesce(TriggerEvent.payload[SOURCE_HINT_FIELD].as_boolean(), False) == source_hints
+        )
     return list((await session.exec(statement)).all())
 
 
-async def _candidate_ids(session: AsyncSession, *, trigger_id: UUID, limit: int) -> list[UUID]:
+async def _candidate_ids(
+    session: AsyncSession, *, trigger_id: UUID, limit: int, source_hints: bool | None = None
+) -> list[UUID]:
     """One trigger's due pending rows, oldest first, at most ``limit`` of them.
 
     On Postgres the scan takes row locks with ``SKIP LOCKED`` so concurrent
@@ -146,6 +160,10 @@ async def _candidate_ids(session: AsyncSession, *, trigger_id: UUID, limit: int)
         .order_by(col(TriggerEvent.available_at), col(TriggerEvent.created_at))
         .limit(limit)
     )
+    if source_hints is not None:
+        statement = statement.where(
+            func.coalesce(TriggerEvent.payload[SOURCE_HINT_FIELD].as_boolean(), False) == source_hints
+        )
     if session.bind is not None and session.bind.dialect.name == "postgresql":
         statement = statement.with_for_update(skip_locked=True)
     return list((await session.exec(statement)).all())
@@ -179,14 +197,16 @@ async def _claim_one(session: AsyncSession, *, event_id: UUID, owner: str, lease
     return bool(result.rowcount == 1)
 
 
-async def claim_batch(session: AsyncSession, *, owner: str, limit: int, lease_ttl_s: float) -> list[TriggerEvent]:
+async def claim_batch(
+    session: AsyncSession, *, owner: str, limit: int, lease_ttl_s: float, source_hints: bool | None = None
+) -> list[TriggerEvent]:
     """Claim up to ``limit`` due events for ``owner``, respecting concurrency caps.
 
     Triggers are visited round-robin (longest-waiting first) and each one may
     contribute only its remaining headroom, so a trigger at its cap costs the
     batch nothing and never crowds another trigger out of the window.
     """
-    trigger_ids = await _due_trigger_ids(session, limit=limit)
+    trigger_ids = await _due_trigger_ids(session, limit=limit, source_hints=source_hints)
     if not trigger_ids:
         return []
     claimed: list[TriggerEvent] = []
@@ -196,6 +216,12 @@ async def claim_batch(session: AsyncSession, *, owner: str, limit: int, lease_tt
             break
         trigger = await _lock_trigger(session, trigger_id)
         if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
+            continue
+        if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+            TriggerState.PENDING.value,
+            TriggerState.ERROR.value,
+            TriggerState.NEEDS_RECONNECT.value,
+        }:
             continue
         in_flight = (
             await session.exec(
@@ -210,7 +236,7 @@ async def claim_batch(session: AsyncSession, *, owner: str, limit: int, lease_tt
         headroom = min(trigger.concurrency_limit - in_flight, remaining)
         if headroom <= 0:
             continue
-        for event_id in await _candidate_ids(session, trigger_id=trigger_id, limit=headroom):
+        for event_id in await _candidate_ids(session, trigger_id=trigger_id, limit=headroom, source_hints=source_hints):
             event = await session.get(TriggerEvent, event_id)
             if event is None or event.state != TriggerEventState.PENDING.value:
                 continue
@@ -467,6 +493,27 @@ async def _recover_submitted_job(session: AsyncSession, *, trigger: Trigger, eve
     return True
 
 
+async def _fence_event(session: AsyncSession, event: TriggerEvent) -> None:
+    """Acquire the accounting write lock only after external work finishes."""
+    from langflow.services.triggers.lease_guard import LeaseLostError
+
+    with session.no_autoflush:
+        result = await session.exec(
+            update(TriggerEvent)
+            .where(
+                TriggerEvent.id == event.id,
+                TriggerEvent.state == TriggerEventState.CLAIMED.value,
+                TriggerEvent.lease_owner == event.lease_owner,
+                TriggerEvent.lease_expires_at > _now(),
+            )
+            .values(updated_at=TriggerEvent.updated_at)
+            .execution_options(synchronize_session=False)
+        )
+    if result.rowcount != 1:
+        msg = "Event ownership changed during dispatch."
+        raise LeaseLostError(msg)
+
+
 async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: str | None = None) -> None:
     """Turn one claimed ledger row into one background job, or account for why not.
 
@@ -486,6 +533,19 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     if await _recover_submitted_job(session, trigger=trigger, event=event):
         return
 
+    if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+        TriggerState.PENDING.value,
+        TriggerState.ERROR.value,
+        TriggerState.NEEDS_RECONNECT.value,
+    }:
+        await _fence_event(session, event)
+        event.state = TriggerEventState.PENDING.value
+        event.lease_owner = None
+        event.lease_expires_at = None
+        event.available_at = _now() + timedelta(seconds=30)
+        session.add(event)
+        return
+
     if trigger.state not in _DISPATCHABLE_TRIGGER_STATES:
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=f"trigger_{trigger.state}")
         return
@@ -494,16 +554,18 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         # A thin Graph/Google notification is a durable wakeup. Expanding it
         # through the owner's connection produces canonical ledger rows; it
         # must never submit a flow with the notification headers as its event.
-        from langflow.services.triggers.source_poll import poll_source
+        from langflow.services.triggers.source_runtime import reconcile_source
 
         try:
-            await poll_source(session, trigger, family=family)
             delivery = (event.payload or {}).get("delivery") or {}
-            if delivery.get("lifecycleEvent") == "subscriptionRemoved":
-                from langflow.services.triggers.source_subscription import provision_source
-
-                await provision_source(session, trigger)
+            await reconcile_source(
+                trigger.id, repair_subscription=delivery.get("lifecycleEvent") == "subscriptionRemoved"
+            )
         except Exception as exc:  # noqa: BLE001 - the hint remains retryable
+            await _fence_event(session, event)
+            trigger.last_error = f"Source reconciliation failed: {type(exc).__name__}"
+            trigger.next_fire_at = _now() + timedelta(minutes=1)
+            session.add(trigger)
             retry_after = getattr(exc, "retry_after", None)
             await _schedule_retry(
                 session,
@@ -513,6 +575,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
                 retry_after=retry_after,
             )
             return
+        await _fence_event(session, event)
         await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
         return
 
@@ -554,6 +617,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
             job_id=uuid5(NAMESPACE_URL, f"langflow:trigger-event:{event.id}"),
         )
     except Exception as exc:  # noqa: BLE001 — every submit failure is retryable work, not a crash
+        await _fence_event(session, event)
         if await _recover_submitted_job(session, trigger=trigger, event=event):
             return
         await logger.awarning("Trigger %s failed to submit event %s: %s", trigger.id, event.id, type(exc).__name__)
@@ -562,10 +626,11 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         )
         return
 
+    await _fence_event(session, event)
     await _record_dispatched(session, trigger=trigger, event=event, job_id=job_id, session_id=session_id)
 
 
-async def run_once(*, owner: str) -> int:
+async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
     """One dispatcher pass: sweep, reconcile, claim, dispatch. Returns rows dispatched."""
     settings = get_settings_service().settings
     async with session_scope() as session:
@@ -576,6 +641,7 @@ async def run_once(*, owner: str) -> int:
             owner=owner,
             limit=settings.trigger_max_events_per_poll,
             lease_ttl_s=settings.trigger_lease_ttl_s,
+            source_hints=source_hints,
         )
     dispatched = 0
     for event in claimed:
@@ -594,20 +660,22 @@ async def run_once(*, owner: str) -> int:
 async def reconcile_push_sources(*, limit: int = 5) -> int:
     """Scan due push sources even when the provider sent no notification."""
     from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
-    from langflow.services.triggers.source_poll import poll_source
+    from langflow.services.triggers.source_runtime import reconcile_source
 
     now = _now()
     async with session_scope() as session:
         due = (
             await session.exec(
                 select(Trigger.id)
-                .join(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
+                .outerjoin(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
                 .where(
                     Trigger.state == TriggerState.ACTIVE.value,
                     col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS),
-                    TriggerSubscription.state == TriggerSubscriptionState.ACTIVE.value,
+                    (col(TriggerSubscription.state) == TriggerSubscriptionState.ACTIVE.value)
+                    | Trigger.config["mechanism_id"].as_string().in_(PUSH_MECHANISMS),
                     (col(Trigger.next_fire_at).is_(None)) | (Trigger.next_fire_at <= now),
                 )
+                .group_by(Trigger.id, Trigger.next_fire_at)
                 .order_by(col(Trigger.next_fire_at))
                 .limit(limit)
             )
@@ -615,11 +683,11 @@ async def reconcile_push_sources(*, limit: int = 5) -> int:
     completed = 0
     for trigger_id in due:
         try:
+            await reconcile_source(trigger_id, repair_subscription=True)
             async with session_scope() as session:
                 trigger = await session.get(Trigger, trigger_id)
                 if trigger is None or trigger.state != TriggerState.ACTIVE.value:
                     continue
-                await poll_source(session, trigger, family=FAMILY_TRIGGER_PUSH)
                 if (trigger.last_error or "").startswith("Source reconciliation failed:"):
                     trigger.last_error = None
                     session.add(trigger)
@@ -646,6 +714,8 @@ class TriggerDispatcher:
     def __init__(self, *, owner: str | None = None) -> None:
         self.owner = owner or leases.new_owner_token("dispatcher")
         self._task: asyncio.Task | None = None
+        self._source_task: asyncio.Task | None = None
+        self._source_owner = f"{self.owner}:sources"
         self._stopping = asyncio.Event()
         self._last_purge_at: datetime | None = None
         self._last_renewal_at: datetime | None = None
@@ -659,25 +729,32 @@ class TriggerDispatcher:
             return
         self._stopping = asyncio.Event()
         self._task = asyncio.create_task(self._loop())
+        self._source_task = asyncio.create_task(self._source_loop())
 
     async def stop(self) -> None:
         self._stopping.set()
-        task, self._task = self._task, None
-        if task is not None:
+        tasks = [task for task in (self._task, self._source_task) if task is not None]
+        self._task = self._source_task = None
+        for task in tasks:
             task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
+        await asyncio.gather(*tasks, return_exceptions=True)
         # Hand the lease back so another replica takes over immediately rather
         # than waiting out the TTL on a clean shutdown.
         with contextlib.suppress(Exception):
             async with session_scope() as session:
                 await leases.release(session, name=DISPATCHER_LEASE_NAME, owner=self.owner)
+                await leases.release(session, name="trigger-source-maintenance", owner=self._source_owner)
 
     async def _loop(self) -> None:
         settings = get_settings_service().settings
         while not self._stopping.is_set():
             try:
-                await self.tick()
+                dispatched = await self.tick()
+                if dispatched >= settings.trigger_max_events_per_poll:
+                    # Continue draining full batches without adding a fixed
+                    # sleep to every batch in a burst. Yield to other tasks.
+                    await asyncio.sleep(0)
+                    continue
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 — the loop must outlive one bad pass
@@ -693,10 +770,8 @@ class TriggerDispatcher:
         not one bottleneck.
         """
         from langflow.services.triggers.scheduler import run_scheduler_pass
-        from langflow.services.triggers.subscriptions import run_renewal_pass
 
         await run_scheduler_pass(owner=self.owner)
-        await self._maybe_renew_subscriptions(run_renewal_pass)
         settings = get_settings_service().settings
         async with session_scope() as session:
             held = await leases.acquire(
@@ -707,10 +782,73 @@ class TriggerDispatcher:
             )
         if not held:
             return 0
-        dispatched = await run_once(owner=self.owner)
-        await reconcile_push_sources()
-        await self._maybe_purge()
-        return dispatched
+
+        async def drain():
+            dispatched = await run_once(owner=self.owner, source_hints=False)
+            await self._maybe_purge()
+            return dispatched
+
+        return await self._guarded_pass(drain(), name=DISPATCHER_LEASE_NAME, owner=self.owner)
+
+    async def _guarded_pass(self, work, *, name: str, owner: str) -> int:
+        from langflow.services.triggers.lease_guard import LeaseLostError, run_guarded
+
+        async def heartbeat(session, *, now, ttl_s):
+            await session.exec(
+                update(TriggerEvent)
+                .where(
+                    TriggerEvent.state == TriggerEventState.CLAIMED.value,
+                    TriggerEvent.lease_owner == owner,
+                    TriggerEvent.lease_expires_at > now,
+                )
+                .values(lease_expires_at=now + timedelta(seconds=ttl_s))
+            )
+
+        try:
+            return await run_guarded(
+                work,
+                name=name,
+                owner=owner,
+                ttl_s=get_settings_service().settings.trigger_lease_ttl_s,
+                heartbeat=heartbeat,
+            )
+        except LeaseLostError:
+            await logger.awarning("Trigger worker %s stopped after losing its lease", name)
+            return 0
+
+    async def source_tick(self) -> int:
+        """Run source hints and maintenance independently of ordinary job submission."""
+        from langflow.services.triggers.source_cleanup import run_cleanup_pass
+        from langflow.services.triggers.subscriptions import run_renewal_pass
+
+        name = "trigger-source-maintenance"
+        async with session_scope() as session:
+            if not await leases.acquire(
+                session, name=name, owner=self._source_owner, ttl_s=get_settings_service().settings.trigger_lease_ttl_s
+            ):
+                return 0
+
+        async def maintain():
+            await self._maybe_renew_subscriptions(run_renewal_pass)
+            await run_once(owner=self._source_owner, source_hints=True)
+            scanned = await reconcile_push_sources()
+            await run_cleanup_pass()
+            return scanned
+
+        return await self._guarded_pass(maintain(), name=name, owner=self._source_owner)
+
+    async def _source_loop(self) -> None:
+        while not self._stopping.is_set():
+            try:
+                await self.source_tick()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001 - retry independently of dispatch
+                await logger.aerror("Trigger source maintenance failed: %s", type(exc).__name__)
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(
+                    self._stopping.wait(), timeout=get_settings_service().settings.trigger_dispatcher_poll_interval_s
+                )
 
     async def _maybe_renew_subscriptions(self, run_renewal_pass: Callable[..., Awaitable[int]]) -> None:
         """Keep provider subscriptions alive, on their own slower cadence.
@@ -730,7 +868,7 @@ class TriggerDispatcher:
             return
         self._last_renewal_at = now
         try:
-            renewed = await run_renewal_pass(owner=self.owner)
+            renewed = await run_renewal_pass(owner=self._source_owner)
         except Exception as exc:  # noqa: BLE001 - renewal must not end the dispatch loop
             await logger.aerror("Trigger subscription renewal failed: %s", type(exc).__name__)
             return

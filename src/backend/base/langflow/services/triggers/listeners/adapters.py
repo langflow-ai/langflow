@@ -189,8 +189,10 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
     """Poll every active source on one connection through its owner credential."""
 
     async def poll(self, ctx: ListenerContext) -> int:
+        from lfx.services.deps import session_scope_readonly
+
         from langflow.services.database.models.trigger.model import Trigger
-        from langflow.services.deps import session_scope, session_scope_readonly
+        from langflow.services.deps import session_scope
         from langflow.services.triggers.source_clients import source_lease
         from langflow.services.triggers.source_poll import collect_source, commit_source
 

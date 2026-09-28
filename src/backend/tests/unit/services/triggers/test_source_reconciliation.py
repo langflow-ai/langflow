@@ -8,7 +8,6 @@ from uuid import uuid4
 from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
 from langflow.services.deps import session_scope
-from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
 from langflow.services.triggers.dispatcher import reconcile_push_sources
 
 
@@ -29,15 +28,21 @@ async def test_due_push_source_is_scanned_without_a_hint(make_trigger, monkeypat
 
     calls = []
 
-    async def poll(_session, trigger: Trigger, *, family: str) -> int:
-        calls.append((trigger.id, family))
-        trigger.next_fire_at = datetime.now(timezone.utc) + timedelta(minutes=5)
-        _session.add(trigger)
+    async def poll(identifier) -> int:
+        calls.append(identifier)
+        async with session_scope() as session:
+            trigger = await session.get(Trigger, identifier)
+            trigger.next_fire_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+            session.add(trigger)
         return 0
 
-    monkeypatch.setattr("langflow.services.triggers.source_poll.poll_source", poll)
+    async def provision(identifier):
+        assert identifier == trigger_id
+
+    monkeypatch.setattr("langflow.services.triggers.source_runtime.sync_source", poll)
+    monkeypatch.setattr("langflow.services.triggers.source_runtime.ensure_subscription", provision)
     assert await reconcile_push_sources() == 1
-    assert calls == [(trigger_id, FAMILY_TRIGGER_PUSH)]
+    assert calls == [trigger_id]
     assert await reconcile_push_sources() == 0
     async with session_scope() as session:
         assert (await session.get(Trigger, trigger_id)).last_error is None

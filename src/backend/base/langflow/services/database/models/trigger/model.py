@@ -23,7 +23,7 @@ without another schema change:
 
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003 - SQLModel resolves annotations at runtime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -298,3 +298,28 @@ class TriggerSourceVersion(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
     )
+
+
+class TriggerCleanup(SQLModel, table=True):  # type: ignore[call-arg]
+    """A remote revocation intent that outlives deletion of local trigger rows.
+
+    No foreign keys or credentials: deleting a flow must not erase outstanding
+    cleanup, and the worker must resolve the original owner's connection anew.
+    """
+
+    __tablename__ = "trigger_cleanup"
+    id: UUID = Field(primary_key=True)
+    trigger_id: UUID
+    connection_id: UUID | None = Field(default=None)
+    user_id: UUID
+    provider: str = Field(sa_column=Column(sa.String(64), nullable=False))
+    kind: str = Field(sa_column=Column(sa.String(64), nullable=False))
+    provider_subscription_id: str = Field(sa_column=Column(sa.String(255), nullable=False))
+    provider_state: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JsonVariant, nullable=False))
+    expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    available_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True),
+    )
+    attempt: int = Field(default=0, sa_column=Column(sa.Integer(), nullable=False, server_default="0"))
+    last_error: str | None = Field(default=None, sa_column=Column(sa.String(128), nullable=True))

@@ -315,6 +315,8 @@ def verify_microsoft(request: IngressRequest, secrets: IngressSecrets, *, tolera
     # One ledger row per batch, so the key covers the whole batch: keyed on its
     # first entry alone, a batch whose head was delivered before would be
     # dropped as a duplicate along with everything behind it.
+    if not all(identities):
+        return Verified(payload={"value": notifications}, lifecycle=lifecycle)
     batch = hashlib.sha256(_utf8("\n".join(identities))).hexdigest()[:32]
     return Verified(payload={"value": notifications}, dedupe_suffix=f"batch:{batch}", lifecycle=lifecycle)
 
@@ -327,8 +329,14 @@ def _graph_identity(notification: dict[str, Any]) -> str:
     The resource's ``@odata.etag`` changes with each edit and survives a retry,
     so it is what tells a second edit apart from a redelivery of the first.
     """
+    if notification.get("id"):
+        return f"{notification.get('subscriptionId')}:notification:{notification['id']}"
     resource_data = notification.get("resourceData")
     resource_data = resource_data if isinstance(resource_data, dict) else {}
+    if not resource_data.get("@odata.etag"):
+        # Root wakeups can be byte-for-byte identical for distinct changes.
+        # Deduplicate canonical item versions after expansion instead.
+        return ""
     resource_id = resource_data.get("id") or notification.get("resource")
     parts = (
         notification.get("subscriptionId"),

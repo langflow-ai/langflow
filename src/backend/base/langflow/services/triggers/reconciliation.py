@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import re
+import secrets
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -128,7 +129,14 @@ _CONFIG_FIELDS: dict[str, tuple[tuple[str, str, Any], ...]] = {
     **{
         kind: tuple(
             (field, field, None)
-            for field in ("connection", "calendar_id", "site_id", "pubsub_topic", "pubsub_service_account")
+            for field in (
+                "connection",
+                "calendar_id",
+                "site_id",
+                "pubsub_topic",
+                "pubsub_service_account",
+                "delivery_mode",
+            )
         )
         for kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS
     },
@@ -400,6 +408,9 @@ async def reconcile_flow_triggers(
                     provider=provider,
                     node_id=node_id,
                     connection_id=connection_id,
+                    public_id=secrets.token_urlsafe(24)
+                    if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS
+                    else None,
                     config=config,
                     provider_state={},
                     state=TriggerState.PENDING.value,
@@ -411,6 +422,10 @@ async def reconcile_flow_triggers(
             )
             touched += 1
             continue
+        if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and not row.public_id:
+            row.public_id = secrets.token_urlsafe(24)
+            session.add(row)
+            touched += 1
         config_changed = row.config != config
         changed = config_changed or row.session_policy != session_policy
         if changed:

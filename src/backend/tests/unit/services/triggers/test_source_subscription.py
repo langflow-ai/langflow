@@ -156,9 +156,13 @@ async def test_google_watch_creates_a_verified_channel(kind, expected_path, monk
         ("google.drive", "drive/v3/channels/stop"),
     ],
 )
-async def test_google_channel_stop_uses_its_own_api(kind, expected_path, monkeypatch) -> None:
+async def test_google_channel_stop_uses_its_own_api(
+    kind, expected_path, monkeypatch, make_trigger, trigger_owner
+) -> None:
+    from langflow.services.database.models.trigger.model import TriggerCleanup
+    from langflow.services.triggers import source_cleanup, source_clients
+
     paths = []
-    old_connection_id = uuid4()
 
     class Client:
         async def __aenter__(self):
@@ -171,28 +175,31 @@ async def test_google_channel_stop_uses_its_own_api(kind, expected_path, monkeyp
             paths.append((method, path, body))
             return {}
 
-    class Session:
-        async def get(self, _model, _identifier):
-            return trigger
-
-    async def lease(_session, _trigger, *, family):
-        assert family == "trigger_push"
-        assert _trigger.connection_id == old_connection_id
-        return object()
-
-    trigger = Trigger(
-        id=uuid4(), flow_id=uuid4(), user_id=uuid4(), name="source", kind=kind, provider="google", connection_id=uuid4()
-    )
-    subscription = TriggerSubscription(
-        trigger_id=trigger.id,
-        connection_id=old_connection_id,
-        provider="google",
-        provider_subscription_id="channel-1",
-        provider_state={"resource_id": "resource-1"},
-    )
-    monkeypatch.setattr(source_subscription, "SourceHTTP", lambda *_args, **_kwargs: Client())
-    monkeypatch.setattr(source_subscription, "source_lease", lease)
-    await source_subscription.revoke_source(Session(), subscription)
+    async with session_scope() as session:
+        connection = Connection(
+            provider_key="google", name=f"old_{uuid4().hex}", display_name="Old", owner_id=trigger_owner
+        )
+        session.add(connection)
+        await session.flush()
+        old_connection_id = connection.id
+    trigger_id = await make_trigger(kind=kind, provider="google")
+    async with session_scope() as session:
+        subscription = TriggerSubscription(
+            trigger_id=trigger_id,
+            connection_id=old_connection_id,
+            provider="google",
+            provider_subscription_id="channel-1",
+            provider_state={"resource_id": "resource-1"},
+        )
+        session.add(subscription)
+        await session.flush()
+        await source_subscription.revoke_source(session, subscription)
+        cleanup_id = subscription.id
+    async with session_scope() as session:
+        task = await session.get(TriggerCleanup, cleanup_id)
+        assert task.connection_id == old_connection_id
+    monkeypatch.setattr(source_clients, "SourceHTTP", lambda *_args, **_kwargs: Client())
+    await source_cleanup._revoke(task)
     assert paths == [("POST", expected_path, {"id": "channel-1", "resourceId": "resource-1"})]
 
 

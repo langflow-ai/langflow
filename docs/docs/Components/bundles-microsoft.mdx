@@ -47,9 +47,9 @@ Add **Outlook: On Message**, **Outlook: On Calendar Event**, or **OneDrive or Sh
 | Outlook: On Calendar Event | `Calendars.Read` | Events in a rolling calendar window |
 | OneDrive or SharePoint: On File | `Files.Read`; add `Files.Read.All` and `Sites.Read.All` when **SharePoint Site ID** is set | Files in the owner's drive or selected site's default drive |
 
-With public HTTPS ingress enabled, Langflow creates a Microsoft Graph change notification subscription. Desktop deployments use Graph delta polling. Notifications only wake a delta scan; the Flow receives the changed item. Langflow stores the item version and delta cursor together, renews subscriptions, and scans push sources every five minutes to recover missed notifications. Enabling starts from the current state, so existing items do not fire the Flow.
+In advanced **Delivery Mode**, `auto` chooses a Graph notification subscription when ingress is enabled and the OAuth registration advertises a public HTTPS callback; otherwise it uses Graph delta polling. Select `poll` to use a listener even when ingress is enabled, or `push` to require push configuration. Hosted deployments require push. Notifications only wake a delta scan; the Flow receives the changed item. Langflow stores the item version and delta cursor together, renews subscriptions, and schedules backup scans after five minutes to recover missed notifications. Backlog and provider delays can extend this interval. Enabling starts from the current state, so existing items do not fire the Flow.
 
-The Graph subscription callback uses the public origin of the connection's OAuth registration. That registration must have an HTTPS redirect URI reachable by Graph. `GET /api/v1/triggers/{trigger_id}/ingress` shows the exact callback for an enabled push trigger. If Graph expires a delta cursor, Langflow compares a fresh snapshot with stored item versions before resuming.
+The Graph subscription callback uses the public origin of the connection's OAuth registration. That registration must have an HTTPS redirect URI reachable by Graph. `GET /api/v1/triggers/{trigger_id}/ingress` shows the exact callback after saving a configured push source, before enabling it. If Graph expires a delta cursor, Langflow compares a fresh snapshot with stored item versions before resuming.
 
 ## Components
 

@@ -112,3 +112,48 @@ async def test_readded_item_can_emit_a_second_removal(make_trigger) -> None:
         rows = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all()
         removal_keys = [row.dedupe_key for row in rows if row.payload["deleted"]]
         assert len(removal_keys) == len(set(removal_keys)) == 2
+
+
+async def test_large_batch_rolls_back_versions_events_and_cursor_together(make_trigger):
+    trigger_id = await make_trigger(kind="google.calendar", provider="google")
+    items = [_item(str(index), "v1") for index in range(251)]
+    async with session_scope() as session:
+        assert (
+            await append_and_advance(session, trigger_id=trigger_id, items=items, cursor={"sync_token": "new"}) == 251
+        )
+        await session.rollback()
+    async with session_scope() as session:
+        assert (await session.get(Trigger, trigger_id)).provider_state == {}
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all()
+        assert not (
+            await session.exec(select(TriggerSourceVersion).where(TriggerSourceVersion.trigger_id == trigger_id))
+        ).all()
+        assert (
+            await append_and_advance(session, trigger_id=trigger_id, items=items, cursor={"sync_token": "new"}) == 251
+        )
+    async with session_scope() as session:
+        assert (
+            await append_and_advance(session, trigger_id=trigger_id, items=items, cursor={"sync_token": "newer"}) == 0
+        )
+
+
+async def test_competing_source_collectors_cannot_overwrite_the_cursor(make_trigger):
+    import asyncio
+
+    trigger_id = await make_trigger(kind="google.calendar", provider="google", provider_state={"sync_token": "start"})
+
+    async def commit(index):
+        async with session_scope() as session:
+            return await append_and_advance(
+                session,
+                trigger_id=trigger_id,
+                items=[_item(str(index), "v1")],
+                cursor={"sync_token": str(index)},
+                previous_cursor={"sync_token": "start"},
+            )
+
+    outcomes = await asyncio.gather(*(commit(index) for index in range(4)), return_exceptions=True)
+    assert sum(result == 1 for result in outcomes) == 1
+    assert sum(isinstance(result, RuntimeError) and "cursor changed" in str(result) for result in outcomes) == 3
+    async with session_scope() as session:
+        assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all()) == 1

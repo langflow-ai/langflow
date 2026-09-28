@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlsplit
 from uuid import uuid4
 
-from lfx.log.logger import logger
 from sqlmodel import select
 
 from langflow.services.connection.oauth.config import get_oauth_settings
@@ -44,11 +43,13 @@ async def source_ingress_url(session: AsyncSession, trigger: Trigger) -> str:
         msg = "A push source requires an OAuth connection with a configured public callback."
         raise ValueError(msg)
     registration = get_oauth_settings().registration(binding.registration_id)
-    uri = urlsplit(registration.redirect_uri)
-    if uri.scheme != "https" or not uri.netloc:
+    from langflow.services.triggers.source_arming import public_ingress_origin
+
+    origin = public_ingress_origin(registration.redirect_uri)
+    if origin is None:
         msg = "Provider push requires a public HTTPS OAuth callback on this instance."
         raise ValueError(msg)
-    return f"{uri.scheme}://{uri.netloc}/api/v1/triggers/ingress/{trigger.provider}/{trigger.public_id}"
+    return f"{origin}/api/v1/triggers/ingress/{trigger.provider}/{trigger.public_id}"
 
 
 def _expiry(value: Any) -> datetime:
@@ -134,10 +135,10 @@ async def _google_watch(
     elif trigger.kind == "google.drive":
         # The change-feed token is established before the channel, so a
         # change between those two calls is still visible on the next scan.
-        from langflow.services.triggers.source_poll import poll_source
 
         if not (trigger.provider_state or {}).get("page_token"):
-            await poll_source(session, trigger, family=FAMILY_TRIGGER_PUSH)
+            msg = "Initialize the Drive cursor before creating a watch."
+            raise ValueError(msg)
         path = "drive/v3/changes/watch"
         origin = GOOGLE_DRIVE_ORIGIN
         params = {"pageToken": (trigger.provider_state or {})["page_token"]}
@@ -157,6 +158,17 @@ async def _google_watch(
         {"channel_id": channel_id, "resource_id": resource_id},
         _expiry(response.get("expiration")),
     )
+
+
+async def gmail_mailbox_key(lease) -> str:
+    """Use the provider's canonical mailbox identity across OAuth connections."""
+    async with SourceHTTP(lease, origin=GOOGLE_GMAIL_ORIGIN) as client:
+        profile = await client.request("GET", "gmail/v1/users/me/profile")
+    address = profile.get("emailAddress")
+    if not isinstance(address, str) or not address:
+        msg = "Gmail did not return a mailbox identity."
+        raise ValueError(msg)
+    return hashlib.sha256(address.casefold().encode()).hexdigest()
 
 
 async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSubscription:
@@ -191,6 +203,23 @@ async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSu
     if trigger.kind == "google.gmail":
         config = trigger.config or {}
         lease = await source_lease(session, trigger, family=FAMILY_TRIGGER_PUSH)
+        mailbox_key = session.info.get("gmail_mailbox_key") or await gmail_mailbox_key(lease)
+        siblings = (
+            await session.exec(
+                select(TriggerSubscription).where(
+                    TriggerSubscription.provider == PROVIDER_GOOGLE,
+                    TriggerSubscription.state == TriggerSubscriptionState.ACTIVE.value,
+                )
+            )
+        ).all()
+        for sibling in siblings:
+            state = sibling.provider_state or {}
+            if state.get("kind") == "gmail" and not state.get("mailbox_key"):
+                msg = "Disable and re-enable existing Gmail triggers before adding another mailbox watch."
+                raise ValueError(msg)
+            if state.get("mailbox_key") == mailbox_key and state.get("pubsub_topic") != config["pubsub_topic"]:
+                msg = "All Gmail triggers for one mailbox must use the same Pub/Sub topic."
+                raise ValueError(msg)
         async with SourceHTTP(lease, origin=GOOGLE_GMAIL_ORIGIN) as client:
             response = await client.request(
                 "POST",
@@ -202,11 +231,13 @@ async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSu
             trigger_id=trigger.id,
             connection_id=trigger.connection_id,
             provider=PROVIDER_GOOGLE,
-            provider_subscription_id=f"gmail-watch:{trigger.id}",
+            provider_subscription_id=f"gmail-watch:{trigger.id}:{uuid4()}",
             client_state_digest=None,
             expires_at=_expiry(response.get("expiration")),
             provider_state={
                 "kind": "gmail",
+                "mailbox_key": mailbox_key,
+                "pubsub_topic": config["pubsub_topic"],
                 "audience": address,
                 "pubsub_service_account": config["pubsub_service_account"],
             },
@@ -239,59 +270,46 @@ async def renew_source(session: AsyncSession, subscription: TriggerSubscription)
         old_channel = subscription.provider_subscription_id
         old_resource = (subscription.provider_state or {}).get("resource_id")
         channel_id, token, state, expiry = await _google_watch(session, trigger, address)
+        from langflow.services.triggers.source_cleanup import enqueue_cleanup
+
+        if old_resource:
+            old_watch = TriggerSubscription(**subscription.model_dump())
+            old_watch.id = uuid4()
+            old_watch.provider_subscription_id = old_channel
+            await enqueue_cleanup(session, old_watch)
         subscription.provider_subscription_id = channel_id
         subscription.client_state_digest = state_digest(token)
         subscription.provider_state = state
         session.add(subscription)
-        from langflow.services.triggers.source_poll import poll_source
-
-        await poll_source(session, trigger, family=FAMILY_TRIGGER_PUSH)
-        if old_resource:
-            try:
-                origin = GOOGLE_CALENDAR_ORIGIN if trigger.kind == "google.calendar" else GOOGLE_DRIVE_ORIGIN
-                path = "calendar/v3/channels/stop" if trigger.kind == "google.calendar" else "drive/v3/channels/stop"
-                async with SourceHTTP(lease, origin=origin) as client:
-                    await client.request("POST", path, body={"id": old_channel, "resourceId": old_resource})
-            except Exception:  # noqa: BLE001 - the old channel expires while the new one serves
-                # The old channel expires soon; the new verified channel is
-                # already live and local deduplication spans them.
-                await logger.awarning("Old Google channel %s could not be stopped", old_channel)
         return expiry
     if trigger.kind == "google.gmail":
-        async with SourceHTTP(lease, origin=GOOGLE_GMAIL_ORIGIN) as client:
-            response = await client.request(
-                "POST",
-                "gmail/v1/users/me/watch",
-                body={"topicName": (trigger.config or {})["pubsub_topic"], "labelIds": ["INBOX"]},
-            )
-        return _expiry(response.get("expiration"))
+        from langflow.services.triggers.source_cleanup import with_mailbox_lease
+
+        key = await gmail_mailbox_key(lease)
+        if key != (subscription.provider_state or {}).get("mailbox_key"):
+            msg = "The Gmail mailbox identity changed. Enable the trigger again."
+            raise ValueError(msg)
+
+        async def renew_watch():
+            await session.refresh(subscription)
+            if subscription.state != TriggerSubscriptionState.ACTIVE.value:
+                msg = "The Gmail watch was retired during renewal."
+                raise ValueError(msg)
+            async with SourceHTTP(lease, origin=GOOGLE_GMAIL_ORIGIN) as client:
+                response = await client.request(
+                    "POST",
+                    "gmail/v1/users/me/watch",
+                    body={"topicName": (subscription.provider_state or {})["pubsub_topic"], "labelIds": ["INBOX"]},
+                )
+            return _expiry(response.get("expiration"))
+
+        return await with_mailbox_lease(key, renew_watch)
     msg = "Unsupported source subscription renewal."
     raise ValueError(msg)
 
 
 async def revoke_source(session: AsyncSession, subscription: TriggerSubscription) -> None:
-    trigger = await session.get(Trigger, subscription.trigger_id)
-    if trigger is None:
-        return
-    if subscription.connection_id and subscription.connection_id != trigger.connection_id:
-        # Re-arming may already have switched the trigger to a new connection.
-        # The old provider watch must be stopped with the credential that made it.
-        trigger = trigger.model_copy(update={"connection_id": subscription.connection_id})
-    lease = await source_lease(session, trigger, family=FAMILY_TRIGGER_PUSH)
-    if subscription.provider == PROVIDER_MICROSOFT:
-        async with SourceHTTP(lease, origin=GRAPH_ORIGIN) as client:
-            await client.request("DELETE", f"v1.0/subscriptions/{subscription.provider_subscription_id}")
-    elif trigger.kind == "google.gmail":
-        async with SourceHTTP(lease, origin=GOOGLE_GMAIL_ORIGIN) as client:
-            await client.request("POST", "gmail/v1/users/me/stop")
-    else:
-        resource_id = (subscription.provider_state or {}).get("resource_id")
-        if resource_id:
-            origin = GOOGLE_CALENDAR_ORIGIN if trigger.kind == "google.calendar" else GOOGLE_DRIVE_ORIGIN
-            path = "calendar/v3/channels/stop" if trigger.kind == "google.calendar" else "drive/v3/channels/stop"
-            async with SourceHTTP(lease, origin=origin) as client:
-                await client.request(
-                    "POST",
-                    path,
-                    body={"id": subscription.provider_subscription_id, "resourceId": resource_id},
-                )
+    """Queue revocation; lifecycle transactions must not hold writes during I/O."""
+    from langflow.services.triggers.source_cleanup import enqueue_cleanup
+
+    await enqueue_cleanup(session, subscription)

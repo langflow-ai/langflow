@@ -159,11 +159,12 @@ def dedupe_key(*, provider: str, suffix: str | None, fallback: str) -> str:
     """The ledger key for one delivery.
 
     Derived from the provider's own event identity whenever it offers one -
-    Slack's ``event_id``, Graph's subscription plus resource plus change type,
+    Slack's ``event_id``, Graph's notification id or item version,
     Google's channel plus message number - because that identity is exactly what
     survives a redelivery. ``fallback`` is used only when a provider sends
-    nothing stable, and it is a digest of the signed body, so two identical
-    bodies still collapse into one run.
+    nothing stable. Unversioned Graph hints use a fresh fallback because
+    distinct changes can produce identical bodies; canonical versions dedupe
+    downstream. Other providers use a signed-body digest.
     """
     key = f"{INGRESS_DEDUPE_PREFIX}:{provider}:{suffix or fallback}"
     if len(key) <= DEDUPE_KEY_MAX_LENGTH:
@@ -193,6 +194,11 @@ async def record_event(
     telling a provider "that was a duplicate" with an error status is how a
     provider is taught to retry forever.
     """
+    if provider == PROVIDER_MICROSOFT and not suffix:
+        from uuid import uuid4
+
+        # An identical thin wakeup is not evidence of an identical change.
+        fallback = str(uuid4())
     key = dedupe_key(provider=provider, suffix=suffix, fallback=fallback)
     is_source_hint = provider in {PROVIDER_MICROSOFT, PROVIDER_GOOGLE}
     envelope = {"provider": provider, "delivery": payload}

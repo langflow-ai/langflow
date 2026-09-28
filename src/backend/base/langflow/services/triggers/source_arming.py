@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import ipaddress
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 from lfx.integrations.models import ConnectionRef
 from sqlmodel import select
@@ -44,6 +46,26 @@ _PUBSUB_TOPIC = re.compile(r"^projects/[A-Za-z0-9_.~+%-]+/topics/[A-Za-z0-9_.~+%
 _SERVICE_ACCOUNT = re.compile(r"^[A-Za-z0-9_.-]+@[A-Za-z0-9.-]+\.iam\.gserviceaccount\.com$")
 
 
+def public_ingress_origin(redirect_uri: str) -> str | None:
+    """Validate an advertised ingress origin without probing arbitrary hosts."""
+    try:
+        uri = urlsplit(redirect_uri)
+        host = (uri.hostname or "").lower()
+        if uri.scheme != "https" or not host or uri.username or uri.password:
+            return None
+        if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+            return None
+        try:
+            if not ipaddress.ip_address(host).is_global:
+                return None
+        except ValueError:
+            pass  # DNS names are configured by the operator, not reachability-probed.
+    except ValueError:
+        return None
+    else:
+        return f"https://{uri.netloc}"
+
+
 @dataclass(frozen=True)
 class SourceArming:
     connection_id: UUID
@@ -59,6 +81,12 @@ def normalize_source_config(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
         for key in ("connection", "calendar_id", "site_id", "pubsub_topic", "pubsub_service_account")
         if raw.get(key)
     }
+    delivery = raw.get("delivery_mode") or "auto"
+    if delivery not in {"auto", "push", "poll"}:
+        msg = "Delivery mode must be auto, push, or poll."
+        raise ValueError(msg)
+    if delivery != "auto":
+        config["delivery_mode"] = delivery
     config["share_session"] = bool(raw.get("share_session"))
     return config
 
@@ -116,6 +144,22 @@ async def resolve_arming(session: AsyncSession, *, kind: str, owner_id: UUID, co
             msg = "Use the customer service account email configured for authenticated Pub/Sub push."
             raise ValueError(msg)
     ingress = get_settings_service().settings.trigger_ingress_enabled and context != "desktop"
+    if ingress:
+        binding = await session.get(ConnectionOAuth, row.id)
+        ingress = (
+            binding is not None
+            and public_ingress_origin(get_oauth_settings().registration(binding.registration_id).redirect_uri)
+            is not None
+        )
+    delivery = config.get("delivery_mode", "auto")
+    if delivery == "push" and not ingress:
+        msg = "Push delivery requires a public HTTPS callback and enabled ingress."
+        raise ValueError(msg)
+    if delivery == "poll":
+        if kind == "google.gmail" or context == "hosted":
+            msg = "Polling is not supported for Gmail or hosted source triggers."
+            raise ValueError(msg)
+        ingress = False
     if kind in MICROSOFT_SOURCE_KINDS:
         mechanism = MECHANISM_GRAPH_NOTIFICATIONS if ingress else MECHANISM_GRAPH_DELTA
     elif kind == "google.calendar":

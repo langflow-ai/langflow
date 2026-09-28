@@ -269,19 +269,11 @@ class TriggerService(Service):
             if changed:
                 row.provider_state = {}
             if arming.mechanism_id in PUSH_MECHANISMS:
-                from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
-                from langflow.services.triggers.source_poll import poll_source
-                from langflow.services.triggers.source_subscription import provision_source
-
                 if not row.public_id:
                     row.public_id = mint_public_id()
-                await session.flush()
-                if not (row.provider_state or {}).get("baseline_complete"):
-                    await poll_source(session, row, family=FAMILY_TRIGGER_PUSH)
-                await provision_source(session, row)
-                # Read once more after watch creation to cover the gap between
-                # establishing the cursor and registering with the provider.
-                await poll_source(session, row, family=FAMILY_TRIGGER_PUSH)
+                # The route commits this intent before any provider I/O. The
+                # initializer then persists each recoverable stage separately.
+                return await self.set_state(session, row=row, state=TriggerState.PENDING)
             session.add(row)
         # Re-arming starts from now rather than replaying paused ticks. An
         # idempotent enable on an active trigger must preserve its due tick.
