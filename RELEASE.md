@@ -99,7 +99,7 @@ Use the [prepared release-tag process](./DEVELOPMENT.md#preparing-official-relea
 1. Finish version updates and fixes on `release-X.Y.Z`.
 2. Run **Prepare Release Tag** with `tag=vX.Y.Z` and `ref=release-X.Y.Z`.
    If an earlier candidate already uses this tag and the source has changed, enable `replace_prepared_tag`. The workflow verifies the existing preparation, protects final GitHub releases and checks for concurrent tag updates.
-3. Run the normal release workflow against the prepared `vX.Y.Z` tag with `pre_release` disabled.
+3. Run the normal release workflow with `release_tag=vX.Y.Z`, `release_commit` set to the full prepared SHA, and `pre_release` disabled. The workflow reserves a draft final release before publishing packages or images, even when `create_release=false`. Keep that reservation if publication fails and retry the same source commit.
 
 Use the same preparation process before each release candidate. Do not create tags directly on the release branch or move published final tags; publish a new version for subsequent fixes. Keep the authentication-preparation commit out of the branch merged back into `main`.
 

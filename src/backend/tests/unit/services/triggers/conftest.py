@@ -117,3 +117,68 @@ def fake_background_service(monkeypatch):
 
     monkeypatch.setattr("langflow.services.deps.get_background_execution_service", _get)
     return service
+
+
+# --------------------------------------------------------------------------- #
+# Slack Socket Mode: a local endpoint and the adapter pointed at it
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def listener_process(trigger_owner, monkeypatch):  # noqa: ARG001 - the API app must exist before the flag is set
+    """Play the listener process, the only one a Slack app-level token resolves in.
+
+    ``create_app`` refuses to build an app once the flag is set, so this depends
+    on ``trigger_owner`` (and through it on ``client``) to run after the app is up.
+    """
+    from langflow.services.triggers.listeners import guard
+
+    monkeypatch.setattr(guard, "_IS_LISTENER_PROCESS", True)
+
+
+@pytest.fixture
+async def slack():
+    """A local Slack Socket Mode endpoint (``fake_slack_socket.py``)."""
+    from tests.unit.services.triggers.fake_slack_socket import FakeSlackSocketMode
+
+    async with FakeSlackSocketMode() as fake:
+        yield fake
+
+
+@pytest.fixture
+def socket_adapters(slack, monkeypatch):
+    """Point the Socket Mode registration at the fake, and restore it afterwards."""
+    from langflow.services.deps import get_settings_service
+    from langflow.services.triggers.constants import MECHANISM_SLACK_SOCKET_MODE as SOCKET
+    from langflow.services.triggers.constants import SLACK_TRIGGER_KINDS
+    from langflow.services.triggers.listeners import adapters
+    from langflow.services.triggers.providers.slack.socket_mode import SlackSocketModeAdapter
+
+    from tests.unit.services.triggers.fake_slack_socket import API_BASE_URL, local_socket_url
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "listener_backoff_base_s", 0.05)
+    monkeypatch.setattr(settings, "listener_backoff_cap_s", 0.1)
+    created: list = []
+
+    def factory(_trigger):
+        adapter = SlackSocketModeAdapter(
+            max_connections=10,
+            api_base_url=API_BASE_URL,
+            http_transport=slack.transport(),
+            url_allowed=local_socket_url,
+            open_timeout_s=5.0,
+            drain_timeout_s=0.3,
+        )
+        created.append(adapter)
+        return adapter
+
+    saved = {key: adapters._REGISTRY.pop(key) for key in list(adapters._REGISTRY) if key[1] == SOCKET}
+    for kind in SLACK_TRIGGER_KINDS:
+        adapters.register_adapter(kind=kind, mechanism=SOCKET, factory=factory, rebuild_on_config_change=False)
+    try:
+        yield created
+    finally:
+        for kind in SLACK_TRIGGER_KINDS:
+            adapters.unregister_adapter(kind=kind, mechanism=SOCKET)
+        adapters._REGISTRY.update(saved)

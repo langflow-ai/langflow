@@ -47,7 +47,7 @@ from langflow.services.triggers.constants import (
 from langflow.services.triggers.correlation import derive_session_id
 from langflow.services.triggers.errors import BindingUnsupportedError
 from langflow.services.triggers.ledger import purge_events
-from langflow.services.triggers.principal import connection_preflight
+from langflow.services.triggers.principal import connection_preflight, family_for
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -461,8 +461,13 @@ async def _recover_submitted_job(session: AsyncSession, *, trigger: Trigger, eve
     return True
 
 
-async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: str = FAMILY_TRIGGER_LISTENER) -> None:
-    """Turn one claimed ledger row into one background job, or account for why not."""
+async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: str | None = None) -> None:
+    """Turn one claimed ledger row into one background job, or account for why not.
+
+    ``family`` defaults to the trigger's own (:func:`principal.family_for`): a
+    Slack Events API or inbound-webhook run is ``trigger_push``, the rest
+    ``trigger_listener``.
+    """
     from langflow.services.database.models.user.model import UserRead
     from langflow.services.deps import get_background_execution_service
 
@@ -470,6 +475,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="trigger_missing")
         return
+    family = family or family_for(trigger)
 
     if await _recover_submitted_job(session, trigger=trigger, event=event):
         return

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import io
+import os
+import shutil
 import subprocess
 import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
+import yaml
 
 from scripts.ci.release_auth.constants import AUTH_SOURCE
 from scripts.ci.release_auth.preparation import prepare_release_auth
@@ -19,6 +22,54 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 pytest_plugins = ("scripts.ci.release_auth_fixtures",)
+
+
+def test_release_validation_refuses_changed_tags_and_keeps_the_original_commit(source_repo: Path) -> None:
+    from pathlib import Path
+
+    workflow_path = Path(__file__).resolve().parents[2] / ".github/workflows/release.yml"
+    workflow = yaml.safe_load(workflow_path.read_text())
+    commands = next(
+        step["run"]
+        for step in workflow["jobs"]["validate-tag"]["steps"]
+        if step.get("name") == "Validate release source"
+    )
+    bash = shutil.which("bash")
+    assert bash is not None
+    first = prepare_release_tag(source_repo, "v1.13.0")
+    expected = run_git(source_repo, "rev-parse", "refs/tags/v1.13.0").decode().strip()
+    run_git(source_repo, "checkout", "--detach", first)
+    env = {**os.environ, "DRY_RUN": "false", "RELEASE_REF": "v1.13.0", "RELEASE_COMMIT": first}
+    original = subprocess.run(  # noqa: S603
+        [bash, "-e"], input=commands, cwd=source_repo, env=env, text=True, capture_output=True, check=False
+    )
+    assert original.returncode == 0, original.stdout + original.stderr
+
+    run_git(source_repo, "checkout", "development")
+    (source_repo / "candidate-fix.txt").write_text("next candidate")
+    run_git(source_repo, "add", "candidate-fix.txt")
+    run_git(source_repo, "commit", "-m", "Next candidate")
+    second = prepare_release_tag(source_repo, "v1.13.0", expected_tag=expected)
+    run_git(source_repo, "checkout", "--detach", first)
+    retried = subprocess.run(  # noqa: S603
+        [bash, "-e"], input=commands, cwd=source_repo, env=env, text=True, capture_output=True, check=False
+    )
+    assert retried.returncode != 0
+    assert "no longer matches release_commit" in retried.stdout
+    assert run_git(source_repo, "rev-parse", "HEAD").decode().strip() == first
+    assert first != second
+
+    invalid = subprocess.run(  # noqa: S603
+        [bash, "-e"],
+        input=commands,
+        cwd=source_repo,
+        env={**env, "RELEASE_COMMIT": "development"},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert invalid.returncode != 0
+    assert "must be the full source commit SHA" in invalid.stdout
 
 
 def test_release_tag_archives_disable_auto_login_without_changing_development(source_repo: Path) -> None:

@@ -152,7 +152,12 @@ class ConnectionUnresolvedError(IntegrationError):
 
 
 ConnectionNotAuthorizedReason = Literal[
-    "principal", "provider", "anonymous-principal", "unknown-principal", "non-interactive-opt-in-required"
+    "principal",
+    "provider",
+    "anonymous-principal",
+    "unknown-principal",
+    "non-interactive-opt-in-required",
+    "listener-only",
 ]
 
 _CONNECTION_NOT_AUTHORIZED_HINTS: dict[ConnectionNotAuthorizedReason, str] = {
@@ -162,6 +167,11 @@ _CONNECTION_NOT_AUTHORIZED_HINTS: dict[ConnectionNotAuthorizedReason, str] = {
     "unknown-principal": "Configure the host to supply an execution identity before resolving connections.",
     "non-interactive-opt-in-required": (
         "Ask the connection owner to enable allow_non_interactive on this connection, then retry."
+    ),
+    # A credential that exists only to hold a trigger listener's connection -
+    # a Slack app-level token opens Socket Mode sockets and does nothing else.
+    "listener-only": (
+        "This connection can only be used by a trigger listener. Choose a different connection for this component."
     ),
 }
 

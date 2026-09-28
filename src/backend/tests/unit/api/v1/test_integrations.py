@@ -387,3 +387,20 @@ async def test_integration_routes_require_authentication(client: AsyncClient) ->
     for path in ("api/v1/integrations", "api/v1/integrations/policy/effective"):
         response = await client.get(path)
         assert response.status_code in {401, 403}, f"{path}: {response.text}"
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize("context", ["self_managed", "hosted", "desktop"])
+async def test_list_integrations_reports_the_deployment_context(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch,
+    context: str,
+) -> None:
+    """The connection dialog needs it: hosted offers no pasted Slack tokens."""
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", context)
+
+    response = await client.get("api/v1/integrations", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["deployment_context"] == context

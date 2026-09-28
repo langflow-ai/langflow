@@ -42,16 +42,8 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         with:
           script: |
-            try {
-              const {data: release} = await github.rest.repos.getReleaseByTag({
-                ...context.repo, tag: process.env.RELEASE_TAG,
-              });
-              if (!release.prerelease) {
-                core.setFailed('A final release already uses this tag; create a new version instead.');
-              }
-            } catch (error) {
-              if (error.status !== 404) throw error;
-            }
+            const { assertCandidateReplaceable } = require('./scripts/ci/release_auth/publication.cjs');
+            await assertCandidateReplaceable(github, context.repo, process.env.RELEASE_TAG);
       - name: Create and push the release source tag
         env:
           RELEASE_TAG: ${{ inputs.tag }}

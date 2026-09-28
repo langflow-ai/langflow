@@ -175,6 +175,8 @@ For more information about containers, see [Docker image defaults](/deployment-d
 
 Before installing a release that disables auto-login, prepare the existing account for password sign-in. Keep the same database, configuration directory, encryption key, and superuser username so that your flows and stored credentials remain available.
 
+If your flows use the File System component, also follow [Move shared files when enabling authentication](/file-system#move-shared-files-when-enabling-authentication). Its shared files remain on disk but are not automatically assigned to the private workspace used after sign-in. Existing LFX flow exports also need their [saved File System component updated](/file-system#upgrade-an-existing-flow-export).
+
 1. Back up the database and configuration directory. Keep the instance restricted to trusted local access during the transition.
 2. While signed in to the existing installation, identify the current account with the authenticated [Get current user API](/api-users#get-current-user). If you already know its password, verify that password with `POST /api/v1/login` and continue to step 4.
 3. If the account uses an unknown generated bootstrap password, use an existing administrator session or API key with `PATCH /api/v1/users/{user_id}` to set a strong password on **that same account**. Send only the `password` field, as described in [Update user](/api-users#update-user), then verify password sign-in. The self-service `reset-password` endpoint requires the old password and is not suitable for an unknown bootstrap password.

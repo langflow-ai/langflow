@@ -7,38 +7,50 @@ A trigger fires a flow when something happens somewhere else. Providers deliver 
 
 That needs your Langflow to be reachable over HTTPS from the public internet. If it isn't, use the trigger listener process instead: Langflow dials out and holds the connection, and needs no inbound address at all.
 
-## The ingress endpoint
+## The ingress endpoints
 
-One route accepts every provider delivery:
+Two routes accept provider deliveries. Most providers address one trigger per URL:
 
 ```
 POST /api/v1/triggers/ingress/{provider}/{public_id}
 ```
 
-`provider` is one of `webhook`, `slack`, `microsoft`, or `google`. `public_id` is an opaque address minted per trigger, so no two triggers share a URL and knowing one tells you nothing about another.
+`provider` is one of `webhook`, `microsoft`, or `google`. `public_id` is an opaque address minted per trigger, so no two triggers share a URL and knowing one tells you nothing about another.
+
+Slack is different: a Slack app has exactly one Request URL for every workspace it is installed in, so its deliveries name an app, not a trigger:
+
+```
+POST /api/v1/triggers/ingress/slack/apps/{registration_id}
+```
+
+`registration_id` is the app's registration name in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`. Each delivery is verified with that registration's signing secret and then reaches every armed Slack trigger whose connection is an installation of the app in the delivering workspace. See [Slack triggers](../Components/bundles-slack.mdx#slack-triggers) for the app setup.
 
 The route is unauthenticated, because a provider has no Langflow account. It is not unprotected: every delivery must carry the provider's own proof, and everything else is refused.
 
 | Provider | What proves the delivery |
 |---|---|
-| `slack` | The `X-Slack-Signature` HMAC over the raw body, plus a timestamp no more than five minutes old |
+| `slack` | The `X-Slack-Signature` HMAC over the raw body with the registration's signing secret, plus a timestamp no more than five minutes old |
 | `microsoft` | The `clientState` Langflow set when it created the subscription |
 | `google` | The `X-Goog-Channel-Token` Langflow set when it created the channel, bound to that channel's id |
 | `webhook` | An `X-Langflow-Signature` HMAC over the raw body with the trigger's own secret |
 
 ### Every refusal answers the same way
 
-An unknown address, a wrong provider, a bad signature, a stale timestamp, a paused trigger, an oversized body, and a rate-limited delivery all return `404` with one body. An endpoint that distinguished them would tell an attacker which trigger addresses exist and how close they were getting — including by the request count at which a `429` appeared, since known and unknown addresses have different ceilings.
+An unknown address or Slack app, a wrong provider, a bad signature, a stale timestamp, a paused trigger, an oversized body, and a rate-limited delivery all return `404` with one body. An endpoint that distinguished them would tell an attacker which trigger addresses exist and how close they were getting — including by the request count at which a `429` appeared, since known and unknown addresses have different ceilings.
 
 The one exception is the Microsoft Graph subscription handshake, which answers `200` with the echoed `validationToken`. It carries no provider proof, so Langflow answers it *before* looking up the trigger: the response is the same whether the address exists or not.
+
+Slack's Request URL check (`url_verification`) is signed, so it is answered only after the signature verifies. It names no trigger, so it succeeds before any trigger exists, which is when you save the URL in the Slack app.
 
 The actual reason is written to the authorization audit log, where you can read it and they cannot. Enable it with `LANGFLOW_AUTHZ_AUDIT_ENABLED=true`.
 
 ### What the request does, and does not, do
 
-The request verifies the delivery, deduplicates it, writes one event to the trigger's ledger, and answers. That is all.
+The request verifies the delivery, deduplicates it, writes one event to each ledger it belongs in — one trigger's, or every matching Slack trigger's, in one commit — and answers. That is all.
 
-It does not run your flow. The dispatcher picks the event up afterwards and runs the flow as the trigger's owner, which is why Slack's three-second acknowledgement window is never at risk.
+It does not run your flow. The dispatcher picks the event up afterwards and runs the flow as the trigger's owner, so however long a run takes, it never counts against Slack's three-second acknowledgement window.
+
+The request does wait for its ledger write to commit before it answers, because answering first is the only order that could lose an event. A database that takes more than three seconds to commit therefore makes Slack retry. The ledger collapses the retry, so the flow still runs once, but the first answer was late: see [Troubleshoot](#troubleshoot).
 
 It also does not fetch anything back from the provider. Microsoft Graph notifications carry ids only; the run resolves them with the owner's connection, outside the request.
 
@@ -91,7 +103,7 @@ Post to `/signing-secret` again. The address stays the same, so your callers kee
 
 Every provider here is at-least-once. Slack retries at zero, one, and five minutes when it doesn't get an acknowledgement in time; Graph and Google redeliver too.
 
-Langflow keys each delivery on the provider's own event identity — Slack's `event_id`, Graph's subscription, resource, change type and resource etag (so a second edit to the same message is a second event), Google's channel and message number — and the ledger rejects a second event with the same key. Three retries of one Slack event produce one run.
+Langflow keys each delivery on the provider's own event identity — Slack's `event_id` (the same key whether the event came through the Events API or Socket Mode), Graph's subscription, resource, change type and resource etag (so a second edit to the same message is a second event), Google's channel and message number — and the ledger rejects a second event with the same key. Three retries of one Slack event produce one run.
 
 Duplicates are acknowledged with `202` rather than an error, because telling a provider its retry failed teaches it to retry forever.
 
@@ -120,8 +132,10 @@ A trigger in **needs reconnect** is waiting for a person. It won't quietly start
 | `LANGFLOW_TRIGGER_INGRESS_ENABLED` | `true` | Set to `false` on an instance that should accept no inbound deliveries at all. Every ingress request then answers `404`. |
 | `LANGFLOW_TRIGGER_INGRESS_MAX_BODY_BYTES` | `1048576` | Per-route body cap, independent of the global request limit. |
 | `LANGFLOW_TRIGGER_INGRESS_RATE_LIMIT_PER_MINUTE` | `600` | Per-trigger delivery ceiling. The Microsoft Graph subscription handshake gets its own per-client counter at this ceiling, so probing unknown addresses cannot block subscription creation or renewal. |
-| `LANGFLOW_TRIGGER_INGRESS_UNKNOWN_RATE_LIMIT_PER_MINUTE` | `60` | Per-client ceiling for deliveries naming no known trigger, so probing for addresses is bounded without a real provider sharing the budget. |
+| `LANGFLOW_TRIGGER_INGRESS_UNKNOWN_RATE_LIMIT_PER_MINUTE` | `60` | Per-client ceiling for deliveries naming no known trigger, so probing for addresses is bounded without a real provider sharing the budget. It also caps how many refused requests one client can write to the audit log, including requests to a Slack app's Request URL that fail verification. Behind a reverse proxy, set `LANGFLOW_RATE_LIMIT_TRUST_PROXY` so each sender has its own counter instead of sharing the proxy's. |
 | `LANGFLOW_TRIGGER_INGRESS_SIGNATURE_TOLERANCE_S` | `300` | How stale a signed request's timestamp may be. |
+| `LANGFLOW_TRIGGER_INGRESS_SLACK_APP_RATE_LIMIT_PER_MINUTE` | `20000` | Ceiling on verified deliveries to one Slack app's Request URL: a flood guard sized well above what a hosted app installed in many workspaces receives. Only a delivery whose signature verifies spends it, and no request is refused before its signature is checked. Requests without a valid signature therefore can't get Slack's deliveries refused, even behind a reverse proxy where every sender shares one client address. |
+| `LANGFLOW_TRIGGER_INGRESS_SLACK_TEAM_RATE_LIMIT_PER_HOUR` | `60000` | Ceiling on verified deliveries for one workspace of one Slack app, counted over an hour: twice Slack's own delivery cap of 30,000 events per workspace per hour, over the same window, so a burst Slack permits is never refused. The workspace is the one whose app installation received the event. In a channel shared with another workspace, that isn't necessarily the workspace the message came from. |
 | `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_FRACTION` | `0.5` | Fraction of a subscription's lifetime after which renewal is attempted. |
 | `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_LEAD_CAP_S` | `86400` | Upper bound on how far ahead of expiry a subscription is renewed. |
 | `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_INTERVAL_S` | `300` | How often the renewal job scans for subscriptions coming due. |
@@ -130,13 +144,13 @@ A trigger in **needs reconnect** is waiting for a person. It won't quietly start
 | `LANGFLOW_TRIGGER_SUBSCRIPTION_RETRY_BACKOFF_CAP_S` | `3600` | Maximum delay between renewal retries. |
 | `LANGFLOW_TRIGGER_SUBSCRIPTION_FAILURE_THRESHOLD` | `3` | Consecutive renewal failures before the problem appears on the trigger. |
 
-Slack signs with an app-level secret that is not the OAuth client secret. Put it on the OAuth registration as `signing_secret`, alongside `client_id` and `client_secret`, in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`.
+Slack signs with an app-level secret that is not the OAuth client secret. Put it on the OAuth registration as `signing_secret`, alongside `client_id` and `client_secret`, in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`. A hosted deployment must also set `LANGFLOW_CONNECTION_OAUTH_CONTEXT=hosted`: Langflow uses it to refuse Slack Socket Mode there.
 
 ## Troubleshoot
 
-**Every delivery returns 404.** Check, in this order: the trigger is enabled; the URL's provider segment matches the trigger's provider; the clock on the sending host is within five minutes of Langflow's; the signature covers the *raw* body, not a re-serialized copy of it; the body is under the size cap; you are not over the rate limit. Turn on the audit log to see which check actually failed — the response deliberately doesn't say.
+**Every delivery returns 404.** Check, in this order: the trigger is enabled; the URL's provider segment matches the trigger's provider (for Slack, the URL names an existing registration that has `signing_secret`); the clock on the sending host is within five minutes of Langflow's; the signature covers the *raw* body, not a re-serialized copy of it; the body is under the size cap; you are not over the rate limit. Turn on the audit log to see which check actually failed — the response deliberately doesn't say.
 
-**Slack keeps retrying a delivery Langflow accepted.** Slack retries when it doesn't receive a `2xx` in three seconds. Check for a proxy or WAF in front of Langflow that is buffering or delaying the response.
+**Slack keeps retrying a delivery Langflow accepted.** Slack retries when it doesn't receive a `2xx` in three seconds. Langflow answers only after the delivery's ledger write commits, so check for slow database commits as well as for a proxy or WAF in front of Langflow that is buffering or delaying the response. The retries never run a flow twice, but a Request URL that keeps answering late can get its event delivery disabled by Slack.
 
 **Events stopped arriving and nothing looks wrong.** Look at the trigger's state. **Needs reconnect** means the provider withdrew authorization; reconnect the connection. If the trigger is still **active**, the subscription may have expired while the API was down — re-enable the trigger to subscribe again.
 

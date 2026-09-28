@@ -109,11 +109,13 @@ def test_candidate_workflow_protects_final_releases_and_fails_closed(response: d
     assert not guard.get("continue-on-error", False)
     # Execute the workflow's JavaScript with an in-memory GitHub API response.
     script = f"""
+      import {{createRequire}} from 'node:module';
+      const require = createRequire(process.cwd() + '/review-workflow.cjs');
       const response = {json.dumps(response)};
       let refused = false;
       const core = {{setFailed: () => {{refused = true;}}}};
       const context = {{repo: {{owner: 'test', repo: 'test'}}}};
-      const github = {{rest: {{repos: {{getReleaseByTag: async () => {{
+      const github = {{paginate: async () => [], rest: {{repos: {{getReleaseByTag: async () => {{
         if (response.status) throw response;
         return {{data: response}};
       }}}}}}}};
@@ -124,7 +126,7 @@ def test_candidate_workflow_protects_final_releases_and_fails_closed(response: d
     """
     # Only the checked-in workflow and fixed test responses are executed.
     result = subprocess.run(  # noqa: S603
-        [node, "--input-type=module"], input=script, text=True, capture_output=True, check=True
+        [node, "--input-type=module"], input=script, cwd=REPO_ROOT, text=True, capture_output=True, check=True
     )
     assert result.stdout.strip() == expected
     push_step = next(step for step in steps if step.get("name") == "Create and push the release source tag")
@@ -132,3 +134,43 @@ def test_candidate_workflow_protects_final_releases_and_fails_closed(response: d
     push = push_step["run"]
     assert '--replace-prepared-tag "$expected"' in push
     assert '--force-with-lease="$tag_ref:$expected"' in push
+
+
+def test_release_source_is_pinned_across_every_checkout_and_reusable_workflow() -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/release.yml").read_text())
+    # PyYAML's YAML 1.1 loader parses the Actions `on` key as True.
+    assert workflow[True]["workflow_dispatch"]["inputs"]["release_commit"]["required"] is True
+    expected = "${{ inputs.release_commit }}"
+    for job in workflow["jobs"].values():
+        if "ref" in job.get("with", {}):
+            assert job["with"]["ref"] == expected
+        for step in job.get("steps", []):
+            if step.get("uses", "").startswith("actions/checkout@"):
+                assert step["with"]["ref"] == expected
+    release_steps = workflow["jobs"]["create_release"]["steps"]
+    attribution = next(step for step in release_steps if step.get("id") == "release_commit")
+    assert attribution["env"]["RELEASE_COMMIT"] == expected
+    assert 'sha="$RELEASE_COMMIT"' in attribution["run"]
+
+
+def test_every_publication_waits_for_final_reservation() -> None:
+    jobs = yaml.safe_load((REPO_ROOT / ".github/workflows/release.yml").read_text())["jobs"]
+    gate = "reserve-final-release"
+    publishers = {
+        name for name in jobs if name.startswith(("publish-", "call_docker_build_")) or name == "create_release"
+    }
+    assert publishers
+    for name in publishers:
+        assert gate in jobs[name]["needs"], name
+        if "always()" in jobs[name]["if"]:
+            assert f"needs.{gate}.result == 'success'" in jobs[name]["if"], name
+    assert not publishers.intersection(jobs[gate]["needs"])
+    assert "test-cross-platform" in jobs[gate]["needs"]
+    assert (
+        "(needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped')"
+        in jobs[gate]["if"]
+    )
+    reservation = next(step for step in jobs[gate]["steps"] if "script" in step.get("with", {}))
+    assert reservation["if"] == "${{ !inputs.dry_run && !inputs.pre_release }}"
+    assert "inputs.create_release" not in jobs[gate]["if"] + reservation["if"]
+    assert not reservation.get("continue-on-error", False)

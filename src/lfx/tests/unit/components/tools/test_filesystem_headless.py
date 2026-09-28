@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING
+import json
+import shutil
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
+from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.graph.base import Graph
 from lfx.run._defaults import apply_run_defaults
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.deps import get_settings_service
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
@@ -94,13 +94,13 @@ def test_authenticated_boundaries_override_generated_identity(boundary: str) -> 
     assert component.build_metadata().data["mode"] == "isolated"
 
 
-@pytest.mark.parametrize("copy_mode", ["deepcopy", "checkpoint", "repeat", "different_user"])
+@pytest.mark.parametrize("copy_mode", ["deepcopy", "object_state", "repeat", "different_user"])
 def test_runtime_provenance_survives_only_same_identity_reuse(copy_mode: str) -> None:
     graph = Graph()
     apply_run_defaults(graph, session_id=None, user_id=None)
     if copy_mode == "deepcopy":
         reused = copy.deepcopy(graph)
-    elif copy_mode == "checkpoint":
+    elif copy_mode == "object_state":
         reused = Graph()
         reused.__setstate__(graph.__getstate__())
     elif copy_mode == "different_user":
@@ -116,3 +116,70 @@ def test_missing_identity_still_refuses_filesystem_access() -> None:
     component = component_for(Graph())
     assert "error" in component._write_file("notes.md", "should not be written")
     assert component.build_metadata().data["mode"] == "refused"
+
+
+@pytest.mark.parametrize("identity", ["generated", "explicit", "host", "legacy", "mismatched", "verified_resume"])
+def test_durable_checkpoint_preserves_filesystem_identity(identity: str) -> None:
+    node = FileSystemToolComponent(root_path="project", read_only=False).to_frontend_node()
+    graph = Graph.from_payload({"nodes": [node], "edges": []})
+    user_id = uuid4().hex if identity == "explicit" else None
+    apply_run_defaults(graph, session_id=None, user_id=user_id, overwrite_user_id=False)
+    if identity == "host":
+        graph.execution_principal = ExecutionPrincipal(kind="interactive_chat", family="host_route")
+    graph.prepare()
+    graph.set_run_id()
+    writer = graph.vertices[0].custom_component
+    assert writer._write_file("notes.md", "before pause")["status"] == "created"
+    payload = graph.build_checkpoint().model_dump(mode="json")
+    if identity == "legacy":
+        payload.pop("headless_filesystem_user_id")
+    elif identity == "mismatched":
+        payload["headless_filesystem_user_id"] = uuid4().hex
+    checkpoint = GraphCheckpoint.model_validate_json(json.dumps(payload))
+    restored = Graph.resume_from_checkpoint(checkpoint)
+    apply_run_defaults(
+        restored,
+        session_id=checkpoint.session_id,
+        user_id=checkpoint.user_id if identity == "verified_resume" else None,
+        overwrite_user_id=False,
+    )
+    reader = restored.vertices[0].custom_component
+    assert reader.build_metadata().data["mode"] == ("shared" if identity == "generated" else "isolated")
+    result = reader._read_file("notes.md")
+    if identity in {"generated", "explicit", "host"}:
+        assert "before pause" in result["content"]
+    else:
+        assert "error" in result
+
+
+def test_updated_flow_export_preserves_files_when_loaded_for_separate_runs() -> None:
+    node = FileSystemToolComponent(root_path="project", read_only=False).to_frontend_node()
+    components = []
+    for _ in range(2):
+        graph = Graph.from_payload({"nodes": [copy.deepcopy(node)], "edges": []})
+        apply_run_defaults(graph, session_id=None, user_id=None, overwrite_user_id=False)
+        components.append(graph.vertices[0].custom_component)
+
+    writer, reader = components
+    assert writer._write_file("notes.md", "saved export content")["status"] == "created"
+    assert "saved export content" in reader._read_file("notes.md")["content"]
+    assert reader.build_metadata().data["mode"] == "shared"
+
+
+def test_owner_selected_file_migration_keeps_other_users_isolated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner = component_for(Graph(user_id=uuid4().hex))
+    other_user = component_for(Graph(user_id=uuid4().hex))
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", True)
+    owner._write_file("notes.md", "existing shared file")
+    shared_file = tmp_path / "files/shared/notes.md"
+
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", False)
+    assert "error" in owner._read_file("notes.md")
+    destination = Path(owner.build_metadata().data["effective_root"])
+    shutil.copy2(shared_file, destination / "notes.md")
+
+    assert "existing shared file" in owner._read_file("notes.md")["content"]
+    assert "error" in other_user._read_file("notes.md")
+    assert shared_file.read_text() == "existing shared file"
