@@ -64,24 +64,24 @@
     "serialize-javascript": "^7.0.5",
     "nanoid": "^3.3.17",
     "dompurify": "^3.4.13",
-    "js-yaml": "^4.3.1",
+    "js-yaml": "^4.3.2",
     "picomatch": "^4.0.4",
-    "lodash": "4.17.21",
-    "fast-xml-parser": "4.5.4",
+    "lodash": "4.18.1",
+    "fast-xml-parser": "4.5.7",
     "openapi-to-postmanv2": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.1"
     },
     "postman-collection": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.1"
     },
     "json-schema-resolve-allof": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.1"
     },
     "json-refs": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.1"
     },
     "gray-matter": {
-      "js-yaml": "^3.15.1"
+      "js-yaml": "^3.15.2"
     }
   }
 }
