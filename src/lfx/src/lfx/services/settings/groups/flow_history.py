@@ -19,3 +19,15 @@ class FlowHistorySettings(BaseModel):
     than the limit gets a row of its own; the default sits above the largest
     node in the starter projects (about 89 KB).
     """
+    flow_revision_checkpoint_cadence: int = Field(default=100, ge=1)
+    """Operations recorded between automatic checkpoints of a flow's graph.
+
+    Replay starts from the newest checkpoint, so this bounds how far any read
+    or save has to replay.
+    """
+    flow_revision_retention_window: int = Field(default=5000, ge=1)
+    """Minimum number of a flow's most recent operations kept in its history.
+
+    Older operations are compacted away behind a checkpoint. Counts operations,
+    not rows. Saved versions are kept regardless, as snapshots.
+    """

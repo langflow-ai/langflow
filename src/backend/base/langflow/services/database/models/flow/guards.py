@@ -52,7 +52,8 @@ async def lock_flow_for_read(session: AsyncSession, flow: Flow) -> None:
     every later statement then sees the state the lock was granted on, and
     nothing can delete rows under the read.
 
-    SQLite has no row locks and is left alone.
+    SQLite has no row locks and is left alone; a read there that races
+    maintenance sees a gap and retries (see ``flow_history.replay``).
     """
     if session.get_bind().dialect.name == "sqlite":
         return
