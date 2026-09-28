@@ -2431,8 +2431,15 @@ class TestKnowledgeBaseAPI:
         assert mock_create_backend.call_args.kwargs["kb_path"] is None
 
 
+@pytest.mark.usefixtures("client")
 class TestPerformIngestionTask:
-    """Tests for the internal KBIngestionHelper.perform_ingestion background task."""
+    """Tests for the internal KBIngestionHelper.perform_ingestion background task.
+
+    ``perform_ingestion`` looks up the ``knowledge_base`` row before anything
+    else, so these tests need the database the ``client`` fixture creates.
+    Without it they pass only when an earlier test on the same worker happened
+    to leave the tables behind.
+    """
 
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
