@@ -34,6 +34,21 @@ let entryQueryLoading = false;
 let entryQueryError = false;
 const getVersionEntryMock = jest.fn();
 
+// No recorded history: these specs cover the saved-version list.
+jest.mock("@/controllers/API/queries/flow-revisions", () => ({
+  useGetFlowRevisions: () => ({
+    data: undefined,
+    fetchNextPage: jest.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  }),
+  useGetFlowRevision: () => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowVersions: () => ({
     data: {
