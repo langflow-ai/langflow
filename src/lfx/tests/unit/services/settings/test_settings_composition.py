@@ -257,6 +257,7 @@ EXPECTED_FIELDS = {
     "background_backend",
     "background_poll_interval_s",
     "background_claim_candidates",
+    "background_retention_days",
     # Triggers (TRG-2)
     "trigger_dispatcher_enabled",
     "trigger_dispatcher_poll_interval_s",
