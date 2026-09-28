@@ -11,17 +11,21 @@ jest.mock("@tanstack/react-query", () => ({
 }));
 
 const downloadFlowMock = jest.fn();
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 const removeApiKeysMock = jest.fn((flow: any) => flow);
 
 jest.mock("@/utils/reactflowUtils", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   downloadFlow: (...args: any[]) => downloadFlowMock(...args),
   processFlows: jest.fn(),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   removeApiKeys: (flow: any) => removeApiKeysMock(flow),
 }));
 
 // API mock — used by handleExportEntry to fetch the full version entry
 const apiGetMock = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   api: { get: (...args: any[]) => apiGetMock(...args), post: jest.fn() },
 }));
 jest.mock("@/controllers/API/helpers/constants", () => ({
@@ -40,6 +44,21 @@ const mockVersions = [
     created_at: "2026-01-01T00:00:00Z",
   },
 ];
+
+// No recorded history: these specs cover the saved-version list.
+jest.mock("@/controllers/API/queries/flow-revisions", () => ({
+  useGetFlowRevisions: () => ({
+    data: undefined,
+    fetchNextPage: jest.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  }),
+  useGetFlowRevision: () => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+  }),
+}));
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowVersions: () => ({
@@ -69,6 +88,7 @@ const mockCurrentFlow = {
 };
 
 jest.mock("@/stores/flowStore", () => {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const store: any = (selector: any) =>
     selector({
       currentFlow: mockCurrentFlow,
@@ -91,6 +111,7 @@ jest.mock("@/stores/flowStore", () => {
 const setErrorDataMock = jest.fn();
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default: (selector: any) =>
     selector({
       setSuccessData: jest.fn(),
@@ -99,15 +120,18 @@ jest.mock("@/stores/alertStore", () => ({
 }));
 
 jest.mock("@/utils/utils", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   cn: (...args: any[]) => args.filter(Boolean).join(" "),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default: ({ name }: any) => <span data-testid={`icon-${name}`} />,
 }));
 
 jest.mock("@/components/ui/button", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   Button: ({ children, onClick, ...rest }: any) => (
     <button onClick={onClick} {...rest}>
       {children}
@@ -116,14 +140,18 @@ jest.mock("@/components/ui/button", () => ({
 }));
 
 jest.mock("@/components/ui/dropdown-menu", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenuItem: ({ children, onClick }: any) => (
     <div role="menuitem" onClick={onClick}>
       {children}
     </div>
   ),
   DropdownMenuSeparator: () => <hr />,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
 }));
 
@@ -133,12 +161,15 @@ jest.mock("@/components/ui/checkbox", () => ({
 
 jest.mock("@/components/ui/sidebar", () => ({
   useSidebar: () => ({ setActiveSection: jest.fn() }),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarGroupLabel: ({ children, className }: any) => (
     <div className={className}>{children}</div>
   ),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarMenu: ({ children, className }: any) => (
     <div className={className}>{children}</div>
   ),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarMenuButton: ({ children, onClick, isActive, className }: any) => (
     <div
       role="button"
@@ -148,10 +179,12 @@ jest.mock("@/components/ui/sidebar", () => ({
       {children}
     </div>
   ),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarMenuItem: ({ children }: any) => <div>{children}</div>,
 }));
 
 jest.mock("lodash", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   cloneDeep: jest.fn((obj: any) =>
     obj === undefined ? undefined : JSON.parse(JSON.stringify(obj)),
   ),
@@ -169,6 +202,7 @@ jest.mock("@/stores/versionPreviewStore", () => {
     clearPreview: jest.fn(),
     setPreviewLoading: jest.fn(),
   };
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const store: any = (selector: any) => selector(state);
   store.getState = () => state;
   store.setState = jest.fn();

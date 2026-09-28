@@ -1,5 +1,6 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: store mocks intentionally accept multiple selector shapes
 import { renderHook } from "@testing-library/react";
+import useFlowHistoryRepairStore from "@/stores/flowHistoryRepairStore";
 import useSaveFlow from "../use-save-flow";
 
 const mockSetFlows = jest.fn();
@@ -621,5 +622,71 @@ describe("useSaveFlow", () => {
     await expect(result.current()).resolves.toBeUndefined();
 
     expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+  });
+
+  describe("history refusals the server can repair", () => {
+    const refusal = (detail: object) => ({ response: { data: { detail } } });
+
+    beforeEach(() => {
+      useFlowHistoryRepairStore.setState({ problem: null });
+    });
+
+    it("sends a request id with every save", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect(mockMutate.mock.calls[0][0].request_id).toEqual(
+        expect.stringMatching(/^[0-9a-f-]{36}$/),
+      );
+    });
+
+    it.each([
+      ["FLOW_REVISION_MISMATCH", "repair_revision_mismatch"],
+      ["FLOW_GRAPH_INVALID", "repair_invalid_graph"],
+    ])(
+      "offers to repair a %s refusal and resends with %s",
+      async (code, flag) => {
+        mockMutate.mockImplementationOnce((_payload, options) =>
+          options.onError(
+            refusal({
+              code,
+              graph: "stored",
+              violations: [{ code: "EDGE_ENDPOINT_INVALID" }],
+            }),
+          ),
+        );
+        const { result } = renderHook(() => useSaveFlow());
+
+        await expect(result.current()).rejects.toBeDefined();
+
+        const problem = useFlowHistoryRepairStore.getState().problem;
+        expect(problem?.code).toBe(code);
+        // Offered instead of the generic save error.
+        expect(mockSetErrorData).not.toHaveBeenCalled();
+
+        await problem!.repair();
+
+        const resent = mockMutate.mock.calls[1][0];
+        expect(resent[flag]).toBe(true);
+        expect(resent.request_id).not.toBe(
+          mockMutate.mock.calls[0][0].request_id,
+        );
+      },
+    );
+
+    it("reports other refusals as a save error", async () => {
+      mockMutate.mockImplementationOnce((_payload, options) =>
+        options.onError(refusal({ code: "SOMETHING_ELSE", message: "nope" })),
+      );
+      const { result } = renderHook(() => useSaveFlow());
+
+      await expect(result.current()).rejects.toBeDefined();
+
+      expect(useFlowHistoryRepairStore.getState().problem).toBeNull();
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ list: ["nope"] }),
+      );
+    });
   });
 });

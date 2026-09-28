@@ -11,20 +11,27 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
+  useGetFlowRevision,
+  useGetFlowRevisions,
+} from "@/controllers/API/queries/flow-revisions";
+import {
   useDeleteVersionEntry,
   useGetFlowVersionEntry,
   useGetFlowVersions,
 } from "@/controllers/API/queries/flow-version";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowVersionEntry } from "@/types/flow/version";
+import { summarizeOperations } from "@/utils/flow-operations/describe";
 import {
   downloadFlow,
   processFlows,
   removeApiKeys,
 } from "@/utils/reactflowUtils";
-import { CURRENT_DRAFT_ID } from "./constants";
+import { CURRENT_DRAFT_ID, revisionOfSelection } from "./constants";
+import { formatTimestamp } from "./utils";
 
 export function useFlowVersionSidebar(flowId: string) {
   const { t } = useTranslation();
@@ -77,6 +84,30 @@ export function useFlowVersionSidebar(flowId: string) {
   const versions = versionResponse?.entries;
   const maxEntries = versionResponse?.max_entries;
 
+  const {
+    data: revisionPages,
+    fetchNextPage: loadOlderEntries,
+    hasNextPage: hasOlderEntries,
+    isFetchingNextPage: isLoadingOlderEntries,
+  } = useGetFlowRevisions(flowId, { refetchInterval: 10000 });
+  const timelineEntries = useMemo(
+    () => revisionPages?.pages.flatMap((page) => page.entries) ?? [],
+    [revisionPages],
+  );
+  const earliestRevision = revisionPages?.pages[0]?.earliest_revision ?? null;
+  // Saved versions the timeline cannot place: saved before the flow had
+  // history, or older than the history still retained.
+  const olderVersions = useMemo(
+    () =>
+      (versions ?? []).filter(
+        (version) =>
+          version.operation_revision == null ||
+          earliestRevision === null ||
+          version.operation_revision < earliestRevision,
+      ),
+    [versions, earliestRevision],
+  );
+
   useEffect(() => {
     const newLen = versions?.length ?? 0;
     if (newLen > prevVersionCountRef.current && versions?.[0]) {
@@ -88,19 +119,74 @@ export function useFlowVersionSidebar(flowId: string) {
     prevVersionCountRef.current = newLen;
   }, [versions]);
 
-  const selectedVersionId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
+  const selectedRevision = revisionOfSelection(selectedId);
+  const selectedTimelineEntry = timelineEntries.find(
+    (entry) => entry.end_revision === selectedRevision,
+  );
+  const selectedVersionId =
+    selectedId !== CURRENT_DRAFT_ID && selectedRevision === null
+      ? selectedId
+      : "";
   const {
-    data: selectedEntryFull,
-    isLoading: isLoadingEntry,
-    isError: isEntryError,
+    data: selectedVersionFull,
+    isLoading: isLoadingVersion,
+    isError: isVersionError,
   } = useGetFlowVersionEntry(
     { flowId, versionId: selectedVersionId },
     { enabled: !!selectedVersionId, gcTime: 0, staleTime: 0 },
   );
+  const {
+    data: selectedRevisionGraph,
+    isLoading: isLoadingRevision,
+    isError: isRevisionError,
+  } = useGetFlowRevision(
+    { flowId, revision: selectedRevision },
+    { gcTime: 0, staleTime: 0 },
+  );
+  const isLoadingEntry =
+    (!!selectedVersionId && isLoadingVersion) ||
+    (selectedRevision !== null && isLoadingRevision);
+  const isEntryError = isVersionError || isRevisionError;
+  // A timeline entry previews like a version: the flow at its last revision,
+  // labelled by when it was recorded and summarized by what changed.
+  const selectedEntryFull =
+    selectedRevision !== null
+      ? selectedRevisionGraph && {
+          data: selectedRevisionGraph.data,
+          version_tag: selectedTimelineEntry?.created_at
+            ? formatTimestamp(selectedTimelineEntry.created_at)
+            : t("flowHistory.previewLabel"),
+          description: selectedTimelineEntry?.operations
+            ? summarizeOperations(selectedTimelineEntry.operations, t)
+            : null,
+        }
+      : selectedVersionFull;
 
   useEffect(() => {
     setPreviewLoading(isLoadingEntry);
   }, [isLoadingEntry, setPreviewLoading]);
+
+  const setPlaybackEntry = useRevisionPlaybackStore((state) => state.setEntry);
+  // Keyed on the entry's id, not the object: the timeline refetches every few
+  // seconds, and recorded history never changes, so a refetch must not
+  // restart playback.
+  const selectedTimelineEntryRef = useRef(selectedTimelineEntry);
+  selectedTimelineEntryRef.current = selectedTimelineEntry;
+  const selectedTimelineEntryId = selectedTimelineEntry?.id ?? null;
+  useEffect(() => {
+    const entry = selectedTimelineEntryRef.current;
+    setPlaybackEntry(
+      entry?.operations
+        ? {
+            flowId,
+            fromRevision: entry.start_revision - 1,
+            toRevision: entry.end_revision,
+            operations: entry.operations,
+          }
+        : null,
+    );
+  }, [flowId, selectedTimelineEntryId, setPlaybackEntry]);
+  useEffect(() => () => setPlaybackEntry(null), [setPlaybackEntry]);
 
   const processedPreview = useMemo<{
     // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -363,6 +449,11 @@ export function useFlowVersionSidebar(flowId: string) {
     setDeleteDialogEntry,
     versions,
     maxEntries,
+    timelineEntries,
+    olderVersions,
+    hasOlderEntries,
+    isLoadingOlderEntries,
+    loadOlderEntries,
     isLoading,
     isListError,
     isEntryError,
