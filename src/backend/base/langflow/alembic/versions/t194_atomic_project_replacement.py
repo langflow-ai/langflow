@@ -1,7 +1,7 @@
 """Add durable project replacement receipts.
 
 Revision ID: f194a1b2c3d4
-Revises: d8f2c3a4b5e6
+Revises: 4e7a2b9c1d05
 Create Date: 2026-09-21
 
 Phase: EXPAND
@@ -15,7 +15,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "f194a1b2c3d4"  # pragma: allowlist secret -- migration revision identifier
-down_revision: str | None = "d8f2c3a4b5e6"  # pragma: allowlist secret -- migration revision identifier
+down_revision: str | None = "4e7a2b9c1d05"  # pragma: allowlist secret -- migration revision identifier
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
