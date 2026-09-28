@@ -269,3 +269,32 @@ async def test_index_already_shared_by_two_owners_is_neither_served_nor_deleted(
     finally:
         for backend in backends:
             await _drop(backend)
+
+
+@pytest.mark.api_key_required
+async def test_embeddings_come_back_when_the_cluster_excludes_vectors_by_default() -> None:
+    """OpenSearch 3.3+ can strip knn_vector fields from every search response.
+
+    The ``knn_default_excludes`` system processor does it unless the request sets
+    ``_source`` itself. Reading a knowledge base with its embeddings, as relocate-kb
+    does, has to ask for ``_source`` explicitly or it gets chunks without vectors.
+    """
+    _require_live_opensearch()
+    backend = _backend(f"kb-vectors-{uuid.uuid4().hex[:8]}", uuid.uuid4())
+    setting = "cluster.search.enabled_system_generated_factories"
+    client = None
+    try:
+        await _write(backend, "alpha", "beta")
+        client = backend._os_client
+        client.cluster.put_settings(body={"persistent": {setting: ["knn_default_excludes_factory"]}})
+
+        embeddings = []
+        async for batch in backend.iter_documents(batch_size=100, include_embeddings=True):
+            embeddings.extend(doc.embedding for doc in batch)
+
+        assert len(embeddings) == 2
+        assert all(embedding is not None and len(embedding) == 8 for embedding in embeddings), embeddings
+    finally:
+        if client is not None:
+            client.cluster.put_settings(body={"persistent": {setting: None}})
+        await _drop(backend)
