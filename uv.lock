@@ -10011,7 +10011,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai-compatible"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "src/bundles/openai-compatible" }
 dependencies = [
     { name = "httpx" },
