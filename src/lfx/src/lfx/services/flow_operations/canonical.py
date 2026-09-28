@@ -1,21 +1,33 @@
-"""Canonical JSON values, for comparing what a write expects with what is stored.
+"""Canonical form of flow data, for equality and checkpoint hashes.
 
-Two values are equal when their canonical forms are byte-identical. The form is
-RFC 8785 (JSON Canonicalization Scheme): object keys are sorted and numbers are
-printed the way JavaScript prints them, so ``1`` and ``1.0`` are the same
-value, ``true`` and ``1`` are not, and key order is never a difference.
-JavaScript cannot tell integers from floats, so a ``0.0`` that comes back from
-the editor as ``0`` must compare equal.
+Two graphs are equal when their canonical forms are byte-identical. The form is
+RFC 8785 (JSON Canonicalization Scheme) applied to the graph with its view
+state removed and its nodes and edges ordered by ID:
+
+- JCS sorts object keys and prints numbers the way JavaScript does, so ``1``
+  and ``1.0`` are the same value, ``true`` and ``1`` are not, and key order is
+  never a change. JavaScript cannot tell integers from floats, so a ``0.0``
+  that comes back from the editor as ``0`` must not count as an edit.
+- ``nodes`` and ``edges`` are collections keyed by ID. Their array order is not
+  state, so a save that only reorders them changes nothing.
+- View state describes one person's view of the canvas rather than the flow:
+  pan and zoom, selection, drag and resize flags, and sizes React Flow measures
+  in one browser. It is never recorded and never compared.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from decimal import Decimal
 from typing import Any
 
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
+
+FLOW_VIEW_STATE_KEYS = frozenset({"viewport"})
+NODE_VIEW_STATE_KEYS = frozenset({"selected", "dragging", "resizing", "measured"})
+EDGE_VIEW_STATE_KEYS = frozenset({"selected", "animated", "className"})
 
 # Largest integer a JavaScript number holds exactly. Larger integers are
 # printed as the double the editor would round them to.
@@ -126,6 +138,50 @@ def canonical_json(value: Any) -> str:
     parts: list[str] = []
     _write_canonical(value, parts)
     return "".join(parts)
+
+
+def _without(mapping: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
+    return {key: item for key, item in mapping.items() if key not in keys}
+
+
+def _by_id(entries: list[Any], view_state_keys: frozenset[str]) -> list[Any]:
+    cleaned = [_without(entry, view_state_keys) if isinstance(entry, dict) else entry for entry in entries]
+    return sorted(
+        cleaned,
+        key=lambda entry: utf16_sort_key(entry["id"])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+        else b"",
+    )
+
+
+def canonical_graph(flow_data: dict[str, Any]) -> dict[str, Any]:
+    """Return flow data without view state and with nodes and edges ordered by ID.
+
+    The result shares nested values with ``flow_data``; it is meant to be
+    serialized or compared, not mutated.
+    """
+    graph = _without(flow_data, FLOW_VIEW_STATE_KEYS)
+    if isinstance(graph.get("nodes"), list):
+        graph["nodes"] = _by_id(graph["nodes"], NODE_VIEW_STATE_KEYS)
+    if isinstance(graph.get("edges"), list):
+        graph["edges"] = _by_id(graph["edges"], EDGE_VIEW_STATE_KEYS)
+    return graph
+
+
+def canonical_graph_json(flow_data: dict[str, Any]) -> str:
+    """Serialize flow data in canonical graph form."""
+    return canonical_json(canonical_graph(flow_data))
+
+
+def graph_hash(flow_data: dict[str, Any]) -> str:
+    """Return the SHA-256 hex digest of flow data's canonical graph form."""
+    encoded = canonical_graph_json(flow_data).encode("utf-8", "surrogatepass")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def graphs_equal(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    """Return whether two flow data mappings are the same graph."""
+    return canonical_graph_json(left) == canonical_graph_json(right)
 
 
 def values_equal(left: Any, right: Any) -> bool:

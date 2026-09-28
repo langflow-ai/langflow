@@ -113,9 +113,19 @@ class _NodeFieldUpdateBase(BaseModel):
         return path
 
 
+JsonTypeName = Literal["object", "array", "string", "number", "boolean", "null"]
+
+
 class SetNodeFieldUpdate(_NodeFieldUpdateBase):
     op: Literal["set_field"]
     value: Any
+    # Declares that the write replaces a value of this JSON type. Required when
+    # the type changes, so a number cannot silently become a string.
+    from_type: JsonTypeName | None = None
+    # Metadata of the template field this path writes into (its name, type and
+    # secret flags), as of this operation. The engine ignores it; readers use it
+    # to strip secret values without replaying the flow.
+    template_field: dict[str, Any] | None = None
 
 
 class DeleteNodeFieldUpdate(_NodeFieldUpdateBase):

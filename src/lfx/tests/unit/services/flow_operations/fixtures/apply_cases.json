@@ -558,6 +558,156 @@
       "code": "FLOW_GRAPH_INVALID"
     },
     {
+      "name": "set_field rejects an undeclared type change",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FIELD_TYPE_CHANGE_UNDECLARED"
+    },
+    {
+      "name": "set_field accepts a type change declared with from_type",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3, "from_type": "string"}]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": 3, "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "set_field rejects a from_type that does not match",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3, "from_type": "boolean"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FIELD_TYPE_PRECONDITION_FAILED"
+    },
+    {
+      "name": "set_field treats integers and floats as one number type",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 1.5}]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 1.5, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "set_field carries template field metadata unchanged",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": ["data", "node", "template", "text", "value"],
+              "value": "x",
+              "template_field": {"name": "text", "type": "str"}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "x", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "add_nodes rejects a node without data.node.template",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "add_nodes", "nodes": [{"id": "c", "data": {"node": {}}}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "base flow with a node missing data.node is rejected",
+      "base": {
+        "nodes": [{"id": "a", "data": {}}],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
+      "name": "base flow with an edge to an unknown node is rejected",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-az", "source": "a", "target": "zz", "sourceHandle": "a-out", "targetHandle": "zz-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
       "name": "selector: set_field edits one table cell by row id",
       "base": {
         "nodes": [
