@@ -22,6 +22,7 @@ from bundle_release_plan import (
     BASE_DIR,
     PlanError,
     PublishResult,
+    _lfx_range_is_compatible,
     build_artifact_plan,
     build_change_plan,
     bump_version,
@@ -286,6 +287,38 @@ def test_multi_bundle_update_changes_versions_ranges_manifests_and_lock(tmp_path
     )
     assert alpha_manifest["version"] == "0.1.1"
     assert 'name = "lfx-beta"\nversion = "0.2.5"' in (repo / "uv.lock").read_text()
+
+
+@pytest.mark.parametrize(
+    ("specifier", "compatible"),
+    [
+        (">=1.12.0.dev0,<2.0.0", True),
+        (">=1.12.4,<2.0.0", True),
+        (">=1.12.4,<1.13", True),
+        (">=1.11.9,<2.0.0", False),
+        (">=1.12.5,<2.0.0", False),
+        (">=1.12.4,<1.12.4", False),
+        (">=1.12.4", False),
+    ],
+)
+def test_lfx_range_accepts_only_installable_tightenings(specifier: str, *, compatible: bool) -> None:
+    assert _lfx_range_is_compatible(specifier, "1.12.4") is compatible
+
+
+def test_bundle_update_preserves_a_tightened_lfx_floor(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
+    pyproject = repo / "src" / "bundles" / "alpha" / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8").replace("lfx>=1.11.0.dev0", "lfx>=1.11.0"),
+        encoding="utf-8",
+    )
+    source = repo / "src" / "bundles" / "alpha" / "src" / "lfx_alpha" / "component.py"
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+
+    plan = update_changed_bundles("HEAD", base_dir=repo, run_lock=lambda: _refresh_lock(repo))
+
+    assert all(not entry.errors for entry in plan)
+    assert '"lfx>=1.11.0,<2.0.0"' in pyproject.read_text(encoding="utf-8")
 
 
 def test_prerelease_versions_share_the_requested_restamp() -> None:
