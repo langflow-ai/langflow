@@ -54,6 +54,8 @@
     "node": "22.22.0"
   },
   "overrides": {
+    "fast-uri": "^3.1.8",
+    "proxy-addr": "^2.0.8",
     "shell-quote": "^1.9.0",
     "websocket-driver": "^0.7.5",
     "brace-expansion": "^5.0.9",
