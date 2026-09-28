@@ -91,14 +91,13 @@ async def _read_history_window(
     if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
         raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
     if before_id is not None:
-        anchor_in_scope = await session.exec(
-            stmt.where(MessageTable.id == before_id).with_only_columns(col(MessageTable.id))
-        )
-        if anchor_in_scope.first() is None:
+        # Read the anchor's timestamp here rather than in a subquery of the page query, so the
+        # page is still right if the anchor is deleted between the two statements.
+        anchor_timestamp = (
+            await session.exec(stmt.where(MessageTable.id == before_id).with_only_columns(col(MessageTable.timestamp)))
+        ).first()
+        if anchor_timestamp is None:
             raise HTTPException(status_code=400, detail="before_id does not match a message in this history.")
-        # Compare against the stored timestamp in SQL rather than a bound Python value, so
-        # the tie check matches the stored representation exactly on every dialect.
-        anchor_timestamp = select(MessageTable.timestamp).where(MessageTable.id == before_id).scalar_subquery()
         # `(timestamp, id) < anchor`, written with a redundant `timestamp <=` bound: that
         # conjunct lets the planner seek into the (flow_id|session_id, timestamp, id) index.
         # A bare OR is only a filter, so every row newer than the anchor would be scanned.

@@ -3,11 +3,13 @@ from uuid import UUID, uuid4
 
 import pytest
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
+from langflow.api.v1.monitor import _read_history_window
 from langflow.memory import aadd_messagetables
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
 from sqlalchemy import delete, update
+from sqlmodel import select
 
 
 @pytest.fixture(params=["messages", "messages/shared"])
@@ -219,6 +221,40 @@ async def test_offset_pages_drift_when_history_changes_but_before_id_pages_do_no
         # The row just below the first page is never returned.
         assert expected_next[0] not in offset_ids
         assert offset_ids == [*expected_next[1:], newest[40]["id"]]
+
+
+async def test_before_id_page_survives_the_anchor_being_deleted_mid_request(message_history, monkeypatch):
+    """A delete landing between the anchor check and the page query must not empty the page.
+
+    An empty page reads as the end of history, so a client would stop loading older messages.
+    """
+    _, _, newest = message_history
+    anchor_id = UUID(newest[19]["id"])
+    async with session_scope() as session:
+        original_exec = session.exec
+        statements = 0
+
+        async def exec_then_delete_anchor(statement, *args, **kwargs):
+            nonlocal statements
+            result = await original_exec(statement, *args, **kwargs)
+            statements += 1
+            if statements == 1:
+                await session.execute(delete(MessageTable).where(MessageTable.id == anchor_id))
+            return result
+
+        monkeypatch.setattr(session, "exec", exec_then_delete_anchor)
+        page = await _read_history_window(
+            session,
+            select(MessageTable).where(MessageTable.flow_id == UUID(newest[0]["flow_id"])),
+            order_by="timestamp",
+            order="DESC",
+            limit=20,
+            offset=None,
+            before_id=anchor_id,
+        )
+
+    assert statements == 2
+    assert [str(message.id) for message in page] == [message["id"] for message in newest[20:40]]
 
 
 async def test_before_id_pages_within_the_filtered_session(client, logged_in_headers, message_history):
