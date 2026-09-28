@@ -810,6 +810,7 @@
   "files.emptyDescription": "Carregue arquivos ou importe-os da sua nuvem preferida.",
   "files.errorDeleting": "Erro ao excluir arquivos",
   "files.errorDeletingDetail": "Ocorreu um erro ao excluir os arquivos",
+  "files.errorRenaming": "Erro ao renomear arquivo",
   "files.errorUploading": "Erro ao enviar o arquivo",
   "files.errorUploadingDetail": "Ocorreu um erro ao enviar o arquivo",
   "files.filesUploadedSuccessfully": "Arquivos transferidos por upload com sucesso",
