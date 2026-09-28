@@ -43,7 +43,8 @@ async def adapt_graph_events_to_executor_shape(
             if event.get("event") == "on_chain_stream":
                 model_output = _model_message_from_graph_update(event)
                 if model_output is not None and not _same_message(model_output, last_model_output):
-                    # Some chat models produce a graph update without a model-end callback.
+                    # Python 3.10: LangGraph can't propagate callbacks into the model node, so no
+                    # on_chat_model_end fires; narration then reaches Message.text, matching 3.11+.
                     yield _synthetic_model_end(event, model_output)
                     last_model_output = model_output
             if event.get("event") == "on_chain_end":
