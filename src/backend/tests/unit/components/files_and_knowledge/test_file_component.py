@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import subprocess
 import tempfile
@@ -21,6 +22,25 @@ def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
         "lfx.utils.file_path_security.get_settings_service",
         lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
     )
+
+
+@contextlib.contextmanager
+def _record_loop_exception_reports():
+    """Collect every context the running loop passes to its exception handler."""
+    loop = asyncio.get_running_loop()
+    previous_handler = loop.get_exception_handler()
+    reports: list[dict] = []
+    loop.set_exception_handler(lambda _loop, context: reports.append(context))
+    try:
+        yield reports
+    finally:
+        loop.set_exception_handler(previous_handler)
+
+
+def _shielded_future_reports(reports: list[dict]) -> list[str]:
+    """Return the Python 3.14+ reports for an exception left in an orphaned asyncio.shield."""
+    messages = [context.get("message", "") for context in reports]
+    return [message for message in messages if "exception in shielded future" in message]
 
 
 class TestFileComponentFrontendMetadata:
@@ -801,6 +821,131 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         finally:
             released.set()
             await asyncio.to_thread(finished.wait, 2)
+
+    @pytest.mark.parametrize(
+        ("loader_error", "expected_log"),
+        [
+            (file_component_module._FileToolCancelledError(), None),
+            (ValueError("cleanup failed"), "File loader failed while cleaning up a cancelled tool call"),
+        ],
+        ids=["cooperative-cancel", "cleanup-failure"],
+    )
+    @pytest.mark.asyncio
+    async def test_cancelled_tool_call_reports_no_shielded_future_error(
+        self, monkeypatch, component_class, loader_error, expected_log
+    ):
+        """A loader error inside the cleanup window must not reach the loop exception handler.
+
+        On Python 3.14, an ``asyncio.shield`` whose outer future is cancelled reports the
+        inner task's eventual exception to the loop. Awaiting the loader through a shield
+        therefore logged "_FileToolCancelledError exception in shielded future" as an ERROR
+        on every cancelled call, although the tool handles that error.
+        """
+        mock_logger = MagicMock()
+        monkeypatch.setattr(file_component_module, "logger", mock_logger)
+        started = threading.Event()
+        finished = threading.Event()
+
+        def fake_loader(_component):
+            started.set()
+            try:
+                cancel_event = file_component_module._FILE_TOOL_CANCEL_EVENT.get()
+                assert cancel_event is not None
+                assert cancel_event.wait(timeout=2), "Tool cancellation did not signal the loader"
+                raise loader_error
+            finally:
+                finished.set()
+
+        monkeypatch.setattr(component_class, "load_files_message", fake_loader)
+
+        with _record_loop_exception_reports() as reports:
+            tool = (await component_class()._get_tools())[0]
+            task = asyncio.create_task(tool.coroutine())
+            assert await asyncio.to_thread(started.wait, 1), "Loader did not start"
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert finished.is_set(), "Tool call returned before the loader's cooperative cleanup"
+            await asyncio.sleep(0)
+
+        assert _shielded_future_reports(reports) == []
+        assert [context for context in reports if context.get("exception") is loader_error] == []
+        if expected_log is None:
+            mock_logger.error.assert_not_called()
+        else:
+            mock_logger.error.assert_called_once_with(expected_log, exc_info=loader_error)
+        mock_logger.exception.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_loader_failure_after_abandonment_is_logged(self, monkeypatch, component_class):
+        """A loader that outlives the cleanup window keeps its slot and has its failure logged."""
+        monkeypatch.setattr(file_component_module, "_FILE_TOOL_CANCEL_WAIT_SECONDS", 0.01)
+        load_limiter = asyncio.Semaphore(1)
+        monkeypatch.setattr(file_component_module, "_get_file_tool_limiter", lambda: load_limiter)
+        mock_logger = MagicMock()
+        monkeypatch.setattr(file_component_module, "logger", mock_logger)
+        started = threading.Event()
+        release = threading.Event()
+        failure = ValueError("loader failed after abandonment")
+
+        def fake_loader(_component):
+            started.set()
+            assert release.wait(timeout=2), "Abandoned loader was not released by the test"
+            raise failure
+
+        monkeypatch.setattr(component_class, "load_files_message", fake_loader)
+
+        with _record_loop_exception_reports() as reports:
+            tool = (await component_class()._get_tools())[0]
+            task = asyncio.create_task(tool.coroutine())
+            assert await asyncio.to_thread(started.wait, 1), "Loader did not start"
+            task.cancel()
+            try:
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+                assert load_limiter.locked(), "Abandoned loader released its admission slot early"
+                mock_logger.error.assert_not_called()
+            finally:
+                release.set()
+            # The slot is released by a done-callback on the loader task, so reacquiring
+            # it means the loader has finished and its other done-callbacks have run.
+            await asyncio.wait_for(load_limiter.acquire(), timeout=2)
+            load_limiter.release()
+
+        assert _shielded_future_reports(reports) == []
+        mock_logger.error.assert_called_once_with(
+            "Abandoned file loader failed after its tool call was cancelled", exc_info=failure
+        )
+
+    @pytest.mark.asyncio
+    async def test_cancelled_loader_task_still_signals_worker(self, monkeypatch, component_class):
+        """Cancelling the loader task leaves its worker thread running, so the tool must still signal it."""
+        started = threading.Event()
+        signalled = threading.Event()
+
+        def fake_loader(_component):
+            started.set()
+            cancel_event = file_component_module._FILE_TOOL_CANCEL_EVENT.get()
+            if cancel_event is not None and cancel_event.wait(timeout=2):
+                signalled.set()
+            return "file contents"
+
+        monkeypatch.setattr(component_class, "load_files_message", fake_loader)
+
+        tool = (await component_class()._get_tools())[0]
+        task = asyncio.create_task(tool.coroutine())
+        assert await asyncio.to_thread(started.wait, 1), "Loader did not start"
+        loader_tasks = [
+            pending
+            for pending in asyncio.all_tasks()
+            if getattr(pending.get_coro(), "__name__", "") == "to_thread" and pending is not task
+        ]
+        assert len(loader_tasks) == 1, "Expected exactly one running loader task"
+        loader_tasks[0].cancel()
+
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert await asyncio.to_thread(signalled.wait, 2), "Worker thread was not signalled to stop"
 
     # ==================== Error Handling Tests ====================
 

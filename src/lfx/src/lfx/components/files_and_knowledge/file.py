@@ -111,6 +111,25 @@ def _log_abandoned_file_tool_result(task: asyncio.Task) -> None:
         logger.error("Abandoned file loader failed after its tool call was cancelled", exc_info=error)
 
 
+async def _wait_for_cancelled_file_tool_loader(loader_task: asyncio.Task) -> None:
+    """Give a cancelled tool call's loader time to clean up, without cancelling it.
+
+    This waits with ``asyncio.wait`` rather than ``asyncio.shield``. On Python 3.14, a
+    shield whose outer future is cancelled reports the inner task's eventual exception to
+    the loop's exception handler, which logged the expected ``_FileToolCancelledError`` as
+    an ERROR on every cancelled tool call.
+    """
+    try:
+        await asyncio.wait({loader_task}, timeout=_FILE_TOOL_CANCEL_WAIT_SECONDS)
+    finally:
+        if not loader_task.done():
+            loader_task.add_done_callback(_log_abandoned_file_tool_result)
+        elif not loader_task.cancelled():
+            error = loader_task.exception()
+            if error is not None and not isinstance(error, _FileToolCancelledError):
+                logger.error("File loader failed while cleaning up a cancelled tool call", exc_info=error)
+
+
 def _get_storage_location_options():
     """Get storage location options, filtering out Local if in Astra cloud environment."""
     all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
@@ -418,25 +437,17 @@ class FileComponent(BaseFileComponent):
                     raise
                 loader_task.add_done_callback(lambda _task: load_limiter.release())
                 try:
-                    result = await asyncio.shield(loader_task)
+                    # asyncio.wait neither cancels the loader nor leaves an orphaned
+                    # shield behind to report its outcome if this call is cancelled.
+                    await asyncio.wait({loader_task})
+                    # A cancelled loader task raises CancelledError here while its
+                    # worker thread keeps running, so it takes the same path below.
+                    result = loader_task.result()
                 except asyncio.CancelledError:
                     cancel_event.set()
                     # Give cooperative cleanup time to kill/reap Docling and remove
                     # temporary files before releasing this tool invocation.
-                    try:
-                        await asyncio.wait_for(
-                            asyncio.shield(loader_task),
-                            timeout=_FILE_TOOL_CANCEL_WAIT_SECONDS,
-                        )
-                    except _FileToolCancelledError:
-                        pass
-                    except asyncio.TimeoutError:
-                        pass
-                    except Exception:  # noqa: BLE001 - cancellation stays dominant over loader cleanup
-                        logger.exception("File loader failed while cleaning up a cancelled tool call")
-                    finally:
-                        if not loader_task.done():
-                            loader_task.add_done_callback(_log_abandoned_file_tool_result)
+                    await _wait_for_cancelled_file_tool_loader(loader_task)
                     raise
                 if hasattr(result, "get_text"):
                     return result.get_text()
