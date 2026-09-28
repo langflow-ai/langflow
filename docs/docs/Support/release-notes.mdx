@@ -50,19 +50,35 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
-### Connector security in 1.12.4
-
-Connector SSRF validation now checks database and vector-store bootstrap targets, including PGVector. PGVector connections to `localhost` or `127.0.0.1` are blocked by default. For a trusted local PGVector flow, add the hostname or address to `LANGFLOW_SSRF_ALLOWED_HOSTS`. See [SSRF protection](/api-keys-and-authentication#ssrf-protection) for container-network and SRV target guidance.
-
-With local file access restricted (the default), existing `mysql+mysqlconnector://` URLs now need `allow_local_infile=false`, and `mariadb+mariadbconnector://` URLs need `local_infile=false`. Add these to each URL's query string before upgrading. The [local file access setting](/api-keys-and-authentication) explains the trusted single-tenant opt-out.
-
-Database URLs that refer to local TLS certificate or key files, including PostgreSQL `sslrootcert`, `sslcert`, and `sslkey` parameters, are blocked when local file access is restricted unless an administrator configures `LANGFLOW_DATABASE_TLS_FILES_DIR` with the needed files. Administrators using file-based TLS credentials should stage approved files in that directory before upgrading. See [component hardening](/api-keys-and-authentication#multi-tenant-component-hardening) for the supported URL options and directory requirements.
-
 ### Breaking changes
+
+- Connector security (1.12.4)
+
+    Update the server or the database URL before you upgrade if the connection matches one of these cases.
+
+    If PGVector connects to `localhost` or `127.0.0.1`, add that host to `LANGFLOW_SSRF_ALLOWED_HOSTS`. For example, `LANGFLOW_SSRF_ALLOWED_HOSTS=localhost,127.0.0.1`. Do the same for a private or container hostname, such as `postgres`. A public hostname needs no entry. MongoDB and Couchbase SRV targets must be allowlisted by their own hostnames, or by a wildcard such as `*.cluster.internal`. For more information, see [SSRF protection](/api-keys-and-authentication#ssrf-protection).
+
+    If an SQL Database URL starts with `mysql+mysqlconnector://`, add `allow_local_infile=false` to the query string. If it starts with `mariadb+mariadbconnector://`, add `local_infile=false`. Use `?` when the URL has no query string, and `&` when it already has one: `mysql+mysqlconnector://user:password@db.example.com/app?allow_local_infile=false`. On a trusted single-tenant server, `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false` keeps the previous URLs working and also lets flows read local server files. For more information, see [component hardening](/api-keys-and-authentication#multi-tenant-component-hardening).
+
+    If the URL points at a TLS certificate or key on the server, copy the file into a directory only an administrator can change, set `LANGFLOW_DATABASE_TLS_FILES_DIR` to that directory, and point the URL at the new path. For example, set `LANGFLOW_DATABASE_TLS_FILES_DIR=/etc/langflow/db-tls` and use `postgresql://user:password@db.example.com/app?sslrootcert=/etc/langflow/db-tls/ca.pem`. PostgreSQL `sslrootcert`, `sslcert`, and `sslkey`, and MySQL or MariaDB `ssl_ca`, `ssl_cert`, and `ssl_key`, can use files in that directory. For more information, see [component hardening](/api-keys-and-authentication#multi-tenant-component-hardening).
+
+- Custom component input names (1.12.4)
+
+    A custom component input `name` can no longer match a method name on `Component` or `CustomComponent`.
+    
+    Names that commonly collide include `index`, `start`, `stop`, `run`, `log`, `validate`, and `variables`. Components that previously ran without reading `self.<name>` will also fail to load.
+    
+    To fix the collision, rename the custom component's input `name` and update any connections that target it. The display name is not affected.
+
+    For more information, see [Inputs](components-custom-components#inputs).
 
 - MCP stdio Node.js launch options (1.12.4)
 
-    MCP stdio configurations can no longer place Node.js runtime options or `inspect` before a server script, even when interpreter hardening is disabled. For example, `node --no-warnings server.js` must be changed to `node server.js` or replaced with an operator-approved launcher. Options intended for the server may still follow its script: `node server.js --server-option`. Shell wrappers now reject sh/bash globs and braces and cmd variable, caret, or double-quote syntax; use an approved launcher directly with separate command and arguments for those payloads.
+    MCP stdio configurations can no longer place Node.js runtime options or `inspect` before a server script, even when `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` is `false`.
+    
+    For example, `node --no-warnings server.js` must be changed to `node server.js`. Options intended for the server may still follow the script startup, such as `node server.js --no-warnings`. 
+    
+    Use an approved launcher directly, such as `npx` or `uvx`, with separate command and arguments for those payloads after the script startup.
 
 - `langflow-base` is now the minimal install
 

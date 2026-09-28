@@ -52,6 +52,24 @@ Highlights of this release include the following changes. For all changes, see t
 
 ### Breaking changes
 
+- Custom component input names (1.12.4)
+
+    A custom component input `name` can no longer match a method name on `Component` or `CustomComponent`.
+    
+    Names that commonly collide include `index`, `start`, `stop`, `run`, `log`, `validate`, and `variables`. Components that previously ran without reading `self.<name>` will also fail to load.
+    
+    To fix the collision, rename the custom component's input `name` and update any connections that target it. The display name is not affected.
+
+    For more information, see [Inputs](components-custom-components#inputs).
+
+- MCP stdio Node.js launch options (1.12.4)
+
+    MCP stdio configurations can no longer place Node.js runtime options or `inspect` before a server script, even when `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` is `false`.
+    
+    For example, `node --no-warnings server.js` must be changed to `node server.js`. Options intended for the server may still follow the script startup, such as `node server.js --no-warnings`. 
+    
+    Use an approved launcher directly, such as `npx` or `uvx`, with separate command and arguments for those payloads after the script startup.
+
 - `langflow-base` is now the minimal install
 
     Langflow 1.12 makes `langflow-base` a complete, version-aligned installation of the Langflow application.
