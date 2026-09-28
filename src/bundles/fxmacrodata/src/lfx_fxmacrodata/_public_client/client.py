@@ -146,8 +146,7 @@ class FXMacroDataClient:
             if headers and headers.get("Mcp-Session-Id"):
                 response = None
                 try:
-                    response = self._request("DELETE", MCP_URL, params=self._auth_params(),
-                                             headers=headers, timeout=min(self.timeout, 2))
+                    response = self._request("DELETE", MCP_URL, headers=headers, timeout=min(self.timeout, 2))
                 except Exception:
                     # Closing a session is best effort and must not mask a tool
                     # result or expose an underlying request/credential error.
@@ -188,6 +187,7 @@ class FXMacroDataClient:
 
     def _request(self, method: str, url: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None, body: dict[str, Any] | None = None, timeout: float | None = None) -> requests.Response:
         try:
+            headers = {**(headers or {}), **self._auth_headers()}
             with protected_diagnostics(self._api_key):
                 return self._session.request(method, url, params=params, headers=headers, json=body, timeout=timeout or self.timeout, allow_redirects=False, stream=True)
         except (requests.RequestException, ValueError):
@@ -281,8 +281,8 @@ class FXMacroDataClient:
         finally:
             response.close()
 
-    def _auth_params(self) -> dict[str, str]:
-        return {"api_key": self._api_key} if self._api_key else {}
+    def _auth_headers(self) -> dict[str, str]:
+        return {"X-API-Key": self._api_key} if self._api_key else {}
 
     def execute(self, operation_name: str, arguments: dict[str, Any] | None = None) -> Result:
         with self._lock, protected_diagnostics(self._api_key):
@@ -306,7 +306,7 @@ class FXMacroDataClient:
         if op.method == "MCP":
             return self._call_mcp(op.name[4:], args)
         path = op.path
-        params: dict[str, Any] = self._auth_params()
+        params: dict[str, Any] = {}
         headers = {"Accept": "application/json"}
         for parameter in op.parameters:
             name = parameter["name"]
@@ -384,7 +384,7 @@ class FXMacroDataClient:
         if not notification:
             self._request_id += 1
             body["id"] = self._request_id
-        response = self._request("POST", MCP_URL, params=self._auth_params(), headers=headers, body=body)
+        response = self._request("POST", MCP_URL, headers=headers, body=body)
         response_headers = dict(response.headers)
         if notification:
             try:

@@ -1,7 +1,9 @@
 FXMacroData Public Client 0.1.0 (MIT)
 
-Four files (__init__.py, client.py, transport.py and py.typed) are copied without
-changes from the published client. The two JSON files use LF line endings to
+Three files (__init__.py, transport.py and py.typed) are copied without changes
+from the published client. client.py has one local change: the API key is sent in
+the X-API-Key request header instead of the api_key query parameter, so it never
+appears in a request URL. The two JSON files use LF line endings to
 match Langflow text normalization. Their only change is CRLF-to-LF conversion;
 JSON values and schemas are preserved.
 Upstream: https://github.com/fxmacrodata/fxmacrodata-public-client
@@ -15,7 +17,7 @@ See LICENSE in this directory for the original copyright and licence terms.
 
 Bundled file SHA-256:
 27d483d5389fc6d65f96522628dfa41d6f469c1443082d648ff683fa30ca0d00  __init__.py
-cd6ac9c9ef204fc5c877cbafd3c44ff21b9665352d1a86daf19c1149f956a1cf  client.py
+36293458b0295800209f3ee1d5762b7812273ce5313c70a987432f59209d888f  client.py
 8bc1c4f7ab304c8730a64d9eb9cc5f5806c497b29cb506f5c4af250e9e334f04  mcp-tools.json
 581cff99ffdbf7cda64fabbf10f034fbcdc9b69a3284f2f749ccecdd8ca3446c  operations.json
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  py.typed

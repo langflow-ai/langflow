@@ -71,6 +71,21 @@ def test_table_uses_bundled_http_client_and_preserves_source_links():
         frame = component.build_table()
     assert request.call_args.args[1].startswith("https://api.fxmacrodata.com/v1/")
     assert "api_key" not in request.call_args.kwargs["params"]
+    assert "X-API-Key" not in request.call_args.kwargs["headers"]
     assert frame.attrs["fxmacrodata_response"] == payload
     assert "fxmacrodata.com" in frame.attrs["source_url"]
     assert "utm_source=langflow" in frame.attrs["provider_url"]
+
+
+def test_bundled_client_sends_key_in_header_not_url():
+    response = requests.Response()
+    response.status_code = 200
+    response.headers["Content-Type"] = "application/json"
+    response._content = b'{"data": []}'
+    response._content_consumed = True
+    key = "FXMD_SYNTHETIC_HEADER_KEY"
+    with patch("lfx_fxmacrodata._public_client.client.requests.Session.request", return_value=response) as request:
+        public_client.FXMacroDataClient(api_key=key).execute("release_calendar", {"currency": "USD"})
+    assert request.call_args.kwargs["headers"]["X-API-Key"] == key
+    assert key not in request.call_args.args[1]
+    assert key not in str(request.call_args.kwargs["params"])
