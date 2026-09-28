@@ -20,14 +20,15 @@ export const useChatHistory = (visibleSession: string | null) => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Pagination offset anchored to fetched count — the cache length drifts
-  // as live messages are appended.
-  const offsetRef = useRef(0);
+  // Id of the oldest row the backend has returned; the next page starts
+  // strictly before it. Taken from fetched pages, not the cache, because the
+  // cache also holds live messages and has no reliable order.
+  const beforeIdRef = useRef<string | null>(null);
 
   // Reset pagination when session or flow changes
   useEffect(() => {
     setHasMore(true);
-    offsetRef.current = 0;
+    beforeIdRef.current = null;
   }, [visibleSession, currentFlowId]);
 
   // Fetch messages from backend only when playground is visible and cap at 20
@@ -41,9 +42,12 @@ export const useChatHistory = (visibleSession: string | null) => {
       order: "DESC",
     },
   };
-  const { data: queryData } = useGetMessagesQuery(messageQueryParams, {
-    enabled: isPlaygroundOpen,
-  });
+  const { data: queryData, isPlaceholderData } = useGetMessagesQuery(
+    messageQueryParams,
+    {
+      enabled: isPlaygroundOpen,
+    },
+  );
 
   // Session cache key - this is the single source of truth for messages
   const sessionCacheKey = useMemo(
@@ -75,9 +79,17 @@ export const useChatHistory = (visibleSession: string | null) => {
     if (queryData && typeof queryData === "object" && "rows" in queryData) {
       const rowsData = queryData.rows as { data?: Message[] } | undefined;
       if (rowsData && typeof rowsData === "object" && "data" in rowsData) {
-        const backendMessages = (rowsData.data || []).filter((msg: Message) =>
+        const fetchedPage: Message[] = rowsData.data || [];
+        const backendMessages = fetchedPage.filter((msg: Message) =>
           isMessageForSession(msg, currentFlowId, visibleSession),
         );
+
+        // Anchor on the unfiltered page: loadMore sends the same filters, so
+        // the cursor must come from the rows those filters returned. Placeholder
+        // data still belongs to the previous session or flow.
+        if (beforeIdRef.current === null && !isPlaceholderData) {
+          beforeIdRef.current = fetchedPage[fetchedPage.length - 1]?.id ?? null;
+        }
 
         const existingCache =
           queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
@@ -85,7 +97,6 @@ export const useChatHistory = (visibleSession: string | null) => {
         // Only initialize if cache is empty and we have backend messages for this session
         if (existingCache.length === 0 && backendMessages.length > 0) {
           queryClient.setQueryData(sessionCacheKey, backendMessages);
-          offsetRef.current = backendMessages.length;
         } else if (existingCache.length > 0) {
           const reconciled = withAnsweredHumanInputCards(
             existingCache,
@@ -95,7 +106,14 @@ export const useChatHistory = (visibleSession: string | null) => {
         }
       }
     }
-  }, [queryData, queryClient, sessionCacheKey, currentFlowId, visibleSession]);
+  }, [
+    queryData,
+    isPlaceholderData,
+    queryClient,
+    sessionCacheKey,
+    currentFlowId,
+    visibleSession,
+  ]);
 
   // Load older messages (scroll-up pagination). Returns how many messages
   // were actually prepended.
@@ -104,41 +122,31 @@ export const useChatHistory = (visibleSession: string | null) => {
     setIsLoadingMore(true);
     try {
       // Loop until at least one new message lands or pages run out: after a
-      // remount offsetRef restarts at 0 while the cache may already hold the
-      // early pages, and dedup would otherwise swallow them and stall.
+      // remount the cursor restarts at the newest page while the cache may
+      // already hold older ones, and dedup would otherwise swallow them and
+      // stall. Each page starts strictly before the last, so the loop ends.
       let prepended = 0;
-      const seenPageSignatures = new Set<string>();
       while (prepended === 0) {
+        const requestedBeforeId = beforeIdRef.current;
         const response = await getMessages(currentFlowId, {
           ...(visibleSession ? { session_id: visibleSession } : {}),
           limit: 20,
           order: "DESC",
-          offset: offsetRef.current,
+          ...(requestedBeforeId ? { before_id: requestedBeforeId } : {}),
         });
         const olderMessages: Message[] = response.data || [];
-        if (olderMessages.length > 0) {
-          const pageSignature = JSON.stringify(
-            olderMessages.map((message) =>
-              message.id
-                ? message.id
-                : [
-                    message.flow_id,
-                    message.session_id,
-                    message.timestamp,
-                    message.sender,
-                    message.text,
-                  ],
-            ),
-          );
-          if (seenPageSignatures.has(pageSignature)) {
-            setHasMore(false);
-            break;
-          }
-          seenPageSignatures.add(pageSignature);
+        const nextBeforeId = olderMessages[olderMessages.length - 1]?.id;
+        if (nextBeforeId) {
+          beforeIdRef.current = nextBeforeId;
         }
-        offsetRef.current += olderMessages.length;
 
-        const exhausted = olderMessages.length < 20;
+        // Stop when a page has no id to anchor on, or when the cursor did not
+        // move: a server that ignores before_id repeats the newest page, and
+        // following it would request the same page forever.
+        const exhausted =
+          olderMessages.length < 20 ||
+          !nextBeforeId ||
+          nextBeforeId === requestedBeforeId;
         if (exhausted) {
           setHasMore(false);
         }
@@ -162,6 +170,9 @@ export const useChatHistory = (visibleSession: string | null) => {
       }
       return prepended;
     } catch (e) {
+      // The anchor may have been deleted since it was fetched. Restart from
+      // the newest page on the next attempt; dedup skips what is cached.
+      beforeIdRef.current = null;
       console.error("Failed to load more messages:", e);
       return 0;
     } finally {

@@ -4,8 +4,10 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from sqlalchemy import or_
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
@@ -53,6 +55,71 @@ MESSAGE_UPDATE_FAILED = "Could not update the message."
 # routers (_LIST_DEFAULT_LIMIT / _LIST_MAX_LIMIT).
 _MESSAGES_DEFAULT_LIMIT = 100
 _MESSAGES_MAX_LIMIT = 200
+
+
+def _reject_mixed_paging(*, offset: int | None, before_id: UUID | None) -> None:
+    """Keep cursor and offset paging mutually exclusive.
+
+    ``offset`` counts from the newest row, so it drifts as new messages land; ``before_id``
+    anchors on a row. Combining them has no single meaning, so neither silently wins.
+    """
+    if offset is not None and before_id is not None:
+        raise HTTPException(status_code=400, detail="Use either offset or before_id, not both.")
+
+
+async def _read_history_window(
+    session: DbSession,
+    stmt: SelectOfScalar[MessageTable],
+    *,
+    order_by: str | None,
+    order: str,
+    limit: int | None,
+    offset: int | None,
+    before_id: UUID | None,
+) -> list[MessageResponse]:
+    """Select one bounded history window from ``stmt`` and return it in display order.
+
+    The window is always the newest ``limit`` rows by ``(timestamp, id)``, either skipping
+    ``offset`` rows or starting strictly older than the ``before_id`` message. The anchor is
+    looked up through ``stmt`` itself, so it must satisfy the same ownership and filter
+    predicates as the page; a foreign, filtered-out, or deleted anchor is rejected rather than
+    yielding an empty page that would read as the end of history.
+    """
+    normalized_order = order.upper()
+    if normalized_order not in {"ASC", "DESC"}:
+        raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
+    if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+        raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+    if before_id is not None:
+        anchor_in_scope = await session.exec(
+            stmt.where(MessageTable.id == before_id).with_only_columns(col(MessageTable.id))
+        )
+        if anchor_in_scope.first() is None:
+            raise HTTPException(status_code=400, detail="before_id does not match a message in this history.")
+        # Compare against the stored timestamp in SQL rather than a bound Python value, so
+        # the tie check matches the stored representation exactly on every dialect.
+        anchor_timestamp = select(MessageTable.timestamp).where(MessageTable.id == before_id).scalar_subquery()
+        # `(timestamp, id) < anchor`, written with a redundant `timestamp <=` bound: that
+        # conjunct lets the planner seek into the (flow_id|session_id, timestamp, id) index.
+        # A bare OR is only a filter, so every row newer than the anchor would be scanned.
+        stmt = stmt.where(
+            col(MessageTable.timestamp) <= anchor_timestamp,
+            or_(col(MessageTable.timestamp) < anchor_timestamp, col(MessageTable.id) < before_id),
+        )
+    # Always select the newest window by timestamp DESC (anchored at the most
+    # recent row): polling callers pass flow_id only, and an unbounded default
+    # serializes the whole history on every poll (issue #15023). Selecting by
+    # timestamp keeps paging aligned with history age even when the caller sorts
+    # by a non-timestamp field. A falsy limit (None/0) falls back to the default,
+    # matching the previous `if limit:` behavior where 0 meant "no limit".
+    effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+    stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
+    if offset:
+        stmt = stmt.offset(offset)
+    stmt = stmt.limit(effective_limit)
+    window = list(await session.exec(stmt))
+    window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
+    return [_message_history_response(message) for message in window]
 
 
 def _sorted_for_display(messages: list[MessageTable], *, order_by: str | None, descending: bool) -> list[MessageTable]:
@@ -274,7 +341,12 @@ async def get_messages(
     order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
+    before_id: Annotated[
+        UUID | None,
+        Query(description="Return messages strictly older than this message. Cannot be combined with offset."),
+    ] = None,
 ) -> list[MessageResponse]:
+    _reject_mixed_paging(offset=offset, before_id=before_id)
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
         # share-aware path lets a non-owner with a read grant see the flow's
@@ -308,26 +380,9 @@ async def get_messages(
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
-        normalized_order = order.upper()
-        if normalized_order not in {"ASC", "DESC"}:
-            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-        # Always select the newest window by timestamp DESC (anchored at the most
-        # recent row): the editor polls with flow_id only, and an unbounded default
-        # serializes the whole history on every poll (issue #15023). Selecting by
-        # timestamp keeps offset paging aligned with history age even when the
-        # caller sorts by a non-timestamp field. A falsy limit (None/0) falls back
-        # to the default, matching the previous `if limit:` behavior where 0 meant
-        # "no limit".
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
-        if offset:
-            stmt = stmt.offset(offset)
-        stmt = stmt.limit(effective_limit)
-        window = list(await session.exec(stmt))
-        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
-        return [_message_history_response(message) for message in window]
+        return await _read_history_window(
+            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before_id=before_id
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -620,12 +675,17 @@ async def get_shared_messages(
     order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
+    before_id: Annotated[
+        UUID | None,
+        Query(description="Return messages strictly older than this message. Cannot be combined with offset."),
+    ] = None,
 ) -> list[MessageResponse]:
     """Get messages for a shared/public flow, scoped to the authenticated user.
 
     Uses a deterministic virtual flow_id derived from the user's ID and the
     original flow ID. Only messages stored under this virtual flow_id are returned.
     """
+    _reject_mixed_paging(offset=offset, before_id=before_id)
     try:
         virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable)
@@ -636,20 +696,9 @@ async def get_shared_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
-        normalized_order = order.upper()
-        if normalized_order not in {"ASC", "DESC"}:
-            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-        # Select the newest window by timestamp DESC, mirroring get_messages (issue #15023).
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
-        if offset:
-            stmt = stmt.offset(offset)
-        stmt = stmt.limit(effective_limit)
-        window = list(await session.exec(stmt))
-        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
-        return [_message_history_response(message) for message in window]
+        return await _read_history_window(
+            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before_id=before_id
+        )
     except HTTPException:
         raise
     except Exception as e:

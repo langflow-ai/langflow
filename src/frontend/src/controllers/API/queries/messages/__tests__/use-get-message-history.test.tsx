@@ -58,11 +58,15 @@ beforeEach(() => {
   mockAuthenticated = false;
   useMessagesStore.getState().clearMessages();
   sessionStorage.clear();
-  mockGet.mockImplementation(async (_url, { params }) => ({
-    data: Array.from({ length: 250 }, (_, i) =>
+  mockGet.mockImplementation(async (_url, { params }) => {
+    const newestFirst = Array.from({ length: 250 }, (_, i) =>
       message(249 - i, decodeURIComponent(params.session_id ?? "session-a")),
-    ).slice(params.offset, params.offset + params.limit),
-  }));
+    );
+    const start = params.before_id
+      ? newestFirst.findIndex((m) => m.id === params.before_id) + 1
+      : 0;
+    return { data: newestFirst.slice(start, start + params.limit) };
+  });
 });
 
 it.each([false, true])(
@@ -95,8 +99,8 @@ it.each([false, true])(
       new Set(useMessagesStore.getState().messages.map((m) => m.id)).size,
     ).toBe(250);
     expect(
-      mockGet.mock.calls.map(([, config]) => config.params.offset),
-    ).toEqual([0, 100, 200]);
+      mockGet.mock.calls.map(([, config]) => config.params.before_id),
+    ).toEqual([undefined, "session-a-150", "session-a-50"]);
     for (const [url, { params }] of mockGet.mock.calls) {
       expect(url.endsWith(shared ? "/messages/shared" : "/messages")).toBe(
         true,
@@ -106,6 +110,7 @@ it.each([false, true])(
         order: "DESC",
         session_id: "session-a",
       });
+      expect(params).not.toHaveProperty("offset");
       expect(params).toHaveProperty(
         shared ? "source_flow_id" : "flow_id",
         shared ? "source-flow" : "flow",
@@ -181,10 +186,9 @@ it("resets pagination for a different session without mixing histories", async (
     ).toBe(true),
   );
   expect(useMessagesStore.getState().messages).toHaveLength(100);
-  expect(mockGet.mock.calls.at(-1)?.[1].params).toMatchObject({
-    session_id: "session-b",
-    offset: 0,
-  });
+  const lastParams = mockGet.mock.calls.at(-1)?.[1].params;
+  expect(lastParams).toMatchObject({ session_id: "session-b" });
+  expect(lastParams).not.toHaveProperty("before_id");
 });
 
 it("preserves every anonymous session when the playground saves its message store", async () => {

@@ -134,3 +134,107 @@ async def test_nullable_text_keeps_history_readable(client, logged_in_headers, m
     async with session_scope() as session:
         stored = await session.get(MessageTable, null_message_id)
         assert stored.text is None
+
+
+async def _walk_with_cursor(client, headers, url, params, *, order, page_size):
+    """Follow before_id from page to page until a short page ends the history."""
+    pages = []
+    before_id = None
+    while True:
+        cursor = {"before_id": before_id} if before_id else {}
+        response = await client.get(
+            url, headers=headers, params={**params, **cursor, "limit": page_size, "order": order}
+        )
+        assert response.status_code == 200, response.text
+        page = response.json()
+        pages.append(page)
+        if len(page) < page_size:
+            return pages
+        # The oldest row anchors the next page: last when DESC, first when ASC.
+        before_id = page[-1 if order == "DESC" else 0]["id"]
+
+
+@pytest.mark.parametrize("order", ["ASC", "DESC"])
+async def test_before_id_walks_tied_timestamps_without_gaps_or_overlap(
+    client, logged_in_headers, message_history, order
+):
+    url, params, newest = message_history
+    pages = await _walk_with_cursor(client, logged_in_headers, url, params, order=order, page_size=17)
+    assert len(pages) == 15
+    newest_first = [message["id"] for page in pages for message in (page if order == "DESC" else reversed(page))]
+    assert newest_first == [message["id"] for message in newest]
+
+
+async def test_before_id_is_stable_when_newer_messages_arrive(client, logged_in_headers, message_history):
+    """New rows shift every offset window by one; a cursor page does not move."""
+    url, params, newest = message_history
+    first = await client.get(url, headers=logged_in_headers, params={**params, "limit": 20, "order": "DESC"})
+    assert first.status_code == 200, first.text
+    async with session_scope() as session:
+        await aadd_messagetables(
+            [
+                MessageTable(
+                    flow_id=UUID(newest[0]["flow_id"]),
+                    files=[],
+                    timestamp=datetime(2027, 1, 1, tzinfo=timezone.utc),
+                    sender="User",
+                    sender_name="Late",
+                    text="Arrived between pages",
+                    session_id="session-0",
+                )
+            ],
+            session,
+        )
+
+    second = await client.get(
+        url,
+        headers=logged_in_headers,
+        params={**params, "limit": 20, "order": "DESC", "before_id": first.json()[-1]["id"]},
+    )
+    assert second.status_code == 200, second.text
+    assert [message["id"] for message in second.json()] == [message["id"] for message in newest[20:40]]
+
+
+async def test_before_id_pages_within_the_filtered_session(client, logged_in_headers, message_history):
+    url, params, newest = message_history
+    session_rows = [message for message in newest if message["session_id"] == "session-1"]
+    response = await client.get(
+        url,
+        headers=logged_in_headers,
+        params={**params, "session_id": "session-1", "limit": 10, "order": "DESC", "before_id": session_rows[9]["id"]},
+    )
+    assert response.status_code == 200, response.text
+    assert [message["id"] for message in response.json()] == [message["id"] for message in session_rows[10:20]]
+
+
+async def test_before_id_on_the_oldest_message_returns_an_empty_page(client, logged_in_headers, message_history):
+    url, params, newest = message_history
+    response = await client.get(url, headers=logged_in_headers, params={**params, "before_id": newest[-1]["id"]})
+    assert response.status_code == 200, response.text
+    assert response.json() == []
+
+
+@pytest.mark.parametrize("offset", [0, 20])
+async def test_before_id_and_offset_are_mutually_exclusive(client, logged_in_headers, message_history, offset):
+    url, params, newest = message_history
+    response = await client.get(
+        url, headers=logged_in_headers, params={**params, "offset": offset, "before_id": newest[5]["id"]}
+    )
+    assert response.status_code == 400, response.text
+    assert "offset" in response.json()["detail"]
+
+
+async def test_before_id_outside_the_filtered_history_is_rejected(client, logged_in_headers, message_history):
+    """A missing anchor must not read as an empty page, which would look like the end of history."""
+    url, params, newest = message_history
+    other_session = next(message for message in newest if message["session_id"] == "session-2")
+    cases = [
+        {"before_id": str(uuid4())},
+        {"before_id": "not-a-uuid"},
+        {"before_id": other_session["id"], "session_id": "session-1"},
+    ]
+    statuses = []
+    for query in cases:
+        response = await client.get(url, headers=logged_in_headers, params={**params, **query})
+        statuses.append(response.status_code)
+    assert statuses == [400, 422, 400]

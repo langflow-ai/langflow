@@ -41,6 +41,8 @@ const getStoredMessages = (
       : 1;
   const offset = typeof params.offset === "number" ? params.offset : 0;
   const limit = typeof params.limit === "number" ? params.limit : undefined;
+  const beforeId =
+    typeof params.before_id === "string" ? params.before_id : undefined;
 
   const filteredMessages = sessionId
     ? storedMessages.filter(
@@ -55,6 +57,25 @@ const getStoredMessages = (
     if (Number.isNaN(timeA) || Number.isNaN(timeB)) return 0;
     return direction * (timeA - timeB);
   });
+
+  if (beforeId !== undefined && params.offset !== undefined) {
+    throw new Error("Use either offset or before_id, not both.");
+  }
+  if (beforeId !== undefined) {
+    // Mirror the server's cursor contract: the newest `limit` rows strictly
+    // older than the anchor, and an unknown anchor is an error, not the end.
+    const newestFirst =
+      direction === -1 ? orderedMessages : [...orderedMessages].reverse();
+    const anchor = newestFirst.findIndex((message) => message.id === beforeId);
+    if (anchor === -1) {
+      throw new Error("before_id does not match a message in this history.");
+    }
+    const page = newestFirst.slice(
+      anchor + 1,
+      limit === undefined ? undefined : anchor + 1 + limit,
+    );
+    return direction === -1 ? page : page.reverse();
+  }
 
   return orderedMessages.slice(
     offset,

@@ -217,6 +217,46 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     expect(mockApiGet).not.toHaveBeenCalled();
   });
 
+  it("should_page_anonymous_sessionStorage_before_a_cursor", async () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
+    mockIsAuth.mockReturnValue(false);
+    window.sessionStorage.setItem(
+      FLOW_ID,
+      JSON.stringify(
+        ["m0", "m1", "m2", "m3", "m4"].map((id, minute) => ({
+          id,
+          session_id: "s1",
+          timestamp: `2026-01-01T00:0${minute}:00Z`,
+        })),
+      ),
+    );
+
+    const newestFirst = await getMessages(FLOW_ID, {
+      session_id: "s1",
+      order: "DESC",
+      before_id: "m3",
+      limit: 2,
+    });
+    const chronological = await getMessages(FLOW_ID, {
+      session_id: "s1",
+      order: "ASC",
+      before_id: "m3",
+      limit: 2,
+    });
+
+    expect(newestFirst.data.map((message) => message.id)).toEqual(["m2", "m1"]);
+    expect(chronological.data.map((message) => message.id)).toEqual([
+      "m1",
+      "m2",
+    ]);
+    await expect(
+      getMessages(FLOW_ID, { session_id: "s1", before_id: "missing" }),
+    ).rejects.toThrow("before_id");
+    await expect(
+      getMessages(FLOW_ID, { session_id: "s1", before_id: "m3", offset: 0 }),
+    ).rejects.toThrow("not both");
+  });
+
   it("uses a distinct query key when request params change", () => {
     const { rerender } = renderHook(
       ({ sessionId }) =>
