@@ -505,6 +505,7 @@ module.exports = {
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
+            "Components/bundles-apiroute",
             "Components/bundles-arxiv",
             "Components/bundles-assemblyai",
             "Components/bundles-azure",

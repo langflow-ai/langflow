@@ -436,6 +436,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Apify", name: "apify", icon: "Apify" },
+  { display_name: "API Route", name: "apiroute", icon: "APIRoute" },
   { display_name: "arXiv", name: "arxiv", icon: "arXiv" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   { display_name: "Azure", name: "azure", icon: "Azure" },
