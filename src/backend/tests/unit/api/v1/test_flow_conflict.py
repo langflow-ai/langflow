@@ -8,6 +8,7 @@ lost-update hole reopen with nothing in CI to notice.
 
 import uuid
 
+import pytest
 from fastapi import status
 from httpx import AsyncClient
 
@@ -128,6 +129,22 @@ async def test_malformed_header_is_rejected_not_ignored(client: AsyncClient, log
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.parametrize("blank", ["", "   ", '""', 'W/""'])
+async def test_blank_header_is_rejected_not_ignored(client: AsyncClient, logged_in_headers, blank: str):
+    """A present-but-empty header is a malformed precondition, not a missing one."""
+    flow = await _create_flow(client, logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph("blank")},
+        headers={**logged_in_headers, "If-Match": blank},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    stored = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert stored.json()["data"] == flow["data"]
 
 
 async def test_client_cannot_set_its_own_token(client: AsyncClient, logged_in_headers):

@@ -49,6 +49,7 @@ def parse_if_match(raw: str | None) -> UUID | None:
     HTTP ETag library interoperates. A malformed value is rejected rather than
     ignored: treating it as absent would silently downgrade the request to an
     unconditional write, which is the failure this whole mechanism exists to stop.
+    A present-but-blank header is malformed too: only a missing header opts out.
     """
     if raw is None:
         return None
@@ -56,8 +57,6 @@ def parse_if_match(raw: str | None) -> UUID | None:
     if token.startswith("W/"):
         token = token[2:].strip()
     token = token.strip('"')
-    if not token:
-        return None
     try:
         return UUID(token)
     except ValueError as exc:
