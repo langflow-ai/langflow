@@ -49,6 +49,7 @@ from langflow.services.database.models.flow.utils import get_webhook_component_i
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service, get_variable_service
+from langflow.services.flow_history.shadow import observe_graph_write
 from langflow.services.storage.service import StorageService
 from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
@@ -786,6 +787,7 @@ async def _update_existing_flow(
         update_data = remove_api_keys(update_data)
 
     graph_changed = "data" in update_data and update_data["data"] != existing_flow.data
+    previous_data = existing_flow.data
 
     _apply_update_data(existing_flow, update_data)
 
@@ -828,6 +830,8 @@ async def _update_existing_flow(
     if save_to_fs:
         # Writes happen under the owner's storage namespace, not the actor's.
         await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
+    if "data" in update_data:
+        observe_graph_write(existing_flow.id, previous_data, existing_flow.data)
 
     return FlowRead.model_validate(existing_flow, from_attributes=True)
 
@@ -924,6 +928,7 @@ async def _patch_flow(
     # Only a graph change takes the writer's turn. A rename or a no-op save leaves
     # the token alone on purpose — see the scope note in ``flow_conflict``.
     graph_changed = "data" in update_data and update_data["data"] != db_flow.data
+    previous_data = db_flow.data
 
     _apply_update_data(db_flow, update_data)
 
@@ -969,6 +974,8 @@ async def _patch_flow(
     await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
+    if "data" in update_data:
+        observe_graph_write(db_flow.id, previous_data, db_flow.data)
 
     return FlowRead.model_validate(db_flow, from_attributes=True)
 

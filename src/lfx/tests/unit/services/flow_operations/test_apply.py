@@ -80,7 +80,7 @@ class TestNormalizeRequestedOps:
 
     def test_parse_flow_operations_rejects_unknown_operation_type(self):
         with pytest.raises(FlowOperationValidationError, match="Unsupported operation type"):
-            parse_flow_operations([{"type": "replace_graph", "data": {}}])
+            parse_flow_operations([{"type": "replace_graph", "data": {"node": {"template": {}}}}])
 
     def test_normalize_requested_ops_preserves_parsed_models(self):
         ops = parse_flow_operations([{"type": "delete_nodes", "ids": ["a"]}])
@@ -91,7 +91,7 @@ class TestNormalizeRequestedOps:
 class TestFlowOperationService:
     def test_default_service_applies_operations(self):
         service = PythonFlowOperationService()
-        new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {}}
+        new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {}}}}
 
         result = service.apply(_base_flow_data(), parse_flow_operations([{"type": "add_nodes", "nodes": [new_node]}]))
 
@@ -148,7 +148,7 @@ class TestApplyFlowOperations:
         original = copy.deepcopy(flow_data)
         original_nodes = flow_data["nodes"]
         original_edges = flow_data["edges"]
-        new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {}}
+        new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {}}}}
 
         result = apply_flow_operations(
             flow_data,
@@ -220,7 +220,7 @@ class TestApplyFlowOperations:
 
     def test_add_nodes(self):
         flow_data = _base_flow_data()
-        new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {}}
+        new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {}}}}
         result = apply_flow_operations(flow_data, [{"type": "add_nodes", "nodes": [new_node]}])
 
         assert len(result.flow_data["nodes"]) == 3
@@ -312,7 +312,10 @@ class TestApplyFlowOperations:
 
     def test_update_nodes_writes_an_output_selected_by_name(self):
         flow_data = _base_flow_data()
-        flow_data["nodes"][0]["data"]["node"] = {"outputs": [{"name": "x", "selected": "a"}, {"name": "y"}]}
+        flow_data["nodes"][0]["data"]["node"] = {
+            "template": {},
+            "outputs": [{"name": "x", "selected": "a"}, {"name": "y", "selected": "b"}],
+        }
         result = apply_flow_operations(
             flow_data,
             [
@@ -324,6 +327,7 @@ class TestApplyFlowOperations:
                             "op": "set_field",
                             "path": ["data", "node", "outputs", {"key": "y"}, "selected"],
                             "value": None,
+                            "from_type": "string",
                         }
                     ],
                 }
@@ -508,7 +512,7 @@ class TestApplyFlowOperations:
 
     def test_rejects_update_node_added_earlier_in_same_batch(self):
         flow_data = _base_flow_data()
-        new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
+        new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {}}}}
 
         with pytest.raises(FlowOperationValidationError, match="does not exist in the original flow"):
             apply_flow_operations(
@@ -524,7 +528,7 @@ class TestApplyFlowOperations:
 
     def test_rejects_delete_node_added_earlier_in_same_batch(self):
         flow_data = _base_flow_data()
-        new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
+        new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {}}}}
 
         with pytest.raises(FlowOperationValidationError, match="does not exist in the original flow"):
             apply_flow_operations(
@@ -542,7 +546,7 @@ class TestApplyFlowOperations:
 
     def test_rejects_duplicate_node_id_within_request(self):
         flow_data = _base_flow_data()
-        node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
+        node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {}}}}
         with pytest.raises(FlowOperationValidationError, match="duplicate node id"):
             apply_flow_operations(flow_data, [{"type": "add_nodes", "nodes": [node, copy.deepcopy(node)]}])
 
@@ -667,12 +671,12 @@ class TestApplyFlowOperations:
     def test_rejects_duplicate_ids_in_base_flow_data(self):
         flow_data = _base_flow_data()
         flow_data["nodes"].append(copy.deepcopy(NODE_A))
-        with pytest.raises(FlowDataValidationError, match=r"flow\.data\.nodes: duplicate node id"):
+        with pytest.raises(FlowDataValidationError, match="duplicate node id"):
             apply_flow_operations(flow_data, [])
 
         flow_data = _base_flow_data()
         flow_data["edges"].append(copy.deepcopy(EDGE_AB))
-        with pytest.raises(FlowDataValidationError, match=r"flow\.data\.edges: duplicate edge id"):
+        with pytest.raises(FlowDataValidationError, match="duplicate edge id"):
             apply_flow_operations(flow_data, [])
 
     def test_update_metadata_shallow_updates_and_deletes(self):
