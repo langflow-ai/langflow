@@ -2,8 +2,11 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
+import { revisionOfSelection } from "../../flowSidebarComponent/components/FlowVersionSidebar/constants";
 import { CanvasBadge } from "./CanvasBanner";
+import RestoreRevisionButton from "./RestoreRevisionButton";
 import RestoreVersionButton from "./RestoreVersionButton";
+import RevisionPlayback from "./RevisionPlayback";
 import SaveSnapshotButton from "./SaveSnapshotButton";
 
 export default function VersionPreviewOverlay() {
@@ -18,6 +21,7 @@ export default function VersionPreviewOverlay() {
   const { t } = useTranslation();
 
   if (previewLabel === null) return null;
+  const previewRevision = revisionOfSelection(previewId);
 
   return (
     <div className="version-preview-overlay pointer-events-none absolute inset-0 z-50">
@@ -58,13 +62,27 @@ export default function VersionPreviewOverlay() {
         <SaveSnapshotButton flowId={currentFlowId} />
       )}
 
-      {previewId && previewLabel && previewLabel !== "Current Draft" && (
-        <RestoreVersionButton
-          flowId={currentFlowId}
-          versionId={previewId}
-          versionTag={previewLabel}
-        />
+      {previewRevision !== null && (
+        <>
+          <RestoreRevisionButton
+            flowId={currentFlowId}
+            revision={previewRevision}
+            label={previewLabel}
+          />
+          <RevisionPlayback />
+        </>
       )}
+
+      {previewRevision === null &&
+        previewId &&
+        previewLabel &&
+        previewLabel !== "Current Draft" && (
+          <RestoreVersionButton
+            flowId={currentFlowId}
+            versionId={previewId}
+            versionTag={previewLabel}
+          />
+        )}
     </div>
   );
 }
