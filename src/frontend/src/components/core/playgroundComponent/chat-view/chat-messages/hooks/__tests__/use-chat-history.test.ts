@@ -79,6 +79,7 @@ describe("useChatHistory message ordering", () => {
   const page = (from: number) =>
     Array.from({ length: 20 }, (_, index) => ({
       id: `message-${from + index}`,
+      timestamp: `timestamp-${from + index}`,
       flow_id: "flow-1",
       session_id: "session-1",
     }));
@@ -108,8 +109,14 @@ describe("useChatHistory message ordering", () => {
     });
 
     expect(
-      mockGetMessages.mock.calls.map(([, params]) => params.before_id),
-    ).toEqual(["message-19", "message-39"]);
+      mockGetMessages.mock.calls.map(([, params]) => [
+        params.before_timestamp,
+        params.before_id,
+      ]),
+    ).toEqual([
+      ["timestamp-19", "message-19"],
+      ["timestamp-39", "message-39"],
+    ]);
   });
 
   it("stops when a server ignores the cursor and repeats a page", async () => {
@@ -178,32 +185,6 @@ describe("useChatHistory message ordering", () => {
       mockGetMessages.mock.calls.map(([, params]) => params.before_id),
     ).toEqual([undefined, "message-19"]);
     expect(result.current.hasMore).toBe(false);
-  });
-
-  it("restarts from the newest page when the cursor is rejected", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    jest.spyOn(console, "error").mockImplementation(() => {});
-    mockUseGetMessagesQuery.mockReturnValue({
-      data: { rows: { data: page(0) } },
-      isPlaceholderData: false,
-    });
-    mockGetMessages.mockRejectedValueOnce(new Error("400"));
-
-    const { result } = renderHook(() => useChatHistory("session-1"), {
-      wrapper: createWrapper(queryClient),
-    });
-    await act(async () => {
-      await result.current.loadMore();
-    });
-    await act(async () => {
-      await result.current.loadMore();
-    });
-
-    expect(
-      mockGetMessages.mock.calls.map(([, params]) => params.before_id),
-    ).toEqual(["message-19", undefined]);
   });
 });
 

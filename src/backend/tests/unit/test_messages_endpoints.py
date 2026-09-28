@@ -210,21 +210,20 @@ async def test_get_messages_does_not_return_other_users_messages(
     assert str(cross_user_messages["owned_message"].id) not in other_returned_ids
 
 
-async def test_get_messages_rejects_another_users_message_as_before_id(
-    client: AsyncClient, logged_in_headers, other_logged_in_headers, cross_user_messages
+async def test_get_messages_cursor_from_another_users_message_stays_in_the_callers_history(
+    client: AsyncClient, logged_in_headers, cross_user_messages
 ):
-    """The anchor is resolved through the caller's own history, so a foreign id cannot be probed."""
-    foreign_id = str(cross_user_messages["foreign_message"].id)
-    response = await client.get("api/v1/monitor/messages", headers=logged_in_headers, params={"before_id": foreign_id})
-    assert response.status_code == 400, response.text
-    unknown = await client.get("api/v1/monitor/messages", headers=logged_in_headers, params={"before_id": str(uuid4())})
-    assert unknown.json() == response.json()
-
-    owner_response = await client.get(
-        "api/v1/monitor/messages", headers=other_logged_in_headers, params={"before_id": foreign_id}
+    """The cursor only bounds the caller's own history, so a foreign position reveals nothing."""
+    foreign = cross_user_messages["foreign_message"]
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"before_timestamp": timestamp_to_str(foreign.timestamp), "before_id": str(foreign.id)},
     )
-    assert owner_response.status_code == 200, owner_response.text
-    assert owner_response.json() == []
+    assert response.status_code == 200, response.text
+    returned_ids = {message["id"] for message in response.json()}
+    assert str(foreign.id) not in returned_ids
+    assert returned_ids <= {str(cross_user_messages["owned_message"].id)}
 
 
 @pytest.mark.usefixtures("timestamped_messages")

@@ -217,7 +217,7 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     expect(mockApiGet).not.toHaveBeenCalled();
   });
 
-  it("should_page_anonymous_sessionStorage_before_a_cursor", async () => {
+  it("should_page_anonymous_sessionStorage_below_a_cursor", async () => {
     mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
     mockIsAuth.mockReturnValue(false);
     window.sessionStorage.setItem(
@@ -230,17 +230,29 @@ describe("useGetMessagesQuery - Routing Logic", () => {
         })),
       ),
     );
+    // m3's position; the cursor pages below it even if m3 itself is gone.
+    const cursor = {
+      before_timestamp: "2026-01-01T00:03:00Z",
+      before_id: "m3",
+    };
 
     const newestFirst = await getMessages(FLOW_ID, {
       session_id: "s1",
       order: "DESC",
-      before_id: "m3",
+      ...cursor,
       limit: 2,
     });
     const chronological = await getMessages(FLOW_ID, {
       session_id: "s1",
       order: "ASC",
-      before_id: "m3",
+      ...cursor,
+      limit: 2,
+    });
+    const afterDelete = await getMessages(FLOW_ID, {
+      session_id: "s1",
+      order: "DESC",
+      before_timestamp: cursor.before_timestamp,
+      before_id: "deleted-m3",
       limit: 2,
     });
 
@@ -249,11 +261,12 @@ describe("useGetMessagesQuery - Routing Logic", () => {
       "m1",
       "m2",
     ]);
+    expect(afterDelete.data.map((message) => message.id)).toEqual(["m2", "m1"]);
     await expect(
-      getMessages(FLOW_ID, { session_id: "s1", before_id: "missing" }),
-    ).rejects.toThrow("before_id");
+      getMessages(FLOW_ID, { session_id: "s1", before_id: "m3" }),
+    ).rejects.toThrow("together");
     await expect(
-      getMessages(FLOW_ID, { session_id: "s1", before_id: "m3", offset: 0 }),
+      getMessages(FLOW_ID, { session_id: "s1", ...cursor, offset: 0 }),
     ).rejects.toThrow("not both");
   });
 

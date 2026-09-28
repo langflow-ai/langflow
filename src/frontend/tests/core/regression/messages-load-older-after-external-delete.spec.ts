@@ -27,11 +27,12 @@ const history = Array.from({ length: MESSAGE_COUNT }, (_, index) => ({
   content_blocks: [],
 }));
 
-const idOf = (text: string) => history.find((row) => row.text === text)!.id;
+const rowOf = (text: string) => history.find((row) => row.text === text)!;
 
 /**
  * Serve GET /monitor/messages the way the real endpoint pages it: newest first,
- * by `offset` or by `before_id`, over rows that can change between requests.
+ * by `offset` or below a `before_timestamp`/`before_id` position, over rows that
+ * can change between requests.
  * Deleting a row here stands in for a delete from another tab or API client,
  * which the page is never told about.
  */
@@ -50,21 +51,20 @@ async function mockMessageHistory(page: LangflowPage) {
       requests.push(params);
       const live = history.filter((row) => !deleted.has(row.id));
       const limit = Number(params.get("limit") ?? 100);
-      let start = Number(params.get("offset") ?? 0);
+      const offset = Number(params.get("offset") ?? 0);
       const beforeId = params.get("before_id");
-      if (beforeId) {
-        start = live.findIndex((row) => row.id === beforeId) + 1;
-        if (start === 0) {
-          await route.fulfill({
-            status: 400,
-            json: {
-              detail: "before_id does not match a message in this history.",
-            },
-          });
-          return;
-        }
-      }
-      const window = live.slice(start, start + limit);
+      const beforeTime = new Date(
+        params.get("before_timestamp") ?? "",
+      ).getTime();
+      const below = beforeId
+        ? live.filter((row) => {
+            const time = new Date(row.timestamp).getTime();
+            return (
+              time < beforeTime || (time === beforeTime && row.id < beforeId)
+            );
+          })
+        : live.slice(offset);
+      const window = below.slice(0, limit);
       await route.fulfill({
         json: params.get("order") === "ASC" ? window.reverse() : window,
       });
@@ -72,7 +72,7 @@ async function mockMessageHistory(page: LangflowPage) {
   );
 
   return {
-    deleteElsewhere: (text: string) => deleted.add(idOf(text)),
+    deleteElsewhere: (text: string) => deleted.add(rowOf(text).id),
     lastRequest: () => requests[requests.length - 1],
   };
 }
@@ -119,7 +119,10 @@ test(
         timeout: TIMEOUTS.medium,
       })
       .toBe(true);
-    expect(server.lastRequest().get("before_id")).toBe(idOf("#100"));
+    expect(server.lastRequest().get("before_id")).toBe(rowOf("#100").id);
+    expect(server.lastRequest().get("before_timestamp")).toBe(
+      rowOf("#100").timestamp,
+    );
     expect(server.lastRequest().has("offset")).toBe(false);
   },
 );

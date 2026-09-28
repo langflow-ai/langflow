@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
 from langflow.schema.message import MessageResponse
+from langflow.schema.validators import str_to_timestamp
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
@@ -57,14 +59,30 @@ _MESSAGES_DEFAULT_LIMIT = 100
 _MESSAGES_MAX_LIMIT = 200
 
 
-def _reject_mixed_paging(*, offset: int | None, before_id: UUID | None) -> None:
-    """Keep cursor and offset paging mutually exclusive.
+def _history_cursor(
+    *, offset: int | None, before_timestamp: str | None, before_id: UUID | None
+) -> tuple[datetime, UUID] | None:
+    """Validate the cursor parameters and return the ``(timestamp, id)`` position to page below.
 
-    ``offset`` counts from the newest row, so it drifts as new messages land; ``before_id``
-    anchors on a row. Combining them has no single meaning, so neither silently wins.
+    The cursor carries the position's values rather than referring to a stored message, so a
+    page is still right after that message is deleted. Cursor and ``offset`` paging are
+    mutually exclusive: ``offset`` counts from the newest row and drifts as history changes,
+    so combining them has no single meaning.
     """
-    if offset is not None and before_id is not None:
-        raise HTTPException(status_code=400, detail="Use either offset or before_id, not both.")
+    if before_timestamp is None and before_id is None:
+        return None
+    if before_timestamp is None or before_id is None:
+        raise HTTPException(status_code=400, detail="Send before_timestamp and before_id together.")
+    if offset is not None:
+        raise HTTPException(status_code=400, detail="Use either offset or before_timestamp/before_id, not both.")
+    try:
+        timestamp = str_to_timestamp(before_timestamp)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f"Invalid before_timestamp: {before_timestamp}") from e
+    # message.timestamp is SQLModel's UTCDateTime (timestamptz on Postgres since f2a7c9e4b681),
+    # which binds aware values as UTC instants, so the database session's time zone never
+    # enters the comparison.
+    return timestamp.astimezone(timezone.utc), before_id
 
 
 async def _read_history_window(
@@ -75,35 +93,28 @@ async def _read_history_window(
     order: str,
     limit: int | None,
     offset: int | None,
-    before_id: UUID | None,
+    before: tuple[datetime, UUID] | None,
 ) -> list[MessageResponse]:
     """Select one bounded history window from ``stmt`` and return it in display order.
 
     The window is always the newest ``limit`` rows by ``(timestamp, id)``, either skipping
-    ``offset`` rows or starting strictly older than the ``before_id`` message. The anchor is
-    looked up through ``stmt`` itself, so it must satisfy the same ownership and filter
-    predicates as the page; a foreign, filtered-out, or deleted anchor is rejected rather than
-    yielding an empty page that would read as the end of history.
+    ``offset`` rows or starting strictly below the ``before`` position. The position only
+    bounds ``stmt``, which carries the caller's ownership and filters, so a position taken
+    from someone else's history cannot reveal anything outside the caller's own.
     """
     normalized_order = order.upper()
     if normalized_order not in {"ASC", "DESC"}:
         raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
     if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
         raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-    if before_id is not None:
-        # Read the anchor's timestamp here rather than in a subquery of the page query, so the
-        # page is still right if the anchor is deleted between the two statements.
-        anchor_timestamp = (
-            await session.exec(stmt.where(MessageTable.id == before_id).with_only_columns(col(MessageTable.timestamp)))
-        ).first()
-        if anchor_timestamp is None:
-            raise HTTPException(status_code=400, detail="before_id does not match a message in this history.")
-        # `(timestamp, id) < anchor`, written with a redundant `timestamp <=` bound: that
+    if before is not None:
+        before_timestamp, before_id = before
+        # `(timestamp, id) < before`, written with a redundant `timestamp <=` bound: that
         # conjunct lets the planner seek into the (flow_id|session_id, timestamp, id) index.
-        # A bare OR is only a filter, so every row newer than the anchor would be scanned.
+        # A bare OR is only a filter, so every row newer than the position would be scanned.
         stmt = stmt.where(
-            col(MessageTable.timestamp) <= anchor_timestamp,
-            or_(col(MessageTable.timestamp) < anchor_timestamp, col(MessageTable.id) < before_id),
+            col(MessageTable.timestamp) <= before_timestamp,
+            or_(col(MessageTable.timestamp) < before_timestamp, col(MessageTable.id) < before_id),
         )
     # Always select the newest window by timestamp DESC (anchored at the most
     # recent row): polling callers pass flow_id only, and an unbounded default
@@ -340,12 +351,16 @@ async def get_messages(
     order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
+    before_timestamp: Annotated[
+        str | None,
+        Query(description="With before_id: return messages strictly older than this position. Not with offset."),
+    ] = None,
     before_id: Annotated[
         UUID | None,
-        Query(description="Return messages strictly older than this message. Cannot be combined with offset."),
+        Query(description="With before_timestamp: the id of the last message already loaded, to break timestamp ties."),
     ] = None,
 ) -> list[MessageResponse]:
-    _reject_mixed_paging(offset=offset, before_id=before_id)
+    before = _history_cursor(offset=offset, before_timestamp=before_timestamp, before_id=before_id)
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
         # share-aware path lets a non-owner with a read grant see the flow's
@@ -380,7 +395,7 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         return await _read_history_window(
-            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before_id=before_id
+            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before=before
         )
     except HTTPException:
         raise
@@ -674,9 +689,13 @@ async def get_shared_messages(
     order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
+    before_timestamp: Annotated[
+        str | None,
+        Query(description="With before_id: return messages strictly older than this position. Not with offset."),
+    ] = None,
     before_id: Annotated[
         UUID | None,
-        Query(description="Return messages strictly older than this message. Cannot be combined with offset."),
+        Query(description="With before_timestamp: the id of the last message already loaded, to break timestamp ties."),
     ] = None,
 ) -> list[MessageResponse]:
     """Get messages for a shared/public flow, scoped to the authenticated user.
@@ -684,7 +703,7 @@ async def get_shared_messages(
     Uses a deterministic virtual flow_id derived from the user's ID and the
     original flow ID. Only messages stored under this virtual flow_id are returned.
     """
-    _reject_mixed_paging(offset=offset, before_id=before_id)
+    before = _history_cursor(offset=offset, before_timestamp=before_timestamp, before_id=before_id)
     try:
         virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable)
@@ -696,7 +715,7 @@ async def get_shared_messages(
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
         return await _read_history_window(
-            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before_id=before_id
+            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before=before
         )
     except HTTPException:
         raise

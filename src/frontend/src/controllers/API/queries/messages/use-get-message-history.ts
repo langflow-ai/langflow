@@ -4,36 +4,16 @@ import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import type { Message } from "@/types/messages";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { getMessages, UnknownMessageCursorError } from "./use-get-messages";
+import { cursorBelow, type MessageCursor } from "./message-cursor";
+import { getMessages } from "./use-get-messages";
 
 const PAGE_SIZE = 100;
-// Anchors tried against the server when rows were deleted elsewhere.
-const MAX_CURSOR_ATTEMPTS = 3;
 
 interface HistoryPage {
   messages: Message[];
-  hasMore: boolean;
+  // Where the next page starts: below this page's oldest row.
+  next?: MessageCursor;
 }
-
-// Every fetched row id, oldest first: the candidates for the next cursor.
-type FetchedIds = string[];
-
-/**
- * Pick the cursor for the next page: the oldest fetched row that has not been
- * deleted. Any row between it and a deleted anchor is gone too, so it yields
- * exactly the page the deleted anchor would have.
- */
-const cursorCandidates = (fetchedIds: FetchedIds, id?: string): string[] => {
-  const present = new Set(
-    useMessagesStore
-      .getState()
-      .messages.filter((message) => !id || message.flow_id === id)
-      .map((message) => message.id),
-  );
-  return fetchedIds
-    .filter((messageId) => present.has(messageId))
-    .slice(0, MAX_CURSOR_ATTEMPTS);
-};
 
 export function useGetMessageHistory({
   id,
@@ -51,7 +31,7 @@ export function useGetMessageHistory({
   const applied = useRef<{ scope: string; pages: HistoryPage[] } | undefined>(
     undefined,
   );
-  const history = infiniteQuery<HistoryPage, FetchedIds | null>({
+  const history = infiniteQuery<HistoryPage, MessageCursor | null>({
     // A distinct suffix avoids sharing the ordinary message query's response shape.
     queryKey: [
       "useGetMessagesQuery",
@@ -64,43 +44,27 @@ export function useGetMessageHistory({
         // The anonymous playground persists this store as its complete local
         // history. Keep all sessions so saving it cannot discard unloaded rows.
         const { data } = await getMessages(id, { order: "DESC" });
-        return { messages: data, hasMore: false };
+        return { messages: data };
       }
-      const params = {
+      const { data } = await getMessages(id, {
         ...(sessionId ? { session_id: sessionId } : {}),
         // One lookahead row detects the last page without a count or an empty-page click.
         limit: PAGE_SIZE + 1,
+        // A cursor rather than an offset: messages that arrive or are deleted
+        // while older pages load would otherwise shift every offset window.
+        ...(pageParam ?? {}),
         order: "DESC",
-      };
-      // A cursor rather than an offset: messages that arrive or are deleted
-      // while older pages load would otherwise shift every offset window.
-      // With every fetched row deleted, the newest page is the continuation.
-      const candidates = pageParam ? cursorCandidates(pageParam, id) : [];
-      let data: Message[] | undefined;
-      for (let attempt = 0; data === undefined; attempt++) {
-        const beforeId = candidates[attempt];
-        try {
-          ({ data } = await getMessages(id, {
-            ...params,
-            ...(beforeId ? { before_id: beforeId } : {}),
-          }));
-        } catch (error) {
-          if (!(error instanceof UnknownMessageCursorError)) throw error;
-          if (attempt >= candidates.length - 1) throw error.original ?? error;
-        }
-      }
+      });
+      const messages: Message[] = data.slice(0, PAGE_SIZE);
       return {
-        messages: data.slice(0, PAGE_SIZE),
-        hasMore: data.length > PAGE_SIZE,
+        messages,
+        next:
+          data.length > PAGE_SIZE
+            ? cursorBelow(messages[messages.length - 1])
+            : undefined,
       };
     },
-    getNextPageParam: (page, pages) =>
-      page.hasMore
-        ? pages
-            .flatMap((fetched) => fetched.messages)
-            .reverse()
-            .flatMap((message) => (message.id ? [message.id] : []))
-        : undefined,
+    getNextPageParam: (page) => page.next,
     enabled,
     refetchOnWindowFocus: false,
   });

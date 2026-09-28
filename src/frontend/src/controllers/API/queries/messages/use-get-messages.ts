@@ -1,6 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColDef, ColGroupDef } from "ag-grid-community";
-import axios from "axios";
 import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -27,35 +26,6 @@ interface MessagesResponse {
   columns: Array<ColDef | ColGroupDef>;
 }
 
-const UNKNOWN_CURSOR_DETAIL =
-  "before_id does not match a message in this history.";
-
-// The before_id anchor is not in this history, usually because it was deleted
-// after it was fetched. Callers can retry with another anchor.
-export class UnknownMessageCursorError extends Error {
-  // The server's 400. Rethrow it once no other anchor works, so the query
-  // layer sees a client error and does not retry.
-  readonly original: unknown;
-
-  constructor(original?: unknown) {
-    super(UNKNOWN_CURSOR_DETAIL);
-    this.name = "UnknownMessageCursorError";
-    this.original = original;
-    Object.setPrototypeOf(this, UnknownMessageCursorError.prototype);
-  }
-}
-
-const rethrowUnknownCursor = (error: unknown): never => {
-  if (
-    axios.isAxiosError(error) &&
-    error.response?.status === 400 &&
-    error.response.data?.detail === UNKNOWN_CURSOR_DETAIL
-  ) {
-    throw new UnknownMessageCursorError(error);
-  }
-  throw error;
-};
-
 const getStoredMessages = (
   id: string | undefined,
   params: Record<string, unknown>,
@@ -71,6 +41,10 @@ const getStoredMessages = (
       : 1;
   const offset = typeof params.offset === "number" ? params.offset : 0;
   const limit = typeof params.limit === "number" ? params.limit : undefined;
+  const beforeTimestamp =
+    typeof params.before_timestamp === "string"
+      ? params.before_timestamp
+      : undefined;
   const beforeId =
     typeof params.before_id === "string" ? params.before_id : undefined;
 
@@ -81,29 +55,37 @@ const getStoredMessages = (
           (sessionId === id && !message.session_id),
       )
     : storedMessages;
+  // Order by (timestamp, id), like the server, so ties page consistently.
   const orderedMessages = [...filteredMessages].sort((a, b) => {
     const timeA = new Date(a.timestamp).getTime();
     const timeB = new Date(b.timestamp).getTime();
     if (Number.isNaN(timeA) || Number.isNaN(timeB)) return 0;
-    return direction * (timeA - timeB);
+    if (timeA !== timeB) return direction * (timeA - timeB);
+    return direction * ((a.id ?? "") < (b.id ?? "") ? -1 : 1);
   });
 
-  if (beforeId !== undefined && params.offset !== undefined) {
-    throw new Error("Use either offset or before_id, not both.");
+  // Mirror the server's cursor contract.
+  if ((beforeTimestamp === undefined) !== (beforeId === undefined)) {
+    throw new Error("Send before_timestamp and before_id together.");
   }
-  if (beforeId !== undefined) {
-    // Mirror the server's cursor contract: the newest `limit` rows strictly
-    // older than the anchor, and an unknown anchor is an error, not the end.
+  if (beforeId !== undefined && params.offset !== undefined) {
+    throw new Error(
+      "Use either offset or before_timestamp/before_id, not both.",
+    );
+  }
+  if (beforeTimestamp !== undefined && beforeId !== undefined) {
+    const cursorTime = new Date(beforeTimestamp).getTime();
     const newestFirst =
       direction === -1 ? orderedMessages : [...orderedMessages].reverse();
-    const anchor = newestFirst.findIndex((message) => message.id === beforeId);
-    if (anchor === -1) {
-      throw new UnknownMessageCursorError();
-    }
-    const page = newestFirst.slice(
-      anchor + 1,
-      limit === undefined ? undefined : anchor + 1 + limit,
-    );
+    const page = newestFirst
+      .filter((message) => {
+        const time = new Date(message.timestamp).getTime();
+        return (
+          time < cursorTime ||
+          (time === cursorTime && (message.id ?? "") < beforeId)
+        );
+      })
+      .slice(0, limit);
     return direction === -1 ? page : page.reverse();
   }
 
@@ -126,14 +108,12 @@ export const getMessages = async (
   }
 
   if (!isPlaygroundPage) {
-    return await api
-      .get<Message[]>(`${getURL("MESSAGES")}`, {
-        params: {
-          ...(id ? { flow_id: id } : {}),
-          ...processedParams,
-        },
-      })
-      .catch(rethrowUnknownCursor);
+    return await api.get<Message[]>(`${getURL("MESSAGES")}`, {
+      params: {
+        ...(id ? { flow_id: id } : {}),
+        ...processedParams,
+      },
+    });
   }
 
   if (isAuthenticatedPlayground()) {
@@ -141,14 +121,12 @@ export const getMessages = async (
     const sharedParams = { ...processedParams };
     delete sharedParams.flow_id;
 
-    return await api
-      .get<Message[]>(`${getURL("MESSAGES")}/shared`, {
-        params: {
-          ...sharedParams,
-          source_flow_id: sourceFlowId,
-        },
-      })
-      .catch(rethrowUnknownCursor);
+    return await api.get<Message[]>(`${getURL("MESSAGES")}/shared`, {
+      params: {
+        ...sharedParams,
+        source_flow_id: sourceFlowId,
+      },
+    });
   }
 
   return {

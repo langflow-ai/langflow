@@ -6,6 +6,10 @@ import {
   getMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import {
+  cursorBelow,
+  type MessageCursor,
+} from "@/controllers/API/queries/messages/message-cursor";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { ChatMessageType } from "@/types/chat";
 import type { Message } from "@/types/messages";
@@ -20,15 +24,15 @@ export const useChatHistory = (visibleSession: string | null) => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Id of the oldest row the backend has returned; the next page starts
+  // Position of the oldest row the backend has returned; the next page starts
   // strictly before it. Taken from fetched pages, not the cache, because the
   // cache also holds live messages and has no reliable order.
-  const beforeIdRef = useRef<string | null>(null);
+  const cursorRef = useRef<MessageCursor | null>(null);
 
   // Reset pagination when session or flow changes
   useEffect(() => {
     setHasMore(true);
-    beforeIdRef.current = null;
+    cursorRef.current = null;
   }, [visibleSession, currentFlowId]);
 
   // Fetch messages from backend only when playground is visible and cap at 20
@@ -87,8 +91,9 @@ export const useChatHistory = (visibleSession: string | null) => {
         // Anchor on the unfiltered page: loadMore sends the same filters, so
         // the cursor must come from the rows those filters returned. Placeholder
         // data still belongs to the previous session or flow.
-        if (beforeIdRef.current === null && !isPlaceholderData) {
-          beforeIdRef.current = fetchedPage[fetchedPage.length - 1]?.id ?? null;
+        if (cursorRef.current === null && !isPlaceholderData) {
+          cursorRef.current =
+            cursorBelow(fetchedPage[fetchedPage.length - 1]) ?? null;
         }
 
         const existingCache =
@@ -127,26 +132,26 @@ export const useChatHistory = (visibleSession: string | null) => {
       // stall. Each page starts strictly before the last, so the loop ends.
       let prepended = 0;
       while (prepended === 0) {
-        const requestedBeforeId = beforeIdRef.current;
+        const requested = cursorRef.current;
         const response = await getMessages(currentFlowId, {
           ...(visibleSession ? { session_id: visibleSession } : {}),
           limit: 20,
           order: "DESC",
-          ...(requestedBeforeId ? { before_id: requestedBeforeId } : {}),
+          ...(requested ?? {}),
         });
         const olderMessages: Message[] = response.data || [];
-        const nextBeforeId = olderMessages[olderMessages.length - 1]?.id;
-        if (nextBeforeId) {
-          beforeIdRef.current = nextBeforeId;
+        const next = cursorBelow(olderMessages[olderMessages.length - 1]);
+        if (next) {
+          cursorRef.current = next;
         }
 
-        // Stop when a page has no id to anchor on, or when the cursor did not
-        // move: a server that ignores before_id repeats the newest page, and
-        // following it would request the same page forever.
+        // Stop when a page has no row to position on, or when the cursor did
+        // not move: a server that ignores the cursor repeats the newest page,
+        // and following it would request the same page forever.
         const exhausted =
           olderMessages.length < 20 ||
-          !nextBeforeId ||
-          nextBeforeId === requestedBeforeId;
+          !next ||
+          next.before_id === requested?.before_id;
         if (exhausted) {
           setHasMore(false);
         }
@@ -170,9 +175,6 @@ export const useChatHistory = (visibleSession: string | null) => {
       }
       return prepended;
     } catch (e) {
-      // The anchor may have been deleted since it was fetched. Restart from
-      // the newest page on the next attempt; dedup skips what is cached.
-      beforeIdRef.current = null;
       console.error("Failed to load more messages:", e);
       return 0;
     } finally {
