@@ -64,10 +64,19 @@ test("conflict dialog footer layout", async ({ page }) => {
       (b) => b.textContent?.trim().toLowerCase() === "cancel",
     );
     if (cancel) els.unshift(cancel as HTMLElement);
-    return els.map((e) => Math.round(e.getBoundingClientRect().top));
+    return els.map((e) => {
+      const box = e.getBoundingClientRect();
+      return box.top + box.height / 2;
+    });
   });
-  console.log("button tops:", JSON.stringify(tops));
-  expect(new Set(tops).size, "all actions on a single row").toBe(1);
+  console.log("button centres:", JSON.stringify(tops));
+  // Centres, not tops: the outlined and filled variants differ by a pixel in
+  // height, so their tops disagree while they plainly share one row. A wrap
+  // moves a button by a whole row height.
+  expect(
+    Math.max(...tops) - Math.min(...tops),
+    "all actions on a single row",
+  ).toBeLessThanOrEqual(1);
 
   // And the confirmation step, which now lives off the banner.
   await page.keyboard.press("Escape");
