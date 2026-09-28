@@ -1,0 +1,3941 @@
+{
+  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations`, or raises the named `error` and leaves `base` unchanged.",
+  "cases": [
+    {
+      "name": "empty operation list leaves the flow unchanged",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": []
+    },
+    {
+      "name": "add_nodes appends new nodes",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "c",
+              "type": "genericNode",
+              "position": {
+                "x": 200,
+                "y": 0
+              },
+              "data": {
+                "id": "c",
+                "type": "Prompt",
+                "node": {
+                  "display_name": "Node c",
+                  "template": {
+                    "text": {
+                      "value": "hi",
+                      "type": "str"
+                    }
+                  },
+                  "outputs": [
+                    {
+                      "name": "out",
+                      "selected": "Message"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "c",
+            "type": "genericNode",
+            "position": {
+              "x": 200,
+              "y": 0
+            },
+            "data": {
+              "id": "c",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node c",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "c",
+              "type": "genericNode",
+              "position": {
+                "x": 200,
+                "y": 0
+              },
+              "data": {
+                "id": "c",
+                "type": "Prompt",
+                "node": {
+                  "display_name": "Node c",
+                  "template": {
+                    "text": {
+                      "value": "hi",
+                      "type": "str"
+                    }
+                  },
+                  "outputs": [
+                    {
+                      "name": "out",
+                      "selected": "Message"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "add_nodes rejects an existing id",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "a",
+              "type": "genericNode",
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "data": {
+                "id": "a",
+                "type": "Prompt",
+                "node": {
+                  "display_name": "Node a",
+                  "template": {
+                    "text": {
+                      "value": "hi",
+                      "type": "str"
+                    }
+                  },
+                  "outputs": [
+                    {
+                      "name": "out",
+                      "selected": "Message"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "add_nodes rejects a duplicate id within the request",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "c",
+              "type": "genericNode",
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "data": {
+                "id": "c",
+                "type": "Prompt",
+                "node": {
+                  "display_name": "Node c",
+                  "template": {
+                    "text": {
+                      "value": "hi",
+                      "type": "str"
+                    }
+                  },
+                  "outputs": [
+                    {
+                      "name": "out",
+                      "selected": "Message"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "c",
+              "type": "genericNode",
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "data": {
+                "id": "c",
+                "type": "Prompt",
+                "node": {
+                  "display_name": "Node c",
+                  "template": {
+                    "text": {
+                      "value": "hi",
+                      "type": "str"
+                    }
+                  },
+                  "outputs": [
+                    {
+                      "name": "out",
+                      "selected": "Message"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "add_nodes rejects a node without an id",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "type": "genericNode"
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "set_field replaces a template value",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "data",
+                "node",
+                "template",
+                "text",
+                "value"
+              ],
+              "value": "hello"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hello",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "path": [
+                "data",
+                "node",
+                "template",
+                "text",
+                "value"
+              ],
+              "op": "set_field",
+              "value": "hello"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_field creates a missing final object key",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "data",
+                "customColor"
+              ],
+              "value": "#fff"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              },
+              "customColor": "#fff"
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "path": [
+                "data",
+                "customColor"
+              ],
+              "op": "set_field",
+              "value": "#fff"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_field writes an array element by index",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "data",
+                "node",
+                "outputs",
+                0,
+                "selected"
+              ],
+              "value": "Data"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Data"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "path": [
+                "data",
+                "node",
+                "outputs",
+                0,
+                "selected"
+              ],
+              "op": "set_field",
+              "value": "Data"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_field replaces a whole position",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "b",
+              "op": "set_field",
+              "path": [
+                "position"
+              ],
+              "value": {
+                "x": 5,
+                "y": 6
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 5,
+              "y": 6
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "b",
+              "path": [
+                "position"
+              ],
+              "op": "set_field",
+              "value": {
+                "x": 5,
+                "y": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_field rejects an array index out of range",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "data",
+                "node",
+                "outputs",
+                3,
+                "selected"
+              ],
+              "value": "x"
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "set_field rejects a missing intermediate key",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "data",
+                "missing",
+                "value"
+              ],
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "set_field rejects changing the node id",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "id"
+              ],
+              "value": "z"
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "set_field rejects replacing data.node.template whole",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "data",
+                "node",
+                "template"
+              ],
+              "value": {}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "set_field rejects an unknown node",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "zz",
+              "op": "set_field",
+              "path": [
+                "position"
+              ],
+              "value": {
+                "x": 1,
+                "y": 1
+              }
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "update_nodes rejects two updates to one path",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": [
+                "data",
+                "customColor"
+              ],
+              "value": "#fff"
+            },
+            {
+              "id": "a",
+              "op": "delete_field",
+              "path": [
+                "data",
+                "customColor"
+              ]
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "delete_field removes an object key",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              },
+              "customColor": "#000"
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "delete_field",
+              "path": [
+                "data",
+                "customColor"
+              ]
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "path": [
+                "data",
+                "customColor"
+              ],
+              "op": "delete_field"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "delete_field of a missing key is a no-op",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "delete_field",
+              "path": [
+                "data",
+                "customColor"
+              ]
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "path": [
+                "data",
+                "customColor"
+              ],
+              "op": "delete_field"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "delete_field rejects array elements",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "delete_field",
+              "path": [
+                "data",
+                "node",
+                "outputs",
+                0
+              ]
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "delete_nodes removes incident edges",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "delete_nodes",
+          "ids": [
+            "a"
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "delete_nodes",
+          "ids": [
+            "a"
+          ]
+        },
+        {
+          "type": "delete_edges",
+          "ids": [
+            "e-ab"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "delete_nodes rejects an unknown node",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "delete_nodes",
+          "ids": [
+            "zz"
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "add_edges connects existing nodes",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-ba",
+              "source": "b",
+              "target": "a",
+              "sourceHandle": "b-out",
+              "targetHandle": "a-in",
+              "data": {}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          },
+          {
+            "id": "e-ba",
+            "source": "b",
+            "target": "a",
+            "sourceHandle": "b-out",
+            "targetHandle": "a-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-ba",
+              "source": "b",
+              "target": "a",
+              "sourceHandle": "b-out",
+              "targetHandle": "a-in",
+              "data": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "add_edges rejects a missing endpoint",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-az",
+              "source": "a",
+              "target": "zz",
+              "sourceHandle": "a-out",
+              "targetHandle": "zz-in",
+              "data": {}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "add_edges rejects an existing id",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-ab",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "a-out",
+              "targetHandle": "b-in",
+              "data": {}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "add_edges after add_nodes in one batch",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "c",
+              "type": "genericNode",
+              "position": {
+                "x": 200,
+                "y": 0
+              },
+              "data": {
+                "id": "c",
+                "type": "Prompt",
+                "node": {
+                  "display_name": "Node c",
+                  "template": {
+                    "text": {
+                      "value": "hi",
+                      "type": "str"
+                    }
+                  },
+                  "outputs": [
+                    {
+                      "name": "out",
+                      "selected": "Message"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-bc",
+              "source": "b",
+              "target": "c",
+              "sourceHandle": "b-out",
+              "targetHandle": "c-in",
+              "data": {}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "c",
+            "type": "genericNode",
+            "position": {
+              "x": 200,
+              "y": 0
+            },
+            "data": {
+              "id": "c",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node c",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          },
+          {
+            "id": "e-bc",
+            "source": "b",
+            "target": "c",
+            "sourceHandle": "b-out",
+            "targetHandle": "c-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "c",
+              "type": "genericNode",
+              "position": {
+                "x": 200,
+                "y": 0
+              },
+              "data": {
+                "id": "c",
+                "type": "Prompt",
+                "node": {
+                  "display_name": "Node c",
+                  "template": {
+                    "text": {
+                      "value": "hi",
+                      "type": "str"
+                    }
+                  },
+                  "outputs": [
+                    {
+                      "name": "out",
+                      "selected": "Message"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-bc",
+              "source": "b",
+              "target": "c",
+              "sourceHandle": "b-out",
+              "targetHandle": "c-in",
+              "data": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "delete_edges ignores unknown and repeated ids",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "delete_edges",
+          "ids": [
+            "zz",
+            "e-ab",
+            "e-ab"
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "forward_operations": [
+        {
+          "type": "delete_edges",
+          "ids": [
+            "e-ab"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_metadata sets and deletes top-level keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        },
+        "description": "old",
+        "flag": true
+      },
+      "operations": [
+        {
+          "type": "update_metadata",
+          "fields": {
+            "description": "new"
+          },
+          "delete_keys": [
+            "flag"
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        },
+        "description": "new"
+      },
+      "forward_operations": [
+        {
+          "type": "update_metadata",
+          "fields": {
+            "description": "new"
+          },
+          "delete_keys": [
+            "flag"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_metadata rejects graph collection keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [
+        {
+          "type": "update_metadata",
+          "fields": {
+            "nodes": []
+          },
+          "delete_keys": []
+        }
+      ],
+      "error": "FlowOperationValidationError"
+    },
+    {
+      "name": "base flow with duplicate node ids is rejected",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "a-out",
+            "targetHandle": "b-in",
+            "data": {}
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [],
+      "error": "FlowDataValidationError"
+    },
+    {
+      "name": "base flow with an edge missing its source is rejected",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "genericNode",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "data": {
+              "id": "a",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node a",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "type": "genericNode",
+            "position": {
+              "x": 100,
+              "y": 0
+            },
+            "data": {
+              "id": "b",
+              "type": "Prompt",
+              "node": {
+                "display_name": "Node b",
+                "template": {
+                  "text": {
+                    "value": "hi",
+                    "type": "str"
+                  }
+                },
+                "outputs": [
+                  {
+                    "name": "out",
+                    "selected": "Message"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "target": "b"
+          }
+        ],
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "operations": [],
+      "error": "FlowDataValidationError"
+    }
+  ]
+}
