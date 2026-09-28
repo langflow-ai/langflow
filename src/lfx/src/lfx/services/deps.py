@@ -257,6 +257,13 @@ def get_extension_events_service():
     return get_service(ServiceType.EXTENSION_EVENTS_SERVICE, ExtensionEventsServiceFactory())
 
 
+def get_flow_operation_service():
+    """Retrieves the flow operation service, falling back to the default Python engine."""
+    from lfx.services.flow_operations.factory import FlowOperationServiceFactory
+
+    return get_service(ServiceType.FLOW_OPERATIONS_SERVICE, FlowOperationServiceFactory())
+
+
 def get_chat_service() -> ChatServiceProtocol | None:
     """Retrieves the chat service instance."""
     from lfx.services.schema import ServiceType
