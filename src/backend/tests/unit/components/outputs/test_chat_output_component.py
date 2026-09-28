@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from lfx.components.input_output import ChatOutput
 from lfx.schema.data import Data
@@ -96,3 +98,16 @@ class TestChatOutput(ComponentTestBaseWithClient):
         component.input_value = 123  # Invalid type
         with pytest.raises(TypeError, match="Expected Data or DataFrame or Message or str, Generator or None"):
             await component.message_response()
+
+    @pytest.mark.parametrize("clean_data", [True, False])
+    def test_single_dataframe_honors_clean_data_like_a_list(self, component_class, default_kwargs, clean_data):
+        """A single Table must get the same clean_data treatment as a list holding that Table."""
+        rows = [{"name": "Ana", "notes": "line one\n\n\nline two"}, {"name": "Bruno", "notes": "ok"}]
+        single = component_class(**{**default_kwargs, "clean_data": clean_data, "input_value": DataFrame(rows)})
+        as_list = component_class(**{**default_kwargs, "clean_data": clean_data, "input_value": [DataFrame(rows)]})
+
+        single_text = single.convert_to_string()
+
+        assert single_text == as_list.convert_to_string()
+        has_blank_row = re.search(r"^\|(\s*\|)+$", single_text, flags=re.MULTILINE) is not None
+        assert has_blank_row is not clean_data
