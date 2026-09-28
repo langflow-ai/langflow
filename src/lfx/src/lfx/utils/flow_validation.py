@@ -124,13 +124,19 @@ CODE_EXECUTION_FIELD_NAMES: frozenset[str] = frozenset(
 )
 
 # Component inputs that cross a privileged sink boundary and therefore must retain
-# the value stored by the flow author. SQLComponent uses these fields to select a
-# database and execute SQL with the server's filesystem access and database
-# credentials; allowing the Tweaks API to replace them would let a run caller
-# repoint that authority without editing the flow. Other SQLComponent options
-# remain tweakable.
+# the value stored by the flow author. A run caller must not repoint a stored SQL
+# connection or send the flow author's Bing subscription key to another URL.
+# Other component options remain tweakable. Bing identities include the current
+# extension slot and the legacy aliases accepted by extension migration.
 PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Mapping[str, frozenset[str]] = {
     "SQLComponent": frozenset({"database_url", "query"}),
+    "BingSearchAPI": frozenset({"bing_search_url"}),
+    "BingSearchAPIComponent": frozenset({"bing_search_url"}),
+    "Bing Search API": frozenset({"bing_search_url"}),
+    "ext:bing:BingSearchAPIComponent@official": frozenset({"bing_search_url"}),
+    "ext:bing:BingSearchAPIComponent@official-pre-a": frozenset({"bing_search_url"}),
+    "lfx.components.bing.bing_search_api.BingSearchAPIComponent": frozenset({"bing_search_url"}),
+    "lfx.components.bing.BingSearchAPIComponent": frozenset({"bing_search_url"}),
 }
 
 
