@@ -286,6 +286,14 @@ FLOW_DELETE_FAILED = "Could not delete the flow."
 FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
 
+def _flow_read_for_caller(flow: Flow | FlowRead, caller_id: UUID) -> FlowRead:
+    """Keep persisted credentials visible only to the flow owner."""
+    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+    if flow.user_id != caller_id:
+        flow_read.data = strip_secret_field_values(flow_read.data)
+    return flow_read
+
+
 @router.post("/", response_model=FlowRead, status_code=201)
 async def create_flow(
     *,
@@ -448,11 +456,16 @@ async def read_flows(
                 )
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
-                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                flow_headers = []
+                for flow in flows:
+                    header = FlowHeader.model_validate(flow, from_attributes=True)
+                    if flow.user_id != current_user.id:
+                        header.data = strip_secret_field_values(header.data)
+                    flow_headers.append(header)
                 return compress_response(flow_headers)
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
-            flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
+            flow_reads = [_flow_read_for_caller(flow, current_user.id) for flow in flows]
             return compress_response(flow_reads)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
@@ -478,6 +491,7 @@ async def read_flows(
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
+        page.items = [_flow_read_for_caller(flow, current_user.id) for flow in page.items]
         return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
 
     except Exception as e:
@@ -492,9 +506,10 @@ async def read_flow(
     *,
     flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedReadFlow,
+    current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    return FlowRead.model_validate(flow, from_attributes=True)
+    return _flow_read_for_caller(flow, current_user.id)
 
 
 @router.get("/{flow_id}/note_translations", status_code=200)
@@ -699,11 +714,12 @@ async def update_flow(
                 )
             return await operation()
 
-        return await run_with_lock_retry(
+        flow_read = await run_with_lock_retry(
             update_attempt,
             session=session,
             description=f"update_flow {flow_id}",
         )
+        return _flow_read_for_caller(flow_read, actor.id)
     except HTTPException:
         raise
     except Exception as e:
@@ -906,7 +922,10 @@ async def upsert_flow(
             )
             status_code = 201
 
-        return JSONResponse(status_code=status_code, content=jsonable_encoder(flow_read))
+        return JSONResponse(
+            status_code=status_code,
+            content=jsonable_encoder(_flow_read_for_caller(flow_read, writer_id)),
+        )
 
     except HTTPException:
         raise
@@ -1338,7 +1357,7 @@ async def download_multiple_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="No flows found.") from exc
 
-    return await _build_flows_download_response(db, flows)
+    return await _build_flows_download_response(db, flows, caller_id=user.id)
 
 
 # 5 minutes
