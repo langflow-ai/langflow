@@ -19,7 +19,27 @@ class LockedFlowError(RuntimeError):
 
 
 async def lock_flow_for_update(session: AsyncSession, flow: Flow) -> None:
-    """Refresh *flow* while holding its database row lock until transaction end."""
+    """Refresh *flow* while holding its database row lock until transaction end.
+
+    Every writer of a flow's graph takes this lock before reading the flow and
+    holds it through commit, conditional or not: the history's revision head is
+    extended under it, and two writers extending it from the same head would
+    record two transitions from one state.
+
+    SQLite ignores ``FOR UPDATE``. A no-op write takes its database-wide write
+    lock instead, which is held until the transaction ends, and the refresh
+    that follows reads the flow as committed.
+    """
+    if session.get_bind().dialect.name == "sqlite":
+        from sqlmodel import update
+
+        from langflow.services.database.models.flow.model import Flow
+
+        await session.exec(
+            update(Flow).where(Flow.id == flow.id).values(id=Flow.id).execution_options(synchronize_session=False)
+        )
+        await session.refresh(flow)
+        return
     await session.refresh(flow, with_for_update=True)
 
 

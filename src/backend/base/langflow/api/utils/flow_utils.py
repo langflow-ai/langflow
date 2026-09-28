@@ -25,6 +25,8 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_flow_has_deployed_versions
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_operation import FlowOperation
+from langflow.services.database.models.flow_operation.append_only import delete_history_rows
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
@@ -177,6 +179,10 @@ async def cascade_delete_flow(
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
         )
         result = await session.exec(delete(Flow).where(Flow.id == flow_id))
+        # History rows go after the flow: their append-only trigger admits a
+        # delete only once the flow is gone. PostgreSQL's cascade has already
+        # removed them; SQLite runs without foreign keys and needs it explicit.
+        await delete_history_rows(session, delete(FlowOperation).where(FlowOperation.flow_id == flow_id))
     except StorageUnavailableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as e:

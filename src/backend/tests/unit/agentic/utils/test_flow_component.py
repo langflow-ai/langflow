@@ -19,6 +19,26 @@ from langflow.agentic.utils.flow_component import (
 
 MODULE = "langflow.agentic.utils.flow_component"
 
+
+@pytest.fixture(autouse=True)
+def _history_seam_assigns_the_graph(monkeypatch):
+    """These tests pin component field updates on a mocked session; history recording has its own tests.
+
+    Stand in for the history seam with what it does to the flow itself (store the graph),
+    and for the row lock with the re-read these tests assert on.
+    """
+
+    async def write_flow_graph(_session, flow, target, **_kwargs):
+        flow.data = target
+
+    async def lock_flow_for_update(session, flow):
+        # The row lock's contract as these tests pin it: re-read the flow under the lock.
+        await session.refresh(flow, with_for_update=True)
+
+    monkeypatch.setattr(f"{MODULE}.write_flow_graph", write_flow_graph)
+    monkeypatch.setattr(f"{MODULE}.lock_flow_for_update", lock_flow_for_update)
+
+
 FLOW_ID = str(uuid4())
 USER_ID = str(uuid4())
 

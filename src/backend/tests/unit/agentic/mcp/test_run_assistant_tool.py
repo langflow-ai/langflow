@@ -33,6 +33,26 @@ from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 RUNNER_MODULE = "langflow.agentic.utils.assistant_runner"
 
+
+@pytest.fixture(autouse=True)
+def _history_seam_assigns_the_graph(monkeypatch):
+    """These tests pin assistant behaviour on a mocked session; history recording has its own tests.
+
+    Stand in for the history seam with what it does to the flow itself (store the graph),
+    and for the row lock with the re-read these tests assert on.
+    """
+
+    async def write_flow_graph(_session, flow, target, **_kwargs):
+        flow.data = target
+
+    async def lock_flow_for_update(session, flow):
+        # The row lock's contract as these tests pin it: re-read the flow under the lock.
+        await session.refresh(flow, with_for_update=True)
+
+    monkeypatch.setattr(f"{RUNNER_MODULE}.write_flow_graph", write_flow_graph)
+    monkeypatch.setattr(f"{RUNNER_MODULE}.lock_flow_for_update", lock_flow_for_update)
+
+
 NEW_FLOW_DATA = {"nodes": [{"id": "ChatInput-abc"}], "edges": []}
 
 EVENTS_WITH_FLOW = [

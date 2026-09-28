@@ -15,7 +15,13 @@ from httpx import AsyncClient
 
 def _graph(label: str) -> dict:
     return {
-        "nodes": [{"id": f"n-{label}", "data": {"label": label}, "position": {"x": 0, "y": 0}}],
+        "nodes": [
+            {
+                "id": f"n-{label}",
+                "data": {"id": f"n-{label}", "label": label, "node": {"display_name": label, "template": {}}},
+                "position": {"x": 0, "y": 0},
+            }
+        ],
         "edges": [],
         "viewport": {"x": 0, "y": 0, "zoom": 1},
     }
