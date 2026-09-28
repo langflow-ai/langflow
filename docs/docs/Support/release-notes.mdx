@@ -60,6 +60,10 @@ Database URLs that refer to local TLS certificate or key files, including Postgr
 
 ### Breaking changes
 
+- MCP stdio Node.js launch options (1.12.4)
+
+    MCP stdio configurations can no longer place Node.js runtime options or `inspect` before a server script, even when interpreter hardening is disabled. For example, `node --no-warnings server.js` must be changed to `node server.js` or replaced with an operator-approved launcher. Options intended for the server may still follow its script: `node server.js --server-option`. Shell wrappers now reject sh/bash globs and braces and cmd variable, caret, or double-quote syntax; use an approved launcher directly with separate command and arguments for those payloads.
+
 - `langflow-base` is now the minimal install
 
     Langflow 1.12 makes `langflow-base` a complete, version-aligned installation of the Langflow application.
