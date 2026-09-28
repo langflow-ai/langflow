@@ -193,7 +193,8 @@ The command needs the same AWS credentials Langflow uses.
 LANGFLOW_STORAGE_TYPE=local langflow relocate-files --bucket S3_BUCKET_NAME --prefix S3_BUCKET_DIRECTORY
 ```
 
-Each file keeps its key, so no database row changes.
+Each file keeps its key.
+Chat history records each attachment by its absolute path on local disk, which the S3 backend can't read, so the command rewrites those paths to the `<id>/<file name>` form both backends read. A path it can't match to a stored file is reported and left as it was.
 Nothing is deleted from local disk, files already in the bucket are skipped, and a file counts as copied only when the bucket reports an object of the same size, so you can run the command again after an interrupted run.
 A file already in the bucket with the same size but different content, such as a file edited between runs, is reported rather than skipped. The content comparison uses the object's MD5, which S3 provides for files uploaded in one part without SSE-KMS or customer-provided keys. For other objects, including files larger than 8 MiB, which the command uploads in parts, it compares size only and says so.
 Files stream from disk to the bucket, so a large file isn't loaded into memory. The command copies 4 files at a time. Set `--concurrency` to change that; each file in flight holds at most 8 MiB.

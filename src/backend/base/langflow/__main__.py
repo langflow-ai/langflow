@@ -1230,8 +1230,10 @@ def relocate_files(
     A file counts as copied only once the bucket reports an object of the same
     size, and files already there are skipped, so a run can be repeated.
 
-    Nothing is deleted from the source and no database row changes: readers
-    address a file by its owner and name, which the copy preserves.
+    Nothing is deleted from the source. Readers address a file by its owner and
+    name, which the copy preserves. Chat history is the exception: it records
+    attachments by absolute local path, so those entries are rewritten to the
+    owner/name form, which both storage backends read.
 
     Uploads, chat attachments and files attached to flows are copied. Profile
     pictures and knowledge bases live outside the storage backend and stay where
