@@ -4,10 +4,17 @@ The URL component fetches pages with ``httpx`` and enforces DNS-pinned SSRF
 protection (see ``test_dns_rebinding.py`` for the rebinding-specific coverage).
 These tests exercise content extraction, output formats, URL normalization, and
 the SSRF guard without making real network requests by stubbing the per-URL
-fetch (``_fetch_url_with_pinning``) and, for SSRF, validating direct IPs.
+fetch (``_fetch_url_with_pinning``) and, for SSRF, validating direct IPs. The
+response-size limits are exercised at the connection level with httpcore mock
+streams, so the real httpx streaming and decoding code runs.
 """
 
+import gzip
+import socket
+
+import httpcore
 import pytest
+from lfx.components.data_source import url as url_module
 from lfx.components.data_source.url import URLComponent
 from lfx.schema import DataFrame
 
@@ -272,3 +279,163 @@ class TestURLComponentSSRFProtection:
         component.set_attributes({"urls": ["http://127.0.0.1:9999"]})
         with pytest.raises(ValueError, match="SSRF Protection"):
             await component.fetch_url_contents()
+
+
+def _http(status: str, headers: dict[str, str], *chunks: bytes) -> list[bytes]:
+    """Raw HTTP/1.1 response: the head, then each body chunk as a separate network read."""
+    head = f"HTTP/1.1 {status}\r\nConnection: close\r\n"
+    head += "".join(f"{name}: {value}\r\n" for name, value in headers.items())
+    return [f"{head}\r\n".encode(), *chunks]
+
+
+class _RecordingStream(httpcore.AsyncMockStream):
+    """Mock connection that records the request bytes; unread response chunks stay in ``_buffer``."""
+
+    def __init__(self, buffer: list[bytes]):
+        super().__init__(buffer)
+        self.sent = b""
+
+    async def write(self, buffer: bytes, timeout: float | None = None) -> None:  # noqa: ARG002
+        self.sent += buffer
+
+
+class TestURLComponentResponseLimits:
+    """Untrusted response bodies are read bounded, so a hostile server cannot exhaust memory."""
+
+    LIMIT = 1024
+
+    @pytest.fixture(autouse=True)
+    def small_limits(self, monkeypatch):
+        monkeypatch.setattr(url_module, "MAX_RESPONSE_BYTES", self.LIMIT)
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))],
+        )
+
+    @pytest.fixture(params=["true", "false"], ids=["ssrf-pinned", "ssrf-disabled"])
+    def ssrf_mode(self, request, monkeypatch):
+        """Run against both fetch paths: pinned per-hop redirects and httpx-built redirects."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", request.param)
+
+    @pytest.fixture
+    def serve(self, monkeypatch):
+        """Answer each new connection with the next raw response; return the opened connections."""
+
+        def _serve(*responses: list[bytes]) -> list[_RecordingStream]:
+            queue = list(responses)
+            streams: list[_RecordingStream] = []
+
+            async def connect_tcp(*_args, **_kwargs):
+                streams.append(_RecordingStream(queue.pop(0)))
+                return streams[-1]
+
+            monkeypatch.setattr(httpcore.AnyIOBackend, "connect_tcp", connect_tcp)
+            return streams
+
+        return _serve
+
+    @staticmethod
+    def _component(**overrides) -> URLComponent:
+        component = URLComponent()
+        component.set_attributes(
+            {"urls": ["http://site.test/"], "max_depth": 1, "format": "HTML", "continue_on_failure": False, **overrides}
+        )
+        return component
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("ssrf_mode")
+    async def test_declared_oversized_body_is_rejected_unread(self, serve):
+        body = b"x" * self.LIMIT
+        streams = serve(_http("200 OK", {"Content-Length": str(2 * self.LIMIT)}, body, body))
+
+        with pytest.raises(ValueError, match=f"exceeds the {self.LIMIT} byte limit"):
+            await self._component().fetch_url_contents()
+
+        assert len(streams[0]._buffer) == 2, "no body chunk should be read"
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("ssrf_mode")
+    async def test_undeclared_body_stops_streaming_at_limit(self, serve):
+        streams = serve(_http("200 OK", {}, *[b"x" * 512] * 100))
+
+        with pytest.raises(ValueError, match=f"exceeds the {self.LIMIT} byte limit"):
+            await self._component().fetch_url_contents()
+
+        assert len(streams[0]._buffer) > 90, "the transfer must be abandoned right after the limit"
+
+    @pytest.mark.asyncio
+    async def test_limit_applies_to_decoded_size(self, serve):
+        bomb = gzip.compress(b"\0" * (100 * self.LIMIT))
+        assert len(bomb) < self.LIMIT
+        serve(_http("200 OK", {"Content-Encoding": "gzip", "Content-Length": str(len(bomb))}, bomb))
+
+        with pytest.raises(ValueError, match=f"exceeds the {self.LIMIT} byte limit"):
+            await self._component().fetch_url_contents()
+
+    @pytest.mark.asyncio
+    async def test_gzip_body_is_decoded_and_only_bounded_codings_are_advertised(self, serve):
+        body = gzip.compress(b"<html><body>compressed page</body></html>")
+        streams = serve(_http("200 OK", {"Content-Encoding": "gzip", "Content-Length": str(len(body))}, body))
+
+        result = await self._component().fetch_url_contents()
+
+        assert "compressed page" in result[0]["text"]
+        assert b"accept-encoding: gzip, deflate\r\n" in streams[0].sent.lower()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("coding", ["br", "zstd", "gzip, gzip"])
+    async def test_codings_with_unbounded_expansion_are_rejected(self, serve, coding):
+        serve(_http("200 OK", {"Content-Encoding": coding, "Content-Length": "4"}, b"abcd"))
+
+        with pytest.raises(ValueError, match="Unsupported content encoding"):
+            await self._component().fetch_url_contents()
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("ssrf_mode")
+    async def test_redirect_body_is_never_read(self, serve):
+        final = b"<html><body>final page</body></html>"
+        streams = serve(
+            _http("302 Found", {"Location": "/final"}, *[b"x" * 512] * 100),
+            _http("200 OK", {"Content-Length": str(len(final))}, final),
+        )
+
+        result = await self._component().fetch_url_contents()
+
+        assert "final page" in result[0]["text"]
+        assert len(streams[0]._buffer) == 100, "the redirect body must not be read"
+
+    @pytest.mark.asyncio
+    async def test_redirects_without_pinning_keep_httpx_cookie_and_cap_semantics(self, serve, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
+        final = b"<html><body>final page</body></html>"
+        streams = serve(
+            _http("302 Found", {"Location": "/final", "Set-Cookie": "session=abc; Path=/", "Content-Length": "0"}),
+            _http("200 OK", {"Content-Length": str(len(final))}, final),
+        )
+        assert "final page" in (await self._component().fetch_url_contents())[0]["text"]
+        assert b"cookie: session=abc\r\n" in streams[1].sent.lower()
+
+        redirect = _http("302 Found", {"Location": "/again", "Content-Length": "0"})
+        streams = serve(*[list(redirect) for _ in range(url_module.MAX_REDIRECTS + 1)])
+        with pytest.raises(ValueError, match="Exceeded maximum allowed redirects"):
+            await self._component().fetch_url_contents()
+        assert len(streams) == url_module.MAX_REDIRECTS + 1
+
+    @pytest.mark.asyncio
+    async def test_total_budget_stops_crawl_and_resets_per_fetch(self, serve, monkeypatch):
+        root = b"<html><body>" + b"".join(b'<a href="/p%d">p</a>' % i for i in range(5)) + b"</body></html>"
+        page = b"<html><body>" + b"x" * 400 + b"</body></html>"
+        monkeypatch.setattr(url_module, "MAX_TOTAL_BYTES", len(root) + 2 * len(page))
+
+        def pages() -> list[list[bytes]]:
+            return [_http("200 OK", {"Content-Length": str(len(body))}, body) for body in [root, *[page] * 5]]
+
+        component = self._component(max_depth=2)
+        for _ in range(2):
+            streams = serve(*pages())
+            result = await component.fetch_url_contents()
+            assert [doc["url"] for doc in result] == ["http://site.test/", "http://site.test/p0", "http://site.test/p1"]
+            assert len(streams) == 3, "no page may be requested once the budget is spent"

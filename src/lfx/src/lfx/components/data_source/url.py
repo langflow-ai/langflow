@@ -33,6 +33,18 @@ MAX_REDIRECTS = 20
 # Default ports per scheme, used to compare redirect origins.
 DEFAULT_SCHEME_PORTS = {"http": 80, "https": 443}
 
+# Memory bounds for untrusted responses. Bodies are streamed and abandoned once the
+# per-response cap or the budget shared by every page of one fetch (all URLs and crawled
+# links) is exceeded, so a hostile server cannot exhaust memory with a huge or endless body.
+MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+MAX_TOTAL_BYTES = 100 * 1024 * 1024
+
+# Only codings whose expansion per network chunk is bounded (~1000:1). Brotli and zstd can
+# expand a few hundred bytes into gigabytes inside a single decode call, before any size
+# check runs, so they are neither advertised nor accepted.
+ACCEPT_ENCODING = "gzip, deflate"
+ALLOWED_CONTENT_ENCODINGS = frozenset({"gzip", "deflate"})
+
 
 URL_REGEX = re.compile(
     r"^(https?:\/\/)?" r"(www\.)?" r"([a-zA-Z0-9.-]+)" r"(\.[a-zA-Z]{2,})?" r"(:\d+)?" r"(\/[^\s]*)?$",
@@ -65,6 +77,8 @@ class URLComponent(Component):
     documentation: str = "https://docs.langflow.org/url"
     icon = "layout-template"
     name = "URLComponent"
+    # Body bytes the current fetch may still read; reset by ``fetch_url_contents``.
+    _bytes_remaining = MAX_TOTAL_BYTES
 
     inputs = [
         MessageTextInput(
@@ -305,11 +319,14 @@ class URLComponent(Component):
         Returns:
             httpx.AsyncClient: A client with DNS pinning when SSRF protection is enabled
         """
-        if is_ssrf_protection_enabled() and validated_ips:
-            hostname = pin_host_for_url(url)
-            if hostname:
-                return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
-        return httpx.AsyncClient()
+        hostname = pin_host_for_url(url) if is_ssrf_protection_enabled() and validated_ips else None
+        if hostname:
+            client = create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
+        else:
+            client = httpx.AsyncClient()
+        # A client default, so a user-supplied Accept-Encoding header still takes precedence.
+        client.headers["Accept-Encoding"] = ACCEPT_ENCODING
+        return client
 
     @staticmethod
     def _headers_for_redirect(headers: dict | None, current_url: str, next_url: str) -> dict | None:
@@ -339,11 +356,44 @@ class URLComponent(Component):
         sensitive = {"authorization", "proxy-authorization", "cookie"}
         return {k: v for k, v in headers.items() if k.lower() not in sensitive}
 
-    def _process_response(self, response: httpx.Response) -> tuple[str, dict]:
-        """Turn a final (non-redirect) response into its HTML content and metadata.
+    async def _read_bounded_text(self, response: httpx.Response) -> str:
+        """Read a streamed response body without exceeding the per-response or total byte budget.
+
+        Bytes read count against the total budget even when the body is rejected, so a server
+        that keeps answering with oversized bodies cannot make a crawl download without bound.
+
+        Raises:
+            httpx.HTTPError: If the body is (or declares to be) larger than the remaining budget,
+                or uses a content coding whose decompression cannot be bounded.
+        """
+        codings = [c.strip().lower() for c in response.headers.get("content-encoding", "").split(",")]
+        codings = [c for c in codings if c not in {"", "identity"}]
+        if len(codings) > 1 or (codings and codings[0] not in ALLOWED_CONTENT_ENCODINGS):
+            msg = f"Unsupported content encoding from {response.url}: {', '.join(codings)}"
+            raise httpx.HTTPError(msg)
+
+        limit = min(MAX_RESPONSE_BYTES, self._bytes_remaining)
+        too_large = f"Response from {response.url} exceeds the {limit} byte limit"
+        declared = response.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > limit:
+            raise httpx.HTTPError(too_large)
+
+        body = bytearray()
+        try:
+            async for chunk in response.aiter_bytes():
+                body.extend(chunk)
+                if len(body) > limit:
+                    raise httpx.HTTPError(too_large)
+        finally:
+            self._bytes_remaining -= len(body)
+        # Same decoding as ``response.text``.
+        return body.decode(response.encoding or "utf-8", errors="replace")
+
+    async def _process_response(self, response: httpx.Response) -> tuple[str, dict]:
+        """Turn a final (non-redirect) streamed response into its HTML content and metadata.
 
         Args:
-            response: The HTTP response to process
+            response: The HTTP response to process, opened with ``stream=True``
 
         Returns:
             tuple[str, dict]: The HTML content and metadata
@@ -359,7 +409,7 @@ class URLComponent(Component):
             return "", {}
 
         # Get the HTML content
-        html_content = response.text
+        html_content = await self._read_bounded_text(response)
 
         # Extract metadata
         metadata = {
@@ -419,30 +469,33 @@ class URLComponent(Component):
         current_ips = validated_ips
 
         for _ in range(MAX_REDIRECTS + 1):
-            async with self._build_http_client(current_url, current_ips) as client:
-                response = await client.get(current_url, headers=headers, timeout=self.timeout, follow_redirects=False)
+            # Stream so redirect bodies are never read and the final body is read bounded.
+            async with (
+                self._build_http_client(current_url, current_ips) as client,
+                client.stream(
+                    "GET", current_url, headers=headers, timeout=self.timeout, follow_redirects=False
+                ) as response,
+            ):
+                location = response.headers.get("location")
+                if response.status_code not in REDIRECT_STATUS_CODES or not location:
+                    # Not a redirect (or no Location header) - this is the final response.
+                    return await self._process_response(response)
 
-            location = response.headers.get("location")
-            if response.status_code in REDIRECT_STATUS_CODES and location:
-                # Resolve relative redirects against the current URL.
-                next_url = urljoin(current_url, location)
+            # Resolve relative redirects against the current URL.
+            next_url = urljoin(current_url, location)
 
-                # Re-validate the redirect target with the same SSRF denylist + DNS pinning.
-                try:
-                    validated_next_url, current_ips = self.ensure_url(next_url)
-                except (ValueError, SSRFProtectionError) as e:
-                    if self.continue_on_failure:
-                        logger.warning(f"Skipping blocked or invalid redirect to {next_url}: {e}")
-                        return "", {}
-                    msg = f"SSRF Protection: blocked redirect to {next_url}: {e}"
-                    raise ValueError(msg) from e
+            # Re-validate the redirect target with the same SSRF denylist + DNS pinning.
+            try:
+                validated_next_url, current_ips = self.ensure_url(next_url)
+            except (ValueError, SSRFProtectionError) as e:
+                if self.continue_on_failure:
+                    logger.warning(f"Skipping blocked or invalid redirect to {next_url}: {e}")
+                    return "", {}
+                msg = f"SSRF Protection: blocked redirect to {next_url}: {e}"
+                raise ValueError(msg) from e
 
-                headers = self._headers_for_redirect(headers, current_url, next_url)
-                current_url = validated_next_url
-                continue
-
-            # Not a redirect (or no Location header) - this is the final response.
-            return self._process_response(response)
+            headers = self._headers_for_redirect(headers, current_url, next_url)
+            current_url = validated_next_url
 
         # Exhausted the redirect budget.
         if self.continue_on_failure:
@@ -467,15 +520,24 @@ class URLComponent(Component):
             # is re-validated and DNS-pinned; letting httpx auto-follow would connect to the
             # redirect target without pinning (different host, not in the pin map) and re-open
             # the SSRF hole that DNS pinning closes. With protection disabled there is no pin
-            # to bypass, so httpx can follow redirects natively.
+            # to bypass, so redirects follow the requests httpx itself builds for each hop.
             if self.follow_redirects and is_ssrf_protection_enabled():
                 return await self._fetch_with_revalidated_redirects(url, validated_ips, headers)
 
             async with self._build_http_client(url, validated_ips) as client:
-                response = await client.get(
-                    url, headers=headers, timeout=self.timeout, follow_redirects=self.follow_redirects
-                )
-            return self._process_response(response)
+                request = client.build_request("GET", url, headers=headers, timeout=self.timeout)
+                # httpx auto-follow reads every redirect body into memory without a limit, so hop
+                # manually via ``next_request`` (same cookies, headers and redirect cap as httpx).
+                for _ in range(MAX_REDIRECTS + 1):
+                    response = await client.send(request, stream=True, follow_redirects=False)
+                    try:
+                        if not (self.follow_redirects and response.next_request):
+                            return await self._process_response(response)
+                        request = response.next_request
+                    finally:
+                        await response.aclose()
+            msg = "Exceeded maximum allowed redirects."
+            raise httpx.TooManyRedirects(msg, request=request)
 
         except httpx.HTTPError as e:
             if self.continue_on_failure:
@@ -499,6 +561,9 @@ class URLComponent(Component):
             list[dict]: List of documents with content and metadata
         """
         if depth >= self.max_depth or start_url in visited:
+            return []
+        if self._bytes_remaining <= 0:
+            logger.warning(f"Skipping {start_url}: reached the {MAX_TOTAL_BYTES} byte limit for this fetch")
             return []
 
         visited.add(start_url)
@@ -541,6 +606,8 @@ class URLComponent(Component):
                 links = soup.find_all("a", href=True)
 
                 for link in links:
+                    if self._bytes_remaining <= 0:
+                        break
                     href = link["href"]
                     # Resolve relative URLs
                     absolute_url = urljoin(base_url, href)
@@ -589,6 +656,7 @@ class URLComponent(Component):
         Raises:
             ValueError: If no valid URLs are provided or if there's an error loading documents
         """
+        self._bytes_remaining = MAX_TOTAL_BYTES
         try:
             # Validate all URLs and get their validated IPs for DNS pinning
             validated_urls = []
