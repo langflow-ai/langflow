@@ -28,14 +28,19 @@ const badgeVariants = cva(
         // comes from the Enterprise design file rather than the app's accent
         // tokens, which sit on different hues — indigo against purple, and a
         // tinted fill behind each rather than a solid one.
+        // The tint is kept light because it darkens (or lightens) the chip under
+        // its own text, and the rows these sit on are tinted too: at 15% the
+        // Modified badge measured 4.48:1 in dark and Removed 3.7:1 in light.
+        // Amber and red text are too light for any tint in the light theme, so
+        // amber drops to a trace of fill there and red borrows `destructive`.
         conflictAdded:
-          "border-accent-emerald-foreground/30 bg-accent-emerald-foreground/15 text-accent-emerald-foreground",
+          "border-accent-emerald-foreground/30 bg-accent-emerald-foreground/10 text-accent-emerald-foreground",
         conflictModified:
-          "border-accent-indigo-foreground/30 bg-accent-indigo-foreground/15 text-accent-indigo-foreground",
+          "border-accent-indigo-foreground/30 bg-accent-indigo-foreground/10 text-accent-indigo-foreground",
         conflictContested:
-          "border-accent-amber-foreground/40 bg-accent-amber-foreground/15 text-accent-amber-foreground",
+          "border-accent-amber-foreground/40 bg-accent-amber-foreground/5 text-accent-amber-foreground dark:bg-accent-amber-foreground/10",
         conflictRemoved:
-          "border-accent-red-foreground/30 bg-accent-red-foreground/15 text-accent-red-foreground",
+          "border-accent-red-foreground/30 bg-accent-red-foreground/10 text-destructive dark:text-accent-red-foreground",
       },
       size: {
         sm: "h-4 text-xs",

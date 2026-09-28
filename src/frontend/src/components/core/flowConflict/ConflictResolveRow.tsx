@@ -1,5 +1,5 @@
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
@@ -139,12 +139,21 @@ export function ConflictResolveRow({
   const name = useId();
   const resolved = choice !== null;
   const [expanded, setExpanded] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // Arrow keys move the selection in a radio group, so a keyboard user chooses
+  // simply by looking at the next option. Only a pointer choice is final enough
+  // to fold the card; folding on an arrow closed it under the reader and lost focus.
+  const pointerChoiceRef = useRef(false);
 
   const choose = (value: string) => {
     onChoose(theirs.targetKey, value as "mine" | "theirs");
+    if (!pointerChoiceRef.current) return;
+    pointerChoiceRef.current = false;
     // Folded away once answered: the summary line now says everything the open
-    // card did, and the next unresolved conflict moves into view.
+    // card did, and the next unresolved conflict moves into view. Focus goes to
+    // the card's own toggle, since the radio it was on is about to disappear.
     setExpanded(false);
+    triggerRef.current?.focus();
   };
 
   return (
@@ -222,6 +231,7 @@ export function ConflictResolveRow({
           )}
           <AccordionPrimitive.Trigger asChild>
             <button
+              ref={triggerRef}
               type="button"
               aria-label={t(
                 expanded
@@ -247,6 +257,12 @@ export function ConflictResolveRow({
             <RadioGroup
               value={choice ?? ""}
               onValueChange={choose}
+              onPointerDown={() => {
+                pointerChoiceRef.current = true;
+              }}
+              onKeyDown={() => {
+                pointerChoiceRef.current = false;
+              }}
               className="gap-0"
               aria-label={t("multiEdit.dialog.chooseVersionFor", {
                 component: theirs.label,

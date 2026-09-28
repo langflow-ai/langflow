@@ -125,12 +125,7 @@ export function ChangeRow({
 
   return (
     <div
-      className={cn(
-        "rounded-[10px] border border-muted bg-muted/40 px-3 py-2.5",
-        // Dimmed only while it is not a choice: a row that can be ticked has to
-        // look like one.
-        disabled && "opacity-60",
-      )}
+      className="rounded-[10px] border border-muted bg-muted/40 px-3 py-2.5"
       data-testid={`conflict-change-${side}-${group.targetKey}`}
     >
       <div className="flex items-start gap-3">
@@ -139,6 +134,8 @@ export function ChangeRow({
           checked={checked}
           disabled={disabled}
           onCheckedChange={() => onToggle?.(group.targetKey)}
+          // The disabled checkbox is what says "not a choice". Dimming the whole
+          // row as well took its description and badge below readable contrast.
           className="mt-0.5"
         />
         <div className="min-w-0 flex-1">

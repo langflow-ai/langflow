@@ -358,7 +358,7 @@ export function DuplicateFlowModal() {
                 <h3 className="text-[11px] uppercase leading-[16.5px] tracking-[0.55px] text-muted-foreground">
                   {t("multiEdit.dialog.yourChanges")}
                 </h3>
-                <span className="text-xs leading-[18px] text-placeholder">
+                <span className="text-xs leading-[18px] text-muted-foreground">
                   {t("multiEdit.dialog.yourChangesHint")}
                 </span>
               </div>
@@ -408,7 +408,7 @@ export function DuplicateFlowModal() {
                 <h3 className="text-[11px] uppercase leading-[16.5px] tracking-[0.55px] text-muted-foreground">
                   {t("multiEdit.dialog.changesAvailable")}
                 </h3>
-                <span className="text-xs leading-[18px] text-placeholder">
+                <span className="text-xs leading-[18px] text-muted-foreground">
                   {t("multiEdit.dialog.selectChanges")}
                 </span>
               </div>

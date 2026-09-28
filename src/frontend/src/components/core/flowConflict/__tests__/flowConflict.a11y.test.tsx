@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FlowConflict } from "@/stores/flowConflictStore";
 import useFlowConflictStore from "@/stores/flowConflictStore";
@@ -335,6 +335,58 @@ describe("duplicate dialog accessibility", () => {
     expect(
       screen.queryByRole("radio", { name: /keep carlos's version/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should_keep_both_versions_open_while_i_move_between_them_with_arrows", async () => {
+    // Arrow keys move the selection in a radio group. Folding the card on every
+    // change closed it on the first arrow press and dropped keyboard focus, so a
+    // keyboard user could never read the second version before it was chosen.
+    const user = userEvent.setup();
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    screen.getByTestId("conflict-toggle-node:prompt-1").focus();
+    await user.keyboard("{Enter}");
+    const resolve = screen.getByTestId("conflict-resolve-node:prompt-1");
+    within(resolve)
+      .getByRole("radio", { name: /keep my version/i })
+      .focus();
+    // Held across the focus move, as a real key is: Radix moves focus on a
+    // timer and only selects on focus while an arrow key is still down.
+    await user.keyboard("{ArrowDown>}");
+    const theirs = within(resolve).getByRole("radio", {
+      name: /keep carlos's version/i,
+    });
+    await waitFor(() => expect(theirs).toBeChecked());
+    await user.keyboard("{/ArrowDown}");
+
+    expect(theirs).toHaveFocus();
+    expect(screen.getByTestId("conflict-toggle-node:prompt-1")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+
+    await user.keyboard("{ArrowUp>}");
+    const mine = within(resolve).getByRole("radio", {
+      name: /keep my version/i,
+    });
+    await waitFor(() => expect(mine).toBeChecked());
+    await user.keyboard("{/ArrowUp}");
+    expect(mine).toHaveFocus();
+  });
+
+  it("should_return_focus_to_the_card_when_a_click_folds_it", async () => {
+    const user = userEvent.setup();
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    await user.click(
+      within(await openConflict(user)).getByRole("radio", {
+        name: /keep carlos's version/i,
+      }),
+    );
+
+    expect(screen.getByTestId("conflict-toggle-node:prompt-1")).toHaveFocus();
   });
 
   it("should_have_no_violations_after_taking_their_contested_version", async () => {
