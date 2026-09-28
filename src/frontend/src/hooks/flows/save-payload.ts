@@ -72,10 +72,16 @@ export const buildFlowUpdatePayload = ({
   const payloadGraph = asText(graphOf(data));
 
   const hasBaseline = persisted?.id === id && persisted?.data !== undefined;
+  const differsFromBaseline =
+    payloadGraph !== asText(graphOf(persisted?.data ?? null));
   // A caller handing over a graph the canvas does not have — applying a template,
   // say — is writing that graph deliberately, whatever the person has touched.
+  // The graph as it was loaded is not such a graph: opening a flow refreshes its
+  // components on the canvas, and a rename carrying the loaded graph was read as
+  // a deliberate write, shipped the whole flow and was refused as one.
   const writesItsOwnGraph =
     live !== undefined &&
+    differsFromBaseline &&
     payloadGraph !==
       asText(
         graphOf({ nodes: live.nodes, edges: live.edges } as FlowType["data"]),
@@ -84,9 +90,7 @@ export const buildFlowUpdatePayload = ({
   // on its way in (component refreshes, model inputs), so comparing against the
   // baseline alone called a plain rename a graph write and had it refused.
   const graphChanged =
-    !hasBaseline ||
-    writesItsOwnGraph ||
-    (userEdited && payloadGraph !== asText(graphOf(persisted?.data)));
+    !hasBaseline || writesItsOwnGraph || (userEdited && differsFromBaseline);
 
   const persistedForScope =
     persisted?.id === id

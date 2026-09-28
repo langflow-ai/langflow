@@ -17,7 +17,30 @@ import {
   registerConflictState,
 } from "./conflict-actions";
 import { FlowSaveBlockedError } from "./save-blocked-error";
-import { buildFlowUpdatePayload } from "./save-payload";
+import { buildFlowUpdatePayload, type FlowUpdatePayload } from "./save-payload";
+
+/**
+ * The response to a save that sent no graph, reduced to what that save wrote.
+ *
+ * A rename is accepted even after somebody else moved the graph on, and its
+ * response carries their graph and their token. Taking those as the baseline
+ * would let the next autosave send this canvas under their token, and the
+ * server would accept it as current: their work overwritten, nobody told. The
+ * graph and the token stay the ones this client built on, so that next save is
+ * refused and the change is surfaced as the conflict it is.
+ */
+const keepBuiltOnGraph = (
+  response: FlowType,
+  payload: FlowUpdatePayload,
+  builtOn: FlowType | undefined,
+): FlowType => {
+  if ("data" in payload || builtOn?.id !== response.id) return response;
+  return {
+    ...response,
+    data: builtOn.data,
+    version_token: builtOn.version_token,
+  };
+};
 
 // Opt-out for callers that recover from a save failure themselves.
 export type SaveFlowOptions = { suppressErrorToast?: boolean };
@@ -180,7 +203,12 @@ const useSaveFlow = () => {
           };
           const persistFlow = () => {
             mutate(updatePayload, {
-              onSuccess: (updatedFlow) => {
+              onSuccess: (response) => {
+                const updatedFlow = keepBuiltOnGraph(
+                  response,
+                  updatePayload,
+                  currentSavedFlow,
+                );
                 const flows = useFlowsManagerStore.getState().flows;
                 setSaveLoading(false);
                 if (flows) {

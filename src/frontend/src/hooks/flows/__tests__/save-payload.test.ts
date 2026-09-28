@@ -183,6 +183,24 @@ describe("whose change the graph is", () => {
     expect(payload.versionToken).toBeNull();
   });
 
+  it("should not call the loaded graph a caller's own after opening rewrote the canvas", () => {
+    // A rename carries the graph as it was loaded. Opening a flow refreshes its
+    // components on the canvas, so that graph no longer matches the live one, and
+    // the rename shipped the whole flow with a precondition that someone else's
+    // save then refused.
+    const payload = buildFlowUpdatePayload({
+      flow: flow({ name: "renamed", data: graph("base") }),
+      persisted: baseline(),
+      flows: [],
+      live: live("refreshed-on-load"),
+      userEdited: false,
+    });
+
+    expect("data" in payload).toBe(false);
+    expect(payload.versionToken).toBeNull();
+    expect(payload.name).toBe("renamed");
+  });
+
   it("should send a graph the caller supplied itself, edits or not", () => {
     // Applying a template writes a graph the canvas does not hold yet.
     const payload = buildFlowUpdatePayload({
