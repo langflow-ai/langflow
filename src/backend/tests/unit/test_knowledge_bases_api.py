@@ -14,6 +14,7 @@ from langflow.api.utils.kb_helpers import (
     KBAnalysisHelper,
     KBIngestionHelper,
     KBStorageHelper,
+    chunk_text_for_ingestion,
 )
 from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 
@@ -40,6 +41,13 @@ def empty_text_file():
 def whitespace_text_file():
     """Create a whitespace-only in-memory text file for testing."""
     return ("whitespace.txt", "   \n\n   \t   ")
+
+
+@pytest.fixture
+def long_lines_text_file():
+    """Three ~1,500-character single-line paragraphs — each longer than the default chunk size."""
+    line = " ".join(["lorem"] * 250)
+    return ("long_lines.txt", "\n".join([line] * 3))
 
 
 @pytest.fixture
@@ -411,6 +419,24 @@ class TestPreviewChunks:
 
         assert response.status_code == 422, response.text
         assert "chunk size" in response.json()["detail"].lower()
+
+    async def test_preview_matches_ingestion_chunks_with_separator(
+        self, client: AsyncClient, logged_in_headers, long_lines_text_file
+    ):
+        r"""The preview must show exactly the chunks ingestion will store (UI defaults: 1000 / 200 / ``\n``)."""
+        file_name, file_content = long_lines_text_file
+        response = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=logged_in_headers,
+            files={"files": (file_name, io.BytesIO(file_content.encode()), "text/plain")},
+            data={"chunk_size": "1000", "chunk_overlap": "200", "separator": "\\n", "max_chunks": "50"},
+        )
+
+        assert response.status_code == 200, response.text
+        previewed = [chunk["content"] for chunk in response.json()["files"][0]["preview_chunks"]]
+        ingested = chunk_text_for_ingestion(file_content, chunk_size=1000, chunk_overlap=200, separator="\\n")
+        assert previewed == ingested
+        assert max(len(chunk) for chunk in ingested) <= 1000
 
 
 class TestKnowledgeBaseAPI:
@@ -2446,6 +2472,56 @@ class TestPerformIngestionTask:
         written_docs = [doc for call in mock_backend.add_documents.call_args_list for doc in call.args[0]]
         assert written_docs, "expected at least one chunk document to be written"
         assert all(doc.metadata.get("source_type") == "file_upload" for doc in written_docs)
+
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
+    async def test_perform_ingestion_respects_chunk_size_with_separator(
+        self,
+        mock_update_metrics,  # noqa: ARG002
+        mock_size,
+        mock_build,
+        mock_backend_cls,
+        mock_create_run,
+        mock_mark_running,  # noqa: ARG002
+        mock_finalize_run,  # noqa: ARG002
+        mock_kb_path,
+        long_lines_text_file,
+    ):
+        """Text between two separators that exceeds ``chunk_size`` is split, not stored whole."""
+        mock_build.return_value = MagicMock()
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock()
+        mock_backend.teardown = AsyncMock()
+        mock_backend_cls.return_value = mock_backend
+        mock_create_run.return_value = uuid.uuid4()
+        mock_size.return_value = 100
+
+        file_name, file_content = long_lines_text_file
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
+
+        await KBIngestionHelper.perform_ingestion(
+            kb_name="test_kb",
+            kb_path=mock_kb_path,
+            files_data=[(file_name, file_content.encode())],
+            chunk_size=1000,
+            chunk_overlap=200,
+            separator="\\n",
+            source_name="src",
+            current_user=current_user,
+            model_selection={"name": "model", "provider": "OpenAI"},
+            task_job_id=uuid.uuid4(),
+            job_service=AsyncMock(),
+        )
+
+        stored = [doc.page_content for call in mock_backend.add_documents.call_args_list for doc in call.args[0]]
+        assert len(stored) > 3
+        assert max(len(chunk) for chunk in stored) <= 1000
 
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
