@@ -25,7 +25,7 @@ from langflow.services.authorization import (
     ensure_project_permission,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
-from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, FlowRead
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, FlowRead, FlowType
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.memory_base.model import MemoryBase
@@ -159,6 +159,7 @@ class ProjectDeploymentSnapshotFlow:
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
+    flow_type: FlowType = FlowType.WORKFLOW
     a2a_enabled: bool | None = False
     a2a_card_overrides: dict[str, Any] | None = None
     tags: list[str] | None = None
@@ -1258,6 +1259,9 @@ def _build_deployment_snapshot_flows(
                 # Package-volatile presentation fields, read from the unscrubbed
                 # source so the snapshot still round-trips them.
                 access_type=AccessTypeEnum(snapshot.payload.get("access_type") or AccessTypeEnum.PRIVATE),
+                # Not volatile - untouched by the scrub - but read the same way for
+                # consistency with the other exposure fields on this line.
+                flow_type=FlowType(scrubbed.get("flow_type") or FlowType.WORKFLOW),
                 a2a_enabled=scrubbed.get("a2a_enabled", False),
                 a2a_card_overrides=scrubbed.get("a2a_card_overrides"),
                 tags=scrubbed.get("tags"),

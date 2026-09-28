@@ -344,13 +344,34 @@ _MCP_SECRET_FLAG_PATTERN = re.compile(
 )
 
 
-def _mcp_config_is_clean(config: dict, name: str) -> bool:
+def _mcp_reference_names_known_variable(value: str, known_variable_names: Collection[str]) -> bool:
+    """Return whether an ``env``/``headers`` reference names one of the owner's variables.
+
+    Only called once ``_mcp_config_secrets._is_variable_reference`` has confirmed
+    ``value`` is a bare ``MCP_*`` reference or a ``{{NAME}}`` placeholder - the two
+    shapes the deploy target can resolve. A bare reference names itself; a
+    placeholder names its inner ``NAME``.
+    """
+    placeholder_match = _mcp_config_secrets.PLACEHOLDER_PATTERN.match(value)
+    name = value[2:-2].strip() if placeholder_match else value
+    return name in known_variable_names
+
+
+def _mcp_config_is_clean(config: dict, name: str, known_variable_names: Collection[str] | None = None) -> bool:
     """Return whether an MCP ``config`` is provably free of secrets, verbatim.
 
     Deliberately conservative: this only ever widens what gets kept behind an
     explicit opt-in (see ``keep_mcp_config`` on ``_strip_template_field_value``),
     so any shape it cannot positively clear the config on is treated as unclean.
     The caller then nulls the config rather than keep something unverified.
+
+    ``known_variable_names``, when given, additionally requires every ``env``/
+    ``headers`` reference to name one of the caller's real global variables
+    (see ``_mcp_reference_names_known_variable``), so a literal secret shaped
+    like an ``MCP_*`` name or a ``{{NAME}}`` placeholder cannot escape a strict
+    snapshot just because it is shaped like a reference. ``None`` keeps the
+    shape-only check, matching ``_is_preserved_reference``'s default for other
+    secret fields.
     """
     # strip_config_secrets rewrites env/headers entries and drops secret-bearing
     # args and top-level fields; "found" means it had to change something.
@@ -384,6 +405,10 @@ def _mcp_config_is_clean(config: dict, name: str) -> bool:
             if is_non_secret_header or not value:
                 continue
             if not isinstance(value, str) or not _mcp_config_secrets._is_variable_reference(value):  # noqa: SLF001
+                return False
+            if known_variable_names is not None and not _mcp_reference_names_known_variable(
+                value, known_variable_names
+            ):
                 return False
 
     args = config.get("args")
@@ -472,7 +497,9 @@ def _strip_template_field_value(
         # snapshot sees the change against the original and refuses to capture.
         config = value.get("config")
         if keep_mcp_config and isinstance(config, dict):
-            preserved["config"] = config if _mcp_config_is_clean(config, str(name or "")) else None
+            preserved["config"] = (
+                config if _mcp_config_is_clean(config, str(name or ""), known_variable_names) else None
+            )
         field["value"] = preserved or None
         return
 

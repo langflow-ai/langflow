@@ -134,6 +134,21 @@ async def test_deployment_snapshot_owner_gets_full_snapshot(client: AsyncClient,
         headers=logged_in_headers,
     )
     assert variable_resp.status_code == status.HTTP_201_CREATED, variable_resp.text
+    # Same requirement for the MCP config's header reference below: a bare
+    # MCP_* value is only kept once it names one of the owner's real global
+    # variables (LE-2717 review: _mcp_config_is_clean must not accept any
+    # MCP_*-shaped value without checking it against known_variable_names).
+    mcp_variable_resp = await client.post(
+        "api/v1/variables/",
+        json={
+            "name": "MCP_DEMO_MCP_AUTHORIZATION_ABCD1234",
+            "value": "does-not-matter",
+            "type": CREDENTIAL_TYPE,
+            "default_fields": [],
+        },
+        headers=logged_in_headers,
+    )
+    assert mcp_variable_resp.status_code == status.HTTP_201_CREATED, mcp_variable_resp.text
 
     project_id = await _create_project(client, logged_in_headers, name="support-automation")
     flow_payload = _flow_payload(project_id, endpoint_name=f"triage-{uuid4().hex[:8]}")
@@ -208,6 +223,7 @@ async def test_deployment_snapshot_round_trips_exposure_fields_through_replaceme
         "action_name": "custom_action",
         "action_description": "A custom action description",
         "access_type": "PUBLIC",
+        "flow_type": "agent",
         "a2a_enabled": True,
         "a2a_card_overrides": {"skillDescription": "custom skill"},
         "tags": ["alpha", "beta"],
@@ -242,6 +258,7 @@ async def test_deployment_snapshot_round_trips_exposure_fields_through_replaceme
         stored_flow.action_name = None
         stored_flow.action_description = None
         stored_flow.access_type = "PRIVATE"
+        stored_flow.flow_type = "workflow"
         stored_flow.a2a_enabled = False
         stored_flow.a2a_card_overrides = None
         stored_flow.tags = []
@@ -254,6 +271,7 @@ async def test_deployment_snapshot_round_trips_exposure_fields_through_replaceme
     drifted = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
     assert drifted.status_code == status.HTTP_200_OK, drifted.text
     assert drifted.json()["flows"][0]["access_type"] == "PRIVATE"
+    assert drifted.json()["flows"][0]["flow_type"] == "workflow"
     assert drifted.json()["flows"][0]["locked"] is False
 
     restore = await client.put(
@@ -417,6 +435,97 @@ async def test_deployment_snapshot_load_from_db_naming_known_variable_is_capture
     assert body["required_variables"] == ["KNOWN_DEPLOY_VARIABLE"]
     template = body["flows"][0]["data"]["nodes"][0]["data"]["node"]["template"]
     assert template["api_key"]["value"] == "KNOWN_DEPLOY_VARIABLE"
+
+
+def _mcp_flow_payload(project_id: str, *, reference: str) -> dict:
+    return {
+        "name": "MCP Header Reference",
+        "folder_id": project_id,
+        "is_component": False,
+        "data": {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "mcp_server": {
+                                    "name": "mcp_server",
+                                    "type": "mcp",
+                                    "value": {
+                                        "name": "demo-mcp",
+                                        "config": {
+                                            "url": "https://mcp.example.com",
+                                            "headers": {"Authorization": reference},
+                                        },
+                                    },
+                                },
+                            }
+                        }
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+
+
+@pytest.mark.asyncio
+async def test_deployment_snapshot_refuses_mcp_config_naming_unknown_variable(
+    client: AsyncClient, logged_in_headers
+) -> None:
+    """An MCP header value that does not name one of the owner's real variables must fail closed.
+
+    ``_mcp_config_is_clean`` used to accept any ``MCP_*``-shaped header value as
+    provably clean without checking it against the owner's real global
+    variables, letting a literal secret that merely looks like one of these
+    generated reference names escape a strict snapshot (LE-2717 review).
+    """
+    project_id = await _create_project(client, logged_in_headers, name="mcp-unknown-variable-project")
+    flow_payload = _mcp_flow_payload(project_id, reference="MCP_RAW_LITERAL_SECRET")
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED, flow_resp.text
+
+    response = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.json()["detail"] == "Project snapshot could not be captured safely"
+    assert "MCP_RAW_LITERAL_SECRET" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_deployment_snapshot_mcp_config_naming_known_variable_is_captured(
+    client: AsyncClient, logged_in_headers
+) -> None:
+    """The same MCP header reference is kept once it names a real owner variable."""
+    variable_resp = await client.post(
+        "api/v1/variables/",
+        json={
+            "name": "MCP_KNOWN_DEPLOY_VARIABLE",
+            "value": "does-not-matter",
+            "type": CREDENTIAL_TYPE,
+            "default_fields": [],
+        },
+        headers=logged_in_headers,
+    )
+    assert variable_resp.status_code == status.HTTP_201_CREATED, variable_resp.text
+
+    project_id = await _create_project(client, logged_in_headers, name="mcp-known-variable-project")
+    flow_payload = _mcp_flow_payload(project_id, reference="MCP_KNOWN_DEPLOY_VARIABLE")
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED, flow_resp.text
+
+    response = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    template = response.json()["flows"][0]["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["mcp_server"]["value"] == {
+        "name": "demo-mcp",
+        "config": {
+            "url": "https://mcp.example.com",
+            "headers": {"Authorization": "MCP_KNOWN_DEPLOY_VARIABLE"},
+        },
+    }
 
 
 @pytest.mark.asyncio

@@ -564,3 +564,58 @@ def test_scrub_nulls_unclean_mcp_config_with_keep_mcp_config(config: dict) -> No
 
     value = _template(flow_data)["mcp_server"]["value"]
     assert value == {"name": "srv", "config": None}
+
+
+def _mcp_flow_data_referencing(reference: str) -> dict:
+    return _flow_data(
+        {
+            "mcp_server": {
+                "name": "mcp_server",
+                "type": "mcp",
+                "value": {
+                    "name": "srv",
+                    "config": {
+                        "url": "https://mcp.example.com",
+                        "headers": {"Authorization": reference},
+                    },
+                },
+            }
+        }
+    )
+
+
+def test_scrub_nulls_mcp_config_referencing_unknown_variable_with_known_variable_names() -> None:
+    """An ``MCP_*``-shaped value that names no real global variable must fail closed.
+
+    ``_mcp_config_is_clean`` used to accept any value shaped like a reference -
+    a bare ``MCP_*`` name or a ``{{NAME}}`` placeholder - without checking it
+    names one of the owner's actual variables, letting a literal secret that
+    merely looks like one of these generated names escape a strict snapshot.
+    """
+    flow_data = _mcp_flow_data_referencing("MCP_RAW_LITERAL_SECRET")
+
+    strip_secret_field_values_in_place(
+        flow_data, variable_references=set(), keep_mcp_config=True, known_variable_names=set()
+    )
+
+    value = _template(flow_data)["mcp_server"]["value"]
+    assert value["name"] == "srv"
+    assert value["config"] is None
+
+
+def test_scrub_keeps_mcp_config_referencing_known_variable_with_known_variable_names() -> None:
+    """The same reference is kept once it actually names one of the owner's variables."""
+    flow_data = _mcp_flow_data_referencing("MCP_RAW_LITERAL_SECRET")
+
+    strip_secret_field_values_in_place(
+        flow_data,
+        variable_references=set(),
+        keep_mcp_config=True,
+        known_variable_names={"MCP_RAW_LITERAL_SECRET"},
+    )
+
+    value = _template(flow_data)["mcp_server"]["value"]
+    assert value["config"] == {
+        "url": "https://mcp.example.com",
+        "headers": {"Authorization": "MCP_RAW_LITERAL_SECRET"},
+    }

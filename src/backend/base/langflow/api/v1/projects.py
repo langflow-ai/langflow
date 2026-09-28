@@ -518,6 +518,7 @@ async def read_project_deployment_snapshot(
                 action_name=flow.action_name,
                 action_description=flow.action_description,
                 access_type=flow.access_type,
+                flow_type=flow.flow_type,
                 a2a_enabled=flow.a2a_enabled,
                 a2a_card_overrides=flow.a2a_card_overrides,
                 tags=flow.tags,

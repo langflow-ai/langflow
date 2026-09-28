@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from langflow.services.database.models.flow.model import AccessTypeEnum
+from langflow.services.database.models.flow.model import AccessTypeEnum, FlowType
 
 
 class DeploymentSnapshotProject(BaseModel):
@@ -37,6 +37,7 @@ class DeploymentSnapshotFlow(BaseModel):
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
+    flow_type: FlowType = FlowType.WORKFLOW
     a2a_enabled: bool | None = False
     a2a_card_overrides: dict[str, Any] | None = None
     tags: list[str] | None = None

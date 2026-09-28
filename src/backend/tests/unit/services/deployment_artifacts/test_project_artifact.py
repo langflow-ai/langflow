@@ -1274,7 +1274,15 @@ async def test_build_project_deployment_snapshot_keeps_cleaned_mcp_config() -> N
     session = _snapshot_session_for_flows(project, [flow])
     user = SimpleNamespace(id=actor_id, is_superuser=False)
 
-    snapshot = await _build_snapshot_authorized(session=session, user=user, project=project)
+    # The header's MCP_* reference must name one of the owner's real global
+    # variables (LE-2717 review: _mcp_config_is_clean must not accept any
+    # MCP_*-shaped value without checking it against known_variable_names).
+    snapshot = await _build_snapshot_authorized(
+        session=session,
+        user=user,
+        project=project,
+        known_variable_names=frozenset({"MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"}),
+    )
 
     template = snapshot.flows[0].data["nodes"][0]["data"]["node"]["template"]
     assert template["mcp_server"]["value"] == {
@@ -1284,6 +1292,49 @@ async def test_build_project_deployment_snapshot_keeps_cleaned_mcp_config() -> N
             "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
         },
     }
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_refuses_mcp_reference_naming_unknown_variable() -> None:
+    """An MCP_*-shaped header value that names none of the owner's variables must fail closed.
+
+    Same config as ``test_build_project_deployment_snapshot_keeps_cleaned_mcp_config``,
+    but the owner has no matching global variable: a literal secret shaped like
+    a generated MCP_* reference must not be mistaken for a legitimate one.
+    """
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Snapshot MCP unknown variable", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "mcp_server": {
+                                "name": "mcp_server",
+                                "type": "mcp",
+                                "value": {
+                                    "name": "billing-mcp",
+                                    "config": {
+                                        "url": "https://mcp.example.com",
+                                        "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+                                    },
+                                },
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="cannot be safely captured"):
+        await _build_snapshot_authorized(session=session, user=user, project=project)
 
 
 @pytest.mark.asyncio
