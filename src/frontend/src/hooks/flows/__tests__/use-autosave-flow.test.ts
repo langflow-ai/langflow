@@ -38,7 +38,12 @@ jest.mock("@/stores/utilityStore", () => ({
 }));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: { getState: jest.fn(() => ({ componentsToUpdate: [] })) },
+  default: {
+    getState: jest.fn(() => ({ componentsToUpdate: [] })),
+    // Requesting a save marks the flow as user-edited, which the conflict
+    // guards read to tell a real edit from hydration.
+    setState: jest.fn(),
+  },
 }));
 jest.mock("@/contexts/permissionsContext", () => ({
   usePermissions: () => mockUsePermissions(),
@@ -274,6 +279,9 @@ describe("useAutoSaveFlow", () => {
     expect(useDebounce).toHaveBeenCalledWith(
       expect.any(Function),
       customInterval,
+      // A ceiling proportional to the interval, so continuous editing cannot
+      // defer the save indefinitely however an install configures the debounce.
+      { maxWait: customInterval * 3 },
     );
   });
 
