@@ -109,9 +109,11 @@ async def _read_history_window(
         raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
     if before is not None:
         before_timestamp, before_id = before
-        # `(timestamp, id) < before`, written with a redundant `timestamp <=` bound: that
-        # conjunct lets the planner seek into the (flow_id|session_id, timestamp, id) index.
-        # A bare OR is only a filter, so every row newer than the position would be scanned.
+        # Rows strictly older than the cursor: an earlier timestamp, or the same timestamp and
+        # a smaller id (the tie-break). The `<=` line looks redundant, but it is what makes this
+        # fast: it lets the database jump straight to the cursor's spot in the
+        # (flow_id, timestamp, id) index. With only the OR, the database starts at the newest
+        # message and checks each one until it gets past the cursor, which is slow deep in history.
         stmt = stmt.where(
             col(MessageTable.timestamp) <= before_timestamp,
             or_(col(MessageTable.timestamp) < before_timestamp, col(MessageTable.id) < before_id),
