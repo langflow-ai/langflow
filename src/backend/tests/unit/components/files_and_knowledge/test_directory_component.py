@@ -11,6 +11,11 @@ from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestDirectoryComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self, monkeypatch):
+        """These tests exercise allowed-roots directory loading, not containment; opt out."""
+        monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
+
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""

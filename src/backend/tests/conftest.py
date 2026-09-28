@@ -564,6 +564,12 @@ async def client_fixture(
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
             monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
+            # Triggers: keep the leased dispatcher out of the test app. It is a
+            # background loop that polls the database, so leaving it on would
+            # race any test that drives the dispatcher directly and would add a
+            # poll to every unrelated API test. Trigger tests call the loop's
+            # own entry points instead.
+            monkeypatch.setenv("LANGFLOW_TRIGGER_DISPATCHER_ENABLED", "false")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"

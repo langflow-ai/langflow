@@ -3,7 +3,17 @@ from types import NoneType
 from typing import Union
 
 import pytest
-from lfx.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput, NestedDictInput
+from lfx.inputs.inputs import (
+    BoolInput,
+    DictInput,
+    FloatInput,
+    InputTypes,
+    IntInput,
+    MessageTextInput,
+    MultiselectInput,
+    NestedDictInput,
+    instantiate_input,
+)
 from lfx.io.schema import schema_to_langflow_inputs
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
@@ -11,6 +21,17 @@ from lfx.template import Input, Output
 from lfx.template.field.base import UNDEFINED
 from lfx.type_extraction.type_extraction import post_process_type
 from pydantic import BaseModel, Field, ValidationError
+
+
+@pytest.mark.parametrize("by_alias", [True, False])
+@pytest.mark.parametrize("is_list", [True, False])
+def test_multiselect_serialized_field_names_round_trip(by_alias, is_list):
+    original = MultiselectInput(name="checks", options=["PII"], value=["PII"], is_list=is_list)
+    payload = original.model_dump(by_alias=by_alias)
+    payload.pop("_input_type", None)
+    restored = instantiate_input("MultiselectInput", payload)
+    assert restored.is_list is is_list
+    assert restored.value == ["PII"]
 
 
 class TestInput:

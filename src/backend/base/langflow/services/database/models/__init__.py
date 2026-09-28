@@ -41,6 +41,7 @@ from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
+from .trigger import Trigger, TriggerEvent, TriggerLease, TriggerListenerLease, TriggerSubscription
 from .user import User
 from .variable import Variable
 
@@ -99,6 +100,11 @@ __all__ = [
     "SpanTable",
     "TraceTable",
     "TransactionTable",
+    "Trigger",
+    "TriggerEvent",
+    "TriggerLease",
+    "TriggerListenerLease",
+    "TriggerSubscription",
     "User",
     "Variable",
     "decrypt_sso_client_secret",

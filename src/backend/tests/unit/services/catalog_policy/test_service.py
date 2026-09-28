@@ -442,3 +442,55 @@ async def test_startup_hydration_failure_logs_and_continues(monkeypatch):
     service.hydrate.assert_awaited_once_with()
     warning.assert_awaited_once()
     assert "continuing with allow-all policy" in warning.await_args.args[0]
+
+
+@pytest.mark.asyncio
+async def test_catalog_facet_write_preserves_integration_governance(monkeypatch):
+    """A catalog-only write must never clear the INT-7 integration decisions.
+
+    The twin of ``test_provider_ceiling_write_preserves_integration_governance``
+    in ``test_policy_bundle_store.py``: without this, blocking one component
+    from the catalog admin would silently drop the operator's integration
+    ceiling and action deny-list on the next revision.
+    """
+    bundle_service = PolicyBundleService()
+    service = LangflowCatalogPolicyService(None, bundle_service)
+    current = PolicyBundleSnapshot(
+        revision=7,
+        initialized=True,
+        approved_provider_ids={"openai"},
+        blocked_component_keys={"old-component"},
+        blocked_template_keys={"old-template"},
+        blocked_model_keys={"openai/gpt-4o"},
+        approved_integration_provider_ids={"google"},
+        blocked_integration_action_keys={"integrations.google.drive.delete"},
+    )
+    committed = PolicyBundleSnapshot(
+        revision=8,
+        initialized=True,
+        approved_provider_ids=current.approved_provider_ids,
+        blocked_component_keys={"PythonREPL"},
+        blocked_template_keys=current.blocked_template_keys,
+        blocked_model_keys=current.blocked_model_keys,
+        approved_integration_provider_ids=current.approved_integration_provider_ids,
+        blocked_integration_action_keys=current.blocked_integration_action_keys,
+    )
+
+    @asynccontextmanager
+    async def session_scope():
+        yield object()
+
+    replace_bundle = AsyncMock(return_value=committed)
+    monkeypatch.setattr(catalog_policy_service_module, "session_scope", session_scope)
+    monkeypatch.setattr(catalog_policy_service_module, "get_policy_bundle_state", AsyncMock(return_value=current))
+    monkeypatch.setattr(catalog_policy_service_module, "replace_policy_bundle_state", replace_bundle)
+    publish_bundle = Mock(side_effect=bundle_service.publish)
+    monkeypatch.setattr(catalog_policy_service_module, "apply_policy_bundle_state", publish_bundle)
+
+    await service.replace_blocked_component_keys(["PythonREPL"], actor_user_id=None)
+
+    kwargs = replace_bundle.await_args.kwargs
+    assert kwargs["approved_integration_provider_ids"] == current.approved_integration_provider_ids
+    assert kwargs["blocked_integration_action_keys"] == current.blocked_integration_action_keys
+    assert bundle_service.snapshot.approved_integration_provider_ids == frozenset({"google"})
+    assert bundle_service.snapshot.blocked_integration_action_keys == frozenset({"integrations.google.drive.delete"})

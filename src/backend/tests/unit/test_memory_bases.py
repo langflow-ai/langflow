@@ -2763,6 +2763,23 @@ class TestMemoriesAPIHandlers:
         assert exc_info.value.status_code == 409
 
     @pytest.mark.asyncio
+    async def test_create_storage_routing_override_returns_403(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError
+
+        payload = MemoryBaseCreate(name="mb", flow_id=uuid.uuid4(), user_id=mock_user.id, kb_name="kb")
+        svc = MagicMock()
+        svc.create = AsyncMock(side_effect=StorageRoutingNotAllowedError("Only a superuser can set index_name"))
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_memory_base(current_user=mock_user, payload=payload)
+
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
     async def test_create_provider_policy_denial_returns_404(self, mock_user):
         from fastapi import HTTPException
         from langflow.api.v1.memories import create_memory_base

@@ -52,3 +52,33 @@ entries:
   resolved_in_version: 1.12.0
   fix_pr: https://github.com/langflow-ai/langflow/pull/14253
   workaround: none
+
+- id: GH-12665
+  title: Chroma component silently returns no results from a remote server on chromadb 1.0+
+  status: resolved
+  area: components
+  first_bad_version: unknown
+  last_known_good_version: unknown
+  resolved_in_version: 1.10.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12900
+  workaround: none
+
+- id: GH-12824
+  title: Qdrant component ignores the dimension of the connected embedding model
+  status: resolved
+  area: components
+  first_bad_version: 1.9.0
+  last_known_good_version: 1.8.3
+  resolved_in_version: 1.9.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12876
+  workaround: none
+
+- id: GH-13318
+  title: Trace view stops loading after upgrading, on rows written by an older version
+  status: resolved
+  area: database
+  first_bad_version: 1.9.1
+  last_known_good_version: 1.9.0
+  resolved_in_version: 1.10.1
+  fix_pr: https://github.com/langflow-ai/langflow/pull/13346
+  workaround: none

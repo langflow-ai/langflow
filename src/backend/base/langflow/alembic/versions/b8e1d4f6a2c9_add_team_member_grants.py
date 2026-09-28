@@ -53,7 +53,7 @@ def _create_table() -> None:
             "AND legacy_source IS NULL) OR "
             "(source_kind = 'legacy' AND provider_id IS NULL AND external_group_id IS NULL "
             "AND legacy_source IS NOT NULL)",
-            name="ck_authz_team_member_grant_source",
+            name=op.f("ck_authz_team_member_grant_source"),
         ),
         sa.ForeignKeyConstraint(["administrative_actor"], ["user.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["membership_id"], ["authz_team_member.id"], ondelete="CASCADE"),

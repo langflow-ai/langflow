@@ -1079,6 +1079,38 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             typer.echo("Superuser creation failed.")
 
 
+@app.command(name="listeners")
+def listeners(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    health_host: str | None = typer.Option(
+        None, help="Interface the health endpoint binds.", envvar="LANGFLOW_LISTENERS_HEALTH_HOST"
+    ),
+    health_port: int | None = typer.Option(
+        None, help="Port serving /health and /healthz.", envvar="LANGFLOW_LISTENERS_HEALTH_PORT"
+    ),
+) -> None:
+    """Run the trigger listener process: hold provider connections, write events to the ledger.
+
+    This is the Track B half of triggers - Slack Socket Mode, Microsoft Graph delta
+    polling, Gmail Pub/Sub pull - for instances that cannot accept provider webhooks.
+    It shares the API's database and configuration and hosts no HTTP application:
+    only /health and /healthz. It never runs migrations, so start or upgrade the API
+    against this database first.
+
+    Run it as its own service (a Kubernetes Deployment, a Compose service) for
+    multi-replica deployments, or set LANGFLOW_LISTENERS_MODE=subprocess to have the
+    API spawn it for a single container or Desktop.
+    """
+    configure(log_level=log_level)
+    if health_host is not None:
+        os.environ["LANGFLOW_LISTENERS_HEALTH_HOST"] = health_host
+    if health_port is not None:
+        os.environ["LANGFLOW_LISTENERS_HEALTH_PORT"] = str(health_port)
+    from langflow.services.triggers.listeners.runtime import main as run_listener_process
+
+    run_listener_process()
+
+
 @app.command(name="migrate-mcp")
 def migrate_mcp(
     log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),

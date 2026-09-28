@@ -10,6 +10,7 @@ Tests focus on critical logic and edge cases:
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -685,6 +686,23 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
 
 class TestFileContentRetrieverPersistence:
     """Tests for persistent directory support."""
+
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """These tests exercise the persistence round trip against tmp_path, not containment.
+
+        ``persistent_dir`` is routed through ``enforce_local_file_access``, which since 1.12.3
+        defaults to confining it to ``config_dir/<user_id|flow_id>``. These components are built
+        without a graph, so they have no scope and every tmp_path directory is out of bounds.
+        Containment itself is covered in
+        ``src/lfx/tests/unit/components/files_ingestion/test_file_content_retriever.py``
+        (``TestPersistentDirFileAccess`` / ``TestPersistentIndexTraversal``), including an
+        in-scope round trip, so opt out here instead of duplicating that setup.
+        """
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+        )
 
     @pytest.fixture
     def component_class(self):

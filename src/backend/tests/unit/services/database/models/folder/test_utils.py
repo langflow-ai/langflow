@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
 
 
-def _utcnow_naive() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _create_sqlite_engine() -> AsyncEngine:
@@ -70,7 +70,7 @@ async def db_fixture(db_engine):
 
 @pytest.fixture
 async def user(db: AsyncSession) -> User:
-    now = _utcnow_naive()
+    now = _utcnow()
     row = User(username="guard-user", password=_TEST_PASSWORD, is_active=True, create_at=now, updated_at=now)
     db.add(row)
     await db.commit()
@@ -94,7 +94,7 @@ async def test_default_folder_creation_consults_guard_with_null_folder_flows(
         user_id=user.id,
         folder_id=None,
         data={"nodes": [], "edges": []},
-        updated_at=_utcnow_naive(),
+        updated_at=_utcnow(),
     )
     db.add(null_folder_flow)
     await db.commit()

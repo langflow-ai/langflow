@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
 import pytest
+from lfx.services.settings.groups import SecuritySettings
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
     get_allowed_hosts,
@@ -479,16 +480,54 @@ class TestDatabaseURLValidation:
     """Tests for validate_database_url_for_ssrf (tenant-controlled DB URIs)."""
 
     def test_protection_disabled_allows_all(self):
-        """With SSRF off and file access unrestricted, sqlite/local URIs are allowed (OSS default)."""
+        """With SSRF off and file access unrestricted (explicit opt-out), sqlite/local URIs are allowed."""
         with mock_ssrf_settings(enabled=False, restrict_files=False):
             validate_database_url_for_ssrf("sqlite:////etc/passwd")
             validate_database_url_for_ssrf("postgresql://127.0.0.1:5432/db")
 
-    def test_sqlite_allowed_by_default_with_ssrf_on(self):
-        """SQLite must keep working by default (SSRF on, file access not restricted)."""
+    def test_sqlite_allowed_when_file_access_unrestricted(self):
+        """SQLite keeps working when the operator explicitly disables file restriction."""
         with mock_ssrf_settings(enabled=True, restrict_files=False):
             validate_database_url_for_ssrf("sqlite:///./local.db")
             validate_database_url_for_ssrf("sqlite:///:memory:")
+
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "sqlite:////etc/passwd",
+            "sqlite:////app/data/.cache/langflow/secret_key",
+            "duckdb:///data.duckdb",
+        ],
+    )
+    def test_local_file_dialects_blocked_by_default(self, uri):
+        """Regression for H1-3982171: local-file dialects are blocked at the default settings.
+
+        ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` defaults to True, so an authenticated user can
+        no longer turn a SQL Database component URI into an arbitrary local file read.
+        """
+        default_settings = MagicMock()
+        default_settings.settings = SecuritySettings()
+        with (
+            patch("lfx.utils.ssrf_protection.get_settings_service", return_value=default_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=default_settings),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    def test_local_file_dialects_blocked_when_settings_unavailable(self):
+        """The restriction read fails closed, so an unreadable settings service still denies.
+
+        ``get_settings_service()`` returns None when service creation fails. The SSRF toggle is
+        read from the environment first, so it answers without the settings service and the
+        dialect check is still reached -- a fail-open read of ``restrict_local_file_access``
+        there would re-open ``sqlite:////etc/passwd`` without any operator opt-out.
+        """
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=None),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf("sqlite:////etc/passwd")
 
     @pytest.mark.parametrize(
         "uri",

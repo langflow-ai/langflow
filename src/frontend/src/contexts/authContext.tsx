@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
@@ -31,8 +31,19 @@ export function AuthProvider({ children }): React.ReactElement {
   // Authentication state is now managed via session validation
   // instead of reading cookies directly (supports HttpOnly cookies)
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<Users | null>(null);
+  const [userData, setUserDataState] = useState<Users | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+
+  // `useAuthStore.userData` mirrors this state for hooks and stores that live
+  // outside the context (the Connections page, flowStore, use-get-flow-id, and
+  // the multi-edit autosave, conflict and draft paths, which otherwise lose the
+  // draft and misattribute your own edit from another tab). Writing both here
+  // keeps every path in sync, including a session restored after a reload,
+  // which never goes through `useGetUserData`.
+  const setUserData = useCallback((user: Users | null) => {
+    setUserDataState(user);
+    useAuthStore.getState().setUserData(user);
+  }, []);
 
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
@@ -117,15 +128,6 @@ export function AuthProvider({ children }): React.ReactElement {
     // Cookies are set by the server and browser handles them automatically
     executeAuthRequests();
   }
-
-  // The store is what code outside React reads — autosave, the conflict paths,
-  // the draft that keeps refused work alive. Only a fresh sign-in used to write
-  // it, so opening a flow by URL or reloading the page left it empty: the draft
-  // was silently never kept, and your own edit from another tab was attributed
-  // to a stranger. Mirroring here covers every path that learns who you are.
-  useEffect(() => {
-    useAuthStore.getState().setUserData(userData);
-  }, [userData]);
 
   function storeApiKey(apikey: string) {
     setApiKey(apikey);

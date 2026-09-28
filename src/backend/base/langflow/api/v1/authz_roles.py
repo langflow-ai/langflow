@@ -40,7 +40,7 @@ from langflow.services.creation_hooks import (
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/roles", tags=["Authorization"], include_in_schema=False)
+router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
 
 # Match ``authz_shares``: cap any single list call so an authenticated client
 # (or a buggy frontend) can't enumerate the entire role/team catalog in one
@@ -162,7 +162,7 @@ async def _detect_parent_cycle(
 
 
 @router.get("", response_model=list[RoleRead])
-@router.get("/", response_model=list[RoleRead])
+@router.get("/", response_model=list[RoleRead], include_in_schema=False)
 async def list_roles(
     session: DbSession,
     current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
@@ -203,7 +203,13 @@ async def read_role(
 
 
 @router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
-@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
+@router.post(
+    "/",
+    response_model=RoleRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
+    include_in_schema=False,
+)
 async def create_role(
     payload: RoleCreate,
     current_user: CurrentActiveUser,

@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from lfx.integrations.errors import IntegrationError
 
 SAFE_WORKFLOW_ERROR_MESSAGE = "Workflow execution failed."
+SAFE_TOOL_ERROR_MESSAGE = "Tool execution failed."
 
 # Generic replacement for an integration error's own sentence on paths where the
 # caller is not the connection's owner. The typed fields still cross (a client

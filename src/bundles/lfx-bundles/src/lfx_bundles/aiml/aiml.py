@@ -1,6 +1,7 @@
 from langchain_openai import ChatOpenAI
 from lfx.base.models.aiml_constants import AimlModels
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import (
@@ -21,6 +22,8 @@ class AIMLModelComponent(LCModelComponent):
     icon = "AIML"
     name = "AIMLModel"
     documentation = "https://docs.aimlapi.com/api-reference"
+
+    _default_api_base = "https://api.aimlapi.com/v2"
 
     inputs = [
         *LCModelComponent.get_base_inputs(),
@@ -76,7 +79,7 @@ class AIMLModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
+        aiml_api_base = self.aiml_api_base or self._default_api_base
 
         openai_api_key = secret_value_to_str(aiml_api_key)
 
@@ -92,6 +95,7 @@ class AIMLModelComponent(LCModelComponent):
             base_url=aiml_api_base,
             max_tokens=max_tokens or None,
             **model_kwargs,
+            **openai_compatible_client_kwargs(self.aiml_api_base, default_url=self._default_api_base),
         )
 
     def _get_exception_message(self, e: Exception):

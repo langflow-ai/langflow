@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from lfx.utils.file_path_security import (
@@ -33,6 +33,29 @@ def test_disabled_is_noop(tmp_path):
         assert is_local_file_access_restricted() is False
         # An obviously-outside path is returned unchanged.
         assert enforce_local_file_access("/etc/passwd") == Path("/etc/passwd")
+
+
+def test_settings_unavailable_fails_closed():
+    """A settings read failure must not silently disable containment.
+
+    ``get_settings_service()`` returns None when service creation fails, so the read raises.
+    The setting defaults to True, so answering False there would hand back the opposite of the
+    configured default and let any absolute path through without an operator opting out.
+    """
+    with patch("lfx.utils.file_path_security.get_settings_service", return_value=None):
+        assert is_local_file_access_restricted() is True
+        with pytest.raises(LocalFileAccessError, match="storage directory could not be resolved"):
+            enforce_local_file_access("/etc/passwd", scope_ids=["flow-id"])
+
+
+def test_settings_raising_fails_closed(tmp_path):
+    """A settings service that raises on attribute access is denied the same way."""
+    settings = MagicMock()
+    type(settings).settings = PropertyMock(side_effect=RuntimeError("boom"))
+    with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings):
+        assert is_local_file_access_restricted() is True
+        with pytest.raises(LocalFileAccessError):
+            enforce_local_file_access(str(tmp_path / "anything.txt"), scope_ids=["flow-id"])
 
 
 def test_component_scopes_include_trusted_public_source_flow():

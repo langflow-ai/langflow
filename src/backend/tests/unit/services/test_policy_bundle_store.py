@@ -638,3 +638,192 @@ async def test_legacy_provider_ceiling_write_preserves_blocked_model_keys(bundle
     assert persisted.bundle_snapshot is not None
     assert persisted.bundle_snapshot.blocked_model_keys == frozenset({"openai::gpt-blocked"})
     assert persisted.approved_provider_ids == frozenset({"openai", "anthropic"})
+
+
+# --------------------------------------------------------------------------- INT-7 (LE-2465)
+
+
+_BLOCKED_ACTION = "integrations.google.drive.delete"
+
+
+async def test_replace_persists_and_canonicalizes_integration_governance(bundle_session_maker):
+    """QA: policy tests cover provider blocking and action blocking, durably."""
+    async with bundle_session_maker() as session:
+        committed = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            approved_integration_provider_ids={"Google", "google", "slack"},
+            blocked_integration_action_keys={"Integrations.Google.Drive.Delete", _BLOCKED_ACTION},
+            actor_user_id=uuid4(),
+            reason="approve integrations",
+        )
+
+    assert committed.approved_integration_provider_ids == frozenset({"google", "slack"})
+    assert committed.blocked_integration_action_keys == frozenset({_BLOCKED_ACTION})
+    assert committed.content_hash == policy_store.policy_bundle_content_hash(
+        approved_provider_ids=_INITIAL_PROVIDERS,
+        blocked_component_keys=_INITIAL_COMPONENTS,
+        blocked_template_keys=_INITIAL_TEMPLATES,
+        approved_integration_provider_ids={"google", "slack"},
+        blocked_integration_action_keys={_BLOCKED_ACTION},
+    )
+    durable = await _read_active(bundle_session_maker)
+    assert durable.approved_integration_provider_ids == committed.approved_integration_provider_ids
+    assert durable.blocked_integration_action_keys == committed.blocked_integration_action_keys
+    assert durable.content_hash == committed.content_hash
+
+
+async def test_replace_without_integration_fields_keeps_legacy_content_hash_shape(bundle_session_maker):
+    """QA: policy tests prove hash stability when integration sets are empty."""
+    async with bundle_session_maker() as session:
+        committed = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            blocked_model_keys={"openai::gpt-blocked"},
+            actor_user_id=uuid4(),
+        )
+
+    assert committed.approved_integration_provider_ids == frozenset()
+    assert committed.blocked_integration_action_keys == frozenset()
+    assert committed.content_hash == policy_store.policy_bundle_content_hash(
+        approved_provider_ids=_INITIAL_PROVIDERS,
+        blocked_component_keys=_INITIAL_COMPONENTS,
+        blocked_template_keys=_INITIAL_TEMPLATES,
+        blocked_model_keys={"openai::gpt-blocked"},
+    )
+
+
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [{"google.drive.search"}, {"integrations.google"}, {"integrations..search"}, {"  "}],
+    ids=["missing-prefix", "no-action-segment", "empty-segment", "blank"],
+)
+async def test_malformed_integration_action_key_rejected_before_any_write(bundle_session_maker, invalid_keys):
+    async with bundle_session_maker() as session:
+        with pytest.raises(ValueError, match="Integration action policy keys"):
+            await policy_store.replace_policy_bundle_state(
+                session,
+                expected_revision=1,
+                approved_provider_ids=_INITIAL_PROVIDERS,
+                blocked_component_keys=_INITIAL_COMPONENTS,
+                blocked_template_keys=_INITIAL_TEMPLATES,
+                blocked_integration_action_keys=invalid_keys,
+                actor_user_id=uuid4(),
+            )
+
+    active = await _read_active(bundle_session_maker)
+    assert active.revision == 1
+    assert active.blocked_integration_action_keys == frozenset()
+
+
+async def test_malformed_integration_provider_id_rejected_before_any_write(bundle_session_maker):
+    async with bundle_session_maker() as session:
+        with pytest.raises(ValueError, match="Integration provider IDs"):
+            await policy_store.replace_policy_bundle_state(
+                session,
+                expected_revision=1,
+                approved_provider_ids=_INITIAL_PROVIDERS,
+                blocked_component_keys=_INITIAL_COMPONENTS,
+                blocked_template_keys=_INITIAL_TEMPLATES,
+                approved_integration_provider_ids={"google drive"},
+                actor_user_id=uuid4(),
+            )
+
+    active = await _read_active(bundle_session_maker)
+    assert active.revision == 1
+    assert active.approved_integration_provider_ids == frozenset()
+
+
+async def test_rollback_restores_integration_governance(bundle_session_maker):
+    async with bundle_session_maker() as session:
+        revision_two = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            approved_integration_provider_ids={"google"},
+            blocked_integration_action_keys={_BLOCKED_ACTION},
+            actor_user_id=uuid4(),
+        )
+    async with bundle_session_maker() as session:
+        revision_three = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=revision_two.revision,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            actor_user_id=uuid4(),
+        )
+    assert revision_three.approved_integration_provider_ids == frozenset()
+
+    async with bundle_session_maker() as session:
+        rolled_back = await policy_store.rollback_policy_bundle_state(
+            session,
+            expected_revision=revision_three.revision,
+            target_revision=revision_two.revision,
+            actor_user_id=uuid4(),
+        )
+
+    assert rolled_back.approved_integration_provider_ids == frozenset({"google"})
+    assert rolled_back.blocked_integration_action_keys == frozenset({_BLOCKED_ACTION})
+    assert rolled_back.content_hash == revision_two.content_hash
+
+
+async def test_provider_ceiling_write_preserves_integration_governance(bundle_session_maker):
+    """A model-provider facet write must never clear the integration decisions."""
+    from langflow.services import model_provider_policy as legacy_provider_store
+
+    async with bundle_session_maker() as session:
+        await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            approved_integration_provider_ids={"google"},
+            blocked_integration_action_keys={_BLOCKED_ACTION},
+            actor_user_id=uuid4(),
+        )
+
+    async with bundle_session_maker() as session:
+        persisted = await legacy_provider_store.replace_model_provider_policy_state(
+            session,
+            {"openai", "anthropic"},
+            actor_user_id=uuid4(),
+        )
+
+    assert persisted.bundle_snapshot is not None
+    assert persisted.bundle_snapshot.approved_integration_provider_ids == frozenset({"google"})
+    assert persisted.bundle_snapshot.blocked_integration_action_keys == frozenset({_BLOCKED_ACTION})
+
+
+async def test_bootstrap_carries_integration_governance_into_the_first_revision(bundle_session_maker):
+    async with bundle_session_maker() as session:
+        active = await session.get(PolicyBundleActive, 1)
+        initial = await session.get(PolicyBundleRevision, 1)
+        assert active is not None
+        assert initial is not None
+        active.initialized = False
+        initial.initialized = False
+        await session.commit()
+
+    async with bundle_session_maker() as session:
+        snapshot, created = await policy_store.bootstrap_policy_bundle_if_pristine(
+            session,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=(),
+            blocked_template_keys=(),
+            approved_integration_provider_ids={"google"},
+            blocked_integration_action_keys={_BLOCKED_ACTION},
+        )
+
+    assert created is True
+    assert snapshot.approved_integration_provider_ids == frozenset({"google"})
+    assert snapshot.blocked_integration_action_keys == frozenset({_BLOCKED_ACTION})

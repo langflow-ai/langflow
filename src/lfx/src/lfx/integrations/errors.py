@@ -23,6 +23,10 @@ INTEGRATION_ERROR_CODES = frozenset(
         "rate-limited",
         "provider-unavailable",
         "action-unsupported",
+        "invalid-request",
+        "resource-not-found",
+        "policy-blocked",
+        "incompatible-tool",
     }
 )
 
@@ -82,6 +86,7 @@ ConnectionUnresolvedReason = Literal[
     "invalid-expiry",
     "invalid-credential",
     "credential-undecryptable",
+    "registration-unavailable",
 ]
 
 _CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
@@ -105,6 +110,15 @@ _CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
     "credential-undecryptable": (
         "The stored credential could not be decrypted. Reconnect the integration; if many connections "
         "report this, check whether the server's secret key changed."
+    ),
+    # Distinct from ``auth-expired`` on purpose: the credential is intact and
+    # reconnecting would not help. This process cannot see the OAuth
+    # registration the connection was authorized under, which is a property of
+    # how *it* is configured - so a listener or worker that hits this should
+    # retry rather than disarm the work that depends on the connection.
+    "registration-unavailable": (
+        "This process has no usable OAuth registration for this connection. Configure the same OAuth "
+        "registrations the API is running with, then retry."
     ),
 }
 
@@ -138,7 +152,12 @@ class ConnectionUnresolvedError(IntegrationError):
 
 
 ConnectionNotAuthorizedReason = Literal[
-    "principal", "provider", "anonymous-principal", "unknown-principal", "non-interactive-opt-in-required"
+    "principal",
+    "provider",
+    "anonymous-principal",
+    "unknown-principal",
+    "non-interactive-opt-in-required",
+    "listener-only",
 ]
 
 _CONNECTION_NOT_AUTHORIZED_HINTS: dict[ConnectionNotAuthorizedReason, str] = {
@@ -149,13 +168,24 @@ _CONNECTION_NOT_AUTHORIZED_HINTS: dict[ConnectionNotAuthorizedReason, str] = {
     "non-interactive-opt-in-required": (
         "Ask the connection owner to enable allow_non_interactive on this connection, then retry."
     ),
+    # A credential that exists only to hold a trigger listener's connection -
+    # a Slack app-level token opens Socket Mode sockets and does nothing else.
+    "listener-only": (
+        "This connection can only be used by a trigger listener. Choose a different connection for this component."
+    ),
 }
 
 
 class ConnectionNotAuthorizedError(IntegrationError):
     code = "connection-not-authorized"
 
-    def __init__(self, *, provider: str | None = None, reason: ConnectionNotAuthorizedReason = "principal") -> None:
+    def __init__(
+        self,
+        *,
+        provider: str | None = None,
+        reason: ConnectionNotAuthorizedReason = "principal",
+        hint: str | None = None,
+    ) -> None:
         if reason not in _CONNECTION_NOT_AUTHORIZED_HINTS:
             msg = "Unknown connection authorization reason"
             raise ValueError(msg)
@@ -163,7 +193,9 @@ class ConnectionNotAuthorizedError(IntegrationError):
             "The provider denied this action."
             if reason == "provider"
             else "This execution principal is not authorized to use the requested connection.",
-            hint=_CONNECTION_NOT_AUTHORIZED_HINTS[reason],
+            # A provider adapter that recognizes a narrower denial (for example a
+            # per-file grant boundary) may name the remedy; the reason stays typed.
+            hint=hint or _CONNECTION_NOT_AUTHORIZED_HINTS[reason],
             provider=provider,
             http_status=403,
             details={"reason": reason},
@@ -241,6 +273,57 @@ class ProviderUnavailableError(IntegrationError):
         )
 
 
+class IntegrationPolicyBlockedError(IntegrationError):
+    """The provider or action is denied by the deployment's integration policy.
+
+    Discovery hides blocked capabilities, so reaching this error means a saved
+    or crafted flow named an action the operator has not approved. The message
+    is deliberately non-specific about *why* a key is denied: the sanitized
+    client body carries the stable ``policy-blocked`` code, and the blocked key
+    itself is only surfaced through ``details`` for the flow owner.
+    """
+
+    code = "policy-blocked"
+
+    def __init__(self, *, provider: str | None = None, policy_key: str | None = None) -> None:
+        super().__init__(
+            "This integration action is not available under the current integration policy.",
+            hint="Ask an administrator to approve the integration or unblock the action.",
+            provider=provider,
+            http_status=403,
+            details={"policy_key": policy_key} if policy_key else None,
+        )
+        self.policy_key = policy_key
+
+
+class InvalidRequestError(IntegrationError):
+    """The inputs must change before the provider can perform the action."""
+
+    code = "invalid-request"
+
+    def __init__(
+        self,
+        message: str = "The provider rejected the action's inputs.",
+        *,
+        hint: str = "Check the action's inputs and try again.",
+        provider: str | None = None,
+        http_status: int | None = 400,
+    ) -> None:
+        super().__init__(message, hint=hint, provider=provider, http_status=http_status)
+
+
+class ResourceNotFoundError(IntegrationError):
+    code = "resource-not-found"
+
+    def __init__(self, *, provider: str | None = None, hint: str | None = None) -> None:
+        super().__init__(
+            "The requested provider resource was not found or is inaccessible.",
+            hint=hint or "Check the resource ID and the connected account's access to it.",
+            provider=provider,
+            http_status=404,
+        )
+
+
 class ActionUnsupportedError(IntegrationError):
     code = "action-unsupported"
 
@@ -249,6 +332,35 @@ class ActionUnsupportedError(IntegrationError):
             "The provider does not support this action.",
             provider=provider,
             http_status=http_status,
+        )
+
+
+class IncompatibleToolError(IntegrationError):
+    """A pinned MCP server no longer matches the tool contract a bundle pinned.
+
+    Raised instead of degrading to whatever the server currently offers: an added,
+    removed, renamed, or re-shaped tool, a server-version or ``tools/list`` digest
+    mismatch, or a call whose arguments fall outside the pinned schema. Not
+    retryable -- only a bundle release (or a provider rollback) can resolve it.
+    """
+
+    code = "incompatible-tool"
+
+    def __init__(
+        self,
+        message: str = "The MCP server does not match the tool contract pinned by this action.",
+        *,
+        provider: str | None = None,
+        hint: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            hint=hint or "Upgrade to a bundle release whose pinned tools match the server, then retry.",
+            provider=provider,
+            retryable=False,
+            safe_message="This action's provider tools changed and no longer match what the bundle pinned.",
+            details=details,
         )
 
 

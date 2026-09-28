@@ -508,3 +508,72 @@ async def test_instance_connections_are_changed_only_by_superusers(
     assert renamed.status_code == 200, renamed.text
     deleted = await client.delete(connection_url, headers=logged_in_headers_super_user)
     assert deleted.status_code == 204, deleted.text
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize("revoked", [False, True])
+@pytest.mark.parametrize("durable", [False, True])
+async def test_mutation_rechecks_policy_under_lock_without_blocking_durable_audit(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    revoked: bool,
+    durable: bool,
+) -> None:
+    import asyncio
+
+    from langflow.services.authorization.audit import drain_pending_audit_writes
+    from langflow.services.database.models.auth import AuthzAuditLog
+    from langflow.services.database.models.connection import Connection
+
+    created = await client.post("api/v1/connections", json=_payload(), headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    connection_id = UUID(created.json()["id"])
+    settings = get_settings_service()
+    decisions = []
+
+    async def changing_policy(**request):
+        assert request["obj"] == f"connection:{connection_id}"
+        assert request["act"] == "write"
+        allowed = not decisions or not revoked
+        decisions.append(allowed)
+        return allowed
+
+    async with _other_user_headers(client) as headers:
+        with install_policy_authz(settings) as policy:
+            monkeypatch.setattr(policy, "enforce", changing_policy)
+            monkeypatch.setattr(settings.auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+            monkeypatch.setattr(settings.auth_settings, "AUTHZ_AUDIT_DURABLE", durable)
+            try:
+                with _connection_row_updates() as locks:
+                    response = await asyncio.wait_for(
+                        client.patch(
+                            f"api/v1/connections/{connection_id}",
+                            json={"display_name": "Renamed"},
+                            headers=headers,
+                        ),
+                        timeout=5,
+                    )
+                assert response.status_code == (403 if revoked else 200), response.text
+                assert decisions == [True, not revoked]
+                assert locks
+                if not durable:
+                    await drain_pending_audit_writes()
+                async with session_scope() as session:
+                    row = await session.get(Connection, connection_id)
+                    assert row.display_name == ("Work Google" if revoked else "Renamed")
+                    audits = (
+                        await session.exec(
+                            select(AuthzAuditLog).where(
+                                AuthzAuditLog.resource_id == connection_id,
+                                AuthzAuditLog.action == "connection:write",
+                            )
+                        )
+                    ).all()
+                    assert len(audits) == 2
+                    assert sorted(audit.result for audit in audits) == (
+                        ["allow", "deny"] if revoked else ["allow", "allow"]
+                    )
+            finally:
+                await drain_pending_audit_writes()

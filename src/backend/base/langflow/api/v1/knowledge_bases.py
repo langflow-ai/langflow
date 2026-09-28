@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError, ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.ingestion_sources import (
     FolderSource,
@@ -25,6 +26,7 @@ from lfx.base.knowledge_bases.ingestion_sources import (
 from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import provider_id_for
 from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
+from lfx.integrations.errors import IntegrationError
 from lfx.log import logger
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -35,6 +37,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
+from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
     KBStorageHelper,
@@ -543,7 +546,6 @@ async def _cancel_inflight_ingestion_for_kb(
     *,
     kb_name: str,
     asset_id: uuid.UUID,
-    current_user: CurrentActiveUser,
     job_service: JobService,
 ) -> None:
     """Cancel queued / in-progress ingestion jobs for the named KB.
@@ -558,12 +560,15 @@ async def _cancel_inflight_ingestion_for_kb(
     user's actual delete intent. Failures are logged and the delete
     proceeds — the worst case is the same as before this helper
     existed.
+
+    Not filtered by user: ``asset_id`` is the KB row the caller is already
+    authorized to delete, and a collaborator's run on a shared KB must stop
+    too, or it keeps writing into the deleted KB's storage.
     """
     try:
         cancelled = await job_service.cancel_in_flight_jobs_by_asset(
             asset_id=asset_id,
             asset_type="knowledge_base",
-            user_id=current_user.id,
         )
     except Exception as exc:  # noqa: BLE001
         await logger.awarning("Cancel-on-delete failed for KB %s: %s", kb_name, exc)
@@ -754,6 +759,10 @@ async def create_knowledge_base(
         # guard below never runs for them — this is what keeps a name like
         # ``../victim_user/evil_kb`` from being persisted on a remote backend.
         _validate_kb_name_or_403(kb_name, current_user)
+        try:
+            ensure_storage_routing_allowed(request.backend_config, is_superuser=bool(current_user.is_superuser))
+        except StorageRoutingNotAllowedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
         # The ``knowledge_base`` row is the authority on existence, and
         # ``uq_knowledge_base_user_name`` is the real guard against duplicates.
         existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
@@ -1162,6 +1171,7 @@ async def ingest_files_to_knowledge_base(
             separator=separator,
             source_name=source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -1313,6 +1323,7 @@ async def ingest_folder_to_knowledge_base(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -1437,6 +1448,8 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
                 description=getattr(source_cls, "description", "") or "",
                 icon=getattr(source_cls, "icon", None),
                 requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+                provider_key=getattr(source_cls, "connection_provider", "") or None,
+                required_scopes=list(getattr(source_cls, "connection_required_scopes", ()) or ()),
             )
         )
     return entries
@@ -1829,6 +1842,15 @@ async def ingest_via_connector(
             await source.validate_config()
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except IntegrationError as exc:
+            # A connection the caller cannot use (no allow_non_interactive opt-in,
+            # a missing scope, a provider denial) is theirs to fix: keep the typed
+            # code, status and hint instead of the catch-all 500 below. The handle
+            # was supplied by this caller, so the owner diagnostics are theirs too.
+            typed = integration_http_error(exc, expose_details=True)
+            if typed is None:
+                raise
+            raise typed from exc
 
         # Build an idempotency key over (user, kb, source, config) so
         # that a double-click on "Ingest" doesn't spawn two jobs for
@@ -1878,6 +1900,7 @@ async def ingest_via_connector(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -2031,7 +2054,6 @@ async def delete_knowledge_base(
         await _cancel_inflight_ingestion_for_kb(
             kb_name=kb_name,
             asset_id=record.id,
-            current_user=kb_owner,
             job_service=job_service,
         )
 
@@ -2150,7 +2172,6 @@ async def delete_knowledge_bases_bulk(
                 await _cancel_inflight_ingestion_for_kb(
                     kb_name=kb_name,
                     asset_id=record.id,
-                    current_user=kb_guard.owner_user,
                     job_service=job_service,
                 )
                 remote_warning = await _delete_remote_backend_collection(
@@ -2258,19 +2279,17 @@ async def cancel_ingestion(
         # Update status immediately so background task can see it
         await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
 
-        # Clean up any partially ingested chunks from this job. Forward
-        # the KB's configured backend + user_id so non-Chroma KBs
-        # (Mongo/Astra/Postgres) actually find their variable-backed
-        # credentials and delete against the right store — otherwise
-        # cleanup silently falls back to Chroma and remote chunks
-        # written before the cancel stick around.
+        # Clean up any partially ingested chunks from this job. Forward the KB's
+        # configured backend and its owner's id: remote backends name their
+        # storage from the owner, so a collaborator cancelling a shared KB's run
+        # must still delete from the owner's collection, not their own.
         await KBIngestionHelper.cleanup_chroma_chunks_by_job(
             job.job_id,
             kb_path,
             kb_name,
             backend_type=backend_type_value,
             backend_config=backend_config,
-            user_id=current_user.id,
+            user_id=_kb_guard.owner_user.id,
         )
 
         if revoked:

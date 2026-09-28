@@ -59,6 +59,14 @@ class TestFileComponent(BaseFileComponent):
 class TestLoadFilesMessage:
     """Test cases for BaseFileComponent.load_files_message method."""
 
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self, monkeypatch):
+        """These tests exercise file loading mechanics, not containment; opt out of restriction."""
+        settings = SimpleNamespace(restrict_local_file_access=False)
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service", lambda: SimpleNamespace(settings=settings)
+        )
+
     def setup_method(self):
         """Set up test fixtures."""
         self.component = TestFileComponent()
@@ -125,6 +133,10 @@ class TestLoadFilesMessage:
         assert "First text" in result.text
         assert "Second text" in result.text
         assert "\n\n" in result.text  # Default separator
+        assert result.data["source_files"] == [
+            {"file_path": str(file1), "text": "First text"},
+            {"file_path": str(file2), "text": "Second text"},
+        ]
 
     def test_load_files_message_with_custom_separator(self):
         """Test load_files_message with custom separator."""
@@ -141,6 +153,20 @@ class TestLoadFilesMessage:
         result = self.component.load_files_message()
 
         assert result.text == "First | Second"
+
+    def test_multiple_data_rows_from_one_file_stay_together(self):
+        self.component.load_files_core = lambda: [
+            Data(data={"file_path": "first.txt", "text": "first part"}),
+            Data(data={"file_path": "second.txt", "text": "second file"}),
+            Data(data={"file_path": "first.txt", "text": "second part"}),
+        ]
+
+        result = self.component.load_files_message()
+
+        assert result.data["source_files"] == [
+            {"file_path": "first.txt", "text": "first part\n\nsecond part"},
+            {"file_path": "second.txt", "text": "second file"},
+        ]
 
     def test_load_files_message_with_json_complex_structure(self):
         """Test load_files_message with complex JSON structure."""
@@ -258,6 +284,14 @@ class TestLoadFilesMessage:
 
 class TestDeleteAfterProcessingRaceCondition:
     """Tests for race condition when delete_server_file_after_processing=True."""
+
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self, monkeypatch):
+        """These tests exercise file loading mechanics, not containment; opt out of restriction."""
+        settings = SimpleNamespace(restrict_local_file_access=False)
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service", lambda: SimpleNamespace(settings=settings)
+        )
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -549,7 +583,7 @@ class TestStorageKeyNamespaceOwnership:
         settings = SimpleNamespace(
             config_dir=str(config_dir),
             database_url="",
-            # OSS default: local-file containment is OFF. Namespace ownership must hold anyway.
+            # Containment explicitly disabled (legacy opt-out). Namespace ownership must hold anyway.
             restrict_local_file_access=False,
             storage_type="local",
         )

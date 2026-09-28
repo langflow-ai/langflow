@@ -11,7 +11,11 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urlsplit
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 API_WORDS = ["api", "key", "token"]
 
@@ -100,15 +104,15 @@ def remove_api_keys(flow: dict) -> dict:
 
 def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     """Return a deep-copied flow-data mapping with persisted secrets removed."""
-    # Only ``None`` short-circuits. An empty mapping must still be copied: callers such as
-    # ``strip_flow_secrets`` promise the returned ``data`` is detached from the ORM-backed
-    # payload, and returning the original ``{}`` would alias it.
+    # Only ``None`` short-circuits. An empty mapping must still be copied: callers promise
+    # the returned data is detached from the ORM-backed payload, and returning the
+    # original ``{}`` would alias it.
     if flow_data is None:
         return flow_data
     return strip_secret_field_values_in_place(deepcopy(flow_data))
 
 
-def strip_flow_secrets(flow: dict) -> dict:
+def strip_flow_secrets(flow: dict, *, known_variable_names: Collection[str] = frozenset()) -> dict:
     """Return a copy of a serialized flow *envelope* with persisted secrets removed.
 
     ``strip_secret_field_values`` scrubs a bare flow-data mapping; export paths
@@ -117,13 +121,24 @@ def strip_flow_secrets(flow: dict) -> dict:
     than the legacy :func:`remove_api_keys`, which only nulled fields that were
     both ``password``-marked *and* named like an API key.
 
+    Fields bound to a global variable (``load_from_db``) keep the variable
+    *name*, not the secret, so the importing instance can resolve the
+    credential by that name. A bound value is kept only when it names one of
+    ``known_variable_names`` (the flow owner's existing global variables), so a
+    literal secret behind a stale ``load_from_db`` flag is nulled even when it
+    is shaped like a name. The empty default nulls every bound value.
+
     The returned envelope is a shallow copy whose ``data`` is detached, so the
     caller never mutates the ORM-backed payload it serialized from.
     """
     if not isinstance(flow, dict) or "data" not in flow:
         return flow
     scrubbed = dict(flow)
-    scrubbed["data"] = strip_secret_field_values(flow["data"])
+    scrubbed["data"] = strip_secret_field_values_in_place(
+        deepcopy(flow["data"]),
+        variable_references=set(),
+        known_variable_names=known_variable_names,
+    )
     return scrubbed
 
 
@@ -167,6 +182,17 @@ def _is_variable_reference(value: object) -> bool:
     if _CREDENTIAL_VALUE_PATTERN.match(value.strip()):
         return False
     return not _contains_url_credentials(value)
+
+
+def _is_preserved_reference(value: object, known_variable_names: Collection[str] | None) -> bool:
+    """Return whether a ``load_from_db`` value is kept as a variable-name reference.
+
+    ``known_variable_names`` restricts preserved values to names of existing
+    global variables. ``None`` keeps every value that passes the shape check.
+    """
+    if not _is_variable_reference(value):
+        return False
+    return known_variable_names is None or value in known_variable_names
 
 
 def _contains_url_credentials(value: str) -> bool:
@@ -256,7 +282,12 @@ def _table_reference_columns(field: dict) -> frozenset[str]:
     )
 
 
-def _strip_table_rows_in_place(field: dict, reference_columns: frozenset[str], variable_references: set[str]) -> None:
+def _strip_table_rows_in_place(
+    field: dict,
+    reference_columns: frozenset[str],
+    variable_references: set[str],
+    known_variable_names: Collection[str] | None = None,
+) -> None:
     """Strip table rows while preserving valid ``load_from_db`` column references."""
     rows = field.get("value")
     if not isinstance(rows, list):
@@ -277,7 +308,9 @@ def _strip_table_rows_in_place(field: dict, reference_columns: frozenset[str], v
             # variable *name*. A cell the row marks as not loading from the
             # database holds the literal value itself, so it is scrubbed like
             # any other secret rather than published as a required variable.
-            if _cell_loads_from_db(row_metadata, column) is False or not _is_variable_reference(cell):
+            if _cell_loads_from_db(row_metadata, column) is False or not _is_preserved_reference(
+                cell, known_variable_names
+            ):
                 preserved[column] = None
                 continue
             variable_references.add(cell)
@@ -288,7 +321,11 @@ def _strip_table_rows_in_place(field: dict, reference_columns: frozenset[str], v
             row[_TABLE_LOAD_FROM_DB_FIELDS] = row_metadata
 
 
-def _strip_template_field_value(field: dict, variable_references: set[str] | None = None) -> None:
+def _strip_template_field_value(
+    field: dict,
+    variable_references: set[str] | None = None,
+    known_variable_names: Collection[str] | None = None,
+) -> None:
     """Strip a template field according to metadata and value shape."""
     field_type = str(field.get("type") or "").lower()
     if field_type == "connection_ref":
@@ -313,9 +350,10 @@ def _strip_template_field_value(field: dict, variable_references: set[str] | Non
     ):
         # A bound field stores the global-variable *name*, not the secret, so a
         # deployment target can re-resolve the credential it provisions under
-        # that name. Anything that fails the reference shape check is nulled.
+        # that name. Anything that fails the reference shape check, or names no
+        # variable in ``known_variable_names`` when the caller passes it, is nulled.
         value = field.get("value")
-        if _is_variable_reference(value):
+        if _is_preserved_reference(value, known_variable_names):
             variable_references.add(value)
         else:
             field["value"] = None
@@ -335,13 +373,17 @@ def _strip_template_field_value(field: dict, variable_references: set[str] | Non
     if variable_references is not None:
         reference_columns = _table_reference_columns(field)
         if reference_columns:
-            _strip_table_rows_in_place(field, reference_columns, variable_references)
+            _strip_table_rows_in_place(field, reference_columns, variable_references, known_variable_names)
             return
 
     field["value"] = _strip_structured_secret_values_in_place(field.get("value"))
 
 
-def _strip_secrets_from_nodes(nodes: list, variable_references: set[str] | None = None) -> None:
+def _strip_secrets_from_nodes(
+    nodes: list,
+    variable_references: set[str] | None = None,
+    known_variable_names: Collection[str] | None = None,
+) -> None:
     """Iteratively strip secret values from regular and grouped flow nodes."""
     node_frames = [iter(nodes)]
     while node_frames:
@@ -362,7 +404,7 @@ def _strip_secrets_from_nodes(nodes: list, variable_references: set[str] | None 
         if isinstance(template, dict):
             for value in template.values():
                 if isinstance(value, dict):
-                    _strip_template_field_value(value, variable_references)
+                    _strip_template_field_value(value, variable_references, known_variable_names)
 
         flow = node_inner.get("flow")
         if isinstance(flow, dict):
@@ -377,29 +419,32 @@ def strip_secret_field_values_in_place(
     flow_data: dict | None,
     *,
     variable_references: set[str] | None = None,
+    known_variable_names: Collection[str] | None = None,
 ) -> dict | None:
     """Scrub a detached flow-data mapping in place with bounded traversal memory.
 
     By default every secret-bearing value is nulled, including the names of
     global variables bound via ``load_from_db`` — the right contract for
     anonymous consumers such as the public-flow endpoint. Deployment packaging
-    passes ``variable_references``: fields (and table cells) that the runtime
-    resolves from the database then keep their variable-*name* values, and
-    every preserved name is added to the set so the caller can emit a
-    required-variables manifest.
+    and flow/project export pass ``variable_references``: fields (and table
+    cells) that the runtime resolves from the database then keep their
+    variable-*name* values, and every preserved name is added to the set so the
+    caller can emit a required-variables manifest.
 
     Only values the runtime would look up are preserved — a table cell the row
     marks as not loading from the database holds the literal secret, so it is
     nulled like any other. Values that cannot be a variable name are nulled
     too, but that shape check narrows rather than closes the gap: a flow whose
     ``load_from_db`` metadata is wrong can still carry a raw secret shaped like
-    an ordinary name.
+    an ordinary name. Callers that can list the owner's global variables pass
+    ``known_variable_names`` to close it: only values naming one of those
+    variables are then preserved.
     """
     if not flow_data:
         return flow_data
     nodes = flow_data.get("nodes")
     if isinstance(nodes, list):
-        _strip_secrets_from_nodes(nodes, variable_references)
+        _strip_secrets_from_nodes(nodes, variable_references, known_variable_names)
     return flow_data
 
 

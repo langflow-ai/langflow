@@ -38,6 +38,7 @@ def test_apply_run_defaults_stamps_headless_only_when_principal_is_unknown() -> 
 
     assert graph.execution_principal.kind == "headless_operator"
     assert graph.execution_principal.family == "lfx_headless"
+    assert graph.execution_principal.interactive is False
 
 
 @pytest.mark.parametrize(
@@ -66,3 +67,25 @@ def test_apply_run_defaults_stamps_when_the_graph_has_no_principal_attribute() -
     apply_run_defaults(graph, session_id="session-1", user_id="user-1")
 
     assert graph.execution_principal.kind == "headless_operator"
+
+
+async def test_headless_defaults_cannot_bypass_non_interactive_opt_in():
+    from lfx.integrations.errors import ConnectionNotAuthorizedError
+    from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
+    from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
+
+    class UserConnection(BaseConnectionResolverService):
+        async def _get_access_policy(self, _request):
+            return ConnectionAccessPolicy(owner_kind="user", connection_owner_id="user-1", allow_non_interactive=False)
+
+        async def _resolve(self, _request, _policy):
+            pytest.fail("Headless execution must be denied before credentials are loaded")
+
+    graph = _FakeGraph(ExecutionPrincipal.unknown())
+    apply_run_defaults(graph, session_id="session-1", user_id="user-1")
+    request = ConnectionResolutionRequest(
+        ref=ConnectionRef.parse("microsoft/work"), principal=graph.execution_principal
+    )
+    with pytest.raises(ConnectionNotAuthorizedError) as caught:
+        await UserConnection().resolve(request)
+    assert caught.value.reason == "non-interactive-opt-in-required"

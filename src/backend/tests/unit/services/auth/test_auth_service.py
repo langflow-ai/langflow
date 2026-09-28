@@ -1232,6 +1232,37 @@ async def test_materialize_external_user_preserves_email_when_token_omits_it(
     assert profile.email == "alice2@example.com"
 
 
+@pytest.mark.anyio
+async def test_materialize_external_user_falls_back_when_username_differs_only_in_case(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """An IdP username that case-collides with a local user takes the fallback name.
+
+    An exact-match availability check would pick "Alice", hit
+    ix_user_username_lower on insert, and fail that login on every attempt.
+    """
+    from langflow.services.auth.external import identity_from_claims
+    from sqlmodel import func, select
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    local = User(username="alice", password="hashed", is_active=True)  # noqa: S106 # pragma: allowlist secret
+    async_session.add(local)
+    await async_session.flush()
+
+    identity = identity_from_claims({"sub": "ext-subject-case", "preferred_username": "Alice"}, auth_settings)
+    user = await auth_service._materialize_external_user(identity, async_session)
+    await async_session.flush()
+
+    assert user.id != local.id
+    assert user.username.lower() != "alice"
+    same_name = select(func.count()).select_from(User).where(func.lower(User.username) == "alice")
+    assert (await async_session.exec(same_name)).one() == 1
+
+
 # =============================================================================
 # Verified external-group reconciliation
 # =============================================================================

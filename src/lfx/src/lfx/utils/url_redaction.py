@@ -6,8 +6,42 @@ tickets) are exactly the places a secret must not. The reduction is deliberate r
 clever: keep enough to identify the target, drop everything that can authenticate to it.
 """
 
+import logging
 import re
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from urllib.parse import urlparse
+
+_sensitive_http_request: ContextVar[bool] = ContextVar("sensitive_http_request", default=False)
+
+
+class _SensitiveHTTPLogFilter(logging.Filter):
+    def filter(self, _record: logging.LogRecord) -> bool:
+        return not _sensitive_http_request.get()
+
+
+_sensitive_http_filter = _SensitiveHTTPLogFilter()
+
+
+@asynccontextmanager
+async def suppress_sensitive_http_logs():
+    """Keep preauthenticated URLs and redirect headers out of HTTP transport logs.
+
+    The filter is task-local, so concurrent ordinary requests keep their logs.
+    HTTPX logs full request URLs at INFO; HTTP Core logs response headers (which
+    can include signed download locations) at DEBUG.
+    """
+    names = {"httpx", "httpcore"}
+    names.update(f"httpcore.{suffix}" for suffix in ("connection", "http11", "http2", "proxy", "socks_proxy"))
+    names.update(name for name in logging.Logger.manager.loggerDict.copy() if name.startswith("httpcore."))
+    for name in names:
+        logging.getLogger(name).addFilter(_sensitive_http_filter)
+    token = _sensitive_http_request.set(True)
+    try:
+        yield
+    finally:
+        _sensitive_http_request.reset(token)
+
 
 URL_IN_TEXT_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s'\"<>]+")
 

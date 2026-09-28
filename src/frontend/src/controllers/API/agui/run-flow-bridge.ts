@@ -51,6 +51,13 @@ const AGUI_STATUS_TO_BUILD_STATUS: Record<string, BuildStatus> = {
   inactive: BuildStatus.INACTIVE,
 };
 
+function showWorkflowWarning(message: string): void {
+  useAlertStore.getState().setNoticeData({
+    title: i18n.t("playground.workflowWarning"),
+    list: [message],
+  });
+}
+
 interface JsonPatchOp {
   op: string;
   path: string;
@@ -81,6 +88,7 @@ export interface BridgeContext {
   handleLogEvent: (data: unknown) => void;
   onFinished: () => void;
   onError: (message: string) => void;
+  onWarning: (message: string) => void;
 }
 
 /**
@@ -112,6 +120,11 @@ export function handleAGUIEvent(event: BaseEvent, ctx: BridgeContext): boolean {
         ctx.handleEndEvent(custom.value.data);
       } else {
         ctx.handleCustomEvent(custom.value.event_type, custom.value.data);
+      }
+    } else if (custom.name === "langflow.warning") {
+      const warning = custom.value as { message?: unknown } | undefined;
+      if (typeof warning?.message === "string" && warning.message) {
+        ctx.onWarning(warning.message);
       }
     } else if (custom.name === "langflow.human_input_required") {
       // Non-terminal: surface the card; the SSE ends at suspend and reattaches on resume.
@@ -406,6 +419,7 @@ export async function runFlowAGUI(
     },
     handleEndEvent: persistBuildDuration,
     handleLogEvent: appendLogEvent,
+    onWarning: showWorkflowWarning,
     onFinished: () => {
       terminalEventSeen = true;
       if (!opts.silent) {
@@ -504,7 +518,7 @@ export async function runFlowAGUI(
 }
 
 /** Background-run body (mode="background"); HITL needs the durable substrate. */
-function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
+export function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
   const body: Record<string, unknown> = {
     flow_id: opts.flowId,
     input_value: opts.message ?? "",
@@ -517,6 +531,12 @@ function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
   if (opts.stopComponentId) body.stop_component_id = opts.stopComponentId;
   if (opts.flowData) body.data = opts.flowData;
   if (opts.files && opts.files.length > 0) body.files = opts.files;
+  // Same reason as buildWorkflowRunRequest: `agui` withholds graph state unless
+  // asked, and the canvas renders node status from STATE_DELTA and the
+  // playground renders chat from the `langflow.event` mirror, which is gated on
+  // the same flag. A flow that can suspend runs through here, so without this a
+  // Human Input flow would run with no node lighting up and no messages.
+  body.expose_graph_state = opts.exposeGraphState ?? true;
   return body;
 }
 
@@ -552,6 +572,7 @@ export async function consumeBackgroundEvents(
     // end/log split); logs aren't surfaced separately on the reattach path.
     handleEndEvent: (data) => handleMessageEvent("end", data),
     handleLogEvent: () => {},
+    onWarning: showWorkflowWarning,
     onHumanInput: (payload) => {
       // Skip only the already-answered pause the reattach replays; a genuinely-new later pause
       // in the same run is unanswered and must still surface its card.

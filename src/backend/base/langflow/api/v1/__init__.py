@@ -18,6 +18,7 @@ from langflow.api.v1.flow_events import router as flow_events_router
 from langflow.api.v1.flow_version import router as flow_version_router
 from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.folders import router as folders_router
+from langflow.api.v1.integrations import router as integrations_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
@@ -33,6 +34,8 @@ from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
 from langflow.api.v1.traces import router as traces_router
+from langflow.api.v1.trigger_ingress import router as trigger_ingress_router
+from langflow.api.v1.triggers import router as triggers_router
 from langflow.api.v1.users import router as users_router
 from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
@@ -59,6 +62,7 @@ __all__ = [
     "flow_version_router",
     "flows_router",
     "folders_router",
+    "integrations_router",
     "knowledge_bases_router",
     "login_router",
     "mcp_projects_router",
@@ -74,6 +78,8 @@ __all__ = [
     "starter_projects_router",
     "store_router",
     "traces_router",
+    "trigger_ingress_router",
+    "triggers_router",
     "users_router",
     "validate_router",
     "variables_router",

@@ -11,6 +11,35 @@ entries:
   last_known_good_version: 1.11.6
   workaround: Install with the bundles extra (pip install "langflow[bundles]") or add the provider package to the image. Ollama was restored to the default install in 1.12.0; Groq and Mistral were not.
 
+- id: GH-14255
+  title: GET /api/v1/starter-projects/ returns a null name and description for every template
+  status: resolved
+  area: api
+  first_bad_version: unknown
+  last_known_good_version: unknown
+  resolved_in_version: 1.12.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14256
+  workaround: none
+
+- id: GH-15006
+  title: Startup fails on an existing PostgreSQL database because the catalog policy migration rejects its own CHECK constraint names
+  status: resolved
+  area: database
+  first_bad_version: 1.12.1
+  last_known_good_version: 1.12.0
+  resolved_in_version: 1.12.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/15007
+  workaround: none
+
+- id: GH-15261
+  title: CIDR-allowlisted provider IP endpoints rejected over HTTP
+  status: resolved
+  area: components
+  first_bad_version: 1.12.3rc0
+  last_known_good_version: 1.12.2
+  resolved_in_version: 1.12.3
+  workaround: Add the endpoint's exact IP address to LANGFLOW_SSRF_ALLOWED_HOSTS.
+
 # To add an entry, copy the template below and fill in the fields.
 # For more information, see regressions/README.md.
 #

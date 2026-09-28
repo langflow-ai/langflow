@@ -100,6 +100,19 @@ class ResolvedCredential:
     owner_kind: Literal["user", "instance", "env"] = "env"
     provider: str = ""
     name: str = ""
+    # Executing identity recorded on the connection, when the host knows it.
+    # Providers whose user and bot tokens share scope names (Slack's
+    # ``chat:write`` is both a User Token Scope and a Bot Token Scope) cannot
+    # tell the identities apart from ``granted_scopes``, so a bundle capability
+    # that must run as a bot compares this instead and fails closed. ``None``
+    # means the resolver does not know -- the headless env wire format has no
+    # place to declare one. ``None`` is not proof of any identity: a caller
+    # that needs one must establish it another way (``lfx-slack`` reads the
+    # token's type prefix) or fail closed.
+    #
+    # The literal mirrors ``lfx.integrations.capabilities.IntegrationIdentity``;
+    # it is spelled out here because ``capabilities`` imports from this module.
+    identity: Literal["user_delegated", "bot", "service"] | None = None
 
     def __repr__(self) -> str:
         return (
@@ -107,7 +120,8 @@ class ResolvedCredential:
             f"token_type={self.token_type!r}, expires_at={self.expires_at!r}, "
             f"granted_scopes={self.granted_scopes!r}, scopes_verified={self.scopes_verified!r}, "
             f"account={self.account!r}, connection_id={self.connection_id!r}, "
-            f"owner_kind={self.owner_kind!r}, provider={self.provider!r}, name={self.name!r})"
+            f"owner_kind={self.owner_kind!r}, provider={self.provider!r}, name={self.name!r}, "
+            f"identity={self.identity!r})"
         )
 
     def __reduce__(self):
@@ -122,6 +136,11 @@ class ConnectionResolutionRequest:
     ref: ConnectionRef
     principal: ExecutionPrincipal
     required_scopes: frozenset[str] = frozenset()
+    # INT-3 capability ids declared by the requesting input (INT-7). The host
+    # resolver enforces the action deny-list on these before it selects any
+    # candidate row, so a saved or crafted flow cannot reach a blocked action
+    # through a connection the caller legitimately owns.
+    capability_ids: frozenset[str] = frozenset()
     component_id: str | None = None
     flow_id: str | None = None
     run_id: str | None = None
@@ -154,6 +173,7 @@ class CredentialLease:
         self._lock = asyncio.Lock()
         self._now = now or (lambda: datetime.now(timezone.utc))
         self._reactive_refresh_completed = False
+        self._reactive_refresh_succeeded = False
 
     @property
     def ref(self) -> ConnectionRef:
@@ -190,8 +210,13 @@ class CredentialLease:
         credential = await self.get_credential()
         return credential.access_token.get_secret_value()
 
-    async def get_token_after_auth_error(self, error: AuthExpiredError) -> str:
-        """Re-resolve once after a provider rejects a no-expiry or stale token."""
+    async def get_token_after_auth_error(self, error: AuthExpiredError, *, rejected_token: str | None = None) -> str:
+        """Re-resolve once, sharing a successful refresh with concurrent stale requests.
+
+        Callers can identify the token their request used. A late rejection of
+        that old token can then reuse the refreshed credential, while a rejection
+        of the refreshed token still fails without another resolution.
+        """
         from lfx.integrations.errors import AuthExpiredError
 
         if not isinstance(error, AuthExpiredError):
@@ -199,6 +224,10 @@ class CredentialLease:
             raise TypeError(msg)
         async with self._lock:
             if self._reactive_refresh_completed:
+                if self._reactive_refresh_succeeded and self._credential is not None and rejected_token is not None:
+                    current = self._credential.access_token.get_secret_value()
+                    if current != rejected_token:
+                        return current
                 raise error
             self._reactive_refresh_completed = True
             rejected = (
@@ -207,5 +236,6 @@ class CredentialLease:
                 else None
             )
             self._credential = await self._resolver.resolve(replace(self._request, rejected_token_digest=rejected))
+            self._reactive_refresh_succeeded = True
             credential = self._credential
             return credential.access_token.get_secret_value()

@@ -20,6 +20,17 @@ export function getDefaultDisplay(
   if (value === undefined || value === null || value === "") {
     return { token: "empty" };
   }
+  if (
+    field?.type === "slider" &&
+    field.value_inverted &&
+    Number.isFinite(Number(value))
+  ) {
+    const range = field.rangeSpec ?? field.range_spec;
+    const min = range?.min ?? -2;
+    const max = range?.max ?? 2;
+    const clamped = Math.min(max, Math.max(min, Number(value)));
+    return { text: (min + max - clamped).toFixed(2) };
+  }
   if (Array.isArray(value)) {
     return value.length === 0
       ? { token: "none" }

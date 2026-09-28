@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -21,8 +22,8 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
 
     __tablename__ = "policy_bundle_revision"
     __table_args__ = (
-        sa.CheckConstraint("revision >= 1", name="ck_policy_bundle_revision_positive"),
-        sa.CheckConstraint("length(content_hash) = 64", name="ck_policy_bundle_revision_hash_length"),
+        sa.CheckConstraint("revision >= 1", name=conv("ck_policy_bundle_revision_positive")),
+        sa.CheckConstraint("length(content_hash) = 64", name=conv("ck_policy_bundle_revision_hash_length")),
     )
 
     revision: int = Field(primary_key=True, ge=1)
@@ -34,6 +35,17 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
     # revisions written before the column existed read back as "blocks
     # nothing" without a backfill. Writers always provide the value.
     blocked_model_keys: list[str] = Field(
+        default_factory=list,
+        sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
+    )
+    # Integration governance (INT-7) follows the same EXPAND-phase shape: an
+    # empty approved set means "unrestricted" in OSS, and revisions written
+    # before the columns existed read back as governing nothing.
+    approved_integration_provider_ids: list[str] = Field(
+        default_factory=list,
+        sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
+    )
+    blocked_integration_action_keys: list[str] = Field(
         default_factory=list,
         sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
     )
@@ -75,9 +87,9 @@ class PolicyBundleActive(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         sa.CheckConstraint(
             f"id = {POLICY_BUNDLE_SINGLETON_ID}",
-            name="ck_policy_bundle_active_singleton",
+            name=conv("ck_policy_bundle_active_singleton"),
         ),
-        sa.CheckConstraint("revision >= 1", name="ck_policy_bundle_active_revision_positive"),
+        sa.CheckConstraint("revision >= 1", name=conv("ck_policy_bundle_active_revision_positive")),
     )
 
     id: int = Field(default=POLICY_BUNDLE_SINGLETON_ID, primary_key=True)

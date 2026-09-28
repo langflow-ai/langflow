@@ -1,3 +1,4 @@
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -210,7 +211,7 @@ def test_published_images_pin_hardened_package_managers() -> None:
         ("IP_ADDRESS_VERSION", "10.3.1", "ip-address", '"ip-address": "10.3.1"'),
         ("BRACE_EXPANSION_VERSION", "5.0.9", "brace-expansion", '"brace-expansion": "5.0.9"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
-        ("UNDICI_VERSION", "6.28.0", "undici", 'undici: "6.28.0"'),
+        ("UNDICI_VERSION", "6.28.1", "undici", 'undici: "6.28.1"'),
     ):
         assert f'{variable}="{version}"' in install_script
         assert f'"{package}@${{{variable}}}"' in install_script
@@ -243,3 +244,37 @@ def test_published_images_pin_hardened_package_managers() -> None:
     lockfile = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
     locked_pip_versions = {package["version"] for package in lockfile["package"] if package["name"] == "pip"}
     assert locked_pip_versions == {"26.2.1"}
+
+
+def _image_uid(dockerfile: str) -> int:
+    """The numeric uid the image's named runtime user is created with."""
+    source = (REPO_ROOT / "docker" / dockerfile).read_text(encoding="utf-8")
+    match = re.search(r"useradd\b[^\n]*?(?:--uid|-u)[= ](\d+)", source)
+    assert match is not None, f"{dockerfile} no longer creates its runtime user with an explicit uid"
+    return int(match.group(1))
+
+
+def test_the_listener_deployment_names_a_uid_and_not_only_non_root() -> None:
+    """`runAsNonRoot` alone never starts a container whose image USER is a name.
+
+    The kubelet cannot prove that the name `user` is not root, so the pod stops
+    at `CreateContainerConfigError: image has non-numeric user`. The manifest has
+    to say which uid, and that uid has to be the one the images actually create -
+    which is the drift this test exists to catch.
+    """
+    import yaml
+
+    manifest = yaml.safe_load(
+        (REPO_ROOT / "deploy" / "listeners" / "kubernetes-deployment.yaml").read_text(encoding="utf-8")
+    )
+    containers = manifest["spec"]["template"]["spec"]["containers"]
+    assert len(containers) == 1
+    security_context = containers[0]["securityContext"]
+
+    assert security_context["runAsNonRoot"] is True
+    runtime_uid = security_context["runAsUser"]
+    assert isinstance(runtime_uid, int)
+    assert runtime_uid != 0
+
+    for dockerfile in ("build_and_push.Dockerfile", "build_and_push_backend.Dockerfile"):
+        assert _image_uid(dockerfile) == runtime_uid, f"{dockerfile} runs as a different uid than the manifest asks for"

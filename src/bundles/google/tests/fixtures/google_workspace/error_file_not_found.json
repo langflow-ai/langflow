@@ -1,0 +1,13 @@
+{
+  "error": {
+    "errors": [
+      {
+        "domain": "global",
+        "reason": "notFound",
+        "message": "File not found: file-outside-grant."
+      }
+    ],
+    "code": 404,
+    "message": "File not found: file-outside-grant."
+  }
+}

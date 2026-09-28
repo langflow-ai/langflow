@@ -40,8 +40,17 @@ from lfx.observability import execution_protocol, extract_trace_link, queued_tra
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
-from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_terminal_output_event
-from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
+from lfx.workflow.adapters.langflow import (
+    WORKFLOW_OUTPUT_CAPTURE_EVENT,
+    WORKFLOW_STOP_CHECKPOINT_EVENT,
+    build_terminal_output_event,
+)
+from lfx.workflow.converters import (
+    ParsedWorkflowRun,
+    create_error_response,
+    redact_component_identity,
+    run_response_to_workflow_response,
+)
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
@@ -385,7 +394,15 @@ async def _stream_event_frames(
     # The AG-UI playground's chat-view consumes the v1 message payload via a
     # side-channel ``CustomEvent``; emitted only when the wire protocol is
     # AG-UI. A follow-up retires this once chat-view consumes AG-UI primitives.
-    emit_side_channel = adapter.name == "agui"
+    # It is raw EventManager payloads, so a caller that asked for the narrowed
+    # stream does not get it: such a client reads the AG-UI TEXT_MESSAGE_*
+    # primitives, which carry the same conversation without the internals. The
+    # public playground is the exception and sets it independently.
+    emit_side_channel = adapter.name == "agui" and parsed.emit_v1_side_channel
+    # Only for a background run (the runner is the only consumer) whose per-vertex
+    # frames are suppressed; with graph state on those frames are durable and the
+    # runner already polls on them.
+    emit_stop_checkpoint = emit_output_capture and not parsed.expose_graph_state
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False
@@ -400,6 +417,10 @@ async def _stream_event_frames(
         for event in adapter.initial_events():
             yield _frame(event, seq)
             seq += 1
+        if parsed.component_substitution_warning:
+            for event in adapter.translate("warning", {"message": parsed.component_substitution_warning}):
+                yield _frame(event, seq)
+                seq += 1
         while True:
             _, value, _ = await queue.get()
             if value is None:
@@ -408,12 +429,19 @@ async def _stream_event_frames(
             event_type = payload.get("event", "")
             event_data = payload.get("data") or {}
             if emit_side_channel and event_type in side_channel_events:
+                # The mirror forwards EventManager payloads verbatim, and a message
+                # names the component that produced it (an LLM's ``source.source``
+                # is the model name). A run without graph state must not leak that
+                # through the side door the playground uses.
+                mirrored = event_data
+                if not parsed.expose_graph_state and event_type in {"add_message", "error"}:
+                    mirrored = redact_component_identity(event_data)
                 yield _frame(
                     StreamEvent(
                         type="CUSTOM",
                         data_json=CustomEvent(
                             name="langflow.event",
-                            value={"event_type": event_type, "data": event_data},
+                            value={"event_type": event_type, "data": mirrored},
                         ).model_dump_json(by_alias=True, exclude_none=True),
                     ),
                     seq,
@@ -438,6 +466,16 @@ async def _stream_event_frames(
                         seq,
                     )
                     seq += 1
+
+            if emit_stop_checkpoint and event_type == "end_vertex":
+                # Carries no payload: its only job is to give the runner a
+                # vertex boundary to poll STOP on, now that the frames it used
+                # to poll on are suppressed.
+                yield _frame(
+                    StreamEvent(type=WORKFLOW_STOP_CHECKPOINT_EVENT, data_json="{}"),
+                    seq,
+                )
+                seq += 1
 
             for event in adapter.translate(event_type, event_data):
                 if terminal_error_type is not None and event.type == terminal_error_type:
@@ -801,10 +839,17 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
+    warning = parsed.component_substitution_warning
+    warnings = [warning] if warning else []
     # user_id stays the executing service account (flow fetch / resume rely on it); the end
     # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
     await job_service.create_job(
-        job_id=job_id, flow_id=flow_id_str, user_id=current_user.id, end_user_id=parsed.end_user_id
+        job_id=job_id,
+        flow_id=flow_id_str,
+        user_id=current_user.id,
+        end_user_id=parsed.end_user_id,
+        # Keep the notice available to GET status even when sync result caching is off.
+        initial_metadata={"component_substitution_warning": warning} if warning else None,
     )
     _sync_run_paused = False
     _sync_run_success = False
@@ -860,6 +905,8 @@ async def execute_sync_workflow(
             effective_globals=request_variables,
             selected_ids=parsed.output_ids,
         )
+        if warnings:
+            workflow_response.warnings = warnings
         # Optionally cache the completed run's outputs + request to the job row so a
         # later GET status returns the same response. Off by default: sync callers
         # already hold the full response inline, so this is an opt-in per-request
@@ -893,6 +940,7 @@ async def execute_sync_workflow(
             job_id=str(job_id),
             status=JobStatus.SUSPENDED,
             human_request=exc.data or {},
+            warnings=warnings,
         )
         _sync_run_paused = True
         return suspended_response
@@ -908,13 +956,16 @@ async def execute_sync_workflow(
         # Component execution errors - return in response body with HTTP 200
         # This allows partial results and detailed error information per component
         _sync_run_error = str(exc)
-        return create_error_response(
+        error_response = create_error_response(
             flow_id=parsed.flow_id,
             job_id=job_id,
             inputs=parsed.tweaks,
             error=error_for_client(exc, expose_details=expose_error_details),
             effective_globals=request_variables,
         )
+        if warnings:
+            error_response.warnings = warnings
+        return error_response
     finally:
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Scarf telemetry pipeline both see every v2 sync workflow run.

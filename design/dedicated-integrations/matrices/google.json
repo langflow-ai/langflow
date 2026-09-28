@@ -294,6 +294,18 @@
             "type": "str",
             "required": false,
             "description": "Reply into an existing thread"
+          },
+          {
+            "name": "in_reply_to",
+            "type": "str",
+            "required": false,
+            "description": "Original Message-ID header; required with thread_id"
+          },
+          {
+            "name": "references",
+            "type": "str",
+            "required": false,
+            "description": "Space-separated Message-ID headers; defaults to in_reply_to"
           }
         ],
         "outputs": [
@@ -898,6 +910,12 @@
             "type": "int",
             "required": false,
             "description": "0 or 1"
+          },
+          {
+            "name": "time_zone",
+            "type": "str",
+            "required": false,
+            "description": "IANA time zone; required for recurring events"
           }
         ],
         "outputs": [

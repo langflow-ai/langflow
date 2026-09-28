@@ -11,6 +11,7 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
@@ -110,7 +111,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_catalog_policy_service, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
-from langflow.utils.compression import compress_response
 from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
 # Re-export helpers so existing ``from langflow.api.v1.flows import ...`` still works.
@@ -451,13 +451,13 @@ async def read_flows(
                     act=FlowAction.READ,
                 )
             if header_flows:
-                # Convert to FlowHeader objects and compress the response
+                # Convert to FlowHeader objects
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
-                return compress_response(flow_headers)
+                return JSONResponse(content=jsonable_encoder(flow_headers))
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
             flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
-            return compress_response(flow_reads)
+            return JSONResponse(content=jsonable_encoder(flow_reads))
 
         stmt = stmt.where(Flow.folder_id == folder_id)
 
@@ -752,8 +752,6 @@ async def upsert_flow(
 
     Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.
     """
-    from fastapi.responses import JSONResponse
-
     # Read once, outside the retry loop: a rollback between attempts expires the ORM User
     # and a later attribute read would lazy-load outside the greenlet.
     writer_id = current_user.id
@@ -954,7 +952,7 @@ async def delete_flow(
             memory_base_cleanups.clear()
             retry_target = await _read_flow(session, target_flow_id, actor.id)
             if retry_target is None:
-                return
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
             await ensure_flow_permission(
                 actor,
                 FlowAction.DELETE,
@@ -964,7 +962,8 @@ async def delete_flow(
                 folder_id=retry_target.folder_id,
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
-            memory_base_cleanups.extend(await cascade_delete_flow(session, target_flow_id))
+            if not await cascade_delete_flow(session, target_flow_id, memory_base_cleanups=memory_base_cleanups):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
@@ -1006,11 +1005,17 @@ async def create_flows(
 ):
     """Create multiple new flows."""
     catalog_policy_snapshot = get_catalog_policy_service().snapshot
+    storage_service = get_storage_service()
     # Validate the complete request before adding or flushing any rows. This
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        # This endpoint bypasses _new_flow, so the fs_path containment check
+        # every sibling flow-write route applies must run here too. Without it
+        # an absolute fs_path reaches the fs sync poller, which merges any
+        # readable JSON file on the host into the caller's own flow.
+        await _verify_fs_path(flow.fs_path, current_user.id, storage_service)
 
     # Resolve and authorize every flow's canonical project/workspace instead of
     # trusting caller-supplied denormalized scope fields.
@@ -1061,6 +1066,9 @@ async def create_flows(
         raise _handle_unique_constraint_error(exc, status_code=409) from exc
     for db_flow in db_flows:
         await session.refresh(db_flow)
+        # Mirror _new_flow: an fs_path verified above is materialized with the
+        # flow's content so the fs sync poller never reads an empty file.
+        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
     return [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in db_flows]
 
@@ -1275,10 +1283,12 @@ async def delete_multiple_flows(
                     folder_id=flow.folder_id,
                 )
             authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
+            deleted = 0
             for flow in flows_to_delete:
-                memory_base_cleanups.extend(await cascade_delete_flow(db, flow.id))
+                if await cascade_delete_flow(db, flow.id, memory_base_cleanups=memory_base_cleanups):
+                    deleted += 1
             await db.flush()
-            return len(flows_to_delete)
+            return deleted
 
         async def _delete_attempt(_attempt: int) -> int:
             return await retry_flow_operation_on_deployment_guard(
@@ -1356,7 +1366,7 @@ async def download_multiple_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="No flows found.") from exc
 
-    return _build_flows_download_response(flows)
+    return await _build_flows_download_response(db, flows)
 
 
 # 5 minutes
@@ -1411,7 +1421,7 @@ async def read_basic_examples(
                 blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
             )
         )
-        return compress_response(visible_flows)
+        return JSONResponse(content=jsonable_encoder(visible_flows))
 
     async with _starter_flows_lock:
         # Double-check inside lock to prevent thundering herd
@@ -1425,7 +1435,7 @@ async def read_basic_examples(
                     blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
                 )
             )
-            return compress_response(visible_flows)
+            return JSONResponse(content=jsonable_encoder(visible_flows))
 
         # Ensure raw DB data is cached
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
@@ -1438,7 +1448,7 @@ async def read_basic_examples(
                 ).first()
 
                 if not starter_folder:
-                    return compress_response([])
+                    return JSONResponse(content=jsonable_encoder([]))
 
                 all_starter_folder_flows = (
                     await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
@@ -1479,7 +1489,7 @@ async def read_basic_examples(
             blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
         )
     )
-    return compress_response(visible_flows)
+    return JSONResponse(content=jsonable_encoder(visible_flows))
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

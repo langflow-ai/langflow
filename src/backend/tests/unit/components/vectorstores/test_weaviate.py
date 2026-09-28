@@ -58,8 +58,11 @@ def test_connect_client_custom(mocker):
     assert client is mock_connect.return_value
 
 
-def test_connect_client_cloud(mocker):
+def test_connect_client_cloud(mocker, monkeypatch):
     """A Weaviate Cloud URL routes to connect_to_weaviate_cloud (gRPC resolved internally)."""
+    # The fake cluster hostname does not resolve; the SSRF guard's DNS check is
+    # exercised separately in lfx-bundles/tests/test_connector_ssrf.py.
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "false")
     mock_cloud = mocker.patch("weaviate.connect_to_weaviate_cloud", return_value=MagicMock())
     mock_auth = mocker.patch.object(_WEAVIATE_MODULE, "AuthApiKey", return_value="AUTH")
     component = WeaviateVectorStoreComponent(

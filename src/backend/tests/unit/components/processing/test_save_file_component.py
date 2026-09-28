@@ -1,4 +1,5 @@
 import contextlib
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -318,6 +319,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 "lfx.components.files_and_knowledge.save_file.get_settings_service",
                 return_value=settings_service_mock,
             ),
+            patch(
+                "lfx.utils.file_path_security.get_settings_service",
+                return_value=settings_service_mock,
+            ),
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db
@@ -379,6 +384,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 ) as mock_get_user,
                 patch(
                     "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
                     return_value=settings_service_mock,
                 ),
             ):
@@ -623,6 +632,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                     "lfx.components.files_and_knowledge.save_file.get_settings_service",
                     return_value=settings_service_mock,
                 ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
             ):
                 # Make Path() return our temp file path
                 mock_path_class.return_value = tmp_path
@@ -774,6 +787,8 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             ('{"type": "service_account", "private_key": "-----BEGIN\nKEY\n-----END"}', "With control chars"),
             # Case 3: JSON with extra whitespace
             ('  \n{"type": "service_account", "project_id": "test"}  \n', "With whitespace"),
+            # Case 4: Double-encoded JSON, as emitted by some secret pipelines (LE-2561)
+            (json.dumps('{"type": "service_account", "project_id": "test"}'), "Double-encoded"),
         ]
 
         for service_account_json, test_name in test_cases:

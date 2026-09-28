@@ -93,11 +93,11 @@ async def get_or_create_super_user(
     *,
     rotate_legacy_default_password: bool = False,
 ):
-    from langflow.services.database.models.user.model import User
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
 
-    stmt = select(User).where(User.username == username)
-    result = await session.exec(stmt)
-    user = result.first()
+    # Case-insensitive so a configured "Admin" resolves to an existing "admin"
+    # (and the checks below) instead of a create that the unique index rejects.
+    user = await get_user_by_username_case_insensitive(session, username)
 
     auth = get_auth_service()
     if user and user.is_superuser:
@@ -566,6 +566,7 @@ def register_all_service_factories() -> None:
 
     service_manager = get_service_manager()
     from lfx.services.executor import factory as executor_factory
+    from lfx.services.integration_policy.service import IntegrationPolicyService
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.model_provider_policy.service import ModelProviderPolicyService
     from lfx.services.policy_bundle.service import PolicyBundleService
@@ -651,6 +652,13 @@ def register_all_service_factories() -> None:
     service_manager.register_service_class(
         ServiceType.MODEL_PROVIDER_POLICY_SERVICE,
         ModelProviderPolicyService,
+        override=True,
+    )
+    # Integration governance shares the bundle coordinator with the provider and
+    # catalog services, so one published revision decides all three.
+    service_manager.register_service_class(
+        ServiceType.INTEGRATION_POLICY_SERVICE,
+        IntegrationPolicyService,
         override=True,
     )
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())

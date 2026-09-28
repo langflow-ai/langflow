@@ -14,6 +14,7 @@ from lfx.integrations.errors import (
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
     IntegrationError,
+    IntegrationPolicyBlockedError,
     ScopeMissingError,
 )
 from lfx.integrations.models import (
@@ -35,8 +36,13 @@ from langflow.services.authorization.listing import (
     restrict_to_owned_or_visible_scope,
 )
 from langflow.services.connection.oauth import broker
-from langflow.services.connection.oauth.config import OAuthError
+from langflow.services.connection.oauth.config import OAuthError, deployment_context
 from langflow.services.connection.oauth.locking import lock_connection
+from langflow.services.connection.slack_credentials import (
+    is_app_token_connection,
+    prepare_manual_credential,
+    refuse_outside_listener,
+)
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
@@ -220,6 +226,37 @@ def _access_policy(row: Connection, *, explicit_share_authorized: bool) -> Conne
     )
 
 
+async def enforce_integration_policy_for_provider(
+    provider_key: str,
+    *,
+    user_id: UUID | str | None,
+    capability_ids: frozenset[str] = frozenset(),
+    purpose: str = "use",
+) -> None:
+    """Deny a governed provider or action before any credential work happens.
+
+    Raised as an ``IntegrationPolicyBlockedError`` rather than the policy's own
+    ``PermissionError`` so the failure travels through the sanitized integration
+    error family and reaches clients as the stable ``policy-blocked`` code.
+    """
+    from lfx.services.integration_policy import (
+        IntegrationPolicyError,
+        IntegrationPolicyPurpose,
+        arequire_integration_actions,
+    )
+
+    try:
+        await arequire_integration_actions(
+            user_id=user_id,
+            provider_id=provider_key,
+            policy_keys=(),
+            capability_ids=capability_ids,
+            purpose=IntegrationPolicyPurpose(purpose),
+        )
+    except IntegrationPolicyError as exc:
+        raise IntegrationPolicyBlockedError(provider=provider_key, policy_key=exc.policy_key) from exc
+
+
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
     """Resolve encrypted database connections while exposing only safe metadata."""
 
@@ -236,6 +273,11 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         payload: ConnectionCreate,
     ) -> ConnectionRead:
+        # "Enable an integration within the operator ceiling" happens here:
+        # creating a connection for a provider outside the ceiling is refused
+        # before any credential material is encrypted or stored.
+        await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id)
+        payload = prepare_manual_credential(payload, context=deployment_context())
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)
@@ -278,14 +320,54 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_key: str | None = None,
     ) -> list[ConnectionRead]:
+        rows = await self._list_visible_rows(
+            session, user=user, provider_ids=frozenset({provider_key}) if provider_key is not None else None
+        )
+        secret_ids = (
+            set(
+                (
+                    await session.exec(
+                        select(ConnectionSecret.connection_id).where(
+                            col(ConnectionSecret.connection_id).in_([row.id for row in rows])
+                        )
+                    )
+                ).all()
+            )
+            if rows
+            else set()
+        )
+        return [self.to_read(row, has_credentials=row.id in secret_ids) for row in rows]
+
+    async def count_for_user(
+        self,
+        session: AsyncSession,
+        *,
+        user: User | UserRead,
+        provider_ids: frozenset[str],
+    ) -> dict[str, int]:
+        """Count visible connections using the same share decisions as listing."""
+        if not provider_ids:
+            return {}
+        counts: dict[str, int] = {}
+        for row in await self._list_visible_rows(session, user=user, provider_ids=provider_ids):
+            counts[row.provider_key] = counts.get(row.provider_key, 0) + 1
+        return counts
+
+    async def _list_visible_rows(
+        self,
+        session: AsyncSession,
+        *,
+        user: User | UserRead,
+        provider_ids: frozenset[str] | None,
+    ) -> list[Connection]:
         is_superuser = bool(getattr(user, "is_superuser", False))
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
         )
         stmt = select(Connection)
-        if provider_key is not None:
-            stmt = stmt.where(Connection.provider_key == provider_key)
+        if provider_ids is not None:
+            stmt = stmt.where(col(Connection.provider_key).in_(provider_ids))
         authz = get_authorization_service()
         cross_user = await authz.is_enabled() and await authz.supports_cross_user_fetch()
         if not is_superuser:
@@ -312,20 +394,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 else item.owner_id,
                 act="read",
             )
-        secret_ids = (
-            set(
-                (
-                    await session.exec(
-                        select(ConnectionSecret.connection_id).where(
-                            col(ConnectionSecret.connection_id).in_([row.id for row in rows])
-                        )
-                    )
-                ).all()
-            )
-            if rows
-            else set()
-        )
-        return [self.to_read(row, has_credentials=row.id in secret_ids) for row in rows]
+        return rows
 
     async def get_for_user(
         self,
@@ -400,6 +469,18 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         principal: ExecutionPrincipal,
         required_scopes: frozenset[str] = frozenset(),
     ) -> ConnectionRead:
+        if is_app_token_connection(row):
+            # Only the listener may read an app-level token, and only Slack can
+            # say whether it still works - by accepting a Socket Mode socket.
+            # Reporting "unhealthy" for a token this process is not allowed to
+            # read would be wrong, so its health is simply unknown here; the
+            # trigger's own state carries the listener's verdict.
+            row.health = ConnectionHealth.UNKNOWN.value
+            row.health_checked_at = _utc_now()
+            session.add(row)
+            await session.flush()
+            await session.refresh(row)
+            return self.to_read(row, has_credentials=await self.has_credentials(session, row.id))
         try:
             await self._check_row_credential(session, row=row, principal=principal, required_scopes=required_scopes)
         except AuthExpiredError:
@@ -409,9 +490,16 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             # The stored credential is unusable. Pending and revoked rows hold
             # none by design; any other row is in error, with the cause recorded
             # so a key change does not read as N unrelated user problems.
+            #
+            # ``registration-unavailable`` is the exception that writes no
+            # status at all: the credential is intact and the row is not at
+            # fault, only this process's OAuth configuration is. Recording
+            # ``expired`` there would ask the owner to reconnect a connection
+            # that works, and would disarm every listener trigger on it -
+            # an expired connection is one the supervisor stops dialling.
             if exc.reason == "credential-undecryptable":
                 _set_status(row, PersistedConnectionStatus.ERROR, ConnectionStatusReason.CREDENTIAL_UNDECRYPTABLE)
-            elif row.status not in _CREDENTIAL_FREE_STATUSES:
+            elif exc.reason != "registration-unavailable" and row.status not in _CREDENTIAL_FREE_STATUSES:
                 _set_status(row, PersistedConnectionStatus.ERROR, ConnectionStatusReason.CREDENTIAL_MISSING)
             row.health = ConnectionHealth.UNHEALTHY.value
         except IntegrationError:
@@ -430,6 +518,15 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
 
     async def _get_access_policy(self, request: ConnectionResolutionRequest) -> ConnectionAccessPolicy:
         user_id = _principal_user_id(request.principal)
+        # The policy gate runs before candidate discovery: no connection row is
+        # read, locked, decrypted, or refreshed for a denied provider or action,
+        # and every entry point (canvas, /api/v1/run, webhooks, deployments)
+        # goes through this one resolver.
+        await enforce_integration_policy_for_provider(
+            request.ref.provider,
+            user_id=request.principal.user_id,
+            capability_ids=request.capability_ids,
+        )
         async with session_scope() as session:
             row = await self._owned_or_instance_row(session, request.ref, user_id)
             explicit_share = row is None
@@ -701,6 +798,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         handle = ConnectionRef(provider=row.provider_key, name=row.name).to_handle()
         if row.status == PersistedConnectionStatus.REVOKED.value:
             raise ConnectionUnresolvedError(handle, provider=row.provider_key)
+        # Before anything is decrypted: a Slack app-level token never leaves the
+        # listener process (``slack_credentials``).
+        refuse_outside_listener(row)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is None:
             raise ConnectionUnresolvedError(handle, provider=row.provider_key)
@@ -719,8 +819,24 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             raise ConnectionUnresolvedError(handle, provider=row.provider_key, reason="credential-undecryptable")
         try:
             payload = await broker.refresh_if_needed(session, row, payload, rejected_token_digest=rejected_token_digest)
-        except OAuthError:
+        except OAuthError as exc:
+            if getattr(exc, "reason", None) == "registration-unavailable":
+                # The credential is fine and reconnecting would not help: this
+                # process cannot see the registration the connection was
+                # authorized under, so the refresh never reached the provider.
+                # Saying "expired or rejected" here is what sends a listener
+                # down the disarm-the-trigger path for what is a missing
+                # environment variable on one process.
+                logger.warning(
+                    "Connection %s could not be refreshed: no usable OAuth registration is configured on this "
+                    "process. Set LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS to the same value the API runs with.",
+                    row.id,
+                )
+                raise ConnectionUnresolvedError(
+                    handle, provider=row.provider_key, reason="registration-unavailable"
+                ) from None
             raise AuthExpiredError(provider=row.provider_key) from None
+        refuse_outside_listener(row, access_token=payload["access_token"])
         expires_at = _parse_expiry(payload.get("expires_at"))
         if expires_at is not None and expires_at <= _utc_now():
             raise AuthExpiredError(provider=row.provider_key)
@@ -737,6 +853,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             owner_kind=row.ownership_mode,
             provider=row.provider_key,
             name=row.name,
+            identity=identity.identity,
         )
 
     @staticmethod
@@ -744,9 +861,12 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         return ConnectionRead.model_validate(
             {
                 **row.model_dump(),
-                # A reason explains only the error status, so a writer that
-                # restores another status cannot leave a stale cause visible.
-                "status_reason": row.status_reason if row.status == PersistedConnectionStatus.ERROR.value else None,
+                # A failed reauthorization can leave existing credentials
+                # usable. Keep that attempt's outcome visible to the dialog.
+                "status_reason": row.status_reason
+                if row.status == PersistedConnectionStatus.ERROR.value
+                or row.status_reason in {"oauth-denied", "oauth-expired", "oauth-failed"}
+                else None,
                 "has_credentials": has_credentials,
             }
         )

@@ -28,6 +28,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.services.integration_policy import IntegrationPolicyError
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
@@ -121,8 +122,11 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
+from langflow.services.integration_policy_discovery import (
+    aenforce_integration_policy_for_component,
+    filter_component_palette_by_integration_policy,
+)
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -271,6 +275,16 @@ async def get_all(
             attributes=provider_policy_attributes,
         )
         if not include_blocked:
+            # Integration governance (INT-7) hides a component when its provider
+            # is outside the operator ceiling or every action it can perform is
+            # blocked. ``include_blocked`` is a superuser catalog-authoring
+            # view, so it lifts this filter for the same reason it lifts catalog
+            # blocks.
+            visible_types_en = await filter_component_palette_by_integration_policy(
+                visible_types_en,
+                user_id=current_user.id,
+                attributes=provider_policy_attributes,
+            )
             visible_types_en = _filter_component_palette_by_catalog_policy(
                 visible_types_en,
                 blocked_component_keys=catalog_policy_snapshot.blocked_component_keys,
@@ -281,7 +295,7 @@ async def get_all(
         all_types = translate_component_dict(visible_types_en, locale) if locale != "en" else visible_types_en
 
         component_display_names = build_component_display_names(visible_types_en)
-        return compress_response({**all_types, "component_display_names": component_display_names})
+        return JSONResponse(content=jsonable_encoder({**all_types, "component_display_names": component_display_names}))
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -476,6 +490,7 @@ async def simple_run_flow(
                 graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
             )
         stamp_execution_principal(graph, execution_principal)
+        graph.expose_error_details = expose_error_details
         # Forward the caller-supplied identifier to tracing providers without
         # affecting authn/authz. The API-key owner remains the effective user
         # for permissions, global variables, and job ownership.
@@ -577,6 +592,10 @@ async def simple_run_flow(
                 if expose_error_details:
                     raise
                 raise error_for_client(exc, expose_details=expose_error_details) from exc
+            if integration_http_error(exc, expose_details=expose_error_details) is not None:
+                # The terminal handler applies the caller's error policy. Keep
+                # the typed cause intact instead of burying it in an HTTP 500.
+                raise
             await logger.aerror(
                 "Workflow job execution failed for flow %s: %s",
                 flow.id,
@@ -1660,6 +1679,7 @@ async def experimental_run_flow(
         graph,
         execution_principal_for(FAMILY_V1_RUN, user=api_key_user, flow_owner_id=flow.user_id),
     )
+    graph.expose_error_details = expose_error_details
 
     # Graph execution below can run for minutes; end any request transaction
     # opened by dependency resolution so it does not pin a pooled connection
@@ -1877,6 +1897,13 @@ async def custom_component(
         built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
+        # Posting the source of a blocked integration component must not
+        # reconstruct what discovery hides (INT-7).
+        await aenforce_integration_policy_for_component(
+            built_frontend_node,
+            user_id=user.id,
+            attributes=provider_policy_attributes,
+        )
         if isinstance(component_instance, Component):
             # Dynamic configuration may resolve DB-backed credentials or call
             # provider APIs. Refresh the active hierarchy before either hook
@@ -1902,6 +1929,11 @@ async def custom_component(
                 field_name="tool_mode",
                 field_value=tool_mode,
             )
+    except IntegrationPolicyError as exc:
+        # Same reasoning as the model-provider denial below: a governed
+        # integration that discovery hides must not be distinguishable from one
+        # that does not exist.
+        raise HTTPException(status_code=404, detail="Integration not found") from exc
     except ModelProviderPolicyError as exc:
         # Keep scoped denials indistinguishable from unavailable providers and
         # avoid surfacing an authorization decision as a retryable server error.
@@ -1970,6 +2002,11 @@ async def custom_component_update(
         )
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
+        await aenforce_integration_policy_for_component(
+            component_node,
+            user_id=user.id,
+            attributes=provider_policy_attributes,
+        )
 
         template = code_request.get_template()
         params = _raw_component_parameters(template)
@@ -2042,6 +2079,8 @@ async def custom_component_update(
 
     except CatalogPolicyHTTPException:
         raise
+    except IntegrationPolicyError as exc:
+        raise HTTPException(status_code=404, detail="Integration not found") from exc
     except ModelProviderPolicyError as exc:
         raise HTTPException(status_code=404, detail="Model provider not found") from exc
     except Exception as exc:

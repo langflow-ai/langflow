@@ -1018,7 +1018,7 @@ export default function Page({
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   isAgentWorking={isAgentWorking}
-                  isReadOnly={effectiveLocked}
+                  isReadOnly={isPermissionReadOnly}
                 />
                 {!isPreviewActive && <FlowToolbar />}
                 {inspectionPanelVisible && !effectiveLocked && (

@@ -15,6 +15,7 @@ from lfx.log.logger import logger
 from lfx.utils.flow_validation import (
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
+    describe_component_code_substitution,
     prepare_flow_build_for_user_from_cache,
 )
 from lfx.workflow.converters import ParsedWorkflowRun
@@ -118,13 +119,14 @@ def _validate_flow_data_for_execution(
 ) -> ParsedWorkflowRun:
     """Apply component policies and return sanitized caller-supplied graph data."""
     try:
+        original_data = parsed.data if parsed.data is not None else flow.data
         if parsed.data is not None:
             sanitized_data = prepare_flow_build_for_user_from_cache(
                 parsed.data,
                 is_superuser=current_user.is_superuser,
             )
             if sanitized_data is not None:
-                return replace(parsed, data=sanitized_data)
+                parsed = replace(parsed, data=sanitized_data)
         elif flow.data:
             # A stored graph is caller-controlled: a regular user can persist component
             # source through the flow-write API and then execute it by omitting ``data``.
@@ -140,7 +142,10 @@ def _validate_flow_data_for_execution(
             if sanitized_data is not None:
                 # The streaming driver rebuilds a ``FlowDataRequest`` from this dict, which
                 # requires both graph keys, so normalize a stored row that omits one.
-                return replace(parsed, data={"nodes": [], "edges": [], **sanitized_data})
+                parsed = replace(parsed, data={"nodes": [], "edges": [], **sanitized_data})
+        # Validation loads the registry and sanitizes a detached copy. Inspect the original
+        # source so admin-only sanitization cannot erase the evidence of a substitution.
+        warning = describe_component_code_substitution(original_data, include_component_names=expose_error_details)
     except CustomComponentValidationError as exc:
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(client_error)) from exc
@@ -150,7 +155,7 @@ def _validate_flow_data_for_execution(
     except RuntimeError as exc:
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(client_error)) from exc
-    return parsed
+    return replace(parsed, component_substitution_warning=warning)
 
 
 def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[str]) -> None:
