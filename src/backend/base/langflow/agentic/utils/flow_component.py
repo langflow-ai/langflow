@@ -8,11 +8,14 @@ from uuid import UUID, uuid4
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
+from langflow.api.utils.flow_history import history_http_error
 from langflow.api.v1.flow_conflict import claim_version_token
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
+from langflow.services.flow_history.errors import FlowHistoryError
+from langflow.services.flow_history.recorder import write_flow_graph
 
 
 async def get_component_details(
@@ -289,8 +292,11 @@ async def update_component_field_value(
 
             claimed = await claim_version_token(session, db_flow, reviewed_version_token)
 
-            # Update the flow data
-            db_flow.data = flow_data
+            # Update the flow data, recording the edit in the flow's history.
+            try:
+                await write_flow_graph(session, db_flow, flow_data, actor_id=UUID(str(user_id)))
+            except FlowHistoryError as exc:
+                return {"error": history_http_error(exc).detail, "success": False}
             db_flow.updated_at = datetime.now(timezone.utc)
             # Same reason as the assistant runner: a graph write that does not
             # rotate the token is invisible to every open editor, whose next save
