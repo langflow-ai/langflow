@@ -23,7 +23,9 @@ class ProjectReplacementRequest(SQLModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    description: str
+    # Nullable so a snapshot carrying a null project description (Folder.description
+    # is nullable) is restorable unchanged.
+    description: str | None
     flows: list[ReplacementFlowCreate]
     project_name: str | None = None
     # The Control Plane owns dependency validation and provisioning. The serving

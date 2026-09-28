@@ -1,8 +1,8 @@
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
-import pytest
 from fastapi import HTTPException
 from httpx import AsyncClient
 from langflow.api.v1 import projects as projects_module
@@ -11,9 +11,24 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.deps import session_scope
-from psycopg.errors import DeadlockDetected
 from sqlalchemy.exc import OperationalError
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+class _DeadlockDetectedError(Exception):
+    """Stand-in for psycopg's DeadlockDetected (SQLSTATE 40P01).
+
+    psycopg is only available with the postgres extra, so importing it at
+    module level breaks collection in a plain CI install. See
+    test_auth_service.py for the same pattern.
+    """
+
+    sqlstate = "40P01"
+
+
+def _deadlock_error(statement: str, message: str) -> OperationalError:
+    return OperationalError(statement, None, _DeadlockDetectedError(message))
 
 
 def _flow_payload(*, flow_id: UUID | None = None, name: str, endpoint_name: str | None = None) -> dict:
@@ -50,6 +65,7 @@ async def _create_flow(active_user, project_id: str, flow_payload: dict) -> dict
             fs_path=flow_payload.get("fs_path"),
             user_id=active_user.id,
             folder_id=UUID(project_id),
+            locked=flow_payload.get("locked", False),
         )
         session.add(flow)
         await session.flush()
@@ -60,6 +76,7 @@ async def _create_flow(active_user, project_id: str, flow_payload: dict) -> dict
             "description": flow.description,
             "data": flow.data,
             "fs_path": flow.fs_path,
+            "locked": flow.locked,
         }
 
 
@@ -78,77 +95,151 @@ def test_replacement_digest_preserves_legacy_no_dependency_shape() -> None:
     )
 
 
-async def test_replacement_deadlock_retry_uses_original_request_body(monkeypatch):
-    request_body = ProjectReplacementRequest(
-        description="retry me",
-        flows=[_flow_payload(flow_id=uuid4(), name="retry-flow")],
-    )
-    expected_data = request_body.flows[0].data.copy()
-    calls = 0
+def test_replacement_digest_distinguishes_null_from_present_description() -> None:
+    """A null description is a real, distinct value — not the same digest as any string."""
+    null_description = ProjectReplacementRequest(description=None, flows=[])
+    empty_string_description = ProjectReplacementRequest(description="", flows=[])
 
-    async def replace_once(**kwargs):
-        nonlocal calls
-        calls += 1
-        flow_data = kwargs["request_body"].flows[0].data
-        if calls == 1:
-            flow_data["attempt_only"] = True
-            statement = "UPDATE flow"
-            deadlock_message = "simulated deadlock"
-            driver_error = DeadlockDetected(deadlock_message)
-            raise OperationalError(statement, None, driver_error)
-        assert flow_data == expected_data
-        return "committed"
-
-    session = MagicMock()
-    session.__contains__.return_value = False
-    session.rollback = AsyncMock()
-    session.refresh = AsyncMock()
-    monkeypatch.setattr(projects_module, "_replace_project_operation_once", replace_once)
-    monkeypatch.setattr(projects_module.asyncio, "sleep", AsyncMock())
-
-    result = await projects_module.replace_project_operation(
-        session=session,
-        project_id=uuid4(),
-        operation_id=uuid4(),
-        request_body=request_body,
-        current_user=SimpleNamespace(id=uuid4()),
-        storage_service=MagicMock(),
+    assert projects_module._replacement_request_digest(null_description) != projects_module._replacement_request_digest(
+        empty_string_description
     )
 
-    assert result == "committed"
-    assert calls == 2
-    assert request_body.flows[0].data == expected_data
-    session.rollback.assert_awaited_once()
+
+async def test_replacement_restores_a_null_description_unchanged(client: AsyncClient, active_user, logged_in_headers):
+    """A snapshot can carry a null project description and must be restorable as-is."""
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    url = f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}"
+    body = {"description": None, "flows": []}
+
+    response = await client.put(url, json=body, headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["project"]["description"] is None
+
+    async with session_scope() as session:
+        stored_project = await session.get(Folder, UUID(project_id))
+        assert stored_project.description is None
+
+    replay = await client.put(url, json=body, headers=logged_in_headers)
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == response.json()
 
 
-async def test_replacement_deadlock_retry_exhaustion_is_generic_503(monkeypatch):
-    async def always_deadlock(**_kwargs):
-        statement = "private SQL details"
-        deadlock_message = "private database detail"
-        driver_error = DeadlockDetected(deadlock_message)
-        raise OperationalError(statement, None, driver_error)
+async def test_replacement_deadlock_retry_recovers_from_a_real_transaction(
+    client: AsyncClient, active_user, logged_in_headers, monkeypatch
+):
+    """A real 40P01 raised inside the transaction rolls back and retries from a clean body.
 
-    session = MagicMock()
-    session.__contains__.return_value = False
-    session.rollback = AsyncMock()
-    session.refresh = AsyncMock()
-    monkeypatch.setattr(projects_module, "_replace_project_operation_once", always_deadlock)
-    monkeypatch.setattr(projects_module.asyncio, "sleep", AsyncMock())
+    Injects the deadlock at the first *explicit* ``session.flush()`` call reached while
+    updating an existing flow (patching ``AsyncSession.flush`` at the class level does not
+    intercept SQLAlchemy's internal autoflush, which calls the sync session's flush
+    directly — only application code's own ``await session.flush()`` goes through this
+    seam). The retried attempt must still land the originally requested content: if
+    ``replace_project_operation`` reused a body a failed attempt had already mutated
+    instead of a fresh copy, the persisted result would diverge from the request.
+    """
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    flow = await _create_flow(active_user, project_id, _flow_payload(name=f"retry-{uuid4().hex[:8]}"))
+    operation_id = str(uuid4())
+    url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
+    body = {
+        "description": "retried replacement",
+        "flows": [
+            {
+                **_flow_payload(flow_id=UUID(flow["id"]), name=f"retried-{uuid4().hex[:8]}"),
+                "data": {"nodes": [], "edges": [], "marker": "target-after-retry"},
+            }
+        ],
+    }
 
-    with pytest.raises(HTTPException) as raised:
-        await projects_module.replace_project_operation(
-            session=session,
-            project_id=uuid4(),
-            operation_id=uuid4(),
-            request_body=ProjectReplacementRequest(description="retry", flows=[]),
-            current_user=SimpleNamespace(id=uuid4()),
-            storage_service=MagicMock(),
+    original_flush = AsyncSession.flush
+    flush_calls = 0
+
+    async def flush_with_one_deadlock(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 1:
+            statement, message = "UPDATE flow", "simulated deadlock on first flush"
+            raise _deadlock_error(statement, message)
+        return await original_flush(self, *args, **kwargs)
+
+    monkeypatch.setattr(AsyncSession, "flush", flush_with_one_deadlock)
+
+    replaced = await client.put(url, json=body, headers=logged_in_headers)
+
+    assert replaced.status_code == 200, replaced.text
+    assert flush_calls >= 2, "the first flush must have raised and the attempt retried"
+    assert replaced.json()["flows"][0]["name"] == body["flows"][0]["name"]
+    assert replaced.json()["flows"][0]["data"] == body["flows"][0]["data"]
+
+    async with session_scope() as session:
+        stored_flow = await session.get(Flow, UUID(flow["id"]))
+        assert stored_flow.name == body["flows"][0]["name"]
+        assert stored_flow.data == body["flows"][0]["data"]
+        receipts = list(
+            (
+                await session.exec(
+                    select(ProjectReplacementOperation).where(
+                        ProjectReplacementOperation.project_id == UUID(project_id),
+                        ProjectReplacementOperation.operation_id == UUID(operation_id),
+                    )
+                )
+            ).all()
         )
+        assert len(receipts) == 1
+        expected_receipt = replaced.json()
+        expected_receipt.pop("dependencies", None)
+        assert receipts[0].result == expected_receipt
 
-    assert raised.value.status_code == 503
-    assert raised.value.detail == "The database is busy. Please retry the request."
-    assert "private" not in str(raised.value.detail)
-    assert session.rollback.await_count == projects_module._REPLACEMENT_MAX_ATTEMPTS
+    replay = await client.get(url, headers=logged_in_headers)
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == replaced.json()
+
+
+async def test_replacement_deadlock_retry_exhaustion_is_generic_503(
+    client: AsyncClient, active_user, logged_in_headers, monkeypatch
+):
+    """Real 40P01s on every attempt exhaust the retry budget and leave nothing committed."""
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    flow = await _create_flow(active_user, project_id, _flow_payload(name=f"exhaust-{uuid4().hex[:8]}"))
+    operation_id = str(uuid4())
+    url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
+    body = {
+        "description": "must never commit",
+        "flows": [_flow_payload(flow_id=UUID(flow["id"]), name=flow["name"])],
+    }
+
+    async def always_deadlock(self, *args, **kwargs):  # noqa: ARG001 - patched signature must match flush()
+        statement, message = "private SQL details", "private database detail"
+        raise _deadlock_error(statement, message)
+
+    monkeypatch.setattr(AsyncSession, "flush", always_deadlock)
+    monkeypatch.setattr(projects_module.asyncio, "sleep", AsyncMock())
+
+    response = await client.put(url, json=body, headers=logged_in_headers)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "The database is busy. Please retry the request."
+    assert "private" not in response.text
+    assert response.headers.get("x-langflow-error-code") == "replacement_retry_exhausted"
+
+    async with session_scope() as session:
+        stored_flow = await session.get(Flow, UUID(flow["id"]))
+        assert stored_flow.name == flow["name"]
+        receipts = list(
+            (
+                await session.exec(
+                    select(ProjectReplacementOperation).where(
+                        ProjectReplacementOperation.project_id == UUID(project_id),
+                        ProjectReplacementOperation.operation_id == UUID(operation_id),
+                    )
+                )
+            ).all()
+        )
+        assert receipts == []
 
 
 async def test_wrapped_cascade_deadlock_retries_replacement_from_clean_transaction(
@@ -170,10 +261,7 @@ async def test_wrapped_cascade_deadlock_retries_replacement_from_clean_transacti
         nonlocal cascade_calls
         cascade_calls += 1
         if cascade_calls == 1:
-            statement = "DELETE FROM flow"
-            deadlock_message = "simulated cascade deadlock"
-            driver_error = DeadlockDetected(deadlock_message)
-            database_error = OperationalError(statement, None, driver_error)
+            database_error = _deadlock_error("DELETE FROM flow", "simulated cascade deadlock")
             wrapper_message = "cascade helper failed"
             raise RuntimeError(wrapper_message) from database_error
         return await original_cascade_delete_flow(*args, **kwargs)
@@ -268,6 +356,7 @@ async def test_replacement_operation_replays_and_gets_committed_snapshot(
     )
     assert missing.status_code == 404
     assert missing.json()["detail"] == "Replacement operation not found"
+    assert missing.headers.get("x-langflow-error-code") == "replacement_operation_not_found"
 
 
 async def test_replacement_receipt_without_dependency_snapshot_remains_readable(
@@ -338,6 +427,52 @@ async def test_restore_creates_project_and_receipt_survives_project_deletion(
     receipt = await client.get(url, headers=logged_in_headers)
     assert receipt.status_code == 200, receipt.text
     assert receipt.json() == created.json()
+
+
+async def test_restore_creates_project_without_mcp_server_when_api_key_issuance_is_denied(
+    client: AsyncClient, logged_in_headers: dict[str, str], monkeypatch
+):
+    """Mirrors _new_project's denial handling.
+
+    AUTO_LOGIN=false always auto-chooses apikey auth here (there is no
+    caller-supplied auth_settings on a replacement request), so a denied
+    issuance must not fail the create — it drops the MCP server and clears
+    auth_settings instead.
+    """
+    from langflow.api.v1 import projects as projects_module
+    from langflow.services.database.models.api_key.policy import (
+        ApiKeyIssuanceDeniedError,
+        get_api_key_issuance_policy,
+        set_api_key_issuance_policy,
+    )
+
+    monkeypatch.setattr(
+        projects_module,
+        "get_settings_service",
+        lambda: SimpleNamespace(
+            settings=SimpleNamespace(add_projects_to_mcp_servers=True),
+            auth_settings=SimpleNamespace(AUTO_LOGIN=False),
+        ),
+    )
+    previous_policy = get_api_key_issuance_policy()
+    set_api_key_issuance_policy(AsyncMock(side_effect=ApiKeyIssuanceDeniedError("no sign-in source")))
+    try:
+        project_id = str(uuid4())
+        operation_id = str(uuid4())
+        url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
+        body = {"project_name": f"restore-{uuid4().hex[:16]}", "description": "restored", "flows": []}
+
+        created = await client.put(url, json=body, headers=logged_in_headers)
+
+        assert created.status_code == 200, created.text
+        assert created.json()["project"]["auth_settings"] is None
+
+        async with session_scope() as session:
+            stored_project = await session.get(Folder, UUID(project_id))
+            assert stored_project is not None
+            assert stored_project.auth_settings is None
+    finally:
+        set_api_key_issuance_policy(previous_policy)
 
 
 async def test_replacement_receipts_are_owner_only_before_and_after_project_deletion(
@@ -463,6 +598,7 @@ async def test_restore_refuses_a_project_that_already_reappeared(
 
     assert refused.status_code == 409
     assert refused.json()["detail"] == "Project already exists"
+    assert refused.headers.get("x-langflow-error-code") == "replacement_project_already_exists"
     async with session_scope() as session:
         stored_project = await session.get(Folder, project_id)
         stored_flow = await session.get(Flow, flow_id)
@@ -489,6 +625,7 @@ async def test_invalid_deployment_project_name_is_hidden_without_mutation(
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Project not found"
+    assert response.headers.get("x-langflow-error-code") == "replacement_project_not_found"
 
     unchanged = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert unchanged.status_code == 200
@@ -556,10 +693,122 @@ async def test_replacement_allows_endpoint_swaps(client: AsyncClient, active_use
     assert by_id[second_flow["id"]]["endpoint_name"] == "endpoint_one"
 
 
-async def test_replacement_rolls_back_everything_when_second_trigger_reconcile_fails(
+async def test_replacement_of_a_locked_flow_with_identical_content_succeeds(
+    client: AsyncClient, active_user, logged_in_headers
+):
+    """A locked flow's temporary rename must not make the lock guard see a name change.
+
+    The replacement handler frees a project-local name by renaming the row to a
+    ``__lf_replace_...`` placeholder before saving. Without comparing against the
+    pre-rename name/endpoint_name, that interim value would always look like a
+    change to the locked-flow guard, even for a request that changes nothing.
+    """
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    flow = await _create_flow(
+        active_user,
+        project_id,
+        {**_flow_payload(name=f"locked-{uuid4().hex[:8]}", endpoint_name="locked_endpoint"), "locked": True},
+    )
+
+    identical_body = {
+        "description": project["description"],
+        "flows": [
+            {
+                "id": flow["id"],
+                "name": flow["name"],
+                "description": flow["description"],
+                "data": flow["data"],
+                "endpoint_name": flow["endpoint_name"],
+                "locked": True,
+            }
+        ],
+    }
+    identical_response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}",
+        json=identical_body,
+        headers=logged_in_headers,
+    )
+    assert identical_response.status_code == 200, identical_response.text
+    assert identical_response.json()["flows"][0]["name"] == flow["name"]
+    assert identical_response.json()["flows"][0]["locked"] is True
+
+    unlock_body = {
+        "description": project["description"],
+        "flows": [
+            {
+                "id": flow["id"],
+                "name": flow["name"],
+                "description": flow["description"],
+                "data": flow["data"],
+                "endpoint_name": flow["endpoint_name"],
+                "locked": False,
+            }
+        ],
+    }
+    unlock_response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}",
+        json=unlock_body,
+        headers=logged_in_headers,
+    )
+    assert unlock_response.status_code == 200, unlock_response.text
+    assert unlock_response.json()["flows"][0]["locked"] is False
+
+    async with session_scope() as session:
+        stored_flow = await session.get(Flow, UUID(flow["id"]))
+        assert stored_flow.name == flow["name"]
+        assert stored_flow.endpoint_name == flow["endpoint_name"]
+        assert stored_flow.locked is False
+
+
+async def test_replacement_content_change_to_a_locked_flow_is_still_rejected(
+    client: AsyncClient, active_user, logged_in_headers
+):
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    flow = await _create_flow(
+        active_user,
+        project_id,
+        {**_flow_payload(name=f"locked-{uuid4().hex[:8]}", endpoint_name="locked_endpoint"), "locked": True},
+    )
+
+    changed_body = {
+        "description": project["description"],
+        "flows": [
+            {
+                "id": flow["id"],
+                "name": flow["name"],
+                "description": "an actual content change",
+                "data": flow["data"],
+                "endpoint_name": flow["endpoint_name"],
+                "locked": True,
+            }
+        ],
+    }
+    response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}",
+        json=changed_body,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 423, response.text
+    assert response.json()["detail"] == "Flow is locked. Unlock it before making changes."
+    async with session_scope() as session:
+        stored_flow = await session.get(Flow, UUID(flow["id"]))
+        assert stored_flow.description == flow["description"]
+        assert stored_flow.locked is True
+
+
+async def test_replacement_commits_despite_trigger_reconciliation_failure(
     client: AsyncClient, active_user, logged_in_headers, monkeypatch
 ):
-    from langflow.api.v1 import projects as projects_module
+    """Trigger reconciliation (reconcile_flow_triggers_safely) is best-effort.
+
+    One flow's reconcile failure must not roll back the rest of the
+    replacement — it is logged and swallowed, same as every other
+    flow-save path.
+    """
+    from langflow.services.triggers import reconciliation as triggers_reconciliation_module
 
     project = await _create_project(active_user)
     project_id = project["id"]
@@ -572,31 +821,32 @@ async def test_replacement_rolls_back_everything_when_second_trigger_reconcile_f
                 "data": {"nodes": [], "edges": [], "marker": f"original-{index}"},
             },
         )
-        for index in range(3)
+        for index in range(2)
     ]
-    request_flows = []
-    for index, live_flow in enumerate(live_flows[:2]):
-        request_flows.append(
-            {
-                **_flow_payload(
-                    flow_id=UUID(live_flow["id"]),
-                    name=f"requested-{index}-{uuid4().hex[:8]}",
-                    endpoint_name=f"requested_endpoint_{index}",
-                ),
-                "data": {"nodes": [], "edges": [], "marker": f"target-{index}"},
-            }
-        )
+    request_flows = [
+        {
+            **_flow_payload(
+                flow_id=UUID(live_flow["id"]),
+                name=f"requested-{index}-{uuid4().hex[:8]}",
+                endpoint_name=f"requested_endpoint_{index}",
+            ),
+            "data": {"nodes": [], "edges": [], "marker": f"target-{index}"},
+        }
+        for index, live_flow in enumerate(live_flows)
+    ]
 
     calls = 0
+    original_reconcile = triggers_reconciliation_module.reconcile_flow_triggers
 
-    async def fail_on_second_reconcile(*_args, **_kwargs):
+    async def fail_on_second_reconcile(*args, **kwargs):
         nonlocal calls
         calls += 1
         if calls == 2:
             failure_message = "injected trigger reconciliation failure"
             raise RuntimeError(failure_message)
+        return await original_reconcile(*args, **kwargs)
 
-    monkeypatch.setattr(projects_module, "reconcile_flow_triggers", fail_on_second_reconcile)
+    monkeypatch.setattr(triggers_reconciliation_module, "reconcile_flow_triggers", fail_on_second_reconcile)
     operation_id = str(uuid4())
     response = await client.put(
         f"api/v1/projects/{project_id}/replacement-operations/{operation_id}",
@@ -604,25 +854,27 @@ async def test_replacement_rolls_back_everything_when_second_trigger_reconcile_f
         headers=logged_in_headers,
     )
 
-    assert response.status_code == 500
+    assert response.status_code == 200, response.text
     assert calls == 2
+    assert response.json()["project"]["description"] == "editor target"
+
     async with session_scope() as session:
         stored_project = await session.get(Folder, UUID(project_id))
         stored_flows = list((await session.exec(select(Flow).where(Flow.folder_id == UUID(project_id)))).all())
-        assert stored_project.description == "original description"
-        assert {flow.id for flow in stored_flows} == {UUID(flow["id"]) for flow in live_flows}
+        assert stored_project.description == "editor target"
+        assert {flow.id for flow in stored_flows} == {UUID(f["id"]) for f in live_flows}
         by_id = {str(flow.id): flow for flow in stored_flows}
-        for original_flow in live_flows:
-            stored_flow = by_id[original_flow["id"]]
-            assert stored_flow.name == original_flow["name"]
-            assert stored_flow.endpoint_name == original_flow["endpoint_name"]
-            assert stored_flow.data == original_flow["data"]
+        for request_flow in request_flows:
+            stored_flow = by_id[request_flow["id"]]
+            assert stored_flow.name == request_flow["name"]
+            assert stored_flow.endpoint_name == request_flow["endpoint_name"]
+            assert stored_flow.data == request_flow["data"]
 
-    missing_receipt = await client.get(
+    receipt = await client.get(
         f"api/v1/projects/{project_id}/replacement-operations/{operation_id}", headers=logged_in_headers
     )
-    assert missing_receipt.status_code == 404
-    assert missing_receipt.json()["detail"] == "Replacement operation not found"
+    assert receipt.status_code == 200, receipt.text
+    assert receipt.json() == response.json()
 
 
 async def test_replacement_rejects_filesystem_flows_without_mutation(
@@ -644,11 +896,94 @@ async def test_replacement_rejects_filesystem_flows_without_mutation(
 
     assert response.status_code == 409
     assert response.json()["detail"] == "Atomic replacement does not support filesystem-backed flows"
+    assert response.headers.get("x-langflow-error-code") == "replacement_filesystem_flows_unsupported"
     async with session_scope() as session:
         stored_project = await session.get(Folder, UUID(project_id))
         stored_flow = await session.get(Flow, UUID(flow["id"]))
         assert stored_project.description == "original description"
         assert stored_flow.fs_path == "flow-files/legacy.json"
+
+
+async def test_replacement_receipts_are_pruned_to_the_newest_ten(client: AsyncClient, active_user, logged_in_headers):
+    """Receipts beyond the newest _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT are tombstoned, not deleted."""
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    max_receipts = projects_module._MAX_REPLACEMENT_RECEIPTS_PER_PROJECT
+    operation_ids = [str(uuid4()) for _ in range(max_receipts + 3)]
+    bodies = [{"description": f"replacement {index}", "flows": []} for index in range(len(operation_ids))]
+    base_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+    for index, (operation_id, body) in enumerate(zip(operation_ids, bodies, strict=True)):
+        response = await client.put(
+            f"api/v1/projects/{project_id}/replacement-operations/{operation_id}",
+            json=body,
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.text
+        # Force a strictly increasing created_at per receipt. Two requests can
+        # otherwise land in the same clock tick, and the pruning query's
+        # (created_at desc, operation_id desc) tie-break then orders same-tick
+        # receipts by random UUID rather than request order, making which
+        # receipts survive nondeterministic - a pre-existing property of the
+        # ranking, not something this test is about.
+        async with session_scope() as session:
+            receipt = await session.get(ProjectReplacementOperation, (UUID(project_id), UUID(operation_id)))
+            receipt.created_at = base_time + timedelta(milliseconds=index)
+            session.add(receipt)
+            await session.commit()
+
+    tombstoned_ids = operation_ids[: len(operation_ids) - max_receipts]
+    surviving_ids = operation_ids[len(operation_ids) - max_receipts :]
+
+    async with session_scope() as session:
+        receipts = list(
+            (
+                await session.exec(
+                    select(ProjectReplacementOperation).where(
+                        ProjectReplacementOperation.project_id == UUID(project_id)
+                    )
+                )
+            ).all()
+        )
+        # Every row survives pruning - the row, digest, and owner/workspace are
+        # kept; only its result is cleared. See ProjectReplacementOperation.result.
+        assert len(receipts) == len(operation_ids)
+        by_id = {str(receipt.operation_id): receipt for receipt in receipts}
+        assert {op_id for op_id, receipt in by_id.items() if receipt.result is None} == set(tombstoned_ids)
+        assert {op_id for op_id, receipt in by_id.items() if receipt.result is not None} == set(surviving_ids)
+
+    # Every tombstoned receipt - including the one right at the retention
+    # boundary, the first one pruned - reads as 410, not 404 (the row still
+    # exists) and not 200 (its content is gone).
+    for operation_id in tombstoned_ids:
+        pruned = await client.get(
+            f"api/v1/projects/{project_id}/replacement-operations/{operation_id}", headers=logged_in_headers
+        )
+        assert pruned.status_code == 410, pruned.text
+        assert pruned.headers["X-Langflow-Error-Code"] == "replacement_receipt_expired"
+
+    # A surviving receipt is still individually readable.
+    kept = await client.get(
+        f"api/v1/projects/{project_id}/replacement-operations/{surviving_ids[-1]}", headers=logged_in_headers
+    )
+    assert kept.status_code == 200, kept.text
+
+    # A PUT retry of a tombstoned operation_id - even with its own original
+    # body, so the request digest still matches - must 410, not silently
+    # replay and overwrite the project with stale content.
+    boundary_operation_id = tombstoned_ids[0]
+    boundary_body = bodies[operation_ids.index(boundary_operation_id)]
+    retry = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{boundary_operation_id}",
+        json=boundary_body,
+        headers=logged_in_headers,
+    )
+    assert retry.status_code == 410, retry.text
+    assert retry.headers["X-Langflow-Error-Code"] == "replacement_receipt_expired"
+
+    async with session_scope() as session:
+        stored_project = await session.get(Folder, UUID(project_id))
+        assert stored_project.description == bodies[-1]["description"]
 
 
 async def test_project_authorization_denial_leaves_replacement_content_unchanged(
@@ -683,3 +1018,121 @@ async def test_project_authorization_denial_leaves_replacement_content_unchanged
         f"api/v1/projects/{project_id}/replacement-operations/{operation_id}", headers=logged_in_headers
     )
     assert receipt.status_code == 404
+
+
+async def test_replacement_by_non_owner_with_literal_mcp_secret_is_rejected(
+    client: AsyncClient, active_user, monkeypatch
+):
+    """A non-owner replacement carrying a literal MCP secret must 409, not stage it.
+
+    MCP credentials are staged as the *project owner's* global variables
+    (``stage_mcp_secrets`` in ``_replace_project_operation_once``), so a
+    non-owner who can reach an owner's project - only possible via a
+    registered cross-user-fetch authorization plugin - must not be able to
+    plant a credential there. This exercises that plugin-widened path with an
+    allow-everything authorization stub, matching the pattern in
+    test_variable.py's ``patch_variable_authz`` and
+    test_authz_share_routes.py's ``_StubAuthz``.
+    """
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.authorization import guards as authz_guards
+    from langflow.services.database.models.user.model import User
+    from langflow.services.database.models.variable.model import Variable
+
+    project = await _create_project(active_user)
+    project_id = project["id"]
+
+    async with session_scope() as session:
+        variables_before = sorted(
+            (await session.exec(select(Variable.name).where(Variable.user_id == active_user.id))).all()
+        )
+
+    other_username = f"mcp-hijacker-{uuid4().hex[:8]}"
+    other_password = "testpassword"  # noqa: S105  # pragma: allowlist secret
+    async with session_scope() as session:
+        session.add(
+            User(
+                username=other_username,
+                password=get_password_hash(other_password),
+                is_active=True,
+                is_superuser=False,
+            )
+        )
+        await session.commit()
+    login = await client.post("api/v1/login", data={"username": other_username, "password": other_password})
+    assert login.status_code == 200, login.text
+    other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    class _AllowAllAuthz:
+        async def supports_cross_user_fetch(self) -> bool:
+            return True
+
+        async def is_enabled(self) -> bool:
+            return True
+
+        async def enforce(self, **_kwargs) -> bool:
+            return True
+
+        async def batch_enforce(self, **kwargs) -> list[bool]:
+            return [True] * len(kwargs.get("requests", []))
+
+    stub = _AllowAllAuthz()
+    monkeypatch.setattr(projects_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(authz_guards, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(
+        authz_guards,
+        "get_settings_service",
+        lambda: SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=True, AUTHZ_AUDIT_ENABLED=False)),
+    )
+
+    flow_id = str(uuid4())
+    operation_id = str(uuid4())
+    flow_payload = {
+        "id": flow_id,
+        "name": f"mcp-hijack-{uuid4().hex[:8]}",
+        "description": "attempted hijack",
+        "data": {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "mcp_server": {
+                                    "name": "mcp_server",
+                                    "type": "mcp",
+                                    "value": {
+                                        "name": "attacker-mcp",
+                                        "config": {
+                                            "url": "https://mcp.example.com",
+                                            # pragma: allowlist secret
+                                            "headers": {"Authorization": "Bearer sk-live-hijack-secret"},
+                                        },
+                                    },
+                                }
+                            }
+                        }
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{operation_id}",
+        json={"description": project["description"], "flows": [flow_payload]},
+        headers=other_headers,
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.headers["X-Langflow-Error-Code"] == "replacement_mcp_secret_requires_owner"
+
+    async with session_scope() as session:
+        variables_after = sorted(
+            (await session.exec(select(Variable.name).where(Variable.user_id == active_user.id))).all()
+        )
+        assert variables_after == variables_before
+        assert not any(name.startswith("MCP_") for name in variables_after)
+        stored_flow = await session.get(Flow, UUID(flow_id))
+        assert stored_flow is None

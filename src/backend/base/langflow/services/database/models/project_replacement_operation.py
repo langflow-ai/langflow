@@ -21,7 +21,11 @@ class ProjectReplacementOperation(SQLModel, table=True):
     project_id: UUID = Field(primary_key=True)
     operation_id: UUID = Field(primary_key=True)
     request_digest: str = Field(sa_column=Column(String(64), nullable=False))
-    result: dict = Field(sa_column=Column(JSON, nullable=False))
+    # Nullable so an old receipt beyond the newest _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT
+    # can be tombstoned (result cleared, row kept) instead of deleted outright - a
+    # pruned operation_id retried with the same body must 410, never silently
+    # re-execute and overwrite newer content. See _replace_project_operation_once.
+    result: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     project_user_id: UUID | None = Field(default=None, nullable=True)
     workspace_id: UUID | None = Field(default=None, nullable=True)
     created_at: datetime = Field(

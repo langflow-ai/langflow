@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
-import json
 import stat
 import zipfile
 from copy import deepcopy
@@ -26,10 +25,11 @@ from langflow.services.authorization import (
     ensure_project_permission,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, FlowRead
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.memory_base.model import MemoryBase
+from langflow.utils.canonical_json import canonical_json_bytes
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 
 if TYPE_CHECKING:
@@ -143,8 +143,32 @@ class ProjectDeploymentSnapshotFlow:
 
     flow_id: UUID
     name: str
+    endpoint_name: str | None
     description: str | None
     data: dict[str, Any]
+    # Exposure/presentation FlowCreate fields, carried end-to-end so a
+    # rollback (PUT /replacement-operations only applies fields the caller
+    # sends) or a restore-after-delete does not silently reset them to
+    # FlowCreate's defaults. workspace_id/user_id/folder_id are deliberately
+    # excluded pending a decision on how a deploy target should treat them.
+    # Same types and defaults as FlowBase.
+    is_component: bool | None = False
+    locked: bool | None = False
+    mcp_enabled: bool | None = False
+    action_name: str | None = None
+    action_description: str | None = None
+    access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
+    a2a_enabled: bool | None = False
+    a2a_card_overrides: dict[str, Any] | None = None
+    tags: list[str] | None = None
+    icon: str | None = None
+    icon_bg_color: str | None = None
+    gradient: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.name or not self.name.strip():
+            msg = f"flow file {self.flow_id} has an empty name"
+            raise ProjectArtifactError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,6 +181,12 @@ class ProjectDeploymentSnapshot:
     flows: tuple[ProjectDeploymentSnapshotFlow, ...]
     dependencies: dict[str, Any]
     required_variables: tuple[str, ...]
+    required_connections: tuple[ProjectArtifactRequiredConnection, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.project_name or not self.project_name.strip():
+            msg = "project snapshot has an empty project name"
+            raise ProjectArtifactError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,10 +202,6 @@ class _SnapshotBatch:
     snapshots: tuple[_FlowSnapshot, ...]
     estimated_bytes: int
     item_count: int
-
-
-def _canonical_json_bytes(value: object) -> bytes:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
 
 
 def _zip_info(path: str) -> zipfile.ZipInfo:
@@ -247,11 +273,25 @@ def _collect_required_connections(flow_data: object) -> tuple[ProjectArtifactReq
     )
 
 
-def _normalized_flow_bytes(
+def _normalized_flow_data(
     snapshot: _FlowSnapshot,
     *,
     strict_secret_safety: bool = False,
-) -> tuple[bytes, tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
+    keep_mcp_config: bool = False,
+) -> tuple[dict[str, Any], tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
+    """Return the scrubbed flow envelope, its required variables and connections.
+
+    Kept separate from byte serialization so a caller that needs the
+    structured envelope itself - a deployment snapshot flow, for instance -
+    is not forced to serialize it to JSON and parse it back.
+
+    ``keep_mcp_config`` is only ever passed by the deployment-snapshot caller:
+    the zip/.lfpkg export path always gets a name-only MCP field, matching
+    every other secret export. See ``strip_secret_field_values_in_place`` for
+    what "provably clean" means and why an unclean config is nulled rather
+    than dropped, which is what makes the strict equality check below fail
+    closed on it.
+    """
     # Scrubbing and volatile-field removal mutate nested values in place. Copy
     # first so aliases held by the snapshot or persisted Flow data stay intact.
     scrubbed = deepcopy(snapshot.payload)
@@ -260,7 +300,9 @@ def _normalized_flow_bytes(
     # collected names feed the manifest's required-variables listing.
     variable_references: set[str] = set()
     required_connections = _collect_required_connections(scrubbed.get("data"))
-    scrubbed["data"] = strip_secret_field_values_in_place(scrubbed.get("data"), variable_references=variable_references)
+    scrubbed["data"] = strip_secret_field_values_in_place(
+        scrubbed.get("data"), variable_references=variable_references, keep_mcp_config=keep_mcp_config
+    )
     if strict_secret_safety and scrubbed.get("data") != snapshot.payload.get("data"):
         msg = f"flow file {snapshot.flow_id} contains values that cannot be safely captured"
         raise ProjectArtifactError(msg)
@@ -281,7 +323,18 @@ def _normalized_flow_bytes(
                 if isinstance(node, dict):
                     for key in _VOLATILE_NODE_FIELDS:
                         node.pop(key, None)
-    return _canonical_json_bytes(scrubbed), tuple(sorted(variable_references)), required_connections
+    return scrubbed, tuple(sorted(variable_references)), required_connections
+
+
+def _normalized_flow_bytes(
+    snapshot: _FlowSnapshot,
+    *,
+    strict_secret_safety: bool = False,
+) -> tuple[bytes, tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
+    scrubbed, variable_references, required_connections = _normalized_flow_data(
+        snapshot, strict_secret_safety=strict_secret_safety
+    )
+    return canonical_json_bytes(scrubbed), variable_references, required_connections
 
 
 def _json_string_size(value: str) -> int:
@@ -493,7 +546,7 @@ def _build_archive(
         manifest["required_connections"] = manifest_required_connections
     if dependencies:
         manifest["dependencies"] = dependencies
-    manifest_bytes = _canonical_json_bytes(manifest)
+    manifest_bytes = canonical_json_bytes(manifest)
     if len(manifest_bytes) > limits.max_flow_bytes:
         msg = f"manifest file is {len(manifest_bytes)} bytes, exceeding the {limits.max_flow_bytes}-byte limit"
         raise ProjectArtifactLimitError(msg)
@@ -867,24 +920,56 @@ async def _resolve_dependencies(
     return dependencies
 
 
-async def build_project_artifact(
+@dataclass(frozen=True, slots=True)
+class _ProjectSnapshotData:
+    """Authorized, revision-consistent flow data staged before encoding."""
+
+    project_id: UUID
+    project_name: str
+    project_description: str | None
+    snapshots: tuple[_FlowSnapshot, ...]
+    dependencies: dict[str, list[dict[str, Any]]]
+
+
+async def _verify_project_identity_unchanged(
+    session: AsyncSession,
+    *,
+    project_id: UUID,
+    project_name: str,
+    project_description: str | None,
+) -> None:
+    """Fail a strict capture if the project's own name or description moved mid-packaging."""
+    current_project = (
+        await session.exec(select(Folder.id, Folder.name, Folder.description).where(Folder.id == project_id))
+    ).first()
+    if current_project is None or (current_project[1], current_project[2]) != (project_name, project_description):
+        msg = "project changed during packaging"
+        raise ProjectArtifactError(msg)
+
+
+async def _prepare_project_snapshot_data(
     session: AsyncSession,
     user: User | UserRead,
     project_id: UUID,
     *,
-    flow_ids: Sequence[UUID] | None = None,
-    limits: ProjectArtifactLimits | None = None,
-    strict_snapshot: bool = False,
-) -> ProjectArtifact:
-    """Package selected readable flows, or every flow assigned to the project.
+    flow_ids: Sequence[UUID] | None,
+    limits: ProjectArtifactLimits,
+    strict_snapshot: bool,
+) -> _ProjectSnapshotData:
+    """Authorize, load, and bound every flow a package or snapshot needs.
+
+    Shared by ``build_project_artifact`` and ``build_project_deployment_snapshot``
+    so both run identical authorization, revision-consistency, and
+    dependency-resolution logic; only how the resulting flows are encoded (a
+    zip archive vs. a JSON-native snapshot) differs downstream.
 
     The project lookup widens beyond the caller's owner namespace only when the
     registered authorization service explicitly supports cross-user fetch. Flow
     membership is determined by project folder regardless of author. Read checks
     are split into an actor-owned batch and a non-owned batch so the owner override
     is never applied to another author's flow, and every check must pass before
-    any archive is constructed. Flow authorship and revision are revalidated
-    while packaging so either kind of concurrent change fails consistently.
+    any flow is packaged. Flow authorship and revision are revalidated while
+    packaging so either kind of concurrent change fails consistently.
     """
     selected_flow_ids: tuple[UUID, ...] | None = None
     if flow_ids is not None:
@@ -917,15 +1002,14 @@ async def build_project_artifact(
         workspace_id=project.workspace_id,
     )
 
-    effective_limits = limits or ProjectArtifactLimits()
-    if selected_flow_ids is not None and len(selected_flow_ids) > effective_limits.max_flow_count:
-        msg = f"selected flow count {len(selected_flow_ids)} exceeds the {effective_limits.max_flow_count}-flow limit"
+    if selected_flow_ids is not None and len(selected_flow_ids) > limits.max_flow_count:
+        msg = f"selected flow count {len(selected_flow_ids)} exceeds the {limits.max_flow_count}-flow limit"
         raise ProjectArtifactLimitError(msg)
     revision_statement = select(Flow.id, Flow.user_id, Flow.updated_at).where(Flow.folder_id == project_id)
     if selected_flow_ids is not None:
         revision_statement = revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     revision_rows = list(
-        (await session.exec(revision_statement.order_by(col(Flow.id)).limit(effective_limits.max_flow_count + 1))).all()
+        (await session.exec(revision_statement.order_by(col(Flow.id)).limit(limits.max_flow_count + 1))).all()
     )
     if selected_flow_ids is not None and len(revision_rows) != len(selected_flow_ids):
         msg = "one or more selected flows were not found in the project"
@@ -933,8 +1017,8 @@ async def build_project_artifact(
     if not revision_rows:
         msg = "project has no flows to package"
         raise EmptyProjectArtifactError(msg)
-    if len(revision_rows) > effective_limits.max_flow_count:
-        msg = f"project flow count {len(revision_rows)} exceeds the {effective_limits.max_flow_count}-flow limit"
+    if len(revision_rows) > limits.max_flow_count:
+        msg = f"project flow count {len(revision_rows)} exceeds the {limits.max_flow_count}-flow limit"
         raise ProjectArtifactLimitError(msg)
 
     ordered_revisions = tuple(sorted(revision_rows, key=lambda revision: str(revision[0])))
@@ -986,10 +1070,10 @@ async def build_project_artifact(
             msg = "project flows changed during packaging"
             raise ProjectArtifactError(msg)
 
-        remaining_expanded_bytes = effective_limits.max_expanded_bytes - estimated_bytes
+        remaining_expanded_bytes = limits.max_expanded_bytes - estimated_bytes
         remaining_items = _MAX_ARTIFACT_JSON_ITEMS - item_count
         if remaining_expanded_bytes <= 0:
-            msg = f"artifact expanded size exceeds the {effective_limits.max_expanded_bytes}-byte limit"
+            msg = f"artifact expanded size exceeds the {limits.max_expanded_bytes}-byte limit"
             raise ProjectArtifactLimitError(msg)
         if remaining_items <= 0:
             msg = f"artifact exceeds the {_MAX_ARTIFACT_JSON_ITEMS}-item structural limit"
@@ -998,7 +1082,7 @@ async def build_project_artifact(
             partial(
                 _snapshot_rows,
                 ordered_rows,
-                limits=effective_limits,
+                limits=limits,
                 remaining_expanded_bytes=remaining_expanded_bytes,
                 remaining_items=remaining_items,
             )
@@ -1011,19 +1095,12 @@ async def build_project_artifact(
     if selected_flow_ids is not None:
         final_revision_statement = final_revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     final_revisions = tuple(
-        (
-            await session.exec(
-                final_revision_statement.order_by(col(Flow.id)).limit(effective_limits.max_flow_count + 1)
-            )
-        ).all()
+        (await session.exec(final_revision_statement.order_by(col(Flow.id)).limit(limits.max_flow_count + 1))).all()
     )
     if final_revisions != ordered_revisions:
         msg = "project flows changed during packaging"
         raise ProjectArtifactError(msg)
 
-    # Archive construction is intentionally non-abandoning. If the HTTP request
-    # is cancelled, keep the caller suspended until the worker exits so the
-    # Enterprise package semaphore continues to account for its memory use.
     dependencies = await _resolve_dependencies(
         session,
         user=user,
@@ -1033,23 +1110,131 @@ async def build_project_artifact(
         snapshots=tuple(snapshots),
         strict=strict_snapshot,
     )
-    artifact = await _build_archive_non_abandoning(
+    return _ProjectSnapshotData(
         project_id=project_id,
         project_name=project.name,
         project_description=project_description,
         snapshots=tuple(snapshots),
-        limits=effective_limits,
         dependencies=dependencies,
+    )
+
+
+async def build_project_artifact(
+    session: AsyncSession,
+    user: User | UserRead,
+    project_id: UUID,
+    *,
+    flow_ids: Sequence[UUID] | None = None,
+    limits: ProjectArtifactLimits | None = None,
+    strict_snapshot: bool = False,
+) -> ProjectArtifact:
+    """Package selected readable flows, or every flow assigned to the project, into a zip.
+
+    See ``_prepare_project_snapshot_data`` for the shared authorization,
+    revision-consistency, and dependency-resolution behavior.
+    """
+    effective_limits = limits or ProjectArtifactLimits()
+    prepared = await _prepare_project_snapshot_data(
+        session,
+        user,
+        project_id,
+        flow_ids=flow_ids,
+        limits=effective_limits,
+        strict_snapshot=strict_snapshot,
+    )
+
+    # Archive construction is intentionally non-abandoning. If the HTTP request
+    # is cancelled, keep the caller suspended until the worker exits so the
+    # Enterprise package semaphore continues to account for its memory use.
+    artifact = await _build_archive_non_abandoning(
+        project_id=prepared.project_id,
+        project_name=prepared.project_name,
+        project_description=prepared.project_description,
+        snapshots=prepared.snapshots,
+        limits=effective_limits,
+        dependencies=prepared.dependencies,
         strict_secret_safety=strict_snapshot,
     )
     if strict_snapshot:
-        current_project = (
-            await session.exec(select(Folder.id, Folder.name, Folder.description).where(Folder.id == project_id))
-        ).first()
-        if current_project is None or (current_project[1], current_project[2]) != (project.name, project_description):
-            msg = "project changed during packaging"
-            raise ProjectArtifactError(msg)
+        await _verify_project_identity_unchanged(
+            session,
+            project_id=prepared.project_id,
+            project_name=prepared.project_name,
+            project_description=prepared.project_description,
+        )
     return artifact
+
+
+def _build_deployment_snapshot_flows(
+    snapshots: tuple[_FlowSnapshot, ...],
+    *,
+    limits: ProjectArtifactLimits,
+) -> tuple[list[ProjectDeploymentSnapshotFlow], tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
+    """Scrub and bound each flow for a snapshot without ever encoding or reading back a zip.
+
+    Applies the same per-flow and aggregate byte bounds ``_build_archive`` applies
+    to its zip entries - computed from the same canonical JSON encoding - so a
+    snapshot cannot exceed the limits a packaged artifact would enforce.
+    """
+    flows: list[ProjectDeploymentSnapshotFlow] = []
+    required_variables: set[str] = set()
+    required_connections_by_handle: dict[tuple[str, str], set[str]] = {}
+    expanded_size = 0
+    for snapshot in snapshots:
+        _json_string_size(snapshot.name)
+        scrubbed, variable_references, required_connections = _normalized_flow_data(
+            snapshot, strict_secret_safety=True, keep_mcp_config=True
+        )
+        content_size = len(canonical_json_bytes(scrubbed))
+        if content_size > limits.max_flow_bytes:
+            msg = (
+                f"flow file {snapshot.flow_id} is {content_size} bytes, "
+                f"exceeding the {limits.max_flow_bytes}-byte limit"
+            )
+            raise ProjectArtifactLimitError(msg)
+        expanded_size += content_size
+        if expanded_size > limits.max_expanded_bytes:
+            msg = f"artifact expanded size exceeds the {limits.max_expanded_bytes}-byte limit"
+            raise ProjectArtifactLimitError(msg)
+
+        data = scrubbed.get("data")
+        if not isinstance(data, dict):
+            msg = f"flow file {snapshot.flow_id} has no graph data"
+            raise ProjectArtifactError(msg)
+        flows.append(
+            ProjectDeploymentSnapshotFlow(
+                flow_id=snapshot.flow_id,
+                name=snapshot.name,
+                endpoint_name=scrubbed.get("endpoint_name"),
+                description=scrubbed.get("description"),
+                data=data,
+                is_component=scrubbed.get("is_component", False),
+                locked=scrubbed.get("locked", False),
+                mcp_enabled=scrubbed.get("mcp_enabled", False),
+                action_name=scrubbed.get("action_name"),
+                action_description=scrubbed.get("action_description"),
+                # Package-volatile presentation fields, read from the unscrubbed
+                # source so the snapshot still round-trips them.
+                access_type=AccessTypeEnum(snapshot.payload.get("access_type") or AccessTypeEnum.PRIVATE),
+                a2a_enabled=scrubbed.get("a2a_enabled", False),
+                a2a_card_overrides=scrubbed.get("a2a_card_overrides"),
+                tags=scrubbed.get("tags"),
+                icon=scrubbed.get("icon"),
+                icon_bg_color=scrubbed.get("icon_bg_color"),
+                gradient=snapshot.payload.get("gradient"),
+            )
+        )
+        required_variables.update(variable_references)
+        for connection in required_connections:
+            required_connections_by_handle.setdefault((connection.provider, connection.name), set()).update(
+                connection.scopes
+            )
+
+    required_connections_out = tuple(
+        ProjectArtifactRequiredConnection(provider=provider, name=name, scopes=tuple(sorted(scopes)))
+        for (provider, name), scopes in sorted(required_connections_by_handle.items())
+    )
+    return flows, tuple(sorted(required_variables)), required_connections_out
 
 
 async def build_project_deployment_snapshot(
@@ -1061,48 +1246,42 @@ async def build_project_deployment_snapshot(
 ) -> ProjectDeploymentSnapshot:
     """Capture one bounded, secret-safe, read-only serving snapshot.
 
-    The artifact builder remains the single source of truth for flow bounds,
-    authorization, variable extraction, dependency resolution, and secret
-    handling. The package is unpacked in memory because the snapshot endpoint
-    needs JSON rather than an archive; no filesystem or database write occurs.
-    ``strict_snapshot`` makes any graph or dependency information lost by
-    scrubbing fail closed instead of creating an incomplete rollback baseline.
+    Shares authorization, revision-consistency, and dependency resolution with
+    ``build_project_artifact`` via ``_prepare_project_snapshot_data``, but never
+    encodes a zip archive: the snapshot endpoint needs JSON, not an archive, so
+    each flow is scrubbed and bounded directly from its structured form instead
+    of being packaged, then unpacked again. Strict capture makes any graph or
+    dependency information lost by scrubbing fail closed instead of creating an
+    incomplete rollback baseline.
     """
-    artifact = await build_project_artifact(
+    effective_limits = limits or ProjectArtifactLimits()
+    prepared = await _prepare_project_snapshot_data(
         session,
         user,
         project_id,
-        limits=limits,
+        flow_ids=None,
+        limits=effective_limits,
         strict_snapshot=True,
     )
-    flows: list[ProjectDeploymentSnapshotFlow] = []
-    required_variables: set[str] = set()
-    try:
-        with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
-            for manifest_flow in artifact.flows:
-                payload = json.loads(archive.read(manifest_flow.path))
-                data = payload.get("data")
-                if not isinstance(data, dict):
-                    msg = f"flow file {manifest_flow.flow_id} has no graph data"
-                    raise ProjectArtifactError(msg)
-                flows.append(
-                    ProjectDeploymentSnapshotFlow(
-                        flow_id=manifest_flow.flow_id,
-                        name=manifest_flow.name,
-                        description=payload.get("description"),
-                        data=data,
-                    )
-                )
-                required_variables.update(manifest_flow.required_variables)
-    except (AttributeError, KeyError, TypeError, ValueError, zipfile.BadZipFile) as exc:
-        msg = "project artifact could not be read as a deployment snapshot"
-        raise ProjectArtifactError(msg) from exc
+    _json_string_size(prepared.project_name)
+
+    flows, required_variables, required_connections = await _run_sync_non_abandoning(
+        partial(_build_deployment_snapshot_flows, prepared.snapshots, limits=effective_limits)
+    )
+
+    await _verify_project_identity_unchanged(
+        session,
+        project_id=prepared.project_id,
+        project_name=prepared.project_name,
+        project_description=prepared.project_description,
+    )
 
     return ProjectDeploymentSnapshot(
-        project_id=artifact.project_id,
-        project_name=artifact.project_name,
-        project_description=artifact.project_description,
+        project_id=prepared.project_id,
+        project_name=prepared.project_name,
+        project_description=prepared.project_description,
         flows=tuple(flows),
-        dependencies=dict(artifact.dependencies),
-        required_variables=tuple(sorted(required_variables)),
+        dependencies=dict(prepared.dependencies),
+        required_variables=required_variables,
+        required_connections=required_connections,
     )

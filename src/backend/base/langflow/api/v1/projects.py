@@ -1,6 +1,5 @@
 import asyncio
-import hashlib
-import json
+import random
 import re
 import warnings
 from typing import Annotated, cast
@@ -45,6 +44,7 @@ from langflow.api.v1.schemas.deployment_snapshot import (
     DeploymentSnapshot,
     DeploymentSnapshotFlow,
     DeploymentSnapshotProject,
+    DeploymentSnapshotRequiredConnection,
 )
 from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
@@ -56,6 +56,7 @@ from langflow.services.authorization import (
     FlowAction,
     ProjectAction,
     ensure_flow_permission,
+    ensure_flows_permission,
     ensure_project_permission,
     filter_visible_resources,
     resource_visible_in_scope,
@@ -69,6 +70,7 @@ from langflow.services.authorization.fetch import (
 )
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.creation_hooks import (
+    ERROR_CODE_HEADER,
     RESOURCE_PROJECT,
     PreCreationContext,
     enforce_pre_creation,
@@ -114,7 +116,8 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
-from langflow.services.triggers.reconciliation import reconcile_flow_triggers
+from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
+from langflow.utils.canonical_json import canonical_json_digest
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -127,8 +130,18 @@ PROJECT_DELETE_BUSY = "The database is busy. Please retry the request."
 PROJECT_WRITE_DENIED_DETAIL = "You don't have permission to edit this project."
 PROJECT_DELETE_DENIED_DETAIL = "You don't have permission to delete this project."
 _REPLACEMENT_MAX_ATTEMPTS = 3
+# Retain only the newest N replacement receipts per project so the table does
+# not grow without bound; older receipts are pruned in the same transaction
+# that commits a new one. Mirrors the per-flow cap in flow_version/crud.py.
+_MAX_REPLACEMENT_RECEIPTS_PER_PROJECT = 10
 REPLACEMENT_OPERATION_NOT_FOUND = "Replacement operation not found"
 _DEPLOYMENT_PROJECT_SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+# Machine-readable error codes for the replacement endpoints, carried on the
+# X-Langflow-Error-Code response header — the convention creation_hooks.py and
+# users.py already use — alongside the unchanged plain-text `detail`.
+_REPLACEMENT_PROJECT_NOT_FOUND_CODE = "replacement_project_not_found"
+_REPLACEMENT_RECEIPT_EXPIRED_CODE = "replacement_receipt_expired"
+REPLACEMENT_RECEIPT_EXPIRED_DETAIL = "Replacement receipt has expired"
 
 # Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
 # same LIKE-escaping is shared across the API endpoints + the tracing repository.
@@ -480,13 +493,34 @@ async def read_project_deployment_snapshot(
             DeploymentSnapshotFlow(
                 id=flow.flow_id,
                 name=flow.name,
+                endpoint_name=flow.endpoint_name,
                 description=flow.description,
                 data=flow.data,
+                is_component=flow.is_component,
+                locked=flow.locked,
+                mcp_enabled=flow.mcp_enabled,
+                action_name=flow.action_name,
+                action_description=flow.action_description,
+                access_type=flow.access_type,
+                a2a_enabled=flow.a2a_enabled,
+                a2a_card_overrides=flow.a2a_card_overrides,
+                tags=flow.tags,
+                icon=flow.icon,
+                icon_bg_color=flow.icon_bg_color,
+                gradient=flow.gradient,
             )
             for flow in snapshot.flows
         ],
         dependencies=snapshot.dependencies,
         required_variables=list(snapshot.required_variables),
+        required_connections=[
+            DeploymentSnapshotRequiredConnection(
+                provider=connection.provider,
+                name=connection.name,
+                scopes=list(connection.scopes),
+            )
+            for connection in snapshot.required_connections
+        ],
     )
 
 
@@ -675,21 +709,37 @@ def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
     # compatible while binding any non-empty opaque manifest to the operation.
     if not request_body.dependencies:
         normalized.pop("dependencies", None)
-    canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return canonical_json_digest(normalized)
 
 
 def _is_deployment_project_slug(name: str) -> bool:
     return _DEPLOYMENT_PROJECT_SLUG_RE.fullmatch(name) is not None
 
 
-async def _lock_replacement_operation(session: DbSession, project_id: UUID, operation_id: UUID) -> str:
-    """Serialize same-operation retries and start SQLite writes before reads."""
+def _deny_to_404_with_code(exc: HTTPException, *, detail: str, code: str) -> HTTPException:
+    """Like ``deny_to_404``, but also attaches the machine-readable error-code header.
+
+    A non-403 error passes through ``deny_to_404`` unchanged, so it must not be
+    relabelled with a 404 code here either.
+    """
+    mapped = deny_to_404(exc, detail=detail)
+    if mapped.status_code != status.HTTP_404_NOT_FOUND:
+        return mapped
+    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail, headers={ERROR_CODE_HEADER: code})
+
+
+async def _lock_replacement_operation(session: DbSession, project_id: UUID) -> str:
+    """Serialize concurrent replacements of the same project and start SQLite writes before reads.
+
+    Keyed on the project id alone — not the operation id — so two concurrent
+    creates of a not-yet-existing project under different operation ids still
+    serialize instead of racing each other into the same row.
+    """
     dialect = session.get_bind().dialect.name
     if dialect == "postgresql":
         await session.execute(
             text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 1944042026))"),
-            {"lock_key": f"project-replacement-operation:{project_id}:{operation_id}"},
+            {"lock_key": f"project-replacement:{project_id}"},
         )
     elif dialect == "sqlite":
         # SQLite serializes writers database-wide. This no-op write obtains that
@@ -699,8 +749,47 @@ async def _lock_replacement_operation(session: DbSession, project_id: UUID, oper
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail=f"Atomic project replacement is unsupported for database dialect '{dialect}'.",
+            headers={ERROR_CODE_HEADER: "replacement_dialect_unsupported"},
         )
     return dialect
+
+
+async def _authorize_replacement_receipt_project_only(
+    *,
+    current_user: User,
+    project_id: UUID,
+    project_user_id: UUID | None,
+    workspace_id: UUID | None,
+    project_action: ProjectAction,
+    denied_detail: str,
+    denied_error_code: str,
+) -> None:
+    """Authorize a receipt by project alone, for when its saved flows are unavailable.
+
+    A tombstoned receipt (see ``_MAX_REPLACEMENT_RECEIPTS_PER_PROJECT`` pruning)
+    has no ``result`` left to read flow ids from, so this only checks project-level
+    permission - the same check ``_authorize_replacement_result`` does before its
+    per-flow batch, using the caller's own ``project_id`` instead of one read back
+    out of the (absent) result.
+    """
+    authorization_service = get_authorization_service()
+    can_widen = await authorization_service.supports_cross_user_fetch() and await authorization_service.is_enabled()
+    if not can_widen and project_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=denied_detail,
+            headers={ERROR_CODE_HEADER: denied_error_code},
+        )
+    try:
+        await ensure_project_permission(
+            current_user,
+            project_action,
+            project_id=project_id,
+            project_user_id=project_user_id,
+            workspace_id=workspace_id,
+        )
+    except HTTPException as exc:
+        raise _deny_to_404_with_code(exc, detail=denied_detail, code=denied_error_code) from exc
 
 
 async def _authorize_replacement_result(
@@ -711,35 +800,34 @@ async def _authorize_replacement_result(
     workspace_id: UUID | None,
     project_action: ProjectAction,
     denied_detail: str,
+    denied_error_code: str,
 ) -> None:
     """Authorize the saved projection, including full graph bodies in receipts."""
-    authorization_service = get_authorization_service()
-    can_widen = await authorization_service.supports_cross_user_fetch() and await authorization_service.is_enabled()
-    if not can_widen and project_user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=denied_detail)
-    try:
-        await ensure_project_permission(
-            current_user,
-            project_action,
-            project_id=result.project.id,
-            project_user_id=project_user_id,
-            workspace_id=workspace_id,
-        )
-    except HTTPException as exc:
-        raise deny_to_404(exc, detail=denied_detail) from exc
+    await _authorize_replacement_receipt_project_only(
+        current_user=current_user,
+        project_id=result.project.id,
+        project_user_id=project_user_id,
+        workspace_id=workspace_id,
+        project_action=project_action,
+        denied_detail=denied_detail,
+        denied_error_code=denied_error_code,
+    )
 
-    for flow in result.flows:
+    # Every flow in a replacement result shares the project owner and lives in
+    # the project (enforced when the replacement was written), so one batched
+    # enforce call covers the whole set.
+    if result.flows:
         try:
-            await ensure_flow_permission(
+            await ensure_flows_permission(
                 current_user,
                 FlowAction.READ,
-                flow_id=flow.id,
-                flow_user_id=flow.user_id,
-                workspace_id=flow.workspace_id,
-                folder_id=flow.folder_id or result.project.id,
+                flow_ids=[flow.id for flow in result.flows],
+                flow_user_id=project_user_id,
+                workspace_id=workspace_id,
+                folder_id=result.project.id,
             )
         except HTTPException as exc:
-            raise deny_to_404(exc, detail=denied_detail) from exc
+            raise _deny_to_404_with_code(exc, detail=denied_detail, code=denied_error_code) from exc
 
 
 async def _read_replacement_receipt(
@@ -786,9 +874,13 @@ async def replace_project_operation(
                 storage_service=storage_service,
             )
         except DBAPIError as exc:
-            # Flow editors lock Flow before the shared Folder trigger, while
-            # replacement locks Folder first. PostgreSQL can abort either side
-            # with 40P01; retry the entire transaction, never a partial save.
+            # Replacement locks the project's Folder row and then its existing
+            # Flow rows (see the ``with_for_update()`` loads below). A concurrent
+            # INSERT, or an UPDATE that moves a flow into this project, takes
+            # FOR KEY SHARE on the Folder row via its FK check (PostgreSQL skips
+            # that check on an ordinary content-only edit, since folder_id is
+            # unchanged) and can deadlock against this lock order; retry the
+            # entire transaction, never a partial save.
             is_deadlock = getattr(exc.orig, "sqlstate", None) == "40P01"
             retryable = is_deadlock or is_database_lock_error(exc)
             actor_in_session = isinstance(current_user, User) and current_user in session
@@ -802,10 +894,13 @@ async def replace_project_operation(
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="The database is busy. Please retry the request.",
+                    headers={ERROR_CODE_HEADER: "replacement_retry_exhausted"},
                 ) from exc
             if actor_in_session:
                 await session.refresh(current_user)
-            await asyncio.sleep(0.05 * (attempt + 1))
+            # Jitter on top of the linear backoff so concurrent retriers don't
+            # keep re-colliding on the same lock in lockstep.
+            await asyncio.sleep(0.05 * (attempt + 1) + random.uniform(0, 0.05))  # noqa: S311 - jitter, not crypto
     message = "Replacement retry budget exhausted"
     raise RuntimeError(message)
 
@@ -824,7 +919,7 @@ async def _replace_project_operation_once(
     memory_base_cleanups = []
     newly_created_project: Folder | None = None
     try:
-        dialect = await _lock_replacement_operation(session, project_id, operation_id)
+        dialect = await _lock_replacement_operation(session, project_id)
 
         receipt = await _read_replacement_receipt(
             session=session,
@@ -832,6 +927,25 @@ async def _replace_project_operation_once(
             operation_id=operation_id,
         )
         if receipt is not None:
+            if receipt.result is None:
+                # Pruned beyond _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT: the row (and
+                # its digest) survives as a tombstone so a retry can be told the
+                # receipt is gone, but replaying it - even with a matching digest -
+                # must never silently re-execute and overwrite newer content.
+                await _authorize_replacement_receipt_project_only(
+                    current_user=current_user,
+                    project_id=project_id,
+                    project_user_id=receipt.project_user_id,
+                    workspace_id=receipt.workspace_id,
+                    project_action=ProjectAction.WRITE,
+                    denied_detail="Project not found",
+                    denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_410_GONE,
+                    detail=REPLACEMENT_RECEIPT_EXPIRED_DETAIL,
+                    headers={ERROR_CODE_HEADER: _REPLACEMENT_RECEIPT_EXPIRED_CODE},
+                )
             saved_result = ProjectReplacementResult.model_validate(receipt.result)
             await _authorize_replacement_result(
                 current_user=current_user,
@@ -840,17 +954,23 @@ async def _replace_project_operation_once(
                 workspace_id=receipt.workspace_id,
                 project_action=ProjectAction.WRITE,
                 denied_detail="Project not found",
+                denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
             )
             if receipt.request_digest != request_digest:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Operation ID already used with a different request",
+                    headers={ERROR_CODE_HEADER: "replacement_operation_id_conflict"},
                 )
             return saved_result
 
         requested_ids = [flow.id for flow in request_body.flows]
         if len(set(requested_ids)) != len(requested_ids):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Flow ids must be unique")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Flow ids must be unique",
+                headers={ERROR_CODE_HEADER: "replacement_duplicate_flow_ids"},
+            )
 
         # Load under the shared project guard. PostgreSQL uses the Folder row lock;
         # SQLite already holds its database-wide writer slot from the no-op UPDATE.
@@ -863,19 +983,32 @@ async def _replace_project_operation_once(
             project_query = project_query.with_for_update()
         project = (await session.exec(project_query)).first()
         if project is not None and not can_widen_project_fetch and project.user_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+                headers={ERROR_CODE_HEADER: _REPLACEMENT_PROJECT_NOT_FOUND_CODE},
+            )
 
         if project is None:
             if request_body.project_name is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found",
+                    headers={ERROR_CODE_HEADER: _REPLACEMENT_PROJECT_NOT_FOUND_CODE},
+                )
             if not _is_deployment_project_slug(request_body.project_name):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="project_name must be a lowercase deployment slug of at most 63 characters",
+                    headers={ERROR_CODE_HEADER: "replacement_invalid_project_name"},
                 )
             workspace_ids = {flow.workspace_id for flow in request_body.flows if flow.workspace_id is not None}
             if len(workspace_ids) > 1:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Flows span multiple workspaces")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Flows span multiple workspaces",
+                    headers={ERROR_CODE_HEADER: "replacement_flows_span_multiple_workspaces"},
+                )
             workspace_id = next(iter(workspace_ids), None)
             await ensure_project_permission(current_user, ProjectAction.CREATE, workspace_id=workspace_id)
             await enforce_pre_creation(
@@ -896,7 +1029,11 @@ async def _replace_project_operation_once(
                 )
             ).first()
             if name_taken is not None:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Project name must be unique")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Project name must be unique",
+                    headers={ERROR_CODE_HEADER: "replacement_project_name_conflict"},
+                )
 
             mcp_auth: dict = {"auth_type": "none"}
             project_auth_settings = None
@@ -916,14 +1053,28 @@ async def _replace_project_operation_once(
             await session.flush()
             newly_created_project = project
             if settings_service.settings.add_projects_to_mcp_servers:
-                await register_mcp_servers_for_project(
-                    project,
-                    mcp_auth,
-                    current_user,
-                    session,
-                    raise_on_error=True,
-                    owns_transaction=False,
-                )
+                try:
+                    await register_mcp_servers_for_project(
+                        project,
+                        mcp_auth,
+                        current_user,
+                        session,
+                        raise_on_error=True,
+                        owns_transaction=False,
+                    )
+                except ApiKeyIssuanceDeniedError as denial:
+                    # This branch always auto-chooses apikey auth — there is no
+                    # caller-supplied auth_settings on a replacement request —
+                    # so a denial mirrors _new_project's AUTO_LOGIN=false
+                    # default: create the project without the MCP server
+                    # rather than failing on a credential nothing asked for.
+                    project.auth_settings = None
+                    await logger.awarning(
+                        "Skipped MCP auto-registration for project %s (%s): %s",
+                        project.name,
+                        project.id,
+                        denial,
+                    )
         else:
             try:
                 await ensure_project_permission(
@@ -934,51 +1085,83 @@ async def _replace_project_operation_once(
                     workspace_id=project.workspace_id,
                 )
             except HTTPException as exc:
-                raise deny_to_404(exc, detail="Project not found") from exc
+                raise _deny_to_404_with_code(
+                    exc, detail="Project not found", code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE
+                ) from exc
             if project.user_id is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found",
+                    headers={ERROR_CODE_HEADER: _REPLACEMENT_PROJECT_NOT_FOUND_CODE},
+                )
             if request_body.project_name is not None:
                 if not _is_deployment_project_slug(request_body.project_name):
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail="project_name must be a lowercase deployment slug of at most 63 characters",
+                        headers={ERROR_CODE_HEADER: "replacement_invalid_project_name"},
                     )
                 # `project_name` marks a restore/create operation. Do not adopt
                 # a project that reappeared after the Editor observed it gone:
                 # it may belong to an external recreation with the same UUID
                 # and name. Receipt replay was checked above, so an exact retry
                 # of a successful create still returns its original result.
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Project already exists")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Project already exists",
+                    headers={ERROR_CODE_HEADER: "replacement_project_already_exists"},
+                )
             if not _is_deployment_project_slug(project.name):
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found",
+                    headers={ERROR_CODE_HEADER: _REPLACEMENT_PROJECT_NOT_FOUND_CODE},
+                )
             workspace_id = project.workspace_id
 
         if project.user_id is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+                headers={ERROR_CODE_HEADER: _REPLACEMENT_PROJECT_NOT_FOUND_CODE},
+            )
         for flow in request_body.flows:
             if flow.folder_id is not None and flow.folder_id != project_id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Flow folder_id does not match project",
+                    headers={ERROR_CODE_HEADER: "replacement_flow_folder_mismatch"},
                 )
             if flow.workspace_id is not None and flow.workspace_id != project.workspace_id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Flow workspace_id does not match project",
+                    headers={ERROR_CODE_HEADER: "replacement_flow_workspace_mismatch"},
                 )
             flow.folder_id = project_id
             flow.workspace_id = project.workspace_id
 
-        existing_flows = list((await session.exec(select(Flow).where(Flow.folder_id == project_id))).all())
+        existing_flows_query = select(Flow).where(Flow.folder_id == project_id)
+        if dialect == "postgresql":
+            # Lock the project's current flow rows too, ordered by id for a
+            # deterministic lock order. A concurrent insert or move into this
+            # project already blocks on the Folder row lock above (the flow's
+            # FK takes FOR KEY SHARE on folder, which conflicts with FOR
+            # UPDATE); this closes the remaining gap — an ordinary edit of a
+            # flow already in the project.
+            existing_flows_query = existing_flows_query.order_by(Flow.id).with_for_update()
+        existing_flows = list((await session.exec(existing_flows_query)).all())
         if any(flow.user_id != project.user_id for flow in existing_flows):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Project contains flows outside the project owner's scope",
+                headers={ERROR_CODE_HEADER: "replacement_flows_outside_owner_scope"},
             )
         if any(flow.fs_path for flow in existing_flows) or any(flow.fs_path for flow in request_body.flows):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Atomic replacement does not support filesystem-backed flows",
+                headers={ERROR_CODE_HEADER: "replacement_filesystem_flows_unsupported"},
             )
 
         existing_by_id = {flow.id: flow for flow in existing_flows}
@@ -986,38 +1169,58 @@ async def _replace_project_operation_once(
         stale_flows = [flow for flow in existing_flows if flow.id not in requested_id_set]
         updated_flows = [existing_by_id[flow_id] for flow_id in requested_ids if flow_id in existing_by_id]
         original_endpoint_names = {flow.id: flow.endpoint_name for flow in updated_flows}
+        # Captured before the temporary rename below so the locked-flow guard
+        # diffs the request against the flow's real persisted name/endpoint,
+        # not the interim `__lf_replace_...` placeholder (see its use in the
+        # update loop further down).
+        original_names_by_id = {flow.id: flow.name for flow in updated_flows}
 
         if requested_ids:
             other_flows = list((await session.exec(select(Flow).where(Flow.id.in_(requested_ids)))).all())
             if any(flow.id not in existing_by_id for flow in other_flows):
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Flow id belongs to another project")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Flow id belongs to another project",
+                    headers={ERROR_CODE_HEADER: "replacement_flow_belongs_to_another_project"},
+                )
 
-        for existing_flow in stale_flows:
+        # Every existing flow in this project shares the project owner (checked
+        # above), so one batched enforce call covers the whole DELETE/WRITE set
+        # instead of one plugin round-trip per flow.
+        if stale_flows:
             try:
-                await ensure_flow_permission(
+                await ensure_flows_permission(
                     current_user,
                     FlowAction.DELETE,
-                    flow_id=existing_flow.id,
-                    flow_user_id=existing_flow.user_id,
-                    workspace_id=existing_flow.workspace_id,
-                    folder_id=existing_flow.folder_id,
+                    flow_ids=[flow.id for flow in stale_flows],
+                    flow_user_id=project.user_id,
+                    workspace_id=project.workspace_id,
+                    folder_id=project_id,
                 )
             except HTTPException as exc:
-                raise deny_to_404(exc, detail="Project not found") from exc
-        for existing_flow in updated_flows:
+                raise _deny_to_404_with_code(
+                    exc, detail="Project not found", code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE
+                ) from exc
+        if updated_flows:
             try:
-                await ensure_flow_permission(
+                await ensure_flows_permission(
                     current_user,
                     FlowAction.WRITE,
-                    flow_id=existing_flow.id,
-                    flow_user_id=existing_flow.user_id,
-                    workspace_id=existing_flow.workspace_id,
-                    folder_id=existing_flow.folder_id,
+                    flow_ids=[flow.id for flow in updated_flows],
+                    flow_user_id=project.user_id,
+                    workspace_id=project.workspace_id,
+                    folder_id=project_id,
                 )
             except HTTPException as exc:
-                raise deny_to_404(exc, detail="Project not found") from exc
-        for flow in request_body.flows:
-            if flow.id not in existing_by_id:
+                raise _deny_to_404_with_code(
+                    exc, detail="Project not found", code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE
+                ) from exc
+        if any(flow.id not in existing_by_id for flow in request_body.flows):
+            # A new flow has no owner yet, so there is no per-flow object to
+            # batch against — and every new flow in this replacement lands in
+            # the same project, so the CREATE decision is identical for all of
+            # them. One check suffices.
+            try:
                 await ensure_flow_permission(
                     current_user,
                     FlowAction.CREATE,
@@ -1025,6 +1228,10 @@ async def _replace_project_operation_once(
                     folder_id=project_id,
                     folder_user_id=project.user_id,
                 )
+            except HTTPException as exc:
+                raise _deny_to_404_with_code(
+                    exc, detail="Project not found", code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE
+                ) from exc
 
         flow_names = [flow.name for flow in request_body.flows]
         endpoint_names = [flow.endpoint_name for flow in request_body.flows if flow.endpoint_name]
@@ -1032,6 +1239,7 @@ async def _replace_project_operation_once(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Flow names and endpoint names must be unique",
+                headers={ERROR_CODE_HEADER: "replacement_duplicate_flow_names"},
             )
         current_ids = [flow.id for flow in existing_flows]
         external_name_conflict = (
@@ -1059,14 +1267,31 @@ async def _replace_project_operation_once(
             else None
         )
         if external_name_conflict is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Flow name must be unique")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Flow name must be unique",
+                headers={ERROR_CODE_HEADER: "replacement_flow_name_conflict"},
+            )
         if external_endpoint_conflict is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Endpoint name must be unique")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Endpoint name must be unique",
+                headers={ERROR_CODE_HEADER: "replacement_endpoint_name_conflict"},
+            )
 
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         carried_secrets_by_id: dict[UUID, tuple[list[tuple[str, dict]], dict[str, str]]] = {}
         for flow in request_body.flows:
             carried, variables = extract_and_strip_mcp_secrets(flow.data)
+            if variables and current_user.id != project.user_id:
+                # MCP credentials are staged as the project owner's global
+                # variables, which rotation would overwrite for every flow the
+                # owner has. Only the owner may carry literal MCP secrets.
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Only the project owner can replace flows carrying literal MCP credentials",
+                    headers={ERROR_CODE_HEADER: "replacement_mcp_secret_requires_owner"},
+                )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
             carried_secrets_by_id[flow.id] = (carried, variables)
 
@@ -1075,7 +1300,11 @@ async def _replace_project_operation_once(
 
         for stale_flow in stale_flows:
             if not await cascade_delete_flow(session, stale_flow.id, memory_base_cleanups=memory_base_cleanups):
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Flow not found",
+                    headers={ERROR_CODE_HEADER: "replacement_flow_not_found"},
+                )
 
         # Free project-local names before applying the requested set, allowing a
         # replacement to swap names/endpoints without ever exposing the interim rows.
@@ -1116,7 +1345,9 @@ async def _replace_project_operation_once(
                     variables,
                     project.user_id,
                     session,
-                    rotatable_servers=mcp_server_names(existing_flow.data),
+                    rotatable_servers=(
+                        mcp_server_names(existing_flow.data) if current_user.id == project.user_id else None
+                    ),
                 )
                 flow_read = await _update_existing_flow(
                     session=session,
@@ -1127,9 +1358,13 @@ async def _replace_project_operation_once(
                     save_to_fs=False,
                     reconcile_triggers=False,
                     preserve_explicit_nulls=True,
+                    locked_flow_persisted_values={
+                        "name": original_names_by_id[flow.id],
+                        "endpoint_name": original_endpoint_names[flow.id],
+                    },
                 )
 
-            await reconcile_flow_triggers(
+            await reconcile_flow_triggers_safely(
                 session,
                 flow_id=flow_read.id,
                 owner_id=flow_read.user_id,
@@ -1149,6 +1384,7 @@ async def _replace_project_operation_once(
             workspace_id=project.workspace_id,
             project_action=ProjectAction.READ,
             denied_detail="Project not found",
+            denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
         )
         result_json = result.model_dump(mode="json")
         if result.dependencies is None:
@@ -1166,21 +1402,46 @@ async def _replace_project_operation_once(
         )
         session.add(receipt)
         await session.flush()
+
+        # Prune old receipts for this project in the same transaction as the
+        # new one, keeping only the newest _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT
+        # readable. A pruned row is tombstoned (its result cleared) rather than
+        # deleted: the row, digest, and owner/workspace survive so a retry against
+        # it - even one whose body still matches the original digest - gets an
+        # explicit 410 instead of silently re-executing and overwriting newer
+        # content with a stale one. created_at ties (possible with low-resolution
+        # clocks) break on operation_id for a deterministic ordering.
+        #
+        # Ranking (and therefore the offset boundary) includes the just-inserted
+        # receipt like every other row - excluding it from the ranking itself
+        # would shrink the "others" count by one and permanently under-prune by
+        # one row. It is excluded only from the resulting tombstone set, as a
+        # belt-and-suspenders guard: the newest row should never rank beyond the
+        # offset, but nothing here must ever tombstone the receipt this same
+        # transaction just committed.
+        stale_receipt_ids = (
+            await session.exec(
+                select(ProjectReplacementOperation.operation_id)
+                .where(ProjectReplacementOperation.project_id == project_id)
+                .order_by(
+                    ProjectReplacementOperation.created_at.desc(),
+                    ProjectReplacementOperation.operation_id.desc(),
+                )
+                .offset(_MAX_REPLACEMENT_RECEIPTS_PER_PROJECT)
+            )
+        ).all()
+        stale_receipt_ids = [stale_id for stale_id in stale_receipt_ids if stale_id != operation_id]
+        if stale_receipt_ids:
+            await session.exec(
+                update(ProjectReplacementOperation)
+                .where(
+                    ProjectReplacementOperation.project_id == project_id,
+                    ProjectReplacementOperation.operation_id.in_(stale_receipt_ids),
+                )
+                .values(result=null())
+            )
+
         await session.commit()
-
-        if memory_base_cleanups:
-            from langflow.services.memory_base.flow_cleanup import finalize_flow_memory_base_cleanup
-
-            await finalize_flow_memory_base_cleanup(memory_base_cleanups)
-        if newly_created_project is not None and get_settings_service().settings.add_projects_to_mcp_servers:
-            from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-            from lfx.base.mcp.util import sanitize_mcp_name
-
-            from langflow.api.v2.mcp import _clear_server_cache
-
-            server_name = f"lf-{sanitize_mcp_name(newly_created_project.name)[: MAX_MCP_SERVER_NAME_LENGTH - 4]}"
-            _clear_server_cache(server_name)
-        return result  # noqa: TRY300 - return after committed transaction and required side effects
     except (HTTPException, DBAPIError):
         raise
     except Exception as exc:
@@ -1193,6 +1454,32 @@ async def _replace_project_operation_once(
             log_message=f"op=replace_project_operation project_id={project_id}",
         )
         raise _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT) from exc
+
+    # Post-commit side effects are best-effort: the replacement is already
+    # durable at this point, so a cleanup/cache failure here must never
+    # surface as an error to the caller (the except clauses above only ever
+    # see failures that happened before commit).
+    if memory_base_cleanups:
+        from langflow.services.memory_base.flow_cleanup import finalize_flow_memory_base_cleanup
+
+        try:
+            await finalize_flow_memory_base_cleanup(memory_base_cleanups)
+        except Exception:  # noqa: BLE001 - best-effort cleanup must never fail the response
+            await logger.aexception("Memory Base cleanup failed after replacement commit for project %s", project_id)
+    if newly_created_project is not None and get_settings_service().settings.add_projects_to_mcp_servers:
+        from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+        from lfx.base.mcp.util import sanitize_mcp_name
+
+        from langflow.api.v2.mcp import _clear_server_cache
+
+        server_name = f"lf-{sanitize_mcp_name(newly_created_project.name)[: MAX_MCP_SERVER_NAME_LENGTH - 4]}"
+        try:
+            _clear_server_cache(server_name)
+        except Exception:  # noqa: BLE001 - best-effort cache invalidation must never fail the response
+            await logger.awarning(
+                "Failed to clear MCP server cache for %s after replacement commit", server_name, exc_info=True
+            )
+    return result
 
 
 @router.get(
@@ -1214,7 +1501,29 @@ async def get_project_replacement_operation(
         operation_id=operation_id,
     )
     if receipt is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=REPLACEMENT_OPERATION_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=REPLACEMENT_OPERATION_NOT_FOUND,
+            headers={ERROR_CODE_HEADER: "replacement_operation_not_found"},
+        )
+    if receipt.result is None:
+        # Pruned beyond _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT: tombstoned, not gone
+        # outright, so this still authorizes against the stored project identity
+        # before telling the caller the content itself is no longer available.
+        await _authorize_replacement_receipt_project_only(
+            current_user=current_user,
+            project_id=project_id,
+            project_user_id=receipt.project_user_id,
+            workspace_id=receipt.workspace_id,
+            project_action=ProjectAction.READ,
+            denied_detail=REPLACEMENT_OPERATION_NOT_FOUND,
+            denied_error_code="replacement_operation_not_found",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail=REPLACEMENT_RECEIPT_EXPIRED_DETAIL,
+            headers={ERROR_CODE_HEADER: _REPLACEMENT_RECEIPT_EXPIRED_CODE},
+        )
 
     result = ProjectReplacementResult.model_validate(receipt.result)
     await _authorize_replacement_result(
@@ -1224,6 +1533,7 @@ async def get_project_replacement_operation(
         workspace_id=receipt.workspace_id,
         project_action=ProjectAction.READ,
         denied_detail=REPLACEMENT_OPERATION_NOT_FOUND,
+        denied_error_code="replacement_operation_not_found",
     )
     return result
 

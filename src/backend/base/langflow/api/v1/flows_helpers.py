@@ -49,6 +49,8 @@ from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from langflow.services.database.models.user.model import User
 
 
@@ -165,10 +167,15 @@ def _endpoint_name_was_explicitly_cleared(flow: FlowCreate | FlowUpdate) -> bool
     return "endpoint_name" in flow.model_fields_set and flow.endpoint_name in (None, "")
 
 
-def _ensure_api_flow_update_allowed(db_flow: Flow, update_data: dict[str, Any]) -> None:
+def _ensure_api_flow_update_allowed(
+    db_flow: Flow,
+    update_data: dict[str, Any],
+    *,
+    persisted_values: Mapping[str, Any] | None = None,
+) -> None:
     """Translate the domain lock guard into the API's 423 response."""
     try:
-        ensure_flow_update_allowed(db_flow, update_data)
+        ensure_flow_update_allowed(db_flow, update_data, persisted_values=persisted_values)
     except LockedFlowError as exc:
         raise HTTPException(status_code=423, detail=str(exc)) from exc
 
@@ -616,6 +623,7 @@ async def _update_existing_flow(
     save_to_fs: bool = True,
     reconcile_triggers: bool = True,
     preserve_explicit_nulls: bool = False,
+    locked_flow_persisted_values: Mapping[str, Any] | None = None,
 ) -> FlowRead:
     """Update an existing flow (PUT update path).
 
@@ -630,6 +638,13 @@ async def _update_existing_flow(
     otherwise the write silently retargets folders/storage that belong to the
     actor. This mirrors the cross-user semantics already enforced by
     ``_patch_flow``.
+
+    ``locked_flow_persisted_values`` overrides ``existing_flow``'s in-memory
+    fields for the locked-flow diff only (see ``ensure_flow_update_allowed``).
+    Atomic project replacement passes the flow's pre-rename name/endpoint_name
+    here: it temporarily renames the row before calling this function, and
+    without the override a locked flow's own (unchanged) name would look
+    changed against that interim value.
     """
     await lock_flow_for_update(session, existing_flow)
 
@@ -745,7 +760,7 @@ async def _update_existing_flow(
             new_folder_id=update_data["folder_id"],
         )
 
-    _ensure_api_flow_update_allowed(existing_flow, update_data)
+    _ensure_api_flow_update_allowed(existing_flow, update_data, persisted_values=locked_flow_persisted_values)
 
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)

@@ -1,143 +1,305 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException, Response, status
 from langflow.api.v1 import projects
+from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 from langflow.services.deployment_artifacts import (
     ProjectArtifactError,
     ProjectArtifactLimitError,
     ProjectArtifactNotFoundError,
-    ProjectDeploymentSnapshot,
-    ProjectDeploymentSnapshotFlow,
-    build_project_deployment_snapshot,
 )
+from langflow.services.deps import session_scope
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
 
 
-def _snapshot_session(project: Folder, flow: Flow) -> AsyncMock:
-    ordered = [(flow.id, flow.user_id, flow.updated_at)]
-    revision_result = MagicMock()
-    revision_result.all.return_value = ordered
-    flow_result = MagicMock()
-    flow_result.all.return_value = [flow]
-    final_revision_result = MagicMock()
-    final_revision_result.all.return_value = ordered
-    project_result = MagicMock()
-    project_result.first.return_value = (project.id, project.name, project.description)
-    session = AsyncMock()
-    session.exec.side_effect = [revision_result, flow_result, final_revision_result, project_result]
-    return session
+def _flow_payload(project_id: str, *, endpoint_name: str) -> dict:
+    """Build a flow exercising every field shape recently flagged in review.
 
-
-@pytest.mark.asyncio
-async def test_snapshot_builder_returns_complete_consistent_content_without_writes() -> None:
-    actor_id = uuid4()
-    project_id = uuid4()
-    project = Folder(id=project_id, name="support-automation", description="Captured", user_id=actor_id)
-    flow = Flow(
-        id=uuid4(),
-        name="Triage",
-        description="Route a request",
-        user_id=actor_id,
-        folder_id=project_id,
-        data={
+    A load_from_db secret, a connection ref, an already-empty password field, a
+    component ``code`` string with a ``#`` comment mentioning "password", and
+    an MCP server whose config is already secret-free - exactly the shapes
+    CodeRabbit/ogabrielluiz/HzaRashid flagged as being scrubbed or rejected
+    incorrectly.
+    """
+    return {
+        "name": "Triage",
+        "description": "Route a request",
+        "endpoint_name": endpoint_name,
+        "folder_id": project_id,
+        "is_component": False,
+        "data": {
             "nodes": [
                 {
                     "id": "node-1",
-                    "positionAbsolute": {"x": 8, "y": 13},
-                    "dragging": True,
-                    "selected": False,
+                    "data": {
+                        "node": {
+                            "template": {
+                                "api_key": {
+                                    "name": "api_key",
+                                    "password": True,
+                                    "load_from_db": True,
+                                    "value": "MY_DEPLOY_API_KEY",
+                                },
+                                "connection": {
+                                    "name": "connection",
+                                    "type": "connection_ref",
+                                    "provider": "google_workspace",
+                                    "value": "google_workspace/work",
+                                    "required_scopes": ["calendar.readonly"],
+                                },
+                                "code": {
+                                    "name": "code",
+                                    "type": "code",
+                                    "value": (
+                                        "# Enable global variable mode: single-line with password masking\n"
+                                        "class Demo:\n    pass\n"
+                                    ),
+                                },
+                                "mcp_server": {
+                                    "name": "mcp_server",
+                                    "type": "mcp",
+                                    "value": {
+                                        "name": "demo-mcp",
+                                        "config": {
+                                            "url": "https://mcp.example.com",
+                                            "headers": {"Authorization": "MCP_DEMO_MCP_AUTHORIZATION_ABCD1234"},
+                                        },
+                                    },
+                                },
+                                "extra_secret": {
+                                    "name": "extra_secret",
+                                    "password": True,
+                                    "value": "",
+                                },
+                            }
+                        }
+                    },
                 }
             ],
             "edges": [],
         },
-    )
-    session = _snapshot_session(project, flow)
-    user = SimpleNamespace(id=actor_id, is_superuser=False)
+    }
 
-    with (
-        patch(
-            "langflow.services.deployment_artifacts.builder.authorized_or_owner_scoped",
-            new_callable=AsyncMock,
-            return_value=project,
-        ),
-        patch("langflow.services.deployment_artifacts.builder.ensure_project_permission", new_callable=AsyncMock),
-        patch("langflow.services.deployment_artifacts.builder.ensure_flows_permission", new_callable=AsyncMock),
-    ):
-        snapshot = await build_project_deployment_snapshot(session, user, project_id)
 
-    assert snapshot.project_id == project_id
-    assert snapshot.project_name == project.name
-    assert snapshot.project_description == project.description
-    assert snapshot.flows == (
-        ProjectDeploymentSnapshotFlow(
-            flow_id=flow.id,
-            name=flow.name,
-            description=flow.description,
-            data={
-                "nodes": [
-                    {
-                        "id": "node-1",
-                        "positionAbsolute": {"x": 8, "y": 13},
-                        "dragging": True,
-                        "selected": False,
-                    }
-                ],
-                "edges": [],
-            },
-        ),
+async def _create_project(client: AsyncClient, headers: dict, *, name: str) -> str:
+    response = await client.post(
+        "api/v1/projects/",
+        json={"name": name, "description": "", "flows_list": [], "components_list": []},
+        headers=headers,
     )
-    assert snapshot.dependencies == {}
-    assert snapshot.required_variables == ()
-    session.commit.assert_not_awaited()
-    session.flush.assert_not_awaited()
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    return response.json()["id"]
+
+
+async def _second_user_headers(client: AsyncClient, *, username: str) -> dict:
+    async with session_scope() as session:
+        other_user = User(
+            username=username,
+            password=get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(other_user)
+        await session.commit()
+
+    login_data = {"username": username, "password": "testpassword"}  # pragma: allowlist secret
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == status.HTTP_200_OK
+    tokens = response.json()
+    return {"Authorization": f"Bearer {tokens['access_token']}"}
 
 
 @pytest.mark.asyncio
-async def test_snapshot_route_always_returns_required_containers_and_no_store() -> None:
-    project_id = uuid4()
-    flow_id = uuid4()
-    snapshot = ProjectDeploymentSnapshot(
-        project_id=project_id,
-        project_name="support-automation",
-        project_description=None,
-        flows=(ProjectDeploymentSnapshotFlow(flow_id, "Triage", None, {"nodes": [], "edges": []}),),
-        dependencies={},
-        required_variables=(),
-    )
-    response = Response()
-    session = AsyncMock()
-    user = SimpleNamespace(id=uuid4())
+async def test_deployment_snapshot_owner_gets_full_snapshot(client: AsyncClient, logged_in_headers) -> None:
+    """The owner's snapshot must carry the identity, secrets-safe fields the CP needs to rebuild a deploy."""
+    project_id = await _create_project(client, logged_in_headers, name="support-automation")
+    flow_payload = _flow_payload(project_id, endpoint_name=f"triage-{uuid4().hex[:8]}")
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED, flow_resp.text
+    flow_id = flow_resp.json()["id"]
 
-    with (
-        patch.object(projects, "_begin_deployment_snapshot_transaction", new_callable=AsyncMock),
-        patch.object(
-            projects,
-            "build_project_deployment_snapshot",
-            new_callable=AsyncMock,
-            return_value=snapshot,
-        ) as capture,
-    ):
-        result = await projects.read_project_deployment_snapshot(
-            session=session,
-            project_id=project_id,
-            current_user=user,
-            response=response,
-        )
+    response = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
 
-    assert result.project.id == project_id
-    assert result.project.description is None
-    assert result.flows[0].id == flow_id
-    assert result.dependencies == {}
-    assert result.required_variables == []
+    assert response.status_code == status.HTTP_200_OK, response.text
     assert response.headers["cache-control"] == "no-store"
-    capture.assert_awaited_once_with(session, user, project_id)
-    session.commit.assert_not_awaited()
+    body = response.json()
+
+    assert body["project"]["id"] == project_id
+    assert body["project"]["name"] == "support-automation"
+
+    assert len(body["flows"]) == 1
+    flow = body["flows"][0]
+    assert flow["id"] == flow_id
+    assert flow["name"] == "Triage"
+    assert flow["endpoint_name"] == flow_payload["endpoint_name"]
+    assert flow["description"] == "Route a request"
+
+    template = flow["data"]["nodes"][0]["data"]["node"]["template"]
+    # load_from_db secret: kept as the variable NAME, never the literal, and
+    # surfaced in required_variables so the deploy target can provision it.
+    assert template["api_key"]["value"] == "MY_DEPLOY_API_KEY"
+    assert body["required_variables"] == ["MY_DEPLOY_API_KEY"]
+    # connection_ref: kept and normalized, and rolled up into required_connections.
+    assert template["connection"]["value"] == "google_workspace/work"
+    assert body["required_connections"] == [
+        {"provider": "google_workspace", "name": "work", "scopes": ["calendar.readonly"]}
+    ]
+    # A `#` comment mentioning "password" in component code must survive untouched
+    # (regression for the _contains_url_credentials false positive).
+    assert "password masking" in template["code"]["value"]
+    # An MCP config that was already secret-free at save time is kept, not
+    # collapsed down to {"name": ...}.
+    assert template["mcp_server"]["value"] == {
+        "name": "demo-mcp",
+        "config": {
+            "url": "https://mcp.example.com",
+            "headers": {"Authorization": "MCP_DEMO_MCP_AUTHORIZATION_ABCD1234"},
+        },
+    }
+    # An already-empty password field must not trip the strict-capture guard.
+    assert template["extra_secret"]["value"] == ""
+
+
+@pytest.mark.asyncio
+async def test_deployment_snapshot_round_trips_exposure_fields_through_replacement(
+    client: AsyncClient, logged_in_headers
+) -> None:
+    """A rollback (PUT only applies sent fields) or restore-after-delete must not drift them.
+
+    Captures a snapshot with non-default values for every FlowCreate exposure/
+    presentation field the snapshot now carries, mutates the persisted flow
+    away from those values (as a delete+restore or a partial rollback would
+    leave it), replays the snapshot's own flows through PUT
+    /replacement-operations, and checks a second snapshot matches the first.
+    """
+    project_id = await _create_project(client, logged_in_headers, name="exposure-fields")
+    flow_payload = {
+        "name": "Exposure",
+        "description": "Carries every exposure field",
+        "endpoint_name": f"exposure-{uuid4().hex[:8]}",
+        "folder_id": project_id,
+        "data": {"nodes": [], "edges": []},
+        "is_component": True,
+        "locked": True,
+        "mcp_enabled": True,
+        "action_name": "custom_action",
+        "action_description": "A custom action description",
+        "access_type": "PUBLIC",
+        "a2a_enabled": True,
+        "a2a_card_overrides": {"skillDescription": "custom skill"},
+        "tags": ["alpha", "beta"],
+        "icon": "bot",
+        "icon_bg_color": "#123456",
+        "gradient": "3",
+    }
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED, flow_resp.text
+    flow_id = flow_resp.json()["id"]
+
+    first = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+    assert first.status_code == status.HTTP_200_OK, first.text
+    first_body = first.json()
+    snapshot_flow = first_body["flows"][0]
+    for field, expected in flow_payload.items():
+        if field in ("folder_id", "endpoint_name", "name", "description", "data"):
+            continue
+        assert snapshot_flow[field] == expected, field
+
+    # Directly mutate the persisted flow away from the captured values - what
+    # a delete+restore or a partial rollback would otherwise leave behind.
+    # The flow is unlocked here too, since a locked flow's content is
+    # immutable except for an identical-content request (see
+    # ensure_flow_update_allowed); replaying the snapshot's own locked=True
+    # value below is then a legitimate re-lock, not a locked-content edit.
+    async with session_scope() as session:
+        stored_flow = await session.get(Flow, UUID(flow_id))
+        stored_flow.is_component = False
+        stored_flow.locked = False
+        stored_flow.mcp_enabled = False
+        stored_flow.action_name = None
+        stored_flow.action_description = None
+        stored_flow.access_type = "PRIVATE"
+        stored_flow.a2a_enabled = False
+        stored_flow.a2a_card_overrides = None
+        stored_flow.tags = []
+        stored_flow.icon = None
+        stored_flow.icon_bg_color = None
+        stored_flow.gradient = None
+        session.add(stored_flow)
+        await session.commit()
+
+    drifted = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+    assert drifted.status_code == status.HTTP_200_OK, drifted.text
+    assert drifted.json()["flows"][0]["access_type"] == "PRIVATE"
+    assert drifted.json()["flows"][0]["locked"] is False
+
+    restore = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}",
+        json={"description": first_body["project"]["description"], "flows": first_body["flows"]},
+        headers=logged_in_headers,
+    )
+    assert restore.status_code == status.HTTP_200_OK, restore.text
+
+    second = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+    assert second.status_code == status.HTTP_200_OK, second.text
+    assert second.json() == first_body
+
+
+@pytest.mark.asyncio
+async def test_deployment_snapshot_another_user_gets_404(client: AsyncClient, logged_in_headers) -> None:
+    """A project the caller does not own must read as not-found, not forbidden."""
+    project_id = await _create_project(client, logged_in_headers, name="owner-only-project")
+    other_headers = await _second_user_headers(client, username=f"other_snapshot_user_{uuid4().hex[:8]}")
+
+    response = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=other_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Project not found"
+
+
+@pytest.mark.asyncio
+async def test_deployment_snapshot_refuses_unsafe_literal_secret(client: AsyncClient, logged_in_headers) -> None:
+    """A real, non-referenced secret must fail the capture closed rather than leak."""
+    project_id = await _create_project(client, logged_in_headers, name="unsafe-secret-project")
+    secret = "literal-secret-must-not-escape"  # noqa: S105  # pragma: allowlist secret
+    flow_payload = {
+        "name": "Has Raw Secret",
+        "folder_id": project_id,
+        "is_component": False,
+        "data": {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "password": {"name": "password", "password": True, "value": secret},
+                            }
+                        }
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED, flow_resp.text
+
+    response = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.json()["detail"] == "Project snapshot could not be captured safely"
+    assert secret not in response.text
 
 
 @pytest.mark.asyncio
@@ -170,7 +332,7 @@ async def test_snapshot_route_masks_auth_denial_and_does_not_expose_capture_deta
 
 
 @pytest.mark.asyncio
-async def test_snapshot_route_refuses_unsafe_capture_without_raw_error() -> None:
+async def test_snapshot_route_masks_generic_capture_error_detail() -> None:
     session = AsyncMock()
     response = Response()
     secret = "literal-secret-must-not-escape"  # noqa: S105  # pragma: allowlist secret
