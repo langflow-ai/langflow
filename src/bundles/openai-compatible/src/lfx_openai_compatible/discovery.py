@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 import httpx
 from lfx.base.models.model_metadata import create_model_metadata
 from lfx.base.models.model_utils import MIN_DEFAULT_MODELS, get_provider_variable_value
+from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.log.logger import logger
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 
@@ -56,7 +57,9 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     if not base_url:
         return []
     try:
-        api_key = get_provider_variable_value(user_id, "OPENAI_COMPATIBLE_API_KEY")
+        # Resolve optional credentials exactly as chat/embedding execution does,
+        # including per-user precedence and request-scoped env restrictions.
+        api_key = get_api_key_for_provider(user_id, _PROVIDER)
     except Exception:  # noqa: BLE001 - API key is optional for local servers; never block discovery on it
         api_key = None
 
