@@ -213,3 +213,23 @@ async def test_sqlite_purge_bounds_delete_parameters():
     assert await service.get_job_by_job_id(with_children) is None
     assert await _child_counts(service, with_children) == (0, 0, 0)
     assert all([await service.get_job_by_job_id(job.job_id) is None for job in jobs])
+
+
+async def test_purge_skips_a_terminal_job_with_no_finished_timestamp():
+    """A terminal row carrying no finished time is skipped, not dated from creation.
+
+    Dating it from creation deleted an old run the moment it was cancelled,
+    instead of keeping it for the configured window.
+    """
+    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.deps import session_scope
+    from sqlmodel import update
+
+    service = JobService()
+    job_id = await _aged_job(service, status=JobStatus.CANCELLED, age_days=200, with_children=True)
+    async with session_scope() as session:
+        await session.exec(update(Job).where(Job.job_id == job_id).values(finished_timestamp=None))
+
+    assert await service.purge_terminal_jobs(older_than_days=30, limit=100) == 0
+    assert await service.get_job_by_job_id(job_id) is not None
+    assert await _child_counts(service, job_id) == (1, 1, 1)
