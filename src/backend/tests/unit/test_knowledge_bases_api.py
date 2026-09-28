@@ -51,6 +51,13 @@ def long_lines_text_file():
 
 
 @pytest.fixture
+def paragraphs_text_file():
+    r"""Two paragraphs of short lines — chunks differ depending on whether ``\n`` or ``\n\n`` is tried first."""
+    paragraph = "\n".join([f"line {i:02d} " + "x" * 30 for i in range(4)])
+    return ("paragraphs.txt", f"{paragraph}\n\n{paragraph}")
+
+
+@pytest.fixture
 def mock_kb_path(tmp_path):
     kb_dir = tmp_path / "test_kb"
     kb_dir.mkdir()
@@ -437,6 +444,34 @@ class TestPreviewChunks:
         ingested = chunk_text_for_ingestion(file_content, chunk_size=1000, chunk_overlap=200, separator="\\n")
         assert previewed == ingested
         assert max(len(chunk) for chunk in ingested) <= 1000
+
+    @pytest.mark.parametrize(
+        "separator_field",
+        [
+            pytest.param({}, id="omitted"),
+            # FastAPI substitutes the Form default for an empty string, so this is
+            # what the UI sends when the user clears the Separator field.
+            pytest.param({"separator": ""}, id="empty"),
+        ],
+    )
+    async def test_preview_matches_ingestion_chunks_without_separator(
+        self, client: AsyncClient, logged_in_headers, paragraphs_text_file, separator_field
+    ):
+        """With no separator the preview must use the same default split points as ingestion."""
+        file_name, file_content = paragraphs_text_file
+        response = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=logged_in_headers,
+            files={"files": (file_name, io.BytesIO(file_content.encode()), "text/plain")},
+            data={"chunk_size": "150", "chunk_overlap": "0", "max_chunks": "50", **separator_field},
+        )
+
+        assert response.status_code == 200, response.text
+        previewed = [chunk["content"] for chunk in response.json()["files"][0]["preview_chunks"]]
+        ingested = chunk_text_for_ingestion(file_content, chunk_size=150, chunk_overlap=0, separator="")
+        # Guard the fixture: a newline-first split must chunk this text differently.
+        assert ingested != chunk_text_for_ingestion(file_content, chunk_size=150, chunk_overlap=0, separator="\n")
+        assert previewed == ingested
 
 
 class TestKnowledgeBaseAPI:

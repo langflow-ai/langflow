@@ -944,7 +944,9 @@ async def preview_chunks(
     # these bounds, an authenticated user can request gigabytes.
     chunk_size: Annotated[int, Form(ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)] = 1000,
     chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
-    separator: Annotated[str, Form()] = "\n",
+    # Must match the ingest endpoint's default: FastAPI also substitutes it for
+    # an empty form value, which is what the UI sends for a blank separator.
+    separator: Annotated[str, Form()] = "",
     max_chunks: Annotated[int, Form(ge=MIN_MAX_CHUNKS, le=MAX_MAX_CHUNKS)] = 5,
 ) -> dict[str, object]:
     """Preview how files will be chunked without storing anything.
