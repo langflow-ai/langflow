@@ -11,8 +11,9 @@ from emoji import purely_emoji
 from lfx.log.logger import logger
 from lfx.schema.validators import ensure_utc
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
-from sqlalchemy import Boolean, Text, UniqueConstraint, false, text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Text, UniqueConstraint, false, text
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.sql.naming import conv
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.data import Data
@@ -22,6 +23,9 @@ if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
 
 HEX_COLOR_LENGTH = 7
+
+# Wrapped in ``conv()`` so ``create_all`` and the migration name it the same.
+FLOW_REVISION_ORDER_CHECK_NAME = "ck_flow_current_revision_not_ahead"
 
 _ENDPOINT_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
@@ -248,6 +252,18 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
             "make the Flow.user relationship ambiguous to SQLAlchemy."
         ),
     )
+    # The highest recorded operation revision: the flow's logical current state.
+    latest_revision: int = Field(
+        default=0,
+        sa_column=Column(BigInteger, nullable=False, server_default=text("0")),
+    )
+    # The revision ``data`` holds. Equal to ``latest_revision`` while every write
+    # materializes synchronously; the gap exists so a later writer can record
+    # operations before applying them to ``data``.
+    current_revision: int = Field(
+        default=0,
+        sa_column=Column(BigInteger, nullable=False, server_default=text("0")),
+    )
 
     def to_data(self):
         serialized = self.model_dump()
@@ -264,10 +280,44 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="unique_flow_name"),
         UniqueConstraint("user_id", "endpoint_name", name="unique_flow_endpoint_name"),
+        CheckConstraint("current_revision <= latest_revision", name=conv(FLOW_REVISION_ORDER_CHECK_NAME)),
     )
 
 
-class FlowCreate(FlowBase):
+class FlowGraphWriteOptions(SQLModel):
+    """Request controls for a write that replaces a flow's graph.
+
+    They steer how the write is recorded in the flow's history and are never
+    part of the stored flow.
+    """
+
+    request_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Identifies this write across retries. A retry with the same id returns the "
+            "original result instead of recording the change twice."
+        ),
+    )
+    repair_revision_mismatch: bool = Field(
+        default=False,
+        description=(
+            "When the stored graph no longer matches its history (it was edited outside "
+            "the API), reset it to the latest recorded revision before applying this write."
+        ),
+    )
+    repair_invalid_graph: bool = Field(
+        default=False,
+        description=(
+            "When the stored or submitted graph breaks the flow graph rules, repair it "
+            "instead of refusing the write. The stored original is kept as a view-only version."
+        ),
+    )
+
+
+GRAPH_WRITE_OPTION_FIELDS = frozenset(FlowGraphWriteOptions.model_fields)
+
+
+class FlowCreate(FlowBase, FlowGraphWriteOptions):
     # Present on upload means upsert (that ID, if it already belongs to the caller); absent
     # means a generated UUID, so every existing import path keeps working unchanged.
     id: UUID | None = None
@@ -285,6 +335,31 @@ class FlowRead(FlowBase):
     tags: list[str] | None = Field(None, description="The tags of the flow")
     name_key: str | None = Field(None, description="Stable i18n key derived from the original English name")
     version_token: UUID | None = Field(None, description="Token identifying the version this response carries")
+    latest_revision: int | None = Field(None, description="The flow's latest recorded history revision")
+    current_revision: int | None = Field(None, description="The history revision this flow's data holds")
+
+
+class FlowHistoryWrite(BaseModel):
+    """What a graph write recorded in the flow's history."""
+
+    request_id: UUID = Field(description="The write's request id; resend it to retry without recording twice")
+    start_revision: int | None = Field(None, description="First revision this write recorded; None when unchanged")
+    end_revision: int | None = Field(None, description="Last revision this write recorded; None when unchanged")
+    latest_revision: int = Field(description="The flow's latest recorded revision after the write")
+    current_revision: int = Field(description="The revision the flow's stored data holds after the write")
+    deduplicated: bool = Field(default=False, description="True when this was a retry of a write already recorded")
+    flow_repaired: bool = Field(
+        default=False, description="True when the stored flow was reset to its latest recorded revision first"
+    )
+    graph_repairs: list[dict] = Field(
+        default_factory=list, description="Fixes applied to the stored or submitted graph when repair was requested"
+    )
+
+
+class FlowWriteRead(FlowRead):
+    """A flow as written, with what the write recorded in its history."""
+
+    history: FlowHistoryWrite | None = Field(None, description="Present when the write replaced the graph")
 
 
 class FlowHeader(BaseModel):
@@ -324,7 +399,7 @@ class FlowHeader(BaseModel):
         return value
 
 
-class FlowUpdate(SQLModel):
+class FlowUpdate(FlowGraphWriteOptions):
     name: str | None = None
     description: str | None = None
     data: dict | None = None

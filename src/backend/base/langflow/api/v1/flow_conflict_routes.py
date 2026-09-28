@@ -26,10 +26,11 @@ from langflow.api.v1.flow_conflict import (
 from langflow.api.v1.flow_fork import FlowFork, build_fork_payload
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _new_flow, _patch_flow
-from langflow.services.database.models.flow.model import FlowRead, FlowUpdate
+from langflow.services.database.models.flow.model import FlowRead, FlowUpdate, FlowWriteRead
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.exceptions import FlowVersionError
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.services.flow_history.recorder import checkpoint_fields
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -92,7 +93,7 @@ class FlowOverwrite(BaseModel):
     data: dict
 
 
-@router.post("/{flow_id}/overwrite", response_model=FlowRead, status_code=200)
+@router.post("/{flow_id}/overwrite", response_model=FlowWriteRead, status_code=200)
 async def overwrite_flow(
     *,
     session: DbSession,
@@ -151,6 +152,9 @@ async def overwrite_flow(
             user_id=flow.last_modified_by or flow.user_id,
             data=replaced_data,
             description="Replaced by a newer edit",
+            # The replaced graph is the stored one, so it anchors the history at
+            # the revision it holds and shows on that entry of the timeline.
+            **await checkpoint_fields(session, flow),
         )
     except FlowVersionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

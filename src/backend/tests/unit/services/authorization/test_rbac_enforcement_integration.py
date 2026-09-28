@@ -336,6 +336,7 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
                 "id": "group-node",
                 "data": {
                     "node": {
+                        "template": {},
                         "flow": {
                             "data": {
                                 "nodes": [
@@ -356,7 +357,7 @@ async def test_shared_flow_reads_strip_owner_credentials_without_mutating_owner_
                                 ],
                                 "edges": [],
                             }
-                        }
+                        },
                     }
                 },
             },

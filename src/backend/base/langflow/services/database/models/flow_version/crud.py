@@ -30,6 +30,10 @@ if TYPE_CHECKING:
 MAX_VERSION_RETRIES = 3
 MAX_VERSION_ID_FILTER_SIZE = 50
 
+# Versions someone saved. System checkpoints that anchor a flow's history have
+# no version number and stay out of every listing, lookup and limit.
+SAVED_VERSION = col(FlowVersion.version_number).is_not(None)
+
 
 async def get_next_version_number(session: AsyncSession, flow_id: UUID) -> int:
     result = await session.exec(select(func.max(FlowVersion.version_number)).where(FlowVersion.flow_id == flow_id))
@@ -43,8 +47,17 @@ async def create_flow_version_entry(
     user_id: UUID,
     data: dict | None,
     description: str | None = None,
+    *,
+    operation_revision: int | None = None,
+    graph_hash: str | None = None,
+    view_only: bool = False,
 ) -> FlowVersion:
     """Create a version entry with retry on version number collision.
+
+    ``operation_revision`` and ``graph_hash`` make the version a history
+    checkpoint; pass them only when ``data`` is exactly the flow's graph at that
+    revision (see ``flow_history.recorder.checkpoint_fields``). ``view_only``
+    marks the kept original of a repaired flow, which is never pruned.
 
     NOTE: This function does NOT verify that user_id owns the flow.
     Callers are responsible for checking ownership before calling this.
@@ -58,6 +71,9 @@ async def create_flow_version_entry(
             data=data,
             description=description,
             version_number=version_number,
+            operation_revision=operation_revision,
+            graph_hash=graph_hash,
+            view_only=view_only,
         )
         try:
             async with session.begin_nested():
@@ -119,6 +135,8 @@ async def create_flow_version_entry(
                 select(FlowVersion.id)
                 .where(
                     FlowVersion.flow_id == flow_id,
+                    SAVED_VERSION,
+                    col(FlowVersion.view_only).is_(False),
                     col(FlowVersion.id).not_in(deployed_version_ids),
                     col(FlowVersion.id).not_in(pinned_version_ids),
                 )
@@ -170,7 +188,7 @@ async def get_flow_version_list_simple(
     """
     stmt = (
         select(FlowVersion)
-        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id, SAVED_VERSION)
         .order_by(col(FlowVersion.version_number).desc())
         .offset(offset)
         .limit(limit)
@@ -211,7 +229,7 @@ async def get_flow_versions_with_provider_status(
             deployed_subquery.c.flow_version_id.isnot(None).label("is_deployed"),
         )
         .outerjoin(deployed_subquery, deployed_subquery.c.flow_version_id == FlowVersion.id)
-        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id, SAVED_VERSION)
     )
     stmt = stmt.order_by(col(FlowVersion.version_number).desc()).offset(offset).limit(limit)
     rows = (await session.exec(stmt)).all()
@@ -223,7 +241,9 @@ async def get_flow_version_entry(
     version_id: UUID,
     user_id: UUID,
 ) -> FlowVersion | None:
-    result = await session.exec(select(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
+    result = await session.exec(
+        select(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id, SAVED_VERSION)
+    )
     return result.first()
 
 
@@ -246,6 +266,7 @@ async def get_flow_version_entries_by_ids(
     stmt = select(FlowVersion).where(
         col(FlowVersion.id).in_(version_ids),
         FlowVersion.user_id == user_id,
+        SAVED_VERSION,
     )
     rows = (await session.exec(stmt)).all()
     return {row.id: row for row in rows}
@@ -394,7 +415,9 @@ async def delete_flow_version_entry(
         raise FlowVersionPinnedError(msg)
 
     # The entry can disappear after the preflight reads under concurrent DELETEs.
-    result = await session.exec(delete(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
+    result = await session.exec(
+        delete(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id, SAVED_VERSION)
+    )
     if result.rowcount == 0:
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)

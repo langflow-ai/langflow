@@ -39,6 +39,10 @@ TABLE_POLICY: dict[str, str] = {
     "execution_signals": ERASED_WITH_FLOW,
     "file": BUILDER_ROWS,
     "flow": ERASED_WITH_FLOW,
+    "flow_operation": (
+        "erased with each owned flow; edits to someone else's flow keep the account UUID only, "
+        "which names no one once the account is deleted (history is append-only)"
+    ),
     "flow_version": ERASED_WITH_FLOW,
     "flow_version_deployment_attachment": "blocks the erase until undeployed",
     "folder": BUILDER_ROWS,

@@ -49,6 +49,16 @@ CRUD_TARGET = "langflow.services.database.models.flow_version.crud.create_flow_v
 SCOPE_TARGET = "lfx.services.deps.session_scope"
 
 
+@pytest.fixture(autouse=True)
+def _flow_without_history(monkeypatch):
+    """The mocked flows here have no history, so restore points are plain snapshots."""
+
+    async def checkpoint_fields(_session, _flow):
+        return {}
+
+    monkeypatch.setattr("langflow.services.flow_history.recorder.checkpoint_fields", checkpoint_fields)
+
+
 class TestSkipConditions:
     @pytest.mark.asyncio
     async def test_should_return_none_when_flow_id_or_user_id_missing(self):

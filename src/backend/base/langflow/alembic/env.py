@@ -11,6 +11,7 @@ from sqlalchemy import pool, text
 from sqlalchemy.event import listen
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from langflow.alembic.dialect_objects import include_object_for
 from langflow.alembic.expand_compat import filter_expand_revision_directives
 from langflow.alembic.warning_filters import filter_known_sqlite_reflection_warnings
 from langflow.services.database.service import SQLModel
@@ -88,6 +89,7 @@ def run_migrations_offline() -> None:
         "dialect_opts": {"paramstyle": "named"},
         "render_as_batch": True,
         "include_name": include_name,
+        "include_object": include_object_for("postgresql" if url and "postgresql" in url else "sqlite"),
         "process_revision_directives": filter_expand_revision_directives,
     }
 
@@ -122,6 +124,7 @@ def _do_run_migrations(connection):
         "target_metadata": target_metadata,
         "render_as_batch": True,
         "include_name": include_name,
+        "include_object": include_object_for(connection.dialect.name),
         "process_revision_directives": filter_expand_revision_directives,
     }
 

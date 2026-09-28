@@ -24,6 +24,11 @@ from lfx.services.catalog_policy import CatalogPolicySnapshot
 # ---------------------------------------------------------------------------
 
 
+def _node(node_id: str, **data) -> dict:
+    """A node shaped the way the editor stores one, which is what flow writes accept."""
+    return {"id": node_id, "data": {"node": {"template": {}}, **data}}
+
+
 async def _create_flow(client: AsyncClient, headers: dict, name: str = "version-test-flow") -> dict:
     """Create a minimal flow and return the JSON response."""
     payload = {
@@ -166,7 +171,7 @@ async def test_snapshot_captures_current_flow_data(client: AsyncClient, logged_i
     s1 = await _create_snapshot(client, logged_in_headers, flow["id"], description="empty")
 
     # Modify the flow
-    new_data = {"nodes": [{"id": "node-1"}], "edges": []}
+    new_data = {"nodes": [_node("node-1")], "edges": []}
     await _patch_flow_data(client, logged_in_headers, flow["id"], new_data)
 
     # Take another snapshot
@@ -188,10 +193,10 @@ async def test_snapshot_archives_a_graph_the_server_never_had(client: AsyncClien
     holds would archive precisely the version that was never at risk.
     """
     flow = await _create_flow(client, logged_in_headers)
-    stored = {"nodes": [{"id": "on-the-server"}], "edges": []}
+    stored = {"nodes": [_node("on-the-server")], "edges": []}
     await _patch_flow_data(client, logged_in_headers, flow["id"], stored)
 
-    abandoned = {"nodes": [{"id": "only-on-my-canvas"}], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}
+    abandoned = {"nodes": [_node("only-on-my-canvas")], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}
     response = await client.post(
         f"api/v1/flows/{flow['id']}/versions/",
         json={"description": "Saved when discarding a conflict", "data": abandoned},
@@ -209,7 +214,7 @@ async def test_snapshot_archives_a_graph_the_server_never_had(client: AsyncClien
 async def test_snapshot_without_a_graph_still_captures_the_stored_one(client: AsyncClient, logged_in_headers):
     """Omitting the graph keeps the original behaviour every other caller relies on."""
     flow = await _create_flow(client, logged_in_headers)
-    stored = {"nodes": [{"id": "stored"}], "edges": []}
+    stored = {"nodes": [_node("stored")], "edges": []}
     await _patch_flow_data(client, logged_in_headers, flow["id"], stored)
 
     snap = await _create_snapshot(client, logged_in_headers, flow["id"], description="no data supplied")
@@ -258,7 +263,7 @@ async def test_activate_version_overwrites_flow_data(client: AsyncClient, logged
     snap = await _create_snapshot(client, logged_in_headers, flow["id"], description="v1 original")
 
     # Modify the flow
-    modified_data = {"nodes": [{"id": "added-node"}], "edges": []}
+    modified_data = {"nodes": [_node("added-node")], "edges": []}
     await _patch_flow_data(client, logged_in_headers, flow["id"], modified_data)
 
     # Activate the old snapshot
@@ -278,7 +283,7 @@ async def test_activate_version_rejects_components_blocked_after_snapshot(
     from langflow.api.v1 import flow_version as flow_version_module
 
     blocked_data = {
-        "nodes": [{"id": "Blocked-1", "data": {"type": "BlockedComponent"}}],
+        "nodes": [_node("Blocked-1", type="BlockedComponent")],
         "edges": [],
     }
     flow = await _create_flow(client, logged_in_headers)
@@ -308,7 +313,7 @@ async def test_activate_creates_auto_snapshot(client: AsyncClient, logged_in_hea
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
     # Modify flow so auto-snapshot has different data
-    await _patch_flow_data(client, logged_in_headers, flow["id"], {"nodes": [{"id": "x"}], "edges": []})
+    await _patch_flow_data(client, logged_in_headers, flow["id"], {"nodes": [_node("x")], "edges": []})
 
     # Activate — this should create an auto-snapshot first
     await client.post(f"api/v1/flows/{flow['id']}/versions/{snap['id']}/activate", headers=logged_in_headers)
@@ -327,7 +332,7 @@ async def test_activate_skips_auto_snapshot_when_save_draft_false(client: AsyncC
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
     # Modify flow so we can verify the draft was NOT saved
-    await _patch_flow_data(client, logged_in_headers, flow["id"], {"nodes": [{"id": "x"}], "edges": []})
+    await _patch_flow_data(client, logged_in_headers, flow["id"], {"nodes": [_node("x")], "edges": []})
 
     # Activate with save_draft=false
     resp = await client.post(
@@ -472,7 +477,7 @@ async def test_full_lifecycle(client: AsyncClient, logged_in_headers):
     assert v1["version_number"] == 1
 
     # 3. Edit the flow
-    data_v2 = {"nodes": [{"id": "n1"}, {"id": "n2"}], "edges": [{"id": "e1"}]}
+    data_v2 = {"nodes": [_node("n1"), _node("n2")], "edges": [{"id": "e1", "source": "n1", "target": "n2"}]}
     await _patch_flow_data(client, logged_in_headers, flow_id, data_v2)
 
     # 4. Save v2 snapshot
@@ -480,7 +485,7 @@ async def test_full_lifecycle(client: AsyncClient, logged_in_headers):
     assert v2["version_number"] == 2
 
     # 5. Edit the flow again
-    data_v3 = {"nodes": [{"id": "n1"}, {"id": "n2"}, {"id": "n3"}], "edges": []}
+    data_v3 = {"nodes": [_node("n1"), _node("n2"), _node("n3")], "edges": []}
     await _patch_flow_data(client, logged_in_headers, flow_id, data_v3)
 
     # 6. Activate v1 — should auto-snapshot current state, then revert to v1's data
@@ -534,7 +539,7 @@ async def test_snapshot_and_activate_with_complex_flow_data(client: AsyncClient,
     snap = await _create_snapshot(client, logged_in_headers, flow_id, description="complex v1")
 
     # Overwrite the flow with minimal data
-    minimal_data = {"nodes": [{"id": "single-node"}], "edges": []}
+    minimal_data = {"nodes": [_node("single-node")], "edges": []}
     await _patch_flow_data(client, logged_in_headers, flow_id, minimal_data)
 
     # Verify flow was actually changed
@@ -639,7 +644,7 @@ async def test_pruning_deletes_oldest_by_data_content(client: AsyncClient, logge
 
     # Create 3 snapshots, each with distinct flow data so we can verify which survived.
     for i in range(3):
-        data = {"nodes": [{"id": f"node-from-snap-{i}"}], "edges": []}
+        data = {"nodes": [_node(f"node-from-snap-{i}")], "edges": []}
         await _patch_flow_data(client, logged_in_headers, flow_id, data)
         await _create_snapshot(client, logged_in_headers, flow_id, description=f"snap-{i}")
 
@@ -863,7 +868,7 @@ async def test_activate_with_deeply_nested_data(client: AsyncClient, logged_in_h
         current["child"] = {"level": i}
         current = current["child"]
 
-    deep_data = {"nodes": [{"id": "deep-node", "data": nested}], "edges": []}
+    deep_data = {"nodes": [_node("deep-node", **nested)], "edges": []}
     payload = {
         "name": "deep-nested-test",
         "description": "test",

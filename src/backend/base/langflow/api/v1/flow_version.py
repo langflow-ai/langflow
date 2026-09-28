@@ -13,6 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.author_names import attach_usernames
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.flow_history import history_http_error, history_write_summary
 from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_match
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
@@ -22,7 +23,8 @@ from langflow.services.audit.operations import audited_permission, audited_route
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.database.lock_retry import is_database_lock_error
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.guards import lock_flow_for_update
+from langflow.services.database.models.flow.model import Flow, FlowGraphWriteOptions, FlowWriteRead
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
     delete_flow_version_entry,
@@ -46,6 +48,8 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionReadWithData,
 )
 from langflow.services.deps import get_catalog_policy_service, get_settings_service
+from langflow.services.flow_history.errors import FlowHistoryError
+from langflow.services.flow_history.recorder import checkpoint_fields, write_flow_graph
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
 
@@ -227,8 +231,14 @@ async def create_snapshot(
     # already established they may write this flow, so recording a version of
     # it from their own canvas is within what they can already do.
     supplied = body.data if body else None
+    # The stored graph and its revision are read together under the lock, so a
+    # snapshot that becomes a history checkpoint names the revision it holds.
+    await lock_flow_for_update(session, flow)
     if supplied is not None:
         data = supplied
+        # A supplied canvas is not the graph at any recorded revision, so it is a
+        # plain snapshot and never a replay anchor.
+        checkpoint: dict = {}
     else:
         try:
             data = copy.deepcopy(flow.data)
@@ -237,6 +247,7 @@ async def create_snapshot(
                 status_code=422,
                 detail="Flow data could not be copied for snapshot. The data may be corrupted.",
             ) from exc
+        checkpoint = await checkpoint_fields(session, flow)
 
     try:
         entry = await create_flow_version_entry(
@@ -245,6 +256,7 @@ async def create_snapshot(
             user_id=current_user.id,
             data=data,
             description=description,
+            **checkpoint,
         )
     except FlowVersionError as exc:
         raise _translate_version_error(exc) from exc
@@ -266,7 +278,10 @@ async def activate_version(
     *,
     save_draft: Annotated[bool, Query()] = True,
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
-) -> FlowRead:
+    request_id: Annotated[UUID | None, Query(description="Identifies this restore across retries.")] = None,
+    repair_revision_mismatch: Annotated[bool, Query()] = False,
+    repair_invalid_graph: Annotated[bool, Query()] = False,
+) -> FlowWriteRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
     await ensure_version_precondition(session, flow, parse_if_match(if_match))
     # The write below shares this transaction; a decision the audit writer commits
@@ -293,6 +308,15 @@ async def activate_version(
         # Guard against activating a version with no data (check before auto-snapshot)
         if target_entry.data is None:
             raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
+        if target_entry.view_only:
+            raise HTTPException(
+                status_code=409,
+                detail="This version is the original of a repaired flow. It can be viewed or exported, not restored.",
+            )
+
+        # Restoring is a graph write like any other: take the flow's lock before
+        # reading what is being replaced.
+        await lock_flow_for_update(session, flow)
 
         # Capture copies of both data dicts before the savepoint to avoid stale
         # reads if pruning inside create_flow_version_entry deletes old entries.
@@ -313,6 +337,11 @@ async def activate_version(
             snapshot=get_catalog_policy_service().snapshot,
         )
 
+        options = FlowGraphWriteOptions(
+            request_id=request_id,
+            repair_revision_mismatch=repair_revision_mismatch,
+            repair_invalid_graph=repair_invalid_graph,
+        )
         # Wrap auto-snapshot + flow overwrite in a single savepoint for atomicity.
         # If the flow update fails, the auto-snapshot is also rolled back.
         try:
@@ -324,9 +353,12 @@ async def activate_version(
                         user_id=current_user.id,
                         data=current_data,
                         description=f"Auto-saved before activating v{target_entry.version_number}",
+                        **await checkpoint_fields(session, flow),
                     )
 
-                flow.data = target_data
+                graph_write = await write_flow_graph(
+                    session, flow, target_data, actor_id=current_user.id, options=options
+                )
                 flow.updated_at = datetime.now(timezone.utc)
                 # Not routed through _patch_flow, so it rotates the token itself: otherwise a
                 # restore leaves open editors holding a token that still looks current.
@@ -343,6 +375,8 @@ async def activate_version(
                     flow_name=flow.name,
                     written_fields=["data"],
                 )
+        except FlowHistoryError as exc:
+            raise history_http_error(exc) from exc
         except FlowVersionError as exc:
             raise _translate_version_error(exc) from exc
         except IntegrityError as exc:
@@ -367,7 +401,9 @@ async def activate_version(
 
     await logger.adebug("Activated version %s (%s) for flow %s", version_id, f"v{target_entry.version_number}", flow_id)
 
-    return FlowRead.model_validate(flow, from_attributes=True)
+    return FlowWriteRead.model_validate(flow, from_attributes=True).model_copy(
+        update={"history": history_write_summary(graph_write)}
+    )
 
 
 @router.delete("/{version_id}", status_code=204)

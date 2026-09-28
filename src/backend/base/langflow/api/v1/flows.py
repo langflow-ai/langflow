@@ -113,6 +113,7 @@ from langflow.services.database.models.flow.model import (
     FlowRead,
     FlowType,
     FlowUpdate,
+    FlowWriteRead,
 )
 
 # TODO: Full-version import/export is planned as a follow-up feature. When implemented,
@@ -308,8 +309,13 @@ FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
 
 def _flow_read_for_caller(flow: Flow | FlowRead, caller_id: UUID) -> FlowRead:
-    """Keep persisted credentials visible only to the flow owner."""
-    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+    """Keep persisted credentials visible only to the flow owner.
+
+    A write's response keeps its read model, so what the write recorded in the
+    flow's history still reaches the caller.
+    """
+    read_model = type(flow) if isinstance(flow, FlowRead) else FlowRead
+    flow_read = read_model.model_validate(flow, from_attributes=True)
     if flow.user_id != caller_id:
         flow_read.data = strip_secret_field_values(flow_read.data)
     return flow_read
@@ -632,7 +638,7 @@ async def read_public_flow(
     return flow_read
 
 
-@router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
+@router.patch("/{flow_id}", response_model=FlowWriteRead, status_code=200)
 @audited_route(
     audit_vocab.AuditResourceType.FLOW,
     audit_vocab.FLOW_WRITE,
@@ -817,7 +823,7 @@ async def update_flow(
         ) from e
 
 
-@router.put("/{flow_id}", response_model=FlowRead)
+@router.put("/{flow_id}", response_model=FlowWriteRead)
 @audited_route(
     audit_vocab.AuditResourceType.FLOW,
     audit_vocab.FLOW_WRITE,

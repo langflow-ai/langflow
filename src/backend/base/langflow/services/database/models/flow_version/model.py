@@ -5,7 +5,19 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, computed_field, field_serializer
 from pydantic import Field as PydanticField
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    false,
+    func,
+)
 from sqlalchemy.sql.naming import conv
 from sqlmodel import JSON, Field, SQLModel
 
@@ -28,10 +40,25 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(ForeignKey("user.id", ondelete="SET NULL"), index=True, nullable=True),
     )
     data: dict | None = Field(default=None, sa_column=Column(JSON))
-    version_number: int = Field(nullable=False, ge=1)
+    # NULL marks a checkpoint the system wrote to anchor the flow's history.
+    # Those are not versions anyone saved, so they take no number, never appear
+    # in the version list, and never count toward the version limit.
+    version_number: int | None = Field(default=None, nullable=True, ge=1)
     description: str | None = Field(default=None, nullable=True, max_length=500)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True),
+    )
+    # The history revision whose graph ``data`` holds, when this version anchors
+    # replay. NULL for versions saved before the flow had history.
+    operation_revision: int | None = Field(default=None, sa_column=Column(BigInteger, nullable=True))
+    # SHA-256 of ``data``'s canonical graph form. The only whole-graph hash the
+    # history stores; replay checks it whenever it reaches this version.
+    graph_hash: str | None = Field(default=None, sa_column=Column(String(64), nullable=True))
+    # The original of a flow whose graph was repaired. It can be viewed and
+    # exported but not restored, and the version limit never prunes it.
+    view_only: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=false()),
     )
 
     # The UniqueConstraint on (flow_id, version_number) creates an implicit composite
@@ -40,6 +67,7 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
         CheckConstraint("version_number >= 1", name=conv(VERSION_NUMBER_CHECK_NAME)),
+        Index("ix_flow_version_flow_id_operation_revision", "flow_id", "operation_revision"),
     )
 
 
@@ -55,6 +83,14 @@ class FlowVersionRead(BaseModel):
     username: str | None = PydanticField(
         default=None,
         description="Display name of whoever authored this version, resolved from user_id.",
+    )
+    operation_revision: int | None = PydanticField(
+        default=None,
+        description="History revision this version's graph belongs to; None for versions saved before history.",
+    )
+    view_only: bool = PydanticField(
+        default=False,
+        description="The original of a repaired flow: viewable and exportable, not restorable.",
     )
     is_deployed: bool | None = PydanticField(
         default=None,
