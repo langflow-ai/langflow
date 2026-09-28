@@ -1,5 +1,6 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
+import { v4 as uuidv4 } from "uuid";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -7,6 +8,9 @@ import useAuthStore from "@/stores/authStore";
 import useFlowConflictStore, {
   type ConflictDetail,
 } from "@/stores/flowConflictStore";
+import useFlowHistoryRepairStore, {
+  repairableProblem,
+} from "@/stores/flowHistoryRepairStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
@@ -197,14 +201,19 @@ const useSaveFlow = () => {
           const { id } = flow;
           // The baseline is the last applied server response, never the canvas,
           // which can hold a token from a response this save has not adopted.
-          const updatePayload = buildFlowUpdatePayload({
-            flow,
-            persisted:
-              currentSavedFlow?.id === id ? currentSavedFlow : undefined,
-            flows: useFlowsManagerStore.getState().flows,
-            live: currentFlow?.id === id ? { nodes, edges } : undefined,
-            userEdited: useFlowStore.getState().userEditedSinceLoad,
-          });
+          const updatePayload = {
+            ...buildFlowUpdatePayload({
+              flow,
+              persisted:
+                currentSavedFlow?.id === id ? currentSavedFlow : undefined,
+              flows: useFlowsManagerStore.getState().flows,
+              live: currentFlow?.id === id ? { nodes, edges } : undefined,
+              userEdited: useFlowStore.getState().userEditedSinceLoad,
+            }),
+            // One id per save: a retry of this request is recognized by the
+            // server and recorded in the flow's history only once.
+            request_id: uuidv4(),
+          };
           // biome-ignore lint/suspicious/noExplicitAny: legacy
           const handleError = (e: any) => {
             const detail = e.response?.data?.detail;
@@ -219,64 +228,101 @@ const useSaveFlow = () => {
               reject(e);
               return;
             }
-            reportSaveError(detail || e.message || "Unknown error");
+            const problem = repairableProblem(e);
+            if (problem && !options?.suppressErrorToast) {
+              // The server can resolve this itself; offer that instead of an error.
+              useFlowHistoryRepairStore.getState().setProblem({
+                ...problem,
+                repair: () =>
+                  new Promise<void>((resolveRepair, rejectRepair) => {
+                    mutate(
+                      {
+                        ...updatePayload,
+                        request_id: uuidv4(),
+                        ...(problem.code === "FLOW_REVISION_MISMATCH"
+                          ? { repair_revision_mismatch: true }
+                          : { repair_invalid_graph: true }),
+                      },
+                      {
+                        onSuccess: (response) => {
+                          handleSaved(response);
+                          resolveRepair();
+                        },
+                        onError: (repairError) => {
+                          reportSaveError(
+                            repairError.response?.data?.detail?.message ||
+                              repairError.message ||
+                              "Unknown error",
+                          );
+                          rejectRepair(repairError);
+                        },
+                      },
+                    );
+                  }),
+              });
+            } else {
+              reportSaveError(
+                detail?.message || detail || e.message || "Unknown error",
+              );
+            }
             setSaveLoading(false);
             reject(e);
           };
+          const handleSaved = (response: FlowType) => {
+            const updatedFlow = keepBuiltOnGraph(
+              response,
+              updatePayload,
+              currentSavedFlow,
+            );
+            const flows = useFlowsManagerStore.getState().flows;
+            setSaveLoading(false);
+            if (flows) {
+              // updates flow in state
+              setFlows(
+                flows.map((flow) => {
+                  if (flow.id === updatedFlow.id) {
+                    return updatedFlow;
+                  }
+                  return flow;
+                }),
+              );
+              // Only update useFlowStore.currentFlow when on the flow page.
+              // When saving from the list page (e.g., renaming via settings modal),
+              // setting this would leave stale unprocessed flow data in the store,
+              // causing a crash when the user later navigates to the flow page.
+              //
+              // The graph is adopted only when the canvas still holds the
+              // one this request carried. `currentFlow` is the baseline the
+              // next autosave diffs against, so adopting the response of a
+              // save that started before an edit makes that edit look
+              // persisted and the follow-up save is skipped — the edit is
+              // lost. The store swaps these arrays on every change, so
+              // identity is an exact "nothing moved while we were away"
+              // check.
+              const liveState = useFlowStore.getState();
+              const liveFlow = liveState.currentFlow;
+              const graphUnchanged =
+                liveState.nodes === nodes && liveState.edges === edges;
+              if (liveState.onFlowPage && graphUnchanged) {
+                setCurrentFlow(updatedFlow);
+              } else if (
+                liveState.onFlowPage &&
+                liveFlow &&
+                liveFlow.id === updatedFlow.id
+              ) {
+                setCurrentFlow(
+                  adoptSavedSettings(liveFlow, currentFlow, updatedFlow),
+                );
+              }
+              resolve();
+            } else {
+              reportSaveError(t("errors.flowsVariableUndefined"));
+              reject(new Error("Flows variable undefined"));
+            }
+          };
           const persistFlow = () => {
             mutate(updatePayload, {
-              onSuccess: (response) => {
-                const updatedFlow = keepBuiltOnGraph(
-                  response,
-                  updatePayload,
-                  currentSavedFlow,
-                );
-                const flows = useFlowsManagerStore.getState().flows;
-                setSaveLoading(false);
-                if (flows) {
-                  // updates flow in state
-                  setFlows(
-                    flows.map((flow) => {
-                      if (flow.id === updatedFlow.id) {
-                        return updatedFlow;
-                      }
-                      return flow;
-                    }),
-                  );
-                  // Only update useFlowStore.currentFlow when on the flow page.
-                  // When saving from the list page (e.g., renaming via settings modal),
-                  // setting this would leave stale unprocessed flow data in the store,
-                  // causing a crash when the user later navigates to the flow page.
-                  //
-                  // The graph is adopted only when the canvas still holds the
-                  // one this request carried. `currentFlow` is the baseline the
-                  // next autosave diffs against, so adopting the response of a
-                  // save that started before an edit makes that edit look
-                  // persisted and the follow-up save is skipped — the edit is
-                  // lost. The store swaps these arrays on every change, so
-                  // identity is an exact "nothing moved while we were away"
-                  // check.
-                  const liveState = useFlowStore.getState();
-                  const liveFlow = liveState.currentFlow;
-                  const graphUnchanged =
-                    liveState.nodes === nodes && liveState.edges === edges;
-                  if (liveState.onFlowPage && graphUnchanged) {
-                    setCurrentFlow(updatedFlow);
-                  } else if (
-                    liveState.onFlowPage &&
-                    liveFlow &&
-                    liveFlow.id === updatedFlow.id
-                  ) {
-                    setCurrentFlow(
-                      adoptSavedSettings(liveFlow, currentFlow, updatedFlow),
-                    );
-                  }
-                  resolve();
-                } else {
-                  reportSaveError(t("errors.flowsVariableUndefined"));
-                  reject(new Error("Flows variable undefined"));
-                }
-              },
+              onSuccess: handleSaved,
               onError: handleError,
             });
           };

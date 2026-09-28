@@ -21,6 +21,12 @@ interface IPatchUpdateFlow {
   flow_type?: "agent" | "workflow";
   a2a_enabled?: boolean;
   a2a_card_overrides?: Record<string, unknown> | null;
+  /** Identifies this save across retries, so the flow's history records it once. */
+  request_id?: string;
+  /** Reset a flow edited outside Langflow to its latest recorded version first. */
+  repair_revision_mismatch?: boolean;
+  /** Repair a graph that breaks the flow graph rules instead of refusing it. */
+  repair_invalid_graph?: boolean;
   /** Internal signal; stripped before PATCHing the API. */
   providerScopeChanged?: boolean;
   /** Sent as If-Match so the server refuses a save built on a version someone replaced. */
