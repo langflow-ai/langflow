@@ -13,9 +13,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.flow_operations import FlowOperationError, apply_flow_operations, graph_hash
+from sqlmodel import func, select
 
+from langflow.services.database.models.flow_operation import FlowOperation
 from langflow.services.flow_history.envelope import decode_row
-from langflow.services.flow_history.errors import FlowHistoryCorruptionError, FlowRevisionNotFoundError
+from langflow.services.flow_history.errors import (
+    FlowHistoryCorruptionError,
+    FlowRevisionNotFoundError,
+    FlowRevisionNotRetainedError,
+)
 from langflow.services.flow_history.store import latest_anchor_at_or_before, rows_covering
 
 if TYPE_CHECKING:
@@ -45,12 +51,52 @@ async def reconstruct_graph(
         msg = f"Flow {flow_id} has no revision {revision}"
         raise FlowRevisionNotFoundError(msg)
 
+    # SQLite reads are not isolated from compaction the way PostgreSQL's share
+    # lock isolates them, so a read that races it can see a gap. Compaction
+    # only ever leaves a consistent state behind, so one more read settles it.
+    attempts = 2 if session.get_bind().dialect.name == "sqlite" else 1
+    for attempt in range(attempts):
+        try:
+            return await _reconstruct(session, flow_id, revision, latest_revision, verify_anchor=verify_anchor)
+        except FlowHistoryCorruptionError:
+            if attempt == attempts - 1:
+                raise
+    msg = "unreachable"
+    raise AssertionError(msg)
+
+
+async def retention_cutoff(session: AsyncSession, flow_id: UUID, latest_revision: int) -> int:
+    """Return the first revision the history can still replay to.
+
+    It is where the first retained row ends, where compaction always leaves a
+    checkpoint. With no rows left (after a purge) only the latest revision is.
+    """
+    earliest_end = (
+        await session.exec(select(func.min(FlowOperation.end_revision)).where(FlowOperation.flow_id == flow_id))
+    ).one()
+    return earliest_end if earliest_end is not None else latest_revision
+
+
+async def _reconstruct(
+    session: AsyncSession, flow_id: UUID, revision: int, latest_revision: int, *, verify_anchor: bool
+) -> dict[str, Any]:
     anchor = await latest_anchor_at_or_before(session, flow_id, revision)
-    if anchor is None:
-        raise FlowHistoryCorruptionError(flow_id, "no checkpoint to replay from", revision=revision)
-    if verify_anchor:
-        verify_checkpoint(anchor)
-    return await replay_from(session, flow_id, anchor, revision)
+    if anchor is not None and anchor.operation_revision == revision:
+        if verify_anchor:
+            verify_checkpoint(anchor)
+        return anchor.data
+    try:
+        if anchor is None:
+            raise FlowHistoryCorruptionError(flow_id, "no checkpoint to replay from", revision=revision)
+        if verify_anchor:
+            verify_checkpoint(anchor)
+        return await replay_from(session, flow_id, anchor, revision)
+    except FlowHistoryCorruptionError:
+        # Below the cutoff, missing history was compacted away on purpose.
+        if revision < await retention_cutoff(session, flow_id, latest_revision):
+            msg = f"Revision {revision} of flow {flow_id} is no longer retained"
+            raise FlowRevisionNotRetainedError(msg) from None
+        raise
 
 
 def verify_checkpoint(checkpoint: FlowVersion) -> None:

@@ -32,6 +32,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
 from langflow.services.flow_history.envelope import RESTORE_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
+from langflow.services.flow_history.maintenance import purge_history
 from langflow.services.flow_history.replay import reconstruct_graph
 from langflow.services.flow_history.secrets import strip_graph_secrets
 from langflow.services.flow_history.timeline import TimelineEntry, read_timeline
@@ -136,6 +137,46 @@ async def list_revisions(
         earliest_revision=page.earliest_revision,
         entries=[_entry(entry, usernames) for entry in page.entries],
         next_before=page.next_before,
+    )
+
+
+@router.post("/purge", response_model=RevisionPage)
+async def purge_revisions(
+    *,
+    session: DbSession,
+    flow_id: UUID,  # noqa: ARG001 -- resolved by the flow dependency
+    flow: AuthorizedWriteFlow,
+    current_user: CurrentActiveUser,
+) -> RevisionPage:
+    """Delete the flow's recorded history, keeping only a checkpoint of the flow as it is now.
+
+    For removing a secret from the history after removing it from the flow:
+    history is otherwise immutable and keeps every value it recorded for the
+    retention window. Saved versions are not touched; delete any that hold the
+    secret the usual way. Only the flow's owner may do this.
+    """
+    if flow.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Only the flow's owner can purge its history.")
+    await lock_flow_for_update(session, flow)
+    try:
+        await purge_history(session, flow)
+        page = await read_timeline(
+            session,
+            flow,
+            before=None,
+            limit=MAX_PAGE_SIZE,
+            include_operations=False,
+            known_variable_names=frozenset(),
+        )
+    except FlowHistoryError as exc:
+        raise history_http_error(exc) from exc
+    return RevisionPage(
+        flow_id=flow.id,
+        latest_revision=flow.latest_revision,
+        current_revision=flow.current_revision,
+        earliest_revision=page.earliest_revision,
+        entries=[],
+        next_before=None,
     )
 
 

@@ -12,6 +12,7 @@ from langflow.services.flow_history.errors import (
     FlowHistoryError,
     FlowRevisionMismatchError,
     FlowRevisionNotFoundError,
+    FlowRevisionNotRetainedError,
     FlowVersionConflictError,
 )
 from langflow.services.flow_history.recorder import GraphWriteResult
@@ -67,6 +68,14 @@ def history_http_error(exc: FlowHistoryError) -> HTTPException:
                 ),
                 "graph": exc.graph,
                 "violations": [violation.to_dict() for violation in exc.violations],
+            },
+        )
+    if isinstance(exc, FlowRevisionNotRetainedError):
+        return HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail={
+                "code": exc.code,
+                "message": "This point in the flow's history is older than the history Langflow keeps.",
             },
         )
     if isinstance(exc, FlowRevisionNotFoundError):

@@ -79,6 +79,12 @@ class FlowRevisionNotFoundError(FlowHistoryError):
     code = "FLOW_REVISION_NOT_FOUND"
 
 
+class FlowRevisionNotRetainedError(FlowHistoryError):
+    """The revision was recorded but compacted away, and no checkpoint holds it."""
+
+    code = "FLOW_REVISION_NOT_RETAINED"
+
+
 class FlowHistoryCorruptionError(FlowHistoryError):
     """Replay found the history damaged: a gap, a bad row, or a failed hash.
 

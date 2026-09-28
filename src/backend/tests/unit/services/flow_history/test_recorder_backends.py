@@ -16,8 +16,11 @@ from langflow.services.database.models.flow.model import Flow, FlowGraphWriteOpt
 from langflow.services.database.models.flow_operation import FlowOperation
 from langflow.services.database.models.user.model import User
 from langflow.services.database.service import SQLModel
+from langflow.services.deps import get_settings_service
+from langflow.services.flow_history.errors import FlowRevisionNotRetainedError
+from langflow.services.flow_history.maintenance import checkpoint_if_due, compact_if_due
 from langflow.services.flow_history.recorder import write_flow_graph
-from langflow.services.flow_history.replay import reconstruct_graph
+from langflow.services.flow_history.replay import reconstruct_graph, retention_cutoff
 from lfx.services.flow_operations import graphs_equal
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import col, select
@@ -123,3 +126,33 @@ async def test_concurrent_writers_extend_one_head(engine, flow_id):
         flow = await session.get(Flow, flow_uuid)
     assert [row.start_revision for row in rows] == list(range(1, len(rows) + 1))
     assert flow.latest_revision == flow.current_revision == len(rows) == 5
+
+
+async def test_compaction_deletes_old_rows_through_the_append_only_trigger(engine, flow_id, monkeypatch):
+    # On PostgreSQL the trigger refuses deletes of a live flow's rows unless the
+    # transaction is marked as maintenance; this is the path that marks it.
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "flow_revision_checkpoint_cadence", 2)
+    monkeypatch.setattr(settings, "flow_revision_retention_window", 3)
+    flow_uuid, actor_id = flow_id
+    for value in range(1, 9):
+        await _write(engine, flow_uuid, actor_id, _graph(str(value)))
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            flow = await session.get(Flow, flow_uuid)
+            await lock_flow_for_update(session, flow)
+            await checkpoint_if_due(session, flow)
+            await compact_if_due(session, flow)
+            await session.commit()
+
+    async with AsyncSession(engine) as session:
+        flow = await session.get(Flow, flow_uuid)
+        starts = (
+            await session.exec(select(FlowOperation.start_revision).where(FlowOperation.flow_id == flow_uuid))
+        ).all()
+        assert min(starts) > 1
+        cutoff = await retention_cutoff(session, flow_uuid, flow.latest_revision)
+        for revision in range(cutoff, 9):
+            graph = await reconstruct_graph(session, flow_uuid, revision, latest_revision=flow.latest_revision)
+            assert graphs_equal(graph, _graph(str(revision)))
+        with pytest.raises(FlowRevisionNotRetainedError):
+            await reconstruct_graph(session, flow_uuid, cutoff - 1, latest_revision=flow.latest_revision)
