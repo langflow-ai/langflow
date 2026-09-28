@@ -469,17 +469,33 @@ async def read_project_deployment_snapshot(
     try:
         snapshot = await build_project_deployment_snapshot(session, current_user, project_id)
     except HTTPException as exc:
-        raise deny_to_404(exc, detail="Project not found") from exc
+        # Reuses the replacement endpoints' deny-to-404 + error-code convention
+        # (_deny_to_404_with_code only attaches the code when this actually
+        # remaps a 403 to 404; any other status passes through unchanged).
+        raise _deny_to_404_with_code(exc, detail="Project not found", code="snapshot_project_not_found") from exc
     except ProjectArtifactNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+            headers={ERROR_CODE_HEADER: "snapshot_project_not_found"},
+        ) from exc
     except ProjectArtifactLimitError as exc:
-        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=str(exc),
+            headers={ERROR_CODE_HEADER: "snapshot_too_large"},
+        ) from exc
     except EmptyProjectArtifactError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+            headers={ERROR_CODE_HEADER: "snapshot_empty"},
+        ) from exc
     except ProjectArtifactError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Project snapshot could not be captured safely",
+            headers={ERROR_CODE_HEADER: "snapshot_unsafe"},
         ) from exc
 
     response.headers["Cache-Control"] = "no-store"
@@ -709,7 +725,21 @@ def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
     # compatible while binding any non-empty opaque manifest to the operation.
     if not request_body.dependencies:
         normalized.pop("dependencies", None)
-    return canonical_json_digest(normalized)
+    try:
+        return canonical_json_digest(normalized)
+    except UnicodeEncodeError as exc:
+        # A lone (unpaired) Unicode surrogate is a legal Python str, so it
+        # passes pydantic validation, but it cannot be UTF-8 encoded -
+        # canonical_json_digest's ``.encode()`` raises before this request
+        # reaches any place that fails closed with a client-facing error. Map
+        # it to the same 422 + error-code shape every other replacement
+        # validation failure uses instead of letting it surface as an
+        # unhandled 500.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Request contains invalid Unicode content",
+            headers={ERROR_CODE_HEADER: "replacement_invalid_unicode"},
+        ) from exc
 
 
 def _is_deployment_project_slug(name: str) -> bool:
@@ -752,6 +782,21 @@ async def _lock_replacement_operation(session: DbSession, project_id: UUID) -> s
             headers={ERROR_CODE_HEADER: "replacement_dialect_unsupported"},
         )
     return dialect
+
+
+async def _lock_project_for_delete(session: DbSession, project_id: UUID) -> None:
+    """On PostgreSQL, lock the project's Folder row before any flow is cascade-deleted.
+
+    Replacement (``_lock_replacement_operation`` plus the Folder ``with_for_update()``
+    load in ``_replace_project_operation_once``) locks the Folder row before its flow
+    rows. Delete used to remove flows first and the Folder last — the opposite order —
+    which can deadlock (40P01) against a concurrent replacement. Taking the Folder lock
+    first here restores a single lock order across both operations. SQLite already
+    serializes writers database-wide (see ``run_with_lock_retry``), so only PostgreSQL
+    needs an explicit lock here.
+    """
+    if session.get_bind().dialect.name == "postgresql":
+        await session.exec(select(Folder).where(Folder.id == project_id).with_for_update())
 
 
 async def _authorize_replacement_receipt_project_only(
@@ -1369,6 +1414,10 @@ async def _replace_project_operation_once(
                 flow_id=flow_read.id,
                 owner_id=flow_read.user_id,
                 flow_data=flow_read.data,
+                # A database error here (lock timeout, deadlock) must reach the
+                # whole-transaction retry in replace_project_operation, not be
+                # swallowed as best-effort — see reconcile_flow_triggers_safely.
+                reraise_database_errors=True,
             )
             result_flows.append(flow_read)
 
@@ -2035,6 +2084,7 @@ async def delete_project(
     def _make_delete_operation(target: Folder):
         async def _delete_project_operation() -> None:
             memory_base_cleanups.clear()
+            await _lock_project_for_delete(session, project_id)
             flows = (
                 await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
             ).all()

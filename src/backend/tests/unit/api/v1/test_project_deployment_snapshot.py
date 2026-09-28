@@ -12,11 +12,13 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deployment_artifacts import (
+    EmptyProjectArtifactError,
     ProjectArtifactError,
     ProjectArtifactLimitError,
     ProjectArtifactNotFoundError,
 )
 from langflow.services.deps import session_scope
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -122,6 +124,17 @@ async def _second_user_headers(client: AsyncClient, *, username: str) -> dict:
 @pytest.mark.asyncio
 async def test_deployment_snapshot_owner_gets_full_snapshot(client: AsyncClient, logged_in_headers) -> None:
     """The owner's snapshot must carry the identity, secrets-safe fields the CP needs to rebuild a deploy."""
+    # The snapshot only keeps a load_from_db reference that names one of the
+    # owner's real global variables (LE-2717 review: a name-shaped literal
+    # behind a stale load_from_db flag must not survive capture) - create it
+    # so the api_key field below is a legitimate reference, not a false one.
+    variable_resp = await client.post(
+        "api/v1/variables/",
+        json={"name": "MY_DEPLOY_API_KEY", "value": "does-not-matter", "type": CREDENTIAL_TYPE, "default_fields": []},
+        headers=logged_in_headers,
+    )
+    assert variable_resp.status_code == status.HTTP_201_CREATED, variable_resp.text
+
     project_id = await _create_project(client, logged_in_headers, name="support-automation")
     flow_payload = _flow_payload(project_id, endpoint_name=f"triage-{uuid4().hex[:8]}")
     flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
@@ -303,6 +316,110 @@ async def test_deployment_snapshot_refuses_unsafe_literal_secret(client: AsyncCl
 
 
 @pytest.mark.asyncio
+async def test_deployment_snapshot_refuses_load_from_db_naming_unknown_variable(
+    client: AsyncClient, logged_in_headers
+) -> None:
+    """A load_from_db value that does not name one of the owner's real variables must fail closed.
+
+    A stale ``load_from_db`` flag left on a field that actually holds a literal
+    secret is shaped exactly like a legitimate variable-name reference. Without
+    checking the name against the owner's real variables, that literal would be
+    captured (and required_variables would advertise a variable that does not
+    exist) instead of failing the capture.
+    """
+    project_id = await _create_project(client, logged_in_headers, name="unknown-variable-project")
+    secret = "looks-like-a-var-name-but-is-a-secret"  # noqa: S105  # pragma: allowlist secret
+    flow_payload = {
+        "name": "Stale Load From DB Flag",
+        "folder_id": project_id,
+        "is_component": False,
+        "data": {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "api_key": {
+                                    "name": "api_key",
+                                    "password": True,
+                                    "load_from_db": True,
+                                    "value": secret,
+                                },
+                            }
+                        }
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED, flow_resp.text
+
+    response = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.json()["detail"] == "Project snapshot could not be captured safely"
+    assert secret not in response.text
+
+
+@pytest.mark.asyncio
+async def test_deployment_snapshot_load_from_db_naming_known_variable_is_captured(
+    client: AsyncClient, logged_in_headers
+) -> None:
+    """A load_from_db value naming a real owner variable is kept and listed as required."""
+    variable_resp = await client.post(
+        "api/v1/variables/",
+        json={
+            "name": "KNOWN_DEPLOY_VARIABLE",
+            "value": "does-not-matter",
+            "type": CREDENTIAL_TYPE,
+            "default_fields": [],
+        },
+        headers=logged_in_headers,
+    )
+    assert variable_resp.status_code == status.HTTP_201_CREATED, variable_resp.text
+
+    project_id = await _create_project(client, logged_in_headers, name="known-variable-project")
+    flow_payload = {
+        "name": "Known Load From DB Reference",
+        "folder_id": project_id,
+        "is_component": False,
+        "data": {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "api_key": {
+                                    "name": "api_key",
+                                    "password": True,
+                                    "load_from_db": True,
+                                    "value": "KNOWN_DEPLOY_VARIABLE",
+                                },
+                            }
+                        }
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED, flow_resp.text
+
+    response = await client.get(f"api/v1/projects/{project_id}/deployment-snapshot", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    body = response.json()
+    assert body["required_variables"] == ["KNOWN_DEPLOY_VARIABLE"]
+    template = body["flows"][0]["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "KNOWN_DEPLOY_VARIABLE"
+
+
+@pytest.mark.asyncio
 async def test_snapshot_route_masks_auth_denial_and_does_not_expose_capture_details() -> None:
     session = AsyncMock()
     response = Response()
@@ -328,6 +445,7 @@ async def test_snapshot_route_masks_auth_denial_and_does_not_expose_capture_deta
     assert raised.value.status_code == status.HTTP_404_NOT_FOUND
     assert raised.value.detail == "Project not found"
     assert secret not in str(raised.value.detail)
+    assert raised.value.headers.get("X-Langflow-Error-Code") == "snapshot_project_not_found"
     session.commit.assert_not_awaited()
 
 
@@ -357,18 +475,20 @@ async def test_snapshot_route_masks_generic_capture_error_detail() -> None:
     assert raised.value.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert raised.value.detail == "Project snapshot could not be captured safely"
     assert secret not in str(raised.value.detail)
+    assert raised.value.headers.get("X-Langflow-Error-Code") == "snapshot_unsafe"
     session.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("failure", "expected_status"),
+    ("failure", "expected_status", "expected_code"),
     [
-        (ProjectArtifactLimitError("snapshot too large"), status.HTTP_413_CONTENT_TOO_LARGE),
-        (ProjectArtifactNotFoundError("Project not found"), status.HTTP_404_NOT_FOUND),
+        (ProjectArtifactLimitError("snapshot too large"), status.HTTP_413_CONTENT_TOO_LARGE, "snapshot_too_large"),
+        (ProjectArtifactNotFoundError("Project not found"), status.HTTP_404_NOT_FOUND, "snapshot_project_not_found"),
+        (EmptyProjectArtifactError("project has no flows"), status.HTTP_422_UNPROCESSABLE_CONTENT, "snapshot_empty"),
     ],
 )
-async def test_snapshot_route_maps_bounded_capture_failures(failure, expected_status) -> None:
+async def test_snapshot_route_maps_bounded_capture_failures(failure, expected_status, expected_code) -> None:
     session = AsyncMock()
     response = Response()
 
@@ -385,6 +505,7 @@ async def test_snapshot_route_maps_bounded_capture_failures(failure, expected_st
         )
 
     assert raised.value.status_code == expected_status
+    assert raised.value.headers.get("X-Langflow-Error-Code") == expected_code
     session.commit.assert_not_awaited()
 
 

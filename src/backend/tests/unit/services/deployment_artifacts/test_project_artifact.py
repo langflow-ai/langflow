@@ -108,11 +108,24 @@ async def _build_snapshot_authorized(
     user: SimpleNamespace,
     project: Folder,
     limits: ProjectArtifactLimits | None = None,
+    known_variable_names: frozenset[str] | None = None,
 ):
+    """Also stubs the variable service so the owner-variable lookup never touches ``session``.
+
+    ``_snapshot_session_for_flows`` gives ``session.exec`` a fixed, ordered
+    ``side_effect`` list sized for exactly the queries the snapshot path itself
+    issues; a real variable-service call would consume one of those slots out
+    of order. ``known_variable_names`` lets a caller opt a flow's
+    ``load_from_db`` references into surviving the strict capture, the same way
+    a real owner variable would.
+    """
+    variable_service = AsyncMock()
+    variable_service.list_variables = AsyncMock(return_value=sorted(known_variable_names or []))
     with (
         patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
         patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
         patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.get_variable_service", return_value=variable_service),
     ):
         kwargs = {"limits": limits} if limits is not None else {}
         return await build_project_deployment_snapshot(session, user, project.id, **kwargs)
@@ -1144,6 +1157,36 @@ def test_connection_artifact_accepts_implicit_provider_but_rejects_mismatches(de
 
 
 @pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_rejects_lone_unicode_surrogate_in_project_description() -> None:
+    """A lone surrogate in the project description must fail closed, the same as one in the name."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Valid project", description="Invalid description \ud800", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="Unicode surrogate"):
+        await _build_snapshot_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_counts_project_description_toward_expanded_bytes() -> None:
+    """A large project description must count toward max_expanded_bytes, not evade it entirely."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Big description", description="d" * 200, user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactLimitError, match="expanded size"):
+        await _build_snapshot_authorized(
+            session=session, user=user, project=project, limits=ProjectArtifactLimits(max_expanded_bytes=64)
+        )
+
+
+@pytest.mark.asyncio
 async def test_build_project_deployment_snapshot_includes_required_connections_and_endpoint_name() -> None:
     actor_id = uuid4()
     project_id = uuid4()
@@ -1351,6 +1394,24 @@ def test_build_deployment_snapshot_flows_enforces_max_expanded_bytes() -> None:
     with pytest.raises(ProjectArtifactLimitError, match="expanded size"):
         builder._build_deployment_snapshot_flows(
             snapshots, limits=ProjectArtifactLimits(max_flow_bytes=1024 * 1024, max_expanded_bytes=64)
+        )
+
+
+def test_build_deployment_snapshot_flows_counts_initial_expanded_bytes_toward_the_limit() -> None:
+    """``initial_expanded_bytes`` (the project's own name/description) must count toward the bound.
+
+    Without it, an arbitrarily large project name or description could evade
+    ``max_expanded_bytes`` entirely: it is never part of any flow's content size.
+    """
+    from langflow.services.deployment_artifacts import builder
+
+    snapshot = builder._FlowSnapshot(flow_id=uuid4(), name="Flow", payload={"data": {"nodes": [], "edges": []}})
+
+    with pytest.raises(ProjectArtifactLimitError, match="expanded size"):
+        builder._build_deployment_snapshot_flows(
+            (snapshot,),
+            limits=ProjectArtifactLimits(max_expanded_bytes=64),
+            initial_expanded_bytes=128,
         )
 
 

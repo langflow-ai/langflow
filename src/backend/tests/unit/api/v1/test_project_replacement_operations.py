@@ -3,14 +3,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi import HTTPException
 from httpx import AsyncClient
 from langflow.api.v1 import projects as projects_module
-from langflow.api.v1.schemas.replacement_operations import ProjectReplacementRequest
+from langflow.api.v1.schemas.replacement_operations import ProjectReplacementRequest, ReplacementFlowCreate
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.deps import session_scope
+from pydantic import ValidationError
 from sqlalchemy.exc import OperationalError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -95,6 +97,34 @@ def test_replacement_digest_preserves_legacy_no_dependency_shape() -> None:
     )
 
 
+def test_replacement_digest_matches_a_pinned_value() -> None:
+    """Pin one digest so silent encoding drift is caught instead of shipped.
+
+    ``_replacement_request_digest`` binds a replacement receipt to the exact
+    request body that produced it (see the digest comparison in
+    ``_replace_project_operation_once``). If canonical_json_digest's encoding
+    ever drifts (field order, separators, escaping), an identical retry of an
+    old request would digest differently and get spuriously rejected as
+    "Operation ID already used with a different request" - this hard-codes one
+    known-good digest so that drift fails a test instead of a retry in
+    production.
+    """
+    request = ProjectReplacementRequest(
+        description="pinned digest",
+        flows=[
+            ReplacementFlowCreate(
+                id=UUID("00000000-0000-0000-0000-000000000001"),
+                name="Pinned Flow",
+                data={"nodes": [], "edges": []},
+            )
+        ],
+    )
+
+    digest = projects_module._replacement_request_digest(request)
+
+    assert digest == "c1ae5b89480dd418ac8f6369c41fdd1e9aeb6776ef523f152fb063f60da83abb"
+
+
 def test_replacement_digest_distinguishes_null_from_present_description() -> None:
     """A null description is a real, distinct value — not the same digest as any string."""
     null_description = ProjectReplacementRequest(description=None, flows=[])
@@ -103,6 +133,93 @@ def test_replacement_digest_distinguishes_null_from_present_description() -> Non
     assert projects_module._replacement_request_digest(null_description) != projects_module._replacement_request_digest(
         empty_string_description
     )
+
+
+def test_replacement_flow_rejects_blank_name() -> None:
+    """A blank (or whitespace-only) flow name must fail request validation, not save as-is."""
+    for blank_name in ("", "   "):
+        with pytest.raises(ValidationError, match="name must not be blank"):
+            ReplacementFlowCreate(id=uuid4(), name=blank_name, data={"nodes": [], "edges": []})
+
+
+def test_replacement_flow_rejects_null_data() -> None:
+    """`data: None` must fail request validation, not commit content the snapshot later refuses.
+
+    The deployment snapshot's strict capture refuses a flow with no graph data
+    ("flow has no graph data") - this catches the same content at request time.
+    """
+    with pytest.raises(ValidationError):
+        ReplacementFlowCreate(id=uuid4(), name="valid name", data=None)
+
+
+async def test_replacement_rejects_blank_flow_name_over_http(client: AsyncClient, active_user, logged_in_headers):
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    body = {
+        "description": "must not commit",
+        "flows": [{**_flow_payload(name="   "), "id": str(uuid4())}],
+    }
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}", json=body, headers=logged_in_headers
+    )
+
+    assert response.status_code == 422, response.text
+    async with session_scope() as session:
+        stored_flows = list((await session.exec(select(Flow).where(Flow.folder_id == UUID(project_id)))).all())
+        assert stored_flows == []
+
+
+async def test_replacement_rejects_null_flow_data_over_http(client: AsyncClient, active_user, logged_in_headers):
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    body = {
+        "description": "must not commit",
+        "flows": [{"id": str(uuid4()), "name": "no data", "data": None}],
+    }
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}", json=body, headers=logged_in_headers
+    )
+
+    assert response.status_code == 422, response.text
+    async with session_scope() as session:
+        stored_flows = list((await session.exec(select(Flow).where(Flow.folder_id == UUID(project_id)))).all())
+        assert stored_flows == []
+
+
+async def test_replacement_rejects_lone_unicode_surrogate_as_422(client: AsyncClient, active_user, logged_in_headers):
+    r"""A lone (unpaired) Unicode surrogate must fail with 422 + an error code, not an unhandled 500.
+
+    Sent as a raw request body with the surrogate *escaped* (``\ud800``, plain
+    ASCII on the wire): httpx's own ``json=`` encoding tries to UTF-8 encode
+    the raw character client-side and refuses to even send it, but a raw
+    ``\ud800`` escape round-trips through JSON as an ordinary 6-byte ASCII
+    sequence. The server's ``json.loads`` then reconstructs the same lone
+    surrogate as a legal Python ``str`` - it passes pydantic validation, but
+    canonical_json_digest's UTF-8 encode step cannot represent it and raised
+    UnicodeEncodeError before this fix, escaping every exception handler in
+    the replacement transaction as an unhandled 500.
+    """
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    flow_id = uuid4()
+    raw_body = (
+        f'{{"description": "surrogate test", "flows": [{{"id": "{flow_id}", '
+        '"name": "Invalid \\ud800 name", "data": {"nodes": [], "edges": []}}]}'
+    ).encode("ascii")
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}",
+        content=raw_body,
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.headers.get("x-langflow-error-code") == "replacement_invalid_unicode"
+    async with session_scope() as session:
+        stored_flows = list((await session.exec(select(Flow).where(Flow.folder_id == UUID(project_id)))).all())
+        assert stored_flows == []
 
 
 async def test_replacement_restores_a_null_description_unchanged(client: AsyncClient, active_user, logged_in_headers):
@@ -167,10 +284,25 @@ async def test_replacement_deadlock_retry_recovers_from_a_real_transaction(
 
     monkeypatch.setattr(AsyncSession, "flush", flush_with_one_deadlock)
 
+    # Spy on _replace_project_operation_once itself (not just the flush count)
+    # so a deadlock that happens to trigger more than one internal flush per
+    # attempt cannot silently inflate flush_calls without a real whole-
+    # transaction retry actually running.
+    original_replace_once = projects_module._replace_project_operation_once
+    attempt_calls = 0
+
+    async def counting_replace_once(**kwargs):
+        nonlocal attempt_calls
+        attempt_calls += 1
+        return await original_replace_once(**kwargs)
+
+    monkeypatch.setattr(projects_module, "_replace_project_operation_once", counting_replace_once)
+
     replaced = await client.put(url, json=body, headers=logged_in_headers)
 
     assert replaced.status_code == 200, replaced.text
     assert flush_calls >= 2, "the first flush must have raised and the attempt retried"
+    assert attempt_calls == 2, "the whole operation must run exactly twice: the deadlocked attempt, then recovery"
     assert replaced.json()["flows"][0]["name"] == body["flows"][0]["name"]
     assert replaced.json()["flows"][0]["data"] == body["flows"][0]["data"]
 
@@ -219,12 +351,27 @@ async def test_replacement_deadlock_retry_exhaustion_is_generic_503(
     monkeypatch.setattr(AsyncSession, "flush", always_deadlock)
     monkeypatch.setattr(projects_module.asyncio, "sleep", AsyncMock())
 
+    # Spy on _replace_project_operation_once so the retry budget is checked
+    # against the number of whole-operation attempts, not just flush calls.
+    original_replace_once = projects_module._replace_project_operation_once
+    attempt_calls = 0
+
+    async def counting_replace_once(**kwargs):
+        nonlocal attempt_calls
+        attempt_calls += 1
+        return await original_replace_once(**kwargs)
+
+    monkeypatch.setattr(projects_module, "_replace_project_operation_once", counting_replace_once)
+
     response = await client.put(url, json=body, headers=logged_in_headers)
 
     assert response.status_code == 503
     assert response.json()["detail"] == "The database is busy. Please retry the request."
     assert "private" not in response.text
     assert response.headers.get("x-langflow-error-code") == "replacement_retry_exhausted"
+    assert attempt_calls == projects_module._REPLACEMENT_MAX_ATTEMPTS, (
+        "every attempt in the retry budget must actually run the whole operation"
+    )
 
     async with session_scope() as session:
         stored_flow = await session.get(Flow, UUID(flow["id"]))
@@ -530,6 +677,9 @@ async def test_replacement_can_explicitly_clear_nullable_flow_fields_and_replay_
     flow = await _create_flow(active_user, project_id, _flow_payload(name=f"clear-{uuid4().hex[:8]}"))
     operation_id = str(uuid4())
     url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
+    # `data` is excluded here: ReplacementFlowCreate now requires it to be a
+    # dict (see test_replacement_rejects_null_flow_data), so this only covers
+    # the fields that remain genuinely nullable.
     body = {
         "description": "clear nullable flow fields",
         "flows": [
@@ -537,7 +687,7 @@ async def test_replacement_can_explicitly_clear_nullable_flow_fields_and_replay_
                 "id": flow["id"],
                 "name": flow["name"],
                 "description": None,
-                "data": None,
+                "data": {"nodes": [], "edges": []},
             }
         ],
     }
@@ -546,12 +696,12 @@ async def test_replacement_can_explicitly_clear_nullable_flow_fields_and_replay_
     assert replaced.status_code == 200, replaced.text
     replaced_flow = replaced.json()["flows"][0]
     assert replaced_flow["description"] is None
-    assert replaced_flow["data"] is None
+    assert replaced_flow["data"] == {"nodes": [], "edges": []}
 
     async with session_scope() as session:
         stored_flow = await session.get(Flow, UUID(flow["id"]))
         assert stored_flow.description is None
-        assert stored_flow.data is None
+        assert stored_flow.data == {"nodes": [], "edges": []}
 
     replay = await client.put(url, json=body, headers=logged_in_headers)
     receipt = await client.get(url, headers=logged_in_headers)
@@ -877,6 +1027,59 @@ async def test_replacement_commits_despite_trigger_reconciliation_failure(
     assert receipt.json() == response.json()
 
 
+async def test_replacement_retries_on_deadlock_from_trigger_reconciliation(
+    client: AsyncClient, active_user, logged_in_headers, monkeypatch
+):
+    """A DBAPIError from trigger reconciliation must trigger the whole-transaction retry.
+
+    Unlike a non-database reconciliation failure (best-effort, swallowed —
+    see test_replacement_commits_despite_trigger_reconciliation_failure), a real
+    lock/deadlock error there must propagate so the replacement is retried from
+    a clean body instead of committing with stale trigger rows.
+    """
+    from langflow.services.triggers import reconciliation as triggers_reconciliation_module
+
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    flow = await _create_flow(active_user, project_id, _flow_payload(name=f"trigger-deadlock-{uuid4().hex[:8]}"))
+    operation_id = str(uuid4())
+    url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
+    body = {
+        "description": "retried after trigger reconciliation deadlock",
+        "flows": [
+            {
+                **_flow_payload(flow_id=UUID(flow["id"]), name=f"retried-{uuid4().hex[:8]}"),
+                "data": {"nodes": [], "edges": [], "marker": "target-after-retry"},
+            }
+        ],
+    }
+
+    calls = 0
+    original_reconcile = triggers_reconciliation_module.reconcile_flow_triggers
+
+    async def deadlock_once(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            statement, message = "UPDATE trigger", "simulated trigger reconciliation deadlock"
+            raise _deadlock_error(statement, message)
+        return await original_reconcile(*args, **kwargs)
+
+    monkeypatch.setattr(triggers_reconciliation_module, "reconcile_flow_triggers", deadlock_once)
+
+    replaced = await client.put(url, json=body, headers=logged_in_headers)
+
+    assert replaced.status_code == 200, replaced.text
+    assert calls >= 2, "the first reconcile must have raised and the whole replacement retried"
+    assert replaced.json()["flows"][0]["name"] == body["flows"][0]["name"]
+    assert replaced.json()["flows"][0]["data"] == body["flows"][0]["data"]
+
+    async with session_scope() as session:
+        stored_flow = await session.get(Flow, UUID(flow["id"]))
+        assert stored_flow.name == body["flows"][0]["name"]
+        assert stored_flow.data == body["flows"][0]["data"]
+
+
 async def test_replacement_rejects_filesystem_flows_without_mutation(
     client: AsyncClient, active_user, logged_in_headers
 ):
@@ -1018,6 +1221,134 @@ async def test_project_authorization_denial_leaves_replacement_content_unchanged
         f"api/v1/projects/{project_id}/replacement-operations/{operation_id}", headers=logged_in_headers
     )
     assert receipt.status_code == 404
+
+
+@pytest.mark.parametrize("scenario", ["delete", "write", "create"])
+async def test_flow_level_authorization_denial_maps_to_404_and_leaves_content_unchanged(
+    client: AsyncClient, active_user, logged_in_headers, monkeypatch, scenario
+):
+    """A per-flow (not project-level) denial must also 404 and commit nothing.
+
+    Covers all three flow-level checks _replace_project_operation_once makes:
+    DELETE (a stale flow dropped from the request), WRITE (an existing flow
+    kept but changed), and CREATE (a flow id not already in the project) -
+    the same denied-to-404 mapping test_project_authorization_denial_leaves_replacement_content_unchanged
+    covers for the project-level check.
+    """
+    project = await _create_project(active_user)
+    project_id = project["id"]
+
+    if scenario in ("delete", "write"):
+        flow = await _create_flow(active_user, project_id, _flow_payload(name=f"{scenario}-{uuid4().hex[:8]}"))
+    else:
+        flow = None
+
+    if scenario == "delete":
+        # No requested flows: the project's one existing flow becomes stale.
+        body = {"description": "must not commit", "flows": []}
+        patched_name = "ensure_flows_permission"
+    elif scenario == "write":
+        # Same flow id, changed content: goes through the WRITE batch, not CREATE.
+        body = {
+            "description": "must not commit",
+            "flows": [{**_flow_payload(flow_id=UUID(flow["id"]), name=flow["name"]), "description": "changed"}],
+        }
+        patched_name = "ensure_flows_permission"
+    else:
+        # An id with no existing row: goes through the single-flow CREATE check.
+        body = {
+            "description": "must not commit",
+            "flows": [_flow_payload(flow_id=uuid4(), name=f"new-{uuid4().hex[:8]}")],
+        }
+        patched_name = "ensure_flow_permission"
+
+    denial = AsyncMock(side_effect=HTTPException(status_code=403, detail="denied"))
+    monkeypatch.setattr(projects_module, patched_name, denial)
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{uuid4()}", json=body, headers=logged_in_headers
+    )
+
+    assert response.status_code == 404, response.text
+    assert response.json()["detail"] == "Project not found"
+    assert response.headers.get("x-langflow-error-code") == "replacement_project_not_found"
+    denial.assert_awaited()
+
+    async with session_scope() as session:
+        stored_project = await session.get(Folder, UUID(project_id))
+        stored_flows = list((await session.exec(select(Flow).where(Flow.folder_id == UUID(project_id)))).all())
+        assert stored_project.description == "original description"
+        if scenario == "create":
+            assert stored_flows == []
+        else:
+            assert len(stored_flows) == 1
+            assert stored_flows[0].id == UUID(flow["id"])
+            assert stored_flows[0].description != "changed"
+
+
+async def test_replacement_returns_200_despite_post_commit_memory_base_cleanup_failure(
+    client: AsyncClient, active_user, logged_in_headers, monkeypatch
+):
+    """A post-commit Memory Base cleanup failure is best-effort and must not fail the response.
+
+    The replacement is already durable once the transaction commits (see the
+    comment above the post-commit block in replace_project_operation) - only
+    the external cleanup/cache calls that follow are allowed to fail silently.
+    """
+    from langflow.services.memory_base import flow_cleanup as flow_cleanup_module
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup
+
+    project = await _create_project(active_user)
+    project_id = project["id"]
+    stale_flow = await _create_flow(active_user, project_id, _flow_payload(name=f"mb-cleanup-{uuid4().hex[:8]}"))
+
+    async def _fake_cascade_delete_flow(session, target_flow_id, *, memory_base_cleanups):
+        # Actually removes the row (mirroring the real cascade) while also
+        # recording the Memory Base handle whose finalize is about to fail -
+        # without needing a real Memory Base row or KB backend.
+        memory_base_cleanups.append(
+            FlowMemoryBaseCleanup(
+                kb_name="does-not-matter",
+                user_id=active_user.id,
+                kb_username="activeuser",
+                backend_type="chroma",
+                backend_config={},
+            )
+        )
+        flow_row = await session.get(Flow, target_flow_id)
+        if flow_row is not None:
+            await session.delete(flow_row)
+        return True
+
+    monkeypatch.setattr(projects_module, "cascade_delete_flow", _fake_cascade_delete_flow)
+
+    async def _raise(*_args, **_kwargs):
+        failure_message = "injected memory base cleanup failure"
+        raise RuntimeError(failure_message)
+
+    monkeypatch.setattr(flow_cleanup_module, "finalize_flow_memory_base_cleanup", _raise)
+
+    operation_id = str(uuid4())
+    response = await client.put(
+        f"api/v1/projects/{project_id}/replacement-operations/{operation_id}",
+        json={"description": "post-commit cleanup must not fail this", "flows": []},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["flows"] == []
+
+    async with session_scope() as session:
+        # The commit itself succeeded despite the cleanup failure: the stale
+        # flow is gone even though its Memory Base's remote cleanup errored.
+        stored_flow = await session.get(Flow, UUID(stale_flow["id"]))
+        assert stored_flow is None
+
+    receipt = await client.get(
+        f"api/v1/projects/{project_id}/replacement-operations/{operation_id}", headers=logged_in_headers
+    )
+    assert receipt.status_code == 200, receipt.text
+    assert receipt.json() == response.json()
 
 
 async def test_replacement_by_non_owner_with_literal_mcp_secret_is_rejected(

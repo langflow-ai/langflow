@@ -14,8 +14,22 @@ class ReplacementFlowCreate(FlowCreate):
     """Ordinary flow-create fields with the stable id required by replacement."""
 
     id: UUID
+    # Narrower than FlowCreate.data (``dict | None``): a replacement's graph is
+    # never optional, and a None here would be accepted by this endpoint only
+    # to be refused later by the deployment snapshot's strict capture ("flow
+    # has no graph data"), letting content the snapshot cannot round-trip get
+    # committed as a replacement in the first place.
+    data: dict
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        if not value.strip():
+            msg = "name must not be blank"
+            raise ValueError(msg)
+        return value
 
 
 class ProjectReplacementRequest(SQLModel):

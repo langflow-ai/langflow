@@ -29,11 +29,12 @@ from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, F
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.memory_base.model import MemoryBase
+from langflow.services.deps import get_variable_service
 from langflow.utils.canonical_json import canonical_json_bytes
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import Callable, Collection, Iterator, Sequence
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -273,11 +274,27 @@ def _collect_required_connections(flow_data: object) -> tuple[ProjectArtifactReq
     )
 
 
+async def _known_variable_names(session: AsyncSession, owner_id: UUID | None) -> frozenset[str]:
+    """Return the global-variable names the project owner's snapshot may keep as bindings.
+
+    Mirrors ``langflow.api.v1.flows_helpers._export_variable_names`` (kept as its
+    own copy here rather than imported, so this services-layer module does not
+    reach up into api.v1). A snapshot keeps a ``load_from_db`` value only when
+    it names one of the owner's existing global variables, so a name-shaped
+    literal secret behind a stale ``load_from_db`` flag is never captured.
+    """
+    if owner_id is None:
+        return frozenset()
+    names = await get_variable_service().list_variables(user_id=owner_id, session=session)
+    return frozenset(name for name in names if name)
+
+
 def _normalized_flow_data(
     snapshot: _FlowSnapshot,
     *,
     strict_secret_safety: bool = False,
     keep_mcp_config: bool = False,
+    known_variable_names: Collection[str] | None = None,
 ) -> tuple[dict[str, Any], tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
     """Return the scrubbed flow envelope, its required variables and connections.
 
@@ -291,6 +308,11 @@ def _normalized_flow_data(
     what "provably clean" means and why an unclean config is nulled rather
     than dropped, which is what makes the strict equality check below fail
     closed on it.
+
+    ``known_variable_names``, when given, narrows preserved ``load_from_db``
+    values to ones naming a variable the project owner actually has - see
+    ``strip_secret_field_values_in_place`` for why that closes the
+    stale-flag/name-shaped-secret gap a shape check alone cannot.
     """
     # Scrubbing and volatile-field removal mutate nested values in place. Copy
     # first so aliases held by the snapshot or persisted Flow data stay intact.
@@ -301,7 +323,10 @@ def _normalized_flow_data(
     variable_references: set[str] = set()
     required_connections = _collect_required_connections(scrubbed.get("data"))
     scrubbed["data"] = strip_secret_field_values_in_place(
-        scrubbed.get("data"), variable_references=variable_references, keep_mcp_config=keep_mcp_config
+        scrubbed.get("data"),
+        variable_references=variable_references,
+        known_variable_names=known_variable_names,
+        keep_mcp_config=keep_mcp_config,
     )
     if strict_secret_safety and scrubbed.get("data") != snapshot.payload.get("data"):
         msg = f"flow file {snapshot.flow_id} contains values that cannot be safely captured"
@@ -927,6 +952,7 @@ class _ProjectSnapshotData:
     project_id: UUID
     project_name: str
     project_description: str | None
+    project_user_id: UUID | None
     snapshots: tuple[_FlowSnapshot, ...]
     dependencies: dict[str, list[dict[str, Any]]]
 
@@ -1114,6 +1140,7 @@ async def _prepare_project_snapshot_data(
         project_id=project_id,
         project_name=project.name,
         project_description=project_description,
+        project_user_id=project.user_id,
         snapshots=tuple(snapshots),
         dependencies=dependencies,
     )
@@ -1169,8 +1196,20 @@ def _build_deployment_snapshot_flows(
     snapshots: tuple[_FlowSnapshot, ...],
     *,
     limits: ProjectArtifactLimits,
+    known_variable_names: Collection[str] | None = None,
+    initial_expanded_bytes: int = 0,
 ) -> tuple[list[ProjectDeploymentSnapshotFlow], tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
     """Scrub and bound each flow for a snapshot without ever encoding or reading back a zip.
+
+    ``known_variable_names`` is the project owner's real global-variable names,
+    fetched once by the caller (this runs off the event loop via
+    ``_run_sync_non_abandoning`` and cannot make its own DB call) - see
+    ``_normalized_flow_data``.
+
+    ``initial_expanded_bytes`` seeds the aggregate size bound with the
+    project's own name and description - text that is not a flow but is still
+    part of the captured snapshot - so a large enough project name/description
+    cannot evade ``max_expanded_bytes`` entirely.
 
     Applies the same per-flow and aggregate byte bounds ``_build_archive`` applies
     to its zip entries - computed from the same canonical JSON encoding - so a
@@ -1179,11 +1218,14 @@ def _build_deployment_snapshot_flows(
     flows: list[ProjectDeploymentSnapshotFlow] = []
     required_variables: set[str] = set()
     required_connections_by_handle: dict[tuple[str, str], set[str]] = {}
-    expanded_size = 0
+    expanded_size = initial_expanded_bytes
     for snapshot in snapshots:
         _json_string_size(snapshot.name)
         scrubbed, variable_references, required_connections = _normalized_flow_data(
-            snapshot, strict_secret_safety=True, keep_mcp_config=True
+            snapshot,
+            strict_secret_safety=True,
+            keep_mcp_config=True,
+            known_variable_names=known_variable_names,
         )
         content_size = len(canonical_json_bytes(scrubbed))
         if content_size > limits.max_flow_bytes:
@@ -1263,10 +1305,23 @@ async def build_project_deployment_snapshot(
         limits=effective_limits,
         strict_snapshot=True,
     )
-    _json_string_size(prepared.project_name)
+    # Both the project name and description are captured verbatim in the
+    # snapshot; check both for the same invalid-surrogate failure mode
+    # (see _json_string_size) and count both toward max_expanded_bytes so
+    # neither can evade the aggregate size bound every flow is held to.
+    project_text_bytes = _json_string_size(prepared.project_name)
+    if prepared.project_description is not None:
+        project_text_bytes += _json_string_size(prepared.project_description)
+    known_variable_names = await _known_variable_names(session, prepared.project_user_id)
 
     flows, required_variables, required_connections = await _run_sync_non_abandoning(
-        partial(_build_deployment_snapshot_flows, prepared.snapshots, limits=effective_limits)
+        partial(
+            _build_deployment_snapshot_flows,
+            prepared.snapshots,
+            limits=effective_limits,
+            known_variable_names=known_variable_names,
+            initial_expanded_bytes=project_text_bytes,
+        )
     )
 
     await _verify_project_identity_unchanged(
