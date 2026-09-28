@@ -54,6 +54,9 @@ class IndexClient(Protocol):
     def get_latest_version(self, package: str) -> str | None:
         """Return the public index's latest version, or None when the package is absent."""
 
+    def get_versions(self, package: str) -> tuple[str, ...]:
+        """Return every installable (non-yanked) public version, or () when the package is absent."""
+
     def get_release(self, package: str, version: str) -> dict[str, Any] | None:
         """Return release JSON, or None when the package/version is absent."""
 
@@ -97,6 +100,7 @@ class WheelArtifact:
     filename: str
     sha256: str
     content_digest: str
+    lfx_floor: str | None = None
 
 
 @dataclass(frozen=True)
@@ -140,18 +144,31 @@ class PyPIClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    def get_latest_version(self, package: str) -> str | None:
+    def _get_project(self, package: str) -> dict[str, Any] | None:
         url = f"{self.base_url}/{canonicalize_name(package)}/json"
         try:
             with urllib.request.urlopen(url, timeout=self.timeout) as response:  # noqa: S310
-                payload = json.load(response)
+                return json.load(response)
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
                 return None
             raise PlanError(f"{package}: public index returned HTTP {exc.code} for {url}") from exc
         except urllib.error.URLError as exc:
             raise PlanError(f"{package}: unable to query public index {url}: {exc.reason}") from exc
-        return str(payload["info"]["version"])
+
+    def get_latest_version(self, package: str) -> str | None:
+        payload = self._get_project(package)
+        return None if payload is None else str(payload["info"]["version"])
+
+    def get_versions(self, package: str) -> tuple[str, ...]:
+        payload = self._get_project(package)
+        if payload is None:
+            return ()
+        return tuple(
+            version
+            for version, files in payload.get("releases", {}).items()
+            if any(not item.get("yanked", False) for item in files)
+        )
 
     def get_release(self, package: str, version: str) -> dict[str, Any] | None:
         url = f"{self.base_url}/{canonicalize_name(package)}/{version}/json"
@@ -194,14 +211,86 @@ def parse_version(version: str) -> tuple[int, int, int, int, int]:
     return (*release, *phase)
 
 
-def _ensure_not_behind_public_latest(package: str, version: str, client: IndexClient) -> None:
+def _version_key(value: str) -> tuple[int, int, int, int, int]:
+    """Parse a version, also accepting PEP 440 shorthand bounds such as ``<2`` or ``<1.13``."""
+    if re.fullmatch(r"\d+", value):
+        value += ".0.0"
+    elif re.fullmatch(r"\d+\.\d+", value):
+        value += ".0"
+    return parse_version(value)
+
+
+def _lfx_specifiers(requirements: Iterable[str]) -> tuple[str, ...]:
+    """Return the unconditional lfx specifiers among a distribution's Requires-Dist entries."""
+    specifiers: list[str] = []
+    for entry in requirements:
+        requirement, _, marker = str(entry).partition(";")
+        name, specifier = _requirement_parts(requirement)
+        if name == "lfx" and not marker.strip():
+            specifiers.append(specifier.strip("()"))
+    return tuple(specifiers)
+
+
+def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
+    """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series.
+
+    Clauses without a comparable bound (``==``, ``~=``, ``!=``) count as admitting so the caller fails closed.
+    """
+    major, minor, _, _, _ = parse_version(lfx_version)
+    series_start = parse_version(f"{major}.{minor}.0.dev0")
+    series_end = parse_version(f"{major}.{minor + 1}.0.dev0")
+    for clause in filter(None, specifier.split(",")):
+        match = re.fullmatch(r"(?P<op>>=|<=|>|<)(?P<bound>.+)", clause)
+        if match is None:
+            continue
+        try:
+            bound = _version_key(match["bound"])
+        except PlanError:
+            continue
+        op = match["op"]
+        if (
+            (op in {">=", ">"} and bound >= series_end)
+            or (op == "<" and bound <= series_start)
+            or (op == "<=" and bound < series_start)
+        ):
+            return False
+    return True
+
+
+def _newer_public_versions(package: str, version: str, latest: str, client: IndexClient) -> list[str]:
+    source = parse_version(version)
+    newer = {latest}
+    for candidate in client.get_versions(package):
+        try:
+            if parse_version(candidate) > source:
+                newer.add(candidate)
+        except PlanError:
+            continue  # Forms this plan never publishes (e.g. post releases) cannot be ordered against it.
+    return sorted(newer, key=parse_version, reverse=True)
+
+
+def _ensure_not_behind_public_latest(package: str, version: str, lfx_version: str | None, client: IndexClient) -> None:
+    """Reject a source version that a newer public release could shadow for the same lfx line.
+
+    Release lines publish a bundle from separate version ranges (for example 0.2.x beside lfx 1.12 and
+    0.3.x beside lfx 1.13). A newer release whose lfx range excludes this build's lfx minor series can
+    never resolve beside it, so only releases that admit that series, or whose lfx range is unknown,
+    block the build.
+    """
     latest = client.get_latest_version(package)
     if latest is None or parse_version(version) >= parse_version(latest):
         return
-    raise PlanError(
-        f"{package} {version}: source version trails latest public version {latest}; "
-        f"bump {package} above {latest} before building so dependency resolution cannot prefer a newer release"
-    )
+    for newer in _newer_public_versions(package, version, latest, client):
+        release = client.get_release(package, newer)
+        specifiers = _lfx_specifiers(((release or {}).get("info") or {}).get("requires_dist") or ())
+        if lfx_version is not None and specifiers and not all(_admits_lfx_series(s, lfx_version) for s in specifiers):
+            continue
+        observed = ", ".join(f"lfx{specifier}" for specifier in specifiers) or "lfx range unknown"
+        raise PlanError(
+            f"{package} {version}: source version trails public version {newer} ({observed}), which this "
+            f"lfx release line can install; bump {package} above {newer} before building so dependency "
+            "resolution cannot prefer a newer release"
+        )
 
 
 def bump_version(version: str, bump: str = "patch", prerelease: str | None = None) -> str:
@@ -371,18 +460,10 @@ def _lfx_range_is_compatible(specifier: str, lfx_version: str) -> bool:
     if generated_minimum is None or generated_upper is None:
         return False
 
-    def version_key(value: str) -> tuple[int, int, int, int, int]:
-        # Upper bounds such as <1.12 are valid PEP 440 shorthand.
-        if re.fullmatch(r"\d+", value):
-            value += ".0.0"
-        elif re.fullmatch(r"\d+\.\d+", value):
-            value += ".0"
-        return parse_version(value)
-
     try:
-        return version_key(generated_minimum) <= version_key(minimum) <= version_key(lfx_version) and version_key(
+        return _version_key(generated_minimum) <= _version_key(minimum) <= _version_key(lfx_version) and _version_key(
             lfx_version
-        ) < version_key(upper) <= version_key(generated_upper)
+        ) < _version_key(upper) <= _version_key(generated_upper)
     except PlanError:
         return False
 
@@ -716,7 +797,7 @@ def restamp_unpublished_bundles(
     targets: list[VersionTarget] = []
     try:
         for bundle in bundles.values():
-            _ensure_not_behind_public_latest(bundle.name, bundle.version, client)
+            _ensure_not_behind_public_latest(bundle.name, bundle.version, lfx_version, client)
             if client.get_release(bundle.name, bundle.version) is not None:
                 targets.append(
                     VersionTarget(
@@ -799,12 +880,27 @@ def read_wheel(path: Path) -> WheelArtifact:
         filename=path.name,
         sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
         content_digest=wheel_content_digest(path),
+        lfx_floor=_lfx_floor(_lfx_specifiers(metadata.get_all("Requires-Dist") or ())),
     )
+
+
+def _lfx_floor(specifiers: Iterable[str]) -> str | None:
+    """Return the lower lfx bound a wheel was built for, or None when it declares none."""
+    for specifier in specifiers:
+        minimum, _ = _minimum_and_upper(specifier)
+        if minimum is None:
+            continue
+        try:
+            parse_version(minimum)
+        except PlanError:
+            continue
+        return minimum
+    return None
 
 
 def observe_artifact(artifact: WheelArtifact, client: IndexClient) -> ArtifactObservation:
     """Compare one local artifact with the public package index."""
-    _ensure_not_behind_public_latest(artifact.package, artifact.version, client)
+    _ensure_not_behind_public_latest(artifact.package, artifact.version, artifact.lfx_floor, client)
     release = client.get_release(artifact.package, artifact.version)
     if release is None:
         return ArtifactObservation(
