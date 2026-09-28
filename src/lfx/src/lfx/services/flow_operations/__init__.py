@@ -1,0 +1,69 @@
+"""Flow operation vocabulary and pure apply engine.
+
+Operations describe granular edits to ``flow.data``: nodes and edges added,
+updated field by field, or deleted, and top-level metadata changes. The engine
+has no transport or database dependencies, so the same rules apply wherever an
+operation comes from.
+"""
+
+from lfx.services.flow_operations.apply import (
+    FlowOperationsApplyResult,
+    GraphState,
+    apply_flow_operations,
+    build_graph_state,
+    finalize_graph,
+)
+from lfx.services.flow_operations.exceptions import (
+    FlowDataValidationError,
+    FlowOperationError,
+    FlowOperationValidationError,
+)
+from lfx.services.flow_operations.ops import (
+    AddEdgesOp,
+    AddNodesOp,
+    DeleteEdgesOp,
+    DeleteNodeFieldUpdate,
+    DeleteNodesOp,
+    FlowOperation,
+    NodeFieldPath,
+    NodeFieldPathSegment,
+    SetNodeFieldUpdate,
+    UpdateMetadataOp,
+    UpdateNodeEntry,
+    UpdateNodesOp,
+    deduplicate_delete_ids,
+    normalize_requested_ops,
+    parse_flow_operation,
+    parse_flow_operations,
+)
+from lfx.services.flow_operations.python import PythonFlowOperationService
+from lfx.services.flow_operations.service import BaseFlowOperationService
+
+__all__ = [
+    "AddEdgesOp",
+    "AddNodesOp",
+    "BaseFlowOperationService",
+    "DeleteEdgesOp",
+    "DeleteNodeFieldUpdate",
+    "DeleteNodesOp",
+    "FlowDataValidationError",
+    "FlowOperation",
+    "FlowOperationError",
+    "FlowOperationValidationError",
+    "FlowOperationsApplyResult",
+    "GraphState",
+    "NodeFieldPath",
+    "NodeFieldPathSegment",
+    "PythonFlowOperationService",
+    "SetNodeFieldUpdate",
+    "UpdateMetadataOp",
+    "UpdateNodeEntry",
+    "UpdateNodesOp",
+    "apply_flow_operations",
+    "build_graph_state",
+    "deduplicate_delete_ids",
+    "finalize_graph",
+    "normalize_requested_ops",
+    "parse_flow_operation",
+    "parse_flow_operations",
+]
