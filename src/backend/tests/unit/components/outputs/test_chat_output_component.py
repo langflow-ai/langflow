@@ -3,6 +3,7 @@ from lfx.components.input_output import ChatOutput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.serialization.constants import MAX_TEXT_LENGTH
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 from tests.base import ComponentTestBaseWithClient
@@ -85,6 +86,33 @@ class TestChatOutput(ComponentTestBaseWithClient):
         assert "First message" in result.text
         assert "Second message" in result.text
         assert "Third message" in result.text
+
+    async def test_dataframe_cells_are_truncated_by_default(self, component_class, default_kwargs):
+        """A long multiline cell must not inflate the chat message into megabytes of padded markdown."""
+        component = component_class(**default_kwargs)
+        component.input_value = DataFrame([{"transcript": "line\n" * MAX_TEXT_LENGTH, "summary": "short"}])
+        result = await component.message_response()
+        assert "[truncated," in result.text
+        # header, separator and the single row are each padded to the capped cell width
+        assert len(result.text) < MAX_TEXT_LENGTH * 10
+
+    async def test_dataframe_cells_render_in_full_when_truncation_is_disabled(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs, truncate_table_cells=False)
+        component.input_value = DataFrame([{"transcript": "line\n" * MAX_TEXT_LENGTH, "summary": "short"}])
+        result = await component.message_response()
+        assert "truncated" not in result.text
+        assert result.text.count("line") == MAX_TEXT_LENGTH
+
+    @pytest.mark.parametrize(
+        ("clean_data", "expected"), [(True, "first<br/>second"), (False, "first<br/><br/><br/>second")]
+    )
+    async def test_clean_data_applies_to_a_single_dataframe(
+        self, component_class, default_kwargs, clean_data, expected
+    ):
+        component = component_class(**{**default_kwargs, "clean_data": clean_data})
+        component.input_value = DataFrame([{"text": "first\n\n\nsecond"}])
+        result = await component.message_response()
+        assert expected in result.text
 
     async def test_invalid_input(self, component_class, default_kwargs):
         """Test handling of invalid input."""
