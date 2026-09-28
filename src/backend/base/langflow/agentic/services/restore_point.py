@@ -45,8 +45,9 @@ async def create_restore_point(flow_id: str | None, user_id: str | None) -> str 
         from sqlmodel import col, select
 
         from langflow.services.database.models.flow import Flow
-        from langflow.services.database.models.flow_version.crud import create_flow_version_entry
+        from langflow.services.database.models.flow_version.crud import SAVED_VERSION, create_flow_version_entry
         from langflow.services.database.models.flow_version.model import FlowVersion
+        from langflow.services.flow_history.recorder import checkpoint_fields
 
         async with session_scope() as session:
             flow = await session.get(Flow, flow_uuid)
@@ -65,7 +66,7 @@ async def create_restore_point(flow_id: str | None, user_id: str | None) -> str 
             latest = (
                 await session.exec(
                     select(FlowVersion)
-                    .where(FlowVersion.flow_id == flow_uuid)
+                    .where(FlowVersion.flow_id == flow_uuid, SAVED_VERSION)
                     .order_by(col(FlowVersion.version_number).desc())
                     .limit(1)
                 )
@@ -79,6 +80,7 @@ async def create_restore_point(flow_id: str | None, user_id: str | None) -> str 
                 user_uuid,
                 data=data,
                 description=_restore_point_description(),
+                **await checkpoint_fields(session, flow),
             )
             return str(entry.id)
     except Exception as exc:  # noqa: BLE001 — a restore point must never break the turn

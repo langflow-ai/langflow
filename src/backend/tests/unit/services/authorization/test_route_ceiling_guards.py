@@ -174,6 +174,10 @@ async def test_flow_version_create_snapshot_owner_proceeds(monkeypatch, owner):
     create_spy = AsyncMock(return_value=entry)
     monkeypatch.setattr(flow_version, "create_flow_version_entry", create_spy)
     monkeypatch.setattr(flow_version, "_version_to_read", lambda e: e)
+    # The session is a mock: stand in for the row lock and the history lookup
+    # that make a snapshot a checkpoint, which this authorization test is not about.
+    monkeypatch.setattr(flow_version, "lock_flow_for_update", AsyncMock())
+    monkeypatch.setattr(flow_version, "checkpoint_fields", AsyncMock(return_value={}))
 
     result = await flow_version.create_snapshot(flow_id=flow.id, current_user=owner, session=MagicMock(), body=None)
 

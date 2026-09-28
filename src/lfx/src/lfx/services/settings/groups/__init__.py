@@ -11,6 +11,7 @@ to be instantiated directly.
 from lfx.services.settings.groups.cache import CacheSettings
 from lfx.services.settings.groups.components import ComponentsSettings
 from lfx.services.settings.groups.database import DatabaseSettings
+from lfx.services.settings.groups.flow_history import FlowHistorySettings
 from lfx.services.settings.groups.mcp import McpSettings
 from lfx.services.settings.groups.observability import ObservabilitySettings
 from lfx.services.settings.groups.paths import PathSettings
@@ -26,6 +27,7 @@ __all__ = [
     "CacheSettings",
     "ComponentsSettings",
     "DatabaseSettings",
+    "FlowHistorySettings",
     "McpSettings",
     "ObservabilitySettings",
     "PathSettings",
