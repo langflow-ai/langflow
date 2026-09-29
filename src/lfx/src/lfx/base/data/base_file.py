@@ -1203,6 +1203,7 @@ class BaseFileComponent(Component, ABC):
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
+                continue
 
             final_files.append(file)
 

@@ -437,8 +437,135 @@ describe("useSaveFlow", () => {
     resolveSave!();
     await inFlight;
 
-    expect(mockSetCurrentFlow).not.toHaveBeenCalled();
-    expect(flowStoreState.currentFlow.data.edges).toEqual(newEdges);
+    expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+    expect(mockSetCurrentFlow.mock.calls[0][0].data.edges).toBe(newEdges);
+  });
+
+  describe("when a node update lands while the save is in flight", () => {
+    let resolveSave: (() => void) | undefined;
+
+    beforeEach(() => {
+      resolveSave = undefined;
+      mockMutate.mockImplementation((payload, options) => {
+        resolveSave = () =>
+          options.onSuccess({
+            ...flowsManagerState.currentFlow,
+            ...payload,
+            updated_at: "2026-09-28T00:00:00Z",
+          });
+      });
+    });
+
+    const landNodeUpdate = () => {
+      const updatedNodes = [{ id: "refreshed-node" }];
+      flowStoreState.nodes = updatedNodes;
+      flowStoreState.currentFlow = {
+        ...flowStoreState.currentFlow,
+        data: { ...flowStoreState.currentFlow.data, nodes: updatedNodes },
+      };
+      return updatedNodes;
+    };
+
+    it("adopts the lock the save persisted", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      const updatedNodes = landNodeUpdate();
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+      const adopted = mockSetCurrentFlow.mock.calls[0][0];
+      expect(adopted.locked).toBe(true);
+      expect(adopted.updated_at).toBe("2026-09-28T00:00:00Z");
+      expect(adopted.data.nodes).toBe(updatedNodes);
+    });
+
+    it("adopts the unlock the save persisted", async () => {
+      const lockedFlow = { ...flowStoreState.currentFlow, locked: true };
+      flowStoreState.currentFlow = lockedFlow;
+      flowsManagerState.currentFlow = {
+        ...flowsManagerState.currentFlow,
+        locked: true,
+      };
+      mockMutate.mockImplementation((payload, options) => {
+        if (payload.data === undefined) {
+          options.onSuccess({
+            ...flowsManagerState.currentFlow,
+            locked: false,
+          });
+          return;
+        }
+        resolveSave = () =>
+          options.onSuccess({ ...flowsManagerState.currentFlow, ...payload });
+      });
+
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({ ...lockedFlow, locked: false });
+      landNodeUpdate();
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+      expect(mockSetCurrentFlow.mock.calls[0][0].locked).toBe(false);
+    });
+
+    it("keeps a setting the user changed after the save started", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      landNodeUpdate();
+      flowStoreState.currentFlow = {
+        ...flowStoreState.currentFlow,
+        description: "typed during the save",
+      };
+
+      resolveSave!();
+      await inFlight;
+
+      const adopted = mockSetCurrentFlow.mock.calls[0][0];
+      expect(adopted.locked).toBe(true);
+      expect(adopted.description).toBe("typed during the save");
+    });
+
+    it("leaves the editor alone when another flow is open", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      flowStoreState.nodes = [{ id: "other-flow-node" }];
+      flowStoreState.currentFlow = {
+        ...flowStoreState.currentFlow,
+        id: "flow-2",
+      };
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+    });
+
+    it("leaves the editor alone outside the flow page", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      landNodeUpdate();
+      flowStoreState.onFlowPage = false;
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+    });
   });
 
   it("keeps the graph and token it built on after a save that sent no graph", async () => {
