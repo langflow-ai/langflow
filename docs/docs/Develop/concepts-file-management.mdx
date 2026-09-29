@@ -200,6 +200,10 @@ A file already in the bucket with the same size but different content, such as a
 Files stream from disk to the bucket, so a large file isn't loaded into memory. The command copies 4 files at a time. Set `--concurrency` to change that; each file in flight holds at most 8 MiB.
 Add `--dry-run` to see what it would copy, and `--username` to limit it to one user's files.
 
+The command rewrites chat history paths in the database that `LANGFLOW_DATABASE_URL` points to, so set it to the database the S3-backed deployment uses. If you converted a SQLite database for that deployment, that's the converted database.
+Without `LANGFLOW_DATABASE_URL`, the command rewrites the default SQLite database instead, and the deployment's database keeps the absolute paths.
+Set `LANGFLOW_CONFIG_DIR` to the source instance's configuration directory, because local storage reads the files from there.
+
 The command copies uploads, chat attachments and files attached to flows.
 Profile pictures and knowledge bases are stored outside the file storage backend, so they stay on local disk.
 
