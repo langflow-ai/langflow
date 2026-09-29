@@ -135,7 +135,14 @@ class TestDefaultSuperuser:
         check = _check(await run_preflight(), "default superuser")
 
         assert check.status == "fail"
-        assert "last_login_at = now()" in check.problems[-1]
+        # A target that keeps the account needs nothing, and setting last_login_at there would
+        # stop it claiming or deactivating the account.
+        kept, deleted = check.problems[-2:]
+        assert "change nothing" in kept
+        assert "last_login_at" in kept
+        # On a target that deletes it, the workaround keeps it, and says what it leaves open.
+        assert "last_login_at = now()" in deleted
+        assert "API keys minted while AUTO_LOGIN was on keep working" in deleted
 
     async def test_a_default_superuser_that_signed_in_passes(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "default superuser").status == "ok"
