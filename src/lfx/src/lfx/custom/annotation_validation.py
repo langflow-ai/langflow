@@ -292,6 +292,14 @@ def _module_namespace(module: ModuleType) -> dict[str, Any] | None:
     return namespace if isinstance(namespace, dict) else None
 
 
+# Identity sets for the safe bindings, each stored with the ``_safe_type_bindings()``
+# dict it was built from. An id is only meaningful while its object is alive, so
+# a stale set could match an unrelated object that reused a freed id. The dict
+# only changes if ``_safe_type_bindings.cache_clear()`` is called (today only in
+# tests), and the ``cached[0] is bindings`` checks below rebuild the sets when it
+# does. If ``_safe_type_bindings`` could not be cleared (a lazily set global
+# returning a read-only ``MappingProxyType``), these could be plain
+# ``@lru_cache(maxsize=1)`` functions like ``_trusted_runtime_metaclasses``.
 _SAFE_TYPE_BINDING_IDS: tuple[dict[str, Any], frozenset[int]] | None = None
 _SAFE_SUBSCRIPT_BASE_IDS: tuple[dict[str, Any], tuple[Any, ...], frozenset[int]] | None = None
 
