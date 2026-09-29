@@ -134,13 +134,6 @@ async def _relocate_one(
     if record.status == KnowledgeBaseStatus.INGESTING.value:
         result.reason = "knowledge base is ingesting; wait for it to finish, then re-run"
         return result
-    if not record.model_selection:
-        # Copying the vectors is still correct. Querying them later is not
-        # guaranteed: embedding resolution falls back to a default model when the
-        # row records none, and that default may not be what produced them.
-        result.warnings.append(
-            "model_selection is empty, so the embedding model that produced these vectors is unknown"
-        )
 
     source: BaseVectorStoreBackend | None = None
     target: BaseVectorStoreBackend | None = None
@@ -148,6 +141,22 @@ async def _relocate_one(
         source = _build_backend(record.backend_type, source_config, record, owner)
         target = _build_backend(target_backend_type, target_backend_config, record, owner, create=not dry_run)
         await source.ensure_ready()
+        if type(source) is type(target):
+            # A stored config usually carries keys the target config leaves out (field
+            # names, TLS flags) while naming the same store, so compare where the two
+            # resolve to. Copying a knowledge base onto itself rewrites it in place.
+            await target.ensure_ready()
+            if source.store_location is not None and source.store_location == target.store_location:
+                result.status = "skipped"
+                result.reason = "already on the target backend"
+                return result
+        if not record.model_selection:
+            # Copying the vectors is still correct. Querying them later is not
+            # guaranteed: embedding resolution falls back to a default model when the
+            # row records none, and that default may not be what produced them.
+            result.warnings.append(
+                "model_selection is empty, so the embedding model that produced these vectors is unknown"
+            )
         result.source_count = await source.count()
         if result.source_count < record.chunks:
             # Fewer chunks than recorded is what a truncated or half-lost store

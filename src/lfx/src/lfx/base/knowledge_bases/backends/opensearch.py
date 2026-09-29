@@ -196,6 +196,11 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """Keep OpenSearch relevance scores, which are already higher-is-better."""
         return float(score)
 
+    @property
+    def store_location(self) -> tuple[Any, ...]:
+        """The resolved cluster URL and index."""
+        return (self._resolved_url, self._resolve_index_name())
+
     def _resolve_index_name(self) -> str:
         """Resolve the effective index for this KB.
 
