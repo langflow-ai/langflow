@@ -657,6 +657,16 @@ def _static_function_return(function: FunctionType, method_name: str) -> ast.AST
     return_source = MappingProxyType.get(method_returns, (method_name, first_line))
     if return_source is None:
         return None
+    return _parse_return_source(return_source)
+
+
+@lru_cache(maxsize=4096)
+def _parse_return_source(return_source: str) -> ast.expr | None:
+    """Parse one ``ast.unparse``-d return annotation from server source.
+
+    The result depends only on the string, and callers only read the returned
+    node, so one parsed tree is shared by every lookup of the same text.
+    """
     try:
         return ast.parse(return_source, mode="eval").body
     except SyntaxError:
