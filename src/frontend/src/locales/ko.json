@@ -1052,7 +1052,7 @@
   "files.errorUploadingDetail": "파일을 업로드하지 못했습니다",
   "files.errorDeleting": "파일을 삭제하지 못했습니다",
   "files.errorDeletingDetail": "파일을 삭제하지 못했습니다",
-  "files.errorRenaming": "파일 이름을 변경하지 못했습니다",
+  "files.errorRenaming": "파일 이름을 바꾸지 못했습니다",
   "files.dropToUpload": "업로드할 파일을 여기에 놓으세요",
   "files.columnName": "이름",
   "files.columnType": "유형",

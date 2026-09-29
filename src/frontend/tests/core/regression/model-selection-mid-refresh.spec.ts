@@ -111,8 +111,10 @@ test(
     await refresh.release();
 
     await expect(trigger).not.toContainText("Select a model");
-    await expect
-      .poll(() => persistedModelName(page), { timeout: 15000 })
-      .toBeTruthy();
+    // Opening a flow never writes it back: the refreshed model stays local
+    // until the user edits. Longer than the 5s autosave debounce, so a write
+    // the refresh triggered would have landed.
+    await page.waitForTimeout(6000);
+    expect(await persistedModelName(page)).toBeUndefined();
   },
 );
