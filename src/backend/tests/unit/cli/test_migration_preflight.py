@@ -14,6 +14,7 @@ import anyio
 import pytest
 import sqlalchemy as sa
 from cryptography.fernet import Fernet
+from langflow.cli.integrity import script_directory
 from langflow.cli.migration_preflight import run_preflight
 from langflow.services.auth.utils import encrypt_api_key, ensure_fernet_key
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment
@@ -29,8 +30,8 @@ from sqlmodel import select
 if TYPE_CHECKING:
     from pathlib import Path
 
-# The test database is at this Langflow's head; its parent is one revision older.
-HEAD = "f2a7c9e4b681"  # pragma: allowlist secret
+# The test database is at this Langflow's head, which moves with every migration; PARENT is older than it.
+HEAD = script_directory().get_current_head()
 PARENT = "9d7e2a6c4b81"  # pragma: allowlist secret
 # The alembic head of Langflow 1.12.0, which the IBM Langflow 1.12.0-dev image runs.
 LANGFLOW_1_12_0 = "a3f8b1c9d7e2"  # pragma: allowlist secret
