@@ -114,8 +114,9 @@ async def check_default_superuser(session: AsyncSession) -> CheckResult:
 
     With AUTO_LOGIN off, which IBM Langflow requires, Langflow deletes the default
     superuser when it has never signed in, and on Postgres the delete takes
-    everything that user owns with it. The fix keeps the user; images that shipped
-    before it do not, so this is checked against the source.
+    everything that user owns with it. The fix keeps the user: it claims the account
+    for LANGFLOW_SUPERUSER or deactivates it, and setting last_login_at skips both.
+    Nothing here tells which kind of target this is, so the advice covers both.
     """
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
@@ -135,10 +136,17 @@ async def check_default_superuser(session: AsyncSession) -> CheckResult:
         name,
         "fail",
         f"{DEFAULT_SUPERUSER!r} has never signed in and owns rows; "
-        "a target with AUTO_LOGIN off deletes it on first boot",
+        "a target with AUTO_LOGIN off deletes it on first boot unless its Langflow keeps such an account",
         [
             ", ".join(f"{table}: {count}" for table, count in sorted(owned.items())),
-            f"before attaching, run against the target database: {_SUPERUSER_WORKAROUND}",
+            "if the target's Langflow keeps it (its migrations add user.retired_at), change nothing: "
+            f"LANGFLOW_SUPERUSER={DEFAULT_SUPERUSER} claims the account with the configured password, and its API "
+            "keys, including any minted while AUTO_LOGIN was on, keep working; any other name deactivates it, which "
+            "stops them. Setting last_login_at on such a target skips both",
+            f"otherwise, before attaching, run against the target database: {_SUPERUSER_WORKAROUND} The account "
+            "stays active with its current password, so API keys minted while AUTO_LOGIN was on keep working. Set "
+            f"LANGFLOW_SUPERUSER to another name and, after the first boot, deactivate {DEFAULT_SUPERUSER!r} from "
+            "the Admin page",
         ],
     )
 
