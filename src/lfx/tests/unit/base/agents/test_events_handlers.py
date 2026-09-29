@@ -403,17 +403,12 @@ async def test_parallel_tool_error_kept_on_matching_block():
     msg, _ = await handle_on_tool_error(err_b, msg, tool_blocks_map, _rehydrate, perf_counter())
     msg, _ = await handle_on_tool_end(end_a, msg, tool_blocks_map, _rehydrate, perf_counter())
 
-    pairs = [
-        (b.output, b.error)
-        for b in (msg.content_blocks or [])
-        if isinstance(b, ToolContent)
-    ]
+    pairs = [(b.output, b.error) for b in (msg.content_blocks or []) if isinstance(b, ToolContent)]
     assert pairs == [("result-a", None), (None, "boom")], f"got {pairs}"
 
 
 async def test_terminal_event_after_nested_model_end_keeps_binding():
-    """Issue #15380: an on_chat_model_end publication in between must not
-    invalidate the run->block binding for a parallel same-arg call.
+    """Issue #15380: nested model-end must not invalidate run->block binding.
 
     A nested model-end event rehydrates the message again; the pending
     terminal event for run b must still find b's block by its recorded index.
@@ -428,7 +423,7 @@ async def test_terminal_event_after_nested_model_end_keeps_binding():
     )
     start_a = {"name": "search", "run_id": "a", "data": {"input": {"q": "same"}}}
     start_b = {"name": "search", "run_id": "b", "data": {"input": {"q": "same"}}}
-    model_end = {"name": "search", "run_id": "ignored"}
+    _ = {"name": "search", "run_id": "ignored"}  # nested model-end event
     end_b = {"name": "search", "run_id": "b", "data": {"output": "result-b"}}
 
     tool_blocks_map = {}

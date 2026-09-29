@@ -246,7 +246,6 @@ async def handle_on_chat_model_end(
     return agent_message, perf_counter()
 
 
-
 def _bound_block_index(blocks: list[Any] | None, target: ToolContent) -> int | None:
     """Return the index of ``target`` in ``blocks`` by identity, if still present.
 
@@ -304,9 +303,7 @@ async def handle_on_tool_start(
     # Skip any that handle_on_tool_start has already bound for an earlier
     # parallel call to the same tool, so each on_tool_start picks the
     # next unbound block in declaration order.
-    bound_block_ids = {
-        id(v[0]) if isinstance(v, tuple) else id(v) for v in tool_blocks_map.values()
-    }
+    bound_block_ids = {id(v[0]) if isinstance(v, tuple) else id(v) for v in tool_blocks_map.values()}
     existing = None
     for block in agent_message.content_blocks:
         if (
