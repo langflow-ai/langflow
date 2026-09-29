@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 import pytest
 import sqlalchemy as sa
 import typer
+from langchain_core.documents import Document
+from langchain_core.embeddings import DeterministicFakeEmbedding
 from langflow.__main__ import _relocate_kb
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.knowledge_base_relocation import (
@@ -372,6 +374,36 @@ async def test_relocation_refuses_a_local_target(backend_type):
 def test_backends_report_the_metric_they_rank_by(tmp_path: Path, backend_type, config, metric):
     backend = create_backend(backend_type, kb_name="kb", kb_path=tmp_path, backend_config=config, user_id=uuid.uuid4())
     assert backend.distance_metric == metric
+
+
+@pytest.mark.api_key_required
+@pytest.mark.parametrize("space_type", ["cosinesimil", "innerproduct"])
+@pytest.mark.parametrize("write", ["ingest", "copy"])
+async def test_opensearch_creates_its_index_with_the_configured_space_type(tmp_path: Path, space_type, write):
+    # distance_metric reports the configured space_type, so the index has to rank by it.
+    if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
+        pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
+    pytest.importorskip("opensearchpy")
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_space_{uuid.uuid4().hex[:6]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL", "space_type": space_type},
+        embedding_function=DeterministicFakeEmbedding(size=DIM),
+        user_id=uuid.uuid4(),
+    )
+    try:
+        if write == "ingest":
+            await backend.add_documents([Document(page_content="doc")])
+        else:
+            await backend.add_embedded_documents([IngestedDocument(id="c0", content="doc", embedding=[0.5] * DIM)])
+
+        mapping = backend._os_client.indices.get_mapping(index=backend._os_index)
+        method = mapping[backend._os_index]["mappings"]["properties"]["vector_field"]["method"]
+        assert method["space_type"] == space_type
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
 
 
 @pytest.mark.api_key_required
