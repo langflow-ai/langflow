@@ -1116,11 +1116,17 @@ _SQL_COLLECTION = {
 
 
 def _add_db_query_attributes(span) -> None:
-    """Record a statement's verb and table as ``db.operation.name`` and ``db.collection.name``.
+    """Record a statement's verb and table, and name the span after them.
 
-    Span metrics group by attributes, and without these the table exists only inside
-    ``db.statement``, which is unbounded and no use as a metric dimension. The span name
-    ("SELECT langflow") carries the verb but not the table.
+    Span metrics group by attributes, and without ``db.operation.name`` and
+    ``db.collection.name`` the table exists only inside ``db.statement``, which is unbounded and
+    no use as a metric dimension.
+
+    The span is renamed to the semantic-convention form, "{operation} {collection}" ("SELECT
+    message"), or the verb alone when no table is found. The instrumentor's name is "<verb>
+    <db.name>" ("SELECT langflow"): the database name is the same on every statement a
+    deployment runs, so it says nothing about the query, and for SQLite it is a file name.
+    ``connect`` spans have no statement and keep their name.
 
     Not a SQL parser, on purpose, and in line with the OpenTelemetry advice against parsing
     queries: it reads the leading verb and the identifier after the first INTO, UPDATE or FROM.
@@ -1148,9 +1154,13 @@ def _add_db_query_attributes(span) -> None:
     updated["db.operation.name"] = operation
     pattern = _SQL_COLLECTION.get(operation)
     table = pattern.search(statement) if pattern else None
+    name = operation
     if table:
         updated["db.collection.name"] = table.group(1)
+        name = f"{operation} {table.group(1)}"
     _replace_attributes(span, updated)
+    # Same private attribute _redact_db_path_attributes writes; ReadableSpan has no setter.
+    span._name = name  # noqa: SLF001
 
 
 def _replace_attributes(span, updated: dict[str, Any]) -> None:

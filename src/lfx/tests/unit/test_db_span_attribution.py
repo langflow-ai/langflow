@@ -67,6 +67,8 @@ def test_the_verb_and_first_table_are_recorded(statement, operation, table):
     assert span.attributes["db.operation.name"] == operation
     assert span.attributes.get("db.collection.name") == table
     assert span.attributes["db.statement"] == statement
+    # Semantic-convention name: the verb and table, or the verb alone, never the database name.
+    assert span.name == (f"{operation} {table}" if table else operation)
 
 
 def test_the_stable_semconv_statement_is_read_and_its_operation_corrected():
@@ -86,6 +88,17 @@ def test_an_unlisted_verb_records_nothing(statement):
 
     assert "db.operation.name" not in span.attributes
     assert "db.collection.name" not in span.attributes
+    assert span.name == "SELECT langflow"
+
+
+def test_a_sqlite_statement_span_is_named_by_table_not_file():
+    span = export(
+        {"db.system": "sqlite", "db.name": "/home/alice/langflow.db", "db.statement": "SELECT flow.id FROM flow"},
+        name="SELECT /home/alice/langflow.db",
+    )
+
+    assert span.name == "SELECT flow"
+    assert span.attributes["db.name"] == "langflow.db"
 
 
 def test_a_table_past_the_scan_limit_is_not_recorded():
@@ -109,6 +122,7 @@ def test_a_connect_span_takes_the_phase_but_records_no_statement_attributes():
 
     assert span.attributes["langflow.phase"] == "job.status"
     assert "db.operation.name" not in span.attributes
+    assert span.name == "connect"
 
 
 def test_outside_any_phase_nothing_is_invented():
@@ -208,10 +222,10 @@ def test_a_real_async_query_carries_its_phase_table_and_verb():
     assert completed.returncode == 0, completed.stderr
     lines = [ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT ")]
     assert lines, f"probe printed no result.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
-    by_verb = {
-        s["attributes"].get("db.operation.name"): s["attributes"]
-        for s in json.loads(lines[0].removeprefix("PROBE_RESULT "))
-    }
+    spans = json.loads(lines[0].removeprefix("PROBE_RESULT "))
+    by_verb = {s["attributes"].get("db.operation.name"): s["attributes"] for s in spans}
+    names = {s["name"] for s in spans}
+    assert {"INSERT job", "UPDATE job", "connect"} <= names, names
 
     assert by_verb["INSERT"]["langflow.phase"] == "job.create"
     assert by_verb["INSERT"]["db.collection.name"] == "job"
