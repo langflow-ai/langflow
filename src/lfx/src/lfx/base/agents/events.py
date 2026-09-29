@@ -246,6 +246,25 @@ async def handle_on_chat_model_end(
     return agent_message, perf_counter()
 
 
+
+def _bound_block_index(blocks: list[Any] | None, target: ToolContent) -> int | None:
+    """Return the index of ``target`` in ``blocks`` by identity, if still present.
+
+    Message callbacks rehydrate ``Message`` from ``model_dump()``, which keeps
+    ``content_blocks`` order but rebuilds the objects, so identity is only
+    reliable inside a single message snapshot. We record the index at binding
+    time (on_tool_start) and use it in the terminal handlers to pick the block
+    that belongs to this run_id instead of value-matching (which is ambiguous
+    for parallel calls to the same tool with identical arguments).
+    """
+    if not blocks:
+        return None
+    for i, block in enumerate(blocks):
+        if block is target:
+            return i
+    return None
+
+
 async def handle_on_tool_start(
     event: dict[str, Any],
     agent_message: Message,
@@ -285,7 +304,9 @@ async def handle_on_tool_start(
     # Skip any that handle_on_tool_start has already bound for an earlier
     # parallel call to the same tool, so each on_tool_start picks the
     # next unbound block in declaration order.
-    bound_block_ids = {id(v) for v in tool_blocks_map.values()}
+    bound_block_ids = {
+        id(v[0]) if isinstance(v, tuple) else id(v) for v in tool_blocks_map.values()
+    }
     existing = None
     for block in agent_message.content_blocks:
         if (
@@ -305,7 +326,7 @@ async def handle_on_tool_start(
         # tool_input (non-streaming Anthropic) fire on_tool_start with an
         # empty payload, and clobbering with {} would lose the real args.
         existing.tool_input = tool_input or existing.tool_input
-        tool_blocks_map[tool_key] = existing
+        tool_blocks_map[tool_key] = (existing, _bound_block_index(agent_message.content_blocks, existing))
         return agent_message, perf_counter()
 
     # Fallback path — append the ToolContent ourselves.
@@ -319,11 +340,11 @@ async def handle_on_tool_start(
         header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
         duration=duration,
     )
-    tool_blocks_map[tool_key] = tool_content
+    tool_blocks_map[tool_key] = (tool_content, None)
     agent_message.content_blocks.append(tool_content)
     agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
     if agent_message.content_blocks and isinstance(agent_message.content_blocks[-1], ToolContent):
-        tool_blocks_map[tool_key] = agent_message.content_blocks[-1]
+        tool_blocks_map[tool_key] = (agent_message.content_blocks[-1], len(agent_message.content_blocks) - 1)
     # The tool cannot run until this handler returns, so start timing after publication.
     return agent_message, perf_counter()
 
@@ -338,9 +359,10 @@ async def handle_on_tool_end(
     run_id = event.get("run_id", "")
     tool_name = event.get("name", "")
     tool_key = f"{tool_name}_{run_id}"
-    tool_content = tool_blocks_map.get(tool_key)
+    bound = tool_blocks_map.get(tool_key)
 
-    if tool_content and isinstance(tool_content, ToolContent):
+    if bound is not None:
+        tool_content, bound_index = bound if isinstance(bound, tuple) else (bound, None)
         # Stop the tool timer before publishing the result. The callback can
         # include transport or persistence work that is not part of the tool's
         # execution time and must not inflate the duration shown to clients.
@@ -350,19 +372,33 @@ async def handle_on_tool_end(
         agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
         new_start_time = perf_counter()
 
-        # Now find and update the tool content in the current message. With
-        # flat content_blocks we walk the list directly instead of indexing
-        # into a single group's .contents.
+        # Resolve the block that belongs to this run_id. Value-matching on
+        # name + input + "no output yet" is ambiguous when parallel calls
+        # invoke the same tool with identical arguments: each terminal event
+        # would claim the first matching block and outputs get shuffled or
+        # dropped. Prefer the index recorded at binding time (the callback
+        # preserves content_blocks order), falling back to value matching only
+        # if another event reordered the blocks in between.
+        blocks = agent_message.content_blocks or []
         updated_tool_content = None
-        for content in agent_message.content_blocks or []:
-            if (
-                isinstance(content, ToolContent)
-                and content.name == tool_name
-                and content.tool_input == tool_content.tool_input
-                and content.output is None
-            ):
-                updated_tool_content = content
-                break
+        if (
+            bound_index is not None
+            and bound_index < len(blocks)
+            and isinstance(blocks[bound_index], ToolContent)
+            and blocks[bound_index].name == tool_name
+            and blocks[bound_index].output is None
+        ):
+            updated_tool_content = blocks[bound_index]
+        if updated_tool_content is None:
+            for content in blocks:
+                if (
+                    isinstance(content, ToolContent)
+                    and content.name == tool_name
+                    and content.tool_input == tool_content.tool_input
+                    and content.output is None
+                ):
+                    updated_tool_content = content
+                    break
 
         # Update the tool content that's actually in the message
         if updated_tool_content:
@@ -371,7 +407,7 @@ async def handle_on_tool_end(
             updated_tool_content.output = event["data"].get("output")
 
             # Update the map reference
-            tool_blocks_map[tool_key] = updated_tool_content
+            tool_blocks_map[tool_key] = (updated_tool_content, bound_index)
 
         return agent_message, new_start_time
     return agent_message, start_time
@@ -403,14 +439,39 @@ async def handle_on_tool_error(
     run_id = event.get("run_id", "")
     tool_name = event.get("name", "")
     tool_key = f"{tool_name}_{run_id}"
-    tool_content = tool_blocks_map.get(tool_key)
+    bound = tool_blocks_map.get(tool_key)
 
-    if tool_content and isinstance(tool_content, ToolContent):
-        tool_content.error = _coerce_tool_error(event["data"].get("error", "Unknown error"))
-        tool_content.duration = _calculate_duration(start_time)
-        tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
-        agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
-        start_time = perf_counter()
+    if bound is not None:
+        tool_content, bound_index = bound if isinstance(bound, tuple) else (bound, None)
+        # Do not mutate the stale reference directly: a prior publication
+        # rehydrated the Message and the bound object is no longer in it.
+        # Locate the live block the same way the success handler does.
+        blocks = agent_message.content_blocks or []
+        target = None
+        if (
+            bound_index is not None
+            and bound_index < len(blocks)
+            and isinstance(blocks[bound_index], ToolContent)
+            and blocks[bound_index].name == tool_name
+        ):
+            target = blocks[bound_index]
+        if target is None:
+            for content in blocks:
+                if (
+                    isinstance(content, ToolContent)
+                    and content.name == tool_name
+                    and content.tool_input == tool_content.tool_input
+                    and content.output is None
+                ):
+                    target = content
+                    break
+        if target is not None:
+            target.error = _coerce_tool_error(event["data"].get("error", "Unknown error"))
+            target.duration = _calculate_duration(start_time)
+            target.header = {"title": f"Error using **{target.name}**", "icon": "Hammer"}
+            agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
+            start_time = perf_counter()
+            tool_blocks_map[tool_key] = (target, bound_index)
     return agent_message, start_time
 
 
