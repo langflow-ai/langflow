@@ -1380,6 +1380,28 @@ def relocation_line(result) -> str:
     return f"{line}  chunks {counts}"
 
 
+async def _schema_mismatch() -> str | None:
+    """Say why the database is not at this Langflow's schema, or None when it is."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    import langflow
+    from langflow.services.database.migration import get_current_alembic_heads
+
+    config = Config()
+    config.set_main_option("script_location", str(Path(langflow.__file__).parent / "alembic"))
+    expected = set(ScriptDirectory.from_config(config).get_heads())
+    async with session_scope() as session:
+        found = set(await get_current_alembic_heads(session))
+    if found == expected:
+        return None
+    return (
+        f"The database is at revision {', '.join(sorted(found)) or 'none'} and this Langflow expects "
+        f"{', '.join(sorted(expected))}. This command does not migrate the database: run it with the "
+        "Langflow version that matches the database, or upgrade the database first."
+    )
+
+
 async def _relocate_kb(
     *,
     target_backend_type: str,
@@ -1389,8 +1411,15 @@ async def _relocate_kb(
     batch_size: int,
 ) -> int:
     from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
+    from langflow.services.utils import register_all_service_factories
 
-    await initialize_services()
+    # Not initialize_services(): that is the server's startup, and it migrates the
+    # database, sets up the superuser, reassigns orphaned flows and prunes history,
+    # dry run or not. Each service is built on first use, which writes nothing.
+    register_all_service_factories()
+    if mismatch := await _schema_mismatch():
+        typer.echo(mismatch, err=True)
+        raise typer.Exit(1)
     results = await relocate_knowledge_bases(
         target_backend_type=target_backend_type,
         target_backend_config=target_backend_config,
