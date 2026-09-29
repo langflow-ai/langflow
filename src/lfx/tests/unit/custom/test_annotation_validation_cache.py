@@ -147,7 +147,11 @@ def test_future_import_location_matches_fix_missing_locations() -> None:
     assert ast.dump(located, include_attributes=True) == ast.dump(fixed, include_attributes=True)
     fixed_code = compile(fixed, "<string>", "exec")
     located_code = compile(located, "<string>", "exec")
-    assert list(located_code.co_positions()) == list(fixed_code.co_positions())
+    # co_positions (line and column spans) exists from Python 3.11; 3.10 has line tables only.
+    if sys.version_info >= (3, 11):
+        assert list(located_code.co_positions()) == list(fixed_code.co_positions())
+    else:
+        assert list(located_code.co_lines()) == list(fixed_code.co_lines())
 
 
 def _source_line(code: str, text: str) -> int:
