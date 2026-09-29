@@ -292,39 +292,30 @@ def _module_namespace(module: ModuleType) -> dict[str, Any] | None:
     return namespace if isinstance(namespace, dict) else None
 
 
-# (bindings, subscript bases, binding ids, subscript base ids), rebuilt whenever
-# ``_safe_type_bindings()`` returns a different dict.
-_SAFE_BINDING_IDS: tuple[dict[str, Any], tuple[Any, ...], frozenset[int], frozenset[int]] | None = None
+_SAFE_TYPE_BINDING_IDS: tuple[dict[str, Any], frozenset[int]] | None = None
+_SAFE_SUBSCRIPT_BASE_IDS: tuple[dict[str, Any], tuple[Any, ...], frozenset[int]] | None = None
 
 
-def _safe_binding_ids() -> tuple[frozenset[int], frozenset[int]]:
-    """Return ``id()`` sets of the safe type bindings and of the safe subscript bases.
+def _safe_type_binding_ids() -> frozenset[int]:
+    """Return ``id()`` of every value in ``_safe_type_bindings()`` for O(1) identity checks.
 
-    Subscript bases are each binding named in ``_SAFE_SUBSCRIPT_BINDING_NAMES``
-    and its ``typing.get_origin``. Every referenced object is stored beside the
-    ids so it stays alive, and ``id(value) in ids`` matches ``value is base``.
+    The bindings dict is stored beside the ids so each bound object stays alive.
+    ``id(value) in ids`` then matches ``value is binding`` for those objects.
     """
-    global _SAFE_BINDING_IDS  # noqa: PLW0603
+    global _SAFE_TYPE_BINDING_IDS  # noqa: PLW0603
     bindings = _safe_type_bindings()
-    cached = _SAFE_BINDING_IDS
+    cached = _SAFE_TYPE_BINDING_IDS
     if cached is not None and cached[0] is bindings:
-        return cached[2], cached[3]
+        return cached[1]
 
-    subscript_bases = tuple(
-        base
-        for name in _SAFE_SUBSCRIPT_BINDING_NAMES
-        if (binding := bindings.get(name)) is not None
-        for base in (binding, typing.get_origin(binding))
-    )
-    binding_ids = frozenset(id(binding) for binding in bindings.values())
-    subscript_base_ids = frozenset(id(base) for base in subscript_bases)
-    _SAFE_BINDING_IDS = (bindings, subscript_bases, binding_ids, subscript_base_ids)
-    return binding_ids, subscript_base_ids
+    ids = frozenset(id(binding) for binding in bindings.values())
+    _SAFE_TYPE_BINDING_IDS = (bindings, ids)
+    return ids
 
 
 def _is_safe_type_binding(value: Any) -> bool:
     """Return whether ``value`` is one of the server-owned safe type bindings, by identity."""
-    return id(value) in _safe_binding_ids()[0]
+    return id(value) in _safe_type_binding_ids()
 
 
 @lru_cache(maxsize=1)
@@ -442,9 +433,32 @@ def _runtime_module_attribute(node: ast.Attribute, globalns: dict[str, Any] | No
     return True, value
 
 
+def _safe_subscript_base_ids() -> frozenset[int]:
+    """Return ``id()`` of every safe subscript binding and of its ``typing.get_origin``.
+
+    The referenced objects are kept alive with the ids, so membership is
+    equivalent to the identity comparisons it replaces.
+    """
+    global _SAFE_SUBSCRIPT_BASE_IDS  # noqa: PLW0603
+    bindings = _safe_type_bindings()
+    cached = _SAFE_SUBSCRIPT_BASE_IDS
+    if cached is not None and cached[0] is bindings:
+        return cached[2]
+
+    bases: list[Any] = []
+    for name in _SAFE_SUBSCRIPT_BINDING_NAMES:
+        binding = bindings.get(name)
+        if binding is not None:
+            bases.extend((binding, typing.get_origin(binding)))
+    pinned = tuple(bases)
+    ids = frozenset(id(base) for base in pinned)
+    _SAFE_SUBSCRIPT_BASE_IDS = (bindings, pinned, ids)
+    return ids
+
+
 def _is_safe_subscript_base(value: Any) -> bool:
     """Return whether subscription is implemented by a fixed, trusted type object."""
-    return id(value) in _safe_binding_ids()[1]
+    return id(value) in _safe_subscript_base_ids()
 
 
 def _is_safe_union_member(value: Any) -> bool:
