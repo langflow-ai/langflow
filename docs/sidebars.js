@@ -529,6 +529,7 @@ module.exports = {
             "Components/bundles-baidu",
             "Components/bundles-bing",
             "Components/bundles-cassandra",
+            "Components/bundles-cheaperinference",
             "Components/bundles-chroma",
             "Components/bundles-cleanlab",
             "Components/bundles-codeagents",

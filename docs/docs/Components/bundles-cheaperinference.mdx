@@ -1,0 +1,44 @@
+---
+title: Cheaper Inference
+slug: /bundles-cheaperinference
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Cheaper Inference** bundle.
+
+[Cheaper Inference](https://cheaperinference.com) is an OpenAI-compatible API for models from many AI labs.
+Each model costs 15–60% less than the list price of its lab.
+
+To get an API key, [create a Cheaper Inference account](https://cheaperinference.com/signup).
+
+To configure Cheaper Inference once for all flows, you can also use the [**OpenAI Compatible**](./bundles-openai-compatible) model provider with the base URL `https://api.cheaperinference.com/v1`.
+
+For more information, see the [Cheaper Inference documentation](https://cheaperinference.com/docs).
+
+## Cheaper Inference text generation
+
+This component generates text with a Cheaper Inference model.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Cheaper Inference model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+### Cheaper Inference text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Cheaper Inference API key for authentication. |
+| model_name | Dropdown | Input parameter. The model to use for chat completion. When you enter an API key, the options are fetched from the Cheaper Inference model list. Default: `gpt-5.4-mini`. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |
