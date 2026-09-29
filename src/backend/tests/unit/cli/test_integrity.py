@@ -83,6 +83,7 @@ class TestCleanInstance:
 
         assert report.ok, [(c.name, c.problems) for c in report.checks if c.status == "fail"]
         assert [c.name for c in report.checks] == [
+            "schema",
             "credentials",
             "files",
             "knowledge bases",
@@ -349,3 +350,68 @@ class TestLivePgvector:
 
         assert counts.status == "fail"
         assert "store holds 4, row records 6" in counts.problems[0]
+
+
+class TestReadOnly:
+    """The check reads. Running it must not create storage or change the database."""
+
+    async def test_an_existing_empty_store_directory_is_not_initialized(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        kb_path = kb_root / active_user.username / "kb-empty-dir"
+        kb_path.mkdir(parents=True)
+        await _add(KnowledgeBaseRecord(name="kb-empty-dir", user_id=active_user.id, backend_type="chroma", chunks=0))
+
+        await check_instance()
+
+        assert list(kb_path.iterdir()) == []
+
+    async def test_a_store_without_this_collection_does_not_get_one(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        import chromadb
+
+        # A store directory that exists and holds another collection, but not this one.
+        kb_path = kb_root / active_user.username / "kb-no-collection"
+        kb_path.mkdir(parents=True)
+        client = chromadb.PersistentClient(path=str(kb_path))
+        client.get_or_create_collection("something-else")
+        del client
+        await _add(
+            KnowledgeBaseRecord(name="kb-no-collection", user_id=active_user.id, backend_type="chroma", chunks=3)
+        )
+
+        report = await check_instance()
+
+        client = chromadb.PersistentClient(path=str(kb_path))
+        assert sorted(c.name for c in client.list_collections()) == ["something-else"]
+        assert "store holds 0, row records 3" in " ".join(_check(report, "vector counts").problems)
+
+    async def test_a_database_on_another_schema_is_reported_and_not_read(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        async with session_scope() as session:
+            revision = (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).one()[0]
+            await session.exec(sa.text("UPDATE alembic_version SET version_num = 'aaaaaaaaaaaa'"))
+            await session.commit()
+        try:
+            report = await check_instance()
+        finally:
+            async with session_scope() as session:
+                await session.exec(sa.text("UPDATE alembic_version SET version_num = :r").bindparams(r=revision))
+                await session.commit()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        assert "aaaaaaaaaaaa" in report.checks[0].summary
+
+    async def test_the_cli_entry_point_leaves_the_database_as_it_found_it(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        from datetime import datetime, timezone
+
+        from langflow.__main__ import _check_integrity
+        from langflow.services.database.models.auth.authz import AuthzAuditLog
+
+        # Startup maintenance prunes audit rows older than the retention window.
+        old = AuthzAuditLog(action="flow:read", result="allow", timestamp=datetime(2020, 1, 1, tzinfo=timezone.utc))
+        await _add(old)
+        async with session_scope() as session:
+            revision_before = (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).all()
+
+        await _check_integrity()
+
+        async with session_scope() as session:
+            assert await session.get(AuthzAuditLog, old.id) is not None
+            assert (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).all() == revision_before

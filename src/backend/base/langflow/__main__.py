@@ -1337,9 +1337,9 @@ def check_integrity(
 
 
 async def _check_integrity() -> bool:
-    from langflow.cli.integrity import check_instance
+    from langflow.cli.integrity import check_instance, open_instance
 
-    await initialize_services()
+    open_instance()
     report = await check_instance()
     for check in report.checks:
         typer.echo(f"{check.status:5} {check.name:16} {check.summary}")

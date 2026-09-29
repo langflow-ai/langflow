@@ -169,6 +169,17 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
             logger.debug("Chroma count() failed for %s: %s", self.kb_name, exc)
             return 0
 
+    async def read_only_count(self) -> int | None:
+        # Opening a client on an empty directory creates chroma.sqlite3, and the vector
+        # store path creates a missing collection, so check for both before reading.
+        if not (self.kb_path / "chroma.sqlite3").exists():
+            return None
+        self._client = self._get_fresh_client()
+        try:
+            return self._client.get_collection(self.kb_name).count()
+        except chromadb.errors.NotFoundError:
+            return None
+
     async def iter_documents(
         self,
         *,
@@ -449,6 +460,15 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         except chromadb.errors.ChromaError as exc:  # pragma: no cover — defensive
             logger.debug("Chroma Cloud count() failed for %s: %s", self.kb_name, exc)
             return 0
+
+    async def read_only_count(self) -> int | None:
+        # The vector store path creates a missing collection; look it up instead.
+        await self.ensure_ready()
+        self._client = self._get_cloud_client()
+        try:
+            return self._client.get_collection(self._resolve_collection_name()).count()
+        except chromadb.errors.NotFoundError:
+            return None
 
     async def iter_documents(
         self,

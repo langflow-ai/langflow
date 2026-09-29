@@ -8,7 +8,8 @@ someone opens the flow, file or memory that depends on it.
 
 Each check reads and reports. None of them writes, repairs or deletes, so this is
 safe to run against production: after a restore, an upgrade, a migration, or when a
-customer reports flows failing for no visible reason.
+customer reports flows failing for no visible reason. Start the instance with
+``open_instance`` for that, not the application's own startup, which writes.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, Literal
 
+import sqlalchemy as sa
 from cryptography.fernet import InvalidToken
 from sqlmodel import func, select
 
@@ -51,13 +53,35 @@ class IntegrityReport:
         return all(check.status != "fail" for check in self.checks)
 
 
+def open_instance() -> None:
+    """Start what a read-only check reads through, and nothing else.
+
+    The application's own startup, ``initialize_services``, also migrates the
+    database, sets up the superuser, reassigns orphaned flows and prunes old history,
+    each in a transaction of its own that commits. A check run after it would report
+    on a database it had already changed. Registering the service factories is
+    enough: each service is built on first use, and building one opens connections
+    without writing.
+    """
+    from langflow.services.utils import register_all_service_factories
+
+    register_all_service_factories()
+
+
 async def check_instance() -> IntegrityReport:
     """Run every check against the running instance's configuration."""
     from langflow.services.deps import session_scope
 
     # One session, and it never commits: everything here is a read.
     async with session_scope() as session:
+        schema = await check_schema(session)
+        if schema.status != "ok":
+            # The other checks read through this Langflow's models, which on another
+            # schema would misread rows or fail on a missing column.
+            await session.rollback()
+            return IntegrityReport([schema])
         checks = [
+            schema,
             await check_credentials(session),
             await check_files(session),
         ]
@@ -67,6 +91,43 @@ async def check_instance() -> IntegrityReport:
         checks.append(await check_authorization(session))
         await session.rollback()
     return IntegrityReport(checks)
+
+
+async def check_schema(session: AsyncSession) -> CheckResult:
+    """Is the database at the schema this Langflow reads?
+
+    Nothing here migrates it: a check that upgraded the schema first would report
+    on a database that is no longer the one it was pointed at.
+    """
+    heads = set(script_directory().get_heads())
+    try:
+        revisions = {row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))}
+    except sa.exc.SQLAlchemyError:
+        await session.rollback()
+        revisions = set()
+    if revisions == heads:
+        return CheckResult("schema", "ok", f"database at revision {', '.join(sorted(revisions))}")
+    found = ", ".join(sorted(revisions)) or "no recorded revision"
+    return CheckResult(
+        "schema",
+        "fail",
+        f"database is at {found} and this Langflow reads {', '.join(sorted(heads))}; run the check with "
+        "the Langflow version that last ran against this database",
+    )
+
+
+def script_directory():
+    """This Langflow's migration scripts, to read the revision it expects."""
+    import pathlib
+
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    import langflow
+
+    config = Config()
+    config.set_main_option("script_location", str(pathlib.Path(langflow.__file__).parent / "alembic"))
+    return ScriptDirectory.from_config(config)
 
 
 def _result(name: str, problems: list[str], ok_summary: str, fail_summary: str) -> CheckResult:
@@ -257,11 +318,17 @@ async def _check_knowledge_bases(
                     user_id=record.user_id,
                 )
                 try:
-                    connection = await backend.test_connection()
-                    if not connection.ok:
-                        unreachable.append(f"{label}: {connection.message}")
-                        continue
-                    count = await backend.count()
+                    if kb_path is None:
+                        # A remote store's connection probe only reads. A local one's opens a
+                        # client, which creates the store in an empty directory, so the
+                        # read-only count below stands in for it.
+                        connection = await backend.test_connection()
+                        if not connection.ok:
+                            unreachable.append(f"{label}: {connection.message}")
+                            continue
+                    # None means the store or its collection does not exist, which reads
+                    # the same as a store never written to.
+                    count = await backend.read_only_count() or 0
                 finally:
                     await backend.teardown()
         except Exception as exc:  # noqa: BLE001 - reported per knowledge base
