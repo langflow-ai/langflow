@@ -199,6 +199,8 @@ _SAFE_SUBSCRIPT_BINDING_NAMES = {
 }
 
 _MISSING = object()
+_LITERAL_ARGUMENT_TYPES = frozenset({str, bytes, int, float, complex, bool})
+_WRAPPED_METHOD_TYPES = frozenset({classmethod, staticmethod})
 
 
 def safe_annotation_aliases(imports: list[Any]) -> dict[str, str]:
@@ -254,6 +256,32 @@ def _module_namespace(module: ModuleType) -> dict[str, Any] | None:
     except (AttributeError, TypeError):
         return None
     return namespace if isinstance(namespace, dict) else None
+
+
+_SAFE_TYPE_BINDING_IDS: tuple[dict[str, Any], frozenset[int]] | None = None
+_SAFE_SUBSCRIPT_BASE_IDS: tuple[dict[str, Any], tuple[Any, ...], frozenset[int]] | None = None
+
+
+def _safe_type_binding_ids() -> frozenset[int]:
+    """Return ``id()`` of every value in ``_safe_type_bindings()`` for O(1) identity checks.
+
+    The ids are derived from the exact bindings dictionary returned by the
+    cached ``_safe_type_bindings()``, and that dictionary is kept alive next to
+    them, so every bound object stays alive and ``id(value) in ids`` is
+    equivalent to ``any(value is binding for binding in bindings.values())``.
+    """
+    global _SAFE_TYPE_BINDING_IDS  # noqa: PLW0603
+    bindings = _safe_type_bindings()
+    cached = _SAFE_TYPE_BINDING_IDS
+    if cached is None or cached[0] is not bindings:
+        cached = (bindings, frozenset(id(binding) for binding in bindings.values()))
+        _SAFE_TYPE_BINDING_IDS = cached
+    return cached[1]
+
+
+def _is_safe_type_binding(value: Any) -> bool:
+    """Return whether ``value`` is one of the server-owned safe type bindings, by identity."""
+    return id(value) in _safe_type_binding_ids()
 
 
 @lru_cache(maxsize=1)
@@ -314,7 +342,7 @@ def _is_runtime_annotation_binding(
     annotation would let downstream type formatting invoke its attribute
     hooks, so plain objects are rejected before they leave this resolver.
     """
-    if any(value is binding for binding in _safe_type_bindings().values()):
+    if _is_safe_type_binding(value):
         return True
 
     # ``type(value)`` observes the real runtime type without consulting a
@@ -337,7 +365,7 @@ def _is_runtime_annotation_binding(
     return all(
         _is_runtime_annotation_binding(argument, seen=nested_seen, depth=depth + 1)
         or argument is Ellipsis
-        or type(argument) in {str, bytes, int, float, complex, bool}
+        or type(argument) in _LITERAL_ARGUMENT_TYPES
         for argument in arguments
     )
 
@@ -371,14 +399,29 @@ def _runtime_module_attribute(node: ast.Attribute, globalns: dict[str, Any] | No
     return True, value
 
 
+def _safe_subscript_base_ids() -> frozenset[int]:
+    """Return ``id()`` of every safe subscript binding and of its ``typing.get_origin``.
+
+    The referenced objects are kept alive with the ids, so membership is
+    equivalent to the identity comparisons it replaces.
+    """
+    global _SAFE_SUBSCRIPT_BASE_IDS  # noqa: PLW0603
+    bindings = _safe_type_bindings()
+    cached = _SAFE_SUBSCRIPT_BASE_IDS
+    if cached is None or cached[0] is not bindings:
+        bases: list[Any] = []
+        for name in _SAFE_SUBSCRIPT_BINDING_NAMES:
+            binding = bindings.get(name)
+            if binding is not None:
+                bases.extend((binding, typing.get_origin(binding)))
+        cached = (bindings, tuple(bases), frozenset(id(base) for base in bases))
+        _SAFE_SUBSCRIPT_BASE_IDS = cached
+    return cached[2]
+
+
 def _is_safe_subscript_base(value: Any) -> bool:
     """Return whether subscription is implemented by a fixed, trusted type object."""
-    bindings = _safe_type_bindings()
-    return any(
-        value is binding or value is typing.get_origin(binding)
-        for name in _SAFE_SUBSCRIPT_BINDING_NAMES
-        if (binding := bindings.get(name)) is not None
-    )
+    return id(value) in _safe_subscript_base_ids()
 
 
 def _is_safe_union_member(value: Any) -> bool:
@@ -629,7 +672,7 @@ def snapshot_trusted_class_method_returns(
                 continue
             function = (
                 object.__getattribute__(descriptor, "__func__")
-                if type(descriptor) in {classmethod, staticmethod}
+                if type(descriptor) in _WRAPPED_METHOD_TYPES
                 else descriptor
             )
             if type(function) is not FunctionType:
@@ -663,7 +706,7 @@ def _annotation_contains_untracked_class(
     depth: int = 0,
 ) -> bool:
     if issubclass(type(annotation), type):
-        is_server_binding = any(annotation is binding for binding in _safe_type_bindings().values())
+        is_server_binding = _is_safe_type_binding(annotation)
         return not is_server_binding and id(annotation) not in preexisting_class_ids
     if depth >= _MAX_ANNOTATION_DEPTH or id(annotation) in seen:
         return True
@@ -827,9 +870,7 @@ def _resolve_trusted_method_snapshot(
             return True, None
         descriptor = MappingProxyType.__getitem__(namespace, method_name)
         function = (
-            object.__getattribute__(descriptor, "__func__")
-            if type(descriptor) in {classmethod, staticmethod}
-            else descriptor
+            object.__getattribute__(descriptor, "__func__") if type(descriptor) in _WRAPPED_METHOD_TYPES else descriptor
         )
         if (
             type(function) is not FunctionType
