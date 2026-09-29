@@ -140,6 +140,25 @@ class TestCredentials:
         assert check.status == "fail"
         assert any(p.startswith("apikey.api_key row ") for p in check.problems)
 
+    async def test_a_trigger_signing_secret_under_another_key_is_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        # Webhook ingress decrypts this with the instance key and rejects every delivery when it does not open.
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.trigger.model import Trigger
+
+        flow = Flow(name=f"webhook-{uuid.uuid4().hex[:6]}", user_id=active_user.id)
+        await _add(flow)
+        foreign = Fernet(Fernet.generate_key()).encrypt(b"whsec").decode()
+        await _add(
+            Trigger(
+                flow_id=flow.id, user_id=active_user.id, name="hook", kind="webhook", signing_secret_encrypted=foreign
+            )
+        )
+
+        check = _check(await check_instance(), "credentials")
+
+        assert check.status == "fail"
+        assert any(p.startswith("trigger.signing_secret_encrypted row ") for p in check.problems)
+
 
 class TestFiles:
     async def test_a_row_without_bytes_is_reported(self, active_user, storage_dir, kb_root):  # noqa: ARG002

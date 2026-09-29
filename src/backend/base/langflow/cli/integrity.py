@@ -191,6 +191,7 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.database.models.mcp_server.model import MCPServer
+    from langflow.services.database.models.trigger.model import Trigger
     from langflow.services.database.models.user.model import User
     from langflow.services.database.models.variable.model import Variable
     from langflow.services.variable.constants import CREDENTIAL_TYPE
@@ -219,6 +220,7 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
         "connection_secret.encrypted_payload",
         await session.exec(select(ConnectionSecret.connection_id, ConnectionSecret.encrypted_payload)),
     )
+    add("trigger.signing_secret_encrypted", await session.exec(select(Trigger.id, Trigger.signing_secret_encrypted)))
 
     for folder_id, settings in await session.exec(select(Folder.id, Folder.auth_settings)):
         if isinstance(settings, dict):
