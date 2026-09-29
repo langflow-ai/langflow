@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: c3e1d5a7f902
-Revises: f2a7c9e4b681
+Revises: 4e7a2b9c1d05
 
 With AUTO_LOGIN off, startup retires the default superuser when it owns work
 and has never signed in: it deactivates the account instead of deleting it.
@@ -17,7 +17,7 @@ from alembic import op
 from langflow.utils import migration
 
 revision: str = "c3e1d5a7f902"  # pragma: allowlist secret
-down_revision: str | None = "f2a7c9e4b681"  # pragma: allowlist secret
+down_revision: str | None = "4e7a2b9c1d05"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
