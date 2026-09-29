@@ -350,6 +350,8 @@ def verify_migration(conn, new_key: str) -> tuple[int, int]:
             continue
         try:
             settings_dict = auth_settings if isinstance(auth_settings, dict) else json.loads(auth_settings)
+            if settings_dict is None:
+                continue
             for field in SENSITIVE_AUTH_FIELDS:
                 if settings_dict.get(field):
                     decrypt_with_key(settings_dict[field], new_key)
@@ -566,6 +568,8 @@ def migrate(
                 continue
             try:
                 settings_dict = auth_settings if isinstance(auth_settings, dict) else json.loads(auth_settings)
+                if settings_dict is None:  # JSON null, which SQLite returns as the text 'null'
+                    continue
                 new_settings, failed_fields = migrate_auth_settings(settings_dict, old_key, new_key)
                 if failed_fields:
                     failed += 1

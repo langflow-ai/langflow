@@ -1201,3 +1201,22 @@ class TestRotationOnAppWrittenDatabase:
             migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
 
         assert not (config_dir / "secret_key").exists()
+
+    def test_skips_projects_without_auth_settings(self, migrate_module, app_db, new_key):
+        from langflow.services.database.models import User
+        from langflow.services.database.models.folder.model import Folder
+        from sqlmodel import Session, select
+
+        engine, config_dir, url, app_key = app_db
+        # The default folder Langflow creates for every user leaves auth_settings unset.
+        with Session(engine) as session:
+            session.add(Folder(name="Starter Project", user_id=session.exec(select(User)).one().id))
+            session.commit()
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT auth_settings FROM folder")).scalar() == "null"
+
+        migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT auth_settings FROM folder")).scalar() == "null"
+        assert migrate_module.read_secret_key_from_file(config_dir) == new_key
