@@ -220,6 +220,15 @@ async def create_assignment(
             reason="user_not_found",
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_id not found")
+    if not user.is_active:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:create",
+            obj="role_assignment:*",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="user_inactive",
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cannot assign roles to an inactive user")
     role = await session.get(AuthzRole, payload.role_id)
     if role is None:
         await _audit_deny(
