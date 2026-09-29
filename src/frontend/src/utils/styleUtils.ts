@@ -447,6 +447,11 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Baidu", name: "baidu", icon: "BaiduQianfan" },
   { display_name: "Bing", name: "bing", icon: "Bing" },
   { display_name: "Cassandra", name: "cassandra", icon: "Cassandra" },
+  {
+    display_name: "Cheaper Inference",
+    name: "cheaperinference",
+    icon: "CheaperInference",
+  },
   { display_name: "Chroma", name: "chroma", icon: "Chroma" },
   { display_name: "ClickHouse", name: "clickhouse", icon: "Clickhouse" },
   { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },

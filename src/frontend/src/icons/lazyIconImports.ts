@@ -125,6 +125,10 @@ export const lazyIconsMapping = {
     import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
   Cassandra: () =>
     import("@/icons/Cassandra").then((mod) => ({ default: mod.CassandraIcon })),
+  CheaperInference: () =>
+    import("@/icons/CheaperInference").then((mod) => ({
+      default: mod.CheaperInferenceIcon,
+    })),
   Chroma: () =>
     import("@/icons/ChromaIcon").then((mod) => ({ default: mod.ChromaIcon })),
   Cleanlab: () =>

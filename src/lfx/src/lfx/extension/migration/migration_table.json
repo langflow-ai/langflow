@@ -5047,6 +5047,11 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "CheaperInferenceComponent",
+      "target": "ext:cheaperinference:CheaperInferenceComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "SerplySearchComponent",
       "target": "ext:serply:SerplySearchComponent@official",
       "added_in": "1.13.0"
