@@ -12,7 +12,7 @@ Additive only. Creating an index carries no data with it, and the down path
 drops it again.
 
 Revision ID: e4d9a1c72b38
-Revises: c3b8d5f2a760
+Revises: b6f3a8d2c471
 Create Date: 2026-09-23
 
 Phase: EXPAND
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "e4d9a1c72b38"  # pragma: allowlist secret
-down_revision: str | None = "c3b8d5f2a760"  # pragma: allowlist secret
+down_revision: str | None = "b6f3a8d2c471"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

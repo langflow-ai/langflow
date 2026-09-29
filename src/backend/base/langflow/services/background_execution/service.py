@@ -39,6 +39,7 @@ from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.jobs.service import BACKGROUND_ORIGIN, BACKGROUND_ORIGIN_KEY
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -474,7 +475,13 @@ class BackgroundExecutionService(Service):
         # The API models default both fields to {}, so treat empty mappings as no
         # override rather than encrypting an envelope for every ordinary run.
         overrides = {key: value for key, value in supplied_overrides.items() if value}
-        metadata: dict[str, Any] = {"request": self._redact_request(request)}
+        # Written with the QUEUED row: the metrics collector uses this as the
+        # durable identity of a background run, so it must exist before the run
+        # starts and survive a run that fails before its first event.
+        metadata: dict[str, Any] = {
+            BACKGROUND_ORIGIN_KEY: BACKGROUND_ORIGIN,
+            "request": self._redact_request(request),
+        }
         if overrides:
             from langflow.services.auth.utils import get_fernet
 

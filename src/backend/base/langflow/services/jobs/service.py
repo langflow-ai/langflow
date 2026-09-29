@@ -43,6 +43,21 @@ _APPEND_EVENT_MAX_RETRIES = 50
 # eligible.
 _RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT)
 
+# Durable identity of a v2 background submission, written into job_metadata with
+# the QUEUED row, before anything runs. The job table is shared: v1 /build and
+# the v1 endpoints write WORKFLOW rows too, and ingestion and trigger firings
+# write their own, so neither job type nor "has emitted an event" identifies a
+# background run. Event presence in particular misses a run that failed before
+# its first durable frame.
+BACKGROUND_ORIGIN_KEY = "origin"
+BACKGROUND_ORIGIN = "v2_background"
+
+# Set once, the first time a job reaches IN_PROGRESS. Durable evidence that a
+# run started, independent of where the row sits now: a retry or a resume puts
+# the row back in QUEUED, and a started counter derived from current status
+# would go backwards, which Prometheus reads as a counter reset.
+BACKGROUND_STARTED_AT_KEY = "started_at"
+
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
     """Return the raw pause request, unwrapping the wire adapter's envelope.
@@ -1172,6 +1187,26 @@ class JobService(Service):
             await session.flush()
             return [job.job_id for job in jobs]
 
+    async def mark_job_started(self, job_id: UUID) -> None:
+        """Flip a job to IN_PROGRESS and record that it has started.
+
+        The stamp is written once and never cleared, so it survives the row
+        going back to QUEUED on a retry requeue or a scaled resume. Metrics read
+        it instead of the current status, which is what keeps a cumulative
+        started counter from going backwards mid-run.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return
+            job.status = JobStatus.IN_PROGRESS
+            metadata = dict(job.job_metadata or {})
+            if not metadata.get(BACKGROUND_STARTED_AT_KEY):
+                metadata[BACKGROUND_STARTED_AT_KEY] = datetime.now(timezone.utc).isoformat()
+                job.job_metadata = metadata
+            session.add(job)
+            await session.flush()
+
     async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
 
@@ -1200,7 +1235,7 @@ class JobService(Service):
         try:
             # Update to IN_PROGRESS
             await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
-            await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+            await self.mark_job_started(job_id)
 
             # Execute the wrapped function
             await logger.ainfo(f"Executing job function for job_id={job_id}")

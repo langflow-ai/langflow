@@ -29,8 +29,9 @@ from sqlalchemy import case
 from sqlmodel import col, func, select
 
 from langflow.services.background_execution.metrics import current_backend
-from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus, JobType
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import get_telemetry_service, session_scope
+from langflow.services.jobs.service import BACKGROUND_ORIGIN, BACKGROUND_ORIGIN_KEY, BACKGROUND_STARTED_AT_KEY
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -40,33 +41,43 @@ if TYPE_CHECKING:
 # out made those jobs vanish from a gauge documented as a count by status. COMPLETED /
 # FAILED / TIMED_OUT / CANCELLED are terminal.
 NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED)
+TERMINAL_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT, JobStatus.CANCELLED)
 
 
-def _workflow_only():
-    """Restrict a metric to background WORKFLOW jobs, matching what the queue runs.
+def _background_jobs():
+    """Restrict a metric to v2 background runs, by the marker ``submit`` writes.
 
-    ``claim_next_queued_lease`` only ever claims WORKFLOW rows, so a gauge that
-    counts every job type reports work this queue will never run: knowledge-base
-    ingestion creates QUEUED rows of its own type. Filtering on type also lets
-    ``ix_job_claim_scan (status, type, created_timestamp)`` serve these queries,
-    which is why no separate (status, created_timestamp) index is needed.
+    The job table is shared. v1 ``/build`` and the v1 endpoints write WORKFLOW
+    rows, ingestion and trigger firings write their own, and none of those are
+    this queue's work. Event presence used to stand in for identity, but it
+    misses a run whose frame source raised before the first durable frame:
+    ``execute_with_status`` marks that row FAILED with an empty event list, and
+    the failure metrics dropped it entirely.
+
+    The marker is written with the QUEUED row, so it exists before anything
+    runs. Rows written before it existed carry none and are not counted, which
+    keeps a legacy install's history out of these gauges rather than guessing.
     """
-    return col(Job.type) == JobType.WORKFLOW
+    return (col(Job.type) == JobType.WORKFLOW) & (
+        col(Job.job_metadata)[BACKGROUND_ORIGIN_KEY].as_string() == BACKGROUND_ORIGIN
+    )
 
 
-def _has_job_events():
-    """EXISTS subquery: the job has at least one ``job_events`` row.
+def _has_started():
+    """Durable evidence that a run started, independent of where it sits now.
 
-    Distinguishes a TRUE background job from a Memory-Base "run job". Every flow
-    build writes a second ``job`` row keyed by the graph run_id (``build.py``,
-    predates the bg work); it is ``type=workflow`` too, so a naive status query
-    double-counts it. The background runner uniquely appends ``job_events`` rows,
-    while run jobs never have any (they go straight IN_PROGRESS->terminal via
-    ``execute_with_status`` and never QUEUED). So a background job is
-    ``status == QUEUED`` OR EXISTS(job_events). ``job_id`` is indexed
-    (UNIQUE(job_id, seq)), so the EXISTS is cheap and dialect-agnostic.
+    ``mark_job_started`` stamps this once and never clears it, so a retry
+    requeue or a scaled resume putting the row back in QUEUED does not undo it.
+    Counting starts by current status made the cumulative counter fall, which
+    Prometheus reads as a reset.
+
+    A terminal row counts as started whether or not it carries the stamp: a run
+    cannot finish without starting, terminal states never revert, and this also
+    covers rows that finished before the stamp existed.
     """
-    return select(JobEvent.id).where(col(JobEvent.job_id) == Job.job_id).exists()
+    return col(Job.job_metadata)[BACKGROUND_STARTED_AT_KEY].as_string().is_not(None) | col(Job.status).in_(
+        TERMINAL_STATUSES
+    )
 
 
 async def count_nonterminal_jobs(session) -> dict[str, int]:
@@ -87,9 +98,8 @@ async def count_nonterminal_jobs(session) -> dict[str, int]:
     # otherwise inflate that count.
     stmt = (
         select(Job.status, func.count())
-        .where(_workflow_only())
+        .where(_background_jobs())
         .where(col(Job.status).in_(NONTERMINAL_STATUSES))
-        .where((Job.status == JobStatus.QUEUED) | _has_job_events())
         .group_by(Job.status)
     )
     rows = (await session.exec(stmt)).all()
@@ -102,7 +112,7 @@ async def oldest_queued_seconds(session, now: datetime) -> float:
     Returns ``0.0`` when nothing is queued. ``now`` is injected (aware UTC) for
     determinism.
     """
-    stmt = select(func.min(Job.created_timestamp)).where(_workflow_only()).where(Job.status == JobStatus.QUEUED)
+    stmt = select(func.min(Job.created_timestamp)).where(_background_jobs()).where(Job.status == JobStatus.QUEUED)
     result = await session.exec(stmt)
     oldest = result.first()
     if oldest is None:
@@ -143,33 +153,36 @@ async def terminal_counts(session) -> dict[str, int]:
     Returns ``{"started", "completed", "failed_error", "failed_worker_lost",
     "timed_out", "cancelled"}``:
 
-    * ``started`` — every background job that has begun: ``status != QUEUED``
-      AND EXISTS(job_events) (IN_PROGRESS plus every terminal state).
+    * ``started`` — every background job that has ever begun, counted from the
+      durable ``started_at`` stamp rather than from the current status, so a
+      retry requeue or a resume cannot make the cumulative counter fall.
     * ``completed`` — ``status == COMPLETED``.
     * FAILED jobs split by ``error->>'type'``: ``failed_worker_lost`` is FAILED
       AND ``type == 'worker_lost'``; ``failed_error`` is every other FAILED row.
     * ``timed_out`` / ``cancelled`` — the matching terminal statuses.
 
-    Every non-queued count adds the EXISTS(job_events) filter so a Memory-Base
-    "run job" (build.py's second workflow row, which never appends job_events)
-    is excluded — without it the counts double (see ``_has_job_events``). The
-    worker_lost split uses a dialect-aware JSON extract (see ``_error_type_expr``)
-    so it stays a single bounded SQL aggregate on both SQLite and Postgres.
+    Identity comes from the background marker (see ``_background_jobs``), which
+    excludes the Memory-Base "run job" that build.py writes as a second workflow
+    row, and unlike the old event-presence filter it still counts a run that
+    failed before emitting anything. The worker_lost split uses a dialect-aware
+    JSON extract (see ``_error_type_expr``) so it stays a single bounded SQL
+    aggregate on both SQLite and Postgres.
     """
     # One grouped scan, with worker_lost as a conditional sum inside it. This replaced six
     # separate counts, each of which was its own pass over an unbounded table.
-    has_events = _has_job_events()
     error_type = _error_type_expr(session)
     worker_lost_flag = case((error_type == "worker_lost", 1), else_=0)
 
     stmt = (
         select(Job.status, func.count(), func.coalesce(func.sum(worker_lost_flag), 0))
-        .where(_workflow_only())
-        .where(Job.status != JobStatus.QUEUED)
-        .where(has_events)
+        .where(_background_jobs())
+        .where(col(Job.status).in_(TERMINAL_STATUSES))
         .group_by(Job.status)
     )
     rows = (await session.exec(stmt)).all()
+
+    started_stmt = select(func.count()).select_from(Job).where(_background_jobs()).where(_has_started())
+    started = int((await session.exec(started_stmt)).one() or 0)
 
     by_status: dict[str, int] = {}
     worker_lost_by_status: dict[str, int] = {}
@@ -182,8 +195,7 @@ async def terminal_counts(session) -> dict[str, int]:
     failed_worker_lost = worker_lost_by_status.get(JobStatus.FAILED.value, 0)
 
     return {
-        # Everything past QUEUED has started, which is the sum of the grouped rows.
-        "started": sum(by_status.values()),
+        "started": started,
         "completed": by_status.get(JobStatus.COMPLETED.value, 0),
         # error_type != 'worker_lost' is NULL for FAILED rows with a NULL error or no type
         # key, so the plain-error count is the complement rather than its own predicate.
@@ -213,7 +225,7 @@ async def duration_percentiles(session, now: datetime, window_seconds: float) ->
     subtracting, the same way ``oldest_queued_seconds`` does.
 
     Only TRUE background jobs are considered (EXISTS(job_events)) so a run job's
-    near-instant duration does not skew p50/p95 — see ``_has_job_events``.
+    near-instant duration does not skew p50/p95 — see ``_background_jobs``.
     """
     cutoff = now - timedelta(seconds=window_seconds)
     # Bind the cutoff in the form the stored column uses: aware for postgres,
@@ -222,10 +234,9 @@ async def duration_percentiles(session, now: datetime, window_seconds: float) ->
     sql_cutoff = cutoff if dialect == "postgresql" else cutoff.replace(tzinfo=None)
     stmt = (
         select(Job.created_timestamp, Job.finished_timestamp)
-        .where(_workflow_only())
+        .where(_background_jobs())
         .where(col(Job.finished_timestamp).is_not(None))
         .where(col(Job.finished_timestamp) >= sql_cutoff)
-        .where(_has_job_events())
     )
     result = await session.exec(stmt)
     durations: list[float] = []

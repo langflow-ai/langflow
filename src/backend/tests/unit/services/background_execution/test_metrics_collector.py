@@ -28,9 +28,24 @@ from langflow.services.background_execution.metrics_collector import (
 )
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_telemetry_service, session_scope
-from langflow.services.jobs.service import JobService
+from langflow.services.jobs.service import BACKGROUND_ORIGIN, BACKGROUND_ORIGIN_KEY, JobService
 
 pytestmark = pytest.mark.usefixtures("client")
+
+
+async def _bg_job(service: JobService, job_id, **kwargs) -> None:
+    """Create a job the way ``submit`` does: carrying the background marker.
+
+    The marker is the collector's identity for a background run, so a fixture
+    without it is invisible to these metrics, exactly like a v1 build row.
+    """
+    await service.create_job(
+        job_id=job_id,
+        flow_id=uuid4(),
+        user_id=uuid4(),
+        initial_metadata={BACKGROUND_ORIGIN_KEY: BACKGROUND_ORIGIN},
+        **kwargs,
+    )
 
 
 async def test_count_nonterminal_jobs_excludes_terminal():
@@ -43,19 +58,20 @@ async def test_count_nonterminal_jobs_excludes_terminal():
     completed = uuid4()
     run_in_progress = uuid4()
 
-    await service.create_job(job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, queued_a)
+    await _bg_job(service, queued_b)
 
-    await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, in_progress)
     await service.append_event(in_progress, "run_started", {})
-    await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
+    await service.mark_job_started(in_progress)
 
-    # A RUN job briefly IN_PROGRESS with NO job_events — must be excluded.
+    # A RUN job: created directly by build.py, so it carries no background
+    # marker. That absence is what must exclude it.
     await service.create_job(job_id=run_in_progress, flow_id=uuid4(), user_id=uuid4())
     await service.update_job_status(run_in_progress, JobStatus.IN_PROGRESS)
 
     # Terminal: must be excluded from the non-terminal aggregate.
-    await service.create_job(job_id=completed, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, completed)
     await service.update_job_status(completed, JobStatus.COMPLETED, finished_timestamp=True)
 
     async with session_scope() as session:
@@ -70,8 +86,8 @@ async def test_oldest_queued_seconds_uses_injected_now():
 
     older = uuid4()
     newer = uuid4()
-    await service.create_job(job_id=older, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=newer, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, older)
+    await _bg_job(service, newer)
 
     # Read back the actual stored created_timestamp of the oldest QUEUED job so
     # the expected age is exact regardless of insert latency.
@@ -93,7 +109,7 @@ async def test_oldest_queued_seconds_zero_when_none_queued():
     service = JobService()
 
     done = uuid4()
-    await service.create_job(job_id=done, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, done)
     await service.update_job_status(done, JobStatus.COMPLETED, finished_timestamp=True)
 
     now = datetime.now(timezone.utc)
@@ -124,14 +140,14 @@ async def test_collect_once_sets_gauges():
     in_progress = uuid4()
     completed = uuid4()
 
-    await service.create_job(job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, queued_a)
+    await _bg_job(service, queued_b)
 
-    await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, in_progress)
     await service.append_event(in_progress, "run_started", {})
-    await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
+    await service.mark_job_started(in_progress)
 
-    await service.create_job(job_id=completed, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, completed)
     await service.update_job_status(completed, JobStatus.COMPLETED, finished_timestamp=True)
 
     collector = BackgroundMetricsCollector(interval=15.0)
@@ -150,8 +166,8 @@ async def test_collect_once_zero_fills_dropped_status():
 
     queued_a = uuid4()
     queued_b = uuid4()
-    await service.create_job(job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
-    await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, queued_a)
+    await _bg_job(service, queued_b)
 
     collector = BackgroundMetricsCollector(interval=15.0)
     async with session_scope() as session:
@@ -183,7 +199,7 @@ async def test_run_stop_lifecycle():
     backend = current_backend()
 
     queued = uuid4()
-    await service.create_job(job_id=queued, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, queued)
 
     sentinel = -1.0
     gauge = get_telemetry_service().ot._metrics["langflow_bg_jobs"]
@@ -205,7 +221,7 @@ async def test_run_stop_lifecycle():
 async def _seed_failed(service: JobService, *, error: dict):
     """Create a BACKGROUND job (with a job_events row), flip FAILED, stamp error."""
     job_id = uuid4()
-    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, job_id)
     # A job_events row is what marks this as a TRUE background job (vs a run job).
     await service.append_event(job_id, "run_started", {})
     await service.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
@@ -216,7 +232,7 @@ async def _seed_failed(service: JobService, *, error: dict):
 async def _seed_terminal(service: JobService, status: JobStatus):
     """Create a BACKGROUND job (with a job_events row) and flip it terminal."""
     job_id = uuid4()
-    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, job_id)
     await service.append_event(job_id, "run_started", {})
     await service.update_job_status(job_id, status, finished_timestamp=True)
     return job_id
@@ -225,8 +241,8 @@ async def _seed_terminal(service: JobService, status: JobStatus):
 async def _seed_run_job(service: JobService, status: JobStatus = JobStatus.COMPLETED):
     """Create a Memory-Base RUN job: created directly, terminal, NO job_events.
 
-    Mimics build.py's second workflow row — it must be excluded by the collector's
-    EXISTS(job_events) filter.
+    Mimics build.py's second workflow row: no background marker, so the
+    collector's identity filter excludes it.
     """
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
@@ -236,16 +252,16 @@ async def _seed_run_job(service: JobService, status: JobStatus = JobStatus.COMPL
 
 async def test_terminal_counts_splits_outcomes():
     """terminal_counts returns the per-outcome split; started excludes only QUEUED."""
-    from langflow.services.database.models.jobs.model import Job, JobEvent
+    from langflow.services.database.models.jobs.model import Job
 
     service = JobService()
 
     # 1 QUEUED (excluded from started), 1 IN_PROGRESS (counts toward started).
-    await service.create_job(job_id=uuid4(), flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, uuid4())
     in_progress = uuid4()
-    await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, in_progress)
     await service.append_event(in_progress, "run_started", {})
-    await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
+    await service.mark_job_started(in_progress)
 
     # 2 COMPLETED.
     await _seed_terminal(service, JobStatus.COMPLETED)
@@ -267,14 +283,14 @@ async def test_terminal_counts_splits_outcomes():
     async with session_scope() as session:
         tc = await terminal_counts(session)
         # Absolute totals in a shared test DB are not isolated across tests, so
-        # assert against the actual current BACKGROUND rows (EXISTS(job_events))
-        # by status to keep this robust and to exclude run jobs.
+        # assert against the actual current BACKGROUND rows by status. Identity
+        # is the marker the collector uses, which is also what excludes run jobs.
         from sqlmodel import col, func, select
 
-        has_events = select(JobEvent.id).where(col(JobEvent.job_id) == Job.job_id).exists()
+        is_background = col(Job.job_metadata)[BACKGROUND_ORIGIN_KEY].as_string() == BACKGROUND_ORIGIN
 
         async def _count(*statuses):
-            stmt = select(func.count()).select_from(Job).where(col(Job.status).in_(statuses)).where(has_events)
+            stmt = select(func.count()).select_from(Job).where(col(Job.status).in_(statuses)).where(is_background)
             return int((await session.exec(stmt)).one())
 
         total = await _count(*list(JobStatus))
@@ -333,7 +349,7 @@ async def test_duration_percentiles_deterministic():
     job_ids = []
     for _ in durations:
         jid = uuid4()
-        await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+        await _bg_job(service, jid)
         await service.append_event(jid, "run_started", {})
         await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
         job_ids.append(jid)
@@ -375,7 +391,7 @@ async def test_duration_percentiles_excludes_jobs_outside_window():
     old = uuid4()
     recent = uuid4()
     for jid in (old, recent):
-        await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+        await _bg_job(service, jid)
         await service.append_event(jid, "run_started", {})
         await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
 
@@ -415,7 +431,7 @@ async def test_duration_percentiles_zero_when_none_in_window():
     service = JobService()
 
     jid = uuid4()
-    await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, jid)
     await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
 
     # Anchor ``now`` far in the FUTURE with a tiny window so the cutoff
@@ -452,7 +468,7 @@ async def test_collect_once_sets_counters_and_duration_gauges():
     # A COMPLETED BACKGROUND job (with a job_events row) with a known 12s
     # duration finished now so the duration gauges are non-zero with a tight window.
     dur_job = uuid4()
-    await service.create_job(job_id=dur_job, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, dur_job)
     await service.append_event(dur_job, "run_started", {})
     await service.update_job_status(dur_job, JobStatus.COMPLETED, finished_timestamp=True)
     async with session_scope() as session:
@@ -552,10 +568,66 @@ async def test_queue_metrics_count_only_workflow_jobs():
     workflow_queued = uuid4()
     ingestion_queued = uuid4()
 
-    await service.create_job(job_id=workflow_queued, flow_id=uuid4(), user_id=uuid4())
+    await _bg_job(service, workflow_queued)
     await service.create_job(job_id=ingestion_queued, flow_id=uuid4(), user_id=uuid4(), job_type=JobType.INGESTION)
 
     async with session_scope() as session:
         counts = await count_nonterminal_jobs(session)
 
     assert counts == {"queued": 1}
+
+
+async def test_started_survives_a_requeue():
+    """A cumulative counter must not fall when a job goes back to QUEUED.
+
+    ``retry_requeue_claim`` (worker died, retry-safe) and the scaled resume both
+    return a started job to QUEUED. Counting starts from the current status made
+    started go 1 then 0, which Prometheus reads as a counter reset rather than a
+    job waiting to run again.
+    """
+    service = JobService()
+    job_id = uuid4()
+    await _bg_job(service, job_id)
+    await service.mark_job_started(job_id)
+
+    async with session_scope() as session:
+        before = (await terminal_counts(session))["started"]
+
+    # Back to QUEUED, exactly as a retry requeue or a resume hand-back leaves it.
+    await service.update_job_status(job_id, JobStatus.QUEUED)
+
+    async with session_scope() as session:
+        after = (await terminal_counts(session))["started"]
+
+    assert after == before, "started fell when a job returned to QUEUED"
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.QUEUED
+
+
+async def test_a_run_that_fails_before_its_first_event_is_still_counted():
+    """A frame source that raises before yielding leaves no job_events row.
+
+    ``execute_with_status`` still marks the row FAILED, so the failure has to
+    reach the metrics. Identifying background jobs by event presence dropped it
+    entirely and ``failed_error`` stayed flat through a real failure.
+    """
+    service = JobService()
+    job_id = uuid4()
+    await _bg_job(service, job_id)
+
+    async def _explodes():
+        message = "frame source raised before its first yield"
+        raise RuntimeError(message)
+
+    with pytest.raises(RuntimeError):
+        await service.execute_with_status(job_id, _explodes)
+
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.FAILED
+    events = await service.read_events(job_id)
+    assert events == [], "this test is only meaningful while the run emits nothing"
+
+    async with session_scope() as session:
+        counts = await terminal_counts(session)
+    assert counts["failed_error"] >= 1
+    assert counts["started"] >= 1
