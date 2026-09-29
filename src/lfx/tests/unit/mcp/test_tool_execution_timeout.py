@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.mcp.util import (
+    ClosedResourceError,
     MCPSessionManager,
     MCPStdioClient,
     MCPStreamableHttpClient,
@@ -179,8 +180,6 @@ async def test_should_run_tool_once_when_response_times_out(client_class, connec
 @CLIENTS
 @pytest.mark.asyncio
 async def test_should_still_retry_when_session_closed_before_the_call(client_class, connection_params):
-    from anyio import ClosedResourceError
-
     client = client_class(tool_execution_timeout=1)
     client._connected = True
     client._connection_params = connection_params
