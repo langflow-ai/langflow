@@ -1035,7 +1035,7 @@ async def test_create_assignment_enforces_plugin_access_ceiling(stub_authz):
         raise AuthorizationMutationRejected(detail)
 
     authz.validate_identity_mutation = reject_assignment
-    target_user = SimpleNamespace(id=uuid4())
+    target_user = SimpleNamespace(id=uuid4(), is_active=True)
     role = SimpleNamespace(id=uuid4(), name="admin")
     session = _FakeAsyncSession(
         {(User, target_user.id): target_user, (AuthzRole, role.id): role},
