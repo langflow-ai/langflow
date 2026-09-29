@@ -157,6 +157,31 @@ describe("InputGlobalComponent", () => {
     });
   });
 
+  it("preserves a redacted shared-flow binding when its variable name is hidden", async () => {
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "EDITOR_VAR", default_fields: ["API Key"] }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      fetchStatus: "idle",
+      isSuccess: true,
+    });
+
+    render(
+      <InputGlobalComponent
+        id="shared-variable"
+        value={null}
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db
+        password
+        editNode={false}
+        disabled={false}
+      />,
+    );
+
+    await waitFor(() => expect(handleOnNewValue).not.toHaveBeenCalled());
+  });
+
   it("clears a missing saved variable exactly once when other variables exist", async () => {
     mockUseGetGlobalVariables.mockReturnValue({
       data: [{ name: "OTHER_VAR" }],

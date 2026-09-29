@@ -180,6 +180,59 @@ async def test_snapshot_captures_current_flow_data(client: AsyncClient, logged_i
     assert r2.json()["data"] == new_data
 
 
+async def test_snapshot_archives_a_graph_the_server_never_had(client: AsyncClient, logged_in_headers):
+    """The state worth keeping is the one on somebody's canvas, not the one already stored.
+
+    Discarding a conflicted edit has to leave the abandoned work recoverable, and
+    that work only exists in the browser — a snapshot of what the server already
+    holds would archive precisely the version that was never at risk.
+    """
+    flow = await _create_flow(client, logged_in_headers)
+    stored = {"nodes": [{"id": "on-the-server"}], "edges": []}
+    await _patch_flow_data(client, logged_in_headers, flow["id"], stored)
+
+    abandoned = {"nodes": [{"id": "only-on-my-canvas"}], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}
+    response = await client.post(
+        f"api/v1/flows/{flow['id']}/versions/",
+        json={"description": "Saved when discarding a conflict", "data": abandoned},
+        headers=logged_in_headers,
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED), response.text
+
+    entry = await client.get(f"api/v1/flows/{flow['id']}/versions/{response.json()['id']}", headers=logged_in_headers)
+    assert entry.json()["data"] == abandoned, "the canvas state is what got archived"
+
+    current = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert current.json()["data"] == stored, "archiving must not touch the flow itself"
+
+
+async def test_snapshot_without_a_graph_still_captures_the_stored_one(client: AsyncClient, logged_in_headers):
+    """Omitting the graph keeps the original behaviour every other caller relies on."""
+    flow = await _create_flow(client, logged_in_headers)
+    stored = {"nodes": [{"id": "stored"}], "edges": []}
+    await _patch_flow_data(client, logged_in_headers, flow["id"], stored)
+
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"], description="no data supplied")
+
+    entry = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+    assert entry.json()["data"] == stored
+
+
+async def test_archiving_a_canvas_does_not_take_the_writers_turn(client: AsyncClient, logged_in_headers):
+    """A discard must not look like an edit to everyone else holding the flow open."""
+    flow = await _create_flow(client, logged_in_headers)
+    token_before = (await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)).json()["version_token"]
+
+    await client.post(
+        f"api/v1/flows/{flow['id']}/versions/",
+        json={"description": "Saved when discarding a conflict", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+
+    token_after = (await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)).json()["version_token"]
+    assert token_after == token_before, "archiving is history only; it never claims the write turn"
+
+
 async def test_delete_version_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])

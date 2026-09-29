@@ -10,7 +10,7 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 This page describes the components that are available in the **Slack** bundle.
 
-Every Slack component runs on the [Slack Web API](https://docs.slack.dev/reference/methods/) and takes its credential from a Langflow [connection](../Develop/connection-oauth.mdx) rather than from a token pasted into the flow.
+Every Slack action runs on the [Slack Web API](https://docs.slack.dev/reference/methods/) and takes its credential from a Langflow [connection](../Develop/connection-oauth.mdx) rather than from a token pasted into the flow. The two [Slack triggers](#slack-triggers) run a flow when something happens in Slack.
 
 <GraduatedBundleInstall packageName="slack" />
 
@@ -21,13 +21,13 @@ Slack has two kinds of token, and a component is fixed to one of them:
 | Identity | Authorization profile | Posts as | Available on Desktop |
 | --- | --- | --- | --- |
 | Connected Slack user | `slack-user-oauth` | the person who authorized the connection | Yes |
-| App bot user | `slack-bot-install` | the app's bot user | No |
+| App bot user | `slack-bot-install` | the app's bot user | With a pasted bot token (`xoxb-`); not through Slack sign-in |
 
 Slack user scopes and bot scopes share names — `chat:write` is both a User Token Scope and a Bot Token Scope — so the scopes a connection was granted cannot tell the two identities apart. Each component instead checks the identity recorded on the connection and the token's own type prefix (`xoxb-` for a bot token, `xoxp-` for a user token), and fails with a connection authorization error, before any request reaches Slack, when either one names the wrong kind.
 
 A headless connection supplied through `LF_CONNECTION__SLACK__<NAME>` has no recorded identity, so its token must carry a recognizable Slack prefix; a token without one is refused.
 
-Bot components are unavailable on Langflow Desktop because Slack desktop redirects use PKCE and [may not request bot scopes](https://docs.slack.dev/authentication/using-pkce/). Use a hosted or self-managed workspace installation for those actions.
+Langflow Desktop cannot install a bot through Slack sign-in, because Slack desktop redirects use PKCE and [may not request bot scopes](https://docs.slack.dev/authentication/using-pkce/). On Desktop, install your own Slack app to the workspace, copy its **Bot User OAuth Token** (`xoxb-`), and add it under **Settings** > **Connections** > **Add connection** > **Paste a token**.
 
 ## Prerequisites
 
@@ -102,6 +102,140 @@ Required scope: `channels:read`. Two scopes are requested only when you enable t
 With **Resolve display names** off, the component returns member IDs. With it on, it calls [`users.info`](https://docs.slack.dev/reference/methods/users.info) once per member and returns the name, real name, display name, and bot flag as well — which costs one extra request per member, so leave it off for large channels.
 
 Outputs the members as `Data` objects and a `Pagination` `Data` with `next_cursor`.
+
+## Slack triggers
+
+A trigger runs its flow when something happens in Slack. Add one to a flow, choose its Slack connection, save the flow, and then enable the trigger.
+
+### How events reach Langflow
+
+Slack delivers events in two ways. Langflow picks one from the connection you choose on the trigger, so the flow never names a transport, and the same flow runs unchanged on hosted Langflow, a self-managed instance, and Desktop:
+
+| Connection on the trigger | Transport | Where it works |
+| --- | --- | --- |
+| A Slack app installation (**Sign in with Slack**, bot) | [Events API](https://docs.slack.dev/apis/events-api/): Slack posts each event to your Langflow over HTTPS | Hosted, and self-managed instances Slack can reach |
+| An app-level token (**Paste a token**, `xapp-`) | [Socket Mode](https://docs.slack.dev/apis/socket-mode/): Langflow opens a WebSocket to Slack and holds it | Self-managed instances Slack cannot reach, and Desktop |
+
+Hosted Langflow uses the Events API only: its Slack app is listed in the Slack Marketplace, and Marketplace apps cannot use Socket Mode. Desktop uses Socket Mode only, because Slack has no way to reach a computer. If you choose a connection the deployment cannot use, the trigger says why and stays unarmed.
+
+Both transports hand the flow the same data for the same event, and a Slack event runs its flow once even when Slack retries the delivery.
+
+They differ in one way: which workspaces a trigger hears. An Events API trigger hears only the workspace its installation belongs to. An app-level token belongs to the whole app, so a Socket Mode trigger hears every workspace the app is installed in. Use **Channel IDs** to narrow it.
+
+### Slack: On Message
+
+Runs the flow when someone posts where the app can see it: in a public channel, a private channel, a direct message with the app, or a group DM. The app's own messages never trigger it, so a flow that replies in the thread doesn't trigger itself.
+
+| Input | Description |
+| --- | --- |
+| **Slack Connection** | The connection the trigger listens through. It decides the transport. |
+| **Only when the app is mentioned** | Fire only for messages that @-mention the app. |
+| **Channel IDs** | Fire only in these conversations, by ID, such as `C0123456789`. Find a channel's ID at the bottom of its details. Leave empty for every conversation the app can see. |
+| **Conversation types** | `channel` (public), `group` (private), `im` (direct message), `mpim` (group DM). All four by default. Hidden and reset to all four when **Only when the app is mentioned** is on, because Slack mention events do not include a conversation type. |
+| **Include thread replies** | On by default. |
+| **Include messages from other bots** | Off by default. |
+| **Include edits and deletions** | Off by default. When on, the event's `subtype` is `message_changed` or `message_deleted`. |
+
+Outputs the event as `Data` and its text as a `Message`, ready to connect to an agent.
+
+### Slack: On Reaction
+
+Runs the flow when someone adds or removes an emoji reaction on a message.
+
+| Input | Description |
+| --- | --- |
+| **Slack Connection** | The connection the trigger listens through. |
+| **Emoji** | Emoji names without colons, such as `rocket`. Leave empty for any reaction. A skin-toned reaction matches its emoji. |
+| **Channel IDs** | Fire only in these conversations. Leave empty for every conversation. |
+| **Fire when a reaction is** | `added` (default), `removed`, or `both`. |
+
+### What the flow receives
+
+The trigger's **Event** output is a `Data` object. Its `payload` has the same keys for every Slack event, with `null` where a key does not apply:
+
+| Key | Description |
+| --- | --- |
+| `type` | `message`, `app_mention`, `reaction_added`, or `reaction_removed`. |
+| `channel_id`, `channel_type` | The conversation, and its kind for messages. |
+| `user_id`, `text`, `ts` | Who posted (or reacted), the message text, and the message timestamp. |
+| `thread_ts`, `is_thread_reply` | Set when the message is a reply in a thread. |
+| `reaction`, `item_ts`, `item_user_id` | The emoji, and the message it was added to. |
+| `session_key` | `slack:{team}:{channel}:{thread_ts or ts}`, the conversation the run belongs to. `{team}` is the workspace of the app installation that received the event, so a thread in a channel shared with another workspace stays one session whichever side replies. |
+| `slack_event_id`, `team_id`, `api_app_id`, `event_time` | Slack's identifiers for the event. In a shared channel, `team_id` can name the other workspace. |
+| `event` | Slack's original event object, for anything the other keys leave out. |
+
+Every run started by a Slack event uses the conversation as its session: each reply in a thread lands in the thread's session, so an agent keeps the whole thread as memory. Three replies to one thread start three runs that share one session. A reaction's session is the message it was added to.
+
+To reply in the thread, pass `channel_id` and `thread_ts` (or `ts`, for a top-level message) to **Slack: Post Message (as app)**.
+
+### Set up a Slack app for triggers
+
+Create the app from one of these manifests (**Create New App** > **From a manifest**), and then replace the placeholders:
+
+* [Events API manifest](/files/slack/langflow-slack-app-events-api.json): replace `LANGFLOW_HOST` with your Langflow's public host, and `REGISTRATION_ID` with the name of the app's registration in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`.
+* [Socket Mode manifest](/files/slack/langflow-slack-app-socket-mode.json): no URL is needed.
+
+Both manifests subscribe the bot to `message.channels`, `message.groups`, `message.im`, `message.mpim`, `app_mention`, `reaction_added`, and `reaction_removed`, and request these bot scopes, which also cover the **as app** actions:
+
+{/* slack-app-bot-scopes:start */}
+| Bot scope | Used for |
+| --- | --- |
+| `app_mentions:read` | Mentions of the app |
+| `channels:history` | Messages in public channels |
+| `channels:read` | **Slack: List Channel Members (as app)** |
+| `chat:write` | **Slack: Post Message (as app)** |
+| `groups:history` | Messages in private channels |
+| `groups:read` | Private channels in **Slack: List Channel Members (as app)** |
+| `im:history` | Direct messages with the app |
+| `mpim:history` | Group DMs |
+| `reactions:read` | Reactions |
+| `reactions:write` | **Slack: Add Reaction (as app)** |
+| `users:read` | Display names in **Slack: List Channel Members (as app)** |
+{/* slack-app-bot-scopes:end */}
+
+A trigger on the Events API also needs the scopes for what it listens to: a message trigger needs the `*:history` scope of each conversation type it covers (or only `app_mentions:read` when it fires only on mentions), and a reaction trigger needs `reactions:read`. Enabling a trigger whose installation lacks them says which are missing. So does saving the flow when the save moves an enabled trigger to another connection or widens what it listens to: the trigger stops, with the reason, until the scopes are there.
+
+#### Events API (hosted and reachable self-managed instances)
+
+1. Under **Basic Information**, copy the app's **Signing Secret** into the registration's `signing_secret`, next to its `client_id` and `client_secret`:
+
+   ```json
+   {"slack-app": {"provider": "slack", "profile": "bot", "client_id": "...", "client_secret": "...",
+    "signing_secret": "...", "redirect_uri": "https://LANGFLOW_HOST/api/v1/connections/oauth/slack/callback",
+    "scopes": ["chat:write", "channels:history", "..."]}}
+   ```
+
+2. Under **Event Subscriptions**, set the **Request URL** to `https://LANGFLOW_HOST/api/v1/triggers/ingress/slack/apps/slack-app`, where the last segment is the registration name. Slack verifies the URL immediately; Langflow answers as soon as the registration is configured, before any trigger exists.
+3. In Langflow, add a Slack connection with **Sign in with Slack** and the bot identity, and choose it on the trigger.
+
+One Request URL serves every workspace the app is installed in. Each event reaches only the triggers whose connection is an installation in that workspace. Triggers can't use an org-wide Enterprise Grid installation, which belongs to no single workspace. Install the app to a workspace instead.
+
+#### Socket Mode (Desktop and instances Slack cannot reach)
+
+1. Under **Basic Information** > **App-Level Tokens**, generate a token with the `connections:write` scope.
+2. Under **Install App**, install the app to your workspace and invite it to the channels it should hear.
+3. In Langflow, go to **Settings** > **Connections** > **Add connection**, choose Slack and **Paste a token**, and paste the app-level token (`xapp-`). To reply from the flow, add the **Bot User OAuth Token** (`xoxb-`) the same way, as a second connection.
+4. Choose the app-level token connection on the trigger.
+
+An app-level token only opens Socket Mode connections. Langflow uses it only in the [trigger listener process](../Deployment/deployment-trigger-listeners.mdx), never in a flow, so choosing it on an action component fails. Socket Mode isn't available on hosted Langflow.
+
+:::important
+An app-level token is the app's whole event stream: every workspace the app is installed in, every conversation it can see. When several people on one Langflow instance each add a token for the same Slack app, Langflow delivers each of the app's events to all of their Socket Mode triggers, because Slack spreads an app's events across every open connection. Give an app-level token only to people who may read everything the app can see.
+:::
+
+#### Allow background runs
+
+A trigger runs its flow with no one signed in. The connection on the trigger, and every connection the flow uses, must allow that: turn on **Allow background runs** when you add the connection, or on the connection later. Enabling a trigger whose connection doesn't allow background runs says so.
+
+### Troubleshoot triggers
+
+**The trigger won't enable.** Its error says what is missing: a connection, the flow owner's own connection (triggers can't use shared or instance connections), a registration signing secret, a scope, or background-runs consent.
+
+**Slack says the Request URL did not respond.** Check that the registration named in the URL exists, has `signing_secret`, and that `LANGFLOW_CONNECTION_OAUTH_CONTEXT` matches the registration's `context`.
+
+**The flow never runs for a message.** Invite the app to the channel. Check the trigger's filters: channel IDs, not names, and whether it fires only on mentions. Messages posted by the app itself never trigger it.
+
+**A Socket Mode trigger stays silent.** Check that the listener process is running (`LANGFLOW_LISTENERS_MODE=subprocess`, or `langflow listeners`) and that Socket Mode is turned on in the app's settings.
 
 ## Errors
 

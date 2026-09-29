@@ -3,6 +3,7 @@
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.field_typing.constants import Memory
 from lfx.inputs.inputs import DictInput, MessageTextInput, SecretStrInput
+from lfx_datastax.components.cassandra._ssrf import validate_cassandra_connection
 
 
 class CassandraChatMemory(LCChatMemoryComponent):
@@ -80,11 +81,12 @@ class CassandraChatMemory(LCChatMemoryComponent):
                 cluster_kwargs=self.cluster_kwargs,
             )
         else:
+            cluster_kwargs = validate_cassandra_connection(database_ref, self.cluster_kwargs)
             cassio.init(
                 contact_points=database_ref,
                 username=self.username,
                 password=self.token,
-                cluster_kwargs=self.cluster_kwargs,
+                cluster_kwargs=cluster_kwargs,
             )
 
         return CassandraChatMessageHistory(

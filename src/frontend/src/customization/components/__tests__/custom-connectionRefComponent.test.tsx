@@ -40,6 +40,7 @@ describe("custom-connectionRefComponent seam", () => {
         inputValues={inputValues}
         capabilities={["google.gmail.send"]}
         identityKind="user"
+        ownershipMode="user"
       />,
     );
 
@@ -54,6 +55,7 @@ describe("custom-connectionRefComponent seam", () => {
         inputValues,
         capabilities: ["google.gmail.send"],
         identityKind: "user",
+        ownershipMode: "user",
       }),
     );
   });

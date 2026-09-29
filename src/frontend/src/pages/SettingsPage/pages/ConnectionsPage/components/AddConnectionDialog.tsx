@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -18,6 +16,7 @@ import {
   CONNECTION_NAME_PATTERN,
   type ConnectionPollBaseline,
   type ConnectionRead,
+  type DeploymentContext,
   hasConsentLanded,
   type IntegrationIdentity,
   type IntegrationProviderRead,
@@ -44,7 +43,11 @@ import {
   shortScope,
   uniqueScopes,
 } from "../helpers/scopes";
+import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
+import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
+import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
+import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
 
 /** Consent can take a while; stop waiting rather than polling forever. */
 const CONSENT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -56,11 +59,6 @@ const openBlankConsentWindow = (): Window | null =>
 /** Re-authorizing starts at `scopes`: the handle and identity already exist. */
 type Step = "details" | "scopes" | "authorize";
 
-type AuthorizeState =
-  | { kind: "waiting" }
-  | { kind: "connected"; connection: ConnectionRead }
-  | { kind: "failed"; message: string };
-
 export interface AddConnectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -69,6 +67,8 @@ export interface AddConnectionDialogProps {
   canCreateInstance: boolean;
   /** Re-authorizing an existing connection instead of creating one. */
   reauthorize?: ConnectionRead;
+  /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
+  deploymentContext?: DeploymentContext;
 }
 
 export function AddConnectionDialog({
@@ -77,6 +77,7 @@ export function AddConnectionDialog({
   providers,
   canCreateInstance,
   reauthorize,
+  deploymentContext,
 }: AddConnectionDialogProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -112,6 +113,14 @@ export function AddConnectionDialog({
   const poll = usePendingConnectionPoll(
     authorize?.kind === "waiting" ? baseline : null,
   );
+  const slackToken = useSlackTokenConnection({
+    providerId,
+    provider,
+    deploymentContext,
+    reauthorizing: !!reauthorize,
+    create: create.mutateAsync,
+  });
+  const { usesToken } = slackToken;
 
   const registrations = useOAuthRegistrationsQuery(providerId, open);
   const candidates = useMemo(
@@ -155,6 +164,7 @@ export function AddConnectionDialog({
     () => scopeRequirements(provider?.capabilities ?? [], typesData),
     [provider, typesData],
   );
+
   const ceiling = candidates.find(
     ({ id }) => id === resolvedRegistration,
   )?.scopes;
@@ -321,24 +331,12 @@ export function AddConnectionDialog({
     [reauthorizeList],
   );
 
-  const registrationSelect = candidates.length > 1 && (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor="connection-registration">
-        {t("connections.add.registration")}
-      </Label>
-      <select
-        id="connection-registration"
-        className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-        value={resolvedRegistration ?? ""}
-        onChange={(event) => setRegistrationId(event.target.value)}
-      >
-        {candidates.map((candidate) => (
-          <option key={candidate.id} value={candidate.id}>
-            {candidate.id}
-          </option>
-        ))}
-      </select>
-    </div>
+  const registrationSelect = (
+    <RegistrationSelect
+      registrationIds={candidates.map(({ id }) => id)}
+      value={resolvedRegistration}
+      onChange={setRegistrationId}
+    />
   );
 
   const handleValid =
@@ -348,11 +346,29 @@ export function AddConnectionDialog({
     !!provider &&
     handleValid &&
     displayName.trim().length > 0 &&
-    !noRegistration;
+    (usesToken ? slackToken.tokenKind !== null : !noRegistration);
+
+  /** A pasted token is stored as-is: no consent window, nothing to wait for. */
+  const onCreateWithToken = async () => {
+    try {
+      const row = await slackToken.createWithToken({
+        name,
+        displayName: displayName.trim(),
+      });
+      setStep("authorize");
+      setAuthorize({ kind: "connected", connection: row });
+    } catch (error) {
+      setFieldError(getAxiosErrorDetail(error, t("connections.add.failed")));
+    }
+  };
 
   const onContinue = async () => {
     if (!provider || !canContinue) return;
     setFieldError(null);
+    if (usesToken) {
+      await onCreateWithToken();
+      return;
+    }
     // Open on the click itself so popup blockers treat it as user-initiated.
     popupRef.current = openBlankConsentWindow();
     try {
@@ -396,13 +412,14 @@ export function AddConnectionDialog({
     setName("");
     setDisplayName("");
     setFieldError(null);
+    slackToken.reset();
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : close(true))}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] sm:max-w-[560px]">
+        <DialogHeader className="shrink-0">
           <DialogTitle>
             {reauthorize
               ? t("connections.add.reauthorizeTitle", {
@@ -413,144 +430,179 @@ export function AddConnectionDialog({
         </DialogHeader>
 
         {step === "details" && (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="connection-provider">
-                {t("connections.add.provider")}
-              </Label>
-              <select
-                id="connection-provider"
-                className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                value={providerId}
-                onChange={(event) => setProviderId(event.target.value)}
-                data-testid="connection-provider"
-              >
-                {providers.map((item) => (
-                  <option key={item.provider_id} value={item.provider_id}>
-                    {item.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex min-h-0 flex-col gap-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-name">
-                  {t("connections.add.handle")}
-                </Label>
-                <Input
-                  id="connection-name"
-                  value={name}
-                  spellCheck={false}
-                  placeholder={t("connections.add.handlePlaceholder")}
-                  onChange={(event) => setName(event.target.value)}
-                  maxLength={CONNECTION_NAME_MAX_LENGTH}
-                  aria-invalid={name.length > 0 && !handleValid}
-                  className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
-                  aria-describedby="connection-name-help"
-                  data-testid="connection-name"
-                />
-                <span className="font-mono text-xs text-muted-foreground">
-                  {providerId}/{name || "…"}
-                </span>
-                <p
-                  id="connection-name-help"
-                  className={cn(
-                    "text-xs text-muted-foreground",
-                    name.length > 0 && !handleValid && "text-destructive",
-                  )}
-                >
-                  {t("connections.add.handleHelp", {
-                    max: CONNECTION_NAME_MAX_LENGTH,
-                  })}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-display-name">
-                  {t("connections.add.displayName")}
-                </Label>
-                <Input
-                  id="connection-display-name"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  data-testid="connection-display-name"
-                />
-              </div>
-            </div>
-
-            {identities.length > 1 && (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-identity">
-                  {t("connections.add.identity")}
+                <Label htmlFor="connection-provider">
+                  {t("connections.add.provider")}
                 </Label>
                 <select
-                  id="connection-identity"
+                  id="connection-provider"
                   className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                  value={identity}
-                  onChange={(event) =>
-                    setIdentity(event.target.value as IntegrationIdentity)
-                  }
-                  data-testid="connection-identity"
+                  value={providerId}
+                  onChange={(event) => {
+                    setProviderId(event.target.value);
+                    // A pasted token belongs to the provider it was pasted for.
+                    slackToken.reset();
+                  }}
+                  data-testid="connection-provider"
                 >
-                  {identities.map((option) => (
-                    <option key={option} value={option}>
-                      {t(`connections.identity.${option}`)}
+                  {providers.map((item) => (
+                    <option key={item.provider_id} value={item.provider_id}>
+                      {item.display_name}
                     </option>
                   ))}
                 </select>
               </div>
-            )}
 
-            {registrationSelect}
-
-            {canCreateInstance && (
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={ownership === "instance"}
-                  onCheckedChange={(checked) =>
-                    setOwnership(checked ? "instance" : "user")
-                  }
-                  data-testid="connection-instance-owned"
+              {slackToken.offersToken && (
+                <ConnectionMethodSelect
+                  method={slackToken.method}
+                  onMethodChange={(method) => {
+                    slackToken.setMethod(method);
+                    setFieldError(null);
+                  }}
                 />
-                {t("connections.add.instanceOwned")}
-              </label>
-            )}
-
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">
-                {t("connections.add.scopes")}
-              </span>
-              {requestable.length === 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {t("connections.add.noScopes")}
-                </span>
               )}
-              <ScopeChecklist
-                scopes={requestable}
-                selected={selectedScopes}
-                onToggle={toggleScope}
-              />
-              {unavailable.length > 0 && (
-                <span className="text-xs text-warning-foreground">
-                  {t("connections.add.scopesOutsideCeiling", {
-                    scopes: unavailable.map(shortScope).join(", "),
-                  })}
-                </span>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="connection-name">
+                    {t("connections.add.handle")}
+                  </Label>
+                  <Input
+                    id="connection-name"
+                    value={name}
+                    spellCheck={false}
+                    placeholder={t("connections.add.handlePlaceholder")}
+                    onChange={(event) => setName(event.target.value)}
+                    maxLength={CONNECTION_NAME_MAX_LENGTH}
+                    aria-invalid={name.length > 0 && !handleValid}
+                    className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
+                    aria-describedby="connection-name-help"
+                    data-testid="connection-name"
+                  />
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {providerId}/{name || "…"}
+                  </span>
+                  <p
+                    id="connection-name-help"
+                    className={cn(
+                      "text-xs text-muted-foreground",
+                      name.length > 0 && !handleValid && "text-destructive",
+                    )}
+                  >
+                    {t("connections.add.handleHelp", {
+                      max: CONNECTION_NAME_MAX_LENGTH,
+                    })}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="connection-display-name">
+                    {t("connections.add.displayName")}
+                  </Label>
+                  <Input
+                    id="connection-display-name"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    data-testid="connection-display-name"
+                  />
+                </div>
+              </div>
+
+              {usesToken && (
+                <SlackTokenFields
+                  token={slackToken.token}
+                  onTokenChange={(value) => {
+                    slackToken.setToken(value);
+                    // The server refused the token that was there; it no longer is.
+                    setFieldError(null);
+                  }}
+                  allowBackgroundRuns={slackToken.allowBackgroundRuns}
+                  onAllowBackgroundRunsChange={
+                    slackToken.setAllowBackgroundRuns
+                  }
+                  botTokenScopes={slackToken.botTokenScopes}
+                  tokenScopes={slackToken.tokenScopes}
+                  onToggleTokenScope={slackToken.toggleTokenScope}
+                />
+              )}
+
+              {!usesToken && identities.length > 1 && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="connection-identity">
+                    {t("connections.add.identity")}
+                  </Label>
+                  <select
+                    id="connection-identity"
+                    className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                    value={identity}
+                    onChange={(event) =>
+                      setIdentity(event.target.value as IntegrationIdentity)
+                    }
+                    data-testid="connection-identity"
+                  >
+                    {identities.map((option) => (
+                      <option key={option} value={option}>
+                        {t(`connections.identity.${option}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {!usesToken && registrationSelect}
+
+              {!usesToken && canCreateInstance && (
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={ownership === "instance"}
+                    onCheckedChange={(checked) =>
+                      setOwnership(checked ? "instance" : "user")
+                    }
+                    data-testid="connection-instance-owned"
+                  />
+                  {t("connections.add.instanceOwned")}
+                </label>
+              )}
+
+              {!usesToken && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium">
+                    {t("connections.add.scopes")}
+                  </span>
+                  {requestable.length === 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {t("connections.add.noScopes")}
+                    </span>
+                  )}
+                  <ScopeChecklist
+                    scopes={requestable}
+                    selected={selectedScopes}
+                    onToggle={toggleScope}
+                  />
+                  {unavailable.length > 0 && (
+                    <span className="text-xs text-warning-foreground">
+                      {t("connections.add.scopesOutsideCeiling", {
+                        scopes: unavailable.map(shortScope).join(", "),
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {!usesToken && noRegistration && (
+                <p className="text-xs text-destructive" role="alert">
+                  {t("connections.add.noRegistration")}
+                </p>
+              )}
+              {fieldError && (
+                <p className="text-xs text-destructive" role="alert">
+                  {fieldError}
+                </p>
               )}
             </div>
-
-            {noRegistration && (
-              <p className="text-xs text-destructive" role="alert">
-                {t("connections.add.noRegistration")}
-              </p>
-            )}
-            {fieldError && (
-              <p className="text-xs text-destructive" role="alert">
-                {fieldError}
-              </p>
-            )}
-
-            <div className="flex justify-end gap-2">
+            <div className="flex shrink-0 justify-end gap-2">
               <Button variant="ghost" onClick={() => close(true)}>
                 {t("connections.add.cancel")}
               </Button>
@@ -566,40 +618,41 @@ export function AddConnectionDialog({
         )}
 
         {step === "scopes" && (
-          <div className="flex flex-col gap-4">
-            {registrationSelect}
+          <div className="flex min-h-0 flex-col gap-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+              {registrationSelect}
 
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">
-                {t("connections.add.scopes")}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {reauthorizeOptions.length === 0
-                  ? t("connections.add.noScopes")
-                  : t("connections.add.reauthorizeHint")}
-              </span>
-              <ScopeChecklist
-                scopes={reauthorizeOptions}
-                selected={selectedScopes}
-                onToggle={toggleScope}
-                granted={grantedOptions}
-              />
-              {notRequestable.length > 0 && (
-                <span className="text-xs text-warning-foreground">
-                  {t("connections.add.scopesOutsideCeiling", {
-                    scopes: notRequestable.map(shortScope).join(", "),
-                  })}
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium">
+                  {t("connections.add.scopes")}
                 </span>
+                <span className="text-xs text-muted-foreground">
+                  {reauthorizeOptions.length === 0
+                    ? t("connections.add.noScopes")
+                    : t("connections.add.reauthorizeHint")}
+                </span>
+                <ScopeChecklist
+                  scopes={reauthorizeOptions}
+                  selected={selectedScopes}
+                  onToggle={toggleScope}
+                  granted={grantedOptions}
+                />
+                {notRequestable.length > 0 && (
+                  <span className="text-xs text-warning-foreground">
+                    {t("connections.add.scopesOutsideCeiling", {
+                      scopes: notRequestable.map(shortScope).join(", "),
+                    })}
+                  </span>
+                )}
+              </div>
+
+              {noRegistration && (
+                <p className="text-xs text-destructive" role="alert">
+                  {t("connections.add.noRegistration")}
+                </p>
               )}
             </div>
-
-            {noRegistration && (
-              <p className="text-xs text-destructive" role="alert">
-                {t("connections.add.noRegistration")}
-              </p>
-            )}
-
-            <div className="flex justify-end gap-2">
+            <div className="flex shrink-0 justify-end gap-2">
               <Button variant="ghost" onClick={() => close(true)}>
                 {t("connections.add.cancel")}
               </Button>
@@ -616,38 +669,7 @@ export function AddConnectionDialog({
 
         {step === "authorize" && (
           <div className="flex flex-col gap-4">
-            {authorize?.kind === "waiting" && (
-              <div className="flex items-center gap-3 text-sm">
-                <ForwardedIconComponent
-                  name="Loader2"
-                  className="h-4 w-4 animate-spin"
-                />
-                {t("connections.add.waiting")}
-              </div>
-            )}
-            {authorize?.kind === "connected" && (
-              <div className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center gap-2 font-medium">
-                  <ForwardedIconComponent
-                    name="CircleCheckBig"
-                    className="h-4 w-4 text-accent-emerald-foreground"
-                  />
-                  {t("connections.add.connected")}
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {authorize.connection.granted_scopes.map((scope) => (
-                    <Badge key={scope} variant="secondaryStatic" size="xq">
-                      {shortScope(scope)}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            {authorize?.kind === "failed" && (
-              <p className="text-sm text-destructive" role="alert">
-                {authorize.message}
-              </p>
-            )}
+            <AuthorizeStatus state={authorize} />
             <div className="flex justify-end gap-2">
               {authorize?.kind === "failed" && pendingRow && (
                 <Button
