@@ -62,6 +62,33 @@ async def test_copy_preserves_ids_and_vectors_without_an_embedder(tmp_path: Path
 
 
 @pytest.mark.api_key_required
+async def test_reads_chunk_text_back_when_config_names_another_text_field(tmp_path: Path) -> None:
+    _require_live_opensearch()
+    # The DB Providers UI persists a "Text field" setting, but LangChain writes and
+    # searches chunk text under "text" whatever the config says.
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_emb_{uuid.uuid4().hex[:8]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL", "text_field": "content"},
+        user_id=uuid.uuid4(),
+    )
+    docs = [IngestedDocument(id=f"chunk-{i}", content=f"doc {i}", embedding=[0.5] * 4) for i in range(2)]
+    try:
+        await backend.ensure_ready()
+        await backend.add_embedded_documents(docs)
+        backend._os_client.indices.refresh(index=backend._os_index)
+
+        copied = {}
+        async for batch in backend.iter_documents(include_embeddings=True):
+            copied.update({d.id: d.content for d in batch})
+        assert copied == {doc.id: doc.content for doc in docs}
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+@pytest.mark.api_key_required
 async def test_writes_a_batch_larger_than_one_bulk_request(tmp_path: Path) -> None:
     _require_live_opensearch()
     backend = create_backend(
