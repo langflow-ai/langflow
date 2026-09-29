@@ -283,10 +283,15 @@ async def test_embeddings_come_back_when_the_cluster_excludes_vectors_by_default
     backend = _backend(f"kb-vectors-{uuid.uuid4().hex[:8]}", uuid.uuid4())
     setting = "cluster.search.enabled_system_generated_factories"
     client = None
+    previous = None
     try:
         await _write(backend, "alpha", "beta")
         client = backend._os_client
-        client.cluster.put_settings(body={"persistent": {setting: ["knn_default_excludes_factory"]}})
+        # A shared cluster may already enable other factories: add this one to them
+        # and put the list back afterwards.
+        previous = client.cluster.get_settings(flat_settings=True).get("persistent", {}).get(setting)
+        enabled = sorted({*(previous or []), "knn_default_excludes_factory"})
+        client.cluster.put_settings(body={"persistent": {setting: enabled}})
 
         embeddings = []
         async for batch in backend.iter_documents(batch_size=100, include_embeddings=True):
@@ -296,5 +301,5 @@ async def test_embeddings_come_back_when_the_cluster_excludes_vectors_by_default
         assert all(embedding is not None and len(embedding) == 8 for embedding in embeddings), embeddings
     finally:
         if client is not None:
-            client.cluster.put_settings(body={"persistent": {setting: None}})
+            client.cluster.put_settings(body={"persistent": {setting: previous}})
         await _drop(backend)
