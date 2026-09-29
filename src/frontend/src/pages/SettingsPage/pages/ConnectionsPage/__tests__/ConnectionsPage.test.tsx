@@ -101,10 +101,34 @@ describe("ConnectionsPage tabs", () => {
       expect(screen.getByTestId("connections-no-providers")).toHaveTextContent(
         /administrator controls/i,
       );
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /administrator controls/i,
+      );
     } finally {
       mockIntegrations = { data: { providers: [] } };
     }
   });
+
+  it.each([
+    ["loading", { data: undefined, isLoading: true }],
+    ["failed", { data: undefined, isError: true }],
+  ])(
+    "keeps Add connection disabled without blaming policy while the provider list is %s",
+    (_state, query) => {
+      mockIntegrations = query;
+      mockUser = { id: SUPERUSER_ID, is_superuser: false };
+      mockConnections = [];
+      try {
+        render(<ConnectionsPage />);
+        expect(screen.getByTestId("add-connection")).toBeDisabled();
+        expect(
+          screen.getByTestId("connections-no-providers"),
+        ).toBeEmptyDOMElement();
+      } finally {
+        mockIntegrations = { data: { providers: [] } };
+      }
+    },
+  );
 
   it("shows the initial empty state only when there are no connections", () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };

@@ -142,8 +142,11 @@ export function AddConnectionDialog({
     preferredId: registrationId,
   });
   // A listed backend that offers nothing for this provider cannot start consent.
+  // Keyed on providerId, not provider: re-authorizing a connection whose
+  // provider policy has since removed must still report the missing
+  // registration up front.
   const noRegistration =
-    !!provider &&
+    providerId !== "" &&
     registrations.data !== null &&
     registrations.isSuccess &&
     resolvedRegistration === null;

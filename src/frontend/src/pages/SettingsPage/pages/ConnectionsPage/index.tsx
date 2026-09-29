@@ -244,8 +244,9 @@ export default function ConnectionsPage() {
             setReauthorizing(undefined);
             setDialogOpen(true);
           }}
-          disabled={noProviders}
-          title={noProviders ? t("connections.noProviders") : undefined}
+          // Until the provider list has loaded, the dialog would open with
+          // no providers and blame policy for a slow or failed request.
+          disabled={!integrationsQuery.isSuccess || noProviders}
           data-testid="add-connection"
         >
           <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
@@ -253,14 +254,19 @@ export default function ConnectionsPage() {
         </Button>
       </div>
 
-      {noProviders && (
-        <p
-          className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
-          data-testid="connections-no-providers"
-        >
-          {t("connections.noProviders")}
-        </p>
-      )}
+      {/* Always mounted: a status region inserted with its text already in
+          place is not reliably announced. */}
+      <p
+        className={
+          noProviders
+            ? "rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
+            : "sr-only"
+        }
+        data-testid="connections-no-providers"
+        role="status"
+      >
+        {noProviders ? t("connections.noProviders") : ""}
+      </p>
 
       {/*
         Every trigger needs a TabsContent with the matching value: Radix points
