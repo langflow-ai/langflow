@@ -79,6 +79,20 @@ def apply_run_defaults(
     validate_provided_id("session_id", session_id)
     validate_provided_id("user_id", user_id)
 
+    supplied_user_id = user_id
+    previous_shared_user = getattr(graph, "_headless_filesystem_user_id", None)
+    principal = getattr(graph, "execution_principal", None)
+    owns_identity = (
+        principal is None
+        or principal.kind == "unknown"
+        or (
+            principal.kind == "headless_operator"
+            and principal.family == "lfx_headless"
+            and previous_shared_user is not None
+            and previous_shared_user == graph.user_id
+        )
+    )
+    generated_user = user_id is None and (overwrite_user_id or not getattr(graph, "user_id", None))
     if not user_id:
         user_id = uuid.uuid4().hex
         logger.debug(
@@ -105,6 +119,14 @@ def apply_run_defaults(
             interactive=False,
             actor_label=str(user_id),
         )
+
+    # Only the standalone runner may opt a synthetic identity into shared files.
+    # Explicit/verified identities and host-stamped principals retain isolation.
+    graph._headless_filesystem_user_id = (  # noqa: SLF001 — runner-owned provenance, not a flow input
+        user_id
+        if owns_identity and supplied_user_id is None and (generated_user or previous_shared_user == user_id)
+        else None
+    )
 
     if not session_id:
         session_id = uuid.uuid4().hex
