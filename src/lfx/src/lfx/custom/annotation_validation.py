@@ -7,12 +7,13 @@ import builtins
 import hashlib
 import threading
 import typing
-from collections import OrderedDict
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, MappingProxyType, MethodType, ModuleType, UnionType
 from typing import Any
 from weakref import ReferenceType, ref
+
+from cachetools import LRUCache
 
 _MAX_ANNOTATION_DEPTH = 32
 _VALIDATED_SOURCES_MAX_ENTRIES = 1024
@@ -139,7 +140,7 @@ def validate_return_annotations(tree: ast.AST) -> None:
 # SHA-256 digests of exact source texts whose parsed tree passed
 # ``validate_return_annotations``. Only successes are recorded, so a rejected
 # source is validated (and rejected) again on every call.
-_VALIDATED_SOURCE_DIGESTS: OrderedDict[bytes, None] = OrderedDict()
+_VALIDATED_SOURCE_DIGESTS: LRUCache[bytes, bool] = LRUCache(maxsize=_VALIDATED_SOURCES_MAX_ENTRIES)
 _VALIDATED_SOURCE_DIGESTS_LOCK = threading.Lock()
 
 
@@ -157,15 +158,12 @@ def validate_source_return_annotations(source: str, tree: ast.AST) -> None:
     """
     digest = _source_digest(source)
     with _VALIDATED_SOURCE_DIGESTS_LOCK:
-        if digest in _VALIDATED_SOURCE_DIGESTS:
-            _VALIDATED_SOURCE_DIGESTS.move_to_end(digest)
+        # ``get`` marks the digest as recently used.
+        if _VALIDATED_SOURCE_DIGESTS.get(digest, False):
             return
     validate_return_annotations(tree)
     with _VALIDATED_SOURCE_DIGESTS_LOCK:
-        _VALIDATED_SOURCE_DIGESTS[digest] = None
-        _VALIDATED_SOURCE_DIGESTS.move_to_end(digest)
-        while len(_VALIDATED_SOURCE_DIGESTS) > _VALIDATED_SOURCES_MAX_ENTRIES:
-            _VALIDATED_SOURCE_DIGESTS.popitem(last=False)
+        _VALIDATED_SOURCE_DIGESTS[digest] = True
 
 
 @lru_cache(maxsize=1)

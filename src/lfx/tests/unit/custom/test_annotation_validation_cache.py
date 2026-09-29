@@ -15,6 +15,7 @@ import typing
 from pathlib import Path
 
 import pytest
+from cachetools import LRUCache
 from lfx.components.processing import output_parser
 from lfx.components.processing.output_parser import OutputParserComponent
 from lfx.custom import annotation_validation
@@ -92,14 +93,16 @@ def test_unsafe_edit_of_validated_source_is_rejected() -> None:
 
 
 def test_validated_source_cache_is_bounded(monkeypatch: pytest.MonkeyPatch, validation_calls: list[ast.AST]) -> None:
-    monkeypatch.setattr(annotation_validation, "_VALIDATED_SOURCES_MAX_ENTRIES", 2)
+    monkeypatch.setattr(annotation_validation, "_VALIDATED_SOURCE_DIGESTS", LRUCache(maxsize=2))
     sources = [f"def build_{index}() -> str:\n    pass\n" for index in range(3)]
-    for source in sources:
-        _validate(source)
+    _validate(sources[0])
+    _validate(sources[1])
+    _validate(sources[0])  # cache hit, now the most recently used
+    _validate(sources[2])  # evicts sources[1]
 
     assert len(annotation_validation._VALIDATED_SOURCE_DIGESTS) == 2
-    _validate(sources[0])  # evicted, validated again
-    _validate(sources[2])  # still cached
+    _validate(sources[0])  # still cached
+    _validate(sources[1])  # evicted, validated again
 
     assert len(validation_calls) == 4
 
