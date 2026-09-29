@@ -1220,3 +1220,16 @@ class TestRotationOnAppWrittenDatabase:
         with engine.connect() as conn:
             assert conn.execute(text("SELECT auth_settings FROM folder")).scalar() == "null"
         assert migrate_module.read_secret_key_from_file(config_dir) == new_key
+
+    def test_env_secret_key_must_be_updated_before_restart(self, migrate_module, app_db, new_key, monkeypatch, capsys):
+        _, config_dir, url, app_key = app_db
+        # Langflow uses this over the key file and writes it back over the file on start.
+        monkeypatch.setenv("LANGFLOW_SECRET_KEY", app_key)
+
+        migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        output = capsys.readouterr().out
+        start, _, _ = output.partition("1. Migrating")
+        _, _, completion = output.partition("MIGRATION COMPLETE")
+        assert "LANGFLOW_SECRET_KEY is set" in start
+        assert f"LANGFLOW_SECRET_KEY={new_key}" in completion

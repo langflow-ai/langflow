@@ -423,6 +423,17 @@ def get_default_database_url(config_dir: Path) -> str | None:
 DATABASE_URL_DISPLAY_LENGTH = 50
 
 
+def warn_env_secret_key(new_key: str | None = None) -> None:
+    """Langflow uses LANGFLOW_SECRET_KEY over the key file and writes it back over the file on start."""
+    print("\n" + "!" * 50)
+    print("LANGFLOW_SECRET_KEY is set in this environment. Langflow uses it instead of")
+    print("the secret_key file and writes it back over that file on start. Set it to the")
+    print("new key before starting Langflow, or every rotated secret decrypts to empty.")
+    if new_key:
+        print(f"\n  LANGFLOW_SECRET_KEY={new_key}")
+    print("!" * 50)
+
+
 def ensure_no_pending_encrypted_work(conn) -> None:
     """Refuse rotation while jobs or OAuth callbacks may still need the old key."""
     if inspect(conn).has_table("job"):
@@ -494,6 +505,8 @@ def migrate(
     )
     print(f"  Database: {db_display}")
     print(f"  Dry run: {dry_run}")
+    if os.environ.get("LANGFLOW_SECRET_KEY"):
+        warn_env_secret_key()
 
     if dry_run:
         print("\n[DRY RUN] No changes will be made.\n")
@@ -721,9 +734,12 @@ def migrate(
         print(f"\nMigrated {total_migrated} items, {total_failed} failures")
         print(f"\nBackup key location: {config_dir}/secret_key.backup.*")
         print("\nNext steps:")
-        print("1. Start Langflow and verify everything works")
-        print("2. Users must log in again (JWT sessions invalidated)")
-        print("3. Once verified, you may delete the backup key file")
+        print("1. If Langflow gets LANGFLOW_SECRET_KEY (environment, .env file, secret store), set it to the new key")
+        print("2. Start Langflow and verify everything works")
+        print("3. Users must log in again (JWT sessions invalidated)")
+        print("4. Once verified, you may delete the backup key file")
+        if os.environ.get("LANGFLOW_SECRET_KEY"):
+            warn_env_secret_key(new_key)
 
     if total_failed > 0:
         print(f"\nWarning: {total_failed} items could not be migrated.")
