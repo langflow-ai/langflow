@@ -133,6 +133,10 @@ class TestLoadFilesMessage:
         assert "First text" in result.text
         assert "Second text" in result.text
         assert "\n\n" in result.text  # Default separator
+        assert result.data["source_files"] == [
+            {"file_path": str(file1), "text": "First text"},
+            {"file_path": str(file2), "text": "Second text"},
+        ]
 
     def test_load_files_message_with_custom_separator(self):
         """Test load_files_message with custom separator."""
@@ -149,6 +153,20 @@ class TestLoadFilesMessage:
         result = self.component.load_files_message()
 
         assert result.text == "First | Second"
+
+    def test_multiple_data_rows_from_one_file_stay_together(self):
+        self.component.load_files_core = lambda: [
+            Data(data={"file_path": "first.txt", "text": "first part"}),
+            Data(data={"file_path": "second.txt", "text": "second file"}),
+            Data(data={"file_path": "first.txt", "text": "second part"}),
+        ]
+
+        result = self.component.load_files_message()
+
+        assert result.data["source_files"] == [
+            {"file_path": "first.txt", "text": "first part\n\nsecond part"},
+            {"file_path": "second.txt", "text": "second file"},
+        ]
 
     def test_load_files_message_with_json_complex_structure(self):
         """Test load_files_message with complex JSON structure."""
