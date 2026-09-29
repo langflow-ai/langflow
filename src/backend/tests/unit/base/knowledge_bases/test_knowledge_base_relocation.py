@@ -11,18 +11,25 @@ import contextlib
 import gc
 import os
 import uuid
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import pytest
+import sqlalchemy as sa
+import typer
+from langflow.__main__ import _relocate_kb
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.knowledge_base_relocation import (
     KBRelocationResult,
     relocate_knowledge_bases,
     validate_relocation_target_config,
 )
+from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.knowledge_base import KnowledgeBaseStatus
-from langflow.services.deps import get_settings_service
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_settings_service, session_scope
 from lfx.base.knowledge_bases.backends import ChromaLocalBackend, IngestedDocument, create_backend
+from pydantic import SecretStr
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -172,6 +179,54 @@ class TestRelocationWithoutATarget:
         assert "4 of 10" in result.reason
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "chroma"
+
+
+async def _database_state() -> tuple[str, list[uuid.UUID], uuid.UUID]:
+    async with session_scope() as session:
+        revision = (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).one()[0]
+        audit_rows = list((await session.exec(sa.select(AuthzAuditLog.id))).scalars())
+        superuser = (await session.exec(sa.select(User.id).where(User.username == "langflow"))).one()[0]
+    return revision, audit_rows, superuser
+
+
+class TestRelocateKbCommand:
+    """The command's own startup, the async helper ``langflow relocate-kb`` runs."""
+
+    @pytest.fixture
+    async def old_audit_row(self, client, monkeypatch):  # noqa: ARG002
+        # Superuser credentials set, as an operator following the runbook has them.
+        password = SecretStr("a-password")  # pragma: allowlist secret
+        monkeypatch.setattr(get_settings_service().auth_settings, "SUPERUSER_PASSWORD", password)
+        async with session_scope() as session:
+            row = AuthzAuditLog(action="flow:read", result="allow", timestamp=datetime(2020, 1, 1, tzinfo=timezone.utc))
+            session.add(row)
+        return row
+
+    async def test_dry_run_writes_nothing_to_the_database(self, old_audit_row):
+        # The server's startup migrates, sets up the superuser, reassigns orphaned
+        # flows and prunes old history. None of that belongs in a dry run.
+        before = await _database_state()
+
+        await _relocate_kb(
+            target_backend_type="postgres", target_backend_config={}, username=None, dry_run=True, batch_size=500
+        )
+
+        assert await _database_state() == before
+        assert old_audit_row.id in before[1]
+
+    async def test_database_behind_this_langflow_is_refused_not_migrated(self, old_audit_row, capsys):  # noqa: ARG002
+        earlier = "9d7e2a6c4b81"  # an earlier revision of this Langflow's own  # pragma: allowlist secret
+        async with session_scope() as session:
+            await session.exec(sa.text("UPDATE alembic_version SET version_num = :v").bindparams(v=earlier))
+        before = await _database_state()
+
+        with pytest.raises(typer.Exit):
+            await _relocate_kb(
+                target_backend_type="postgres", target_backend_config={}, username=None, dry_run=True, batch_size=500
+            )
+
+        assert await _database_state() == before
+        assert earlier in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
