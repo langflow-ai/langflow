@@ -61,11 +61,18 @@ def open_instance() -> None:
     each in a transaction of its own that commits. A check run after it would report
     on a database it had already changed. Registering the service factories is
     enough: each service is built on first use, and building one opens connections
-    without writing.
+    without writing. Settings are the exception: building them saves the secret key
+    to CONFIG_DIR, over whatever the instance kept there, so they are built here
+    with that write turned off.
     """
+    from lfx.services.settings.utils import keys_not_persisted
+
+    from langflow.services.deps import get_settings_service
     from langflow.services.utils import register_all_service_factories
 
     register_all_service_factories()
+    with keys_not_persisted():
+        get_settings_service()
 
 
 async def check_instance() -> IntegrityReport:

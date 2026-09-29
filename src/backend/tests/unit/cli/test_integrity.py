@@ -415,3 +415,43 @@ class TestReadOnly:
         async with session_scope() as session:
             assert await session.get(AuthzAuditLog, old.id) is not None
             assert (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).all() == revision_before
+
+
+class TestSecretKeyFile:
+    """The check reads the instance's key file and never writes it: it may be the only copy of the key."""
+
+    @pytest.fixture
+    async def config_dir(self, active_user, tmp_path, monkeypatch):  # noqa: ARG002
+        """Services built from nothing, as the command starts them, on a config dir of its own."""
+        from lfx.services.manager import get_service_manager
+        from lfx.services.schema import ServiceType
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_dir))
+        manager = get_service_manager()
+        monkeypatch.setattr(manager, "services", {})
+        yield config_dir
+        # Not a service teardown: the database's would tear down the superuser.
+        if database := manager.services.get(ServiceType.DATABASE_SERVICE):
+            await database.engine.dispose()
+
+    async def test_a_different_key_in_the_environment_leaves_the_key_file_as_it_was(self, config_dir, monkeypatch):
+        from langflow.__main__ import _check_integrity
+
+        key_file = config_dir / "secret_key"
+        key_file.write_bytes(b"the-only-copy-of-this-instance-key")
+        monkeypatch.setenv("LANGFLOW_SECRET_KEY", Fernet.generate_key().decode())
+
+        await _check_integrity()
+
+        assert key_file.read_bytes() == b"the-only-copy-of-this-instance-key"
+
+    async def test_no_key_anywhere_does_not_create_a_key_file(self, config_dir, monkeypatch):
+        from langflow.__main__ import _check_integrity
+
+        monkeypatch.delenv("LANGFLOW_SECRET_KEY", raising=False)
+
+        await _check_integrity()
+
+        assert not (config_dir / "secret_key").exists()
