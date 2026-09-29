@@ -7,6 +7,7 @@ session.
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -238,3 +239,73 @@ async def test_create_locks_the_target_user_row(client, logged_in_headers_super_
 
     assert response.status_code == 201, response.text
     assert locked_user_reads, "create_assignment no longer locks the target user's row"
+
+
+@pytest.mark.parametrize("domain_type", ["global", "org", "workspace", "project"])
+async def test_inactive_user_cannot_receive_a_role(
+    client, logged_in_headers_super_user, target_users, roles, monkeypatch, domain_type
+):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
+
+    async with session_scope() as session:
+        user = await session.get(User, target_users[0])
+        user.is_active = False
+        session.add(user)
+
+    audit = AsyncMock()
+    monkeypatch.setattr(authz_role_assignments, "audit_decision", audit)
+    response = await _assign(
+        client,
+        logged_in_headers_super_user,
+        user_id=target_users[0],
+        role_id=roles["viewer"],
+        domain_type=domain_type,
+        domain_id=None if domain_type == "global" else uuid4(),
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"] == "Cannot assign roles to an inactive user"
+    assert await _assignments_for(target_users[0]) == []
+    audit.assert_awaited_once()
+    assert audit.await_args.kwargs["action"] == "role_assignment:create"
+    assert audit.await_args.kwargs["result"] == "deny"
+    assert audit.await_args.kwargs["details"] == {
+        "event": AUDIT_EVENT_ACCESS,
+        "status_code": 409,
+        "reason": "user_inactive",
+    }
+
+
+async def test_inactive_user_cannot_add_a_manual_source_to_an_idp_assignment(
+    client, logged_in_headers_super_user, target_users, roles
+):
+    async with session_scope() as session:
+        user = await session.get(User, target_users[0])
+        user.is_active = False
+        session.add(user)
+        assignment = AuthzRoleAssignment(user_id=user.id, role_id=roles["viewer"])
+        session.add(assignment)
+        await session.flush()
+        assignment_id = assignment.id
+        grant = AuthzRoleAssignmentGrant(
+            assignment_id=assignment_id,
+            source_kind="idp",
+            provider_id="entra",
+            external_group="corp-viewer",
+        )
+        session.add(grant)
+        grant_id = grant.id
+
+    response = await _assign(client, logged_in_headers_super_user, user_id=target_users[0], role_id=roles["viewer"])
+
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"] == "Cannot assign roles to an inactive user"
+    assert [a.id for a in await _assignments_for(target_users[0])] == [assignment_id]
+    async with session_scope() as session:
+        grants = (
+            await session.exec(
+                select(AuthzRoleAssignmentGrant).where(AuthzRoleAssignmentGrant.assignment_id == assignment_id)
+            )
+        ).all()
+    assert [(g.id, g.source_kind) for g in grants] == [(grant_id, "idp")]
