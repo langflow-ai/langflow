@@ -10,7 +10,7 @@ import typing
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, MappingProxyType, MethodType, ModuleType, UnionType
-from typing import Any
+from typing import Any, NamedTuple
 from weakref import ReferenceType, ref
 
 from cachetools import LRUCache
@@ -166,9 +166,24 @@ def validate_source_return_annotations(source: str, tree: ast.AST) -> None:
         _VALIDATED_SOURCE_DIGESTS[digest] = True
 
 
+class _SafeTypes(NamedTuple):
+    """Server-owned type bindings and the ``id()`` sets that match them by identity.
+
+    The sets are built with the objects they describe and kept alive by this
+    tuple, so ``id(value) in binding_ids`` matches ``value is binding``.
+    Clearing ``_safe_types`` rebuilds all of them together.
+    """
+
+    bindings: dict[str, Any]
+    # Each binding named in ``_SAFE_SUBSCRIPT_BINDING_NAMES`` and its ``typing.get_origin``.
+    subscript_bases: tuple[Any, ...]
+    binding_ids: frozenset[int]
+    subscript_base_ids: frozenset[int]
+
+
 @lru_cache(maxsize=1)
-def _safe_type_bindings() -> dict[str, Any]:
-    """Return server-owned type objects that static annotation resolution may use."""
+def _safe_types() -> _SafeTypes:
+    """Build the server-owned type objects that static annotation resolution may use."""
     from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, OutputParser
     from lfx.schema.message import Message
 
@@ -194,7 +209,23 @@ def _safe_type_bindings() -> dict[str, Any]:
         "Union",
     ):
         bindings[name] = getattr(typing, name)
-    return bindings
+
+    subscript_bases: list[Any] = []
+    for name in _SAFE_SUBSCRIPT_BINDING_NAMES:
+        binding = bindings.get(name)
+        if binding is not None:
+            subscript_bases.extend((binding, typing.get_origin(binding)))
+    return _SafeTypes(
+        bindings=bindings,
+        subscript_bases=tuple(subscript_bases),
+        binding_ids=frozenset(id(binding) for binding in bindings.values()),
+        subscript_base_ids=frozenset(id(base) for base in subscript_bases),
+    )
+
+
+def _safe_type_bindings() -> dict[str, Any]:
+    """Return server-owned type objects that static annotation resolution may use."""
+    return _safe_types().bindings
 
 
 _SAFE_ANNOTATION_MODULES = {
@@ -292,38 +323,9 @@ def _module_namespace(module: ModuleType) -> dict[str, Any] | None:
     return namespace if isinstance(namespace, dict) else None
 
 
-# Identity sets for the safe bindings, each stored with the ``_safe_type_bindings()``
-# dict it was built from. An id is only meaningful while its object is alive, so
-# a stale set could match an unrelated object that reused a freed id. The dict
-# only changes if ``_safe_type_bindings.cache_clear()`` is called (today only in
-# tests), and the ``cached[0] is bindings`` checks below rebuild the sets when it
-# does. If ``_safe_type_bindings`` could not be cleared (a lazily set global
-# returning a read-only ``MappingProxyType``), these could be plain
-# ``@lru_cache(maxsize=1)`` functions like ``_trusted_runtime_metaclasses``.
-_SAFE_TYPE_BINDING_IDS: tuple[dict[str, Any], frozenset[int]] | None = None
-_SAFE_SUBSCRIPT_BASE_IDS: tuple[dict[str, Any], tuple[Any, ...], frozenset[int]] | None = None
-
-
-def _safe_type_binding_ids() -> frozenset[int]:
-    """Return ``id()`` of every value in ``_safe_type_bindings()`` for O(1) identity checks.
-
-    The bindings dict is stored beside the ids so each bound object stays alive.
-    ``id(value) in ids`` then matches ``value is binding`` for those objects.
-    """
-    global _SAFE_TYPE_BINDING_IDS  # noqa: PLW0603
-    bindings = _safe_type_bindings()
-    cached = _SAFE_TYPE_BINDING_IDS
-    if cached is not None and cached[0] is bindings:
-        return cached[1]
-
-    ids = frozenset(id(binding) for binding in bindings.values())
-    _SAFE_TYPE_BINDING_IDS = (bindings, ids)
-    return ids
-
-
 def _is_safe_type_binding(value: Any) -> bool:
     """Return whether ``value`` is one of the server-owned safe type bindings, by identity."""
-    return id(value) in _safe_type_binding_ids()
+    return id(value) in _safe_types().binding_ids
 
 
 @lru_cache(maxsize=1)
@@ -441,32 +443,9 @@ def _runtime_module_attribute(node: ast.Attribute, globalns: dict[str, Any] | No
     return True, value
 
 
-def _safe_subscript_base_ids() -> frozenset[int]:
-    """Return ``id()`` of every safe subscript binding and of its ``typing.get_origin``.
-
-    The referenced objects are kept alive with the ids, so membership is
-    equivalent to the identity comparisons it replaces.
-    """
-    global _SAFE_SUBSCRIPT_BASE_IDS  # noqa: PLW0603
-    bindings = _safe_type_bindings()
-    cached = _SAFE_SUBSCRIPT_BASE_IDS
-    if cached is not None and cached[0] is bindings:
-        return cached[2]
-
-    bases: list[Any] = []
-    for name in _SAFE_SUBSCRIPT_BINDING_NAMES:
-        binding = bindings.get(name)
-        if binding is not None:
-            bases.extend((binding, typing.get_origin(binding)))
-    pinned = tuple(bases)
-    ids = frozenset(id(base) for base in pinned)
-    _SAFE_SUBSCRIPT_BASE_IDS = (bindings, pinned, ids)
-    return ids
-
-
 def _is_safe_subscript_base(value: Any) -> bool:
     """Return whether subscription is implemented by a fixed, trusted type object."""
-    return id(value) in _safe_subscript_base_ids()
+    return id(value) in _safe_types().subscript_base_ids
 
 
 def _is_safe_union_member(value: Any) -> bool:

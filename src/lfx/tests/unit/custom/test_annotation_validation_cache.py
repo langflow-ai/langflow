@@ -394,15 +394,11 @@ def test_safe_subscript_base_identity_set_matches_linear_scan() -> None:
         assert annotation_validation._is_safe_subscript_base(value) is expected
 
 
-def test_identity_sets_follow_rebuilt_bindings() -> None:
-    annotation_validation._safe_type_binding_ids()
-    annotation_validation._safe_subscript_base_ids()
-    annotation_validation._safe_type_bindings.cache_clear()
-    try:
-        bindings = annotation_validation._safe_type_bindings()
-        assert annotation_validation._safe_type_binding_ids() == frozenset(id(value) for value in bindings.values())
-        assert annotation_validation._SAFE_TYPE_BINDING_IDS[0] is bindings
-        annotation_validation._safe_subscript_base_ids()
-        assert annotation_validation._SAFE_SUBSCRIPT_BASE_IDS[0] is bindings
-    finally:
-        annotation_validation._safe_type_bindings.cache_clear()
+def test_identity_sets_are_rebuilt_with_bindings() -> None:
+    before = annotation_validation._safe_types()
+    annotation_validation._safe_types.cache_clear()
+    after = annotation_validation._safe_types()
+
+    assert after is not before
+    assert after.binding_ids == frozenset(id(value) for value in after.bindings.values())
+    assert annotation_validation._safe_type_bindings() is after.bindings
