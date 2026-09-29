@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Mapping
+from functools import lru_cache
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
@@ -73,12 +74,17 @@ class ParameterHandler:
         return self._storage_service
 
     @staticmethod
-    def _file_input_names_from_code(code: str) -> set[str]:
-        """Extract literal FileInput names from trusted component source."""
+    @lru_cache(maxsize=512)
+    def _file_input_names_from_code(code: str) -> frozenset[str]:
+        """Extract literal FileInput names from trusted component source.
+
+        The result depends only on the exact source text, so it is cached per
+        source; every request otherwise re-parses each component's code.
+        """
         try:
             tree = ast.parse(code)
         except SyntaxError:
-            return set()
+            return frozenset()
 
         aliases = {"FileInput"}
         for node in ast.walk(tree):
@@ -99,7 +105,7 @@ class ParameterHandler:
                     if isinstance(keyword.value.value, str) and keyword.value.value:
                         names.add(keyword.value.value)
                     break
-        return names
+        return frozenset(names)
 
     def _canonical_file_fields(self) -> dict[str, dict[str, Any]]:
         """Return FileInput metadata derived from server-trusted component source."""
