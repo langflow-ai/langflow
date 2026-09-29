@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import ast
 import builtins
+import hashlib
+import threading
 import typing
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, MappingProxyType, MethodType, ModuleType, UnionType
-from typing import Any
+from typing import Any, NamedTuple
 from weakref import ReferenceType, ref
 
+from cachetools import LRUCache
+
 _MAX_ANNOTATION_DEPTH = 32
+_VALIDATED_SOURCES_MAX_ENTRIES = 1024
 _RUNTIME_ANNOTATED_ALIAS_TYPE = type(typing.Annotated[int, "metadata"])
 
 
@@ -132,9 +137,53 @@ def validate_return_annotations(tree: ast.AST) -> None:
             raise UnsafeReturnAnnotationError(msg)
 
 
+# SHA-256 digests of exact source texts whose parsed tree passed
+# ``validate_return_annotations``. Only successes are recorded, so a rejected
+# source is validated (and rejected) again on every call.
+_VALIDATED_SOURCE_DIGESTS: LRUCache[bytes, bool] = LRUCache(maxsize=_VALIDATED_SOURCES_MAX_ENTRIES)
+_VALIDATED_SOURCE_DIGESTS_LOCK = threading.Lock()
+
+
+def _source_digest(source: str) -> bytes:
+    # ``surrogatepass`` keeps the encoding injective for every ``str``.
+    return hashlib.sha256(source.encode("utf-8", "surrogatepass")).digest()
+
+
+def validate_source_return_annotations(source: str, tree: ast.AST) -> None:
+    """Run ``validate_return_annotations(tree)`` once per exact ``source`` text.
+
+    ``tree`` must be ``ast.parse(source)``. The check depends only on that
+    tree, so a source whose annotations already passed is not walked again.
+    Any change to the text produces a different digest and is validated anew.
+    """
+    digest = _source_digest(source)
+    with _VALIDATED_SOURCE_DIGESTS_LOCK:
+        # ``get`` marks the digest as recently used.
+        if _VALIDATED_SOURCE_DIGESTS.get(digest, False):
+            return
+    validate_return_annotations(tree)
+    with _VALIDATED_SOURCE_DIGESTS_LOCK:
+        _VALIDATED_SOURCE_DIGESTS[digest] = True
+
+
+class _SafeTypes(NamedTuple):
+    """Server-owned type bindings and the ``id()`` sets that match them by identity.
+
+    The sets are built with the objects they describe and kept alive by this
+    tuple, so ``id(value) in binding_ids`` matches ``value is binding``.
+    Clearing ``_safe_types`` rebuilds all of them together.
+    """
+
+    bindings: dict[str, Any]
+    # Each binding named in ``_SAFE_SUBSCRIPT_BINDING_NAMES`` and its ``typing.get_origin``.
+    subscript_bases: tuple[Any, ...]
+    binding_ids: frozenset[int]
+    subscript_base_ids: frozenset[int]
+
+
 @lru_cache(maxsize=1)
-def _safe_type_bindings() -> dict[str, Any]:
-    """Return server-owned type objects that static annotation resolution may use."""
+def _safe_types() -> _SafeTypes:
+    """Build the server-owned type objects that static annotation resolution may use."""
     from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, OutputParser
     from lfx.schema.message import Message
 
@@ -160,7 +209,23 @@ def _safe_type_bindings() -> dict[str, Any]:
         "Union",
     ):
         bindings[name] = getattr(typing, name)
-    return bindings
+
+    subscript_bases: list[Any] = []
+    for name in _SAFE_SUBSCRIPT_BINDING_NAMES:
+        binding = bindings.get(name)
+        if binding is not None:
+            subscript_bases.extend((binding, typing.get_origin(binding)))
+    return _SafeTypes(
+        bindings=bindings,
+        subscript_bases=tuple(subscript_bases),
+        binding_ids=frozenset(id(binding) for binding in bindings.values()),
+        subscript_base_ids=frozenset(id(base) for base in subscript_bases),
+    )
+
+
+def _safe_type_bindings() -> dict[str, Any]:
+    """Return server-owned type objects that static annotation resolution may use."""
+    return _safe_types().bindings
 
 
 _SAFE_ANNOTATION_MODULES = {
@@ -199,6 +264,8 @@ _SAFE_SUBSCRIPT_BINDING_NAMES = {
 }
 
 _MISSING = object()
+_LITERAL_ARGUMENT_TYPES = frozenset({str, bytes, int, float, complex, bool})
+_WRAPPED_METHOD_TYPES = frozenset({classmethod, staticmethod})
 
 
 def safe_annotation_aliases(imports: list[Any]) -> dict[str, str]:
@@ -254,6 +321,11 @@ def _module_namespace(module: ModuleType) -> dict[str, Any] | None:
     except (AttributeError, TypeError):
         return None
     return namespace if isinstance(namespace, dict) else None
+
+
+def _is_safe_type_binding(value: Any) -> bool:
+    """Return whether ``value`` is one of the server-owned safe type bindings, by identity."""
+    return id(value) in _safe_types().binding_ids
 
 
 @lru_cache(maxsize=1)
@@ -314,7 +386,7 @@ def _is_runtime_annotation_binding(
     annotation would let downstream type formatting invoke its attribute
     hooks, so plain objects are rejected before they leave this resolver.
     """
-    if any(value is binding for binding in _safe_type_bindings().values()):
+    if _is_safe_type_binding(value):
         return True
 
     # ``type(value)`` observes the real runtime type without consulting a
@@ -337,7 +409,7 @@ def _is_runtime_annotation_binding(
     return all(
         _is_runtime_annotation_binding(argument, seen=nested_seen, depth=depth + 1)
         or argument is Ellipsis
-        or type(argument) in {str, bytes, int, float, complex, bool}
+        or type(argument) in _LITERAL_ARGUMENT_TYPES
         for argument in arguments
     )
 
@@ -373,12 +445,7 @@ def _runtime_module_attribute(node: ast.Attribute, globalns: dict[str, Any] | No
 
 def _is_safe_subscript_base(value: Any) -> bool:
     """Return whether subscription is implemented by a fixed, trusted type object."""
-    bindings = _safe_type_bindings()
-    return any(
-        value is binding or value is typing.get_origin(binding)
-        for name in _SAFE_SUBSCRIPT_BINDING_NAMES
-        if (binding := bindings.get(name)) is not None
-    )
+    return id(value) in _safe_types().subscript_base_ids
 
 
 def _is_safe_union_member(value: Any) -> bool:
@@ -578,6 +645,16 @@ def _static_function_return(function: FunctionType, method_name: str) -> ast.AST
     return_source = MappingProxyType.get(method_returns, (method_name, first_line))
     if return_source is None:
         return None
+    return _parse_return_source(return_source)
+
+
+@lru_cache(maxsize=4096)
+def _parse_return_source(return_source: str) -> ast.expr | None:
+    """Parse one ``ast.unparse``-d return annotation from server source.
+
+    The result depends only on the string, and callers only read the returned
+    node, so one parsed tree is shared by every lookup of the same text.
+    """
     try:
         return ast.parse(return_source, mode="eval").body
     except SyntaxError:
@@ -629,7 +706,7 @@ def snapshot_trusted_class_method_returns(
                 continue
             function = (
                 object.__getattribute__(descriptor, "__func__")
-                if type(descriptor) in {classmethod, staticmethod}
+                if type(descriptor) in _WRAPPED_METHOD_TYPES
                 else descriptor
             )
             if type(function) is not FunctionType:
@@ -663,7 +740,7 @@ def _annotation_contains_untracked_class(
     depth: int = 0,
 ) -> bool:
     if issubclass(type(annotation), type):
-        is_server_binding = any(annotation is binding for binding in _safe_type_bindings().values())
+        is_server_binding = _is_safe_type_binding(annotation)
         return not is_server_binding and id(annotation) not in preexisting_class_ids
     if depth >= _MAX_ANNOTATION_DEPTH or id(annotation) in seen:
         return True
@@ -827,9 +904,7 @@ def _resolve_trusted_method_snapshot(
             return True, None
         descriptor = MappingProxyType.__getitem__(namespace, method_name)
         function = (
-            object.__getattribute__(descriptor, "__func__")
-            if type(descriptor) in {classmethod, staticmethod}
-            else descriptor
+            object.__getattribute__(descriptor, "__func__") if type(descriptor) in _WRAPPED_METHOD_TYPES else descriptor
         )
         if (
             type(function) is not FunctionType
