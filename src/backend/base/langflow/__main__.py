@@ -1372,7 +1372,7 @@ def migration_preflight(
     Read-only. Exits non-zero if any check fails.
     """
     configure(log_level=log_level)
-    # Not stripped: the preflight warns about whitespace a Secret made from this file would carry.
+    # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
     key = target_secret_key_file.read_text() if target_secret_key_file else None
     if not asyncio.run(_migration_preflight(target_revision or None, key)):
         raise typer.Exit(1)

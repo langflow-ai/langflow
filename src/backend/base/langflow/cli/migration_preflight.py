@@ -157,28 +157,23 @@ async def check_target_key(session: AsyncSession, target_secret_key: str | None)
     if not target_secret_key:
         return CheckResult(name, "warn", f"not checked: pass --target-secret-key-file. {operator_note}")
 
-    # A key file usually ends in a newline. Fernet ignores it, so every credential
-    # opens, but a Secret made from the file with --from-file keeps it, and the SSO
-    # client secret is keyed on the raw bytes. That breaks SSO sign-in and nothing else.
-    key = target_secret_key.strip()
-    padded = ""
-    if key != target_secret_key:
-        padded = (
-            ". The key file has whitespace around the key, such as a trailing newline. A Secret created from it "
-            "with --from-file keeps that whitespace: credentials still decrypt, but the SSO client secret does not. "
-            "Create the Secret with --from-literal"
-        )
-
-    result = await check_credentials(session, _settings_with_key(key))
+    # Tested as the file holds it, trailing newline and all: a Secret created from the
+    # file with --from-file carries it to the target, which reads the key as it is.
+    result = await check_credentials(session, _settings_with_key(target_secret_key))
+    summary = result.summary.replace("the configured", "the target's")
     if result.status == "ok":
-        summary = result.summary.replace("the configured", "the target's") + padded
-        return CheckResult(name, "warn" if padded else "ok", summary, result.problems)
-    return CheckResult(
-        name,
-        "fail",
-        f"{result.summary.replace('the configured', 'the target')}. {operator_note}{padded}",
-        result.problems,
-    )
+        return CheckResult(name, "ok", summary, result.problems)
+    key = target_secret_key.strip()
+    if key != target_secret_key and (await check_credentials(session, _settings_with_key(key))).status == "ok":
+        return CheckResult(
+            name,
+            "fail",
+            "the key file has whitespace around the key, such as a trailing newline, and a Secret created from it "
+            f"with --from-file carries that to the target. With it, {summary}; without it, every value opens. "
+            "Remove it from the file, or create the Secret with --from-literal",
+            result.problems,
+        )
+    return CheckResult(name, "fail", f"{summary}. {operator_note}", result.problems)
 
 
 async def check_embedding_models(session: AsyncSession) -> CheckResult:

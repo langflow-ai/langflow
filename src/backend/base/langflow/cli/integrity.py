@@ -163,7 +163,11 @@ async def check_credentials(session: AsyncSession, settings_service: SettingsSer
     from langflow.services.deps import get_settings_service
 
     settings_service = settings_service or get_settings_service()
-    fernet = get_fernet_for_decryption(settings_service)
+    try:
+        fernet = get_fernet_for_decryption(settings_service)
+    except ValueError as exc:
+        # The app raises the same on every encrypt and decrypt, so nothing opens with this key.
+        return CheckResult("credentials", "fail", f"the configured secret key is not usable: {str(exc).rstrip('.')}")
     counted = 0
     problems = []
     for column, row_id, value in await _encrypted_values(session):
