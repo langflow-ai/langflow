@@ -810,7 +810,7 @@ export default function Page({
         });
       }
     },
-    [takeSnapshot, addComponent],
+    [effectiveLocked, takeSnapshot, addComponent],
   );
 
   const onEdgeUpdateStart = useCallback(() => {
