@@ -251,3 +251,47 @@ class TestComposition:
         await run_preflight(target_revision=HEAD, target_secret_key=_current_key())
 
         assert await snapshot() == before
+
+
+class TestReadOnly:
+    """The preflight reads the source. It must not migrate, repair or prune it first."""
+
+    async def test_the_cli_entry_point_leaves_the_source_as_it_found_it(self, safe_superuser):  # noqa: ARG002
+        from datetime import datetime, timezone
+
+        from langflow.__main__ import _migration_preflight
+        from langflow.services.database.models.auth.authz import AuthzAuditLog
+
+        old = AuthzAuditLog(action="flow:read", result="allow", timestamp=datetime(2020, 1, 1, tzinfo=timezone.utc))
+        await _add(old)
+        async with session_scope() as session:
+            revision_before = (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).all()
+
+        await _migration_preflight(None, None)
+
+        async with session_scope() as session:
+            assert await session.get(AuthzAuditLog, old.id) is not None
+            assert (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).all() == revision_before
+
+    async def test_a_source_on_an_older_schema_is_reported_without_being_migrated(self, safe_superuser):  # noqa: ARG002
+        from langflow.cli.integrity import script_directory
+
+        script = script_directory()
+        head = script.get_current_head()
+        parent = script.get_revision(head).down_revision
+        parent = parent[0] if isinstance(parent, tuple) else parent
+        async with session_scope() as session:
+            await session.exec(sa.text("UPDATE alembic_version SET version_num = :r").bindparams(r=parent))
+            await session.commit()
+        try:
+            report = await run_preflight(target_revision=head)
+            async with session_scope() as session:
+                after = (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).one()[0]
+        finally:
+            async with session_scope() as session:
+                await session.exec(sa.text("UPDATE alembic_version SET version_num = :r").bindparams(r=head))
+                await session.commit()
+
+        assert after == parent
+        assert [(c.name, c.status) for c in report.checks] == [("version", "ok"), ("source: schema", "fail")]
+        assert parent in report.checks[1].summary
