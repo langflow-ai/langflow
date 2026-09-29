@@ -52,6 +52,7 @@ TAG = re.compile(r"</?\d+>")
 # ASCII only, matching the Korean checker precedent. Parentheses are omitted
 # because Markdown links wrap URLs in them. Trailing punctuation is stripped.
 URL = re.compile(r"https?://[A-Za-z0-9\-._~:/?#\[\]@!$&'*+,;=%]+")
+MARKDOWN_LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\n]+)\)")
 INLINE_CODE = re.compile(r"(?<!`)`([^`\n]+)`(?!`)")
 FENCED_CODE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
 ENV_VAR = re.compile(r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b")
@@ -316,6 +317,10 @@ def _urls(text: str) -> Counter[str]:
     return Counter(match.group(0).rstrip(".,;:!?)'\"") for match in URL.finditer(text))
 
 
+def _markdown_link_destinations(text: str) -> list[str]:
+    return [match.group(2) for match in MARKDOWN_LINK.finditer(text)]
+
+
 def tag_order_error(value: str) -> str | None:
     """Return why numbered tags are malformed, or None when properly nested."""
     open_tags: list[str] = []
@@ -440,6 +445,16 @@ def check_value(
         ):
             if len(re.findall(marker, en_value)) != len(re.findall(marker, id_value)):
                 report.error(key, f"Markdown {name} count differs from the English note")
+
+        en_link_destinations = _markdown_link_destinations(en_value)
+        id_link_destinations = _markdown_link_destinations(id_value)
+        if en_link_destinations != id_link_destinations and Counter(en_link_destinations) == Counter(
+            id_link_destinations
+        ):
+            report.error(
+                key,
+                "Markdown link destinations are reordered relative to the English note",
+            )
 
         if en_value.count("**") != id_value.count("**"):
             report.error(key, "Markdown bold-marker count differs from the English note")
