@@ -360,7 +360,6 @@ async def test_relocation_refuses_a_local_target(backend_type):
         await relocate_knowledge_bases(target_backend_type=backend_type, target_backend_config={})
 
 
-@pytest.mark.api_key_required
 @pytest.mark.parametrize(
     ("backend_type", "config", "metric"),
     [
@@ -375,6 +374,7 @@ def test_backends_report_the_metric_they_rank_by(tmp_path: Path, backend_type, c
     assert backend.distance_metric == metric
 
 
+@pytest.mark.api_key_required
 @pytest.mark.usefixtures("kb_root")
 class TestRelocationToPostgresLive:
     @pytest.fixture(autouse=True)
