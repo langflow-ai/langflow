@@ -1,14 +1,17 @@
 import { renderHook } from "@testing-library/react";
 import useFileDrop from "../use-on-file-drop";
 
-const mockSaveFlow = jest.fn();
+const mockSaveFlow = jest.fn().mockResolvedValue(undefined);
 const mockSetFolderDragging = jest.fn();
 const mockSetFolderIdDragging = jest.fn();
 const mockUploadFlowToFolder = jest.fn();
 const mockSetErrorData = jest.fn();
 
-let flowsManagerState: any;
-let folderState: any;
+/** The slice of store state these tests stand up; the hook reads a few keys of it. */
+type MockState = Record<string, unknown>;
+
+let flowsManagerState: MockState;
+let folderState: MockState;
 
 jest.mock("@/hooks/flows/use-save-flow", () => ({
   __esModule: true,
@@ -33,14 +36,14 @@ jest.mock("react-i18next", () => ({
 
 jest.mock("../../../../../stores/alertStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: <T>(selector: (state: MockState) => T) =>
     selector({
       setErrorData: mockSetErrorData,
     }),
 }));
 
 jest.mock("../../../../../stores/flowsManagerStore", () => {
-  const useFlowsManagerStore = (selector: any) =>
+  const useFlowsManagerStore = <T>(selector?: (state: MockState) => T) =>
     selector ? selector(flowsManagerState) : flowsManagerState;
   useFlowsManagerStore.getState = () => flowsManagerState;
   return {
@@ -50,7 +53,7 @@ jest.mock("../../../../../stores/flowsManagerStore", () => {
 });
 
 jest.mock("../../../../../stores/foldersStore", () => {
-  const useFolderStore = (selector: any) =>
+  const useFolderStore = <T>(selector?: (state: MockState) => T) =>
     selector ? selector(folderState) : folderState;
   useFolderStore.getState = () => folderState;
   return {
@@ -68,7 +71,7 @@ describe("useFileDrop.onDrop (drag-and-drop flow between projects)", () => {
       data: null,
       folder_id: "project-A",
       is_component: false,
-    } as any;
+    };
 
     flowsManagerState = {
       flows: [flowInProjectA],
@@ -98,7 +101,7 @@ describe("useFileDrop.onDrop (drag-and-drop flow between projects)", () => {
         types: ["flow"],
       },
       preventDefault: jest.fn(),
-    } as any;
+    } as unknown as React.DragEvent<HTMLDivElement>;
 
     result.current.onDrop(event, "project-B");
 
