@@ -255,6 +255,17 @@ def _trusted_vector_store_decorator_alias(module: ast.Module, class_name: str) -
     raise UnsafeReturnAnnotationError(msg)
 
 
+def _future_annotations_import() -> ast.ImportFrom:
+    """Build a located ``from __future__ import annotations`` for the top of a parsed module."""
+    location = {"lineno": 1, "col_offset": 0, "end_lineno": 1, "end_col_offset": 0}
+    return ast.ImportFrom(
+        module="__future__",
+        names=[ast.alias(name="annotations", **location)],
+        level=0,
+        **location,
+    )
+
+
 def create_class(code, class_name):
     """Dynamically create a class from a string of code and a specified class name.
 
@@ -321,11 +332,10 @@ def create_class(code, class_name):
             and any(alias.name == "annotations" for alias in node.names)
             for node in module.body
         ):
-            module.body.insert(
-                0,
-                ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0),
-            )
-            ast.fix_missing_locations(module)
+            # Only the inserted nodes lack positions; give them the ones
+            # ast.fix_missing_locations would (line 1, column 0) instead of
+            # walking the whole tree.
+            module.body.insert(0, _future_annotations_import())
         trusted_vector_store_alias = _trusted_vector_store_decorator_alias(module, class_name)
         runtime_module = copy.deepcopy(module) if trusted_vector_store_alias is not None else module
         if trusted_vector_store_alias is not None:

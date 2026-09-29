@@ -8,15 +8,20 @@ unsafe input on every call.
 from __future__ import annotations
 
 import ast
+import sys
+import traceback
 import typing
+from pathlib import Path
 
 import pytest
+from lfx.components.processing import output_parser
 from lfx.custom import annotation_validation
 from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     validate_source_return_annotations,
 )
-from lfx.custom.validate import create_class
+from lfx.custom.validate import _future_annotations_import, create_class
+from lfx.field_typing.constants import DEFAULT_IMPORT_STRING
 
 SAFE_SOURCE = "def build() -> list[str]:\n    pass\n"
 UNSAFE_SOURCE = 'def build() -> list[open("marker", "w")]:\n    pass\n'
@@ -120,6 +125,73 @@ def test_create_class_rejects_unsafe_variant_of_cached_source(tmp_path) -> None:
             create_class(unsafe_code, "CachedAnnotationComponent")
 
     assert not marker.exists()
+
+
+# --------------------------------------------------------------------------- inserted __future__ import location
+
+
+def test_future_import_location_matches_fix_missing_locations() -> None:
+    source = DEFAULT_IMPORT_STRING + "\n" + Path(output_parser.__file__).read_text(encoding="utf-8")
+    fixed = ast.parse(source)
+    fixed.body.insert(0, ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0))
+    ast.fix_missing_locations(fixed)
+    located = ast.parse(source)
+    located.body.insert(0, _future_annotations_import())
+
+    assert ast.dump(located, include_attributes=True) == ast.dump(fixed, include_attributes=True)
+    fixed_code = compile(fixed, "<string>", "exec")
+    located_code = compile(located, "<string>", "exec")
+    assert list(located_code.co_positions()) == list(fixed_code.co_positions())
+
+
+def _source_line(code: str, text: str) -> int:
+    """1-based line of ``text`` in the source create_class parses."""
+    return (DEFAULT_IMPORT_STRING + "\n" + code).splitlines().index(text) + 1
+
+
+def _string_frames(exc: BaseException) -> list[traceback.FrameSummary]:
+    return [frame for frame in traceback.extract_tb(exc.__traceback__) if frame.filename == "<string>"]
+
+
+def test_component_method_traceback_points_at_raising_line() -> None:
+    code = """\
+from lfx.custom import Component
+from lfx.io import Output
+from lfx.schema import Data
+
+class LineNumberComponent(Component):
+    outputs = [Output(name="result", display_name="Result", method="build")]
+
+    def build(self) -> Data:
+        value = 1
+        raise RuntimeError(f"boom {value}")
+"""
+    component = create_class(code, "LineNumberComponent")()
+
+    with pytest.raises(RuntimeError, match="boom") as exc_info:
+        component.build()
+
+    frame = _string_frames(exc_info.value)[-1]
+    assert frame.name == "build"
+    assert frame.lineno == _source_line(code, '        raise RuntimeError(f"boom {value}")')
+    if sys.version_info >= (3, 11):
+        assert (frame.colno, frame.end_colno) == (8, len('        raise RuntimeError(f"boom {value}")'))
+
+
+def test_class_body_error_traceback_points_at_failing_line() -> None:
+    code = """\
+from lfx.custom import Component
+
+class BrokenBodyComponent(Component):
+    display_name = "Broken"
+    ratio = 1 // 0
+"""
+
+    with pytest.raises(ValueError, match="ZeroDivisionError") as exc_info:
+        create_class(code, "BrokenBodyComponent")
+
+    frame = _string_frames(exc_info.value.__cause__)[-1]
+    assert frame.lineno == _source_line(code, "    ratio = 1 // 0")
 
 
 # --------------------------------------------------------------------------- identity sets
