@@ -117,6 +117,25 @@ class TestVersionDirection:
     async def test_no_target_revision_is_a_warning(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "version").status == "warn"
 
+    def test_the_hint_prints_a_revision_that_can_be_passed_as_is(self):
+        import subprocess
+        import sys
+
+        from langflow.cli.migration_preflight import TARGET_REVISION_HINT
+
+        code = TARGET_REVISION_HINT.split('python -c "', 1)[1].removesuffix('"')
+        printed = subprocess.run(  # noqa: S603 - the hint's own code, run as the operator would
+            [sys.executable, "-c", code], capture_output=True, text=True, check=True
+        ).stdout
+
+        assert printed.strip() == HEAD
+
+    async def test_a_pasted_revision_list_is_read_as_the_revision_it_names(self, safe_superuser):  # noqa: ARG002
+        # get_heads() prints a list. Pasted as is, an older target must still be refused.
+        check = _check(await run_preflight(target_revision=str([LANGFLOW_1_12_0])), "version")
+
+        assert check.status == "fail"
+
 
 class TestDefaultSuperuser:
     async def test_a_never_signed_in_default_superuser_that_owns_work_is_refused(

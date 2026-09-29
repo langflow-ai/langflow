@@ -35,7 +35,8 @@ if TYPE_CHECKING:
 TARGET_REVISION_HINT = (
     'read it from the target image: python -c "import langflow, pathlib; from alembic.config import Config; '
     "from alembic.script import ScriptDirectory; c = Config(); c.set_main_option('script_location', "
-    "str(pathlib.Path(langflow.__file__).parent / 'alembic')); print(ScriptDirectory.from_config(c).get_heads())\""
+    "str(pathlib.Path(langflow.__file__).parent / 'alembic')); "
+    'print(ScriptDirectory.from_config(c).get_current_head())"'
 )
 
 _SUPERUSER_WORKAROUND = (
@@ -82,6 +83,8 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
     if not target_revision:
         return CheckResult(name, "warn", f"not checked: pass --target-revision ({TARGET_REVISION_HINT})")
 
+    # get_heads() prints a list, such as ['<revision>']; pasted as is, it names that revision.
+    target_revision = target_revision.strip("[]'\" ")
     script = script_directory()
     source_revisions = [row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))]
     try:
