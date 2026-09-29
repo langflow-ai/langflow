@@ -365,6 +365,55 @@ class TestConcurrency:
         assert len(await _stored_keys(bucket)) == 12
 
 
+class TestTheCommandLeavesTheDatabaseAlone:
+    """The command runs against a database the server has not booted on yet, so it must not run the server's startup."""
+
+    async def _revisions(self) -> set[str]:
+        from sqlalchemy import text
+
+        async with session_scope() as session:
+            return set((await session.exec(text("SELECT version_num FROM alembic_version"))).scalars())
+
+    async def test_a_dry_run_prunes_and_migrates_nothing(self, active_user, storage_dir, bucket):
+        from datetime import datetime, timezone
+
+        from langflow.__main__ import _relocate_files
+        from langflow.services.database.models.auth import AuthzAuditLog
+        from sqlmodel import select
+
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        async with session_scope() as session:
+            # Older than any retention window, so startup's history pruning would delete it.
+            old = datetime(2020, 1, 1, tzinfo=timezone.utc)
+            session.add(AuthzAuditLog(action="read", result="allow", timestamp=old))
+        revisions = await self._revisions()
+
+        failed = await _relocate_files(bucket=bucket, prefix="files", username=None, dry_run=True, concurrency=1)
+
+        assert failed == 0
+        async with session_scope() as session:
+            assert len((await session.exec(select(AuthzAuditLog))).all()) == 1
+        assert revisions
+        assert await self._revisions() == revisions
+        assert await _stored_keys(bucket) == []
+
+    async def test_a_database_at_another_revision_is_refused(self, active_user, storage_dir, bucket):
+        import typer
+        from langflow.__main__ import _relocate_files
+        from sqlalchemy import text
+
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        async with session_scope() as session:
+            await session.exec(text("UPDATE alembic_version SET version_num = 'not_this_version'"))
+
+        with pytest.raises(typer.Exit) as refused:
+            await _relocate_files(bucket=bucket, prefix="files", username=None, dry_run=False, concurrency=1)
+
+        assert refused.value.exit_code == 2
+        assert await self._revisions() == {"not_this_version"}
+        assert await _stored_keys(bucket) == []
+
+
 class TestMissingObjects:
     async def test_md5_of_a_missing_key_is_file_not_found(self, active_user, storage_dir, bucket):  # noqa: ARG002
         from langflow.api.utils.file_relocation import _target_storage

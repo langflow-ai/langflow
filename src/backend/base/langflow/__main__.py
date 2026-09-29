@@ -1192,8 +1192,13 @@ def relocate_files(
 
 async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry_run: bool, concurrency: int) -> int:
     from langflow.api.utils.file_relocation import relocate_files
+    from langflow.services.utils import register_all_service_factories
 
-    await initialize_services()
+    # Not initialize_services(): that is the server's startup, which migrates the schema,
+    # sets up the superuser and prunes history. Services are built on first use instead,
+    # and building one writes nothing.
+    register_all_service_factories()
+    await _refuse_a_database_not_at_this_versions_head()
     results = await relocate_files(
         target_bucket=bucket,
         target_prefix=prefix,
@@ -1211,6 +1216,29 @@ async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry
     summary = ", ".join(f"{count} {status}" for status, count in sorted(counts.items())) or "no files found"
     typer.echo(f"File relocation complete for {scope}: {summary}.")
     return counts.get("failed", 0)
+
+
+async def _refuse_a_database_not_at_this_versions_head() -> None:
+    """Exit unless the database is at this Langflow's migration head.
+
+    This version's queries need this version's schema, and migrating is the server's
+    job, so a database at any other revision is left as it is.
+    """
+    from alembic.script import ScriptDirectory
+
+    from langflow.services.database.migration import get_current_alembic_heads
+
+    expected = set(ScriptDirectory(str(get_db_service().script_location)).get_heads())
+    async with session_scope() as session:
+        current = set(await get_current_alembic_heads(session))
+    if current != expected:
+        typer.echo(
+            f"Cannot copy files: the database is at migration revision {', '.join(sorted(current)) or 'none'}, "
+            f"and this Langflow expects {', '.join(sorted(expected))}. This command does not migrate the database. "
+            "Run it with the Langflow version that matches the database.",
+            err=True,
+        )
+        raise typer.Exit(2)
 
 
 # command to copy the langflow database from the cache to the current directory
