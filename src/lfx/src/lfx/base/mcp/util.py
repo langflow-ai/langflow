@@ -1040,6 +1040,18 @@ def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseExcept
     return f"Tool '{tool_name}'{target} failed: {cause}"
 
 
+def describe_mcp_tool_timeout(tool_name: str, timeout: float) -> str:
+    """Describe a tool call whose answer did not arrive in time.
+
+    The server may have run the tool and only its answer was late, so calling it
+    again could repeat a side effect such as a payment or a write.
+    """
+    return (
+        f"Tool '{tool_name}' timed out after {timeout:g}s. It was not retried because the MCP server "
+        "may have already run it; check the tool's effects before running it again."
+    )
+
+
 def describe_mcp_connection_failure(server_name: str, url: str, error: BaseException) -> str:
     """Describe an outbound MCP failure by target, status and cause.
 
@@ -1502,11 +1514,7 @@ class MCPSessionManager:
                     # Background task is still alive — treat the session as healthy.
                     session_info["last_used"] = asyncio.get_event_loop().time()
                     await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                    # record mapping & bump ref-count for backwards compatibility
-                    self._context_to_session[context_id] = (server_key, session_id)
-                    self._session_refcount[(server_key, session_id)] = (
-                        self._session_refcount.get((server_key, session_id), 0) + 1
-                    )
+                    self._bind_context(context_id, (server_key, session_id))
                     return session
                 # Background task finished — session is dead, clean it up.
                 await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
@@ -1553,11 +1561,51 @@ class MCPSessionManager:
                 "last_used": asyncio.get_event_loop().time(),
             }
 
-            # register mapping & initial ref-count for the new session
-            self._context_to_session[context_id] = (server_key, session_id)
-            self._session_refcount[(server_key, session_id)] = 1
+            self._bind_context(context_id, (server_key, session_id))
 
             return session
+
+    def _bind_context(self, context_id: str, pair: tuple[str, str]) -> None:
+        """Make *pair* the one session *context_id* holds a reference to.
+
+        Clients reach `get_session()` before every tool call, while `disconnect()`
+        releases the context once, so a repeat acquisition must not add a
+        reference. A context that moves to another session gives up the old one;
+        tearing that down needs the old server's lock, which may be held by a
+        caller waiting on ours, so it runs as a separate task.
+        """
+        previous = self._context_to_session.get(context_id)
+        if previous == pair:
+            return
+
+        self._context_to_session[context_id] = pair
+        self._session_refcount[pair] = self._session_refcount.get(pair, 0) + 1
+        if previous is None or previous not in self._session_refcount:
+            return
+
+        remaining = self._session_refcount[previous] - 1
+        if remaining > 0:
+            self._session_refcount[previous] = remaining
+            return
+
+        self._session_refcount.pop(previous, None)
+        release = asyncio.create_task(self._release_if_unreferenced(previous))
+        self._background_tasks.add(release)
+        release.add_done_callback(self._background_tasks.discard)
+
+    async def _release_if_unreferenced(self, pair: tuple[str, str]) -> None:
+        """Tear down a session a context let go of, unless another context took it meanwhile."""
+        server_key, session_id = pair
+        async with self._server_lock(server_key):
+            if self._session_refcount.get(pair, 0) <= 0:
+                await self._cleanup_session_by_id(server_key, session_id)
+
+    def _forget_session_references(self, pair: tuple[str, str]) -> None:
+        """Drop every context reference to a session that no longer exists."""
+        self._session_refcount.pop(pair, None)
+        for context_id, mapped in list(self._context_to_session.items()):
+            if mapped == pair:
+                self._context_to_session.pop(context_id, None)
 
     def _abort_session_task(self, task: asyncio.Task[Any]) -> None:
         """Cancel and reap a transport task when session creation is interrupted."""
@@ -1815,6 +1863,9 @@ class MCPSessionManager:
         task or `del` the same key (which raised `KeyError: 'streamable_http_..._0'`
         previously under concurrent flow execution).
         """
+        # Whoever removes the session (disconnect, idle sweep, eviction, dead
+        # task) must also drop the references to it, or they outlive it.
+        self._forget_session_references((server_key, session_id))
         sessions = self._sessions_for(server_key)
         if not sessions and server_key not in self.sessions_by_server:
             return
@@ -1942,6 +1993,11 @@ class MCPSessionManager:
 
         server_key, session_id = mapping
         async with self._server_lock(server_key):
+            # While we waited for the lock the context may have moved to another
+            # session, which already released this one; releasing it again
+            # would take a reference that belongs to another context.
+            if self._context_to_session.get(context_id) != mapping:
+                return
             ref_key = (server_key, session_id)
             remaining = self._session_refcount.get(ref_key, 1) - 1
 
@@ -2218,19 +2274,16 @@ class MCPStdioClient:
                     await asyncio.sleep(0.5)
                     continue
 
-                # If it's a timeout error and we have retries left, try once more
-                if is_timeout_error and attempt < max_retries - 1:
-                    await logger.awarning(f"Tool '{tool_name}' timed out, retrying...")
-                    # Don't clean up session for timeouts, might just be a slow response
-                    await asyncio.sleep(1.0)
-                    continue
+                if is_timeout_error:
+                    msg = describe_mcp_tool_timeout(tool_name, effective_timeout)
+                    await logger.aerror(msg)
+                    raise ValueError(msg) from e
 
                 # For other errors or no retries left, handle as before
                 if (
                     isinstance(e, ConnectionError | TimeoutError | OSError | ValueError)
                     or is_closed_resource_error
                     or is_mcp_connection_error
-                    or is_timeout_error
                 ):
                     msg = describe_mcp_tool_failure(tool_name, None, e)
                     await logger.aerror(msg)
@@ -2551,19 +2604,13 @@ class MCPStreamableHttpClient:
                     await asyncio.sleep(0.5)
                     continue
 
-                # If it's a timeout error and we have retries left, try once more
-                if is_timeout_error and attempt < max_retries - 1:
-                    await logger.awarning(f"Tool '{tool_name}' timed out, retrying...")
-                    # Don't clean up session for timeouts, might just be a slow response
-                    await asyncio.sleep(1.0)
-                    continue
+                if is_timeout_error:
+                    msg = describe_mcp_tool_timeout(tool_name, effective_timeout)
+                    await logger.aerror(msg)
+                    raise ValueError(msg) from e
 
                 # For other errors or no retries left, handle as before
-                if (
-                    isinstance(e, ConnectionError | TimeoutError | OSError | ValueError)
-                    or bust_session
-                    or is_timeout_error
-                ):
+                if isinstance(e, ConnectionError | TimeoutError | OSError | ValueError) or bust_session:
                     msg = describe_mcp_tool_failure(tool_name, (self._connection_params or {}).get("url"), e)
                     await logger.aerror(msg)
                     # Clean up failed session from cache
