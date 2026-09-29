@@ -129,6 +129,7 @@ lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-slack = { workspace = true }
+lfx-unirate = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -169,6 +170,7 @@ members = [
     "src/bundles/serpingapi",
     "src/bundles/microsoft",
     "src/bundles/slack",
+    "src/bundles/unirate",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -192,6 +194,7 @@ bundles = [
     "lfx-paddle>=0.1.5,<1.0.0",
     "lfx-serpingapi>=0.1.0,<1.0.0",
     "lfx-serply>=0.1.0,<1.0.0",
+    "lfx-unirate>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.4,<1.0.0",
 ]
 

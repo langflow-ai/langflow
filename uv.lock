@@ -56,6 +56,7 @@ members = [
     "lfx-serply",
     "lfx-slack",
     "lfx-toolguard",
+    "lfx-unirate",
     "lfx-valkey",
     "lfx-vllm",
 ]
@@ -7550,6 +7551,7 @@ bundles = [
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
     { name = "lfx-serply" },
+    { name = "lfx-unirate" },
     { name = "lfx-valkey" },
 ]
 cassio = [
@@ -7675,6 +7677,7 @@ requires-dist = [
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
+    { name = "lfx-unirate", marker = "extra == 'bundles'", editable = "src/bundles/unirate" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
@@ -10118,6 +10121,21 @@ dependencies = [
 requires-dist = [
     { name = "lfx", editable = "src/lfx" },
     { name = "toolguard", specifier = ">=0.2.20,<1.0.0" },
+]
+
+[[package]]
+name = "lfx-unirate"
+version = "0.1.0"
+source = { editable = "src/bundles/unirate" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]

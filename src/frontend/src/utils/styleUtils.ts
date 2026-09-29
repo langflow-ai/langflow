@@ -526,6 +526,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
   { display_name: "ToolGuard", name: "toolguard", icon: "ShieldCheck" },
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
+  { display_name: "UniRate", name: "unirate", icon: "ArrowRightLeft" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Upstash", name: "upstash", icon: "Upstash" },
   { display_name: "Valkey", name: "valkey", icon: "Valkey" },
