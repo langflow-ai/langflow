@@ -15,7 +15,7 @@ from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     register_compiled_class_method_returns,
     snapshot_trusted_class_method_returns,
-    validate_return_annotations,
+    validate_source_return_annotations,
 )
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
@@ -312,8 +312,9 @@ def create_class(code, class_name):
         module = ast.parse(code)
         # Return annotations are evaluated by Python during class creation and
         # later by typing.get_type_hints. Reject active syntax before imports,
-        # compilation, or component construction can execute it.
-        validate_return_annotations(module)
+        # compilation, or component construction can execute it. The result
+        # depends only on the source text, so it is computed once per source.
+        validate_source_return_annotations(code, module)
         if not any(
             isinstance(node, ast.ImportFrom)
             and node.module == "__future__"

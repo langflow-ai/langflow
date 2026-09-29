@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import ast
 import builtins
+import hashlib
+import threading
 import typing
+from collections import OrderedDict
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, MappingProxyType, MethodType, ModuleType, UnionType
@@ -12,6 +15,7 @@ from typing import Any
 from weakref import ReferenceType, ref
 
 _MAX_ANNOTATION_DEPTH = 32
+_VALIDATED_SOURCES_MAX_ENTRIES = 1024
 _RUNTIME_ANNOTATED_ALIAS_TYPE = type(typing.Annotated[int, "metadata"])
 
 
@@ -130,6 +134,38 @@ def validate_return_annotations(tree: ast.AST) -> None:
                 "Use names, attributes, generics, forward references, or union types only."
             )
             raise UnsafeReturnAnnotationError(msg)
+
+
+# SHA-256 digests of exact source texts whose parsed tree passed
+# ``validate_return_annotations``. Only successes are recorded, so a rejected
+# source is validated (and rejected) again on every call.
+_VALIDATED_SOURCE_DIGESTS: OrderedDict[bytes, None] = OrderedDict()
+_VALIDATED_SOURCE_DIGESTS_LOCK = threading.Lock()
+
+
+def _source_digest(source: str) -> bytes:
+    # ``surrogatepass`` keeps the encoding injective for every ``str``.
+    return hashlib.sha256(source.encode("utf-8", "surrogatepass")).digest()
+
+
+def validate_source_return_annotations(source: str, tree: ast.AST) -> None:
+    """Run ``validate_return_annotations(tree)`` once per exact ``source`` text.
+
+    ``tree`` must be ``ast.parse(source)``. The check depends only on that
+    tree, so a source whose annotations already passed is not walked again.
+    Any change to the text produces a different digest and is validated anew.
+    """
+    digest = _source_digest(source)
+    with _VALIDATED_SOURCE_DIGESTS_LOCK:
+        if digest in _VALIDATED_SOURCE_DIGESTS:
+            _VALIDATED_SOURCE_DIGESTS.move_to_end(digest)
+            return
+    validate_return_annotations(tree)
+    with _VALIDATED_SOURCE_DIGESTS_LOCK:
+        _VALIDATED_SOURCE_DIGESTS[digest] = None
+        _VALIDATED_SOURCE_DIGESTS.move_to_end(digest)
+        while len(_VALIDATED_SOURCE_DIGESTS) > _VALIDATED_SOURCES_MAX_ENTRIES:
+            _VALIDATED_SOURCE_DIGESTS.popitem(last=False)
 
 
 @lru_cache(maxsize=1)
