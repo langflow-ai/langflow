@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -65,7 +66,11 @@ const FlowSettingsComponent = ({
     flowData ? undefined : state.currentFlow,
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-  const pendingAutoSave = useFlowStore((state) => state.autoSaveFlow);
+  // A flow card (`flowData`) must not use the registered autosave: it may
+  // belong to an unmounted editor, whose save never settles.
+  const pendingAutoSave = useFlowStore((state) =>
+    flowData ? undefined : state.autoSaveFlow,
+  );
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
@@ -94,16 +99,20 @@ const FlowSettingsComponent = ({
     if (autoSaving) {
       const persistSettings = async () => {
         try {
-          // Canvas edits use a debounced save. Flush and await that exact save
-          // before persisting settings so a stale canvas snapshot cannot land
-          // after a lock-state update.
-          await pendingAutoSave?.flush();
-          await saveFlow(newFlow);
+          // Queue behind the editor's saves: a canvas save run alongside a
+          // lock change carries the old lock state and the server rejects it.
+          if (pendingAutoSave) {
+            await pendingAutoSave.enqueue(newFlow);
+          } else {
+            await saveFlow(newFlow);
+          }
           setIsSaving(false);
           setSuccessData({ title: t("success.changesSaved") });
           close();
-        } catch {
+        } catch (error) {
           setIsSaving(false);
+          // Never close on a failed save: the form holds the only copy of what was typed.
+          handleBlockedSave(error, { announce: true });
         }
       };
       void persistSettings();
