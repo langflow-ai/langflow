@@ -157,6 +157,31 @@ def observe_vertex_execution(operation: Callable[P, Awaitable[R]]) -> Callable[P
     return wrapped
 
 
+def db_phase(phase: str) -> contextlib.AbstractContextManager[object]:
+    """Attribute database work in this block to *phase* without emitting a span.
+
+    For bookkeeping the request does around a flow run (fetching the flow, writing the job
+    row) whose only telemetry worth paying for is the DB spans it already produces. The phase
+    reaches them as ``langflow.phase``, so span metrics can split DB work before, inside, and
+    after ``flow.execute`` without parents. Callers pass a literal, which keeps it bounded.
+    """
+    return _otel.db_attribution({"langflow.phase": phase})
+
+
+def observe_db_phase(phase: str) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
+    """Decorator form of :func:`db_phase` for a coroutine function."""
+
+    def decorator(operation: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        @functools.wraps(operation)
+        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            with db_phase(phase):
+                return await operation(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
 def observe_response_serialization(operation: Callable[P, R]) -> Callable[P, R]:
     """Trace conversion of an execution result into the public response model."""
 
@@ -338,6 +363,9 @@ def _start_graph_spans(*, make_current: bool) -> tuple[Span, Span, contextlib.Ex
         stack.enter_context(
             trace.use_span(graph_span, end_on_exit=False, record_exception=False, set_status_on_exception=False)
         )
+        # Only when current: the phase follows the span, and a detached one is detached
+        # precisely because this context may not outlive a generator suspension.
+        stack.enter_context(_otel.db_attribution({"langflow.phase": "graph.execute"}))
     return flow_span, graph_span, stack
 
 

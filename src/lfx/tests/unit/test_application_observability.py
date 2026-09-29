@@ -425,3 +425,92 @@ def test_graph_composite_real_sdk_preserves_current_link_error_and_cancel_semant
     assert recorded["attributes"]["error.type"] == "LookupError"
 
     assert "private graph payload" not in json.dumps(spans)
+
+
+async def test_db_phase_helpers_lend_only_a_phase_and_preserve_the_signature():
+    lent = app._otel._current_db_attribution.get
+
+    @app.observe_db_phase("job.create")
+    async def create_job(job_id: str, *, flow_id: str) -> tuple[str, str, dict | None]:
+        return job_id, flow_id, lent()
+
+    assert inspect.signature(create_job).parameters.keys() == {"job_id", "flow_id"}
+    created = ("job", "flow", {"langflow.phase": "job.create"})
+    assert await create_job("job", flow_id="flow") == created
+    with app.db_phase("job.status"):
+        assert lent() == {"langflow.phase": "job.status"}
+        assert await create_job("job", flow_id="flow") == created
+        assert lent() == {"langflow.phase": "job.status"}
+    assert lent() is None
+
+
+def test_real_sdk_db_spans_borrow_vertex_component_and_current_graph_phase(monkeypatch):
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(app._otel.ApplicationOnlySpanProcessor(exporter))
+    namespace = SimpleNamespace(
+        get_tracer=provider.get_tracer,
+        get_current_span=otel_trace.get_current_span,
+        set_span_in_context=otel_trace.set_span_in_context,
+        use_span=otel_trace.use_span,
+        Status=otel_trace.Status,
+        StatusCode=otel_trace.StatusCode,
+    )
+    monkeypatch.setattr(app, "trace", namespace)
+    monkeypatch.setattr(app._otel, "trace", namespace)
+    monkeypatch.setattr(app._otel, "get_queued_trace_link", lambda: None)
+    monkeypatch.setattr(app, "_known_component_types", lambda: frozenset({"ChatOutput"}))
+    db = provider.get_tracer(app._otel.DB_INSTRUMENTATION_SCOPE)
+
+    def query(marker: str) -> None:
+        span = db.start_span("INSERT langflow")
+        span.set_attribute("db.statement", "INSERT INTO message (id) VALUES (?)")
+        span.set_attribute("marker", marker)
+        span.end()
+
+    class Vertex:
+        vertex_type = "ChatOutput"
+        is_loop = False
+
+    class Graph:
+        def get_vertex(self, _vertex_id):
+            return Vertex()
+
+        @app.observe_vertex_execution
+        async def build_vertex(self, vertex_id: str) -> None:
+            query(vertex_id)
+
+    def graph_run(*, make_current: bool):
+        return app.observe_graph_execution(
+            is_subgraph=False,
+            make_current=make_current,
+            identifiers=dict,
+            paused_exception=RuntimeError,
+        )
+
+    with graph_run(make_current=True):
+        query("graph")
+        asyncio.run(Graph().build_vertex("vertex"))
+        query("graph.after")
+    with graph_run(make_current=False):
+        query("detached")
+    provider.force_flush()
+
+    db_spans = {
+        span.attributes["marker"]: dict(span.attributes)
+        for span in exporter.get_finished_spans()
+        if span.instrumentation_scope.name == app._otel.DB_INSTRUMENTATION_SCOPE
+    }
+    assert db_spans["graph"]["langflow.phase"] == "graph.execute"
+    assert "langflow.component.type" not in db_spans["graph"]
+    assert db_spans["vertex"]["langflow.phase"] == "vertex.execute"
+    assert db_spans["vertex"]["langflow.component.type"] == "ChatOutput"
+    assert db_spans["vertex"]["db.collection.name"] == "message"
+    assert db_spans["graph.after"]["langflow.phase"] == "graph.execute"
+    assert "langflow.component.type" not in db_spans["graph.after"]
+    assert "langflow.phase" not in db_spans["detached"]
+    provider.shutdown()

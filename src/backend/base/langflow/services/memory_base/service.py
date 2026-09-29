@@ -17,6 +17,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.application_observability import observe_db_phase
 from lfx.base.knowledge_bases.backends import is_local_chroma
 from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
@@ -643,6 +644,7 @@ class MemoryBaseService(Service):
             get_or_create_session=self._get_or_create_session,
         )
 
+    @observe_db_phase("memory_base.capture")
     async def on_flow_output(
         self,
         flow_id: uuid.UUID,

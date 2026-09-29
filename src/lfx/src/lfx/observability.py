@@ -33,6 +33,7 @@ import contextlib
 import contextvars
 import importlib
 import os
+import re
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -170,6 +171,40 @@ def execution_protocol(protocol: str) -> Iterator[None]:
         yield
     finally:
         _current_protocol.reset(token)
+
+
+# The attributes an application phase lends to the database spans that run inside it.
+#
+# Span metrics are computed per span and know nothing about parents, so a DB span that only
+# says "SELECT langflow" cannot be grouped by the phase it served. Copying the phase onto the
+# DB span at start fixes that without walking the trace. Ambient for the same reason as
+# protocol, and innermost wins: a vertex inside a graph lends its own phase and component type.
+# Both values are already bounded where they are produced.
+DB_LENT_ATTRIBUTES = ("langflow.phase", "langflow.component.type")
+
+_current_db_attribution: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "lfx_db_attribution",
+    default=None,
+)
+
+
+@contextlib.contextmanager
+def db_attribution(attributes: dict[str, Any] | None) -> Iterator[dict[str, Any] | None]:
+    """Lend the phase attributes in *attributes* to DB spans started in this context.
+
+    Yields the lent mapping so a span that learns its component type after it starts can
+    still lend it. A scope without a phase lends nothing and leaves the enclosing one in place.
+    Like ``execution_protocol``, never wrap an async generator in this from outside.
+    """
+    lent = {key: attributes[key] for key in DB_LENT_ATTRIBUTES if key in (attributes or {})}
+    if "langflow.phase" not in lent:
+        yield None
+        return
+    token = _current_db_attribution.set(lent)
+    try:
+        yield lent
+    finally:
+        _current_db_attribution.reset(token)
 
 
 # Event-loop scheduling delay. Sampled rather than instrumented: there is no hook that
@@ -493,6 +528,13 @@ if _OTEL_AVAILABLE:
 
         def on_start(self, span, parent_context=None) -> None:
             super().on_start(span, parent_context)
+            scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
+            if scope == DB_INSTRUMENTATION_SCOPE:
+                # Here rather than at on_end, because a span is only writable until it ends and
+                # the context current now is the one the statement runs in.
+                lent = _current_db_attribution.get()
+                if lent:
+                    span.set_attributes(lent)
             if len(self._lineage) >= self._MAX_TRACKED_SPANS:
                 if not self._lineage_capped:
                     self._lineage_capped = True
@@ -501,7 +543,6 @@ if _OTEL_AVAILABLE:
                         "not re-parenting children of dropped spans beyond this point."
                     )
                 return
-            scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
             context = span.get_span_context()
             self._lineage[context.span_id] = (scope in self._scopes, span.parent, context)
 
@@ -552,6 +593,7 @@ if _OTEL_AVAILABLE:
                     self._reparent_safely(span)
                     _redact_url_attributes(span)
                     _redact_db_path_attributes(span)
+                    _add_db_query_attributes(span)
                     super().on_end(span)
                     return
                 if scope not in self._dropped_scopes:
@@ -1052,6 +1094,83 @@ def _redact_db_path_attributes(span) -> None:
         span._name = span.name.replace(db_name, shortened)  # noqa: SLF001
 
 
+# Statement verbs recorded as ``db.operation.name``. A closed set, so a statement starting with
+# anything else records no operation rather than whatever its first word happens to be.
+_DB_OPERATIONS = frozenset(
+    {"SELECT", "INSERT", "UPDATE", "DELETE", "WITH", "BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT", "RELEASE"}
+)
+
+# How much of a statement is scanned for its table. Langflow's widest SELECT lists every column
+# of one table and fits well inside this; a table named later than this is simply not recorded.
+_DB_STATEMENT_SCAN_LIMIT = 4096
+
+# An optionally schema-qualified, optionally quoted identifier; the last part is the table.
+_SQL_TABLE = r'(?:"?[A-Za-z_][\w$]*"?\.)?"?([A-Za-z_][\w$]*)"?'
+_SQL_OPERATION = re.compile(r"\s*([A-Za-z]+)")
+_SQL_COLLECTION = {
+    "SELECT": re.compile(r"\bFROM\s+" + _SQL_TABLE, re.IGNORECASE),
+    "DELETE": re.compile(r"\bFROM\s+" + _SQL_TABLE, re.IGNORECASE),
+    "INSERT": re.compile(r"\bINTO\s+" + _SQL_TABLE, re.IGNORECASE),
+    "UPDATE": re.compile(r"\s*UPDATE\s+" + _SQL_TABLE, re.IGNORECASE),
+}
+
+
+def _add_db_query_attributes(span) -> None:
+    """Record a statement's verb and table as ``db.operation.name`` and ``db.collection.name``.
+
+    Span metrics group by attributes, and without these the table exists only inside
+    ``db.statement``, which is unbounded and no use as a metric dimension. The span name
+    ("SELECT langflow") carries the verb but not the table.
+
+    Not a SQL parser, on purpose, and in line with the OpenTelemetry advice against parsing
+    queries: it reads the leading verb and the identifier after the first INTO, UPDATE or FROM.
+    A subquery or CTE can therefore name an inner table, which is still a table Langflow owns.
+
+    Bounded by construction. The verb comes from a closed set, and the identifier is a table
+    name written in Langflow's own code: values reach the database as bound parameters, never in
+    the statement text, which is the same property that admitted ``db.statement`` at all.
+
+    Overwrites ``db.operation.name`` because the instrumentor's stable-semconv mode fills it
+    with the span name, "<verb> <db.name>", rather than the verb the convention defines.
+    """
+    attributes = span.attributes
+    if not attributes:
+        return
+    statement = attributes.get("db.statement", attributes.get("db.query.text"))
+    if not isinstance(statement, str):
+        return
+    statement = statement[:_DB_STATEMENT_SCAN_LIMIT]
+    match = _SQL_OPERATION.match(statement)
+    operation = match.group(1).upper() if match else None
+    if operation not in _DB_OPERATIONS:
+        return
+    updated = dict(attributes)
+    updated["db.operation.name"] = operation
+    pattern = _SQL_COLLECTION.get(operation)
+    table = pattern.search(statement) if pattern else None
+    if table:
+        updated["db.collection.name"] = table.group(1)
+    _replace_attributes(span, updated)
+
+
+def _replace_attributes(span, updated: dict[str, Any]) -> None:
+    """Swap a finished span's attributes, keeping the SDK's limits and drop count.
+
+    Span.end() freezes the attributes before processors run and ReadableSpan has no setter,
+    so this is the same rebuild the redaction functions above do inline.
+    """
+    from opentelemetry.attributes import BoundedAttributes
+
+    original_attributes = span._attributes  # noqa: SLF001
+    replaced = BoundedAttributes(
+        maxlen=original_attributes.maxlen,
+        attributes=updated,
+        max_value_len=original_attributes.max_value_len,
+    )
+    replaced.dropped = original_attributes.dropped
+    span._attributes = replaced  # noqa: SLF001
+
+
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:
     """Install OTLP providers for traces, metrics and logs from the standard OTel env vars.
 
@@ -1250,11 +1369,13 @@ class ApplicationSpanScope:
     root exception type and lets call sites add deliberately selected attributes.
     """
 
-    __slots__ = ("error_type", "span")
+    __slots__ = ("error_type", "lent", "span")
 
-    def __init__(self, span: Span | None = None) -> None:
+    def __init__(self, span: Span | None = None, lent: dict[str, Any] | None = None) -> None:
         self.error_type: str | None = None
         self.span = span
+        # What this span lends to the DB spans inside it, when it declared a phase.
+        self.lent = lent
 
     def record_error(self, error_type: str) -> None:
         if self.error_type is None:
@@ -1263,6 +1384,8 @@ class ApplicationSpanScope:
     def set_attribute(self, key: str, value: Any) -> None:
         if self.span is not None:
             self.span.set_attribute(key, value)
+        if self.lent is not None and key in DB_LENT_ATTRIBUTES:
+            self.lent[key] = value
 
     def is_recording(self) -> bool:
         return self.span is not None and self.span.is_recording()
@@ -1392,8 +1515,8 @@ def application_span(
     if start_time is not None:
         kwargs["start_time"] = start_time
     tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
-    with tracer.start_as_current_span(name, **kwargs) as span:
-        scope = ApplicationSpanScope(span)
+    with tracer.start_as_current_span(name, **kwargs) as span, db_attribution(attributes) as lent:
+        scope = ApplicationSpanScope(span, lent)
         for key, value in (attributes or {}).items():
             span.set_attribute(key, value)
         try:
