@@ -78,6 +78,8 @@ export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
 };
 
 export type FlowStoreType = {
+  /** True once a user-originated mutation has landed since this flow was loaded. */
+  userEditedSinceLoad: boolean;
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
   removeDismissedNodes: (dismissedNodes: string[]) => void;
