@@ -9,6 +9,7 @@ import de from "../de.json";
 import en from "../en.json";
 import es from "../es.json";
 import fr from "../fr.json";
+import id from "../id.json";
 import ja from "../ja.json";
 import ko from "../ko.json";
 import pt from "../pt.json";
@@ -18,6 +19,7 @@ const LOCALES: Record<string, Record<string, string>> = {
   de,
   es,
   fr,
+  id,
   ja,
   ko,
   pt,

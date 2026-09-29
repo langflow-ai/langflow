@@ -3,6 +3,7 @@ export const SUPPORTED_LANGUAGES = [
   { code: "fr", label: "Français" },
   { code: "es", label: "Español" },
   { code: "de", label: "Deutsch" },
+  { code: "id", label: "Bahasa Indonesia" },
   { code: "pt", label: "Português" },
   { code: "ja", label: "日本語" },
   { code: "ko", label: "한국어" },
