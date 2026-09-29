@@ -22,7 +22,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import ArgsSchema, StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
-from pydantic import BaseModel, SkipValidation
+from pydantic import AliasChoices, BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
@@ -545,9 +545,17 @@ def _normalize_arguments_for_mcp(
     Uses schema from MCP server (no guessing). On conversion failure, raises
     ValueError with clear user-facing message.
     """
+    arguments = arguments.copy()
     result: dict[str, Any] = {}
     schema_field_names = set(arg_schema.model_fields.keys())
     for field_name, model_field in arg_schema.model_fields.items():
+        # Resolve wire aliases before filling missing values or converting types.
+        # Consume alternate spellings so extras cannot overwrite the validated
+        # value when the model is serialized back to its wire names.
+        if isinstance(model_field.validation_alias, AliasChoices):
+            for alias in model_field.validation_alias.choices:
+                if isinstance(alias, str) and alias not in schema_field_names and alias in arguments:
+                    arguments.setdefault(field_name, arguments.pop(alias))
         value = arguments.get(field_name)
         if value is None:
             if not (model_field.is_required() or field_name in arguments):
@@ -716,7 +724,8 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            # by_alias: send the server's own property names (e.g. `_user_goal`), not sanitized field names.
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True, by_alias=True))
             result = await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
@@ -748,7 +757,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True, by_alias=True))
             result = run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")

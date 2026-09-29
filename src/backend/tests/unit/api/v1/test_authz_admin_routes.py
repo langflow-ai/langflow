@@ -951,7 +951,7 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz, aud
     from langflow.services.database.models.user.model import User
 
     authz = stub_authz()
-    target_user = SimpleNamespace(id=uuid4())
+    target_user = SimpleNamespace(id=uuid4(), is_active=True)
     role = SimpleNamespace(id=uuid4(), name="viewer")
     session = _FakeAsyncSession(
         {(User, target_user.id): target_user, (AuthzRole, role.id): role},
@@ -994,7 +994,7 @@ async def test_create_assignment_duplicate_manual_source_is_409(stub_authz):
 
     authz = stub_authz()
     actor = _make_user(is_superuser=True)
-    target_user = SimpleNamespace(id=uuid4())
+    target_user = SimpleNamespace(id=uuid4(), is_active=True)
     role = SimpleNamespace(id=uuid4(), name="viewer")
     assignment = AuthzRoleAssignment(user_id=target_user.id, role_id=role.id, assigned_by=actor.id)
     manual_grant = AuthzRoleAssignmentGrant(
@@ -1032,7 +1032,7 @@ async def test_create_assignment_adds_manual_source_to_idp_assignment_without_li
 
     authz = stub_authz()
     actor = _make_user(is_superuser=True)
-    target_user = SimpleNamespace(id=uuid4())
+    target_user = SimpleNamespace(id=uuid4(), is_active=True)
     role = SimpleNamespace(id=uuid4(), name="viewer")
     original_actor_id = uuid4()
     assignment = AuthzRoleAssignment(
@@ -1727,7 +1727,7 @@ async def test_create_assignment_succeeds_when_committed_hook_fails(failing_comm
     from langflow.services.database.models.user.model import User
 
     authz = failing_committed_hook_authz()
-    target_user = SimpleNamespace(id=uuid4())
+    target_user = SimpleNamespace(id=uuid4(), is_active=True)
     role = SimpleNamespace(id=uuid4(), name="viewer")
     session = _FakeAsyncSession(
         {(User, target_user.id): target_user, (AuthzRole, role.id): role},
