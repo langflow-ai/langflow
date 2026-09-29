@@ -576,7 +576,7 @@ async def test_start_tracers_with_exception(tracing_service):
         await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
         # Verify exception was logged
-        mock_logger.adebug.assert_any_call("Error initializing tracers: Mock exception")
+        mock_logger.adebug.assert_any_call("Error initializing tracer langsmith: Mock exception")
 
         # Verify trace_context was set even with exception
         trace_context = trace_context_var.get()
@@ -585,6 +585,37 @@ async def test_start_tracers_with_exception(tracing_service):
         assert trace_context.run_name == run_name
 
         # Cleanup
+        await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+async def test_start_tracers_continues_after_one_tracer_fails(tracing_service):
+    run_id = uuid.uuid4()
+
+    with (
+        patch.object(
+            tracing_service,
+            "_initialize_langsmith_tracer",
+            side_effect=Exception("Mock exception"),
+        ),
+        patch.object(
+            tracing_service,
+            "_initialize_native_tracer",
+        ) as mock_native_tracer,
+        patch("langflow.services.tracing.service.logger") as mock_logger,
+    ):
+        mock_logger.adebug = AsyncMock()
+
+        await tracing_service.start_tracers(
+            run_id,
+            "test_run",
+            "test_user",
+            "test_session",
+            "test_project",
+        )
+
+        mock_native_tracer.assert_called_once()
+
         await tracing_service.end_tracers({})
 
 
