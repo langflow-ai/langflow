@@ -1379,9 +1379,10 @@ def migration_preflight(
 
 
 async def _migration_preflight(target_revision: str | None, target_secret_key: str | None) -> bool:
+    from langflow.cli.integrity import open_instance
     from langflow.cli.migration_preflight import run_preflight
 
-    await initialize_services()
+    open_instance()
     report = await run_preflight(target_revision=target_revision, target_secret_key=target_secret_key)
     for check in report.checks:
         typer.echo(f"{check.status:5} {check.name:24} {check.summary}")

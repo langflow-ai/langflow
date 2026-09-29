@@ -19,7 +19,14 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlmodel import func, select
 
-from langflow.cli.integrity import CheckResult, IntegrityReport, check_credentials, check_instance
+from langflow.cli.integrity import (
+    CheckResult,
+    IntegrityReport,
+    check_credentials,
+    check_instance,
+    check_schema,
+    script_directory,
+)
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -45,8 +52,14 @@ async def run_preflight(
     from langflow.services.deps import session_scope
 
     async with session_scope() as session:
-        checks = [
-            await check_version_direction(session, target_revision),
+        checks = [await check_version_direction(session, target_revision)]
+        schema = await check_schema(session)
+        if schema.status != "ok":
+            # The remaining checks read through this Langflow's models, which on another
+            # schema would misread rows. Nothing migrates the source to make them fit.
+            await session.rollback()
+            return IntegrityReport([*checks, replace(schema, name="source: schema")])
+        checks += [
             await check_default_superuser(session),
             await check_target_key(session, target_secret_key),
             await check_embedding_models(session),
@@ -69,7 +82,7 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
     if not target_revision:
         return CheckResult(name, "warn", f"not checked: pass --target-revision ({TARGET_REVISION_HINT})")
 
-    script = _script_directory()
+    script = script_directory()
     source_revisions = [row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))]
     try:
         target_ancestry = {revision.revision for revision in script.iterate_revisions(target_revision, "base")}
@@ -248,16 +261,3 @@ def _settings_with_key(secret_key: str):
     current = get_settings_service()
     auth = current.auth_settings.model_copy(update={"SECRET_KEY": SecretStr(secret_key)})
     return SettingsService(current.settings, auth)
-
-
-def _script_directory():
-    import pathlib
-
-    from alembic.config import Config
-    from alembic.script import ScriptDirectory
-
-    import langflow
-
-    config = Config()
-    config.set_main_option("script_location", str(pathlib.Path(langflow.__file__).parent / "alembic"))
-    return ScriptDirectory.from_config(config)
