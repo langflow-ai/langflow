@@ -32,6 +32,12 @@ def minimal_session_metadata():
     }
 
 
+@pytest.fixture
+def message_scope():
+    """Trusted flow and owner scope for a stored message."""
+    return {"flow_id": uuid4(), "user_id": uuid4()}
+
+
 @pytest.mark.usefixtures("client")
 async def test_message_with_session_metadata(sample_session_metadata):
     """Test creating a Message with session_metadata."""
@@ -63,7 +69,7 @@ async def test_message_without_session_metadata():
 
 
 @pytest.mark.usefixtures("client")
-async def test_store_message_with_session_metadata(sample_session_metadata):
+async def test_store_message_with_session_metadata(sample_session_metadata, message_scope):
     """Test storing a message with session_metadata."""
     session_id = f"stored_session_{uuid4()}"
     message = Message(
@@ -74,17 +80,17 @@ async def test_store_message_with_session_metadata(sample_session_metadata):
         session_metadata=sample_session_metadata,
     )
 
-    await astore_message(message)
+    await astore_message(message, **message_scope)
 
     # Retrieve and verify
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, **message_scope)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message with metadata"
     assert stored_messages[0].session_metadata == sample_session_metadata
 
 
 @pytest.mark.usefixtures("client")
-async def test_store_message_without_session_metadata():
+async def test_store_message_without_session_metadata(message_scope):
     """Test storing a message without session_metadata (backward compatibility)."""
     session_id = f"stored_session_{uuid4()}"
     message = Message(
@@ -94,10 +100,10 @@ async def test_store_message_without_session_metadata():
         session_id=session_id,
     )
 
-    await astore_message(message)
+    await astore_message(message, **message_scope)
 
     # Retrieve and verify
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, **message_scope)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message without metadata"
     assert stored_messages[0].session_metadata is None
@@ -220,7 +226,7 @@ async def test_messageread_with_session_metadata(sample_session_metadata):
 
 
 @pytest.mark.usefixtures("client")
-async def test_session_metadata_persistence_and_retrieval(sample_session_metadata):
+async def test_session_metadata_persistence_and_retrieval(sample_session_metadata, message_scope):
     """Test full cycle: create, store, retrieve, and verify session_metadata."""
     session_id = f"full_cycle_session_{uuid4()}"
 
@@ -232,10 +238,10 @@ async def test_session_metadata_persistence_and_retrieval(sample_session_metadat
         session_id=session_id,
         session_metadata=sample_session_metadata,
     )
-    await astore_message(message)
+    await astore_message(message, **message_scope)
 
     # Retrieve
-    retrieved_messages = await aget_messages(sender="User", session_id=session_id)
+    retrieved_messages = await aget_messages(sender="User", session_id=session_id, **message_scope)
 
     # Verify
     assert len(retrieved_messages) == 1
@@ -251,7 +257,7 @@ async def test_session_metadata_persistence_and_retrieval(sample_session_metadat
 
 
 @pytest.mark.usefixtures("client")
-async def test_session_metadata_json_serialization():
+async def test_session_metadata_json_serialization(message_scope):
     """Test that session_metadata is properly serialized as JSON."""
     session_id = f"json_test_session_{uuid4()}"
     metadata = {
@@ -269,10 +275,10 @@ async def test_session_metadata_json_serialization():
         session_id=session_id,
         session_metadata=metadata,
     )
-    await astore_message(message)
+    await astore_message(message, **message_scope)
 
     # Retrieve and verify complex JSON structure
-    retrieved_messages = await aget_messages(sender="User", session_id=session_id)
+    retrieved_messages = await aget_messages(sender="User", session_id=session_id, **message_scope)
     assert len(retrieved_messages) == 1
     retrieved_metadata = retrieved_messages[0].session_metadata
 
@@ -285,7 +291,7 @@ async def test_session_metadata_json_serialization():
 
 
 @pytest.mark.usefixtures("client")
-async def test_empty_session_metadata():
+async def test_empty_session_metadata(message_scope):
     """Test storing message with empty dict as session_metadata."""
     session_id = f"empty_metadata_session_{uuid4()}"
     message = Message(
@@ -295,15 +301,15 @@ async def test_empty_session_metadata():
         session_id=session_id,
         session_metadata={},
     )
-    await astore_message(message)
+    await astore_message(message, **message_scope)
 
-    retrieved_messages = await aget_messages(sender="User", session_id=session_id)
+    retrieved_messages = await aget_messages(sender="User", session_id=session_id, **message_scope)
     assert len(retrieved_messages) == 1
     assert retrieved_messages[0].session_metadata == {}
 
 
 @pytest.mark.usefixtures("client")
-async def test_session_metadata_retrieval():
+async def test_session_metadata_retrieval(message_scope):
     """Test retrieving session_metadata from stored messages."""
     session_id = f"retrieval_metadata_session_{uuid4()}"
 
@@ -316,10 +322,10 @@ async def test_session_metadata_retrieval():
         session_id=session_id,
         session_metadata=initial_metadata,
     )
-    await astore_message(message)
+    await astore_message(message, **message_scope)
 
     # Retrieve and verify
-    messages = await aget_messages(sender="User", session_id=session_id)
+    messages = await aget_messages(sender="User", session_id=session_id, **message_scope)
     assert len(messages) == 1
     assert messages[0].session_metadata == initial_metadata
 
