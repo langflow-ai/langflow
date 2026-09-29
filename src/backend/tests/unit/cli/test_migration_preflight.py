@@ -15,7 +15,7 @@ import pytest
 import sqlalchemy as sa
 from cryptography.fernet import Fernet
 from langflow.cli.migration_preflight import run_preflight
-from langflow.services.auth.utils import encrypt_api_key
+from langflow.services.auth.utils import encrypt_api_key, ensure_fernet_key
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
@@ -79,6 +79,16 @@ async def _add(*rows) -> None:
 
 def _current_key() -> str:
     return get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+
+
+def _current_key_as_fernet() -> str:
+    """The configured key written as Fernet.generate_key() writes one: 44 characters, padded."""
+    return ensure_fernet_key(_current_key()).decode()
+
+
+def _current_key_as_token_urlsafe() -> str:
+    """The configured key written as Langflow generates one, secrets.token_urlsafe(32): 43 characters."""
+    return _current_key_as_fernet().rstrip("=")
 
 
 class TestVersionDirection:
@@ -165,9 +175,9 @@ class TestTargetKey:
     async def test_no_target_key_is_a_warning(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "target key").status == "warn"
 
-    async def test_a_key_file_ending_in_a_newline_is_a_warning(self, safe_superuser):
-        # Fernet ignores the newline, so every credential still opens; a Secret made
-        # from this file keeps it, and the SSO client secret, keyed on the raw bytes, does not.
+    async def test_a_default_key_file_ending_in_a_newline_is_refused(self, safe_superuser):
+        # A Secret created from the file with --from-file carries the newline to the target. With
+        # Langflow's default key shape, the key with it no longer makes a Fernet key at all.
         await _add(
             Variable(
                 name=f"KEY_{uuid.uuid4().hex[:6]}",
@@ -177,10 +187,26 @@ class TestTargetKey:
             )
         )
 
-        check = _check(await run_preflight(target_secret_key=_current_key() + "\n"), "target key")
+        check = _check(await run_preflight(target_secret_key=_current_key_as_token_urlsafe() + "\n"), "target key")
 
-        assert check.status == "warn"
+        assert check.status == "fail"
+        assert "trailing newline" in check.summary
         assert "--from-literal" in check.summary
+
+    async def test_a_newline_that_the_key_still_opens_every_value_with_passes(self, safe_superuser):
+        # A padded Fernet key decodes the same with the newline, so the target opens every value.
+        await _add(
+            Variable(
+                name=f"KEY_{uuid.uuid4().hex[:6]}",
+                value=encrypt_api_key("sk-real"),
+                type=CREDENTIAL_TYPE,
+                user_id=safe_superuser.id,
+            )
+        )
+
+        check = _check(await run_preflight(target_secret_key=_current_key_as_fernet() + "\n"), "target key")
+
+        assert check.status == "ok", check.summary
 
 
 class TestRoleAssignments:
