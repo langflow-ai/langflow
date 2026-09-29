@@ -4,6 +4,7 @@ from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
 from lfx.utils.connection_string_parser import transform_connection_string
+from lfx.utils.ssrf_protection import validate_connector_database_url_for_ssrf
 
 
 class PGVectorStoreComponent(LCVectorStoreComponent):
@@ -39,6 +40,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         connection_string_parsed = transform_connection_string(self.pg_server_url)
+        validate_connector_database_url_for_ssrf(connection_string_parsed)
 
         if documents:
             pgvector = PGVector.from_documents(

@@ -52,7 +52,7 @@ from lfx.schema.data import Data
 
 class RaceStopper(Component):
     display_name = "Race Stopper"
-    inputs = [DataInput(name="start", display_name="Start")]
+    inputs = [DataInput(name="signal", display_name="Signal")]
     outputs = [
         Output(name="blocked", display_name="Blocked", method="blocked_output", group_outputs=True),
         Output(name="done", display_name="Done", method="done_output", group_outputs=True),
@@ -83,7 +83,7 @@ from lfx.schema.data import Data
 
 class RaceTrigger(Component):
     display_name = "Race Trigger"
-    inputs = [DataInput(name="start", display_name="Start")]
+    inputs = [DataInput(name="signal", display_name="Signal")]
     outputs = [Output(name="trigger", display_name="Trigger", method="emit")]
 
     async def emit(self) -> Data:
@@ -146,8 +146,9 @@ def _race_flow() -> str:
     ):
         component = eval_custom_component_code(code)(_id=vertex_id, _code=code)
         graph.add_component(component, vertex_id)
-    graph.add_component_edge(START_ID, ("start", "start"), STOPPER_ID)
-    graph.add_component_edge(START_ID, ("start", "start"), TRIGGER_ID)
+    # Inputs are named "signal": "start" is a Component method, so it cannot be an input name.
+    graph.add_component_edge(START_ID, ("start", "signal"), STOPPER_ID)
+    graph.add_component_edge(START_ID, ("start", "signal"), TRIGGER_ID)
     graph.add_component_edge(STOPPER_ID, ("blocked", "value"), VICTIM_ID)
     graph.add_component_edge(STOPPER_ID, ("done", "stopper_done"), GOAL_ID)
     graph.add_component_edge(TRIGGER_ID, ("trigger", "trigger_done"), GOAL_ID)

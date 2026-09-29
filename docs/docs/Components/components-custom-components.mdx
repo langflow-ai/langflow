@@ -228,6 +228,14 @@ Inputs and outputs are **class-level configurations** that define how data flows
 
 ### Inputs
 
+:::warning Input names can't match method names
+As of Langflow 1.12.4, the input `name` must not match a method on `Component` or `CustomComponent`, or any method your component class defines.
+
+Names that commonly collide include `index`, `start`, `stop`, `run`, `log`, `validate`, and `variables`. Properties and plain attributes, such as `code`, `description`, `inputs`, and `flow_name`, remain valid input names.
+
+If an existing component uses one of these names, rename the input `name` and update any connections that target it. The display name can stay the same.
+:::
+
 Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render component fields and [ports](/concepts-components#component-ports) in the visual editor. Users or other components provide values or connections to fill these inputs.
 
 An input is usually an instance of a class from `lfx.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`).

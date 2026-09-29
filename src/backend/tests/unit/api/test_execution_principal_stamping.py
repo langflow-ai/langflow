@@ -408,7 +408,7 @@ async def test_the_run_flow_component_forwards_its_graph_principal(monkeypatch: 
 
     principal = execution_principal_for(FAMILY_INTERACTIVE_CHAT, user=_user())
     component = run_flow_module.RunFlowBaseComponent()
-    child_graph = object()
+    child_graph = SimpleNamespace()
     monkeypatch.setattr(component, "get_graph", lambda **_kwargs: _awaitable(child_graph))
     monkeypatch.setattr(component, "_build_flow_tweak_data", dict)
     monkeypatch.setattr(component, "_build_inputs", lambda _tweaks: {})
