@@ -15,7 +15,9 @@ Migrated database fields:
 - apikey.api_key: stored API key values
 - deployment_provider_account.api_key: deployment provider credentials
 - connection_secret.encrypted_payload: connection credentials
-- mcp_server.config: secret values in the env and headers maps
+- trigger.signing_secret_encrypted: webhook trigger signing secrets
+- mcp_server.config: secret values in the env and headers maps, and the
+  --headers values in args
 
 Run it with Langflow stopped, no background jobs queued and no OAuth connection
 flows in progress. Queued jobs' request overrides and pending OAuth verifiers are
@@ -45,6 +47,7 @@ from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, _argv_secret_positions
 from platformdirs import user_cache_dir
 from sqlalchemy import create_engine, inspect, text
 
@@ -55,10 +58,9 @@ FERNET_TOKEN_COLUMNS = [
     ("apikey", "id", "api_key", "stored API key values"),
     ("deployment_provider_account", "id", "api_key", "deployment provider API keys"),
     ("connection_secret", "connection_id", "encrypted_payload", "connection credentials"),
+    ("trigger", "id", "signing_secret_encrypted", "trigger signing secrets"),
 ]
 SENSITIVE_AUTH_FIELDS = ["oauth_client_secret", "api_key"]
-# Must match langflow.services.auth.mcp_encryption.MCP_SECRET_CONFIG_MAPS
-MCP_SECRET_CONFIG_MAPS = ("env", "headers")
 FERNET_VERSION_BYTE = 0x80
 FERNET_MIN_TOKEN_BYTES = 73  # version + timestamp + IV + one AES block + HMAC
 # Must match langflow.services.variable.constants.CREDENTIAL_TYPE
@@ -138,8 +140,7 @@ def ensure_valid_key(s: str) -> bytes:
     of the secret, as the app has done since 1.10.1. For longer keys, pads with
     '=' to ensure valid base64 encoding.
 
-    NOTE: This mirrors langflow.services.auth.utils.ensure_fernet_key to keep the
-    migration script self-contained (can run without full Langflow installation).
+    NOTE: This mirrors langflow.services.auth.utils.ensure_fernet_key.
     Keep in sync if encryption logic changes.
     """
     if len(s) < MINIMUM_KEY_LENGTH:
@@ -295,6 +296,15 @@ def migrate_mcp_config(config: dict, old_key: str, new_key: str) -> tuple[dict, 
                 values[name] = new_value
             else:
                 failed_fields.append(f"{map_name}.{name}")
+    args = result.get("args")
+    for position in _argv_secret_positions(args):
+        if not looks_like_fernet_token(args[position]):
+            continue
+        new_value = migrate_value(args[position], old_key, new_key)
+        if new_value:
+            args[position] = new_value
+        else:
+            failed_fields.append(f"args[{position}]")
     return result, failed_fields
 
 
@@ -378,6 +388,11 @@ def verify_migration(conn, new_key: str) -> tuple[int, int]:
                         if isinstance(value, str) and looks_like_fernet_token(value):
                             decrypt_with_key(value, new_key)
                             verified += 1
+                args = config.get("args")
+                for position in _argv_secret_positions(args):
+                    if looks_like_fernet_token(args[position]):
+                        decrypt_with_key(args[position], new_key)
+                        verified += 1
             except (InvalidToken, json.JSONDecodeError):
                 failed += 1
 

@@ -1110,3 +1110,94 @@ class TestMigrateEndToEnd:
             variable = conn.execute(text("SELECT value FROM variable")).scalar()
         assert migrate_module.decrypt_with_key(variable, old_key) == "variable-secret"
         assert not (config_dir / "secret_key").exists()
+
+
+class TestRotationOnAppWrittenDatabase:
+    """Rows written through the app's models and encryption, in a schema built from its models."""
+
+    @pytest.fixture
+    def app_db(self, tmp_path):
+        from langflow.services.auth.mcp_encryption import encrypt_mcp_config
+        from langflow.services.auth.utils import encrypt_api_key
+        from langflow.services.database.models import Flow, MCPServer, User
+        from langflow.services.database.models.trigger.model import Trigger
+        from sqlmodel import Session, SQLModel
+
+        url = f"sqlite:///{tmp_path / 'langflow.db'}"
+        engine = create_engine(url)
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            user = User(username="owner", password="hashed")  # noqa: S106
+            flow = Flow(name="webhook flow", user_id=user.id)
+            # The shape projects_mcp_helpers registers for an apikey project.
+            project_server = {
+                "command": "uvx",
+                "args": [
+                    "mcp-proxy",
+                    "--transport",
+                    "streamablehttp",
+                    "--headers",
+                    "x-api-key",
+                    "sk-project-key",
+                    "http://localhost:7860/api/v1/mcp/project/p/streamable",
+                ],
+            }
+            session.add_all(
+                [
+                    user,
+                    flow,
+                    MCPServer(user_id=user.id, name="lf-project", config=encrypt_mcp_config(project_server)),
+                    Trigger(
+                        flow_id=flow.id,
+                        user_id=user.id,
+                        name="hook",
+                        kind="webhook",
+                        concurrency_limit=1,
+                        max_attempts=5,
+                        signing_secret_encrypted=encrypt_api_key("whsec-signing"),
+                    ),
+                ]
+            )
+            session.commit()
+        config_dir = tmp_path / "cfg"
+        config_dir.mkdir()
+        app_key = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+        return engine, config_dir, url, app_key
+
+    def test_rotates_the_header_value_mcp_proxy_takes_in_args(self, migrate_module, app_db, new_key):
+        engine, config_dir, url, app_key = app_db
+
+        migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            args = json.loads(conn.execute(text("SELECT config FROM mcp_server")).scalar())["args"]
+        assert migrate_module.decrypt_with_key(args[args.index("x-api-key") + 1], new_key) == "sk-project-key"
+
+    def test_verification_samples_the_header_value_in_args(self, migrate_module, app_db, new_key):
+        engine, _, _, app_key = app_db
+        with engine.connect() as conn:
+            # The trigger secret and the args header value.
+            assert migrate_module.verify_migration(conn, app_key) == (2, 0)
+            assert migrate_module.verify_migration(conn, new_key) == (0, 2)
+
+    def test_rotates_trigger_signing_secrets(self, migrate_module, app_db, new_key):
+        engine, config_dir, url, app_key = app_db
+
+        migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            secret = conn.execute(text('SELECT signing_secret_encrypted FROM "trigger"')).scalar()
+        assert migrate_module.decrypt_with_key(secret, new_key) == "whsec-signing"
+
+    def test_header_value_under_another_key_rolls_back(self, migrate_module, app_db, new_key):
+        engine, config_dir, url, app_key = app_db
+        with engine.begin() as conn:
+            config = json.loads(conn.execute(text("SELECT config FROM mcp_server")).scalar())
+            args = config["args"]
+            args[args.index("x-api-key") + 1] = migrate_module.encrypt_with_key("foreign", secrets.token_urlsafe(32))
+            conn.execute(text("UPDATE mcp_server SET config = :c"), {"c": json.dumps(config)})
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        assert not (config_dir / "secret_key").exists()
