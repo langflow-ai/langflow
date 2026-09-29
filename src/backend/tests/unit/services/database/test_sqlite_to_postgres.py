@@ -187,6 +187,45 @@ def _seed(url: str) -> None:
     engine.dispose()
 
 
+BOB = uuid.UUID("55555555-5555-4555-8555-555555555555")
+
+
+def _leave_orphans(url: str) -> None:
+    """Clear a flow's traces and delete a user the way Langflow does.
+
+    Langflow never turns on SQLite's foreign keys, so neither delete cascades:
+    the spans and bob's role assignment stay behind.
+    """
+    from langflow.services.database.models import User
+    from langflow.services.database.models.auth.authz import (
+        AuthzRole,
+        AuthzRoleAssignment,
+        AuthzRoleAssignmentGrant,
+    )
+    from langflow.services.database.models.traces.model import SpanTable, TraceTable
+    from sqlmodel import Session, select
+
+    engine = sa.create_engine(url)
+    with Session(engine) as session:
+        trace = TraceTable(name="run", flow_id=FLOW)
+        root = SpanTable(name="root", trace_id=trace.id)
+        session.add_all([trace, root, SpanTable(name="child", trace_id=trace.id, parent_span_id=root.id)])
+        session.add(User(id=BOB, username="bob", password="x", is_active=True))  # noqa: S106
+        viewer = session.exec(select(AuthzRole).where(AuthzRole.name == "viewer")).one()
+        assignment = AuthzRoleAssignment(user_id=BOB, role_id=viewer.id, domain_type="global")
+        session.add(assignment)
+        session.add(AuthzRoleAssignmentGrant(assignment_id=assignment.id, source_kind="manual"))
+        # bob granted alice her roles, so her assignments point at him too.
+        for alices in session.exec(select(AuthzRoleAssignment).where(AuthzRoleAssignment.user_id == ALICE)):
+            alices.assigned_by = BOB
+        session.commit()
+        # The flow's "Clear all" traces button and DELETE /users/{id}.
+        session.execute(sa.delete(TraceTable).where(TraceTable.flow_id == FLOW))
+        session.delete(session.get(User, BOB))
+        session.commit()
+    engine.dispose()
+
+
 def _counts(url: str, tables: list[str]) -> dict[str, int]:
     engine = sa.create_engine(url)
     with engine.connect() as conn:
@@ -334,6 +373,64 @@ class TestConversionEndToEnd:
             assert conn.execute(sa.text("SELECT revision FROM policy_bundle_revision")).scalars().all() == [7]
             assert conn.execute(sa.text("SELECT revision FROM policy_bundle_active")).scalar_one() == 7
         engine.dispose()
+
+    def test_orphan_rows_are_refused_before_anything_is_written(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        _leave_orphans(sqlite_source)
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert not report.ok
+        # Each key is named with its count. The grant's assignment still exists in
+        # SQLite, but it goes with bob's assignment, so the grant is gone too.
+        for named in [
+            "span.trace_id: 2 row(s)",
+            "authz_role_assignment.user_id: 1 row(s)",
+            "authz_role_assignment_grant.assignment_id: 1 row(s)",
+            "authz_role_assignment.assigned_by: 2 row(s)",
+        ]:
+            assert any(p.startswith(named) and "--drop-orphans" in p for p in report.problems), report.problems
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == []
+        engine.dispose()
+
+    def test_drop_orphans_copies_what_on_delete_would_have_left(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        _leave_orphans(sqlite_source)
+        # A key written as a dashed string through raw SQL still points at its row.
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO trace (id, name, status, start_time, total_latency_ms, total_tokens, flow_id) "
+                    "VALUES (:id, 'kept', 'ok', '2025-01-01 00:00:00', 0, 0, :flow_id)"
+                ),
+                {"id": uuid.uuid4().hex, "flow_id": str(FLOW)},
+            )
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database, drop_orphans=True)
+
+        assert report.ok, report.problems
+        assert {(o.table, o.column, o.ondelete, o.rows) for o in report.orphans} == {
+            ("span", "trace_id", "CASCADE", 2),
+            ("authz_role_assignment", "user_id", "CASCADE", 1),
+            ("authz_role_assignment_grant", "assignment_id", "CASCADE", 1),
+            ("authz_role_assignment", "assigned_by", "SET NULL", 2),
+        }
+        source = _counts(sqlite_source, ["user", "flow", "trace", "span", "authz_role_assignment"])
+        assert _counts(postgres_database, list(source)) == {
+            **source,
+            "span": 0,
+            "authz_role_assignment": source["authz_role_assignment"] - 1,
+        }
+        assert _counts(postgres_database, ["authz_role_assignment_grant"]) == {"authz_role_assignment_grant": 0}
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assigned_by = conn.execute(sa.text("SELECT assigned_by FROM authz_role_assignment")).scalars().all()
+        engine.dispose()
+        assert assigned_by == [None, None]
 
     def test_target_holding_another_instances_users_is_refused(self, sqlite_source, postgres_database, tmp_path):
         _seed(sqlite_source)

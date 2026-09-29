@@ -1144,6 +1144,11 @@ def convert_sqlite_to_postgres(
     source: str = typer.Option(..., help="SQLite database URL to read, e.g. sqlite:////data/langflow.db."),
     target: str = typer.Option(..., help="Postgres database URL to write. It is upgraded to the latest schema first."),
     batch_size: int = typer.Option(1000, help="Rows per insert batch."),
+    drop_orphans: bool = typer.Option(  # noqa: FBT001
+        default=False,
+        help="Copy rows whose foreign key points at a deleted row the way Postgres would have handled them: "
+        "leave them out (ON DELETE CASCADE) or clear the key (ON DELETE SET NULL). Without it they are refused.",
+    ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ) -> None:
     """Copy every row of a Langflow SQLite database into Postgres.
@@ -1152,11 +1157,14 @@ def convert_sqlite_to_postgres(
     schema (start this Langflow version against it once). The copy runs in one
     transaction and is checked table by table, so it either lands whole or not at
     all, and running it again is safe. Nothing in the source is changed.
+
+    SQLite never enforced Langflow's foreign keys, so deletes can leave rows that
+    point at nothing. They are refused, naming each key, unless --drop-orphans.
     """
     from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
 
     configure(log_level=log_level)
-    report = convert(source, target, batch_size=batch_size)
+    report = convert(source, target, batch_size=batch_size, drop_orphans=drop_orphans)
     if not report.ok:
         # A failed copy is rolled back, so per-table counts would describe rows that are gone.
         for problem in report.problems:
@@ -1164,6 +1172,9 @@ def convert_sqlite_to_postgres(
         raise typer.Exit(1)
     for table in report.tables:
         typer.echo(f"{table.name}: {table.target_rows} row(s)")
+    for orphans in report.orphans:
+        done = "left out" if orphans.ondelete == "CASCADE" else f"copied with {orphans.column} set to NULL"
+        typer.echo(f"{orphans.table}: {orphans.rows} row(s) pointing at a deleted {orphans.parent} {done}")
     typer.echo(f"Converted {len(report.tables)} table(s) at revision {report.revision}.")
 
 

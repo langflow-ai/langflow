@@ -45,22 +45,38 @@ class TableCopy:
 
 
 @dataclass
+class OrphanRows:
+    """Rows whose foreign key points at a row that is gone."""
+
+    table: str
+    column: str
+    parent: str
+    ondelete: str
+    rows: int
+
+
+@dataclass
 class ConversionReport:
     revision: str | None = None
     tables: list[TableCopy] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
+    # Left out (ON DELETE CASCADE) or copied with the key set to NULL (ON DELETE SET NULL).
+    orphans: list[OrphanRows] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
         return not self.problems
 
 
-def convert_sqlite_to_postgres(source_url: str, target_url: str, *, batch_size: int = 1000) -> ConversionReport:
+def convert_sqlite_to_postgres(
+    source_url: str, target_url: str, *, batch_size: int = 1000, drop_orphans: bool = False
+) -> ConversionReport:
     """Copy every row of a SQLite Langflow database into a Postgres database.
 
     The target may be empty or a previous run of this conversion. Returns a
     report; ``report.ok`` is False and nothing is committed when anything was
-    refused or failed.
+    refused or failed. Rows whose foreign key points at a row that is gone are
+    refused unless ``drop_orphans``, which applies their ON DELETE rule instead.
     """
     report = ConversionReport()
     source_path = sa.engine.make_url(_sync_sqlite_url(source_url)).database
@@ -94,11 +110,11 @@ def convert_sqlite_to_postgres(source_url: str, target_url: str, *, batch_size: 
             target = sa.create_engine(_sync_postgres_url(target_url))
             # Everything that can refuse runs before the target is migrated, so a
             # refused run leaves the target exactly as it was.
-            report.problems.extend(_preflight(source, target, models))
+            _preflight(source, target, models, report, drop_orphans=drop_orphans)
             if report.problems:
                 return report
             upgrade_to_head(target_url)
-            _convert(source, target, models, report, batch_size=batch_size)
+            _convert(source, target, models, report, batch_size=batch_size, drop_orphans=drop_orphans)
         except ImportError as exc:
             # No Postgres driver installed. Reported for the same reason as below.
             report.problems.append(f"could not use the target database: {exc}; install langflow[postgresql]")
@@ -164,9 +180,25 @@ def coerce_value(value: Any, column_type: sa.types.TypeEngine) -> Any:
     return value
 
 
-def _preflight(source: sa.Engine, target: sa.Engine, models: Mapping[str, sa.Table]) -> list[str]:
+def _preflight(
+    source: sa.Engine,
+    target: sa.Engine,
+    models: Mapping[str, sa.Table],
+    report: ConversionReport,
+    *,
+    drop_orphans: bool,
+) -> None:
     with source.connect() as src, target.connect() as tgt:
-        return _invalid_enum_values(src, models) + _foreign_users(src, tgt)
+        report.problems.extend(_invalid_enum_values(src, models) + _foreign_users(src, tgt))
+        for orphans in _orphan_rows(src, models):
+            # Only rows an ON DELETE rule accounts for can be let go. A self-referencing
+            # CASCADE would need a recursive query; none exists, so it is refused too.
+            if drop_orphans and (
+                orphans.ondelete == "SET NULL" or (orphans.ondelete == "CASCADE" and orphans.parent != orphans.table)
+            ):
+                report.orphans.append(orphans)
+            else:
+                report.problems.append(_describe_orphans(orphans))
 
 
 def _convert(
@@ -176,6 +208,7 @@ def _convert(
     report: ConversionReport,
     *,
     batch_size: int,
+    drop_orphans: bool,
 ) -> None:
     metadata = sa.MetaData()
     metadata.reflect(bind=target)
@@ -191,7 +224,15 @@ def _convert(
                     _clear_seeded_policy_history(tgt)
                 for table in tables:
                     columns = [column for column in table.columns if column.name in source_columns[table.name]]
-                    source_rows = _copy_table(src, tgt, table, columns, models.get(table.name), batch_size=batch_size)
+                    source_rows = _copy_table(
+                        src,
+                        tgt,
+                        table,
+                        columns,
+                        models.get(table.name),
+                        batch_size=batch_size,
+                        drop_orphans=drop_orphans,
+                    )
                     target_rows = tgt.execute(sa.select(sa.func.count()).select_from(table)).scalar_one()
                     report.tables.append(TableCopy(table.name, source_rows, target_rows))
                     if target_rows != source_rows:
@@ -304,6 +345,75 @@ def _invalid_enum_values(conn: sa.Connection, models: Mapping[str, sa.Table]) ->
     return problems
 
 
+def _orphan_rows(conn: sa.Connection, models: Mapping[str, sa.Table]) -> list[OrphanRows]:
+    """Rows whose foreign key points at a row that is gone, per key.
+
+    Langflow never turns SQLite's foreign keys on, so ON DELETE never fires there:
+    clearing a flow's traces leaves its spans, deleting a user leaves their role
+    assignments. Postgres rejects such a row partway through the copy, after the
+    target was migrated, so they are found here. A CASCADE key counts every row it
+    would drop; any other key counts only rows that would still be copied.
+    """
+    found = []
+    source_tables = set(sa.inspect(conn).get_table_names())
+    for table in models.values():
+        if table.name not in source_tables:
+            continue
+        for foreign_key in table.foreign_key_constraints:
+            rule = _on_delete(foreign_key)
+            dangling = _dangling(foreign_key)
+            where = dangling if rule == "CASCADE" else f"{_kept(table)} AND {dangling}"
+            rows = conn.execute(sa.text(f'SELECT count(*) FROM "{table.name}" WHERE {where}')).scalar_one()  # noqa: S608
+            if rows:
+                column = ", ".join(column.name for column in foreign_key.columns)
+                found.append(OrphanRows(table.name, column, foreign_key.referred_table.name, rule, rows))
+    return found
+
+
+def _describe_orphans(orphans: OrphanRows) -> str:
+    found = f"{orphans.table}.{orphans.column}: {orphans.rows} row(s) point at {orphans.parent} rows that are gone"
+    if orphans.ondelete == "CASCADE":
+        return f"{found}; ON DELETE CASCADE would have deleted them, rerun with --drop-orphans to leave them out"
+    if orphans.ondelete == "SET NULL":
+        return f"{found}; ON DELETE SET NULL would have cleared {orphans.column}, rerun with --drop-orphans to do that"
+    return f"{found}, and no ON DELETE rule says what to do with them; fix them in the source"
+
+
+def _on_delete(foreign_key: sa.ForeignKeyConstraint) -> str:
+    return (foreign_key.ondelete or "NO ACTION").upper()
+
+
+def _kept(table: sa.Table) -> str:
+    """SQL condition for the rows of ``table`` a database enforcing its foreign keys would still hold.
+
+    A row is gone when its ON DELETE CASCADE parent is missing or gone itself.
+    """
+    return (
+        " AND ".join(
+            f"NOT ({_dangling(foreign_key)})"
+            for foreign_key in table.foreign_key_constraints
+            if _on_delete(foreign_key) == "CASCADE" and foreign_key.referred_table is not table
+        )
+        or "1 = 1"
+    )
+
+
+def _dangling(foreign_key: sa.ForeignKeyConstraint) -> str:
+    """SQL condition for rows whose ``foreign_key`` is set but points at no row ``_kept`` keeps."""
+    parent = foreign_key.referred_table
+    columns = ", ".join(_key(element.parent) for element in foreign_key.elements)
+    keys = ", ".join(_key(element.column) for element in foreign_key.elements)
+    return " AND ".join(
+        [f'"{column.name}" IS NOT NULL' for column in foreign_key.columns]
+        + [f'({columns}) NOT IN (SELECT {keys} FROM "{parent.name}" WHERE {_kept(parent)})']  # noqa: S608
+    )
+
+
+def _key(column: sa.Column) -> str:
+    # SQLite holds a Uuid as 32 hex characters; rows written as raw strings may be dashed.
+    return f"lower(replace(\"{column.name}\", '-', ''))" if isinstance(column.type, sa.Uuid) else f'"{column.name}"'
+
+
 def _foreign_users(src: sa.Connection, tgt: sa.Connection) -> list[str]:
     """Refuse to merge two instances: the target may only hold users this source also has."""
     if not sa.inspect(tgt).has_table("user"):
@@ -355,15 +465,24 @@ def _copy_table(
     model: sa.Table | None,
     *,
     batch_size: int,
+    drop_orphans: bool,
 ) -> int:
     names = [column.name for column in columns]
     model_types = [
         model.columns[column.name].type if model is not None and column.name in model.columns else None
         for column in columns
     ]
-    select_sql = sa.text(
-        f'SELECT {", ".join(f"{chr(34)}{name}{chr(34)}" for name in names)} FROM "{table.name}"'  # noqa: S608
-    )
+    selected = {name: f'"{name}"' for name in names}
+    where = ""
+    if drop_orphans and model is not None:
+        # What ON DELETE would have done: leave out CASCADE orphans, clear SET NULL keys.
+        where = f" WHERE {_kept(model)}"
+        for foreign_key in model.foreign_key_constraints:
+            if _on_delete(foreign_key) == "SET NULL":
+                for column in foreign_key.columns:
+                    if column.name in selected:
+                        selected[column.name] = f'CASE WHEN {_dangling(foreign_key)} THEN NULL ELSE "{column.name}" END'
+    select_sql = sa.text(f'SELECT {", ".join(selected.values())} FROM "{table.name}"{where}')  # noqa: S608
     rows = (
         {
             column.name: _coerce(value, model_type, column)
