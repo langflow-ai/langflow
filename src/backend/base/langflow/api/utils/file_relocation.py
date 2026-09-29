@@ -181,7 +181,7 @@ async def _rows_without_bytes(copied: set[tuple[str, str]], username: str | None
     return missing
 
 
-_WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:/")
+_WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:[/\\]")
 
 
 def _portable_attachment_path(entry: str, data_dir: str, stored: set[tuple[str, str]]) -> str | None:
@@ -189,15 +189,14 @@ def _portable_attachment_path(entry: str, data_dir: str, stored: set[tuple[str, 
 
     Local storage records chat attachments by absolute path, which only the local
     backend can read. The logical form is what the S3 backend resolves, and local
-    storage reads it too. A path under local storage maps directly. A path under
-    another directory (the instance ran from elsewhere before its data was restored
-    here) maps only when local storage holds a file under the same last two names.
+    storage reads it too. A path maps only when local storage holds its bytes,
+    including a path under another directory from before a restore.
     """
     path = entry.replace("\\", "/")
     root = data_dir.replace("\\", "/").rstrip("/") + "/"
     if path.startswith(root):
         namespace, _, name = path[len(root) :].partition("/")
-        return f"{namespace}/{name}" if namespace and name and "/" not in name else None
+        return f"{namespace}/{name}" if (namespace, name) in stored else None
     head, _, name = path.rpartition("/")
     namespace = head.rpartition("/")[2]
     return f"{namespace}/{name}" if (namespace, name) in stored else None
@@ -239,7 +238,10 @@ async def _repoint_message_attachments(
                             file_name=name,
                             key="",
                             status="failed",
-                            reason=f"chat attachment in message {message_id} is outside local storage; left as {entry}",
+                            reason=(
+                                f"chat attachment in message {message_id} has no matching file "
+                                f"in source storage; left as {entry}"
+                            ),
                         )
                     )
                     continue
