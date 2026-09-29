@@ -308,6 +308,11 @@ class PostgresBackend(BaseVectorStoreBackend):
         self._resolved_connection_string = _normalize_driver(connection_string)
 
     @property
+    def store_location(self) -> tuple[Any, ...]:
+        """The resolved database and this KB's table."""
+        return (self._resolved_connection_string, self.table_name)
+
+    @property
     def collection_name(self) -> str:
         """Return a stable, non-identifying collection name scoped to the owner."""
         owner_id = self._coerce_user_uuid()

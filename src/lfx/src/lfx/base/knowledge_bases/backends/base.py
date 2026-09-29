@@ -285,6 +285,15 @@ class BaseVectorStoreBackend(ABC):
         await self._resolve_secrets()
         self._secrets_resolved = True
 
+    @property
+    def store_location(self) -> tuple[Any, ...] | None:
+        """Where this knowledge base's chunks live, once ``ensure_ready`` has run.
+
+        Two backends of one class with equal locations read and write the same
+        chunks, whatever their configs say. None means the backend does not say.
+        """
+        return None
+
     # ---- subclass surface ------------------------------------------------
 
     @abstractmethod

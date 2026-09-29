@@ -100,6 +100,25 @@ class TestRelocationWithoutATarget:
 
         assert next(r for r in results if r.kb_id == record.id).status == "skipped"
 
+    async def test_kb_already_in_the_target_store_is_skipped_whatever_its_config(self, active_user, kb_root):
+        # The stored config names the same local store with keys the target config
+        # leaves out; copying would rewrite the knowledge base onto itself.
+        await _seed_chroma_kb(kb_root, active_user.username, "kb_here", 2)
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="kb_here",
+            backend_config={"mode": "local"},
+            model_selection={"name": "m", "provider": "p"},
+            chunks=2,
+        )
+
+        results = await relocate_knowledge_bases(target_backend_type="chroma", target_backend_config={})
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert result.status == "skipped", result.reason
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert row.backend_config == {"mode": "local"}
+
     async def test_dry_run_checks_the_target_is_reachable(self, active_user, kb_root, monkeypatch):
         monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
         await _seed_chroma_kb(kb_root, active_user.username, "kb_dry_unreachable", 2)
@@ -331,3 +350,40 @@ class TestRelocationToPostgresLive:
 
         assert result.status == "failed"
         assert "deleted" in result.reason
+
+
+@pytest.mark.api_key_required
+async def test_opensearch_kb_is_not_relocated_onto_its_own_index(active_user, kb_root, tmp_path: Path):  # noqa: ARG001
+    if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
+        pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
+    pytest.importorskip("opensearchpy")
+    kb_name = f"kb_os_{uuid.uuid4().hex[:6]}"
+    # What the DB Providers UI stores, against a target config that names only the URL.
+    source_config = {"url_variable": "OPENSEARCH_URL", "vector_field": "chunk_embedding", "use_ssl": False}
+    source = create_backend(
+        "opensearch", kb_name=kb_name, kb_path=tmp_path, backend_config=source_config, user_id=active_user.id
+    )
+    try:
+        await source.ensure_ready()
+        await source.add_embedded_documents([IngestedDocument(id="c0", content="doc", embedding=[0.5] * DIM)])
+        source._os_client.indices.refresh(index=source._os_index)
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_name,
+            backend_type="opensearch",
+            backend_config=source_config,
+            model_selection={"name": "m", "provider": "p"},
+            chunks=1,
+        )
+
+        results = await relocate_knowledge_bases(
+            target_backend_type="opensearch", target_backend_config={"url_variable": "OPENSEARCH_URL"}
+        )
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert result.status == "skipped", result.reason
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert row.backend_config == source_config
+    finally:
+        await source.delete_collection()
+        await source.teardown()
