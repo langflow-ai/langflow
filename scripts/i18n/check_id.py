@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Check the Indonesian locale files against the English sources and the style guide.
 
 Covers both locale files:
