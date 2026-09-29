@@ -1,12 +1,16 @@
 """Shared dependencies for the agentic API.
 
-Kept in a leaf module (only fastapi + lfx settings) so both the route definitions
-(langflow.agentic.api.router) and the router-include site (langflow.api.router) can import it
-without a circular import.
+Kept separate from the route definitions so the router-include site can
+import the feature gate without a circular import.
 """
 
 from fastapi import HTTPException, status
 from lfx.services.deps import get_settings_service
+from lfx.utils.flow_validation import admin_only_build_required
+
+from langflow.api.utils.core import CurrentActiveUser
+
+ASSISTANT_ADMIN_ONLY_DETAIL = "The Langflow Assistant is restricted to administrators on this server."
 
 
 def require_agentic_experience() -> None:
@@ -23,3 +27,14 @@ def require_agentic_experience() -> None:
     """
     if not get_settings_service().settings.agentic_experience:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This endpoint is not available")
+
+
+def enforce_agentic_component_admin(*, is_superuser: bool) -> None:
+    """Apply the shared custom-component policy before assistant execution."""
+    if admin_only_build_required(is_superuser=is_superuser):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ASSISTANT_ADMIN_ONLY_DETAIL)
+
+
+def require_agentic_component_admin(current_user: CurrentActiveUser) -> None:
+    """HTTP dependency for assistant routes that can execute component code."""
+    enforce_agentic_component_admin(is_superuser=current_user.is_superuser)
