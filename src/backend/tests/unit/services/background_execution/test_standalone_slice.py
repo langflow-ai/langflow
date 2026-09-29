@@ -36,5 +36,7 @@ def test_redis_job_queue_does_not_select_the_scaled_backend(monkeypatch):
 
     service = BackgroundExecutionService(settings_service)
 
-    assert service._backend is None
+    from langflow.services.background_execution.in_process_backend import InProcessBackend
+
+    assert isinstance(service._backend, InProcessBackend)
     assert service._scaled is False

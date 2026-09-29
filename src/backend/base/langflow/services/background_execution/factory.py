@@ -16,28 +16,40 @@ if TYPE_CHECKING:
 
 
 class BackgroundBackend(Protocol):
-    """Contract a scaled background-execution backend must satisfy.
+    """Contract every background-execution backend satisfies.
 
     The facade owns submit/resume/validate semantics and the durable job row;
-    a backend supplies transport: how a persisted QUEUED row reaches a worker
-    (``enqueue``/``claim``), how a stop request travels (``stop``), how lost
-    in-flight work is reconciled (``requeue_lost``), and how durable events
-    reach a reattaching client (``events``). The durable job table stays the
-    single system of record in every implementation — a broker backend may
-    dispatch and fan out, but the DB conditional-UPDATE remains the claim.
+    a backend supplies execution transport: lifecycle (``start``/``teardown``),
+    how a persisted job runs (``dispatch`` in-process, or ``enqueue``/``claim``
+    across worker processes), how a resumed row travels back to execution
+    (``hand_back``), how a stop request reaches the run (``stop``), how lost
+    in-flight work is reconciled (``requeue_lost``), and how a client follows
+    the live event stream (``tail``). ``external_workers`` says whether jobs
+    run outside the API process, which gates API-side recovery sweeps. The
+    durable job table stays the single system of record in every
+    implementation — a broker backend may dispatch and fan out, but the DB
+    conditional-UPDATE remains the claim.
     """
+
+    external_workers: bool
+
+    async def start(self) -> None: ...
+
+    async def teardown(self) -> None: ...
 
     async def enqueue(self, job_id: str) -> None: ...
 
     async def claim(self, *, block_ms: int = 1000) -> str | None: ...
 
+    async def dispatch(self, job_id: Any, *, flow_id: Any, request: dict[str, Any], user: Any) -> None: ...
+
+    async def hand_back(self, job_id: Any, *, flow_id: Any, request: dict[str, Any], user: Any, owner: str) -> bool: ...
+
     async def stop(self, job_id: str) -> None: ...
 
     async def requeue_lost(self, *, lease_ttl_s: float = 45.0) -> list[str]: ...
 
-    def events(self, job_id: str, last_event_id: int = 0) -> AsyncIterator[Any]: ...
-
-    async def teardown(self) -> None: ...
+    def tail(self, job_id: str, *, last_seq: int, frame_row: Any) -> AsyncIterator[Any]: ...
 
 
 class BackgroundExecutionServiceFactory(ServiceFactory):
