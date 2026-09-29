@@ -90,6 +90,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
+    from langchain_core.documents import Document
     from langchain_core.vectorstores import VectorStore
 
 
@@ -359,6 +360,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         self._os_index = index_name
         self._os_vector_field = vector_field
         self._os_text_field = text_field
+        self._os_space_type = space_type
 
         return OpenSearchVectorSearch(
             opensearch_url=url,
@@ -373,11 +375,22 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             space_type=space_type,
         )
 
+    async def add_documents(self, docs: list[Document]) -> None:
+        # LangChain builds a new index's mapping from per-call kwargs and ignores the
+        # ``space_type`` handed to its constructor, so every write passes it. Without
+        # it the index ranks by l2 whatever the config (and ``distance_metric``) says.
+        if not docs:
+            return
+        await self.ensure_ready()
+        store = self.vector_store
+        await store.aadd_documents(docs, space_type=self._os_space_type)
+
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
         # Like ingestion, no per-call field override: LangChain writes vectors to
         # ``LANGCHAIN_DEFAULT_VECTOR_FIELD``, which is where ``iter_documents``
         # and similarity search already look. ``add_embeddings`` creates the index
-        # with the right dimension when it does not exist yet.
+        # with the right dimension when it does not exist yet, and with
+        # ``space_type`` only when it is passed here (see ``add_documents``).
         # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
         # default) per call, so split larger batches rather than fail the write.
         """Write supplied vectors with stable document identities without invoking an embedder."""
@@ -389,6 +402,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 [(doc.content, doc.embedding) for doc in chunk],
                 metadatas=[doc.metadata for doc in chunk],
                 ids=ids[start : start + bulk_size],
+                space_type=self._os_space_type,
             )
 
     async def similarity_search(
