@@ -14,7 +14,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from langflow import middleware as middleware_module
 from langflow.main import JavaScriptMIMETypeMiddleware
-from langflow.middleware import ContentSizeLimitMiddleware, ExecutionClientMiddleware, MultipartBoundaryMiddleware
+from langflow.middleware import (
+    ContentSizeLimitMiddleware,
+    ExecutionClientMiddleware,
+    ForwardedPrefixMiddleware,
+    MultipartBoundaryMiddleware,
+)
 from lfx.observability import get_execution_client
 from pydantic_core import PydanticSerializationError
 
@@ -311,3 +316,35 @@ class TestMultipartBoundaryMiddleware:
         )
 
         assert messages[0]["status"] == 413
+
+
+class TestForwardedPrefixMiddleware:
+    @staticmethod
+    async def _downstream_root_path(settings, headers: dict[str, str]) -> str:
+        seen = {}
+
+        async def app(scope, receive, send):
+            seen["root_path"] = scope["root_path"]
+            await PlainTextResponse("ok")(scope, receive, send)
+
+        await _call(ForwardedPrefixMiddleware(app, settings=settings), _scope("/api/v1/mcp/sse", headers=headers))
+        return seen["root_path"]
+
+    async def test_the_header_sets_root_path_when_root_path_is_configured(self):
+        settings = SimpleNamespace(root_path="/configured")
+
+        assert await self._downstream_root_path(settings, {"X-Forwarded-Prefix": "/langflow/"}) == "/langflow"
+
+    @pytest.mark.parametrize("prefix", ["https://evil.com", "/path?query=1", "/path#fragment", "no-slash", "", "/"])
+    async def test_an_invalid_prefix_is_ignored(self, prefix):
+        settings = SimpleNamespace(root_path="/configured")
+
+        assert await self._downstream_root_path(settings, {"X-Forwarded-Prefix": prefix}) == ""
+
+    async def test_the_header_is_ignored_unless_root_path_is_configured_at_request_time(self):
+        settings = SimpleNamespace(root_path="")
+        headers = {"X-Forwarded-Prefix": "/attacker-prefix"}
+
+        assert await self._downstream_root_path(settings, headers) == ""
+        settings.root_path = "/configured"
+        assert await self._downstream_root_path(settings, headers) == "/attacker-prefix"

@@ -93,6 +93,35 @@ class ExecutionClientMiddleware:
             await self.app(scope, receive, send)
 
 
+class ForwardedPrefixMiddleware:
+    """Honour X-Forwarded-Prefix set by a reverse proxy.
+
+    When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
+    the request, it can advertise the original prefix via X-Forwarded-Prefix.
+    We propagate this into the ASGI ``root_path`` so that transports like
+    MCP SSE include the prefix in the POST-back URLs they hand to clients.
+
+    This middleware is only active when ``root_path`` is configured in
+    settings (i.e. the operator has explicitly opted into reverse-proxy
+    mode).  The header value takes precedence over the static setting
+    because the proxy is the runtime source of truth for the prefix.
+    """
+
+    def __init__(self, app: ASGIApp, settings) -> None:
+        self.app = app
+        self.settings = settings
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not self.settings.root_path:
+            await self.app(scope, receive, send)
+            return
+
+        prefix = Headers(scope=scope).get("X-Forwarded-Prefix", "").rstrip("/")
+        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+            scope["root_path"] = prefix
+        await self.app(scope, receive, send)
+
+
 class MultipartBoundaryMiddleware:
     """Reject a file upload whose multipart boundary is missing, malformed or not framing the body.
 
