@@ -202,6 +202,30 @@ class TestTargetKey:
     async def test_no_target_key_is_a_warning(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "target key").status == "warn"
 
+    @pytest.mark.parametrize("malformed", ["x" * 40, "@" * 44])
+    async def test_a_malformed_key_fails_cleanly_and_the_other_checks_still_run(
+        self, safe_superuser, monkeypatch, malformed
+    ):
+        from pydantic import SecretStr
+
+        await _add(
+            Variable(
+                name=f"KEY_{uuid.uuid4().hex[:6]}",
+                value=encrypt_api_key("sk-real"),
+                type=CREDENTIAL_TYPE,
+                user_id=safe_superuser.id,
+            )
+        )
+        monkeypatch.setattr(get_settings_service().auth_settings, "SECRET_KEY", SecretStr(malformed))
+
+        report = await run_preflight(target_secret_key=malformed)
+
+        for name in ("target key", "source: credentials"):
+            check = _check(report, name)
+            assert check.status == "fail"
+            assert "not usable" in check.summary
+        assert _check(report, "embedding models")
+
     async def test_a_default_key_file_ending_in_a_newline_is_refused(self, safe_superuser):
         # A Secret created from the file with --from-file carries the newline to the target. With
         # Langflow's default key shape, the key with it no longer makes a Fernet key at all.
