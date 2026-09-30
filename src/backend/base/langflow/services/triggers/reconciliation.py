@@ -35,6 +35,7 @@ import secrets
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
+from sqlalchemy.exc import DBAPIError
 
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
@@ -500,6 +501,7 @@ async def reconcile_flow_triggers_safely(
     flow_id: UUID,
     owner_id: UUID | None,
     flow_data: dict[str, Any] | None,
+    reraise_database_errors: bool = False,
 ) -> None:
     """Reconcile without ever failing the save that called it.
 
@@ -516,11 +518,24 @@ async def reconcile_flow_triggers_safely(
     (an autosave PATCH racing a PUT) can both see no row for a newly added
     trigger node and both insert ``(flow_id, node_id)``; the loser violates
     ``uq_trigger_flow_node``.
+
+    ``reraise_database_errors`` opts a caller that already retries its whole
+    transaction on database errors (atomic project replacement) into
+    propagating a ``DBAPIError`` — a lock timeout or deadlock — instead of
+    swallowing it. Swallowing one here would let the save commit with stale
+    trigger rows: the caller's whole-transaction retry never runs, so the
+    deadlock is reported as success and a client retry of the same operation
+    id is a no-op that returns the already-committed, now-stale receipt. Every
+    other exception, and every other caller, stays best-effort and unchanged.
     """
     if owner_id is None:
         return
     try:
         async with session.begin_nested():
             await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
+    except DBAPIError:
+        if reraise_database_errors:
+            raise
+        await logger.awarning("Trigger reconciliation failed for flow %s", flow_id, exc_info=True)
     except Exception:  # noqa: BLE001 — a flow save must never fail on trigger bookkeeping
         await logger.awarning("Trigger reconciliation failed for flow %s", flow_id, exc_info=True)

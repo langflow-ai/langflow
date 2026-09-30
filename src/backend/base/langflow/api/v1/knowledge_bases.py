@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import json
 import tempfile
 import uuid
@@ -74,6 +73,7 @@ from langflow.services.deps import get_job_service, get_settings_service, get_ta
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService
 from langflow.services.task.service import TaskService
+from langflow.utils.canonical_json import canonical_json_digest
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
     KB_METADATA_RESERVED_KEYS,
@@ -340,17 +340,17 @@ def _build_connector_ingest_dedupe_key(
     of JSON key ordering. Only the hash (not the config) goes on the
     ``job`` row, so no credentials leak through ``dedupe_key``.
     """
-    canonical = json.dumps(
+    digest = canonical_json_digest(
         {
             "user_id": str(user_id),
             "kb_name": kb_name,
             "source_type": source_type,
             "source_config": source_config,
         },
-        sort_keys=True,
+        ensure_ascii=True,
+        separators=None,
         default=str,
     )
-    digest = hashlib.sha256(canonical.encode()).hexdigest()
     return f"kb_connector_ingest:{digest}"
 
 
