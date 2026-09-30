@@ -19,6 +19,15 @@ from __future__ import annotations
 import json
 
 import pytest
+from lfx.application_observability import (
+    AUTH_SPAN,
+    FLOW_LOAD_SPAN,
+    GRAPH_EXECUTION_SPAN,
+    LEGACY_FLOW_EXECUTION_SPAN,
+    RESPONSE_SERIALIZE_SPAN,
+    STREAM_SEND_SPAN,
+    VERTEX_EXECUTION_SPAN,
+)
 from lfx.observability import APPLICATION_TRACER_NAME
 
 from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
@@ -101,7 +110,7 @@ async def test_the_build_route_labels_the_run_as_v1_build(
 async def test_no_component_spans_reach_the_operators_apm(
     client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter
 ):
-    """One unit of work per run. A per-component span here would also carry component payloads."""
+    """One flow span per run; per-component spans carry bounded identity, never component payloads."""
     span_exporter.clear()
 
     await _run_a_v1_build(client, json_memory_chatbot_no_llm, logged_in_headers)
@@ -111,7 +120,22 @@ async def test_no_component_spans_reach_the_operators_apm(
         for span in span_exporter.get_finished_spans()
         if span.instrumentation_scope.name == APPLICATION_TRACER_NAME
     ]
-    assert [span.name for span in application_spans] == ["flow.execute"]
+    phase_spans = {
+        AUTH_SPAN,
+        FLOW_LOAD_SPAN,
+        LEGACY_FLOW_EXECUTION_SPAN,
+        GRAPH_EXECUTION_SPAN,
+        VERTEX_EXECUTION_SPAN,
+        RESPONSE_SERIALIZE_SPAN,
+        STREAM_SEND_SPAN,
+    }
+    names = [span.name for span in application_spans]
+    assert names.count(LEGACY_FLOW_EXECUTION_SPAN) == 1, names
+    assert set(names) <= phase_spans, names
+    vertex_attributes = {"langflow.phase", "langflow.vertex.kind", "langflow.vertex.is_loop", "langflow.component.type"}
+    for span in application_spans:
+        if span.name == VERTEX_EXECUTION_SPAN:
+            assert set(span.attributes or {}) <= vertex_attributes, dict(span.attributes or {})
 
 
 # The build driver catches a component failure, turns it into an error output and stops walking,
