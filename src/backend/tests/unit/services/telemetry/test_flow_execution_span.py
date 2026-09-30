@@ -7,6 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from langflow.services.telemetry.opentelemetry import APPLICATION_INSTRUMENTATION_SCOPES
 from lfx.observability import APPLICATION_TRACER_NAME
 
@@ -275,9 +276,9 @@ sys.modules["opentelemetry.trace"] = None
 
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.graph.base import Graph
-import lfx.graph.graph.base as graph_base
+import lfx.application_observability as application_observability
 
-assert graph_base.otel_trace is None, "guard did not trip"
+assert application_observability.trace is None, "guard did not trip"
 
 async def main():
     chat_input = ChatInput(_id="chat-input")
@@ -315,33 +316,66 @@ def run_probe(source: str) -> dict:
     return json.loads(line.removeprefix("PROBE_RESULT "))
 
 
+def flow_spans(result: dict) -> list[dict]:
+    return [span for span in result["spans"] if span["name"] == "flow.execute"]
+
+
+def only_flow_span(result: dict) -> dict:
+    spans = flow_spans(result)
+    assert len(spans) == 1, [span["name"] for span in result["spans"]]
+    return spans[0]
+
+
+def assert_run_tree(result: dict, components: set[str]) -> dict:
+    """One flow.execute, one graph.execute under it, and one vertex.execute per component under that.
+
+    Nothing else: the phase spans are the whole application span set for a plain graph run.
+    """
+    names = sorted(span["name"] for span in result["spans"])
+    assert names == sorted(["flow.execute", "langflow.graph.execute"] + ["langflow.vertex.execute"] * len(components))
+    flow = only_flow_span(result)
+    (graph,) = [span for span in result["spans"] if span["name"] == "langflow.graph.execute"]
+    vertices = [span for span in result["spans"] if span["name"] == "langflow.vertex.execute"]
+    assert graph["parent_span_id"] == flow["span_id"]
+    assert all(vertex["parent_span_id"] == graph["span_id"] for vertex in vertices)
+    assert {vertex["attrs"]["langflow.component.type"] for vertex in vertices} == components
+    assert all(span["scope"] == APPLICATION_TRACER_NAME for span in result["spans"])
+    return flow
+
+
 def test_lfx_tracer_name_is_allowlisted_by_langflow():
     """Drift between the two constants would silently drop every application span."""
     assert APPLICATION_TRACER_NAME in APPLICATION_INSTRUMENTATION_SCOPES
 
 
-def test_async_start_emits_one_application_span():
+def test_async_start_emits_the_run_phase_spans():
     result = run_probe(ASYNC_START_PROBE)
     assert result["ran"] == ["chat-input", "chat-output"]
 
-    # Exactly one span is also the assertion that no component-level spans are produced.
-    assert len(result["spans"]) == 1
-    span = result["spans"][0]
-    assert span["name"] == "flow.execute"
+    names = sorted(span["name"] for span in result["spans"])
+    assert names == ["flow.execute", "langflow.graph.execute", "langflow.vertex.execute", "langflow.vertex.execute"]
+    span = only_flow_span(result)
     assert span["scope"] == APPLICATION_TRACER_NAME
     assert span["attrs"]["flow_id"] == "11111111-1111-1111-1111-111111111111"
     assert span["attrs"]["run_id"]
 
 
-def test_arun_emits_one_application_span():
+@pytest.mark.xfail(
+    strict=True,
+    reason="async_start's vertex spans start with no parent: the graph span is not current across the "
+    "generator's yields, so each component becomes its own trace root",
+)
+def test_async_start_vertices_nest_under_the_run():
+    assert_run_tree(run_probe(ASYNC_START_PROBE), {"ChatInput", "ChatOutput"})
+
+
+def test_arun_emits_the_run_phase_spans():
     result = run_probe(ARUN_PROBE)
     assert result["text"] == "hello operator"
 
-    assert len(result["spans"]) == 1
-    span = result["spans"][0]
-    assert span["name"] == "flow.execute"
-    assert span["scope"] == APPLICATION_TRACER_NAME
-    assert set(span["attrs"]) == {"flow_id", "run_id", "session_id", "status"}
+    span = assert_run_tree(result, {"ChatInput", "ChatOutput"})
+    assert set(span["attrs"]) == {"flow_id", "run_id", "session_id", "status", "langflow.phase"}
+    assert span["attrs"]["langflow.phase"] == "flow.execute"
     assert span["attrs"]["session_id"] == "session-abc"
     assert span["attrs"]["status"] == "ok"
     # No surface bound one, so the attribute is absent rather than guessed. An operator seeing a
@@ -356,8 +390,7 @@ def test_failing_flow_marks_the_span_as_an_error_without_leaking_the_message():
     # actionable root cause rather than the wrapper shared by unrelated failures.
     assert result["error"] == "ValueError"
 
-    assert len(result["spans"]) == 1
-    span = result["spans"][0]
+    span = only_flow_span(result)
     assert span["status"] == "ERROR"
     assert span["description"] == "KeyError"
     assert span["attrs"]["status"] == "error"
@@ -381,8 +414,7 @@ def test_a_paused_flow_is_not_recorded_as_an_error():
     result = run_probe(PAUSED_PROBE)
     assert result["raised"] is True
 
-    assert len(result["spans"]) == 1
-    span = result["spans"][0]
+    span = only_flow_span(result)
     # Span status stays UNSET so a pause never counts toward the error rate, but the attribute
     # tells a paused run apart from a finished one, which UNSET alone cannot.
     assert span["status"] == "UNSET"
@@ -394,24 +426,27 @@ def test_a_flow_run_from_inside_a_flow_nests_under_its_caller():
     result = run_probe(NESTED_PROBE)
 
     # Child ends first, so it is the one the exporter sees first.
-    child, parent = result["spans"]
+    child, parent = flow_spans(result)
     assert child["attrs"]["session_id"] == "child-session"
-    assert child["parent_span_id"] == parent["span_id"]
+    # The caller's own phase spans sit between the two, so walk up rather than expect a direct parent.
+    parents = {span["span_id"]: span["parent_span_id"] for span in result["spans"]}
+    ancestor = child["parent_span_id"]
+    while ancestor is not None and ancestor != parent["span_id"]:
+        ancestor = parents.get(ancestor)
+    assert ancestor == parent["span_id"]
 
 
 def test_the_span_records_the_surface_the_run_arrived_through():
     result = run_probe(PROTOCOL_PROBE)
 
-    assert len(result["spans"]) == 1
-    assert result["spans"][0]["attrs"]["protocol"] == "webhook"
+    assert only_flow_span(result)["attrs"]["protocol"] == "webhook"
 
 
 def test_an_inner_binding_does_not_overwrite_the_surface_that_took_the_request():
     result = run_probe(NESTED_PROTOCOL_PROBE)
 
     assert result["inner"] == "voice", "the inner generic driver overwrote the real surface"
-    assert len(result["spans"]) == 1
-    assert result["spans"][0]["attrs"]["protocol"] == "voice"
+    assert only_flow_span(result)["attrs"]["protocol"] == "voice"
     # Reset on exit, so a worker reusing this task for the next request starts unbound.
     assert result["after"] is None
 
@@ -451,8 +486,7 @@ def test_a_cancelled_flow_is_not_recorded_as_a_successful_one():
     result = run_probe(CANCELLED_PROBE)
     assert result["raised"] is True
 
-    assert len(result["spans"]) == 1
-    span = result["spans"][0]
+    span = only_flow_span(result)
     assert span["attrs"]["status"] == "cancelled"
     # A withdrawn request is not a service fault, so it must not land on the error rate.
     assert span["status"] == "UNSET"

@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from lfx.application_observability import JOB_EXECUTE_SPAN
 from lfx.observability import APPLICATION_TRACER_NAME
 
 pytestmark = pytest.mark.usefixtures("client")
@@ -83,12 +84,16 @@ def _flow_spans(exporter):
     ]
 
 
+def _job_execute_spans(exporter):
+    return [s for s in exporter.get_finished_spans() if s.name == JOB_EXECUTE_SPAN]
+
+
 def _request_spans(exporter):
     return [s for s in exporter.get_finished_spans() if "workflows" in s.name and s.kind.name == "SERVER"]
 
 
 async def _run_background(client, flow_id, api_key, exporter):
-    """Start a background run and wait for its flow span to arrive."""
+    """Start a background run and wait for its flow and job spans to arrive."""
     response = await client.post(
         "/api/v2/workflows",
         headers={"x-api-key": api_key},
@@ -96,8 +101,9 @@ async def _run_background(client, flow_id, api_key, exporter):
     )
     assert response.status_code == 200, response.text
 
+    # job.execute encloses flow.execute, so it ends (and is exported) just after it.
     for _ in range(150):
-        if _flow_spans(exporter):
+        if _flow_spans(exporter) and _job_execute_spans(exporter):
             break
         await asyncio.sleep(0.1)
     return response.json()
@@ -112,15 +118,20 @@ async def test_a_background_run_links_back_to_the_request_that_queued_it(
     await _run_background(client, simple_api_test["id"], created_api_key.api_key, span_exporter)
 
     flows = _flow_spans(span_exporter)
+    jobs = _job_execute_spans(span_exporter)
     requests = _request_spans(span_exporter)
 
     # Asserted before the link check: with no spans at all, "the link is right" passes trivially.
     assert len(flows) == 1, [s.name for s in span_exporter.get_finished_spans()]
+    assert len(jobs) == 1, [s.name for s in span_exporter.get_finished_spans()]
     assert requests, "no server span for the enqueuing request; the link has nothing to point at"
 
-    links = [link.context.trace_id for link in (flows[0].links or [])]
+    # The run's root is the job's execute span, which carries the link; the flow runs inside it.
+    assert flows[0].parent is not None
+    assert flows[0].parent.span_id == jobs[0].get_span_context().span_id
+    links = [link.context.trace_id for link in (jobs[0].links or [])]
     assert links == [requests[0].get_span_context().trace_id], (
-        f"flow span links {[format(t, '032x') for t in links]}, "
+        f"job span links {[format(t, '032x') for t in links]}, "
         f"request trace {format(requests[0].get_span_context().trace_id, '032x')}"
     )
 
@@ -136,9 +147,11 @@ async def test_the_run_keeps_its_own_trace(client, simple_api_test, created_api_
     await _run_background(client, simple_api_test["id"], created_api_key.api_key, span_exporter)
 
     flow = _flow_spans(span_exporter)[0]
+    job = _job_execute_spans(span_exporter)[0]
     request = _request_spans(span_exporter)[0]
 
-    assert flow.parent is None, flow.parent
+    assert job.parent is None, job.parent
+    assert flow.get_span_context().trace_id == job.get_span_context().trace_id
     assert flow.get_span_context().trace_id != request.get_span_context().trace_id
 
 
