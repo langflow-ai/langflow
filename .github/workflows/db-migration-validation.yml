@@ -25,6 +25,9 @@ env:
 jobs:
   migration-pip-venv:
     name: "Migration Test: pip/venv (stable → nightly)"
+    # Witness-flow setup uses the auto-login endpoint; opt in for this isolated test.
+    env:
+      LANGFLOW_AUTO_LOGIN: "true"
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -109,7 +112,7 @@ jobs:
           # Wait for startup
           timeout 60 bash -c 'until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do sleep 2; done'
 
-          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          # Get auth token via auto_login (explicitly enabled for this test).
           TOKEN=$(curl -fsS http://127.0.0.1:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
             echo "❌ Failed to get authentication token"
@@ -250,7 +253,7 @@ jobs:
 
           timeout 60 bash -c 'until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do sleep 2; done'
 
-          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          # Get auth token via auto_login (explicitly enabled for this test).
           TOKEN=$(curl -fsS http://127.0.0.1:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
             echo "❌ Failed to get authentication token"
@@ -377,7 +380,7 @@ jobs:
       - name: Create witness flow via API
         working-directory: docker-migration-test
         run: |
-          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          # Get auth token via auto_login (explicitly enabled for this test).
           TOKEN=$(curl -fsS http://localhost:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
             echo "❌ Failed to get authentication token"
@@ -458,7 +461,7 @@ jobs:
       - name: Verify witness data persisted
         working-directory: docker-migration-test
         run: |
-          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          # Get auth token via auto_login (explicitly enabled for this test).
           TOKEN=$(curl -fsS http://localhost:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
             echo "❌ Failed to get authentication token"

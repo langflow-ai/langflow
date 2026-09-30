@@ -30,7 +30,7 @@ dependencies = [
     # the supported lfx axis.
     "lfx-ibm>=0.2.5,<1.0.0",
     "lfx-docling>=0.1.7,<1.0.0",
-    "lfx-datastax>=0.1.8,<1.0.0",
+    "lfx-datastax>=0.1.9,<1.0.0",
     "lfx-toolguard>=0.1.2,<1.0.0",
     "lfx-openai>=0.1.5,<1.0.0",
     "lfx-anthropic>=0.1.7,<1.0.0",
@@ -50,6 +50,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "celery>=5.6,<5.7",
     "pytest-instafail>=0.5.0",
     "ipykernel>=6.29.0",
     "ruff~=0.13.1",
@@ -181,7 +182,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.30,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.34,<2.0",
     "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.5,<1.0.0",
@@ -192,7 +193,7 @@ bundles = [
     "lfx-paddle>=0.1.5,<1.0.0",
     "lfx-serpingapi>=0.1.0,<1.0.0",
     "lfx-serply>=0.1.0,<1.0.0",
-    "lfx-valkey>=0.1.4,<1.0.0",
+    "lfx-valkey>=0.1.5,<1.0.0",
 ]
 
 docling = [
@@ -252,6 +253,11 @@ opensearch = [
 ]
 
 [tool.uv]
+constraint-dependencies = [
+    # Security floors for every workspace dependency path, including optional bundles.
+    "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
+]
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
