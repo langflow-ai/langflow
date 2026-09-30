@@ -214,6 +214,44 @@ async def test_warm_deepcopy_matches_cold_implicit_stream_tweak_without_mutating
     assert template.vertices[0].updated_raw_params is False
 
 
+@pytest.mark.parametrize("stored_value", [True, False])
+async def test_warm_deepcopy_without_a_stream_mode_keeps_persisted_values(
+    monkeypatch: pytest.MonkeyPatch,
+    stored_value,
+) -> None:
+    """``stream=None`` matches the v1 build loop, which applies no implicit stream tweak."""
+    from langflow.services import deps
+    from langflow.services.warm_registry import service as registry_service
+
+    template = _FakeGraph([_FakeVertex({"stream": stored_value}, load_from_db_fields=["stream"])])
+    registry = SimpleNamespace(get=lambda _flow_id: (template, "v1"))
+    monkeypatch.setattr(warm_graph, "is_warm_registry_enabled", lambda _settings: True)
+    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(registry_service, "get_warm_registry", lambda: registry)
+    monkeypatch.setattr(
+        warm_graph,
+        "_apply_implicit_stream_tweak",
+        Mock(side_effect=AssertionError("stream tweak applied")),
+    )
+
+    graph = await warm_graph.warm_deepcopy(
+        "flow-id",
+        expected_version="v1",
+        user_id="user-id",
+        session_id="session-id",
+        stream=None,
+    )
+
+    assert graph is not None
+    assert graph is not template
+    assert graph.constructor_stream is stored_value
+    assert graph.constructor_template_stream == {"value": stored_value, "load_from_db": True}
+    assert graph.vertices[0].load_from_db_fields == ["stream"]
+    assert graph.vertices[0].updated_raw_params is False
+    assert graph.user_id == "user-id"
+    assert graph.session_id == "session-id"
+
+
 @pytest.mark.parametrize(("expose_stream", "expected"), [(False, True), (True, False)])
 def test_warm_stream_tweak_matches_cold_group_proxy_scope(monkeypatch, expose_stream, expected) -> None:
     """Hidden grouped fields stay persisted; exposed proxies receive the tweak."""

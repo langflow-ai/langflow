@@ -39,6 +39,7 @@ from langflow.api.v1.schemas import (
     ResultDataResponse,
     VertexBuildResponse,
 )
+from langflow.api.warm_graph import warm_deepcopy
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
@@ -494,6 +495,7 @@ async def _generate_flow_events(
     persist_messages: bool = True,
     end_user_id: str | None = None,
     execution_family: str = FAMILY_INTERACTIVE_CHAT,
+    warm_flow_version: str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -505,6 +507,12 @@ async def _generate_flow_events(
     When ``run_id`` is provided the graph adopts it instead of minting a fresh
     one, so callers (e.g. background jobs) can later look up the run's vertex
     builds by that id. Defaults to a fresh uuid for the live build path.
+
+    ``warm_flow_version`` is the revision of the flow the caller already resolved
+    and authorized. When it is set, a run of the stored graph (no request data,
+    tweaks, public source flow, or durable job) is served from a warm registry
+    copy pinned to that revision instead of reading and parsing the row again.
+    Any registry miss, including a disabled registry, builds from the DB as before.
     """
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -602,9 +610,11 @@ async def _generate_flow_events(
         build_run_id = str(job_id) if job_id is not None else (run_id or str(uuid.uuid4()))
         try:
             flow_id_str = str(flow_id)
-            # Create a fresh session for database operations
-            async with session_scope() as fresh_session:
-                graph = await create_graph(fresh_session, flow_id_str, flow_name)
+            graph = await warm_graph_for_run(flow_id_str)
+            if graph is None:
+                # Create a fresh session for database operations
+                async with session_scope() as fresh_session:
+                    graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
             # Apply request tweaks to the built graph. The sync path applies
             # tweaks before Graph construction; the streaming/background path
@@ -685,11 +695,41 @@ async def _generate_flow_events(
             ),
         )
 
-    async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None) -> Graph:
+    def effective_session_id_for(flow_id_str: str) -> str:
         if inputs is not None and getattr(inputs, "session", None) is not None:
-            effective_session_id = inputs.session
-        else:
-            effective_session_id = flow_id_str
+            return inputs.session
+        return flow_id_str
+
+    async def warm_graph_for_run(flow_id_str: str) -> Graph | None:
+        """Serve the stored graph from the warm registry, or ``None`` to build cold.
+
+        Only a run of the unmodified stored graph qualifies, the same set the v2
+        sync path serves warm: request data, tweaks, a public (virtual) flow id,
+        or a durable job (checkpointing, HITL resume) keep the cold build.
+        ``warm_deepcopy`` returns ``None`` when the registry is disabled, misses,
+        or holds another revision than ``warm_flow_version``.
+        """
+        if warm_flow_version is None or data or tweaks or source_flow_id is not None or job_id is not None:
+            return None
+        graph = await warm_deepcopy(
+            flow_id_str,
+            expected_version=warm_flow_version,
+            user_id=str(current_user.id),
+            session_id=effective_session_id_for(flow_id_str),
+            # The cold build keeps each component's persisted ``stream`` value.
+            stream=None,
+            execution_principal=execution_principal,
+        )
+        if graph is None:
+            return None
+        # Mirror ``build_graph_from_data``: pin the run id before tracing starts.
+        if run_id is not None:
+            graph.set_run_id(run_id)
+        await graph.initialize_run()
+        return graph
+
+    async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None) -> Graph:
+        effective_session_id = effective_session_id_for(flow_id_str)
 
         if not data:
             # For public flows, source_flow_id is the real DB ID, flow_id is virtual.
