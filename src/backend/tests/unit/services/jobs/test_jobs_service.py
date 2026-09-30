@@ -182,7 +182,7 @@ async def test_unconsumed_signals_empty_when_none_written():
 
 @pytest.mark.usefixtures("client")
 async def test_sweep_orphans_fails_in_progress_jobs():
-    """On startup, any IN_PROGRESS job is an orphan from a crashed worker.
+    """On startup, an IN_PROGRESS job past its liveness window is an orphan from a crashed worker.
 
     The default at-most-once policy marks it FAILED with a worker_lost error.
     QUEUED jobs are left alone (at-least-once: they get re-picked).
@@ -196,7 +196,8 @@ async def test_sweep_orphans_fails_in_progress_jobs():
     await service.update_job_status(orphan, JobStatus.IN_PROGRESS)
     await service.create_job(job_id=queued, flow_id=flow_id, user_id=user_id)
 
-    swept = await service.sweep_orphans()
+    # The row never heartbeated (sync/stream), so it is only an orphan past the grace.
+    swept = await service.sweep_orphans(no_heartbeat_grace_s=0.0)
     assert orphan in swept
     assert queued not in swept
 

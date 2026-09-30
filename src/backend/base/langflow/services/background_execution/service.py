@@ -229,6 +229,28 @@ class BackgroundExecutionService(Service):
 
         self._orphan_task = asyncio.create_task(_loop())
 
+    def _schedule_no_heartbeat_resweep(self, lease_ttl: float) -> None:
+        """Sweep once more after the no-heartbeat grace has passed.
+
+        Sync, stream and ingestion rows never heartbeat, so the startup sweep spares
+        them until they are older than ``JobService.no_heartbeat_grace_s``: a young
+        one may be a sibling replica's live run. The crash that caused this boot
+        leaves its rows young, and the in-process queue has no periodic watchdog,
+        so without this pass they would stay IN_PROGRESS until some later boot.
+        """
+        if self._orphan_task is not None:
+            return
+        delay = get_job_service().no_heartbeat_grace_s(lease_ttl)
+
+        async def _resweep() -> None:
+            await asyncio.sleep(delay)
+            try:
+                await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl)
+            except Exception:  # noqa: BLE001 -- best effort, like the startup sweep's other passes
+                await logger.aexception("Delayed startup orphan sweep failed")
+
+        self._orphan_task = asyncio.create_task(_resweep())
+
     def _start_retention_sweep(self) -> None:
         """Purge terminal jobs past the retention window, hourly, until caught up.
 
@@ -880,6 +902,7 @@ class BackgroundExecutionService(Service):
             with lock:
                 # Fail genuinely-orphaned IN_PROGRESS rows (stale/absent heartbeat).
                 await job_service.sweep_orphans(lease_ttl_s=lease_ttl)
+            self._schedule_no_heartbeat_resweep(lease_ttl)
         except Timeout:
             # Another worker is running the reconcile; skip ours.
             await logger.adebug("Another worker is sweeping orphans, skipping")
