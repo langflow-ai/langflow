@@ -9,9 +9,11 @@ migration validation workflow.
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 import sys
+import tracemalloc
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -280,6 +282,56 @@ class TestConversionEndToEnd:
 
         assert report.ok, report.problems
         assert _counts(postgres_database, ["user", "authz_role"]) == _counts(sqlite_source, ["user", "authz_role"])
+
+    def test_a_self_referencing_table_is_copied_without_holding_it_in_memory(self, sqlite_source, postgres_database):
+        # 40 MB of spans, each pointing at the span written after it. Ordering them
+        # parents first in memory held the whole table, so the peak grew past its size.
+        _seed(sqlite_source)
+        trace_id = uuid.uuid4()
+        spans = [uuid.uuid4() for _ in range(40)]
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO trace (id, name, status, start_time, total_latency_ms, total_tokens, flow_id) "
+                    "VALUES (:id, 'run', 'ok', '2025-01-01 00:00:00', 0, 0, :flow_id)"
+                ),
+                {"id": trace_id.hex, "flow_id": FLOW.hex},
+            )
+            conn.execute(
+                sa.text(
+                    "INSERT INTO span (id, trace_id, parent_span_id, name, span_type, status, start_time, latency_ms, "
+                    "inputs, span_kind) VALUES (:id, :trace_id, :parent, 'llm', 'llm', 'ok', '2025-01-01 00:00:00', 0, "
+                    ":inputs, 'INTERNAL')"
+                ),
+                [
+                    {
+                        "id": span.hex,
+                        "trace_id": trace_id.hex,
+                        "parent": parent.hex if parent else None,
+                        "inputs": json.dumps({"text": "x" * 1_000_000}),
+                    }
+                    for span, parent in zip(spans, [*spans[1:], None], strict=True)
+                ],
+            )
+        engine.dispose()
+        # Migrating allocates on its own, so the target is migrated before measuring.
+        upgrade_to_head(postgres_database)
+
+        tracemalloc.start()
+        try:
+            report = convert_sqlite_to_postgres(sqlite_source, postgres_database, batch_size=1)
+            peak = tracemalloc.get_traced_memory()[1]
+        finally:
+            tracemalloc.stop()
+
+        assert report.ok, report.problems
+        assert peak < 20_000_000
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            parents = dict(conn.execute(sa.text("SELECT id, parent_span_id FROM span")).all())
+        engine.dispose()
+        assert parents == dict(zip(spans, [*spans[1:], None], strict=True))
 
     def test_invalid_enum_value_is_refused_before_anything_is_written(self, sqlite_source, postgres_database):
         _seed(sqlite_source)

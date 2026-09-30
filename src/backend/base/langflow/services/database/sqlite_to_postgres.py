@@ -482,6 +482,13 @@ def _copy_table(
                 for column in foreign_key.columns:
                     if column.name in selected:
                         selected[column.name] = f'CASE WHEN {_dangling(foreign_key)} THEN NULL ELSE "{column.name}" END'
+    parents_sql = None
+    if parent := _self_parent_column(table):
+        # A row can point at a row further down the table. Rows go in without that key and
+        # get it back once all are in, so the table streams instead of being held to sort it.
+        parent_column, key_column = parent
+        parents_sql = sa.text(f'SELECT {selected[key_column]}, {selected[parent_column]} FROM "{table.name}"{where}')  # noqa: S608
+        selected[parent_column] = "NULL"
     select_sql = sa.text(f'SELECT {", ".join(selected.values())} FROM "{table.name}"{where}')  # noqa: S608
     rows = (
         {
@@ -490,8 +497,6 @@ def _copy_table(
         }
         for raw in src.execute(select_sql)
     )
-    if parent := _self_parent_column(table):
-        rows = iter(_parents_first(list(rows), *parent))
 
     primary_key = [column.name for column in table.primary_key.columns]
     per_batch = max(1, min(batch_size, _MAX_PARAMS_PER_STATEMENT // max(1, len(names))))
@@ -507,6 +512,16 @@ def _copy_table(
             )
         tgt.execute(statement)
         copied += len(batch)
+    if parents_sql is not None:
+        key, parent_key = table.columns[key_column], table.columns[parent_column]
+        update = table.update().where(key == sa.bindparam("row_key")).values({parent_key: sa.bindparam("parent_key")})
+        pairs = (
+            {"row_key": _coerce(key_value, None, key), "parent_key": _coerce(parent_value, None, parent_key)}
+            for key_value, parent_value in src.execute(parents_sql)
+            if parent_value is not None
+        )
+        for batch in _batches(pairs, batch_size):
+            tgt.execute(update, batch)
     return copied
 
 
@@ -515,25 +530,6 @@ def _self_parent_column(table: sa.Table) -> tuple[str, str] | None:
         if foreign_key.column.table.name == table.name:
             return foreign_key.parent.name, foreign_key.column.name
     return None
-
-
-def _parents_first(rows: list[dict[str, Any]], parent_column: str, key_column: str) -> list[dict[str, Any]]:
-    """Order a self-referencing table so each row comes after the row it points at."""
-    placed: set[Any] = set()
-    ordered: list[dict[str, Any]] = []
-    pending = rows
-    while pending:
-        ready = [row for row in pending if row[parent_column] is None or row[parent_column] in placed]
-        if not ready:
-            # A cycle or a dangling parent. Insert the rest and let the database
-            # report the violation rather than dropping rows silently.
-            ordered.extend(pending)
-            break
-        ordered.extend(ready)
-        placed.update(row[key_column] for row in ready)
-        ready_ids = {id(row) for row in ready}
-        pending = [row for row in pending if id(row) not in ready_ids]
-    return ordered
 
 
 def _batches(rows: Iterator[dict[str, Any]], size: int) -> Iterator[list[dict[str, Any]]]:
