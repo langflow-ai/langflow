@@ -45,7 +45,7 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_chat_service,
@@ -496,6 +496,7 @@ async def _generate_flow_events(
     end_user_id: str | None = None,
     execution_family: str = FAMILY_INTERACTIVE_CHAT,
     warm_flow_version: str | None = None,
+    fresh_run_id: bool = False,
 ) -> None:
     """Generate events for flow building process.
 
@@ -513,6 +514,12 @@ async def _generate_flow_events(
     tweaks, public source flow, or durable job) is served from a warm registry
     copy pinned to that revision instead of reading and parsing the row again.
     Any registry miss, including a disabled registry, builds from the DB as before.
+
+    ``fresh_run_id`` says the caller minted ``run_id`` for this request (the live
+    v2 stream). No job row can exist for it yet, and the run starts in this call,
+    so the tracked job row is created IN_PROGRESS without looking for an existing
+    one first, and ``execute_with_status`` skips its QUEUED -> IN_PROGRESS write.
+    Durable callers (``job_id``) never qualify.
     """
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -1030,18 +1037,25 @@ async def _generate_flow_events(
     # Best-effort: failures here must never break the build path.
     _build_job_svc = None
     _build_run_id: uuid.UUID | None = None
+    # A row this call creates for a run id minted by its caller, for this request, is
+    # born IN_PROGRESS: nothing claims, stops or dedupes it in between, and the startup
+    # sweep re-enqueues QUEUED workflow rows as background runs.
+    _build_job_created_in_progress = False
     try:
         _build_run_id = uuid.UUID(graph.run_id) if graph.run_id else None
         if track_job_status and _build_run_id is not None:
             _build_job_svc = get_job_service()
+            job_row_is_new = fresh_run_id and job_id is None and run_id is not None
             # Background path already created the job; re-creating it = UNIQUE violation.
-            if await _build_job_svc.get_job_by_job_id(_build_run_id) is None:
+            if job_row_is_new or await _build_job_svc.get_job_by_job_id(_build_run_id) is None:
                 await _build_job_svc.create_job(
                     job_id=_build_run_id,
                     flow_id=flow_id,
                     user_id=current_user.id,
                     job_type=JobType.WORKFLOW,
+                    status=JobStatus.IN_PROGRESS if job_row_is_new else JobStatus.QUEUED,
                 )
+                _build_job_created_in_progress = job_row_is_new
     except Exception:  # noqa: BLE001
         await logger.awarning(
             "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
@@ -1110,7 +1124,11 @@ async def _generate_flow_events(
         # still covers them, so the operator sees the request, just not a unit of work.
         with graph.flow_execution_span() as flow_span:
             if _build_job_svc and _build_run_id and not runner_owns_status:
-                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+                await _build_job_svc.execute_with_status(
+                    _build_run_id,
+                    _run_vertex_build,
+                    mark_in_progress=not _build_job_created_in_progress,
+                )
             else:
                 await _run_vertex_build()
             if build_error_type is not None:

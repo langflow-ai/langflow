@@ -259,6 +259,7 @@ async def _stream_event_frames(
     expose_error_details: bool = False,
     execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
     use_warm_registry: bool = False,
+    fresh_run_id: bool = False,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -288,6 +289,10 @@ async def _stream_event_frames(
     ``use_warm_registry`` lets the build loop serve ``provider_policy_flow``'s
     revision from the warm registry, as the sync path does, instead of reading
     and parsing the flow row again. The live v2 stream sets it.
+
+    ``fresh_run_id`` says ``run_id`` was minted for this request, so the build loop
+    creates its job row IN_PROGRESS without looking for an existing one. The live
+    v2 stream sets it; durable and resumed runs must not.
     """
     # EventManager uses put_nowait(), so a plain bounded asyncio.Queue would
     # silently drop frames via QueueFull. This adapter keeps memory bounded and
@@ -408,6 +413,7 @@ async def _stream_event_frames(
                         # (chat memory) scopes to the end user.
                         end_user_id=parsed.end_user_id,
                         warm_flow_version=warm_flow_version,
+                        fresh_run_id=fresh_run_id,
                     ),
                     timeout=execution_timeout,
                 )
@@ -626,6 +632,8 @@ def _execute_streaming_workflow(
             execution_family=FAMILY_WORKFLOW_V2,
             expose_error_details=caller_owns_flow(flow, current_user),
             use_warm_registry=True,
+            # ``build_stream_response`` mints ``run_id`` with uuid4 for this request.
+            fresh_run_id=True,
         ):
             yield frame
 

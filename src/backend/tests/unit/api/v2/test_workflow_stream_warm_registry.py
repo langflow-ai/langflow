@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import BackgroundTasks
@@ -24,6 +25,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.warm_registry.service import flow_version
 from lfx.events.event_manager import create_default_event_manager
 from lfx.services.deps import session_scope
+from sqlmodel import select
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -378,3 +380,147 @@ class TestStreamWarmRegistryEndToEnd:
         # The stale entry is never served: the new revision is warmed and used.
         assert spies.warm_hits == 2
         assert spies.cold == 0
+
+
+# --------------------------------------------------------------------------- job row
+def _job_service() -> SimpleNamespace:
+    return SimpleNamespace(
+        get_job_by_job_id=AsyncMock(return_value=None),
+        create_job=AsyncMock(),
+        execute_with_status=AsyncMock(side_effect=lambda _job_id, run, **_kw: run()),
+    )
+
+
+async def test_live_stream_creates_its_job_row_in_progress(build_loop, monkeypatch: pytest.MonkeyPatch) -> None:
+    from langflow.services.database.models.jobs.model import JobStatus
+
+    jobs = _job_service()
+    monkeypatch.setattr(build_loop.module, "get_job_service", lambda: jobs)
+    run_id = str(uuid4())
+
+    await _run_build(build_loop, run_id=run_id, track_job_status=True, fresh_run_id=True)
+
+    # The run id was minted for this request: no row can exist, so none is looked up.
+    jobs.get_job_by_job_id.assert_not_awaited()
+    assert jobs.create_job.await_args.kwargs["job_id"] == UUID(run_id)
+    assert jobs.create_job.await_args.kwargs["status"] == JobStatus.IN_PROGRESS
+    assert jobs.execute_with_status.await_args.kwargs == {"mark_in_progress": False}
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param({"fresh_run_id": False}, id="playground-and-public-callers"),
+        pytest.param({"fresh_run_id": True, "run_id": None}, id="no-caller-run-id"),
+    ],
+)
+async def test_other_tracked_runs_keep_the_queued_job_row(
+    build_loop, monkeypatch: pytest.MonkeyPatch, overrides
+) -> None:
+    from langflow.services.database.models.jobs.model import JobStatus
+
+    jobs = _job_service()
+    monkeypatch.setattr(build_loop.module, "get_job_service", lambda: jobs)
+
+    await _run_build(build_loop, track_job_status=True, **overrides)
+
+    jobs.get_job_by_job_id.assert_awaited_once()
+    assert jobs.create_job.await_args.kwargs["status"] == JobStatus.QUEUED
+    assert jobs.execute_with_status.await_args.kwargs == {"mark_in_progress": True}
+
+
+async def test_an_existing_job_row_is_not_recreated_and_still_flips(
+    build_loop, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    jobs = _job_service()
+    jobs.get_job_by_job_id.return_value = object()
+    monkeypatch.setattr(build_loop.module, "get_job_service", lambda: jobs)
+
+    await _run_build(build_loop, track_job_status=True, fresh_run_id=False)
+
+    jobs.create_job.assert_not_awaited()
+    assert jobs.execute_with_status.await_args.kwargs == {"mark_in_progress": True}
+
+
+_JOB_STATEMENT = re.compile(
+    r'^\s*(?:(UPDATE)|(SELECT|INSERT)\b.*?\b(?:FROM|INTO))\s+"?job"?\b',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+class TestStreamJobRowStatements:
+    """One live stream run writes its job row with one UPDATE fewer, and no lookup."""
+
+    @pytest.fixture
+    async def chatbot_flow_id(self, created_api_key, json_memory_chatbot_no_llm):
+        raw = json.loads(json_memory_chatbot_no_llm)
+        flow_id = uuid4()
+        async with session_scope() as session:
+            session.add(
+                Flow(id=flow_id, name="Stream Job Row Flow", data=raw.get("data", raw), user_id=created_api_key.user_id)
+            )
+            await session.flush()
+        yield flow_id
+        async with session_scope() as session:
+            flow = await session.get(Flow, flow_id)
+            if flow:
+                await session.delete(flow)
+
+    @staticmethod
+    async def _job_statements(client: AsyncClient, api_key: str, flow_id) -> list[str]:
+        from langflow.services.deps import get_db_service
+        from sqlalchemy import event
+
+        statements: list[str] = []
+
+        def on_execute(_conn, _cursor, statement, *_args) -> None:
+            match = _JOB_STATEMENT.match(statement)
+            if match:
+                statements.append(f"{(match.group(1) or match.group(2)).upper()} job")
+
+        sync_engine = get_db_service().engine.sync_engine
+        event.listen(sync_engine, "before_cursor_execute", on_execute)
+        try:
+            response = await client.post(
+                "api/v2/workflows",
+                json={"flow_id": str(flow_id), "input_value": "hello", "mode": "stream", "session_id": str(uuid4())},
+                headers={"x-api-key": api_key},
+            )
+            assert response.status_code == 200
+            assert _event_types(response.text)[-1] == "end"
+            await asyncio.sleep(0.2)  # let fire-and-forget hooks finish
+        finally:
+            event.remove(sync_engine, "before_cursor_execute", on_execute)
+        return statements
+
+    async def test_stream_job_row_skips_the_lookup_and_the_queued_flip(
+        self, client: AsyncClient, created_api_key, chatbot_flow_id, monkeypatch: pytest.MonkeyPatch
+    ):
+        from langflow.api.v2 import workflow_execution
+        from langflow.services.database.models.jobs.model import Job, JobStatus
+
+        after = await self._job_statements(client, created_api_key.api_key, chatbot_flow_id)
+
+        # Baseline: the same request with the previous job-row handling.
+        real_generate = workflow_execution.generate_flow_events
+
+        async def previous_job_row(*args, **kwargs):
+            kwargs["fresh_run_id"] = False
+            await real_generate(*args, **kwargs)
+
+        monkeypatch.setattr(workflow_execution, "generate_flow_events", previous_job_row)
+        before = await self._job_statements(client, created_api_key.api_key, chatbot_flow_id)
+
+        # No existence lookup before the INSERT, and one status UPDATE fewer: the row is
+        # born IN_PROGRESS and written once more when the run ends. (Each UPDATE may be
+        # followed by a read-back SELECT, depending on ``update_job_status``.)
+        assert before[:2] == ["SELECT job", "INSERT job"], before
+        assert after[0] == "INSERT job", after
+        assert [s for s in before if s != "SELECT job"] == ["INSERT job", "UPDATE job", "UPDATE job"], before
+        assert [s for s in after if s != "SELECT job"] == ["INSERT job", "UPDATE job"], after
+        assert len(after) <= len(before) - 2, (before, after)
+
+        async with session_scope() as session:
+            rows = (await session.exec(select(Job).where(Job.flow_id == chatbot_flow_id))).all()
+        assert len(rows) == 2
+        assert {row.status for row in rows} == {JobStatus.COMPLETED}
