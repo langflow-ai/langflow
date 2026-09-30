@@ -260,6 +260,23 @@ class TestEmbeddingModels:
         assert check.status == "warn"
         assert any("kb-unknown" in p for p in check.problems)
 
+    @pytest.mark.parametrize("selection", [{"provider": "OpenAI"}, {"name": "", "provider": "OpenAI"}, [{}]])
+    async def test_a_selection_that_names_no_model_is_a_warning(self, safe_superuser, selection):
+        await _add(
+            KnowledgeBaseRecord(
+                name="kb-nameless",
+                user_id=safe_superuser.id,
+                backend_type="chroma",
+                chunks=0,
+                model_selection=selection,
+            )
+        )
+
+        check = _check(await run_preflight(), "embedding models")
+
+        assert check.status == "warn"
+        assert any("kb-nameless" in p for p in check.problems)
+
     async def test_knowledge_bases_with_recorded_models_pass(self, safe_superuser):
         await _add(
             KnowledgeBaseRecord(
