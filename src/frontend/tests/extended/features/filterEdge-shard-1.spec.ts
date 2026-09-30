@@ -1,18 +1,14 @@
-import { expect, test } from "@playwright/test";
-import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 
 test(
   "user must see on handle click the possibility connections - RetrievalQA",
   { tag: ["@release", "@api", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
 
     await page.getByTestId("blank-flow").click();
 
@@ -22,143 +18,123 @@ test(
 
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("retrievalqa");
-
-    await page.waitForSelector(
-      '[data-testid="langchain_utilitiesRetrieval QA"]',
-      {
-        timeout: 3000,
-      },
-    );
-    await page
-      .getByTestId("langchain_utilitiesRetrieval QA")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
-
-    await adjustScreenView(page);
-    let visibleElementHandle;
-
-    const outputElements = await page
-      .getByTestId("handle-retrievalqa-shownode-text-right")
-      .all();
-
-    for (const element of outputElements) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await visibleElementHandle.click({
-      force: true,
+    await addComponentFromSidebar(page, {
+      search: "retrievalqa",
+      testId: "langchain_utilitiesRetrieval QA",
+      position: { x: 200, y: 200 },
     });
 
+    await adjustScreenView(page);
+
+    const outputHandle = page
+      .getByTestId("handle-retrievalqa-shownode-text-right")
+      .first();
+    await expect(outputHandle).toBeVisible();
+    await outputHandle.click({ position: { x: 31, y: 16 } });
+
     const disclosureTestIds = [
-      "disclosure-inputs",
-      "disclosure-outputs",
-      "disclosure-data",
-      "disclosure-models",
-      "disclosure-helpers",
-      "disclosure-vector stores",
-      "disclosure-embeddings",
-      "disclosure-agents",
-      "disclosure-memories",
-      "disclosure-logic",
-      "disclosure-tools",
+      "disclosure-input & output",
+      "disclosure-data sources",
+      "disclosure-models & agents",
+      "disclosure-llm operations",
+      "disclosure-files & knowledge",
+      "disclosure-processing",
+      "disclosure-flow control",
+      "disclosure-utilities",
+    ];
+
+    const optionalDisclosureTestIds = [
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
       "disclosure-bundles-datastax",
     ];
 
     const elementTestIds = [
-      "outputsChat Output",
-      "dataAPI Request",
-      "vectorstoresAstra DB",
+      "input_outputChat Output",
+      "data_sourceAPI Request",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesMem0 Chat Memory",
-      "logicCondition",
+      "flow_controlsCondition",
       "langchain_utilitiesSelf Query Retriever",
-      "langchain_utilitiesCharacterTextSplitter",
+      "langchain_utilitiesCharacter Text Splitter",
     ];
 
-    await Promise.all(
-      disclosureTestIds.map((id) => expect(page.getByTestId(id)).toBeVisible()),
-    );
+    const optionalElementTestIds = ["mem0Mem0 Chat Memory"];
 
     await Promise.all(
-      elementTestIds.map((id) => {
-        if (!expect(page.getByTestId(id).first()).toBeVisible()) {
+      disclosureTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
           console.error(`${id} is not visible`);
         }
+        return expect(page.getByTestId(id)).toBeVisible();
       }),
     );
 
+    for (const id of optionalDisclosureTestIds) {
+      const disclosure = page.getByTestId(id);
+      if (await disclosure.isVisible().catch(() => false)) {
+        await expect(disclosure).toBeVisible();
+      }
+    }
+
+    await Promise.all(
+      elementTestIds.map(async (id) => {
+        if (!expect(page.getByTestId(id).first()).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id).first()).toBeVisible();
+      }),
+    );
+
+    for (const id of optionalElementTestIds) {
+      const element = page.getByTestId(id).first();
+      if (await element.isVisible().catch(() => false)) {
+        await expect(element).toBeVisible();
+      }
+    }
+
     await page.getByTestId("sidebar-search-input").click();
 
-    const visibleModelSpecsTestIds = [
-      "modelsAIML",
-      "modelsAnthropic",
-      "modelsAzure OpenAI",
-      "modelsCohere",
-      "modelsGoogle Generative AI",
-      "modelsGroq",
-      "modelsHuggingFace",
-      "modelsLM Studio",
-      "modelsMaritalk",
-      "modelsMistralAI",
-      "modelsNVIDIA",
-      "modelsOllama",
-      "modelsOpenAI",
-      "modelsPerplexity",
-      "modelsQianfan",
-      "modelsSambaNova",
-      "modelsVertex AI",
+    const visibleModelSpecsTestIds = ["cohereCohere Language Models"];
+
+    const optionalVisibleModelSpecsTestIds = [
+      "lmstudioLM Studio",
+      "groqGroq",
+      "maritalkMariTalk",
+      "perplexityPerplexity",
+      "baiduQianfan",
+      "sambanovaSambaNova",
+      "xaixAI",
     ];
 
     await Promise.all(
-      visibleModelSpecsTestIds.map((id) =>
-        expect(page.getByTestId(id)).toBeVisible(),
-      ),
+      visibleModelSpecsTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id)).toBeVisible();
+      }),
     );
 
-    const chainInputElements1 = await page
-      .getByTestId("handle-retrievalqa-shownode-llm-left")
-      .all();
-
-    for (const element of chainInputElements1) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
+    for (const id of optionalVisibleModelSpecsTestIds) {
+      const modelSpec = page.getByTestId(id);
+      if (await modelSpec.isVisible().catch(() => false)) {
+        await expect(modelSpec).toBeVisible();
       }
     }
 
-    await visibleElementHandle.blur();
+    const modelHandle = page
+      .getByTestId("handle-retrievalqa-shownode-language model-left")
+      .first();
+    await expect(modelHandle).toBeVisible();
+    await modelHandle.click({ position: { x: 1, y: 16 } });
 
-    await visibleElementHandle.click({
-      force: true,
-    });
+    await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
 
-    await expect(page.getByTestId("disclosure-models")).toBeVisible();
+    await outputHandle.click({ position: { x: 31, y: 16 } });
 
-    const rqaChainInputElements0 = await page
-      .getByTestId("handle-retrievalqa-shownode-template-left")
-      .all();
-
-    for (const element of rqaChainInputElements0) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await visibleElementHandle.click();
-
-    await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-    await expect(page.getByTestId("disclosure-memories")).toBeVisible();
-    await expect(page.getByTestId("disclosure-logic")).toBeVisible();
+    await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
+    await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
+    await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
   },
 );

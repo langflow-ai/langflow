@@ -1,24 +1,41 @@
 "use client";
-import { BorderTrail } from "@/components/core/border-trail";
-import { ContentBlock } from "@/types/chat";
-import { cn } from "@/utils/utils";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
-import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
-import remarkGfm from "remark-gfm";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BorderTrail } from "@/components/core/border-trail";
+import { useToolDurations } from "@/components/core/playgroundComponent/chat-view/chat-messages/hooks/use-tool-durations";
+import { collectGroupLooseLeaves } from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/content-blocks";
+import {
+  formatTime,
+  formatToolTitle,
+} from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/format";
+import {
+  type ContentBlockItem,
+  type ContentType,
+  isGroupedBlock,
+} from "@/types/chat";
+import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
-import { Separator } from "../../ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../ui/accordion";
 import ContentDisplay from "./ContentDisplay";
 import DurationDisplay from "./DurationDisplay";
+import { groupConsecutiveCitations } from "./groupCitations";
+import { SourcesStrip } from "./SourcesStrip";
+import { ToolCallCard } from "./ToolCallCard";
+import { getToolStatus, TOOL_STATUS_CLASS } from "./toolStatus";
 
 interface ContentBlockDisplayProps {
-  contentBlocks: ContentBlock[];
+  contentBlocks: ContentBlockItem[];
   isLoading?: boolean;
   state?: string;
   chatId: string;
   playgroundPage?: boolean;
+  hideHeader?: boolean;
 }
 
 export function ContentBlockDisplay({
@@ -27,194 +44,267 @@ export function ContentBlockDisplay({
   state,
   chatId,
   playgroundPage,
+  hideHeader = false,
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Separate flat content items from grouped blocks. Memoize so child
+  // components (notably Radix Accordion, which collects refs per render)
+  // see stable references across re-renders. Without this, every parent
+  // render produces fresh filter() arrays, every AccordionItem looks
+  // 'new' to the collection, refs are re-registered, and Radix loops
+  // until React hits the max-update-depth guard.
+  const groupedBlocks = useMemo(
+    () => contentBlocks.filter(isGroupedBlock),
+    [contentBlocks],
+  );
+  const flatItems = useMemo(
+    () =>
+      contentBlocks.filter(
+        (item): item is ContentType => !isGroupedBlock(item),
+      ),
+    [contentBlocks],
+  );
+  // Top-level flat leaves plus a group's displayable non-tool leaves
+  // (reasoning / citation / media, …) render in the same loose stream. tool_use
+  // leaves go to the accordion below; text/usage scaffolding stays hidden.
+  const looseItems = useMemo(
+    () => [...flatItems, ...collectGroupLooseLeaves(contentBlocks)],
+    [flatItems, contentBlocks],
+  );
+
+  // Use shared hook for tool duration tracking (only grouped blocks)
+  const { toolElapsedTimes, toolItems } = useToolDurations(
+    groupedBlocks.length > 0 ? groupedBlocks : undefined,
+    isLoading ?? false,
+  );
+
+  // Stabilize the Radix Accordion defaultValue so the wrapped accordion
+  // doesn't see a new array reference on every parent re-render.
+  const runningToolKeys = useMemo(
+    () =>
+      toolItems
+        .filter(({ content }) => getToolStatus(content) === "running")
+        .map(({ toolKey }) => toolKey),
+    [toolItems],
+  );
+
+  // Controlled open state for the tools accordion. Radix only reads
+  // ``defaultValue`` once at mount, so a tool that mounts or flips to
+  // running *after* the first render never auto-expands. Seed with the
+  // keys running at mount, then add any key that *newly* enters the
+  // running state. We only auto-open on the running transition (diffed
+  // against the previous set), never re-open, so a user collapse via
+  // ``onValueChange`` stays collapsed even while the tool is still running.
+  const [openToolKeys, setOpenToolKeys] = useState<string[]>(runningToolKeys);
+  const prevRunningKeysRef = useRef<string[]>(runningToolKeys);
+  useEffect(() => {
+    const newlyRunning = runningToolKeys.filter(
+      (key) => !prevRunningKeysRef.current.includes(key),
+    );
+    if (newlyRunning.length > 0) {
+      setOpenToolKeys((prev) =>
+        Array.from(new Set([...prev, ...newlyRunning])),
+      );
+    }
+    prevRunningKeysRef.current = runningToolKeys;
+  }, [runningToolKeys]);
+
+  if (!toolItems.length && !looseItems.length) {
+    return null;
+  }
+
   const totalDuration = isLoading
     ? undefined
-    : contentBlocks[0]?.contents.reduce((acc, curr) => {
-        return acc + (curr.duration || 0);
+    : toolItems.reduce((acc, { content, toolKey }) => {
+        const toolDuration = toolElapsedTimes[toolKey] ?? content.duration ?? 0;
+        return acc + toolDuration;
       }, 0);
 
   if (!contentBlocks?.length) {
     return null;
   }
 
-  const lastContent =
-    contentBlocks[0]?.contents[contentBlocks[0]?.contents.length - 1];
-  const headerIcon =
-    state === "partial" ? lastContent?.header?.icon || "Bot" : "Check";
-
-  const headerTitle =
-    state === "partial" ? (lastContent?.header?.title ?? "Steps") : "Finished";
-  // show the block title only if state === "partial"
-  const showBlockTitle = state === "partial";
+  const headerIcon = state === "partial" ? "Bot" : "Check";
+  const headerTitle = state === "partial" ? "Steps" : "Finished";
 
   return (
     <div className="relative py-3">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 0.2,
-          ease: "easeOut",
-        }}
-        className={cn(
-          "relative rounded-lg border border-border bg-background",
-          "overflow-hidden",
-        )}
-      >
-        {isLoading && (
-          <BorderTrail
-            size={100}
-            transition={{
-              repeat: Infinity,
-              duration: 10,
-              ease: "linear",
-            }}
-          />
-        )}
-        <div
-          className="flex cursor-pointer items-center justify-between p-4"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <div className="flex items-center gap-2 align-baseline">
-            {headerIcon && (
-              <span data-testid="header-icon">
-                <ForwardedIconComponent
-                  name={headerIcon}
-                  className={cn(
-                    "h-4 w-4",
-                    state !== "partial" && "text-accent-emerald-foreground",
-                  )}
-                  strokeWidth={1.5}
+      {/* The agent emits tool_use items flat (not inside a group), so they
+          get their own ToolCallCard wrapper to carry the bordered-header
+          chrome a group would otherwise provide. */}
+      {looseItems.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {groupConsecutiveCitations(looseItems).map((run) => {
+            if (run.kind === "sources") {
+              return (
+                <div key={`sources-${run.index}`} className="px-4 py-2">
+                  <SourcesStrip citations={run.citations} />
+                </div>
+              );
+            }
+            if (run.item.type === "tool_use") {
+              return (
+                <ToolCallCard
+                  key={`tool-${run.index}`}
+                  content={run.item}
+                  chatId={`${chatId}-tool-${run.index}`}
+                  playgroundPage={playgroundPage}
                 />
-              </span>
-            )}
-            <div className="relative h-6 overflow-hidden">
-              <motion.div
-                key={headerTitle}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-sm font-semibold text-primary"
-                >
-                  {headerTitle}
-                </Markdown>
-              </motion.div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {!playgroundPage && (
-              <DurationDisplay duration={totalDuration} chatId={chatId} />
-            )}
-            <motion.div
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              <ChevronDown className="h-5 w-5" />
-            </motion.div>
-          </div>
+              );
+            }
+            return (
+              <ContentDisplay
+                key={`flat-${run.index}`}
+                content={run.item}
+                chatId={`${chatId}-flat-${run.index}`}
+                playgroundPage={playgroundPage}
+              />
+            );
+          })}
         </div>
+      )}
 
-        <AnimatePresence initial={false}>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{
-                height: "auto",
-                opacity: 1,
-                transition: {
-                  height: { duration: 0.2 },
-                  opacity: { duration: 0.1, delay: 0.1 },
-                },
-              }}
-              exit={{
-                height: 0,
-                opacity: 0,
-                transition: {
-                  height: { duration: 0.2 },
-                  opacity: { duration: 0.1 },
-                },
-              }}
-              className="relative border-t border-border"
-            >
-              {contentBlocks.map((block, index) => (
-                <motion.div
-                  key={`${block.title}-${index}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2, delay: 0.1 }}
-                  className={cn(
-                    "relative",
-                    index !== contentBlocks.length - 1 &&
-                      "border-b border-border",
-                  )}
-                >
-                  <AnimatePresence>
-                    {showBlockTitle && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        animate={{
-                          opacity: 1,
-                          height: "auto",
-                          marginBottom: 8,
-                        }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden pl-4 pt-[16px] font-medium"
-                      >
-                        <Markdown
-                          className="text-sm font-semibold text-foreground"
-                          remarkPlugins={[remarkGfm]}
-                          linkTarget="_blank"
-                          rehypePlugins={[rehypeMathjax]}
-                          components={{
-                            p({ node, ...props }) {
-                              return (
-                                <span className="inline">{props.children}</span>
-                              );
-                            },
-                          }}
-                        >
-                          {block.title}
-                        </Markdown>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <div className="text-sm text-muted-foreground">
-                    {block.contents.map((content, index) => (
-                      <motion.div key={index}>
-                        <AnimatePresence>
-                          {index !== 0 && (
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Separator orientation="horizontal" />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        <ContentDisplay
-                          playgroundPage={playgroundPage}
-                          content={content}
-                          chatId={`${chatId}-${index}`}
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
+      {/* Render grouped blocks with accordion UI */}
+      {toolItems.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: 0.15,
+            ease: "easeOut",
+          }}
+          className={cn(
+            "relative rounded-lg bg-transparent",
+            "overflow-hidden",
           )}
-        </AnimatePresence>
-      </motion.div>
+        >
+          {isLoading && (
+            <BorderTrail
+              size={100}
+              transition={{
+                repeat: Infinity,
+                duration: 10,
+                ease: "linear",
+              }}
+            />
+          )}
+          {!hideHeader && (
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-2 align-baseline">
+                {headerIcon && (
+                  <span data-testid="header-icon">
+                    <ForwardedIconComponent
+                      name={headerIcon}
+                      className={cn(
+                        "h-4 w-4",
+                        state !== "partial" && "text-accent-emerald-foreground",
+                      )}
+                      strokeWidth={1.5}
+                    />
+                  </span>
+                )}
+                <p className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
+                  {headerTitle}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {!playgroundPage && (
+                  <DurationDisplay duration={totalDuration} chatId={chatId} />
+                )}
+                <motion.div
+                  animate={{ rotate: isExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  onClick={() => setIsExpanded((prev) => !prev)}
+                  className="cursor-pointer"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </motion.div>
+              </div>
+            </div>
+          )}
+
+          {(hideHeader || isExpanded) && (
+            <div className="flex flex-col gap-2">
+              <Accordion
+                // Auto-expand any tool that's still running so the user
+                // sees the in-flight call without clicking. assistant-ui's
+                // terminal variant, ai-chatbot, Claude's web UI, and
+                // ChatGPT all default to expanded-while-running and
+                // user-collapsible after settling. Controlled (not
+                // ``defaultValue``) so tools that start running after mount
+                // also auto-expand.
+                type="multiple"
+                value={openToolKeys}
+                onValueChange={setOpenToolKeys}
+                className="w-full bg-transparent flex flex-col gap-2"
+              >
+                {toolItems.map(
+                  ({ content, toolKey, blockIndex, contentIndex }, flatIdx) => {
+                    const rawTitle =
+                      content.header?.title ||
+                      content.name ||
+                      `Tool ${flatIdx + 1}`;
+                    const toolTitle =
+                      typeof rawTitle === "string"
+                        ? formatToolTitle(rawTitle)
+                        : rawTitle;
+                    const toolDuration =
+                      toolElapsedTimes[toolKey] ?? content.duration ?? 0;
+                    const status = getToolStatus(content);
+                    const dotClass = TOOL_STATUS_CLASS[status];
+                    // Drop the "Called tool" / "Node" prefix and the
+                    // bg-muted code-pill chrome — consensus across
+                    // assistant-ui, ai-chatbot, CopilotKit, Claude, and
+                    // ChatGPT is just the tool name in medium weight as
+                    // the header.
+
+                    return (
+                      <AccordionItem
+                        key={toolKey}
+                        value={toolKey}
+                        className="border border-border rounded-lg overflow-hidden bg-background"
+                      >
+                        <AccordionTrigger className="hover:bg-muted hover:no-underline px-3 py-2.5">
+                          <div className="flex items-center justify-between w-full pr-2 gap-3">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                              <span
+                                data-testid={`tool-status-${status}`}
+                                aria-label={`Tool ${status}`}
+                                className={cn(
+                                  "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                                  dotClass,
+                                )}
+                              />
+                              <p className="truncate text-sm font-medium font-mono">
+                                {toolTitle}
+                              </p>
+                            </div>
+                            {toolDuration > 0 && (
+                              <span className="text-xs text-muted-foreground flex-shrink-0">
+                                {formatTime(toolDuration, true)}
+                              </span>
+                            )}
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-0">
+                          <div className="text-sm text-muted-foreground px-4 pb-4 max-h-96 overflow-auto">
+                            <ContentDisplay
+                              playgroundPage={playgroundPage}
+                              content={content}
+                              chatId={`${chatId}-${blockIndex}-${contentIndex}`}
+                            />
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  },
+                )}
+              </Accordion>
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }

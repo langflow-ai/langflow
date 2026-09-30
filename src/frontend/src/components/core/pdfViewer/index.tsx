@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import IconComponent from "../../common/genericIconComponent";
 import Loading from "../../ui/loading";
-import Error from "./Error";
+import ErrorComponent from "./Error";
 import NoDataPdf from "./noData";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
+  const { t } = useTranslation();
   const [numPages, setNumPages] = useState(-1);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1);
@@ -92,7 +94,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
           onLoadSuccess={onDocumentLoadSuccess}
           file={pdf}
           noData={<NoDataPdf />}
-          error={<Error />}
+          error={<ErrorComponent />}
           className="h-full w-full"
         >
           <Page
@@ -115,6 +117,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
             type="button"
             disabled={pageNumber <= 1}
             onClick={previousPage}
+            aria-label={t("pdfViewer.previousPage")}
           >
             <IconComponent
               name={"ChevronLeft"}
@@ -128,6 +131,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
             type="button"
             disabled={pageNumber >= numPages}
             onClick={nextPage}
+            aria-label={t("pdfViewer.nextPage")}
           >
             <IconComponent
               name={"ChevronRight"}
@@ -135,17 +139,26 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
             ></IconComponent>
           </button>
           <p className="px-2">|</p>
-          <button type="button" onClick={zoomOut}>
+          <button
+            type="button"
+            onClick={zoomOut}
+            aria-label={t("pdfViewer.zoomOut")}
+          >
             <IconComponent name={"ZoomOut"} className="h-6 w-6"></IconComponent>
           </button>
           <input
             type="number"
             step={0.1}
             className="w-6 border-b bg-transparent text-center arrow-hide"
+            aria-label={t("pdfViewer.zoomLevel")}
             onChange={(e) => handleScaleChange(e.target.value)}
             value={scale}
           />
-          <button type="button" onClick={zoomIn}>
+          <button
+            type="button"
+            onClick={zoomIn}
+            aria-label={t("pdfViewer.zoomIn")}
+          >
             <IconComponent name={"ZoomIn"} className="h-6 w-6"></IconComponent>
           </button>
         </div>

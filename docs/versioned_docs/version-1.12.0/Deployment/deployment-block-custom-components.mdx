@@ -1,0 +1,158 @@
+---
+title: Block custom components
+slug: /deployment-block-custom-components
+---
+
+Custom components and the component code editor allow Langflow users to create and execute Python code in the Langflow runtime.
+While this freedom is a feature of Langflow, in some deployments you might want to block the creation of custom Langflow components to prevent arbitrary code execution.
+
+To block custom component creation on a Langflow server, set the following [environment variable](/environment-variables):
+
+```bash
+LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+```
+
+When set to `false`, Langflow blocks creating custom components, changing code in the visual editor, and running [registered built-in code-execution components](/api-keys-and-authentication#multi-tenant-component-hardening).
+
+When unset or `true`, Langflow allows custom code.
+Existing installations keep the default `true` behavior until you opt in to this restriction.
+
+This environment variable is a beta feature, and should not be your only safeguard in production environments.
+
+In the event that Langflow could execute untrusted or LLM-generated code, run Langflow in an isolated and containerized execution environment.
+
+### Restrict custom component creation to superusers{#restrict-custom-components-to-superusers}
+
+To restrict custom component creation to superusers while keeping built-in components functional for users, set the following [environment variable](/environment-variables):
+
+```bash
+LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true
+```
+
+When set to `true`, non-superusers can still view and use custom components in flows, but they cannot create new custom components or edit custom component code.
+
+## Upgrading a server that blocks custom components{#upgrading-with-custom-components-blocked}
+
+While `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, Langflow never runs the component code stored in a flow. It looks up its own copy of that component and runs that instead. The code saved in the flow is only used to identify which component the node is.
+
+This matters when you upgrade. Langflow releases change built-in component code, so after an upgrade the code saved in your flows no longer matches the code the new version ships. By default, Langflow rebuilds those nodes with its own current copy of the component and the flows keep running. Each substitution is logged, and the flow itself is left untouched. The visual editor continues to mark the component as outdated until you update it, but that marker doesn't block editor or Playground runs.
+
+Nothing new becomes runnable: the code that runs is always the server's own, chosen by component type. A node whose component type this server doesn't recognize is still refused. This is the same rule Langflow already applies by default to unauthenticated public flow builds.
+
+A node is also refused, rather than rebuilt, when more than one component claims its type — for example a component in `LANGFLOW_COMPONENTS_PATH` installed under a name a built-in already uses. Langflow can't tell which of the two the node meant, so it declines to guess and asks you to update the component instead.
+
+To require an exact match instead, so that any flow containing a component whose stored code has drifted is refused until you update that component, set:
+
+```bash
+LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false
+```
+
+With this set, an upgrade that changes a built-in component blocks every saved flow using it, with an error naming the components to update:
+
+```text
+Flow build blocked: outdated components must be updated before running: <display_name> (<node_id>)
+```
+
+To update those components, open each flow in the visual editor and apply the component update, or update flow files with `lfx upgrade <flow.json>`. This setting has no effect while `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is `true`, since the flow's own code runs as authored.
+
+## Custom components in publicly shared flows{#public-flow-custom-components}
+
+The [**Shareable Playground**](/concepts-playground#share-a-flows-playground) exposes a single flow at `/public_flow/$FLOW_ID` and runs it without authentication, as its owner. Because anyone holding the link can trigger that run, Langflow applies a stricter rule to public flow builds than to authenticated ones, and it applies regardless of how `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is set.
+
+By default, on every unauthenticated public flow build Langflow replaces each node's stored code with its own copy of that component, selected by component type, and refuses any node whose type it doesn't recognize. A built-in component whose stored code has drifted across an upgrade still runs, because the server's current copy is what executes. A component the server doesn't know, such as one written in the visual editor's code editor and saved only inside the flow, has no server copy, so the build is refused and the visitor sees:
+
+```text
+This flow cannot be executed.
+```
+
+The server log names the components that were blocked:
+
+```text
+Public flow build blocked: unrecognized custom components are not allowed: <display_name> (<node_id>)
+```
+
+While `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is `true`, the same flow still runs in the visual editor, in the **Playground**, and through the Langflow API, because those calls are authenticated.
+
+### Install the component on the server
+
+The recommended way to run a custom component in a shared **Playground** is to make it a component the server knows, by adding it to a directory in [`LANGFLOW_COMPONENTS_PATH`](#configure-a-custom-component-allow-list):
+
+```bash
+LANGFLOW_COMPONENTS_PATH=/path/to/custom_components
+```
+
+Its code is then part of the server's template set, so public flow builds substitute the server's copy the same way they do for a built-in component, and the flow runs. Nothing is relaxed: the code that executes is still the operator-installed code on the server, not the code stored in the flow.
+
+### Allow stored code on the public path
+
+To run the code stored in the flow instead, set:
+
+```bash
+LANGFLOW_ALLOW_PUBLIC_CUSTOM_COMPONENTS=true
+```
+
+:::warning
+This doesn't only allow the custom component you added. With `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` at its default `true`, it turns off code substitution for the entire public path, so every node in a public flow runs the code stored in that flow. Any user who can author a flow and enable its **Shareable Playground** can then have unauthenticated visitors execute that code on your server.
+
+Enable it only when the people authoring flows on your server are trusted, such as a single-team or single-tenant deployment. Leave it disabled in multi-tenant deployments, or where flow authors and server operators aren't the same people.
+:::
+
+The two settings combine as follows.
+
+| `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | `LANGFLOW_ALLOW_PUBLIC_CUSTOM_COMPONENTS` | Public flow build |
+|---|---|---|
+| `true` (default) | `false` (default) | The server's own component code runs. Components the server doesn't know are refused. |
+| `true` | `true` | The code stored in the flow runs, for every node in the flow. |
+| `false` | Either | The server's own component code runs. Components the server doesn't know are refused. |
+
+## Interaction with catalog governance
+
+Catalog governance takes precedence over the custom-code settings on the custom-component create, update, and code-validation endpoints. A catalog block has no superuser bypass.
+
+| Submitted source | Catalog policy | Custom components | Admin-only mode | Result |
+|---|---|---|---|---|
+| Known server template | Blocked | Either | Either | Denied for every user |
+| Known server template | Allowed | Disabled | Either | Allowed using the trusted server source |
+| Known server template | Allowed | Enabled | Non-superuser | Allowed using the trusted server source |
+| Unknown custom source | Not blocked | Disabled | Either | Denied |
+| Unknown custom source | Not blocked | Enabled | Non-superuser | Denied |
+| Unknown custom source | Not blocked | Enabled | Superuser or admin-only disabled | Allowed |
+
+For `POST /api/v1/validate/code`, this policy runs before the source is parsed or imports are inspected. In a restricted custom-code mode, known templates are validated from the trusted server copy, while unknown source follows the same disabled or admin-only rule as the component editor. On custom-component create and update, known blocked template source is rejected before the component is built, and the resolved component type is checked again before request-supplied frontend updates are applied.
+
+An active catalog policy fails closed with a temporary `503` response while server template identities are still initializing. An empty catalog policy preserves the default behavior and does not require template identity lookups.
+
+## Configure a custom component allow-list
+
+`LANGFLOW_ALLOW_CUSTOM_COMPONENTS` works together with optional paths that define which component templates the server loads, and which code hashes are trusted.
+
+Directories listed in the `LANGFLOW_COMPONENTS_PATH` environment variable are loaded as custom components and merged into the server’s template set.
+When `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is set to `false`, the components in the `LANGFLOW_COMPONENTS_PATH` directory **remain allowed**.
+
+To allow some components while blocking others, include the allowed custom components directory in `LANGFLOW_COMPONENTS_PATH` and set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` to `false`.
+
+`LANGFLOW_COMPONENTS_INDEX_PATH` points to a prebuilt component index JSON file at a local path or `http://` / `https://` URL.
+This environment variable replaces the default index bundled with the `lfx` package.
+It does **not** import Python modules from a directory on disk.
+To allow-list custom components, use the `LANGFLOW_COMPONENTS_PATH` environment variable.
+
+If both environment variables are set, Langflow builds one combined set of components from the custom index _and_ from `LANGFLOW_COMPONENTS_PATH`. If the same component category name exists in both, `LANGFLOW_COMPONENTS_PATH` replaces that whole category from the custom index.
+
+### Disable the allow-list bypass
+
+The allow-list behavior above assumes the admin controls which env vars are set at startup. In deployments where that assumption doesn't hold, set:
+
+```bash
+LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=false
+```
+
+When this is `false` **and** `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, components contributed by `LANGFLOW_COMPONENTS_PATH` and `LANGFLOW_COMPONENTS_INDEX_PATH` are ignored and no longer bypass the block.
+
+Default is `true`, which preserves existing behavior. The setting has no effect while `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`, since nothing is being bypassed.
+
+To hide or refuse named built-in components, starter templates, model providers, or models without turning off custom code entirely, use the superuser [catalog and model policy APIs](./api-governance-policy).
+
+For more information, see:
+
+* [Environment variables](/environment-variables#visual-editor-and-playground-behavior)
+* [Security](/security)

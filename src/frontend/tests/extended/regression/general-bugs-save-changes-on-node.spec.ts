@@ -1,5 +1,10 @@
-import { expect, Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { renameFlow } from "../../utils/rename-flow";
 
 async function verifyTextareaValue(
@@ -24,7 +29,7 @@ async function verifyTextareaValue(
   });
 
   await page.waitForTimeout(500);
-  await page.getByText(flowName).first().click();
+  await openFlowCard(page, flowName);
 
   await page.waitForSelector('[data-testid="textarea_str_input_value"]', {
     timeout: 5000,
@@ -51,17 +56,18 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 10000,
-      state: "visible",
-    });
+    await addLegacyComponents(page);
+
+    await adjustScreenView(page);
 
     await renameFlow(page, { flowName: randomFlowName });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
 
-    await page.getByTestId("outputsText Output").waitFor({ state: "visible" });
+    await page
+      .getByTestId("input_outputText Output")
+      .waitFor({ state: "visible" });
     await page.getByTestId("add-component-button-text-output").click();
 
     await page.waitForSelector('[data-testid="title-Text Output"]', {

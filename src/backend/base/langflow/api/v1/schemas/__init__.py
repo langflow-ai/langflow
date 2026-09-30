@@ -1,0 +1,632 @@
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Literal
+from uuid import UUID
+
+from lfx.graph.schema import RunOutputs
+from lfx.services.settings.base import Settings
+from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
+
+from langflow.schema.dotdict import dotdict
+from langflow.schema.graph import Tweaks
+from langflow.schema.schema import InputType, OutputType, OutputValue
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
+from langflow.services.database.models.api_key.model import ApiKeyRead
+from langflow.services.database.models.base import orjson_dumps
+from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.user.model import UserRead
+from langflow.services.tracing.schema import Log
+
+
+class BuildStatus(Enum):
+    """Status of the build."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+    STARTED = "started"
+    IN_PROGRESS = "in_progress"
+
+
+class TweaksRequest(BaseModel):
+    tweaks: dict[str, dict[str, Any]] | None = Field(default_factory=dict)
+
+
+class UpdateTemplateRequest(BaseModel):
+    template: dict
+
+
+class TaskResponse(BaseModel):
+    """Task response schema."""
+
+    id: str | None = Field(None)
+    href: str | None = Field(None)
+
+
+class ProcessResponse(BaseModel):
+    """Process response schema."""
+
+    result: Any
+    status: str | None = None
+    task: TaskResponse | None = None
+    session_id: str | None = None
+    backend: str | None = None
+
+
+class RunResponse(BaseModel):
+    """Run response schema."""
+
+    outputs: list[RunOutputs] | None = []
+    session_id: str | None = None
+
+    @model_serializer(mode="plain")
+    def serialize(self):
+        # Serialize all the outputs if they are base models
+        serialized = {"session_id": self.session_id, "outputs": []}
+        if self.outputs:
+            serialized_outputs = []
+            for output in self.outputs:
+                if isinstance(output, BaseModel) and not isinstance(output, RunOutputs):
+                    serialized_outputs.append(output.model_dump(exclude_none=True))
+                else:
+                    serialized_outputs.append(output)
+            serialized["outputs"] = serialized_outputs
+        return serialized
+
+
+class PreloadResponse(BaseModel):
+    """Preload response schema."""
+
+    session_id: str | None = None
+    is_clear: bool | None = None
+
+
+class TaskStatusResponse(BaseModel):
+    """Task status response schema."""
+
+    status: str
+    result: Any | None = None
+
+
+class ChatMessage(BaseModel):
+    """Chat message schema."""
+
+    is_bot: bool = False
+    message: str | None | dict = None
+    chat_key: str | None = Field(None, serialization_alias="chatKey")
+    type: str = "human"
+
+
+class ChatResponse(ChatMessage):
+    """Chat response schema."""
+
+    intermediate_steps: str
+
+    type: str
+    is_bot: bool = True
+    files: list = []
+
+    @field_validator("type")
+    @classmethod
+    def validate_message_type(cls, v):
+        if v not in {"start", "stream", "end", "error", "info", "file"}:
+            msg = "type must be start, stream, end, error, info, or file"
+            raise ValueError(msg)
+        return v
+
+
+class PromptResponse(ChatMessage):
+    """Prompt response schema."""
+
+    prompt: str
+    type: str = "prompt"
+    is_bot: bool = True
+
+
+class FileResponse(ChatMessage):
+    """File response schema."""
+
+    data: Any = None
+    data_type: str
+    type: str = "file"
+    is_bot: bool = True
+
+    @field_validator("data_type")
+    @classmethod
+    def validate_data_type(cls, v):
+        if v not in {"image", "csv"}:
+            msg = "data_type must be image or csv"
+            raise ValueError(msg)
+        return v
+
+
+class FlowListCreate(BaseModel):
+    flows: list[FlowCreate]
+
+
+class FlowListIds(BaseModel):
+    flow_ids: list[str]
+
+
+class FlowListRead(BaseModel):
+    flows: list[FlowRead]
+
+
+class FlowListReadWithFolderName(BaseModel):
+    flows: list[FlowRead]
+    folder_name: str
+    description: str
+
+
+class InitResponse(BaseModel):
+    flow_id: str = Field(serialization_alias="flowId")
+
+
+class BuiltResponse(BaseModel):
+    built: bool
+
+
+class UploadFileResponse(BaseModel):
+    """Upload file response schema."""
+
+    flow_id: str = Field(serialization_alias="flowId")
+    file_path: str
+
+
+class StreamData(BaseModel):
+    event: str
+    data: dict
+
+    def __str__(self) -> str:
+        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+
+
+class CustomComponentRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    code: str
+    frontend_node: dict | None = None
+
+
+class CustomComponentResponse(BaseModel):
+    data: dict
+    type: str
+
+
+class UpdateCustomComponentRequest(CustomComponentRequest):
+    field: str
+    field_value: str | int | float | bool | dict | list | None = None
+    template: dict
+    tool_mode: bool = False
+
+    def get_template(self):
+        return dotdict(self.template)
+
+
+class CustomComponentResponseError(BaseModel):
+    detail: str
+    traceback: str
+
+
+class ComponentListCreate(BaseModel):
+    flows: list[FlowCreate]
+
+
+class ComponentListRead(BaseModel):
+    flows: list[FlowRead]
+
+
+class UsersResponse(BaseModel):
+    total_count: int
+    users: list[UserRead]
+
+
+class PasswordResetRequest(BaseModel):
+    current_password: str
+    password: str
+
+
+class ApiKeyResponse(BaseModel):
+    id: str
+    api_key: str
+    name: str
+    created_at: str
+    last_used_at: str
+
+
+class ApiKeysResponse(BaseModel):
+    total_count: int
+    user_id: UUID
+    api_keys: list[ApiKeyRead]
+
+
+class CreateApiKeyRequest(BaseModel):
+    name: str
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class ApiKeyCreateRequest(BaseModel):
+    api_key: str
+
+
+class VerticesOrderResponse(BaseModel):
+    ids: list[str]
+    run_id: UUID
+    vertices_to_run: list[str]
+
+
+class ResultDataResponse(BaseModel):
+    results: Any | None = Field(default_factory=dict)
+    outputs: dict[str, OutputValue] = Field(default_factory=dict)
+    logs: dict[str, list[Log]] = Field(default_factory=dict)
+    message: Any | None = Field(default_factory=dict)
+    artifacts: Any | None = Field(default_factory=dict)
+    timedelta: float | None = None
+    duration: str | None = None
+    used_frozen_result: bool | None = False
+    token_usage: dict | None = None
+
+    @field_validator("token_usage", mode="before")
+    @classmethod
+    def validate_token_usage(cls, v):
+        if v is not None and not isinstance(v, dict) and hasattr(v, "model_dump"):
+            return v.model_dump()
+        return v
+
+    @field_serializer("results")
+    @classmethod
+    def serialize_results(cls, v):
+        """Serializes the results value with custom handling for special types and applies truncation limits.
+
+        Returns:
+            The serialized representation of the input value, truncated according to configured
+            maximum text length and item count.
+        """
+        return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
+
+    @model_serializer(mode="plain")
+    def serialize_model(self) -> dict:
+        """Serialize the entire model into a dictionary with truncation applied to large fields.
+
+        Returns:
+            dict: A dictionary representation of the model with serialized and truncated
+            results, outputs, logs, message, and artifacts.
+        """
+        return {
+            "results": self.serialize_results(self.results),
+            "outputs": serialize(self.outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "logs": serialize(self.logs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "message": serialize(self.message, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "artifacts": serialize(self.artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "timedelta": self.timedelta,
+            "duration": self.duration,
+            "used_frozen_result": self.used_frozen_result,
+            "token_usage": self.token_usage,
+        }
+
+
+class VertexBuildResponse(BaseModel):
+    id: str | None = None
+    inactivated_vertices: list[str] | None = None
+    next_vertices_ids: list[str] | None = None
+    top_level_vertices: list[str] | None = None
+    valid: bool
+    params: Any | None = Field(default_factory=dict)
+    """JSON string of the params."""
+    data: ResultDataResponse
+    """Mapping of vertex ids to result dict containing the param name and result value."""
+    timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    """Timestamp of the build."""
+
+    @field_serializer("data")
+    def serialize_data(self, data: ResultDataResponse) -> dict:
+        """Serialize a ResultDataResponse object into a dictionary with enforced maximum text and item lengths.
+
+        Parameters:
+            data (ResultDataResponse): The data object to serialize.
+
+        Returns:
+            dict: The serialized representation of the data with truncation applied.
+        """
+        # return serialize(data, max_length=get_max_text_length())  TODO: Safe?
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+
+
+class VerticesBuiltResponse(BaseModel):
+    vertices: list[VertexBuildResponse]
+
+
+class SimplifiedAPIRequest(BaseModel):
+    input_value: str | None = Field(default=None, description="The input value")
+    input_type: InputType | None = Field(default="chat", description="The input type")
+    output_type: OutputType | None = Field(default="chat", description="The output type")
+    output_component: str | None = Field(
+        default="",
+        description="If there are multiple output components, you can specify the component to get the output from.",
+    )
+    tweaks: Tweaks | None = Field(default=None, description="The tweaks")
+    session_id: str | None = Field(default=None, description="The session id")
+    user_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional end-user identifier forwarded to tracing providers (e.g. Langfuse) "
+            "as the trace's user_id. Does not affect authentication or authorization — the "
+            "API key owner remains the effective Langflow user."
+        ),
+    )
+
+
+# Mirrors the frontend's ReactFlowJsonObject shape: { nodes, edges, viewport }.
+class FlowDataRequest(BaseModel):
+    nodes: list[dict]
+    edges: list[dict]
+    viewport: dict | None = None
+
+
+class BaseConfigResponse(BaseModel):
+    """Base configuration shared by both public and authenticated responses.
+
+    Contains fields that are safe to expose publicly and needed by the frontend
+    for basic functionality (file uploads, event delivery, voice mode, timeouts).
+    """
+
+    feature_flags: FeatureFlags
+    max_file_size_upload: int
+    event_delivery: Literal["polling", "streaming", "direct"]
+    voice_mode_available: bool
+    frontend_timeout: int
+    mcp_base_url: str
+    # Runtime mirror of LANGFLOW_ENABLE_EXTENSION_RELOAD: the packaged frontend is built
+    # before an operator can opt in, so the palette Reload button consults this field too.
+    enable_extension_reload: bool
+    # Mirrors ``LANGFLOW_AUTHZ_ENABLED``. EE/custom frontends gate the Access
+    # Control settings entry on this flag; OSS UI ignores it until wired.
+    authz_enabled: bool = False
+    # Signals that at least one component or template is governed without
+    # exposing the policy contents through the public config response.
+    catalog_governance_enabled: bool = False
+    # The editor uses the same policy as the build path when deciding whether
+    # drifted built-in components must block a run.
+    substitute_outdated_component_code: bool
+
+
+class PublicConfigResponse(BaseConfigResponse):
+    """Configuration response for public/unauthenticated endpoints like the public playground.
+
+    Contains only the configuration values needed for public features, without sensitive data.
+    The 'type' field is a discriminator to distinguish from full ConfigResponse.
+    """
+
+    type: Literal["public"] = "public"
+    allow_custom_components: bool
+
+    @classmethod
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+    ) -> "PublicConfigResponse":
+        """Create a PublicConfigResponse instance using values from a Settings object.
+
+        Parameters:
+            settings (Settings): The Settings object containing configuration values.
+            auth_settings: Auth settings (for ``authz_enabled``).
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
+
+        Returns:
+            PublicConfigResponse: An instance populated with public-safe configuration values.
+        """
+        return cls(
+            feature_flags=FEATURE_FLAGS,
+            max_file_size_upload=settings.max_file_size_upload,
+            event_delivery=settings.event_delivery,
+            voice_mode_available=settings.voice_mode_available,
+            frontend_timeout=settings.frontend_timeout,
+            mcp_base_url=settings.mcp_base_url,
+            enable_extension_reload=settings.enable_extension_reload,
+            allow_custom_components=settings.allow_custom_components,
+            substitute_outdated_component_code=settings.substitute_outdated_component_code,
+            authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
+        )
+
+
+class ConfigResponse(BaseConfigResponse):
+    """Full configuration response for authenticated users.
+
+    The 'type' field is a discriminator to distinguish from PublicConfigResponse.
+    """
+
+    type: Literal["full"] = "full"
+    serialization_max_items_length: int
+    serialization_max_text_length: int
+    auto_saving: bool
+    auto_saving_interval: int
+    health_check_max_retries: int
+    webhook_polling_interval: int
+    public_flow_cleanup_interval: int
+    public_flow_expiration: int
+    webhook_auth_enable: bool
+    default_folder_name: str
+    hide_getting_started_progress: bool
+    allow_custom_components: bool
+    # Embedded mode feature flags
+    embedded_mode: bool
+    hide_logout_button: bool
+    hide_new_project_button: bool
+    hide_new_flow_button: bool
+    hide_starter_projects: bool
+    mcp_servers_locked: bool
+    custom_component_admin_only: bool
+    # Whether the server serves the A2A surface at all (LANGFLOW_A2A_ENABLED, default off). The
+    # publish-as-agent UI reads this to explain, rather than 404, when A2A is disabled server-side.
+    a2a_enabled: bool = False
+    # Mirrors LANGFLOW_AGENTIC_EXPERIENCE (default on) so the Assistant panel
+    # can explain, rather than 404, when the experience is disabled server-side.
+    agentic_experience: bool = True
+    # Mirrors LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH so the Assistant composer enforces the same
+    # cap the API does. A UI-only constant drifted below the API's and silently truncated long
+    # prompts before they were ever sent.
+    assistant_max_message_length: int = 2000
+    # True when local Chroma may back a knowledge base or memory base — i.e. on
+    # the dev profile. The production profile refuses it (vectors on the serving
+    # box's own disk don't survive a restart and can't be shared across
+    # replicas), so the vector-store picker hides the option rather than offering
+    # a choice the create endpoint always rejects with 422.
+    local_vector_store_available: bool = True
+    # The component types an administrator blocked, for authenticated callers
+    # only. ``catalog_governance_enabled`` says a policy exists somewhere; it
+    # cannot say which component in front of you it applies to, and a missing
+    # template is equally an uninstalled bundle, an imported flow or the
+    # caller's own component. The editor needs the identities to name a cause
+    # truthfully. It reveals nothing the palette does not: these are exactly
+    # the components already withheld from ``/all`` for this caller.
+    blocked_component_types: list[str] = []
+
+    @classmethod
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+        blocked_component_types: list[str] | None = None,
+    ) -> "ConfigResponse":
+        """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
+
+        Parameters:
+            settings (Settings): The Settings object containing configuration values.
+            auth_settings: The AuthSettings object containing authentication configuration values.
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
+            blocked_component_types: Component types this caller may not use.
+
+        Returns:
+            ConfigResponse: An instance populated with configuration and feature flag values.
+        """
+        from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+
+        return cls(
+            feature_flags=FEATURE_FLAGS,
+            serialization_max_items_length=settings.max_items_length,
+            serialization_max_text_length=settings.max_text_length,
+            frontend_timeout=settings.frontend_timeout,
+            auto_saving=settings.auto_saving,
+            auto_saving_interval=settings.auto_saving_interval,
+            health_check_max_retries=settings.health_check_max_retries,
+            max_file_size_upload=settings.max_file_size_upload,
+            webhook_polling_interval=settings.webhook_polling_interval,
+            public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
+            public_flow_expiration=settings.public_flow_expiration,
+            event_delivery=settings.event_delivery,
+            voice_mode_available=settings.voice_mode_available,
+            mcp_base_url=settings.mcp_base_url,
+            enable_extension_reload=settings.enable_extension_reload,
+            webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
+            default_folder_name=DEFAULT_FOLDER_NAME,
+            hide_getting_started_progress=settings.hide_getting_started_progress,
+            allow_custom_components=settings.allow_custom_components,
+            substitute_outdated_component_code=settings.substitute_outdated_component_code,
+            authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
+            blocked_component_types=sorted(blocked_component_types or []),
+            embedded_mode=settings.embedded_mode,
+            hide_logout_button=settings.hide_logout_button or settings.embedded_mode,
+            hide_new_project_button=settings.hide_new_project_button or settings.embedded_mode,
+            hide_new_flow_button=settings.hide_new_flow_button or settings.embedded_mode,
+            hide_starter_projects=settings.hide_starter_projects or settings.embedded_mode,
+            mcp_servers_locked=settings.mcp_servers_locked,
+            custom_component_admin_only=settings.custom_component_admin_only,
+            a2a_enabled=settings.a2a_enabled,
+            agentic_experience=settings.agentic_experience,
+            assistant_max_message_length=settings.assistant_max_message_length,
+            local_vector_store_available=settings.deployment_profile != "prod",
+        )
+
+
+class CancelFlowResponse(BaseModel):
+    """Response model for flow build cancellation."""
+
+    success: bool
+    message: str
+
+
+class AuthSettings(BaseModel):
+    """Model representing authentication settings for MCP."""
+
+    auth_type: Literal["none", "apikey", "oauth"] = "none"
+    oauth_host: str | None = None
+    oauth_port: str | None = None
+    oauth_server_url: str | None = None
+    oauth_callback_path: str | None = None  # Deprecated: use oauth_callback_url instead
+    oauth_callback_url: str | None = None
+    oauth_client_id: str | None = None
+    oauth_client_secret: SecretStr | None = None
+    oauth_auth_url: str | None = None
+    oauth_token_url: str | None = None
+    oauth_mcp_scope: str | None = None
+    oauth_provider_scope: str | None = None
+
+    def model_post_init(self, __context, /) -> None:
+        """Normalize oauth_callback_path to oauth_callback_url for backwards compatibility."""
+        # If oauth_callback_url is not set but oauth_callback_path is, use the path value
+        if self.oauth_callback_url is None and self.oauth_callback_path is not None:
+            self.oauth_callback_url = self.oauth_callback_path
+        # If both are set, oauth_callback_url takes precedence (already set correctly)
+
+
+class MCPSettings(BaseModel):
+    """Model representing MCP settings for a flow."""
+
+    id: UUID
+    mcp_enabled: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+    name: str | None = None
+    description: str | None = None
+
+
+class MCPProjectUpdateRequest(BaseModel):
+    """Request model for updating MCP project settings including auth."""
+
+    settings: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
+
+
+class MCPProjectResponse(BaseModel):
+    """Response model for MCP project tools with auth settings."""
+
+    tools: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
+    # The MCP server name the backend derives for this project, which client installs use
+    # unless another project already holds it there. Sent so clients show it instead of
+    # deriving their own and disagreeing about non-Latin names.
+    server_name: str | None = None
+
+
+class ComposerUrlResponse(BaseModel):
+    """Response model for MCP Composer connection details."""
+
+    project_id: str
+    uses_composer: bool
+    streamable_http_url: str | None = None
+    legacy_sse_url: str | None = None
+    error_message: str | None = None
+
+
+class MCPInstallRequest(BaseModel):
+    client: str
+    transport: Literal["sse", "streamablehttp"] | None = None

@@ -17,7 +17,7 @@ export function TagsSelector({
 }) {
   const updateTags = (tagName: string) => {
     const index = selectedTags.indexOf(tagName);
-    let newArray =
+    const newArray =
       index === -1
         ? [...selectedTags, tagName]
         : selectedTags.filter((_, i) => i !== index);

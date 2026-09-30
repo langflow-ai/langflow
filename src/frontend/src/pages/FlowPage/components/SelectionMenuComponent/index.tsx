@@ -65,7 +65,7 @@ export default function SelectionMenu({
       <div className="h-10 w-28 overflow-hidden">
         <div
           className={
-            "duration-400 h-10 w-24 rounded-md border border-indigo-300 bg-background px-2.5 text-primary shadow-inner transition-all ease-in-out" +
+            "duration-400 h-10 w-24 rounded-md border border-accent-indigo-foreground bg-background px-2.5 text-primary shadow-inner transition-all ease-in-out" +
             (isTransitioning ? " opacity-100" : " opacity-0")
           }
         >

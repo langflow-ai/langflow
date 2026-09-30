@@ -1,6 +1,6 @@
-import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import { BuildStatus } from "../../constants/enums";
-import { APIClassType, OutputFieldType } from "../api/index";
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { BuildStatus } from "../../constants/enums";
+import type { APIClassType, OutputFieldType } from "../api/index";
 
 export type PaginatedFlowsType = {
   items: FlowType[];
@@ -33,7 +33,30 @@ export type FlowType = {
   locked?: boolean | null;
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  /**
+   * Anonymous capabilities for this flow, returned only by the direct-link
+   * endpoint (`GET /api/v1/flows/public_flow/{id}`). Authoritative over
+   * `access_type`, which cannot express a canonical `AuthzShare(scope=public)`.
+   */
+  public_access?: PublicFlowAccess;
   mcp_enabled?: boolean;
+  flow_type?: "workflow" | "agent";
+  a2a_enabled?: boolean;
+  a2a_card_overrides?: A2ACardOverrides | null;
+  name_key?: string | null;
+};
+
+export type PublicFlowAccess = {
+  can_read: boolean;
+  can_execute: boolean;
+};
+
+export type A2ACardOverrides = {
+  name?: string;
+  description?: string;
+  version?: string;
+  tags?: string[];
+  examples?: string[];
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
@@ -49,9 +72,11 @@ export type noteClassType = Pick<
 > & {
   template: {
     backgroundColor?: string;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     [key: string]: any;
   };
   outputs?: OutputFieldType[];
+  i18n_key?: string;
 };
 
 export type NoteDataType = {
@@ -68,6 +93,9 @@ export type NodeDataType = {
   output_types?: string[];
   selected_output_type?: string;
   buildStatus?: BuildStatus;
+  selected_output?: string;
+  /** Transient flag: true while "Connect other models" mode is active */
+  _connectionMode?: boolean;
 };
 
 export type EdgeType = Edge<EdgeDataType, "default">;

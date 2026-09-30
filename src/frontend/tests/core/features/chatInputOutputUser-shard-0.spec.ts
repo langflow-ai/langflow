@@ -1,70 +1,51 @@
-import { test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import {
+  closeParametersPanel,
+  openParametersPanel,
+} from "../../utils/open-advanced-options";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user must be able to send an image on chat",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-    await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").last().click();
-    await page.getByText("Close").last().click();
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
-
-    // Read the image file as a binary string
-    const filePath = "tests/assets/chain.png";
-    const fileContent = readFileSync(filePath, "base64");
-
-    // Create the DataTransfer and File objects within the browser context
-    const dataTransfer = await page.evaluateHandle(
-      ({ fileContent }) => {
-        const dt = new DataTransfer();
-        const byteCharacters = atob(fileContent);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const file = new File([byteArray], "chain.png", { type: "image/png" });
-        dt.items.add(file);
-        return dt;
-      },
-      { fileContent },
-    );
+    await page.getByRole("application", { name: "Chat Input node" }).click();
+    await openParametersPanel(page);
+    await closeParametersPanel(page);
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
 
-    // Locate the target element
-    const element = await page.getByTestId("input-chat-playground");
+    // Upload image using the hidden file input
+    const filePath = path.resolve(__dirname, "../../assets/chain.png");
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(filePath);
 
-    // Dispatch the drop event on the target element
-    await element.dispatchEvent("drop", { dataTransfer });
+    // Wait for file preview to appear (shows loading then the image)
+    await page.waitForSelector('img[alt="chain.png"]', { timeout: 30000 });
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
@@ -72,18 +53,8 @@ test(
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector("text=chain.png", { timeout: 30000 });
-
-    await page.getByText("chain.png").isVisible();
-
-    await page.getByText("Close", { exact: true }).click();
-
-    await page.waitForSelector('[data-testid="icon-TextSearchIcon"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("icon-TextSearchIcon").nth(2).click();
-
-    await page.getByText("Restart").isHidden();
+    // Verify the image is visible in the chat messages after sending
+    // Note: Server renames file with timestamp prefix (e.g., "2026-02-03_13-55-02_chain.png")
+    await expect(page.locator('img[alt$="chain.png"]')).toBeVisible();
   },
 );

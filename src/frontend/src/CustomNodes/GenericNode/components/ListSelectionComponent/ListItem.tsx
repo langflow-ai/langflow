@@ -1,7 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import { useEffect, useRef, useState } from "react";
 
 const ListItem = ({
   item,
@@ -71,21 +71,23 @@ const ListItem = ({
       // Disable pointer events during keyboard navigation
       style={{ pointerEvents: isKeyboardNavActive ? "none" : "auto" }}
     >
-      <div className="flex w-full items-center gap-2">
+      <div className="flex w-full items-center gap-3">
         {item.icon && (
           <div>
-            <ForwardedIconComponent
-              name={formattedIcon}
-              className="mr-2 h-4 w-4"
-            />
+            <ForwardedIconComponent name={formattedIcon} className="h-4 w-4" />
           </div>
         )}
         <div className="flex w-full flex-col truncate">
-          <div className="flex w-full truncate text-mmd font-semibold">
+          <div className="flex w-full items-center gap-2 truncate text-mmd font-medium">
             <span className="truncate">{item.name}</span>
+            {"description" in item && item.description && (
+              <span className="font-normal text-muted-foreground">
+                {item.description}
+              </span>
+            )}
           </div>
           {"metaData" in item && item.metaData && (
-            <div className="flex w-full truncate text-mmd text-gray-500">
+            <div className="flex w-full truncate text-mmd text-muted-foreground">
               <span className="truncate">{item.metaData}</span>
             </div>
           )}
@@ -110,7 +112,7 @@ const ListItem = ({
               name="check"
               className={cn(
                 "ml-auto flex h-4 w-4",
-                item.link === "validated" && "text-green-500",
+                item.link === "validated" && "text-accent-emerald-foreground",
               )}
             />
           )

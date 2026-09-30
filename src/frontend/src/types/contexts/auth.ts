@@ -1,4 +1,4 @@
-import { Users } from "../api";
+import type { Users } from "../api";
 
 export type AuthContextType = {
   accessToken: string | null;
@@ -14,4 +14,5 @@ export type AuthContextType = {
   setApiKey: (apiKey: string | null) => void;
   storeApiKey: (apiKey: string) => void;
   getUser: () => void;
+  clearAuthSession: () => void;
 };

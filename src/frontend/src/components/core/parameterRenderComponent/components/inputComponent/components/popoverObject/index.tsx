@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -13,9 +16,12 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
-import { PopoverAnchor } from "@radix-ui/react-popover";
+import { getNodeScopedDomId } from "../../../../helpers/get-node-scoped-dom-id";
+import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
+
 const CustomInputPopoverObject = ({
   id,
+  nodeId = undefined,
   refInput,
   onInputLostFocus,
   selectedOption,
@@ -38,37 +44,63 @@ const CustomInputPopoverObject = ({
   optionsButton,
   handleKeyDown,
   showOptions,
+  inspectionPanel,
+  ariaLabelledBy,
 }) => {
-  const PopoverContentInput = editNode
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
+  const { t } = useTranslation();
+  const PopoverContentInput =
+    editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  const handleInputChange = (e) => {
-    onChange && onChange(e.target.value);
-  };
+  const {
+    displayValue,
+    inputProps: imeInputProps,
+    flushPendingComposition,
+    cancelComposition,
+  } = useIMEInputForOnChange<HTMLInputElement>({
+    value,
+    onChange,
+    inputRef: refInput,
+  });
+
+  const isSingleSelectionMode =
+    (selectedOption !== "" || !onChange) && setSelectedOption;
+  const isMultiSelectionMode =
+    (selectedOptions?.length !== 0 || !onChange) && setSelectedOptions;
+  const isSelectionMode = isSingleSelectionMode || isMultiSelectionMode;
+
+  // Selection-mode renders the input as readOnly with imeInputProps skipped.
+  // If we toggled into selection-mode mid-composition, the IME handlers are
+  // gone and `compositionend` will never reset the stuck flag — clear it now
+  // so a later text-mode swap doesn't drop plain keystrokes.
+  useEffect(() => {
+    if (isSelectionMode) cancelComposition();
+  }, [isSelectionMode, cancelComposition]);
+
+  const selectionDisplay = isSingleSelectionMode
+    ? options?.find((option) => option.id === selectedOption)?.name || ""
+    : isMultiSelectionMode
+      ? (selectedOptions ?? [])
+          .map(
+            (optionId) =>
+              options?.find((option) => option.id === optionId)?.name,
+          )
+          .join(", ")
+      : "";
 
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <Input
-          id={id}
+          id={getNodeScopedDomId(id, nodeId)}
           ref={refInput}
           type="text"
-          onBlur={onInputLostFocus}
-          value={
-            (selectedOption !== "" || !onChange) && setSelectedOption
-              ? options.find((option) => option.id === selectedOption)?.name ||
-                ""
-              : (selectedOptions?.length !== 0 || !onChange) &&
-                  setSelectedOptions
-                ? selectedOptions
-                    .map(
-                      (optionId) =>
-                        options.find((option) => option.id === optionId)?.name,
-                    )
-                    .join(", ")
-                : value
-          }
+          {...(isSelectionMode ? {} : imeInputProps)}
+          onBlur={(event) => {
+            if (!isSelectionMode) flushPendingComposition();
+            onInputLostFocus?.(event);
+          }}
+          readOnly={Boolean(isSelectionMode) || undefined}
+          value={isSelectionMode ? selectionDisplay : displayValue}
           autoFocus={autoFocus}
           disabled={disabled}
           onClick={() => {
@@ -80,21 +112,23 @@ const CustomInputPopoverObject = ({
           required={required}
           className={classNames(className!)}
           placeholder={placeholder}
-          onChange={handleInputChange}
           onKeyDown={(e) => {
             handleKeyDown(e);
             if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
           }}
           data-testid={id}
+          aria-labelledby={ariaLabelledBy}
         />
       </PopoverAnchor>
       <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
+        avoidCollisions={inspectionPanel || editNode}
         align="center"
       >
         <Command
+          label={optionsPlaceholder || t("input.searchOptions")}
           filter={(value, search) => {
             if (
               value.toLowerCase().includes(search.toLowerCase()) ||
@@ -107,7 +141,7 @@ const CustomInputPopoverObject = ({
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
             <CommandGroup defaultChecked={false}>
-              {options.map((option, index) => (
+              {(options ?? []).map((option, index) => (
                 <CommandItem
                   className="group"
                   key={option.id}

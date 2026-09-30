@@ -1,7 +1,7 @@
-# noqa: A005
-from langflow.inputs import (
+from lfx.io import (
     BoolInput,
     CodeInput,
+    DataDisplayInput,
     DataFrameInput,
     DataInput,
     DefaultPromptField,
@@ -12,6 +12,7 @@ from langflow.inputs import (
     HandleInput,
     IntInput,
     LinkInput,
+    McpInput,
     MessageInput,
     MessageTextInput,
     MultilineInput,
@@ -27,11 +28,12 @@ from langflow.inputs import (
     TableInput,
     ToolsInput,
 )
-from langflow.template import Output
+from lfx.template import Output
 
 __all__ = [
     "BoolInput",
     "CodeInput",
+    "DataDisplayInput",
     "DataFrameInput",
     "DataInput",
     "DefaultPromptField",
@@ -44,6 +46,7 @@ __all__ = [
     "IntInput",
     "LinkInput",
     "LinkInput",
+    "McpInput",
     "MessageInput",
     "MessageTextInput",
     "MultilineInput",

@@ -1,13 +1,19 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { getSuppressedAutoComplete } from "@/utils/inputAutofill";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
+import { Button } from "../../../../ui/button";
 import { Input } from "../../../../ui/input";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps, TextAreaComponentType } from "../../types";
+import { normalizeNFC, useIMEInput } from "../../hooks/use-ime-input";
+import type { InputProps, TextAreaComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
 
 const inputClasses = {
@@ -56,7 +62,6 @@ const externalLinkIconClasses = {
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[-1.4rem] h-5",
   normalTop: "top-[-2.1rem] h-7",
-  iconTop: "top-[-1.7rem]",
 };
 
 export default function TextAreaComponent({
@@ -65,22 +70,42 @@ export default function TextAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
+  nodeId,
   updateVisibility,
   password,
   placeholder,
   isToolMode = false,
   nodeInformationMetadata,
-}: InputProps<string, TextAreaComponentType>): JSX.Element {
+  showParameter = true,
+  ariaLabelledBy,
+}: InputProps<string, TextAreaComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const webhookAuthEnable = useUtilityStore((state) => state.webhookAuthEnable);
+  const [cursor, setCursor] = useState<number | null>(null);
+
+  const commitValue = useCallback(
+    (newValue: string) => handleOnNewValue({ value: newValue }),
+    [handleOnNewValue],
+  );
+
+  const { displayValue, inputProps, flushPendingComposition } =
+    useIMEInput<HTMLInputElement>({
+      value: value ?? "",
+      onCommit: commitValue,
+      inputRef,
+      cursor,
+      setCursor,
+    });
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
     [nodeInformationMetadata?.nodeType],
   );
 
-  const isMCPSSE = useMemo(
+  const _isMCPSSE = useMemo(
     () => nodeInformationMetadata?.nodeType === "mcp_sse",
     [nodeInformationMetadata?.nodeType],
   );
@@ -89,7 +114,7 @@ export default function TextAreaComponent({
     if (isWebhook && value === WEBHOOK_VALUE) {
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
-        isAuth: nodeInformationMetadata?.isAuth!,
+        webhookAuthEnable,
         flowName: nodeInformationMetadata?.flowName!,
         format: "singleline",
       });
@@ -98,7 +123,13 @@ export default function TextAreaComponent({
       const mcpSSEUrl = `${URL_MCP_SSE}`;
       handleOnNewValue({ value: mcpSSEUrl });
     }
-  }, [isWebhook, value, nodeInformationMetadata, handleOnNewValue]);
+  }, [
+    isWebhook,
+    value,
+    nodeInformationMetadata,
+    handleOnNewValue,
+    webhookAuthEnable,
+  ]);
 
   const getInputClassName = () => {
     return cn(
@@ -110,15 +141,11 @@ export default function TextAreaComponent({
     );
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleOnNewValue({ value: e.target.value });
-  };
-
   const changeWebhookFormat = (format: "multiline" | "singleline") => {
     if (isWebhook) {
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
-        isAuth: nodeInformationMetadata?.isAuth!,
+        webhookAuthEnable,
         flowName: nodeInformationMetadata?.flowName!,
         format,
       });
@@ -126,86 +153,122 @@ export default function TextAreaComponent({
     }
   };
 
-  const renderIcon = () => (
-    <div>
-      {!disabled && !isFocused && (
-        <div
-          className={cn(
-            externalLinkIconClasses.gradient({
-              disabled,
-              editNode,
-              password: password!,
-            }),
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
-          )}
-          style={{
-            pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
-          }}
-          aria-hidden="true"
-        />
-      )}
-
-      <IconComponent
-        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-        name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
+  const renderGradient = () =>
+    !disabled &&
+    !isFocused && (
+      <div
         className={cn(
-          "cursor-pointer bg-background",
-          externalLinkIconClasses.icon,
+          externalLinkIconClasses.gradient({
+            disabled,
+            editNode,
+            password: password!,
+          }),
           editNode
             ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.iconTop,
-          disabled
-            ? "bg-muted text-placeholder-foreground"
-            : "bg-background text-foreground",
+            : externalLinkIconClasses.normalTop,
         )}
+        style={{
+          pointerEvents: "none",
+          background: isFocused
+            ? undefined
+            : disabled
+              ? "bg-background"
+              : GRADIENT_CLASS,
+        }}
+        aria-hidden="true"
       />
-    </div>
+    );
+
+  const renderIcon = () => (
+    <IconComponent
+      dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
+      name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
+      className={cn(
+        "h-4 w-4 cursor-pointer bg-background",
+        disabled
+          ? "bg-muted text-placeholder-foreground"
+          : "bg-background text-foreground",
+      )}
+    />
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <Input
         onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         data-testid={id}
-        value={disabled ? "" : value}
-        onChange={handleInputChange}
+        {...inputProps}
+        onBlur={() => {
+          flushPendingComposition();
+          setIsFocused(false);
+        }}
+        value={disabled ? "" : displayValue}
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? value : undefined}
+        aria-label={disabled && !ariaLabelledBy ? displayValue : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
+        // Keyed on the secret-ness, not the live type, so revealing a masked
+        // value doesn't re-arm autofill.
+        autoComplete={getSuppressedAutoComplete(!!password)}
         type={password ? (passwordVisible ? "text" : "password") : "text"}
         readOnly={isWebhook}
       />
 
-      <ComponentTextModal
-        changeVisibility={updateVisibility}
-        value={value}
-        setValue={(newValue) => handleOnNewValue({ value: newValue })}
-        disabled={disabled}
-        onCloseModal={() => changeWebhookFormat("singleline")}
-      >
-        <div
-          onClick={() => changeWebhookFormat("multiline")}
-          className="relative w-full"
+      <div className="relative w-full">
+        {renderGradient()}
+        <ComponentTextModal
+          changeVisibility={updateVisibility}
+          value={displayValue}
+          setValue={(newValue) => commitValue(normalizeNFC(newValue))}
+          disabled={disabled}
+          onCloseModal={() => changeWebhookFormat("singleline")}
         >
-          {renderIcon()}
-        </div>
-      </ComponentTextModal>
-      {password && !isFocused && (
-        <div
+          <Button
+            unstyled
+            onClick={() => changeWebhookFormat("multiline")}
+            aria-label={t("input.expandTextEditor")}
+            className={cn(
+              "flex items-center justify-center",
+              externalLinkIconClasses.icon,
+              editNode
+                ? // `before:` pseudo-element pads the touch target out to the
+                  // WCAG 2.5.8 minimum (24x24) without resizing the compact
+                  // edit-node layout; the button is `position: absolute` (via
+                  // externalLinkIconClasses.icon), which anchors the pseudo.
+                  cn(
+                    externalLinkIconClasses.editNodeTop,
+                    "before:absolute before:-inset-1 before:content-['']",
+                  )
+                : // Real 24x24 box (WCAG 2.5.8) — rect-based checkers don't
+                  // count pseudo-element hit areas. The offsets keep the 16px
+                  // icon exactly where the old right-3/top-[-1.7rem] box put it.
+                  "right-2 top-[-1.95rem] h-6 w-6",
+            )}
+          >
+            {renderIcon()}
+          </Button>
+        </ComponentTextModal>
+      </div>
+      {password && (
+        <button
+          type="button"
+          aria-label={
+            passwordVisible ? t("input.hidePassword") : t("input.showPassword")
+          }
           onClick={() => {
             setPasswordVisible(!passwordVisible);
           }}
+          // Hidden visually while the input is being edited, but kept mounted
+          // so forward Tab from the input still reaches it; once it receives
+          // focus the input blurs and the toggle becomes visible again.
+          className={cn(isFocused && "pointer-events-none opacity-0")}
         >
           <IconComponent
             name={passwordVisible ? "eye" : "eye-off"}
@@ -218,7 +281,7 @@ export default function TextAreaComponent({
               "right-10",
             )}
           />
-        </div>
+        </button>
       )}
     </div>
   );

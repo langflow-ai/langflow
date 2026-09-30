@@ -1,0 +1,12 @@
+{
+  "settingsInheritedFrom": "whitesource-config/whitesource-config@master",
+  "scanSettings": {
+    "dependencyScopes": [
+      "prod"
+    ],
+    "baseBranches": [
+      "main",
+      "release-*"
+    ]
+  }
+}

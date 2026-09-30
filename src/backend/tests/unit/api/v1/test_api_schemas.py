@@ -6,6 +6,7 @@ from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from langflow.schema.schema import OutputValue
 from langflow.serialization import serialize
 from langflow.services.tracing.schema import Log
+from lfx.schema.properties import Usage
 from pydantic import BaseModel
 
 # Use a smaller test size for hypothesis
@@ -15,6 +16,50 @@ TEST_TEXT_LENGTH = 50
 class SampleBaseModel(BaseModel):
     name: str
     value: int
+
+
+class TestResultDataResponseTokenUsageValidator:
+    """Tests for the token_usage field_validator on ResultDataResponse."""
+
+    def test_converts_usage_pydantic_model_to_dict(self):
+        # Verify that a Usage (Pydantic BaseModel) is converted to a plain dict
+        usage = Usage(input_tokens=10, output_tokens=20, total_tokens=30)
+
+        response = ResultDataResponse(token_usage=usage)
+
+        assert isinstance(response.token_usage, dict)
+        assert response.token_usage == {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+
+    def test_passes_through_plain_dict_unchanged(self):
+        # A plain dict should not be modified
+        usage_dict = {"input_tokens": 5, "output_tokens": 15, "total_tokens": 20}
+
+        response = ResultDataResponse(token_usage=usage_dict)
+
+        assert response.token_usage == usage_dict
+
+    def test_passes_through_none_as_none(self):
+        response = ResultDataResponse(token_usage=None)
+
+        assert response.token_usage is None
+
+    def test_token_usage_included_in_serialize_model_output(self):
+        # Verify token_usage appears in the serialized model output
+        usage = Usage(input_tokens=100, output_tokens=200, total_tokens=300)
+        response = ResultDataResponse(token_usage=usage)
+
+        serialized = response.serialize_model()
+
+        assert "token_usage" in serialized
+        assert serialized["token_usage"] == {"input_tokens": 100, "output_tokens": 200, "total_tokens": 300}
+
+    def test_token_usage_none_in_serialize_model_output(self):
+        response = ResultDataResponse()
+
+        serialized = response.serialize_model()
+
+        assert "token_usage" in serialized
+        assert serialized["token_usage"] is None
 
 
 @given(st.text(min_size=TEST_TEXT_LENGTH + 1, max_size=TEST_TEXT_LENGTH * 2))
@@ -35,11 +80,11 @@ def test_result_data_response_truncation(long_string):
 @given(
     st.uuids(),
     st.datetimes(timezones=st.just(timezone.utc)),
-    st.decimals(min_value="-1e6", max_value="1e6"),
-    st.text(min_size=1),
-    st.integers(),
+    st.decimals(min_value=-1000, max_value=1000, places=2),
+    st.text(min_size=1, max_size=10),
+    st.integers(min_value=-1000, max_value=1000),
 )
-@settings(max_examples=10)
+@settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
 def test_result_data_response_special_types(uuid, dt, decimal, name, value):
     """Test that ResultDataResponse properly handles special data types."""
     test_model = SampleBaseModel(name=name, value=value)

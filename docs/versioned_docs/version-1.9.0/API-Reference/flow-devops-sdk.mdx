@@ -1,0 +1,227 @@
+---
+title: Flow DevOps Toolkit SDK
+slug: /flow-devops-sdk
+---
+
+Use the Flow DevOps Toolkit SDK to version, test, and deploy your flows.
+
+Instead of manually exporting, sharing, and importing flow JSON files from the Langflow UI, the Flow DevOps toolkit offers terminal-based workflows for versioning, environment variables, testing, and deployment.
+
+## Prerequisites
+
+- [Install and start Langflow](/get-started-installation)
+- Create a [Langflow API key](/api-keys-and-authentication)
+- Install the Langflow `lfx` package
+
+   To install the `lfx` package from PyPI, do the following:
+
+   1. Create a virtual environment:
+      ```bash
+      uv venv VENV_NAME
+      ```
+
+   2. Activate the virtual environment.
+      ```bash
+      source VENV_NAME/bin/activate
+      ```
+   3. Install the Langflow LFX package in the virtual environment:
+      ```bash
+      uv pip install lfx
+      ```
+   4. Run Flow DevOps Toolkit commands in the virtual environment that has LFX installed.
+
+      Alternatively, you can run `uvx lfx` commands, or run LFX from the `src/lfx` directory in a cloned Langflow repo.
+      For more information, see the [Langflow LFX README](https://github.com/langflow-ai/langflow/blob/main/src/lfx/README.md).
+
+## Create a project and version a flow
+
+1. Create a flow in the Langflow UI, such as the Simple Agent starter flow in the [Quickstart](/get-started-quickstart).
+2. Open a terminal session within the virtual environment that has `lfx` installed.
+3. To initialize a project, run:
+    ```bash
+    lfx init PROJECT_NAME
+    ```
+
+    Replace `PROJECT_NAME` with a name for your project folder.
+    `lfx init` creates a scaffold for your project.
+    The output is similar to the following:
+
+    ```text
+    demo-project/
+    ├── .github/
+    │   └── workflows/
+    │       ├── langflow-push.yml       # CI workflow
+    │       ├── langflow-test.yml       # CI workflow
+    │       └── langflow-validate.yml   # CI workflow
+    ├── .gitignore                      # ignores legacy credentials file
+    ├── .lfx/
+    │   └── environments.yaml           # edit with your instance URLs + API key env var names (safe to commit)
+    ├── ci/
+    │   ├── ci-push.sh                  # generic CI script
+    │   ├── ci-test.sh                  # generic CI script
+    │   └── ci-validate.sh              # generic CI script
+    ├── flows/
+    │   └── .gitkeep                    # versioned empty directory
+    └── tests/
+        ├── __init__.py
+        └── test_flows.py               # flow_runner example tests
+
+    ✔ Project scaffolded. Next steps:
+      1. Edit `.lfx/environments.yaml` with your instance URL
+      2. export LANGFLOW_LOCAL_API_KEY=<key>   (Settings -> API Keys)
+      3. lfx pull --env local --output-dir flows/
+    ```
+
+    The project scaffold includes the following tools for building flows:
+
+    * `.github/workflows`: GitHub CI tooling.
+    * `.lfx/environments.yaml`: Control your project's URL and API keys as environment variables for local, staging, and production environments.
+    * `ci/` Shell scripts for pushing, testing, and validating flows.
+    * `flows/`: An empty directory to store flows that includes a `.gitkeep` file for flow versioning.
+    * `tests/test_flows.py`: Example tests that you can modify to test flows.
+
+4. Add your Langflow API key to your `.env` file, or export it within the terminal session.
+    The Flow DevOps SDK includes `url` and `api_key_env` environment variables for `local`, `staging`, and `production` environments.
+    The variable name for the API key differs between environments, so ensure you're adding the correct variable.
+    For example, to add a Langflow API key to a local Langflow server, set:
+
+    ```text
+    export LANGFLOW_LOCAL_API_KEY=LANGFLOW_API_KEY
+    ```
+
+5. To test server authentication with your API key, run:
+
+    ```bash
+    lfx login
+    ```
+
+    The Flow DevOps SDK tests your key against the URL and confirms the connection is working.
+    If the test reports `Authentication failed`, create and export a new key and try again.
+
+6. To check the connected server for existing flows, run:
+
+    ```bash
+    lfx pull
+    ```
+
+    The Flow DevOps SDK lists your server's flows. Output is similar to the following (from a project directory such as `demo-project/`):
+
+    ```text
+    Pulling all flows from http://localhost:7860
+    Pulled 'Simple Agent' -> flows/Simple_Agent.json
+
+    ┌────────────────┬──────────────────────────────────────┬───────────────────────────┬──────────┐
+    │ Name           │ ID                                   │ File                      │ Status   │
+    ├────────────────┼──────────────────────────────────────┼───────────────────────────┼──────────┤
+    │ Simple Agent   │ c2f91b01-9a73-4c62-b7f0-e15bc3bd6802 │ flows/Simple_Agent.json   │ CREATED  │
+    └────────────────┴──────────────────────────────────────┴───────────────────────────┴──────────┘
+
+    1 updated.
+    ```
+
+    `lfx pull` pulls flow changes on the server to JSON files under `flows/` in your project (for example `demo-project/flows`).
+    If you run `lfx pull` again, the Flow DevOps SDK reports a Status of `Unchanged`.
+    You will pull changes in the next steps.
+7. In the Langflow UI, open the Simple Agent flow and change the flow.
+    For example, change the **Chat Input** to a different input string.
+    Save the flow.
+8. Return to your terminal, and run `lfx status`.
+   The Flow DevOps SDK reports the flow's Status as `UPDATED`, because the hash of the flow JSON has changed with your update.
+9. To pull the reported changes from the Langflow server to your local project folder, run `lfx pull`.
+10. To _push_ flow changes from flows stored locally in `demo-project/flows` to the Langflow server, run `lfx push`.
+
+## Validate flows
+
+The Flow DevOps SDK can validate that local flows are correctly formed before pushing to the Langflow with `lfx validate`.
+
+1. To test the Simple Agent starter flow, pass the flow JSON path to the `lfx validate` command:
+    ```
+    lfx validate flows/Simple_Agent.json
+    ```
+2. Once validated, push flow changes to the server with `lfx push`.
+
+## Generate requirements.txt for flows
+
+The Flow DevOps SDK can generate a `requirements.txt` file for a flow.
+
+A flow JSON describes nodes and wiring, and does not list the PyPI packages components import at runtime.
+Generate a `requirements.txt` file to capture the minimal Python dependencies, so you can install a matching environment for the flow.
+
+1. From your project directory, point `lfx requirements` at a flow JSON file.
+   To print the requirements to the terminal:
+
+   ```
+   lfx requirements flows/Simple_Agent.json
+   ```
+
+   To write a `requirements.txt` file instead of printing, use `-o` or `--output`:
+
+   ```
+   lfx requirements flows/Simple_Agent.json -o requirements.txt
+   ```
+
+2. Optionally, you can now share and serve the flow by keeping the flow JSON and `requirements.txt` in the same environment.
+   To serve the flow without the Langflow UI, do the following:
+
+   1. Create a virtual environment:
+   ```
+   uv venv VENV_NAME
+   ```
+
+   2. Activate the virtual environment.
+   ```
+   source VENV_NAME/bin/activate
+   ```
+
+   3. Install the dependencies from `requirements.txt` in the virtual environment:
+   ```bash
+   uv pip install -r requirements.txt
+   ```
+
+   4. To set a Langflow API key, run:
+   ```
+   export LANGFLOW_API_KEY=LANGFLOW_API_KEY
+   ```
+
+   5. To serve the flow without the Langflow UI, pass the flow JSON path to the `lfx serve` command:
+   ```
+   lfx serve flows/Simple_Agent.json
+   ```
+
+   `lfx serve` starts a FastAPI app that exposes your flow as an HTTP API endpoint.
+   For more information, see the [Langflow LFX README](https://github.com/langflow-ai/langflow/blob/main/src/lfx/README.md).
+
+## Manage multiple environments with `environments.yaml`
+
+The `environments.yaml` file created at initialization contains three example entries for deployment environments:
+
+```yaml
+local:
+  url: http://127.0.0.1:7860
+  api_key_env: LANGFLOW_LOCAL_API_KEY
+staging:
+  url: https://staging.example.com
+  api_key_env: LANGFLOW_STAGING_API_KEY
+production:
+  url: https://langflow.example.com
+  api_key_env: LANGFLOW_PRODUCTION_API_KEY
+```
+
+Each entry contains a `url` for the Langflow base URL, and an `api_key_env` field.
+The `api_key_env` field names an environment variable that you either `export` or store in a `.env` file, and does not store the secret string itself, which makes `environments.yaml` safe to commit to version control.
+
+The names `local`, `staging`, and `production` in `environments.yaml` are conventions, and can be named whatever your project requires. You can add more than three entries.
+
+`environments.yaml` is distinct from the Langflow or LFX `.env` file.
+`environments.yaml` controls which remote Langflow instance you're deploying flows to, flow versioning, and environment variable _names_ for API keys.
+The `.env` contains runtime values for the Langflow server, and might also contain _actual secret values_, so the `.env` should not be committed to version control.
+
+Commands that call a Langflow server over HTTP, such as `lfx pull` or `lfx push`, use `--env ENVIRONMENT_NAME` to determine which Langflow instance to send the request to.
+
+For example, to send a `push` request to a server named `local` in `environments.yaml`, run:
+
+```bash
+lfx push --env local
+```
+
+This command will send the request to the Langflow base URL at `http://127.0.0.1:7860` using a Langflow API key named `LANGFLOW_LOCAL_API_KEY`.

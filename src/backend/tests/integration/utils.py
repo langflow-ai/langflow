@@ -3,14 +3,14 @@ import os
 import uuid
 from typing import Any
 
+import pytest
 import requests
-from astrapy.admin import parse_api_endpoint
-from langflow.api.v1.schemas import InputValueRequest
-from langflow.custom import Component
-from langflow.custom.eval import eval_custom_component_code
-from langflow.field_typing import Embeddings
-from langflow.graph import Graph
-from langflow.processing.process import run_graph_internal
+from lfx.custom import Component
+from lfx.custom.eval import eval_custom_component_code
+from lfx.field_typing import Embeddings
+from lfx.graph import Graph
+from lfx.processing.process import run_graph_internal
+from lfx.schema.schema import InputValueRequest
 
 
 def check_env_vars(*env_vars):
@@ -34,6 +34,11 @@ def valid_nvidia_vectorize_region(api_endpoint: str) -> bool:
     Returns:
         True if the region contains hosted nvidia models, False otherwise.
     """
+    try:
+        from astrapy.admin import parse_api_endpoint
+    except ImportError as e:
+        msg = "Could not import astrapy package. Please install it with `uv pip install astrapy`."
+        raise ImportError(msg) from e
     parsed_endpoint = parse_api_endpoint(api_endpoint)
     if not parsed_endpoint:
         msg = "Invalid ASTRA_DB_API_ENDPOINT"
@@ -150,9 +155,11 @@ async def run_single_component(
     run_input: Any | None = None,
     session_id: str | None = None,
     input_type: str | None = "chat",
+    user_id: str | None = None,
+    flow_id: str | None = None,
 ) -> dict[str, Any]:
-    user_id = str(uuid.uuid4())
-    flow_id = str(uuid.uuid4())
+    user_id = user_id or str(uuid.uuid4())
+    flow_id = flow_id or str(uuid.uuid4())
     graph = Graph(user_id=user_id, flow_id=flow_id)
 
     def _add_component(clazz: type, inputs: dict | None = None) -> str:
@@ -187,3 +194,16 @@ def build_component_instance_for_tests(version: str, module: str, file_name: str
     component = download_component_from_github(module, file_name, version)
     cc_class = eval_custom_component_code(component._code)
     return cc_class(**kwargs), component._code
+
+
+def pyleak_marker(**extra_args):
+    default_args = {
+        "enable_task_creation_tracking": True,  # log task creation stacks
+        "thread_name_filter": r"^(?!asyncio_\d+$).*",  # exclude `asyncio_{num}` threads
+        # Exclude the telemetry writer's background ticks (`telemetry-writer*`,
+        # `telemetry-sweeper*`). They are long-lived daemons that legitimately
+        # cycle wait_for wrappers across test boundaries; the writer's own
+        # unit tests cover its lifecycle.
+        "task_name_filter": r"^(?!telemetry-).*",
+    }
+    return pytest.mark.no_leaks(**default_args, **extra_args)

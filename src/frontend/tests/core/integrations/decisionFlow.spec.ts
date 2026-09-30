@@ -1,22 +1,22 @@
-import { test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
+import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import {
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
+} from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
-  { tag: ["@release", "@components", "@workflow"] },
+  { tag: ["@release", "@components"] },
 
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -28,15 +28,13 @@ test(
 
     //---------------------------------- CHAT INPUT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
+    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
-
     await zoomOut(page, 6);
-
     await page
-      .getByTestId("inputsChat Input")
+      .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -44,11 +42,11 @@ test(
     //---------------------------------- CREATE LIST
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("list");
-    await page.waitForSelector('[data-testid="helpersCreate List"]', {
+    await page.waitForSelector('[data-testid="processingCreate List"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("helpersCreate List")
+      .getByTestId("processingCreate List")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 100 },
       });
@@ -74,7 +72,7 @@ test(
       .first()
       .fill("love you babe");
     await page
-      .getByTestId("helpersCreate List")
+      .getByTestId("processingCreate List")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 100 },
       });
@@ -90,6 +88,7 @@ test(
       .last()
       .fill("No one loves me");
     await page.getByTestId("inputlist_str_texts_2").last().fill("not cool..");
+
     //---------------------------------- PARSE DATA
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data to message");
@@ -101,74 +100,81 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
+
     await page
       .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 650, y: 100 },
+        targetPosition: { x: 620, y: 100 },
       });
 
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicPass")
+      .getByTestId("flow_controlsPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 800, y: 100 },
+        targetPosition: { x: 200, y: 0 },
       });
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicPass")
+      .getByTestId("flow_controlsPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 200 },
       });
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicPass")
+      .getByTestId("flow_controlsPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 300 },
       });
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="promptsPrompt"]', {
-      timeout: 2000,
-    });
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 2000,
+      },
+    );
     await page
-      .getByTestId("promptsPrompt")
+      .getByTestId("models_and_agentsPrompt Template")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 300 },
       });
 
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("openai");
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
-      timeout: 2000,
-    });
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("sidebar-search-input")
+      .fill(TEXTS.providerOpenAiSearch);
+    await skipIfComponentUnavailable(
+      page.getByTestId("openai_openai_draggable"),
+      "OpenAI",
+    );
+    await page
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 300 },
       });
@@ -176,47 +182,56 @@ test(
     //---------------------------------- CONDITIONAL ROUTER
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
-    await page.waitForSelector('[data-testid="logicIf-Else"]', {
+    await page.waitForSelector('[data-testid="flow_controlsIf-Else"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicIf-Else")
+      .getByTestId("flow_controlsIf-Else")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 650, y: 300 },
       });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 800, y: 300 },
+        targetPosition: { x: 400, y: 0 },
       });
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 800, y: 400 },
+        targetPosition: { x: 600, y: 0 },
       });
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     //----------------------------------
-    await page.getByTestId("fit_view").click();
+
+    await adjustScreenView(page);
+
     //---------------------------------- EDIT PROMPT
-    await page.getByTestId("promptarea_prompt_template").first().click();
-    await page.getByTestId("modal-promptarea_prompt_template").first().fill(`
+
+    await page.getByText("Prompt Template", { exact: true }).last().click();
+
+    await page.getByTestId("button_open_prompt_modal").click();
+
+    await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .first()
+      .fill(`
       {Condition}
   Answer with either TRUE or FALSE (and nothing else).
   TRUE Examples:
@@ -226,26 +241,26 @@ test(
   User: {user_message}
   AI:
       `);
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
     //---------------------------------- MAKE CONNECTIONS
     await page
-      .getByTestId("handle-createlist-shownode-data list-right")
+      .getByTestId("handle-createlist-shownode-json list-right")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-createlist-shownode-data list-right")
+      .getByTestId("handle-createlist-shownode-json list-right")
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .nth(0)
       .click();
     await page
@@ -258,7 +273,7 @@ test(
       .click();
     //quebrando aqui
     await page
-      .getByTestId("handle-prompt-shownode-true_examples-left")
+      .getByTestId("handle-prompt template-shownode-true_examples-left")
       .nth(0)
       .click();
     await page
@@ -266,7 +281,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-false_examples-left")
+      .getByTestId("handle-prompt template-shownode-false_examples-left")
       .nth(0)
       .click();
     await page
@@ -274,19 +289,19 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-user_message-left")
+      .getByTestId("handle-prompt template-shownode-user_message-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt template-shownode-prompt-right")
       .first()
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-input-left")
+      .getByTestId("handle-openaimodelcomponent-shownode-input-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-message-right")
+      .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
       .nth(0)
       .click();
     await page
@@ -295,21 +310,22 @@ test(
       .click();
     await page.getByTestId("popover-anchor-input-match_text").fill("TRUE");
     await page.getByTestId("title-Pass").nth(1).click();
-    await page.getByTestId("edit-button-modal").click();
     await page
-      .getByTestId("popover-anchor-input-input_message-edit")
+      .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Happy! 🤪");
-    await page.getByTestId("showignored_message").last().click();
-    await page.getByText("Close").last().click();
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "ignored_message");
+    await closeParametersPanel(page);
     await page.getByTestId("title-Pass").nth(0).click();
-    await page.getByTestId("edit-button-modal").click();
     await page
-      .getByTestId("popover-anchor-input-input_message-edit")
+      .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Sad! 🥲");
-    await page.getByTestId("showignored_message").last().click();
-    await page.getByText("Close").last().click();
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "ignored_message");
+    await closeParametersPanel(page);
+
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")
       .nth(0)
@@ -331,7 +347,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(0)
       .click();
     await page
@@ -339,18 +355,16 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-    }
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
-    await page.getByTestId("fit_view").click();
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await configureLoopbackOpenAI(page);
+
+    await adjustScreenView(page);
+
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

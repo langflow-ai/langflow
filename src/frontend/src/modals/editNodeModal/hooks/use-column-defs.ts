@@ -1,7 +1,8 @@
+import type { ColDef, ValueGetterParams } from "ag-grid-community";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import TableAdvancedToggleCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAdvancedToggleCellRender";
 import TableNodeCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableNodeCellRender";
-import { ColDef, ValueGetterParams } from "ag-grid-community";
-import { useMemo } from "react";
 
 const useColumnDefs = (
   nodeId: string,
@@ -9,10 +10,11 @@ const useColumnDefs = (
   isTweaks?: boolean,
   hideVisibility?: boolean,
 ) => {
+  const { t } = useTranslation();
   const columnDefs: ColDef[] = useMemo(() => {
     const colDefs: ColDef[] = [
       {
-        headerName: "Field Name",
+        headerName: t("editNode.fieldName"),
         field: "display_name",
         valueGetter: (params) => {
           const templateParam = params.data;
@@ -26,20 +28,20 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 1,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default text-muted-foreground !py-1",
       },
       {
-        headerName: "Description",
+        headerName: t("editNode.description"),
         field: "info",
         tooltipField: "info",
         wrapText: true,
         autoHeight: true,
         flex: 2,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default text-muted-foreground !py-1",
       },
       {
-        headerName: "Value",
+        headerName: isTweaks ? t("editNode.currentValue") : t("editNode.value"),
         field: "value",
         cellRenderer: TableNodeCellRender,
         cellStyle: {
@@ -61,28 +63,30 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 1,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default !py-1",
       },
     ];
     if (!hideVisibility) {
-      colDefs.push({
-        headerName: "Show",
+      colDefs.unshift({
+        headerName: isTweaks ? t("editNode.exposeInput") : t("editNode.show"),
         field: "advanced",
         cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
             nodeId,
             parameterId: params.data.key,
+            isTweaks,
           };
         },
         editable: false,
-        maxWidth: 80,
+        maxWidth: !isTweaks ? 80 : 120,
+        minWidth: !isTweaks ? 80 : 120,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default !py-1",
       });
     }
     return colDefs;
-  }, [open]);
+  }, [open, t]);
 
   return columnDefs;
 };

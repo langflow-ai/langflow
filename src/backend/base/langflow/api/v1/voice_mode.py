@@ -6,40 +6,49 @@ import time
 import traceback
 import uuid
 from collections import defaultdict
+from contextlib import ExitStack
 from datetime import datetime, timezone
-from functools import partial
+from functools import lru_cache, partial
 from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
 import requests
 import sqlalchemy
-import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
-from fastapi import APIRouter, BackgroundTasks
-from openai import OpenAI
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from lfx.log import logger
+from lfx.observability import execution_protocol
+from lfx.schema.schema import InputValueRequest
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    aresolve_model_provider_policy,
+)
+from lfx.utils.secrets import secret_value_to_str
+from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
+from websockets.asyncio.client import ClientConnection
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
-from langflow.api.v1.schemas import InputValueRequest
-from langflow.logging import logger
+from langflow.api.v1.flows_helpers import _read_flow
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
-from langflow.services.database.models import MessageTable, User
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_variable_service, session_scope
-from langflow.utils.voice_utils import (
-    BYTES_PER_24K_FRAME,
-    VAD_SAMPLE_RATE_16K,
-    resample_24k_to_16k,
-)
+from langflow.services.authorization import FlowAction, VoiceAction, ensure_flow_permission, ensure_voice_permission
+from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_variable_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
+from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
-router = APIRouter(prefix="/voice", tags=["Voice"])
+router = APIRouter(prefix="/voice", tags=["Voice"], include_in_schema=False)
+
 
 SILENCE_THRESHOLD = 0.1
 PREFIX_PADDING_MS = 100
@@ -82,6 +91,13 @@ CLIENT_TO_LF = "Client → LF"
 # --- Helper Functions ---
 
 
+@lru_cache(maxsize=1)
+def get_vad():
+    import webrtcvad
+
+    return webrtcvad.Vad(mode=3)
+
+
 async def authenticate_and_get_openai_key(session: DbSession, user: User, websocket: WebSocket):
     """Authenticate the user using a token or API key and retrieve the OpenAI API key.
 
@@ -97,12 +113,30 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
             }
         )
         return None, None
+
+    try:
+        provider_policy = await aresolve_model_provider_policy(
+            user_id=user.id,
+            providers=["OpenAI"],
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+        provider_policy.require("OpenAI")
+    except ModelProviderPolicyError as exc:
+        await websocket.send_json(
+            {
+                "type": "error",
+                "code": exc.code,
+                "message": str(exc),
+            }
+        )
+        return None, None
+
     variable_service = get_variable_service()
     try:
         openai_key_value = await variable_service.get_variable(
             user_id=user.id, name="OPENAI_API_KEY", field="openai_api_key", session=session
         )
-        openai_key = openai_key_value if openai_key_value is not None else os.getenv("OPENAI_API_KEY", "")
+        openai_key = secret_value_to_str(openai_key_value) or os.getenv("OPENAI_API_KEY", "")
         if not openai_key or openai_key == "dummy":
             await websocket.send_json(
                 {
@@ -114,8 +148,8 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
             )
             return None, None
     except Exception as e:  # noqa: BLE001
-        logger.error(f"Error with API key: {e}")
-        logger.error(traceback.format_exc())
+        await logger.aerror(f"Error with API key: {e}")
+        await logger.aerror(traceback.format_exc())
         return None, None
     return user, openai_key
 
@@ -128,7 +162,7 @@ class VoiceConfig:
         self.elevenlabs_model = "eleven_multilingual_v2"
         self.elevenlabs_client = None
         self.elevenlabs_key = None
-        self.barge_in_enabled = False
+        self._barge_in_enabled = False
         self.progress_enabled = True
 
         self.default_openai_realtime_session = {
@@ -150,54 +184,38 @@ class VoiceConfig:
         }
         self.openai_realtime_session: dict[str, Any] = {}
 
+    @property
+    def barge_in_enabled(self):
+        # Later on we may want to tie this value
+        # to the availability of the webrtcvad package.
+        return self._barge_in_enabled
+
     def get_session_dict(self):
         return dict(self.default_openai_realtime_session)
 
 
-class ElevenLabsClientManager:
-    _instance = None
-    _api_key = None
-
-    @classmethod
-    async def get_client(cls, user_id=None, session=None):
-        """Get or create an ElevenLabs client with the API key."""
-        if cls._instance is None:
-            if cls._api_key is None and user_id and session:
-                variable_service = get_variable_service()
-                try:
-                    cls._api_key = await variable_service.get_variable(
-                        user_id=user_id,
-                        name="ELEVENLABS_API_KEY",
-                        field="elevenlabs_api_key",
-                        session=session,
-                    )
-                except (InvalidToken, ValueError) as e:
-                    logger.error(f"Error with ElevenLabs API key: {e}")
-                    cls._api_key = os.getenv("ELEVENLABS_API_KEY", "")
-                    if not cls._api_key:
-                        logger.error("ElevenLabs API key not found")
-                        return None
-                except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
-                    logger.error(f"Exception getting ElevenLabs API key: {e}")
-                    return None
-
-            if cls._api_key:
-                cls._instance = ElevenLabs(api_key=cls._api_key)
-
-        return cls._instance
-
-
-def get_voice_config(session_id: str) -> VoiceConfig:
+def get_voice_config(session_id: str, user_id: UUID | None = None) -> VoiceConfig:
     if session_id is None:
         msg = "session_id cannot be None"
         raise ValueError(msg)
-    if session_id not in voice_config_cache:
-        voice_config_cache[session_id] = VoiceConfig(session_id)
-    return voice_config_cache[session_id]
+    # Key the cache by (user_id, session_id). session_id is client-supplied (the
+    # human chat-session name), so keying on it alone let two different users
+    # collide on the same session and share cached config/clients across tenants.
+    # Binding the key to the authenticated user prevents that.
+    cache_key = (user_id, session_id)
+    if cache_key not in voice_config_cache:
+        voice_config_cache[cache_key] = VoiceConfig(session_id)
+    return voice_config_cache[cache_key]
 
 
 class TTSConfig:
     def __init__(self, session_id: str, openai_key: str):
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            msg = "Voice mode requires the OpenAI SDK. Install it with `pip install 'langflow-base[audio]'`."
+            raise ImportError(msg) from exc
+
         self.session_id = session_id
         self.use_elevenlabs = False
         self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
@@ -235,13 +253,17 @@ class TTSConfig:
         return self.openai_voice
 
 
-def get_tts_config(session_id: str, openai_key: str) -> TTSConfig:
+def get_tts_config(session_id: str, openai_key: str, user_id: UUID | None = None) -> TTSConfig:
     if session_id is None:
         msg = "session_id cannot be None"
         raise ValueError(msg)
-    if session_id not in tts_config_cache:
-        tts_config_cache[session_id] = TTSConfig(session_id, openai_key)
-    return tts_config_cache[session_id]
+    # Key by (user_id, session_id) so a client-supplied session_id cannot make one
+    # user reuse another user's cached TTSConfig — which holds an OpenAI client
+    # built from that other user's key.
+    cache_key = (user_id, session_id)
+    if cache_key not in tts_config_cache:
+        tts_config_cache[cache_key] = TTSConfig(session_id, openai_key)
+    return tts_config_cache[cache_key]
 
 
 async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
@@ -297,30 +319,30 @@ async def process_message_queue(queue_key, session):
 
             try:
                 await aadd_messagetables([message], session)
-                logger.debug(f"Added message to DB: {message.text[:30]}...")
+                await logger.adebug(f"Added message to DB: {message.text[:30]}...")
             except ValueError as e:
-                logger.error(f"Error saving message to database (ValueError): {e}")
-                logger.error(traceback.format_exc())
+                await logger.aerror(f"Error saving message to database (ValueError): {e}")
+                await logger.aerror(traceback.format_exc())
             except sqlalchemy.exc.SQLAlchemyError as e:
-                logger.error(f"Error saving message to database (SQLAlchemyError): {e}")
-                logger.error(traceback.format_exc())
+                await logger.aerror(f"Error saving message to database (SQLAlchemyError): {e}")
+                await logger.aerror(traceback.format_exc())
             except (KeyError, AttributeError, TypeError) as e:
                 # More specific exceptions instead of blind Exception
-                logger.error(f"Error saving message to database: {e}")
-                logger.error(traceback.format_exc())
+                await logger.aerror(f"Error saving message to database: {e}")
+                await logger.aerror(traceback.format_exc())
             finally:
                 message_queues[queue_key].task_done()
 
             if message_queues[queue_key].empty():
                 break
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"Message queue processor for {queue_key} was cancelled: {e}")
-        logger.error(traceback.format_exc())
+        await logger.adebug(f"Message queue processor for {queue_key} was cancelled: {e}")
+        await logger.aerror(traceback.format_exc())
 
 
 class SendQueues:
-    def __init__(self, openai_ws: websockets.WebSocketClientProtocol, client_ws: WebSocket, log_event):
-        self.openai_ws: websockets.WebSocketClientProtocol = openai_ws
+    def __init__(self, openai_ws: ClientConnection, client_ws: WebSocket, log_event):
+        self.openai_ws: ClientConnection = openai_ws
         self.openai_send_q: asyncio.Queue[tuple] = asyncio.Queue()
         self.openai_writer_task: asyncio.Task = asyncio.create_task(self.__openai_writer())
 
@@ -356,7 +378,7 @@ class SendQueues:
                     logger.trace("OPENAI BLOCKING")
                 # log_event(msg, DIRECTION_TO_OPENAI)
         except Exception:  # noqa: BLE001
-            logger.error(traceback.format_exc())
+            await logger.aerror(traceback.format_exc())
 
     def client_send(self, payload):
         try:
@@ -374,7 +396,7 @@ class SendQueues:
                 self.log_event(msg, LF_TO_CLIENT)
                 await self.client_ws.send_text(json.dumps(msg))
         except Exception:  # noqa: BLE001
-            logger.error(traceback.format_exc())
+            await logger.aerror(traceback.format_exc())
 
     async def close(self):
         self.openai_send_q.put_nowait(None)
@@ -383,13 +405,13 @@ class SendQueues:
         await self.client_writer_task
 
 
-def get_create_response(send_handler: SendQueues, session_id):
+def get_create_response(send_handler: SendQueues, session_id, user_id=None):
     def create_response(original: dict | None = None):
         msg = {}
         if original is not None:
             msg = original
         msg["type"] = "response.create"
-        voice_config = get_voice_config(session_id)
+        voice_config = get_voice_config(session_id, user_id)
         if voice_config.use_elevenlabs:
             response = msg.setdefault("response", {})
             response["modalities"] = ["text"]
@@ -408,19 +430,22 @@ async def handle_function_call(
     session_id: str,
     msg_handler: SendQueues,
 ):
-    create_response = get_create_response(msg_handler, session_id)
+    create_response = get_create_response(msg_handler, session_id, current_user.id)
     """Handle function calls from the OpenAI API."""
     try:
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
         )
-        response = await build_flow_and_stream(
-            flow_id=UUID(flow_id),
-            inputs=input_request,
-            background_tasks=background_tasks,
-            current_user=current_user,
-        )
+        # Bound around the call, not the drain: the build task is created inside and copies the
+        # context then, so the drain below runs outside the scope without losing the label.
+        with execution_protocol("voice"):
+            response = await build_flow_and_stream(
+                flow_id=UUID(flow_id),
+                inputs=input_request,
+                background_tasks=background_tasks,
+                current_user=current_user,
+            )
         result = ""
         async for line in response.body_iterator:
             if not line:
@@ -449,7 +474,7 @@ async def handle_function_call(
         create_response()
     except json.JSONDecodeError as e:
         trace = traceback.format_exc()
-        logger.error(f"JSON decode error: {e!s}\ntrace: {trace}")
+        await logger.aerror(f"JSON decode error: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -461,7 +486,7 @@ async def handle_function_call(
         msg_handler.openai_send(function_output)
     except ValueError as e:
         trace = traceback.format_exc()
-        logger.error(f"Value error: {e!s}\ntrace: {trace}")
+        await logger.aerror(f"Value error: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -473,7 +498,7 @@ async def handle_function_call(
         msg_handler.openai_send(function_output)
     except (ConnectionError, websockets.exceptions.WebSocketException) as e:
         trace = traceback.format_exc()
-        logger.error(f"Connection error: {e!s}\ntrace: {trace}")
+        await logger.aerror(f"Connection error: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -484,8 +509,8 @@ async def handle_function_call(
         }
         msg_handler.openai_send(function_output)
     except (KeyError, AttributeError, TypeError) as e:
-        logger.error(f"Error executing flow: {e}")
-        logger.error(traceback.format_exc())
+        await logger.aerror(f"Error executing flow: {e}")
+        await logger.aerror(traceback.format_exc())
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -497,8 +522,8 @@ async def handle_function_call(
         msg_handler.openai_send(function_output)
 
 
-voice_config_cache: dict[str, VoiceConfig] = {}
-tts_config_cache: dict[str, TTSConfig] = {}
+voice_config_cache: dict[tuple[UUID | None, str], VoiceConfig] = {}
+tts_config_cache: dict[tuple[UUID | None, str], TTSConfig] = {}
 
 
 # --- Global Queues and Message Processing ---
@@ -508,20 +533,66 @@ message_tasks: dict[str, asyncio.Task] = {}
 last_sender_by_session: defaultdict[str, str | None] = defaultdict(lambda: None)
 
 
-async def get_flow_desc_from_db(flow_id: str) -> Flow:
-    async with session_scope() as session:
-        stmt = select(Flow).where(Flow.id == UUID(flow_id))
-        result = await session.exec(stmt)
-        flow = result.scalar_one_or_none()
-        if not flow:
-            msg = f"Flow with id {flow_id} not found"
-            raise ValueError(msg)
-        return flow.description
+async def _get_authorized_voice_flow(flow_id: str, current_user: CurrentActiveUser, session: DbSession) -> Flow:
+    """Load a voice flow with the same share-aware execute policy as standard builds."""
+    flow_uuid = UUID(flow_id)
+    flow = await _read_flow(session, flow_uuid, current_user.id)
+    if flow is None:
+        public_stmt = select(Flow).where(
+            Flow.id == flow_uuid,
+            Flow.access_type == AccessTypeEnum.PUBLIC,
+        )
+        flow = (await session.exec(public_stmt)).first()
+    if flow is None:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    try:
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.EXECUTE,
+            flow_id=flow_uuid,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Flow not found") from exc
+    return flow
 
 
 async def get_or_create_elevenlabs_client(user_id=None, session=None):
-    """Get or create an ElevenLabs client with the API key."""
-    return await ElevenLabsClientManager.get_client(user_id, session)
+    """Build an ElevenLabs client scoped to the requesting user.
+
+    Security: this previously delegated to a process-global singleton
+    (``ElevenLabsClientManager``) that cached the *first* caller's API key and
+    returned that same client to every subsequent user. As a result one tenant's
+    ElevenLabs account was billed for everyone's TTS (cross-tenant billing
+    siphon) and their voice library was exposed via /voice/elevenlabs/voice_ids.
+
+    Build a fresh client from the requesting user's own key on each call and never
+    cache it on a class/module global.
+    """
+    if not (user_id and session):
+        return None
+    variable_service = get_variable_service()
+    try:
+        api_key = await variable_service.get_variable(
+            user_id=user_id,
+            name="ELEVENLABS_API_KEY",
+            field="elevenlabs_api_key",
+            session=session,
+        )
+        api_key = secret_value_to_str(api_key)
+    except (InvalidToken, ValueError) as e:
+        await logger.aerror(f"Error with ElevenLabs API key: {e}")
+        api_key = os.getenv("ELEVENLABS_API_KEY", "")
+    except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
+        await logger.aerror(f"Exception getting ElevenLabs API key: {e}")
+        return None
+    if not api_key:
+        await logger.aerror("ElevenLabs API key not found")
+        return None
+    return ElevenLabs(api_key=api_key)
 
 
 def pcm16_to_float_array(pcm_data):
@@ -665,7 +736,7 @@ class FunctionCall:
                 },
             }
         )
-        create_response = partial(get_create_response(self.msg_handler, self.session_id))
+        create_response = partial(get_create_response(self.msg_handler, self.session_id, self.current_user.id))
         create_response()
 
     def _send_function_call(self):
@@ -712,19 +783,17 @@ async def flow_as_tool_websocket(
     session_id: str,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
+    provider_policy_scope = ExitStack()
+    vad_task: asyncio.Task | None = None
     try:
         await client_websocket.accept()
 
         log_event = create_event_logger()
 
-        vad_task: asyncio.Task | None = None
-        voice_config = get_voice_config(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
-        if current_user is None or openai_key is None:
-            return
         try:
-            flow_description = await get_flow_desc_from_db(flow_id)
+            flow = await _get_authorized_voice_flow(flow_id, current_user, session)
+            flow_description = flow.description
             flow_tool = {
                 "name": "execute_flow",
                 "type": "function",
@@ -738,8 +807,23 @@ async def flow_as_tool_websocket(
         except Exception as e:  # noqa: BLE001
             err_msg = {"error": f"Failed to load flow: {e!s}"}
             await client_websocket.send_json(err_msg)
-            logger.error(f"Failed to load flow: {e}")
+            await logger.aerror(f"Failed to load flow: {e}")
             return
+
+        provider_policy_scope.enter_context(
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(getattr(current_user, "is_superuser", False)),
+            )
+        )
+        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
+        if current_user is None or openai_key is None:
+            return
+
+        # Resolve voice config only after authentication and flow authorization,
+        # scoped to this user.
+        voice_config = get_voice_config(session_id, current_user.id)
 
         url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview"
         headers = {
@@ -752,7 +836,7 @@ async def flow_as_tool_websocket(
             session_dict["tools"] = [flow_tool]
             return session_dict
 
-        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+        async with websockets.connect(url, additional_headers=headers) as openai_ws:
             msg_handler = SendQueues(openai_ws, client_websocket, log_event)
 
             openai_realtime_session = init_session_dict()
@@ -764,11 +848,11 @@ async def flow_as_tool_websocket(
             vad_queue: asyncio.Queue = asyncio.Queue()
             vad_audio_buffer = bytearray()
             bot_speaking_flag = [False]
-            vad = webrtcvad.Vad(mode=3)
 
             async def process_vad_audio() -> None:
                 nonlocal vad_audio_buffer
                 last_speech_time = datetime.now(tz=timezone.utc)
+                vad = get_vad()
                 while True:
                     base64_data = await vad_queue.get()
                     raw_chunk_24k = base64.b64decode(base64_data)
@@ -787,7 +871,7 @@ async def flow_as_tool_websocket(
                                     msg_handler.openai_send({"type": "response.cancel"})
                                     bot_speaking_flag[0] = False
                         except Exception as e:  # noqa: BLE001
-                            logger.error(f"[ERROR] VAD processing failed (ValueError): {e}")
+                            await logger.aerror(f"[ERROR] VAD processing failed (ValueError): {e}")
                             continue
                     if has_speech:
                         last_speech_time = datetime.now(tz=timezone.utc)
@@ -843,7 +927,7 @@ async def flow_as_tool_websocket(
                 return new_session
 
             class Response:
-                def __init__(self, response_id: str, use_elevenlabs: bool | None = None):
+                def __init__(self, response_id: str, *, use_elevenlabs: bool | None = None):
                     if use_elevenlabs is None:
                         use_elevenlabs = False
                     self.response_id = response_id
@@ -912,11 +996,11 @@ async def flow_as_tool_websocket(
                     # client_send_event_from_thread(event, main_loop)
                     msg_handler.client_send(event)
                 except Exception:  # noqa: BLE001
-                    logger.error(traceback.format_exc())
+                    await logger.aerror(traceback.format_exc())
 
             async def forward_to_openai() -> None:
                 nonlocal openai_realtime_session
-                create_response = get_create_response(msg_handler, session_id)
+                create_response = get_create_response(msg_handler, session_id, current_user.id)
                 try:
                     num_audio_samples = 0  # Initialize as an integer instead of None
                     while True:
@@ -941,10 +1025,10 @@ async def flow_as_tool_websocket(
                                 msg_handler.openai_send(msg)
                                 num_audio_samples = 0
                         elif msg.get("type") == "langflow.voice_mode.config":
-                            logger.info(f"langflow.voice_mode.config {msg}")
+                            await logger.ainfo(f"langflow.voice_mode.config {msg}")
                             voice_config.progress_enabled = msg.get("progress_enabled", True)
                         elif msg.get("type") == "langflow.elevenlabs.config":
-                            logger.info(f"langflow.elevenlabs.config {msg}")
+                            await logger.ainfo(f"langflow.elevenlabs.config {msg}")
                             voice_config.use_elevenlabs = msg["enabled"]
                             voice_config.elevenlabs_voice = msg.get("voice_id", voice_config.elevenlabs_voice)
 
@@ -984,7 +1068,7 @@ async def flow_as_tool_websocket(
                         if do_forward:
                             msg_handler.client_send(event)
                         if event_type == "response.created":
-                            responses[response_id] = Response(response_id, voice_config.use_elevenlabs)
+                            responses[response_id] = Response(response_id, use_elevenlabs=voice_config.use_elevenlabs)
                             if function_call:
                                 if function_call.is_prog_enabled and not function_call.prog_rsp_id:
                                     function_call.prog_rsp_id = response_id
@@ -1008,12 +1092,12 @@ async def flow_as_tool_websocket(
                                     message_text = event.get("text", "")
                                     await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
                                 except ValueError as err:
-                                    logger.error(f"Error saving message to database (ValueError): {err}")
-                                    logger.error(traceback.format_exc())
+                                    await logger.aerror(f"Error saving message to database (ValueError): {err}")
+                                    await logger.aerror(traceback.format_exc())
                                 except (KeyError, AttributeError, TypeError) as err:
                                     # Replace blind Exception with specific exceptions
-                                    logger.error(f"Error saving message to database: {err}")
-                                    logger.error(traceback.format_exc())
+                                    await logger.aerror(f"Error saving message to database: {err}")
+                                    await logger.aerror(traceback.format_exc())
 
                         elif event_type == "response.output_item.added":
                             bot_speaking_flag[0] = True
@@ -1037,12 +1121,12 @@ async def flow_as_tool_websocket(
                                 if transcript and transcript.strip():
                                     await add_message_to_db(transcript, session, flow_id, session_id, "Machine", "AI")
                             except ValueError as err:
-                                logger.error(f"Error saving message to database (ValueError): {err}")
-                                logger.error(traceback.format_exc())
+                                await logger.aerror(f"Error saving message to database (ValueError): {err}")
+                                await logger.aerror(traceback.format_exc())
                             except (KeyError, AttributeError, TypeError) as err:
                                 # Replace blind Exception with specific exceptions
-                                logger.error(f"Error saving message to database: {err}")
-                                logger.error(traceback.format_exc())
+                                await logger.aerror(f"Error saving message to database: {err}")
+                                await logger.aerror(traceback.format_exc())
                             bot_speaking_flag[0] = False
                         elif event_type == "response.done":
                             msg_handler.openai_unblock()
@@ -1067,12 +1151,12 @@ async def flow_as_tool_websocket(
                                 if message_text and message_text.strip():
                                     await add_message_to_db(message_text, session, flow_id, session_id, "User", "User")
                             except ValueError as e:
-                                logger.error(f"Error saving message to database (ValueError): {e}")
-                                logger.error(traceback.format_exc())
+                                await logger.aerror(f"Error saving message to database (ValueError): {e}")
+                                await logger.aerror(traceback.format_exc())
                             except (KeyError, AttributeError, TypeError) as e:
                                 # Replace blind Exception with specific exceptions
-                                logger.error(f"Error saving message to database: {e}")
-                                logger.error(traceback.format_exc())
+                                await logger.aerror(f"Error saving message to database: {e}")
+                                await logger.aerror(traceback.format_exc())
                         elif event_type == "error":
                             pass
 
@@ -1091,12 +1175,12 @@ async def flow_as_tool_websocket(
                 # Check for exceptions in results
                 for result in results:
                     if isinstance(result, Exception):
-                        logger.error("WS loop failed:", exc_info=result)
-                        logger.error(traceback.format_exc())
+                        await logger.aerror("WS loop failed:", exc_info=result)
+                        await logger.aerror(traceback.format_exc())
             except Exception as e:  # noqa: BLE001
                 # Handle any other exceptions
-                logger.error(f"WS loop failed: {e}")
-                logger.error(traceback.format_exc())
+                await logger.aerror(f"WS loop failed: {e}")
+                await logger.aerror(traceback.format_exc())
             finally:
                 # shared cleanup for writers & sockets
                 async def close():
@@ -1106,9 +1190,10 @@ async def flow_as_tool_websocket(
 
                 await close()
     except Exception as e:  # noqa: BLE001
-        logger.error(f"Unexpected error: {e}")
-        logger.error(traceback.format_exc())
+        await logger.aerror(f"Unexpected error: {e}")
+        await logger.aerror(traceback.format_exc())
     finally:
+        provider_policy_scope.close()
         # Make sure to clean up the task
         if vad_task and not vad_task.done():
             vad_task.cancel()
@@ -1140,6 +1225,7 @@ async def flow_tts_websocket(
     session_id: str,
 ):
     """WebSocket endpoint for direct flow text-to-speech interaction."""
+    provider_policy_scope = ExitStack()
     try:
         await client_websocket.accept()
 
@@ -1189,15 +1275,32 @@ async def flow_tts_websocket(
             await openai_ws.close()
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
+        try:
+            flow = await _get_authorized_voice_flow(flow_id, current_user, session)
+        except Exception as e:  # noqa: BLE001
+            err_msg = {"error": f"Failed to load flow: {e!s}"}
+            await client_websocket.send_json(err_msg)
+            await logger.aerror(f"Failed to load flow: {e}")
+            return
+
+        provider_policy_scope.enter_context(
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(getattr(current_user, "is_superuser", False)),
+            )
+        )
+        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
+        if current_user is None or openai_key is None:
+            return
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
             "OpenAI-Beta": "realtime=v1",
         }
 
-        tts_config = get_tts_config(session_id, openai_key)
-        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+        tts_config = get_tts_config(session_id, openai_key, current_user.id)
+        async with websockets.connect(url, additional_headers=headers) as openai_ws:
             openai_writer_task = asyncio.create_task(openai_writer())
             client_writer_task = asyncio.create_task(client_writer())
 
@@ -1219,16 +1322,16 @@ async def flow_tts_websocket(
                         elif event.get("type") == "input_audio_buffer.commit":
                             openai_send(event)
                         elif event.get("type") == "langflow.elevenlabs.config":
-                            logger.info(f"langflow.elevenlabs.config {event}")
+                            await logger.ainfo(f"langflow.elevenlabs.config {event}")
                             tts_config.use_elevenlabs = event["enabled"]
                             tts_config.elevenlabs_voice = event.get("voice_id", tts_config.elevenlabs_voice)
                         elif event.get("type") == "voice.settings":
                             # Store the voice setting
                             if event.get("voice"):
                                 tts_config.openai_voice = event.get("voice")
-                                logger.info(f"Updated OpenAI voice to: {tts_config.openai_voice}")
+                                await logger.ainfo(f"Updated OpenAI voice to: {tts_config.openai_voice}")
                 except Exception as e:  # noqa: BLE001
-                    logger.error(f"Error in WebSocket communication: {e}")
+                    await logger.aerror(f"Error in WebSocket communication: {e}")
 
             async def forward_to_client() -> None:
                 try:
@@ -1242,12 +1345,13 @@ async def flow_tts_websocket(
                                 input_request = InputValueRequest(
                                     input_value=transcript, components=[], type="chat", session=session_id
                                 )
-                                response = await build_flow_and_stream(
-                                    flow_id=UUID(flow_id),
-                                    inputs=input_request,
-                                    background_tasks=background_tasks,
-                                    current_user=current_user,
-                                )
+                                with execution_protocol("voice"):
+                                    response = await build_flow_and_stream(
+                                        flow_id=UUID(flow_id),
+                                        inputs=input_request,
+                                        background_tasks=background_tasks,
+                                        current_user=current_user,
+                                    )
                                 result = ""
                                 async for line in response.body_iterator:
                                     if not line:
@@ -1299,7 +1403,7 @@ async def flow_tts_websocket(
                                         audio_event = {"type": "response.audio.delta", "delta": base64_audio}
                                         client_send(audio_event)
                 except Exception as e:  # noqa: BLE001
-                    logger.error(f"Error in WebSocket communication: {e}")
+                    await logger.aerror(f"Error in WebSocket communication: {e}")
 
             try:
                 # Create tasks and gather them for concurrent execution
@@ -1308,13 +1412,15 @@ async def flow_tts_websocket(
                 await asyncio.gather(task1, task2)
             except Exception as exc:  # noqa: BLE001
                 # handle any exceptions from any task
-                logger.error("WS loop failed:", exc_info=exc)
+                await logger.aerror("WS loop failed:", exc_info=exc)
             finally:
                 # shared cleanup for writers & sockets
                 await close()
     except Exception as e:  # noqa: BLE001
-        logger.error(f"Unexpected error: {e}")
-        logger.error(traceback.format_exc())
+        await logger.aerror(f"Unexpected error: {e}")
+        await logger.aerror(traceback.format_exc())
+    finally:
+        provider_policy_scope.close()
 
 
 def extract_transcript(json_data):
@@ -1337,6 +1443,11 @@ async def get_elevenlabs_voice_ids(
 ):
     """Get available voice IDs from ElevenLabs API."""
     try:
+        await ensure_voice_permission(
+            current_user,
+            VoiceAction.READ,
+            voice_user_id=current_user.id,
+        )
         # Get or create the ElevenLabs client
         elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
         if elevenlabs_client is None:
@@ -1354,13 +1465,13 @@ async def get_elevenlabs_voice_ids(
             for voice in voices
         ]
     except ValueError as e:
-        logger.error(f"Error fetching ElevenLabs voices (ValueError): {e}")
+        await logger.aerror(f"Error fetching ElevenLabs voices (ValueError): {e}")
         return {"error": str(e)}
     except requests.RequestException as e:
-        logger.error(f"Error fetching ElevenLabs voices (RequestException): {e}")
+        await logger.aerror(f"Error fetching ElevenLabs voices (RequestException): {e}")
         return {"error": str(e)}
     except (KeyError, AttributeError, TypeError) as e:
         # More specific exceptions instead of blind Exception
-        logger.error(f"Error fetching ElevenLabs voices: {e}")
-        logger.error(traceback.format_exc())
+        await logger.aerror(f"Error fetching ElevenLabs voices: {e}")
+        await logger.aerror(traceback.format_exc())
         return {"error": str(e)}

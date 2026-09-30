@@ -1,0 +1,311 @@
+"""Unit tests for workflow reconstruction from vertex_build table.
+
+Test Coverage:
+    - Successful reconstruction with terminal nodes
+    - Reconstruction with no vertex builds found (error case)
+    - Reconstruction with flow having no data (error case)
+    - Reconstruction filtering to terminal nodes only
+"""
+
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+from uuid import uuid4
+
+import pytest
+from langflow.api.v2.workflow_reconstruction import _recover_session_id, reconstruct_workflow_response_from_job_id
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from lfx.interface.components import component_cache
+from lfx.utils.flow_validation import CustomComponentValidationError
+
+
+class TestRecoverSessionId:
+    """``_recover_session_id`` digs the persisted session_id out of terminal data.
+
+    The session_id sits inside the serialized terminal Message at a depth that
+    varies by component, so the search walks the dict/list structure and ignores
+    serialized text blobs that merely contain the word ``session_id``.
+    """
+
+    def test_recovers_session_id_nested_like_persisted_message(self):
+        # Mirrors the real shape: results["message"]["data"]["session_id"].
+        data = {"results": {"message": {"text_key": "text", "data": {"session_id": "thread-1", "text": "hi"}}}}
+        assert _recover_session_id(data) == "thread-1"
+
+    def test_recovers_session_id_from_list_of_rows(self):
+        data = {"outputs": {"dataframe": {"message": [{"text": "hi", "session_id": "thread-9"}]}}}
+        assert _recover_session_id(data) == "thread-9"
+
+    def test_ignores_session_id_appearing_only_inside_serialized_text(self):
+        # A rendered table header is a string, not a dict key, so it is not matched.
+        data = {"outputs": {"prompt": {"message": "| sender | session_id | text |"}}}
+        assert _recover_session_id(data) is None
+
+    def test_returns_none_for_data_only_flow(self):
+        assert _recover_session_id({"results": {}, "outputs": {"data": {"value": 1}}}) is None
+
+    def test_blank_session_id_is_not_recovered(self):
+        assert _recover_session_id({"data": {"session_id": ""}}) is None
+
+
+class TestWorkflowReconstruction:
+    """Unit tests for workflow reconstruction logic."""
+
+    async def test_reconstruct_success_with_terminal_nodes(self):
+        """Test successful reconstruction filters to terminal nodes and returns response."""
+        flow_id = uuid4()
+        job_id = uuid4()
+        user_id = uuid4()
+
+        # Mock flow
+        mock_flow = MagicMock()
+        mock_flow.id = flow_id
+        mock_flow.data = {"nodes": [{"id": "node1"}, {"id": "node2"}], "edges": []}
+
+        # Mock vertex_builds
+        mock_vb1 = MagicMock(spec=VertexBuildTable)
+        mock_vb1.id = "node1"
+        mock_vb1.data = {"outputs": {"result": "output1"}}
+        mock_vb1.artifacts = {}
+        mock_vb1.timestamp = datetime.now(timezone.utc)
+
+        mock_vb2 = MagicMock(spec=VertexBuildTable)
+        mock_vb2.id = "node2"
+        mock_vb2.data = {"outputs": {"result": "output2"}}
+        mock_vb2.artifacts = {}
+        mock_vb2.timestamp = datetime.now(timezone.utc)
+
+        mock_session = MagicMock()
+
+        with (
+            patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb,
+            patch("langflow.api.v2.workflow_reconstruction.Graph") as mock_graph_class,
+            patch("langflow.api.v2.workflow_reconstruction.run_response_to_workflow_response") as mock_converter,
+        ):
+            mock_get_vb.return_value = [mock_vb1, mock_vb2]
+
+            mock_graph = MagicMock()
+            mock_graph.get_terminal_nodes.return_value = ["node1", "node2"]
+            mock_graph_class.from_payload.return_value = mock_graph
+
+            mock_response = MagicMock()
+            mock_response.flow_id = str(flow_id)
+            mock_response.job_id = str(job_id)
+            mock_converter.return_value = mock_response
+
+            result = await reconstruct_workflow_response_from_job_id(
+                session=mock_session,
+                flow=mock_flow,
+                job_id=str(job_id),
+                user_id=user_id,
+            )
+
+            assert result.flow_id == str(flow_id)
+            assert result.job_id == str(job_id)
+            mock_get_vb.assert_called_once_with(mock_session, str(job_id))
+            mock_graph.get_terminal_nodes.assert_called_once()
+
+    async def test_reconstruct_fails_when_no_vertex_builds(self):
+        """Test reconstruction raises ValueError when no vertex_builds found."""
+        mock_flow = MagicMock()
+        mock_flow.data = {"nodes": [{"id": "node1"}], "edges": []}
+        mock_session = MagicMock()
+
+        with patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb:
+            mock_get_vb.return_value = []
+
+            with pytest.raises(ValueError, match="No vertex builds found"):
+                await reconstruct_workflow_response_from_job_id(
+                    session=mock_session,
+                    flow=mock_flow,
+                    job_id=str(uuid4()),
+                    user_id=uuid4(),
+                )
+
+    async def test_reconstruct_fails_when_flow_has_no_data(self):
+        """Test reconstruction raises ValueError when flow has no data."""
+        mock_flow = MagicMock()
+        mock_flow.data = None
+        mock_session = MagicMock()
+
+        with pytest.raises(ValueError, match="has no data"):
+            await reconstruct_workflow_response_from_job_id(
+                session=mock_session,
+                flow=mock_flow,
+                job_id=str(uuid4()),
+                user_id=uuid4(),
+            )
+
+    async def test_reconstruct_filters_to_terminal_nodes_only(self):
+        """Test reconstruction only includes terminal node outputs, not intermediate nodes."""
+        flow_id = uuid4()
+        job_id = uuid4()
+        user_id = uuid4()
+
+        mock_flow = MagicMock()
+        mock_flow.id = flow_id
+        mock_flow.data = {"nodes": [{"id": "node1"}, {"id": "node2"}, {"id": "node3"}], "edges": []}
+
+        # Create vertex_builds for all 3 nodes
+        mock_vertex_builds = []
+        for node_id in ["node1", "node2", "node3"]:
+            mock_vb = MagicMock(spec=VertexBuildTable)
+            mock_vb.id = node_id
+            mock_vb.data = {"outputs": {"result": f"output_{node_id}"}}
+            mock_vb.artifacts = {}
+            mock_vb.timestamp = datetime.now(timezone.utc)
+            mock_vertex_builds.append(mock_vb)
+
+        mock_session = MagicMock()
+
+        with (
+            patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb,
+            patch("langflow.api.v2.workflow_reconstruction.Graph") as mock_graph_class,
+            patch("langflow.api.v2.workflow_reconstruction.run_response_to_workflow_response") as mock_converter,
+        ):
+            mock_get_vb.return_value = mock_vertex_builds
+
+            # Only node1 and node3 are terminal nodes (node2 is intermediate)
+            mock_graph = MagicMock()
+            mock_graph.get_terminal_nodes.return_value = ["node1", "node3"]
+            mock_graph_class.from_payload.return_value = mock_graph
+
+            mock_response = MagicMock()
+            mock_converter.return_value = mock_response
+
+            result = await reconstruct_workflow_response_from_job_id(
+                session=mock_session,
+                flow=mock_flow,
+                job_id=str(job_id),
+                user_id=user_id,
+            )
+
+            assert result is not None
+            mock_converter.assert_called_once()
+            # Verify filtering happened by checking terminal nodes were retrieved
+            mock_graph.get_terminal_nodes.assert_called_once()
+
+    async def test_reconstructed_outputs_carry_terminal_content(self):
+        """The rebuilt response must carry the persisted terminal content.
+
+        The persisted vertex_build ``data`` blob (a ``ResultDataResponse`` dump) has no
+        ``component_id`` — the component id lives on the row's ``id`` column. The rebuild
+        must attach it, or the converter's ``output_data_map`` (keyed by component_id)
+        stays empty and every completed background GET status returns ``content: null``
+        / ``output.text: null`` while the same run in sync mode returns the text.
+        Fixture mirrors a real ChatOutput row captured from a live background run.
+        """
+        from lfx.components.input_output import ChatInput, ChatOutput
+
+        chat_input = ChatInput(_id="chat_input")
+        chat_output = ChatOutput(_id="chat_output")
+        payload = {
+            "nodes": [
+                {"id": node["id"], "data": node["data"]}
+                for node in (chat_input.to_frontend_node(), chat_output.to_frontend_node())
+            ],
+            "edges": [
+                {
+                    "source": "chat_input",
+                    "target": "chat_output",
+                    "id": "chat_input-message-chat_output",
+                    "data": {
+                        "sourceHandle": {
+                            "dataType": "ChatInput",
+                            "id": "chat_input",
+                            "name": "message",
+                            "output_types": ["Message"],
+                        },
+                        "targetHandle": {
+                            "fieldName": "input_value",
+                            "id": "chat_output",
+                            "inputTypes": ["Message"],
+                            "type": "str",
+                        },
+                    },
+                }
+            ],
+        }
+        mock_flow = MagicMock()
+        mock_flow.id = uuid4()
+        mock_flow.name = "echo"
+        mock_flow.data = payload
+
+        vb = MagicMock(spec=VertexBuildTable)
+        vb.id = "chat_output"
+        vb.data = {
+            "results": {
+                "message": {
+                    "text_key": "text",
+                    "data": {"text": "hello content probe", "session_id": "session-1", "sender": "Machine"},
+                    "text": "hello content probe",
+                    "session_id": "session-1",
+                }
+            },
+            "outputs": {"message": {"message": "hello content probe", "type": "text"}},
+            "logs": {"message": []},
+            "artifacts": {"message": "hello content probe", "type": "object"},
+            "duration": "8 ms",
+        }
+        vb.artifacts = {}
+        vb.timestamp = datetime.now(timezone.utc)
+
+        with patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb:
+            mock_get_vb.return_value = [vb]
+            response = await reconstruct_workflow_response_from_job_id(
+                session=MagicMock(),
+                flow=mock_flow,
+                job_id=str(uuid4()),
+                user_id=str(uuid4()),
+            )
+
+        assert response.outputs["chat_output"].content == "hello content probe"
+        assert response.output.text == "hello content probe"
+        assert response.session_id == "session-1"
+
+    async def test_reconstruct_blocks_custom_components_when_disabled(self, monkeypatch):
+        flow_id = uuid4()
+        job_id = uuid4()
+        user_id = uuid4()
+
+        mock_flow = MagicMock()
+        mock_flow.id = flow_id
+        mock_flow.name = "Blocked Flow"
+        mock_flow.data = {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "id": "node-1",
+                        "type": "TotallyCustom",
+                        "node": {
+                            "display_name": "Blocked Node",
+                            "template": {
+                                "code": {"value": "print('blocked')"},
+                            },
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        }
+        mock_session = MagicMock()
+        mock_vertex_build = MagicMock(spec=VertexBuildTable)
+        mock_vertex_build.id = "node-1"
+        mock_vertex_build.data = {"outputs": {"result": "output"}}
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: MagicMock(settings=MagicMock(allow_custom_components=False)),
+        )
+        monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+
+        with patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb:
+            mock_get_vb.return_value = [mock_vertex_build]
+            with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+                await reconstruct_workflow_response_from_job_id(
+                    session=mock_session,
+                    flow=mock_flow,
+                    job_id=str(job_id),
+                    user_id=str(user_id),
+                )

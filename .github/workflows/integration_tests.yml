@@ -11,9 +11,9 @@ on:
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
-        required: true
+        required: false
         type: string
-        default: "['3.10', '3.11', '3.12', '3.13']"
+        default: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       ref:
         description: "(Optional) ref to checkout"
         required: false
@@ -40,13 +40,17 @@ jobs:
       ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Run integration tests with api keys
         timeout-minutes: 20
         run: |

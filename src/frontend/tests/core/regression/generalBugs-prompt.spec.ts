@@ -1,30 +1,24 @@
-import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 
 test(
   "user must be able to edit an empty prompt",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     let outdatedComponents = await page.getByTestId("update-button").count();
 
@@ -33,12 +27,12 @@ test(
       outdatedComponents = await page.getByTestId("update-button").count();
     }
 
-    await page.getByTestId("promptarea_prompt_template").click();
+    await page.getByTestId("button_open_prompt_modal").click();
 
     await page.keyboard.press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
 
-    await page.getByText("Edit Prompt", { exact: true }).click();
+    await page.getByText(TEXTS.editPrompt, { exact: true }).click();
 
     await page.getByTestId("edit-prompt-sanitized").last().click();
 
@@ -46,7 +40,7 @@ test(
       .getByTestId("modal-promptarea_prompt_template")
       .fill("THIS IS A TEST");
 
-    await page.getByText("Edit Prompt", { exact: true }).click();
+    await page.getByText(TEXTS.editPrompt, { exact: true }).click();
 
     let promptSanitizedText = await page
       .getByTestId("edit-prompt-sanitized")
@@ -60,7 +54,7 @@ test(
     await page.keyboard.press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
 
-    await page.getByText("Edit Prompt", { exact: true }).click();
+    await page.getByText(TEXTS.editPrompt, { exact: true }).click();
 
     await page.getByTestId("edit-prompt-sanitized").last().click();
 
@@ -68,7 +62,7 @@ test(
       .getByTestId("modal-promptarea_prompt_template")
       .fill("THIS IS A TEST 2");
 
-    await page.getByText("Edit Prompt", { exact: true }).click();
+    await page.getByText(TEXTS.editPrompt, { exact: true }).click();
 
     promptSanitizedText = await page
       .getByTestId("edit-prompt-sanitized")

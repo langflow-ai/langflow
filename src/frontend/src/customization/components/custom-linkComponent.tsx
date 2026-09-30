@@ -1,5 +1,5 @@
 import LinkComponent from "@/components/core/parameterRenderComponent/components/linkComponent";
-import {
+import type {
   InputProps,
   LinkComponentType,
 } from "@/components/core/parameterRenderComponent/types";
@@ -12,6 +12,7 @@ export function CustomLinkComponent({
   icon,
   editNode,
   handleOnNewValue,
+  ariaLabelledBy,
 }: InputProps<string, LinkComponentType>) {
   return (
     <LinkComponent
@@ -22,6 +23,7 @@ export function CustomLinkComponent({
       icon={icon}
       editNode={editNode}
       handleOnNewValue={handleOnNewValue}
+      ariaLabelledBy={ariaLabelledBy}
     />
   );
 }

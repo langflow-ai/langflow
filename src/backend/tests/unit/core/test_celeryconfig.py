@@ -1,0 +1,202 @@
+"""Unit tests for langflow.core.celeryconfig module."""
+
+import importlib
+from pathlib import Path
+from urllib.parse import urlsplit
+
+import pytest
+from dotenv import dotenv_values
+
+# Import the module to test
+from langflow.core import celeryconfig
+
+
+@pytest.fixture(autouse=True)
+def _restore_celeryconfig_after_test(monkeypatch):
+    yield
+    monkeypatch.undo()
+    importlib.reload(celeryconfig)
+
+
+class TestCeleryConfigAcceptContent:
+    """Unit tests for accept_content configuration."""
+
+    def test_accept_content_configuration(self):
+        """Test that accept_content is set to the expected values."""
+        # This should be consistent regardless of environment
+        expected_content = ["json"]
+        assert celeryconfig.accept_content == expected_content
+
+    def test_accept_content_types(self):
+        """Test that accept_content contains the expected content types."""
+        assert "json" in celeryconfig.accept_content
+        assert "pickle" not in celeryconfig.accept_content
+        assert len(celeryconfig.accept_content) == 1
+
+    def test_task_and_result_serialization_is_json_only(self):
+        assert celeryconfig.task_serializer == "json"
+        assert celeryconfig.result_serializer == "json"
+        assert celeryconfig.result_accept_content == ["json"]
+
+    def test_accept_content_is_list(self):
+        """Test that accept_content is a list type."""
+        assert isinstance(celeryconfig.accept_content, list)
+
+    def test_accept_content_contains_strings(self):
+        """Test that accept_content contains only string values."""
+        for content_type in celeryconfig.accept_content:
+            assert isinstance(content_type, str)
+
+    def test_celery_rejects_pickle_before_decoding(self):
+        """Both the task consumer and result reader reject untrusted pickle content."""
+        from kombu.exceptions import ContentDisallowed
+        from kombu.serialization import loads, prepare_accept_content
+        from langflow.core.celery_app import make_celery
+
+        app = make_celery("test", "langflow.core.celeryconfig")
+        for accepted in (app.conf.accept_content, app.conf.result_accept_content):
+            with pytest.raises(ContentDisallowed):
+                loads(
+                    b"not-a-pickle",
+                    content_type="application/x-python-serialize",
+                    content_encoding="binary",
+                    accept=prepare_accept_content(accepted),
+                )
+
+
+class TestCeleryConfigVariables:
+    """Unit tests for configuration variables."""
+
+    def test_required_config_variables_exist(self):
+        """Test that all required configuration variables are defined."""
+        required_vars = ["broker_url", "result_backend", "accept_content"]
+        for var in required_vars:
+            assert hasattr(celeryconfig, var), f"Missing required config variable: {var}"
+
+    def test_config_variables_have_expected_types(self):
+        """Test that configuration variables have the expected types."""
+        assert isinstance(celeryconfig.broker_url, str)
+        assert isinstance(celeryconfig.result_backend, str)
+        assert isinstance(celeryconfig.accept_content, list)
+
+    def test_broker_url_format(self):
+        """Test that broker_url follows expected format."""
+        broker_url = celeryconfig.broker_url
+        # Should be either Redis or RabbitMQ format
+        assert broker_url.startswith(("redis://", "amqp://")), f"Unexpected broker_url format: {broker_url}"
+
+    def test_result_backend_format(self):
+        """Test that result_backend follows expected format."""
+        result_backend = celeryconfig.result_backend
+        # Should be Redis format
+        assert result_backend.startswith("redis://"), f"Unexpected result_backend format: {result_backend}"
+
+    def test_broker_url_not_empty(self):
+        """Test that broker_url is not an empty string."""
+        assert len(celeryconfig.broker_url) > 0
+
+    def test_result_backend_not_empty(self):
+        """Test that result_backend is not an empty string."""
+        assert len(celeryconfig.result_backend) > 0
+
+    def test_deploy_sample_uses_credentialed_rabbitmq_broker(self, monkeypatch):
+        sample = dotenv_values(Path(__file__).resolve().parents[5] / "deploy/.env.example")
+        for name in (
+            "LANGFLOW_VALKEY_HOST",
+            "LANGFLOW_VALKEY_PORT",
+            "LANGFLOW_REDIS_HOST",
+            "LANGFLOW_REDIS_PORT",
+            "BROKER_URL",
+            "RESULT_BACKEND",
+        ):
+            monkeypatch.delenv(name, raising=False)
+            if sample.get(name):
+                monkeypatch.setenv(name, sample[name])
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == sample["BROKER_URL"]
+        broker = urlsplit(celeryconfig.broker_url)
+        assert broker.scheme == "amqp"
+        assert broker.hostname == "broker"
+        assert broker.username == sample["RABBITMQ_DEFAULT_USER"]
+        assert broker.password == sample["RABBITMQ_DEFAULT_PASS"]
+        assert celeryconfig.result_backend == sample["RESULT_BACKEND"]
+
+
+class TestCeleryConfigStructure:
+    """Unit tests for configuration structure."""
+
+    def test_broker_url_contains_protocol(self):
+        """Test that broker_url contains a valid protocol."""
+        broker_url = celeryconfig.broker_url
+        assert "://" in broker_url
+
+    def test_result_backend_contains_protocol(self):
+        """Test that result_backend contains a valid protocol."""
+        result_backend = celeryconfig.result_backend
+        assert "://" in result_backend
+
+    def test_broker_url_contains_host(self):
+        """Test that broker_url contains a host component."""
+        broker_url = celeryconfig.broker_url
+        # Remove protocol part
+        if "://" in broker_url:
+            host_part = broker_url.split("://")[1]
+            assert len(host_part) > 0
+
+    def test_result_backend_contains_host(self):
+        """Test that result_backend contains a host component."""
+        result_backend = celeryconfig.result_backend
+        # Remove protocol part
+        if "://" in result_backend:
+            host_part = result_backend.split("://")[1]
+            assert len(host_part) > 0
+
+
+class TestCeleryConfigValkey:
+    """Unit tests for Valkey broker configuration."""
+
+    def test_valkey_env_vars_set_broker_and_backend(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_VALKEY_HOST", "valkey-host")
+        monkeypatch.setenv("LANGFLOW_VALKEY_PORT", "6380")
+        monkeypatch.delenv("LANGFLOW_REDIS_HOST", raising=False)
+        monkeypatch.delenv("LANGFLOW_REDIS_PORT", raising=False)
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://valkey-host:6380/0"
+        assert celeryconfig.result_backend == "redis://valkey-host:6380/0"
+
+    def test_valkey_takes_precedence_over_redis(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_VALKEY_HOST", "valkey-host")
+        monkeypatch.setenv("LANGFLOW_VALKEY_PORT", "6380")
+        monkeypatch.setenv("LANGFLOW_REDIS_HOST", "redis-host")
+        monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://valkey-host:6380/0"
+        assert celeryconfig.result_backend == "redis://valkey-host:6380/0"
+
+    def test_without_valkey_preserves_redis_behavior(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_VALKEY_HOST", raising=False)
+        monkeypatch.delenv("LANGFLOW_VALKEY_PORT", raising=False)
+        monkeypatch.setenv("LANGFLOW_REDIS_HOST", "redis-host")
+        monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://redis-host:6379/0"
+        assert celeryconfig.result_backend == "redis://redis-host:6379/0"
+
+    def test_incomplete_valkey_configuration_falls_back_to_redis(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_VALKEY_HOST", "valkey-host")
+        monkeypatch.delenv("LANGFLOW_VALKEY_PORT", raising=False)
+        monkeypatch.setenv("LANGFLOW_REDIS_HOST", "redis-host")
+        monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://redis-host:6379/0"
+        assert celeryconfig.result_backend == "redis://redis-host:6379/0"

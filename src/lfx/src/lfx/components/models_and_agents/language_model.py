@@ -1,0 +1,140 @@
+from lfx.base.models.model import LCModelComponent
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    handle_model_input_update,
+)
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
+from lfx.components.models_and_agents.model_selection import apply_model_overrides
+from lfx.field_typing.constants import LanguageModel
+from lfx.field_typing.range_spec import RangeSpec
+from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
+from lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
+
+
+class LanguageModelComponent(LCModelComponent):
+    model_provider_policy_mode = "delegate"
+    display_name = "Language Model"
+    description = "Runs a language model given a specified provider."
+    documentation: str = "https://docs.langflow.org/components-models"
+    icon = "brain-circuit"
+    category = "models"
+
+    inputs = [
+        ModelInput(
+            name="model",
+            display_name="Language Model",
+            info="Select your model provider",
+            real_time_refresh=True,
+            required=True,
+        ),
+        StrInput(
+            name="model_name",
+            display_name="Model Name Override",
+            info=(
+                "Optional model name to use instead of the selected model. "
+                "Can be set from a global variable for runtime model selection."
+            ),
+            advanced=True,
+            load_from_db=False,
+        ),
+        StrInput(
+            name="provider",
+            display_name="Provider Override",
+            info=(
+                "Optional provider to use with Model Name Override. Leave blank to use the selected model's provider."
+            ),
+            advanced=True,
+            load_from_db=False,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            required=False,
+            show=True,
+            real_time_refresh=True,
+            advanced=True,
+        ),
+        DropdownInput(
+            name="base_url_ibm_watsonx",
+            display_name="watsonx API Endpoint",
+            info="The base URL of the API (IBM watsonx.ai only)",
+            options=IBM_WATSONX_URLS,
+            value=IBM_WATSONX_URLS[0],
+            combobox=True,
+            show=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="project_id",
+            display_name="watsonx Project ID",
+            info="The project ID associated with the foundation model (IBM watsonx.ai only)",
+            show=False,
+            required=False,
+        ),
+        StrInput(
+            name="ollama_base_url",
+            display_name="Ollama API URL",
+            info="Endpoint of the Ollama API (Ollama only)",
+            show=False,
+            real_time_refresh=True,
+        ),
+        MessageInput(
+            name="input_value",
+            display_name="Input",
+            info="The input text to send to the model",
+        ),
+        MultilineInput(
+            name="system_message",
+            display_name="System Message",
+            info="A system message that helps set the behavior of the assistant",
+            advanced=False,
+        ),
+        BoolInput(
+            name="stream",
+            display_name="Stream",
+            info="Whether to stream the response",
+            value=False,
+            advanced=True,
+        ),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            info="Controls randomness in responses",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
+        ),
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            info="Maximum number of tokens to generate. Set to 0 for no explicit limit. Field name varies by provider.",
+            advanced=True,
+            range_spec=RangeSpec(min=0, max=128000, step=1, step_type="int"),
+        ),
+    ]
+
+    def build_model(self) -> LanguageModel:
+        model = apply_model_overrides(
+            self.model,
+            model_name=getattr(self, "model_name", None),
+            provider=getattr(self, "provider", None),
+            user_id=self.user_id,
+            get_options=get_language_model_options,
+        )
+        return get_llm(
+            model=model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            temperature=self.temperature,
+            stream=self.stream,
+            max_tokens=getattr(self, "max_tokens", None),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+            ollama_base_url=getattr(self, "ollama_base_url", None),
+        )
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        return handle_model_input_update(self, build_config, field_value, field_name)

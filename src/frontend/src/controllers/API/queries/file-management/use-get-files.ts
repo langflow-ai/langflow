@@ -1,6 +1,6 @@
-import { FileType } from "@/types/file_management";
 import { keepPreviousData } from "@tanstack/react-query";
-import { useQueryFunctionType } from "../../../../types/api";
+import type { FileType } from "@/types/file_management";
+import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

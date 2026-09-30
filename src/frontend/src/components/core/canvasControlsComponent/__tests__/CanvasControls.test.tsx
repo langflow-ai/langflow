@@ -1,0 +1,330 @@
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import CanvasControls from "../CanvasControls";
+
+// The modal/dialog/dropdown overlay layer in the app all sits at `z-50`
+// (see ui/dialog.tsx, ui/popover.tsx). The assistant onboarding tooltip must
+// stay at canvas level — strictly BELOW this layer — so it never floats in
+// front of an open modal like "My Files".
+const MODAL_LAYER_Z_INDEX = 50;
+const ONBOARDING_TOOLTIP_DELAY_MS = 10_000;
+
+// Extract the numeric z-index from a Tailwind className, supporting both the
+// scale token (`z-40`) and the arbitrary-value form (`z-[60]`).
+const getZIndex = (className: string): number | null => {
+  const token = className
+    .split(/\s+/)
+    .find((cls) => /^z-(\[?\d+\]?)$/.test(cls));
+  if (!token) return null;
+  const digits = token.replace(/^z-\[?/, "").replace(/\]$/, "");
+  return Number.parseInt(digits, 10);
+};
+
+const reactFlowFns = {
+  fitView: jest.fn(),
+  zoomIn: jest.fn(),
+  zoomOut: jest.fn(),
+  zoomTo: jest.fn(),
+};
+
+jest.mock("@xyflow/react", () => ({
+  Panel: ({ children, ...props }) => (
+    <div data-testid="panel" {...props}>
+      {children}
+    </div>
+  ),
+  useReactFlow: () => reactFlowFns,
+  useUpdateNodeInternals: () => jest.fn(),
+  useStore: () => ({
+    isInteractive: true,
+    minZoomReached: false,
+    maxZoomReached: false,
+    zoom: 1,
+  }),
+  useStoreApi: () => ({ setState: jest.fn() }),
+}));
+
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: jest.fn((selector) => {
+    const state = {
+      nodes: [],
+      edges: [],
+      setNodes: jest.fn(),
+      currentFlow: { locked: false },
+    };
+    return typeof selector === "function" ? selector(state) : false;
+  }),
+}));
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: jest.fn((selector) => {
+    const state = {};
+    return selector(state);
+  }),
+}));
+
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: ({ name, className }) => (
+    <span data-testid={`icon-${name}`} className={className}>
+      {name}
+    </span>
+  ),
+}));
+
+jest.mock("@/components/ui/button", () => ({
+  Button: ({ children, onClick, title, ...rest }) => (
+    <button onClick={onClick} title={title} {...rest}>
+      {children}
+    </button>
+  ),
+}));
+
+jest.mock("../CanvasControlsDropdown", () => ({
+  __esModule: true,
+  default: () => <div data-testid="controls-dropdown" />,
+}));
+
+jest.mock("../HelpDropdown", () => ({
+  __esModule: true,
+  default: () => <div data-testid="help-dropdown" />,
+}));
+
+jest.mock("@/assets/langflow_assistant.svg", () => "mock-assistant-icon.svg");
+jest.mock(
+  "@/assets/langflow_assistant_idle.svg",
+  () => "mock-assistant-idle-icon.svg",
+);
+
+const mockAssistantState = {
+  toggleAssistant: jest.fn(),
+  isAssistantProcessing: false,
+  assistantSidebarOpen: false,
+  setAssistantSidebarOpen: jest.fn(),
+};
+
+jest.mock("@/stores/assistantManagerStore", () => ({
+  __esModule: true,
+  default: jest.fn((selector) =>
+    typeof selector === "function"
+      ? selector(mockAssistantState)
+      : mockAssistantState,
+  ),
+}));
+
+jest.mock("@/customization/feature-flags", () => ({
+  ENABLE_INSPECTION_PANEL: false,
+}));
+
+jest.mock("zustand/react/shallow", () => ({
+  useShallow: (fn: unknown) => fn,
+}));
+
+describe("CanvasControls", () => {
+  const mockDispatchEvent = jest.fn();
+  const originalDispatchEvent = window.dispatchEvent;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAssistantState.isAssistantProcessing = false;
+    mockAssistantState.assistantSidebarOpen = false;
+    window.dispatchEvent = mockDispatchEvent;
+  });
+
+  afterEach(() => {
+    window.dispatchEvent = originalDispatchEvent;
+  });
+
+  it("should_render_panel_with_all_controls_when_mounted", () => {
+    render(<CanvasControls selectedNode={null} />);
+
+    expect(screen.getByTestId("main_canvas_controls")).toBeInTheDocument();
+    expect(screen.getByTestId("controls-dropdown")).toBeInTheDocument();
+    expect(screen.getByTestId("help-dropdown")).toBeInTheDocument();
+  });
+
+  it("should_render_assistant_button_with_new_badge", () => {
+    render(<CanvasControls selectedNode={null} />);
+
+    expect(screen.getByText("New")).toBeInTheDocument();
+    expect(screen.getByAltText("Langflow Assistant")).toBeInTheDocument();
+  });
+
+  it("should_hide_new_badge_when_assistant_already_discovered", () => {
+    localStorage.setItem("langflow-assistant-discovered", "true");
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      expect(screen.queryByText("New")).not.toBeInTheDocument();
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it("should_keep_new_badge_hidden_after_assistant_opened_and_closed", () => {
+    localStorage.clear();
+    render(<CanvasControls selectedNode={null} />);
+    expect(screen.getByText("New")).toBeInTheDocument();
+
+    // Open then close the assistant — the panel-open state alone hid the
+    // badge before this fix, so the badge must stay gone once the panel is
+    // closed again for the ``discovered`` gating to be proven.
+    fireEvent.click(screen.getByTestId("assistant-button"));
+    fireEvent.click(screen.getByTestId("assistant-button"));
+
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
+
+  it("should_render_sticky_note_button", () => {
+    render(<CanvasControls selectedNode={null} />);
+
+    expect(screen.getByTitle("Add Sticky Note")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-sticky-note")).toBeInTheDocument();
+  });
+
+  it("should_dispatch_add_note_event_when_sticky_note_clicked", () => {
+    render(<CanvasControls selectedNode={null} />);
+
+    const stickyNoteButton = screen.getByTitle("Add Sticky Note");
+    fireEvent.click(stickyNoteButton);
+
+    expect(mockDispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "lf:start-add-note" }),
+    );
+  });
+
+  it("should_disable_canvas_mutation_controls_when_read_only", () => {
+    render(<CanvasControls selectedNode={null} effectiveLocked />);
+
+    expect(screen.getByTestId("assistant-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toHaveAttribute(
+      "title",
+      "(Read-Only)",
+    );
+
+    fireEvent.click(screen.getByTestId("canvas-add-note-button"));
+    expect(mockDispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("should_keep_assistant_reachable_when_only_the_assistant_run_locks_the_canvas", () => {
+    mockAssistantState.isAssistantProcessing = true;
+
+    render(
+      <CanvasControls
+        selectedNode={null}
+        effectiveLocked
+        assistantLocked={false}
+      />,
+    );
+
+    const assistantButton = screen.getByTestId("assistant-button");
+    expect(assistantButton).toBeEnabled();
+    expect(assistantButton).not.toHaveAttribute("title", "(Read-Only)");
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+
+    fireEvent.click(assistantButton);
+    expect(mockAssistantState.setAssistantSidebarOpen).toHaveBeenCalledWith(
+      true,
+    );
+  });
+
+  it("should_preserve_read_only_while_the_assistant_is_processing", () => {
+    mockAssistantState.isAssistantProcessing = true;
+
+    render(
+      <CanvasControls selectedNode={null} effectiveLocked assistantLocked />,
+    );
+
+    const assistantButton = screen.getByTestId("assistant-button");
+    expect(assistantButton).toBeDisabled();
+    expect(assistantButton).toHaveAttribute("title", "(Read-Only)");
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+    fireEvent.click(assistantButton);
+    expect(mockAssistantState.setAssistantSidebarOpen).not.toHaveBeenCalled();
+  });
+
+  it("should_render_children_when_provided", () => {
+    render(
+      <CanvasControls selectedNode={null}>
+        <div data-testid="child-element">Lock Button</div>
+      </CanvasControls>,
+    );
+
+    expect(screen.getByTestId("child-element")).toBeInTheDocument();
+  });
+
+  it("should_position_panel_at_bottom_center", () => {
+    render(<CanvasControls selectedNode={null} />);
+
+    const panel = screen.getByTestId("main_canvas_controls");
+    expect(panel).toHaveAttribute("position", "bottom-center");
+  });
+
+  it("should_have_overflow_visible_class_on_panel", () => {
+    render(<CanvasControls selectedNode={null} />);
+
+    const panel = screen.getByTestId("main_canvas_controls");
+    expect(panel.className).toContain("!overflow-visible");
+  });
+
+  it("should_render_onboarding_tooltip_below_modal_layer_when_active", () => {
+    // Arrange — fresh browser (assistant not yet discovered) so the onboarding
+    // tooltip is eligible to surface after the idle delay.
+    localStorage.clear();
+    jest.useFakeTimers();
+
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      // Act — let the idle delay elapse so the popover opens and the tooltip
+      // (rendered via a Portal on document.body) mounts.
+      act(() => {
+        jest.advanceTimersByTime(ONBOARDING_TOOLTIP_DELAY_MS);
+      });
+
+      // Assert — the tooltip stays at canvas level: its z-index must be below
+      // the z-50 modal/dialog layer so it never floats over an open modal.
+      const tooltip = screen.getByTestId("assistant-onboarding-tooltip");
+      const zIndex = getZIndex(tooltip.className);
+
+      expect(zIndex).not.toBeNull();
+      expect(zIndex as number).toBeLessThan(MODAL_LAYER_Z_INDEX);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("should_allow_tab_to_leave_onboarding_tooltip", async () => {
+    localStorage.clear();
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const nextButton = document.createElement("button");
+    nextButton.textContent = "Next focus target";
+
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      act(() => {
+        jest.advanceTimersByTime(ONBOARDING_TOOLTIP_DELAY_MS);
+      });
+
+      document.body.appendChild(nextButton);
+
+      screen.getByTestId("assistant-onboarding-dismiss").focus();
+      await user.tab();
+      expect(screen.getByTestId("assistant-onboarding-open")).toHaveFocus();
+      await user.tab();
+
+      expect(nextButton).toHaveFocus();
+      expect(
+        screen.queryByTestId("assistant-onboarding-tooltip"),
+      ).not.toBeInTheDocument();
+    } finally {
+      nextButton.remove();
+      jest.useRealTimers();
+    }
+  });
+});

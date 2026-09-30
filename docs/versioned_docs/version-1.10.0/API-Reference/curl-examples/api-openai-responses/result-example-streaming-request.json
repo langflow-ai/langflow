@@ -1,0 +1,10 @@
+{
+  "id": "f7fcea36-f128-41c4-9ac1-e683137375d5",
+  "object": "response.chunk",
+  "created": 1756838094,
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "delta": {
+    "content": "Once"
+  },
+  "status": null
+}

@@ -2,7 +2,8 @@ import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { classNames } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps, LinkComponentType } from "../../types";
+import type { InputProps, LinkComponentType } from "../../types";
+
 const DEFAULT_ICON = "ExternalLink";
 
 export default function LinkComponent({
@@ -11,6 +12,7 @@ export default function LinkComponent({
   id = "",
   text,
   icon,
+  ariaLabelledBy,
 }: InputProps<string, LinkComponentType>): JSX.Element {
   function handleOpenLink() {
     if (value) {
@@ -47,6 +49,7 @@ export default function LinkComponent({
         variant="primary"
         size="sm"
         className={buttonClassName}
+        aria-labelledby={!text ? ariaLabelledBy : undefined}
       >
         <ButtonContent icon={icon ?? DEFAULT_ICON} text={text ?? ""} />
       </Button>

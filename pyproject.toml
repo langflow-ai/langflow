@@ -1,8 +1,8 @@
 [project]
 name = "langflow"
-version = "1.4.2"
+version = "1.12.4"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -10,7 +10,6 @@ maintainers = [
     { name = "Carlos Coelho", email = "carlos@langflow.org" },
     { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
     { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
-    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
     { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
     { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
     { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
@@ -18,136 +17,47 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.4.2",
-    "beautifulsoup4==4.12.3",
-    "google-search-results>=2.4.1,<3.0.0",
-    "google-api-python-client==2.154.0",
-    "huggingface-hub[inference]>=0.23.2,<1.0.0",
-    "networkx==3.4.2",
-    "fake-useragent==1.5.1",
-    "pyarrow==19.0.0",
-    "wikipedia==1.4.0",
-    "qdrant-client==1.9.2",
-    "weaviate-client==4.10.2",
-    "faiss-cpu==1.9.0.post1",
-    "types-cachetools==5.5.0.20240820",
-    "pymongo==4.10.1",
-    "supabase==2.6.0",
-    "certifi>=2023.11.17,<2025.0.0",
-    "certifi==2024.8.30",
-    'fastavro==1.9.7; python_version < "3.13"',
-    'fastavro>=1.9.8; python_version >= "3.13"',
-    "redis==5.2.1",
-    "metaphor-python==0.1.23",
-    'pywin32==307; sys_platform == "win32"',
-    "langfuse==2.53.9",
-    "metal_sdk==2.5.1",
-    "MarkupSafe==3.0.2",
-    "boto3==1.34.162",
-    "numexpr==2.10.2",
-    "qianfan==0.3.5",
-    "pgvector==0.3.6",
-    "langchain==0.3.21",
-    "elasticsearch==8.16.0",
-    "pytube==15.0.0",
-    "dspy-ai==2.5.41",
-    "assemblyai==0.35.1",
-    "litellm==1.60.2",
-    "chromadb==0.5.23",
-    "zep-python==2.0.2",
-    "youtube-transcript-api==0.6.3",
-    "Markdown==3.7",
-    "upstash-vector==0.6.0",
-    "GitPython==3.1.43",
-    "kubernetes==31.0.0",
-    "json_repair==0.30.3",
-    "langwatch==0.1.16",
-    "langsmith>=0.3.42,<1.0.0",
-    "yfinance==0.2.50",
-    "wolframalpha==5.1.3",
-    "astra-assistants[tools]~=2.2.12",
-    "composio-langchain==0.7.15",
-    "composio-core==0.7.15",
-    "spider-client==0.1.24",
-    "nltk==3.9.1",
-    "lark==1.2.2",
-    "jq==1.8.0",
-    "pydantic-settings>=2.2.0,<3.0.0",
-    "ragstack-ai-knowledge-store==0.2.1",
-    "duckduckgo_search==7.2.1",
-    "opensearch-py==2.8.0",
-    "langchain-google-genai==2.0.6",
-    "langchain-cohere==0.3.3",
-    "langchain-anthropic==0.3.0",
-    "langchain-astradb~=0.6.0",
-    "langchain-openai==0.2.12",
-    "langchain-google-vertexai==2.0.7",
-    "langchain-groq==0.2.1",
-    "langchain-pinecone==0.2.2",
-    "langchain-mistralai==0.2.3",
-    "langchain-chroma==0.1.4",
-    "langchain-aws==0.2.7",
-    "langchain-unstructured==0.1.5",
-    "langchain-milvus==0.1.7",
-    "langchain-mongodb==0.2.0",
-    "langchain-nvidia-ai-endpoints==0.3.8",
-    "langchain-google-calendar-tools==0.0.1",
-    "langchain-google-community==2.0.3",
-    "langchain-elasticsearch==0.3.0",
-    "langchain-ollama==0.2.1",
-    "langchain-sambanova==0.1.0",
-    "langchain-community~=0.3.20",
-    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
-    "atlassian-python-api==3.41.16",
-    "mem0ai==0.1.34",
-    "needle-python>=0.4.0",
-    "aiofile>=3.9.0,<4.0.0",
-    "sseclient-py==1.8.0",
-    "arize-phoenix-otel>=0.6.1",
-    "openinference-instrumentation-langchain>=0.1.29",
-    "crewai==0.102.0",
-    "mcp>=0.9.1",
-    "uv>=0.5.7",
-    "webrtcvad>=2.0.10",
-    "scipy>=1.14.1",
-    "ag2>=0.1.0",
-    "scrapegraph-py>=1.12.0",
-    "pydantic-ai>=0.0.19",
-    "smolagents>=1.8.0",
-    "apify-client>=1.8.1",
-    "pylint>=3.3.4",
-    "ruff>=0.9.7",
-    "langchain-graph-retriever==0.6.1",
-    "graph-retriever==0.6.1",
-    "ibm-watsonx-ai>=1.3.1",
-    "langchain-ibm>=0.3.8",
-    "opik>=1.6.3",
-    "openai>=1.68.2",
-    'gassist>=0.0.1; sys_platform == "win32"',
-    "twelvelabs>=0.4.7",
+    "langflow-base~=1.12.0",
+    # langflow-extensions:bundle-deps-start
+    # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
+    # curated lfx-* package, never exact pins -- exact pins in reusable library
+    # metadata create resolver conflicts for downstreams that depend on a
+    # different version. Exact pins for reproducibility live in uv.lock and the
+    # release-build manifests. Partner bundles follow their own 0.1.x cadence
+    # (bound <1.0.0). The lfx-bundles metapackage stays opt-in and is not a
+    # default langflow dependency.
+    # The cross-bundle CI matrix verifies these ranges resolve together across
+    # the supported lfx axis.
+    "lfx-ibm>=0.2.5,<1.0.0",
+    "lfx-docling>=0.1.7,<1.0.0",
+    "lfx-datastax>=0.1.9,<1.0.0",
+    "lfx-toolguard>=0.1.2,<1.0.0",
+    "lfx-openai>=0.1.5,<1.0.0",
+    "lfx-anthropic>=0.1.7,<1.0.0",
+    "lfx-azure>=0.1.0,<1.0.0",
+    "lfx-ollama>=0.1.1,<1.0.0",
+    "lfx-amazon>=0.1.7,<1.0.0",
+    "lfx-cohere>=0.1.4,<1.0.0",
+    "lfx-oracle>=0.1.4,<1.0.0",
+    "lfx-vllm>=0.1.3,<1.0.0",
+    "lfx-openai-compatible>=0.1.5,<1.0.0",
+    "lfx-google>=0.2.4,<1.0.0",
+    # langflow-extensions:bundle-deps-end
 ]
+
 
 [dependency-groups]
 dev = [
+    "celery>=5.6,<5.7",
     "pytest-instafail>=0.5.0",
-    "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
-    "ruff>=0.9.7,<0.10",
-    "httpx>=0.27.0",
-    "pytest>=8.2.0",
-    "types-requests>=2.32.0",
-    "requests>=2.32.0",
+    "ruff~=0.13.1",
+    "httpx>=0.28.1",
+    "pytest>=9.0.3",
+    "requests>=2.33.0",
     "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
-    "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-asyncio>=0.23.0",
@@ -157,30 +67,101 @@ dev = [
     "dictdiffer>=0.9.0",
     "pytest-split>=0.9.0",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
     "packaging>=24.1,<25.0",
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
-    "pytest-codspeed>=3.0.0",
     "blockbuster>=1.5.20,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
-    "locust>=2.32.9",
+    "locust~=2.43.4",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19",
-    "elevenlabs>=1.52.0",
+    'elevenlabs==1.58.1; python_version == "3.12"',
+    'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
+    "pyyaml>=6.0.2",
+    "pyleak>=0.1.14",
+    "mcp-server-fetch>=2025.1.17",
+    "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "onnxruntime>=1.26; python_version>='3.14'",
+    "fakeredis>=2.0.0",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
+lfx = { workspace = true }
+langflow-sdk = { workspace = true }
+# langflow-extensions:bundle-sources-start
+lfx-duckduckgo = { workspace = true }
+lfx-arxiv = { workspace = true }
+lfx-ibm = { workspace = true }
+lfx-docling = { workspace = true }
+lfx-bundles = { workspace = true }
+lfx-datastax = { workspace = true }
+lfx-toolguard = { workspace = true }
+lfx-openai = { workspace = true }
+lfx-anthropic = { workspace = true }
+lfx-azure = { workspace = true }
+lfx-ollama = { workspace = true }
+lfx-amazon = { workspace = true }
+lfx-cohere = { workspace = true }
+lfx-oracle = { workspace = true }
+lfx-firecrawl = { workspace = true }
+lfx-nextplaid = { workspace = true }
+lfx-paddle = { workspace = true }
+lfx-vllm = { workspace = true }
+lfx-empiriolabs = { workspace = true }
+lfx-openai-compatible = { workspace = true }
+lfx-exa = { workspace = true }
+lfx-valkey = { workspace = true }
+lfx-google = { workspace = true }
+lfx-confluent = { workspace = true }
+# langflow-extensions:bundle-sources-end
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
 
 [tool.uv.workspace]
-members = ["src/backend/base", "."]
+members = [
+    "src/backend/base",
+    ".",
+    "src/lfx",
+    "src/langflow-stepflow",
+    "src/sdk",
+    # langflow-extensions:bundle-members-start
+    "src/bundles/duckduckgo",
+    "src/bundles/arxiv",
+    "src/bundles/ibm",
+    "src/bundles/docling",
+    "src/bundles/lfx-bundles",
+    "src/bundles/datastax",
+    "src/bundles/toolguard",
+    "src/bundles/openai",
+    "src/bundles/anthropic",
+    "src/bundles/azure",
+    "src/bundles/ollama",
+    "src/bundles/amazon",
+    "src/bundles/cohere",
+    "src/bundles/oracle",
+    "src/bundles/firecrawl",
+    "src/bundles/nextplaid",
+    "src/bundles/paddle",
+    "src/bundles/vllm",
+    "src/bundles/empiriolabs",
+    "src/bundles/openai-compatible",
+    "src/bundles/exa",
+    "src/bundles/valkey",
+    "src/bundles/google",
+    "src/bundles/confluent",
+    # langflow-extensions:bundle-members-end
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
@@ -190,10 +171,44 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
-deploy = [
-    "celery[redis]>=5.3.6",
-    "flower>=2.0.0"
+bundles = [
+    "lfx-bundles[all-no-torch]>=1.1.34,<2.0",
+    "lfx-arxiv>=0.1.5,<1.0.0",
+    "lfx-confluent>=0.1.0,<1.0.0",
+    "lfx-duckduckgo>=0.1.5,<1.0.0",
+    "lfx-empiriolabs>=0.1.3,<1.0.0",
+    "lfx-exa>=0.1.3,<1.0.0",
+    "lfx-firecrawl>=0.1.3,<1.0.0",
+    "lfx-nextplaid>=0.1.6,<1.0.0",
+    "lfx-paddle>=0.1.5,<1.0.0",
+    "lfx-valkey>=0.1.5,<1.0.0",
 ]
+
+docling = [
+    "lfx-docling[local]>=0.1.7,<1.0.0",
+]
+
+docling-chunking = [
+    "lfx-docling[chunking]>=0.1.7,<1.0.0",
+]
+
+docling-image-description = [
+    "lfx-docling[image-description]>=0.1.7,<1.0.0",
+]
+
+audio = [
+    "langflow-base[audio]~=1.12.0",
+]
+
+# Opt-in microVM sandbox backend for code-execution components
+# (LANGFLOW_SANDBOX_BACKEND=exec-sandbox, issue #12029). Requires Python >= 3.12
+# and QEMU 8+ on the host; on older Pythons the extra installs nothing and the
+# backend fails closed at use time.
+sandbox = [
+    "langflow-base[sandbox]~=1.12.0",
+]
+
+
 couchbase = [
     "couchbase>=4.2.1"
 ]
@@ -201,7 +216,6 @@ cassio = [
     "cassio>=0.1.7"
 ]
 local = [
-    "llama-cpp-python~=0.2.0",
     "sentence-transformers>=2.3.1",
     "ctransformers>=0.2.10"
 ]
@@ -210,18 +224,57 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    "nv-ingest-api==2025.4.22.dev20250422",
-    "nv-ingest-client==2025.4.22.dev20250422",
+    "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+    "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
-
+    "langflow-base[postgresql]~=1.12.0",
 ]
 
-[project.scripts]
-langflow = "langflow.__main__:main"
+pgvector = [
+    "langflow-base[pgvector]~=1.12.0",
+]
+
+opensearch = [
+    "langflow-base[opensearch]~=1.12.0",
+]
+
+[tool.uv]
+constraint-dependencies = [
+    # Security floors for every workspace dependency path, including optional bundles.
+    "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
+]
+override-dependencies = [
+    # temporary force a newer python-pptx
+    "python-pptx>=1.0.2",
+    # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
+    "z3-solver<4.15.7",
+    # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
+    "orjson>=3.11.6",
+    "gunicorn>=25.3.0",
+    "pypdf>=6.16.1,<7.0.0",  # Force a patched pypdf 6.x release
+    "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
+    "nltk>=3.10.3",
+    "Markdown>=3.8.0",
+    "dynaconf>=3.2.13",
+    "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
+    "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
+    # Keep the Python 3.14-compatible floor without overriding Opik's Python 3.10 cap.
+    "litellm>=1.93.0,<1.97; python_version < '3.11'",
+    "litellm>=1.93.0,<2.0.0; python_version >= '3.11'",
+    # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
+    # cryptography below 49; 0.5.1 is the newest release without that cap.
+    "langchain-litellm==0.5.1",
+    # Transitive dependency CVE fixes
+    "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
+    "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
+    "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
+    "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
+    "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
+    "h2>=4.4.1",  # CVE-2026-71554
+]
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
@@ -230,27 +283,60 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
-timeout = 120
-timeout_method = "signal"
+# DIAGNOSTIC (temporary): lowered from 150 and switched from "signal" to "thread" to identify the
+# nightly Backend Unit Tests Group 3 stall. Group 3 app-boot ("client" fixture) tests hang ~127s on
+# a firewalled outbound connect (Linux tcp_syn_retries); at timeout=150 that stall finished just
+# under the cap, so the per-test timeout never fired and the group silently accumulated until the
+# 50-min step wall. A 90s cap fires below the ~127s stall, and timeout_method="thread" dumps ALL
+# thread stacks (faulthandler) — naming the exact blocking call even when it is a leaked background
+# task. Revert to timeout=150 / timeout_method="signal" once the stall is identified and bounded.
+timeout = 90
+timeout_method = "thread"
 minversion = "6.0"
-testpaths = ["tests", "integration"]
+testpaths = ["src/backend/tests", "src/lfx/tests", "src/bundles/*/tests"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
+]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required"]
+markers = [
+    "async_test",
+    "api_key_required",
+    "no_blockbuster",
+    "benchmark",
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow-running tests",
+    "security: Security regression tests (IDOR, auth, access control)",
+    "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)"
+]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-p no:benchmark"
 
 [tool.coverage.run]
+# Canonical backend coverage configuration. Keep this static and independent
+# of frontend bundle presentation so local and CI reports measure the same code.
 command_line = """
     -m pytest --ignore=tests/integration
     --cov --cov-report=term --cov-report=html
     --instafail -ra -n auto -m "not api_key_required"
 """
 source = ["src/backend/base/langflow/"]
-omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/*test*",
+    "*/alembic/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+    "*/.*",
+    "*/__init__.py",
+    "*/components/deactivated/*",
+]
 
 
 [tool.coverage.report]
@@ -265,10 +351,29 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*"]
+target-version = "py310"
+exclude = [
+    "src/backend/base/langflow/alembic/*",
+    "src/frontend/tests/assets/*",
+    "src/lfx/src/lfx/_assets/component_index.json",
+    "docs/**/API-Reference/python-examples/**",
+]
 line-length = 120
 
 [tool.ruff.lint]
+flake8-annotations.mypy-init-return = true
+flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "typer.Argument",
+    "typer.Option",
+]
+flake8-type-checking.runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "typing.TypedDict",  # Needed by fastapi
+    "typing_extensions.TypedDict",  # Needed by fastapi
+]
 pydocstyle.convention = "google"
 select = ["ALL"]
 ignore = [
@@ -284,37 +389,232 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
+    "D10", # Missing docstrings
+    "PLW1641", # Object does not implement `__hash__` method (mutable objects shouldn't be hashable)
     # Rules that are TODOs
-    "ANN",
+    "ANN"
 ]
 
 # Preview rules that are not yet activated
 external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/*" = [
-    "D1",
-    "INP",
-    "T201",
+"scripts/*" = ["D1", "INP", "T201"]
+"src/backend/tests/stress/*" = [
+    "D1",     # Docstrings: this is a manual CLI tool, not a test target
+    "INP001", # Stress tests live outside the unit test package
+    "S101",   # Asserts ok in stress harness
+    "S311",   # Standard PRNG is fine for stress payload jitter
+    "T201",   # Print statements: this is a CLI script
+]
+"scripts/gp/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
+"scripts/ci/test_*.py" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
+"src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
+"src/backend/base/langflow/custom/__init__.py" = [
+    "I001",  # Import order affects initialization - must import custom module first
+]
+"src/backend/base/langflow/api/v1/*" = [
+    "TCH",  # FastAPI needs to evaluate types at runtime
+]
+"src/backend/base/langflow/api/v2/*" = [
+    "TCH",  # FastAPI needs to evaluate types at runtime
+]
+"src/backend/base/langflow/__main__.py" = [
+    "B008",  # Typer CLI requires function calls in defaults
+]
+"src/backend/base/langflow/services/cache/*" = [
+    "S301",  # Pickle usage is intentional for caching
+]
+"src/backend/base/langflow/services/tracing/*" = [
+    "SLF001",  # Third-party library private member access (langwatch, opik)
+]
+"src/lfx/src/lfx/base/curl/parse.py" = [
+    "S105",  # False positive: 'token' variable name, not a password
+]
+"src/lfx/src/lfx/services/auth/service.py" = [
+    "ARG002",  # No-op impl: unused args required by interface
+    "EM101",  # NotImplementedError messages as literals
+    "TC003",  # Type-only imports used in signatures
+]
+"src/lfx/src/lfx/base/mcp/util.py" = [
+    "SLF001",  # MCP library private member access
+]
+"src/lfx/src/lfx/cli/common.py" = [
+    "S104",  # Intentional binding to all interfaces for server
+    "S105",  # False positive: GITHUB_TOKEN_ENV is an env var name
+]
+"src/lfx/src/lfx/cli/upgrade.py" = [
+    "TC003",  # Path is used at runtime, not just in type hints
+]
+"src/lfx/src/lfx/components/__init__.py" = [
+    "SLF001",  # Accessing _dynamic_imports from modules
+]
+"src/lfx/src/lfx/components/data/save_file.py" = [
+    "SLF001",  # Google API client private member access
+]
+"src/lfx/src/lfx/components/google/google_generative_ai_embeddings.py" = [
+    "SLF001",  # Google AI library private member access
+]
+"src/lfx/src/lfx/components/knowledge_bases/retrieval.py" = [
+    "SLF001",  # Chroma client private member access
+]
+"src/bundles/lfx-bundles/src/lfx_bundles/mongodb/mongodb_atlas.py" = [
+    "SLF001",  # MongoDB collection private member access
+]
+"src/lfx/src/lfx/components/tools/{python_code_structured_tool.py,searxng.py}" = [
+    "S102",  # Use of exec/eval for dynamic code execution
+    "SLF001",  # Component internal member access
+]
+"src/lfx/src/lfx/components/vectorstores/astradb.py" = [
+    "S110",  # Try-except-pass for optional metadata
+]
+"src/lfx/src/lfx/custom/{code_parser/code_parser.py,validate.py}" = [
+    "S102",  # Use of exec for code validation
+]
+"src/lfx/src/lfx/custom/custom_component/component.py" = [
+    "SLF001",  # Component internal state management
+]
+"src/lfx/src/lfx/custom/directory_reader/directory_reader.py" = [
+    "SLF001",  # Component introspection
+]
+"src/lfx/src/lfx/custom/utils.py" = [
+    "SLF001",  # Component code analysis
+]
+"src/lfx/src/lfx/graph/graph/ascii.py" = [
+    "SLF001",  # Grandalf library private member access
+]
+"src/lfx/src/lfx/inputs/input_mixin.py" = [
+    "S105",  # False positive: PASSWORD is a type constant
+]
+"src/lfx/src/lfx/__main__.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_setup_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_prewarm_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_authoring_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_running_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_remote_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/backend/base/langflow/api/utils/*" = [
+    "TCH",  # Imports are used at runtime (FastAPI deps, SQLAlchemy queries, model constructors)
+]
+"src/sdk/src/langflow_sdk/_http.py" = [
+    "TCH",  # httpx is used at runtime (response object methods)
+]
+"src/sdk/src/langflow_sdk/environments.py" = [
+    "TRY003", # Contextual error messages are necessary here
+    "EM102",  # f-string messages assigned before raise where possible
+]
+"src/sdk/tests/*" = [
+    "S101",   # assert is the standard pytest assertion style
+    "INP001", # Not a package namespace issue in tests
+    "TC003",  # pytest fixture type hints are evaluated at runtime
+]
+"src/lfx/src/lfx/schema/table.py" = [
+    "S105",  # False positive: PASSWORD is a formatter type
+]
+"src/lfx/src/lfx/services/mcp_composer/service.py" = [
+    "S104",  # Intentional binding to all interfaces for server
+    "S110",  # Try-except-pass for optional error logging
 ]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",
     "S101",
     "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+]
+"src/backend/base/langflow/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+]
+"src/lfx/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+    "S104",    # Binding to all interfaces (test servers)
+    "S108",    # Insecure temp file usage (safe in tests)
+]
+"src/bundles/*/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+    "S104",    # Binding to all interfaces (test servers)
+    "S108",    # Insecure temp file usage (safe in tests)
+    "INP001",  # Bundle test dirs are not import packages
+]
+"src/backend/tests/locust/*" = [
+    "D1",      # Missing docstrings (CLI tools don't need full docstrings)
+    "T201",    # Print statements (needed for CLI output)
+    "S603",    # Subprocess calls (needed for running commands)
+    "S607",    # Starting process with partial executable path
+    "S104",    # Binding to all interfaces (needed for Langflow server)
+    "S105",    # Hardcoded passwords (test credentials)
+    "FBT001",  # Boolean-typed positional arguments (common in CLI)
+    "FBT002",  # Boolean default arguments (common in CLI tools)
+    "TRY002",  # Custom exceptions (generic exceptions OK for CLI)
+    "TRY003",  # Long exception messages (descriptive errors for users)
+    "TRY300",  # Consider moving to else block (return patterns)
+    "EM101",   # String literals in exceptions (user-facing messages)
+    "EM102",   # F-string literals in exceptions (user-facing messages)
+    "EXE001",  # Shebang without executable (may be run via python)
+    "D415",    # First line punctuation (CLI docstrings)
+    "F401",    # Unused imports (imports for availability checking)
+    "PTH123",  # Use Path.open (open() is fine for simple cases)
+    "PTH107",  # Use Path.unlink (os.remove is fine for simple cases)
+    "PTH207",  # Use Path.glob (glob.glob is fine for simple cases)
+    "B007",    # Unused loop variables (tuple unpacking)
+    "PLW0602", # Global variable usage (needed for locust state)
+    "PLW0603", # Global variable updates (needed for locust state)
+    "DTZ005",  # Datetime without timezone (local time is fine for logs)
+    "G004",    # Logging f-strings (detailed error logging)
+    "SIM102",  # Nested if statements (readability over optimization)
+    "E501",    # Line too long (some CLI commands are naturally long)
 ]
 
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]
-
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-follow_imports = "skip"
-disable_error_code = ["type-var"]
-namespace_packages = true
-mypy_path = "langflow"
-ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]

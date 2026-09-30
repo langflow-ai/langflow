@@ -1,0 +1,152 @@
+from pathlib import Path, PurePath, PureWindowsPath
+
+from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
+from lfx.custom.custom_component.component import Component
+from lfx.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
+from lfx.services.deps import get_settings_service
+from lfx.template.field.base import Output
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+
+
+class DirectoryComponent(Component):
+    display_name = "Directory"
+    description = "Recursively load files from a directory."
+    documentation: str = "https://docs.langflow.org/directory"
+    icon = "folder"
+    name = "Directory"
+    legacy = True
+    replacement = ["data.File"]
+
+    inputs = [
+        MessageTextInput(
+            name="path",
+            display_name="Path",
+            info="Path to the directory to load files from. Defaults to current directory ('.')",
+            value=".",
+            tool_mode=True,
+        ),
+        MultiselectInput(
+            name="types",
+            display_name="File Types",
+            info="File types to load. Select one or more types or leave empty to load all supported types.",
+            options=TEXT_FILE_TYPES,
+            value=[],
+        ),
+        IntInput(
+            name="depth",
+            display_name="Depth",
+            info="Depth to search for files.",
+            value=0,
+        ),
+        IntInput(
+            name="max_concurrency",
+            display_name="Max Concurrency",
+            advanced=True,
+            info="Maximum concurrency for loading files.",
+            value=2,
+        ),
+        BoolInput(
+            name="load_hidden",
+            display_name="Load Hidden",
+            advanced=True,
+            info="If true, hidden files will be loaded.",
+        ),
+        BoolInput(
+            name="recursive",
+            display_name="Recursive",
+            advanced=True,
+            info="If true, the search will be recursive.",
+        ),
+        BoolInput(
+            name="silent_errors",
+            display_name="Silent Errors",
+            advanced=True,
+            info="If true, errors will not raise an exception.",
+        ),
+        BoolInput(
+            name="use_multithreading",
+            display_name="Use Multithreading",
+            advanced=True,
+            info="If true, multithreading will be used.",
+        ),
+    ]
+
+    outputs = [
+        Output(display_name="Loaded Files", name="dataframe", method="as_dataframe"),
+    ]
+
+    @staticmethod
+    def _has_parent_reference(path: str) -> bool:
+        path_parts = (*PurePath(path).parts, *PureWindowsPath(path).parts)
+        return any(part == ".." for part in path_parts)
+
+    def _allowed_roots(self) -> list[Path]:
+        roots = {Path.cwd().resolve()}
+        configured_roots = getattr(get_settings_service().settings, "directory_component_allowed_roots", []) or []
+        for root in configured_roots:
+            if root:
+                roots.add(Path(root).expanduser().resolve())
+        return list(roots)
+
+    def _resolve_directory_path(self, path: str) -> str:
+        path = str(path or ".").strip()
+        # Reject null bytes and parent references outright. A drive-absolute or UNC
+        # path (e.g. ``D:\\shared\\docs``) is NOT blanket-rejected here: canonicalization
+        # plus the ``_allowed_roots()`` containment check below decides whether it is
+        # allowed, so operator-configured roots on another drive remain reachable.
+        if "\x00" in path or self._has_parent_reference(path):
+            msg = "Directory path escapes the allowed root."
+            raise ValueError(msg)
+
+        resolved_path = Path(self.resolve_path(path)).expanduser().resolve()
+        if not any(resolved_path == root or resolved_path.is_relative_to(root) for root in self._allowed_roots()):
+            msg = "Directory path escapes the allowed root."
+            raise ValueError(msg)
+        return str(resolved_path)
+
+    def load_directory(self) -> list[Data]:
+        path = self.path
+        types = self.types
+        depth = self.depth
+        max_concurrency = self.max_concurrency
+        load_hidden = self.load_hidden
+        recursive = self.recursive
+        silent_errors = self.silent_errors
+        use_multithreading = self.use_multithreading
+
+        resolved_path = self._resolve_directory_path(path)
+
+        # Security: confine directory reads to the storage dir in restricted (multi-tenant)
+        # mode so a tenant cannot recursively read arbitrary server directories.
+        resolved_path = str(enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self)))
+
+        # If no types are specified, use all supported types
+        if not types:
+            types = TEXT_FILE_TYPES
+
+        # Check if all specified types are valid
+        invalid_types = [t for t in types if t not in TEXT_FILE_TYPES]
+        if invalid_types:
+            msg = f"Invalid file types specified: {invalid_types}. Valid types are: {TEXT_FILE_TYPES}"
+            raise ValueError(msg)
+
+        valid_types = types
+
+        file_paths = retrieve_file_paths(
+            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=valid_types
+        )
+
+        loaded_data = []
+        if use_multithreading:
+            loaded_data = parallel_load_data(file_paths, silent_errors=silent_errors, max_concurrency=max_concurrency)
+        else:
+            loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
+
+        valid_data = [x for x in loaded_data if x is not None and isinstance(x, Data)]
+        self.status = valid_data
+        return valid_data
+
+    def as_dataframe(self) -> DataFrame:
+        return DataFrame(self.load_directory())

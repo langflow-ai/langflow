@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import sys
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
-
-from loguru import logger
+from typing import TYPE_CHECKING, Union
 
 from langflow.services.schema import ServiceType
 
@@ -15,17 +14,25 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
-    from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
-    from langflow.services.socket.service import SocketIOService
     from langflow.services.state.service import StateService
-    from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
-    from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
+
+# These imports MUST be outside TYPE_CHECKING because FastAPI uses eval_str=True
+# to evaluate type annotations, and these types are used as return types for
+# dependency functions that FastAPI evaluates at module load time.
+from lfx.services.auth.base import BaseAuthService  # noqa: TC002
+from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
+from lfx.services.catalog_policy.base import BaseCatalogPolicyService  # noqa: TC002
+from lfx.services.policy_bundle.base import BasePolicyBundleService  # noqa: TC002
+from lfx.services.settings.service import SettingsService  # noqa: TC002
+
+from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
+from langflow.services.storage.service import StorageService  # noqa: TC001
+from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -40,12 +47,16 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from langflow.services.manager import service_manager
+    from lfx.services.manager import get_service_manager
 
-    if not service_manager.factories:
+    service_manager = get_service_manager()
+
+    if not service_manager.are_factories_registered():
         # ! This is a workaround to ensure that the service manager is initialized
         # ! Not optimal, but it works for now
-        service_manager.register_factories()
+        from langflow.services.manager import ServiceManager
+
+        service_manager.register_factories(ServiceManager.get_factories())
     return service_manager.get(service_type, default)
 
 
@@ -82,15 +93,6 @@ def get_state_service() -> StateService:
     return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())
 
 
-def get_socket_service() -> SocketIOService:
-    """Get the SocketIOService instance from the service manager.
-
-    Returns:
-        SocketIOService: The SocketIOService instance.
-    """
-    return get_service(ServiceType.SOCKETIO_SERVICE)  # type: ignore[attr-defined]
-
-
 def get_storage_service() -> StorageService:
     """Retrieves the storage service instance.
 
@@ -114,6 +116,17 @@ def get_variable_service() -> VariableService:
     return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
+def is_settings_service_initialized() -> bool:
+    """Check if the SettingsService is already initialized without triggering initialization.
+
+    Returns:
+        bool: True if the SettingsService is already initialized, False otherwise.
+    """
+    from lfx.services.manager import get_service_manager
+
+    return ServiceType.SETTINGS_SERVICE in get_service_manager().services
+
+
 def get_settings_service() -> SettingsService:
     """Retrieves the SettingsService instance.
 
@@ -125,7 +138,7 @@ def get_settings_service() -> SettingsService:
     Raises:
         ValueError: If the service cannot be retrieved or initialized.
     """
-    from langflow.services.settings.factory import SettingsServiceFactory
+    from lfx.services.settings.factory import SettingsServiceFactory
 
     return get_service(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())
 
@@ -143,14 +156,8 @@ def get_db_service() -> DatabaseService:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Retrieves an async session from the database service.
-
-    Yields:
-        AsyncSession: An async session object.
-
-    """
-    async with get_db_service().with_session() as session:
-        yield session
+    msg = "get_session is deprecated, use session_scope instead"
+    raise NotImplementedError(msg)
 
 
 @asynccontextmanager
@@ -168,18 +175,13 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
 
     """
-    db_service = get_db_service()
-    async with db_service.with_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            logger.exception("An error occurred during the session scope.")
-            await session.rollback()
-            raise
+    from lfx.services.deps import session_scope as lfx_session_scope
+
+    async with lfx_session_scope() as session:
+        yield session
 
 
-def get_cache_service() -> CacheService | AsyncBaseCacheService:
+def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
     """Retrieves the cache service from the service manager.
 
     Returns:
@@ -247,3 +249,104 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def _is_lfx_no_op_auth_service(service: object) -> bool:
+    """Report whether ``service`` is LFX's no-op auth stub.
+
+    Resolved through ``sys.modules`` rather than a direct import so that merely asking the
+    question cannot import ``lfx.services.auth.service`` -- that import is what registers
+    the stub for the ``auth_service`` slot in the first place. If the module was never
+    imported the stub cannot be the resolved service anyway.
+    """
+    lfx_auth_module = sys.modules.get("lfx.services.auth.service")
+    return lfx_auth_module is not None and isinstance(service, lfx_auth_module.AuthService)
+
+
+def get_auth_service() -> BaseAuthService:
+    """Retrieve the authentication service.
+
+    LFX's no-op ``AuthService`` claims the ``auth_service`` slot at import time via
+    ``@register_service(..., override=True)``, and a registered service class always wins
+    over the factory passed here as a fallback. That stub must never be the resolved
+    service in a Langflow process: it raises ``NotImplementedError`` for user/token
+    operations and answers API-key checks with ``None``. ``register_all_service_factories()``
+    overrides it during startup, so anything touching auth before (or without) that call
+    would otherwise get the stub -- swap it out for Langflow's implementation here.
+
+    A plugin-provided auth service (e.g. SSO, registered through ``lfx.toml``) is a
+    different class and is left untouched.
+    """
+    from langflow.services.auth.factory import AuthServiceFactory
+
+    service = get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+    if not _is_lfx_no_op_auth_service(service):
+        return service
+
+    from lfx.services.manager import get_service_manager
+
+    from langflow.services.auth.service import AuthService
+
+    service_manager = get_service_manager()
+    service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
+    service_manager.update(ServiceType.AUTH_SERVICE)
+    return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+
+
+def get_authorization_service() -> BaseAuthorizationService:
+    """Retrieve the authorization service."""
+    from langflow.services.authorization.factory import AuthorizationServiceFactory
+
+    return get_service(ServiceType.AUTHORIZATION_SERVICE, AuthorizationServiceFactory())
+
+
+def get_catalog_policy_service() -> BaseCatalogPolicyService:
+    """Retrieve catalog policy through LFX's validated fail-open dependency."""
+    from lfx.services.deps import get_catalog_policy_service as get_lfx_catalog_policy_service
+
+    return get_lfx_catalog_policy_service()
+
+
+def get_policy_bundle_service() -> BasePolicyBundleService:
+    """Retrieve the shared process-local policy bundle coordinator."""
+    from lfx.services.deps import get_policy_bundle_service as get_lfx_policy_bundle_service
+
+    return get_lfx_policy_bundle_service()
+
+
+def get_job_service():
+    """Retrieves the JobService instance from the service manager.
+
+    Returns:
+        JobService: The JobService instance.
+    """
+    from langflow.services.jobs.factory import JobServiceFactory
+
+    return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())
+
+
+def get_flow_events_service():
+    from langflow.services.flow_events.factory import FlowEventsServiceFactory
+
+    return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
+
+
+def get_memory_base_service():
+    """Retrieves the MemoryBaseService instance from the service manager."""
+    from langflow.services.memory_base.factory import MemoryBaseServiceFactory
+
+    return get_service(ServiceType.MEMORY_BASE_SERVICE, MemoryBaseServiceFactory())
+
+
+def get_background_execution_service():
+    """Retrieves the BackgroundExecutionService instance from the service manager."""
+    from langflow.services.background_execution.factory import BackgroundExecutionServiceFactory
+
+    return get_service(ServiceType.BACKGROUND_EXECUTION_SERVICE, BackgroundExecutionServiceFactory())
+
+
+def get_telemetry_writer_service():
+    """Return the TelemetryWriterService instance (always registered when langflow is installed)."""
+    from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
+
+    return get_service(ServiceType.TELEMETRY_WRITER_SERVICE, TelemetryWriterServiceFactory())

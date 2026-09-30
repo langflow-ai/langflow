@@ -1,111 +1,220 @@
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
-import { Category } from "@/types/templates/types";
-import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { newFlowModalPropsType } from "../../types/components";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import type { Category, NavItem } from "@/types/templates/types";
+import { cn } from "@/utils/utils";
+import type { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import GetStartedComponent from "./components/GetStartedComponent";
-import TemplateContentComponent from "./components/TemplateContentComponent";
 import { Nav } from "./components/navComponent";
+import TemplateContentComponent from "./components/TemplateContentComponent";
+import {
+  ALL_TEMPLATES_TAB,
+  availableTemplateTabs,
+} from "./utils/template-availability";
 
 export default function TemplatesModal({
   open,
   setOpen,
 }: newFlowModalPropsType): JSX.Element {
+  const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState("get-started");
+  const [loading, setLoading] = useState(false);
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
+  const dismissWelcomeForNavigation = useFlowBuilderWelcomeStore(
+    (state) => state.dismissForNavigation,
+  );
   const { folderId } = useParams();
+  const hideStarterProjects = useUtilityStore(
+    (state) => state.hideStarterProjects,
+  );
+  // AppInitPage holds every route back until the examples fetch settles, so an
+  // empty store here means a policy blocked them, never "still loading".
+  const examples = useFlowsManagerStore((state) => state.examples);
+
+  // A catalog policy can empty any tab, and a tab with nothing behind it is
+  // offered but not selectable rather than opening onto an empty pane.
+  const availableTabs = useMemo(
+    () => availableTemplateTabs(examples),
+    [examples],
+  );
+
+  const handleFlowCreating = (isCreating: boolean) => {
+    setLoading(isCreating);
+  };
+
+  const handleCreateBlankFlow = () => {
+    if (loading) return;
+
+    handleFlowCreating(true);
+    track("New Flow Created", { template: "Blank Flow" });
+
+    addFlow()
+      .then((id) => {
+        // Same tick as the navigate — see ``dismissForNavigation``.
+        dismissWelcomeForNavigation();
+        navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+      })
+      .finally(() => {
+        handleFlowCreating(false);
+      });
+  };
 
   // Define categories and their items
-  const categories: Category[] = [
+  const rawCategories: Category[] = [
     {
-      title: "Templates",
+      title: t("templatesModal.title"),
       items: [
-        { title: "Get started", icon: "SquarePlay", id: "get-started" },
-        { title: "All templates", icon: "LayoutPanelTop", id: "all-templates" },
+        // Hide "Get Started" tab if starter projects are hidden
+        ...(hideStarterProjects
+          ? []
+          : [
+              {
+                title: t("templatesModal.getStarted"),
+                icon: "SquarePlay",
+                id: "get-started",
+              },
+            ]),
+        {
+          title: t("templatesModal.allTemplates"),
+          icon: "LayoutPanelTop",
+          id: "all-templates",
+        },
       ],
     },
     {
-      title: "Use Cases",
+      title: t("templatesModal.useCases"),
       items: [
-        { title: "Assistants", icon: "BotMessageSquare", id: "assistants" },
-        { title: "Classification", icon: "Tags", id: "classification" },
-        { title: "Coding", icon: "TerminalIcon", id: "coding" },
         {
-          title: "Content Generation",
+          title: t("templatesModal.assistants"),
+          icon: "BotMessageSquare",
+          id: "assistants",
+        },
+        {
+          title: t("templatesModal.classification"),
+          icon: "Tags",
+          id: "classification",
+        },
+        {
+          title: t("templatesModal.coding"),
+          icon: "TerminalIcon",
+          id: "coding",
+        },
+        {
+          title: t("templatesModal.contentGeneration"),
           icon: "Newspaper",
           id: "content-generation",
         },
-        { title: "Q&A", icon: "Database", id: "q-a" },
+        { title: t("templatesModal.qa"), icon: "Database", id: "q-a" },
         // { title: "Summarization", icon: "Bot", id: "summarization" },
         // { title: "Web Scraping", icon: "CodeXml", id: "web-scraping" },
       ],
     },
     {
-      title: "Methodology",
+      title: t("templatesModal.methodology"),
       items: [
-        { title: "Prompting", icon: "MessagesSquare", id: "chatbots" },
-        { title: "RAG", icon: "Database", id: "rag" },
-        { title: "Agents", icon: "Bot", id: "agents" },
+        {
+          title: t("templatesModal.prompting"),
+          icon: "MessagesSquare",
+          id: "chatbots",
+        },
+        { title: t("templatesModal.rag"), icon: "Database", id: "rag" },
+        { title: t("templatesModal.agents"), icon: "Bot", id: "agents" },
       ],
     },
   ];
 
+  // A tab a policy emptied is dropped rather than shown inert, and a group
+  // that loses every tab goes with it so no bare heading is left behind.
+  const categories: Category[] = rawCategories
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => availableTabs.has(item.id)),
+    }))
+    .filter((category) => category.items.length > 0);
+  const selectableItems: NavItem[] = categories.flatMap(
+    (category) => category.items,
+  );
+
+  // Land on a tab that has something in it: the chosen one when it survives
+  // the policy, otherwise the first that does. With every tab gone nothing is
+  // selectable, so fall back to the listing whose empty copy speaks for the
+  // whole catalog rather than just the featured cards.
+  const effectiveTab =
+    selectableItems.find((item) => item.id === currentTab)?.id ??
+    selectableItems[0]?.id ??
+    ALL_TEMPLATES_TAB;
+
   return (
-    <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
-      <BaseModal.Content overflowHidden className="flex flex-col p-0">
+    <BaseModal
+      size="templates"
+      open={open}
+      setOpen={setOpen}
+      className="p-0"
+      ariaLabel={t("templatesModal.title")}
+    >
+      <BaseModal.Content className="flex flex-col p-0">
         <div className="flex h-full">
           <SidebarProvider width="15rem" defaultOpen={false}>
             <Nav
               categories={categories}
-              currentTab={currentTab}
+              currentTab={effectiveTab}
               setCurrentTab={setCurrentTab}
             />
-            <main className="flex flex-1 flex-col gap-4 overflow-hidden p-6 md:gap-8">
-              {currentTab === "get-started" ? (
-                <GetStartedComponent />
+            {/* Not a <main>: the page underneath already owns the single
+                main landmark (WCAG 2.4.1). */}
+            <div className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
+              {effectiveTab === "get-started" ? (
+                <GetStartedComponent
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
+                />
               ) : (
                 <TemplateContentComponent
-                  currentTab={currentTab}
+                  currentTab={effectiveTab}
                   categories={categories.flatMap((category) => category.items)}
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
                 />
               )}
               <BaseModal.Footer>
                 <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
                   <div className="flex flex-col items-start justify-center">
-                    <div className="font-semibold">Start from scratch</div>
+                    <div className="font-semibold">
+                      {t("templatesModal.startFromScratch")}
+                    </div>
                     <div className="text-sm text-muted-foreground">
-                      Begin with a fresh flow to build from scratch.
+                      {t("templatesModal.startFromScratchDescription")}
                     </div>
                   </div>
                   <Button
-                    onClick={() => {
-                      addFlow().then((id) => {
-                        navigate(
-                          `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
-                        );
-                      });
-                      track("New Flow Created", { template: "Blank Flow" });
-                    }}
+                    onClick={handleCreateBlankFlow}
                     size="sm"
                     data-testid="blank-flow"
-                    className="shrink-0"
+                    className={cn(
+                      "shrink-0",
+                      loading ? "cursor-default opacity-80" : "cursor-pointer",
+                    )}
                   >
                     <ForwardedIconComponent
                       name="Plus"
                       className="h-4 w-4 shrink-0"
                     />
-                    Blank Flow
+                    {t("templatesModal.blankFlow")}
                   </Button>
                 </div>
               </BaseModal.Footer>
-            </main>
+            </div>
           </SidebarProvider>
         </div>
       </BaseModal.Content>

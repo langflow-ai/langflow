@@ -1,7 +1,7 @@
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useFlowStore from "@/stores/flowStore";
-import { FlowType } from "@/types/flow";
+import type { FlowType } from "@/types/flow";
 import { processDataFromFlow } from "@/utils/reactflowUtils";
 import useAddFlow from "./use-add-flow";
 
@@ -54,7 +54,7 @@ const useUploadFlow = () => {
     position?: { x: number; y: number };
   }): Promise<void> => {
     try {
-      let flows = await getFlowsToUpload({ files });
+      const flows = await getFlowsToUpload({ files });
       for (const flow of flows) {
         await processDataFromFlow(flow);
       }

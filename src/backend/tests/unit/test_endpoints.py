@@ -2,14 +2,36 @@ import asyncio
 import json
 from uuid import UUID, uuid4
 
+import orjson
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.services.database.models.flow.model import FlowCreate
 from langflow.services.deps import get_settings_service
+from lfx.custom.directory_reader.directory_reader import DirectoryReader
+from lfx.services.settings.base import BASE_COMPONENTS_PATH
+
+
+@pytest.fixture(autouse=True)
+def allow_custom_components_by_default(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "true")
 
 
 async def run_post(client, flow_id, headers, post_data):
+    """Sends a POST request to process a flow and returns the JSON response.
+
+    Args:
+        client: The HTTP client to use for making requests.
+        flow_id: The identifier of the flow to process.
+        headers: The HTTP headers to include in the request.
+        post_data: The JSON payload to send in the request.
+
+    Returns:
+        The JSON response from the API if the request is successful.
+
+    Raises:
+        AssertionError: If the response status code is not 200.
+    """
     response = await client.post(
         f"api/v1/process/{flow_id}",
         headers=headers,
@@ -111,21 +133,322 @@ PROMPT_REQUEST = {
 
 @pytest.mark.benchmark
 async def test_get_all(client: AsyncClient, logged_in_headers):
+    """Tests the retrieval of all available components from the API.
+
+    Sends a GET request to the `api/v1/all` endpoint and verifies that the returned component names
+    correspond to files in the components directory. Also checks for the presence of specific components
+    such as "ChatInput", "Prompt", and "ChatOutput" in the response.
+    """
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
-    settings = get_settings_service().settings
-    dir_reader = DirectoryReader(settings.components_path[0])
+    dir_reader = DirectoryReader(BASE_COMPONENTS_PATH)
     files = dir_reader.get_files()
     # json_response is a dict of dicts
-    all_names = [component_name for _, components in response.json().items() for component_name in components]
+    all_names = [
+        component_name
+        for key, components in response.json().items()
+        if key != "component_display_names"
+        for component_name in components
+    ]
     json_response = response.json()
+    # Bundle/extension components are namespaced "ext:<bundle>:<Class>@<slot>" and are served
+    # from installed bundle packages (e.g. docling, ibm, arxiv), not from BASE_COMPONENTS_PATH,
+    # so they are not backed by files in that directory. Exclude them before comparing against
+    # the on-disk file count.
+    base_component_names = [name for name in all_names if not name.startswith("ext:")]
     # We need to test the custom nodes
-    assert len(all_names) <= len(
+    assert len(base_component_names) <= len(
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
-    assert "ChatInput" in json_response["inputs"]
-    assert "Prompt" in json_response["prompts"]
-    assert "ChatOutput" in json_response["outputs"]
+    assert "ChatInput" in json_response["input_output"]
+    assert "Prompt Template" in json_response["models_and_agents"]
+    assert "ChatOutput" in json_response["input_output"]
+
+
+async def test_component_palette_policy_filters_models_without_mutating_shared_cache(monkeypatch):
+    from langflow.api.v1 import endpoints
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    cached = {
+        "mixed": {
+            "AllowedModel": {"metadata": {"model_provider_id": "openai"}},
+            "DeniedModel": {"metadata": {"model_provider_id": "anthropic"}},
+            "Utility": {"metadata": {}},
+        }
+    }
+
+    project_id = uuid4()
+
+    async def _openai_only(*, user_id, providers, purpose, attributes=None):
+        assert purpose is ModelProviderPolicyPurpose.DISCOVER
+        assert attributes == {"project_id": project_id}
+        candidates = frozenset(providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=candidates,
+            allowed_provider_ids=frozenset({"openai"}),
+        )
+
+    def _sync_resolver_must_not_run(**_kwargs):
+        msg = "scoped palette discovery must refresh hierarchy asynchronously"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _sync_resolver_must_not_run, raising=False)
+    monkeypatch.setattr(endpoints, "aresolve_model_provider_policy", _openai_only, raising=False)
+
+    filtered = await endpoints._filter_component_palette_by_provider_policy(
+        cached,
+        user_id="user-1",
+        attributes={"project_id": project_id},
+    )
+
+    assert set(filtered["mixed"]) == {"AllowedModel", "Utility"}
+    assert "DeniedModel" in cached["mixed"]
+    assert filtered is not cached
+    assert filtered["mixed"] is not cached["mixed"]
+
+
+def test_catalog_policy_filter_is_case_sensitive_and_does_not_mutate_shared_cache():
+    from langflow.api.v1 import endpoints
+
+    blocked_component = {"display_name": "Blocked", "metadata": {"nested": True}}
+    allowed_component = {"display_name": "Allowed", "metadata": {"nested": True}}
+    cached = {
+        "models": {
+            "BlockedAgent": blocked_component,
+            "blockedagent": allowed_component,
+        },
+        "empty": {},
+    }
+
+    filtered = endpoints._filter_component_palette_by_catalog_policy(
+        cached,
+        blocked_component_keys=frozenset({"BlockedAgent"}),
+    )
+
+    assert list(filtered) == ["models", "empty"]
+    assert list(filtered["models"]) == ["blockedagent"]
+    assert filtered["empty"] == {}
+    assert filtered is not cached
+    assert filtered["models"] is not cached["models"]
+    assert filtered["empty"] is not cached["empty"]
+    assert filtered["models"]["blockedagent"] is allowed_component
+    assert list(cached["models"]) == ["BlockedAgent", "blockedagent"]
+    assert cached["models"]["BlockedAgent"] is blocked_component
+
+
+def test_catalog_policy_filter_resolves_legacy_extension_alias_without_mutating_cache():
+    from langflow.api.v1 import endpoints
+
+    canonical_key = "ext:datastax:AstraDBVectorStoreComponent@official"
+    astra_component = {
+        "name": "AstraDB",
+        "display_name": "Astra DB",
+        "metadata": {"module": "lfx_datastax.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"},
+        "template": {"_type": "Component"},
+    }
+    cached = {
+        "datastax": {canonical_key: astra_component},
+        "input_output": {"ChatInput": {"display_name": "Chat Input"}},
+    }
+
+    filtered = endpoints._filter_component_palette_by_catalog_policy(
+        cached,
+        blocked_component_keys=frozenset({"AstraDB"}),
+    )
+
+    assert filtered["datastax"] == {}
+    assert "ChatInput" in filtered["input_output"]
+    assert cached["datastax"][canonical_key] is astra_component
+    assert filtered is not cached
+    assert filtered["datastax"] is not cached["datastax"]
+
+
+async def test_get_all_filters_catalog_policy_and_uses_current_snapshot(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from langflow.interface import components as components_module
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    cached = {
+        "models": {
+            "AllowedAgent": {
+                "display_name": "Allowed Agent",
+                "description": "Visible",
+                "template": {},
+                "metadata": {},
+            },
+            "BlockedAgent": {
+                "display_name": "Blocked Agent",
+                "description": "Hidden",
+                "template": {},
+                "metadata": {},
+            },
+        },
+        "empty": {},
+    }
+
+    class MutableCatalogPolicyService:
+        def __init__(self):
+            self.current_snapshot = CatalogPolicySnapshot(blocked_component_keys={"BlockedAgent"})
+            self.snapshot_reads = 0
+
+        @property
+        def snapshot(self):
+            self.snapshot_reads += 1
+            return self.current_snapshot
+
+    service = MutableCatalogPolicyService()
+
+    async def get_cached_types(*, settings_service):
+        _ = settings_service
+        return cached
+
+    monkeypatch.setattr(components_module, "get_and_cache_all_types_dict", get_cached_types)
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: service)
+
+    async def allow_all_providers(all_types, **_kwargs):
+        return {category: dict(components) for category, components in all_types.items()}
+
+    monkeypatch.setattr(
+        endpoints,
+        "_filter_component_palette_by_provider_policy",
+        allow_all_providers,
+    )
+
+    blocked_response = await client.get("api/v1/all", headers=logged_in_headers)
+
+    assert blocked_response.status_code == status.HTTP_200_OK
+    blocked_payload = blocked_response.json()
+    assert list(blocked_payload["models"]) == ["AllowedAgent"]
+    assert "blockedagent" not in blocked_payload["component_display_names"]
+    assert blocked_payload["empty"] == {}
+    assert service.snapshot_reads == 1
+    assert "BlockedAgent" in cached["models"]
+
+    service.current_snapshot = CatalogPolicySnapshot()
+    unblocked_response = await client.get("api/v1/all", headers=logged_in_headers)
+
+    assert unblocked_response.status_code == status.HTTP_200_OK
+    unblocked_payload = unblocked_response.json()
+    assert list(unblocked_payload["models"]) == ["AllowedAgent", "BlockedAgent"]
+    assert "blockedagent" in unblocked_payload["component_display_names"]
+    assert service.snapshot_reads == 2
+    assert list(cached["models"]) == ["AllowedAgent", "BlockedAgent"]
+
+
+async def test_get_all_rejects_include_blocked_for_non_superuser_before_broad_exception_handler(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+
+    def unexpected_catalog_service_lookup():
+        msg = "catalog policy must not be read for an unauthorized override"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", unexpected_catalog_service_lookup)
+
+    response = await client.get("api/v1/all?include_blocked=true", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_get_all_superuser_override_skips_only_catalog_filter_without_cache_poisoning(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from langflow.interface import components as components_module
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    cached = {
+        "models": {
+            "AllowedAgent": {
+                "display_name": "Allowed Agent",
+                "description": "Visible",
+                "template": {},
+                "metadata": {},
+            },
+            "BlockedAgent": {
+                "display_name": "Blocked Agent",
+                "description": "Catalog blocked",
+                "template": {},
+                "metadata": {},
+            },
+            "ProviderBlockedAgent": {
+                "display_name": "Provider Blocked Agent",
+                "description": "Provider blocked",
+                "template": {},
+                "metadata": {"model_provider_id": "denied-provider"},
+            },
+        }
+    }
+
+    class CountingCatalogPolicyService:
+        def __init__(self):
+            self.snapshot_reads = 0
+
+        @property
+        def snapshot(self):
+            self.snapshot_reads += 1
+            return CatalogPolicySnapshot(blocked_component_keys={"BlockedAgent"})
+
+    service = CountingCatalogPolicyService()
+    provider_filter_calls = 0
+
+    async def get_cached_types(*, settings_service):
+        _ = settings_service
+        return cached
+
+    async def filter_provider_policy(all_types, *, user_id, attributes=None):
+        nonlocal provider_filter_calls
+        _ = user_id
+        provider_filter_calls += 1
+        assert attributes == {"is_superuser": True}
+        return {
+            category: {
+                key: component
+                for key, component in components.items()
+                if component.get("metadata", {}).get("model_provider_id") != "denied-provider"
+            }
+            for category, components in all_types.items()
+        }
+
+    monkeypatch.setattr(components_module, "get_and_cache_all_types_dict", get_cached_types)
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: service)
+    monkeypatch.setattr(endpoints, "_filter_component_palette_by_provider_policy", filter_provider_policy)
+
+    override_response = await client.get(
+        "api/v1/all?include_blocked=true",
+        headers=logged_in_headers_super_user,
+    )
+
+    assert override_response.status_code == status.HTTP_200_OK
+    override_payload = override_response.json()
+    assert list(override_payload["models"]) == ["AllowedAgent", "BlockedAgent"]
+    assert "ProviderBlockedAgent" not in override_payload["models"]
+    assert service.snapshot_reads == 1
+    assert provider_filter_calls == 1
+    assert list(cached["models"]) == ["AllowedAgent", "BlockedAgent", "ProviderBlockedAgent"]
+
+    default_response = await client.get("api/v1/all", headers=logged_in_headers_super_user)
+
+    assert default_response.status_code == status.HTTP_200_OK
+    assert list(default_response.json()["models"]) == ["AllowedAgent"]
+    assert service.snapshot_reads == 2
+    assert provider_filter_calls == 2
+    assert list(cached["models"]) == ["AllowedAgent", "BlockedAgent", "ProviderBlockedAgent"]
 
 
 @pytest.mark.usefixtures("active_user")
@@ -210,18 +533,19 @@ What is a good name for a company that makes {product}?
 INVALID_PROMPT = "This is an invalid prompt without any input variable."
 
 
-async def test_valid_prompt(client: AsyncClient):
+async def test_valid_prompt(client: AsyncClient, logged_in_headers):
     PROMPT_REQUEST["template"] = VALID_PROMPT
-    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST, headers=logged_in_headers)
     assert response.status_code == 200
     assert response.json()["input_variables"] == ["product"]
 
 
-async def test_invalid_prompt(client: AsyncClient):
+async def test_invalid_prompt(client: AsyncClient, logged_in_headers):
     PROMPT_REQUEST["template"] = INVALID_PROMPT
     response = await client.post(
         "api/v1/validate/prompt",
         json=PROMPT_REQUEST,
+        headers=logged_in_headers,
     )
     assert response.status_code == 200
     assert response.json()["input_variables"] == []
@@ -236,17 +560,26 @@ async def test_invalid_prompt(client: AsyncClient):
         ("{a}, {b}, and {c} are variables.", ["a", "b", "c"]),
     ],
 )
-async def test_various_prompts(client, prompt, expected_input_variables):
+async def test_various_prompts(client, logged_in_headers, prompt, expected_input_variables):
     PROMPT_REQUEST["template"] = prompt
-    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST, headers=logged_in_headers)
     assert response.status_code == 200
     assert response.json()["input_variables"] == expected_input_variables
 
 
 async def test_get_vertices_flow_not_found(client, logged_in_headers):
+    """A nonexistent flow id on the deprecated /build/{flow_id}/vertices route returns 404.
+
+    The handler now does an owner-or-public ownership check before reaching
+    ``build_graph_from_db`` (which previously raised ``ValueError("Invalid
+    flow ID")`` and surfaced as 500). Unknown flow ids — and other users'
+    private flows — fail closed with 404, matching the supported
+    /build/{flow_id}/flow contract and the rest of the API's UUID-privacy
+    behavior.
+    """
     uuid = uuid4()
     response = await client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
-    assert response.status_code == 500
+    assert response.status_code == 404
 
 
 async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
@@ -262,16 +595,238 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     assert set(ids) == {"ChatInput"}
 
 
+async def test_get_vertices_rebuilds_outdated_components_when_custom_components_disabled(
+    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+):
+    """A saved flow whose built-in code drifted across versions still builds (issue #14455).
+
+    With allow_custom_components=False the code stored in the node is never what executes —
+    ``resolve_trusted_code_for_build`` substitutes this server's copy — so refusing the flow over
+    a stale code hash only broke every saved flow on upgrade. This node's type is a known server
+    component, so the build runs the server's copy of it instead of being refused.
+
+    The spy asserts the substitution actually fired against the real component registry, which is
+    what keeps this test honest: were the fixture's stored code ever to catch up with the server's
+    copy, the build would still return 200 without exercising the substitution at all.
+    """
+    from lfx.utils import flow_validation
+
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+
+    # from_payload imports this by module attribute on every call, so the spy sees the real run.
+    substitute = flow_validation.substitute_outdated_component_code_in_place
+    swapped: list[str] = []
+
+    def _spy(payload, **kwargs):
+        result = substitute(payload, **kwargs)
+        swapped.extend(result)
+        return result
+
+    monkeypatch.setattr(flow_validation, "substitute_outdated_component_code_in_place", _spy)
+
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+
+    assert response.status_code == 200
+    assert any("ChatInput" in label for label in swapped), f"expected a ChatInput swap, got {swapped}"
+
+
+async def test_get_vertices_blocks_outdated_components_when_substitution_disabled(
+    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+):
+    """LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false keeps the strict hash gate."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
+
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+
+    assert response.status_code == 400
+    assert "outdated components must be updated before running" in response.json()["detail"]
+
+
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
+    """A nonexistent flow id on the deprecated /build/{flow_id}/vertices/{vertex_id} route returns 404.
+
+    Same contract as test_get_vertices_flow_not_found — the new ownership
+    check raises 404 before the graph-cache lookup that previously produced
+    a generic 500.
+    """
     uuid = uuid4()
     response = await client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
-    assert response.status_code == 500
+    assert response.status_code == 404
+
+
+@pytest.fixture
+async def second_user_headers(client):
+    """Log in as a second, distinct user.
+
+    The conftest's ``active_user`` / ``logged_in_headers`` fixtures hard-code
+    a single ``activeuser`` account. Cross-user authorization tests need a
+    second login token, which this fixture provides by registering and
+    logging in as ``second_active_user`` for the lifetime of the test.
+    """
+    from langflow.services.database.models.user.model import User, UserRead
+    from langflow.services.deps import get_auth_service, session_scope
+    from sqlmodel import select
+
+    username = "second_active_user"
+    password = "testpassword"  # noqa: S105  # pragma: allowlist secret
+
+    async with session_scope() as session:
+        user = User(
+            username=username,
+            password=get_auth_service().get_password_hash(password),
+            is_active=True,
+            is_superuser=False,
+        )
+        stmt = select(User).where(User.username == username)
+        if existing := (await session.exec(stmt)).first():
+            user = existing
+        else:
+            session.add(user)
+            await session.flush()
+            await session.refresh(user)
+        user_id = UserRead.model_validate(user, from_attributes=True).id
+
+    login_response = await client.post("api/v1/login", data={"username": username, "password": password})
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+    yield {"Authorization": f"Bearer {token}"}
+
+    async with session_scope() as session:
+        if existing := await session.get(User, user_id):
+            await session.delete(existing)
+
+
+async def test_get_vertices_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """A second user attempting to build vertices on someone else's private flow gets 404.
+
+    Behavioral regression for the deprecated /build/{flow_id}/vertices guard.
+    The flow is created by ``active_user`` via ``added_flow_webhook_test``;
+    ``second_user_headers`` is a different account, so the owner-or-public
+    fetch returns None and the handler raises 404 (preserving UUID-privacy)
+    before reaching the graph builder that previously had no owner filter.
+    """
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=second_user_headers)
+    assert response.status_code == 404, response.text
+
+
+async def test_get_vertices_with_supplied_data_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """A non-owner cannot pollute another user's graph cache via the deprecated supplied-data path.
+
+    Regression for the reported cache-pollution scenario: a second user POSTs
+    attacker-controlled graph ``data`` for someone else's private flow UUID. The
+    owner-or-public ownership guard runs *before* the build-and-cache branch
+    (``build_and_cache_graph_from_data`` -> ``set_cache(str(flow_id), ...)``), so the
+    request fails closed with 404 and no graph is cached under the victim flow id.
+
+    Complements ``test_get_vertices_returns_404_for_other_users_private_flow`` (which
+    exercises the no-data branch) by covering the supplied-data branch specifically.
+    The payload is a schema-valid ``FlowDataRequest`` so the request clears body
+    validation and actually reaches the ownership guard.
+    """
+    flow_id = added_flow_webhook_test["id"]
+    attacker_data = {
+        "nodes": [{"id": "attacker-node", "data": {"type": "AttackerControlled"}}],
+        "edges": [],
+        "viewport": {"x": 1, "y": 2, "zoom": 0.75},
+    }
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", json=attacker_data, headers=second_user_headers)
+    assert response.status_code == 404, response.text
+
+
+async def test_build_vertex_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """Same cross-user 404 behavior on the per-vertex deprecated build route."""
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices/some-vertex-id", headers=second_user_headers)
+    assert response.status_code == 404, response.text
+
+
+async def test_build_vertex_stream_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """The deprecated stream route must authorize before reading the shared graph cache."""
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/ChatInput-some-id/stream",
+        headers=second_user_headers,
+    )
+    assert response.status_code == 404, response.text
 
 
 async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
+
+
+async def test_build_vertex_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated per-vertex route must not execute a stale, newly blocked cached graph."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.post(
+        f"/api/v1/build/{flow_id}/vertices/{vertex_id}",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
+
+
+async def test_build_vertex_stream_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated stream route rejects a stale graph before response streaming begins."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/{vertex_id}/stream",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
 
 
 async def test_successful_run_no_payload(client, simple_api_test, created_api_key):
@@ -299,6 +854,39 @@ async def test_successful_run_no_payload(client, simple_api_test, created_api_ke
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
 
     assert all(result is not None for result in inner_results), (outputs_dict, output_results_has_results)
+
+
+async def test_run_by_id_enforces_current_catalog_policy_and_recovers_when_cleared(
+    client, json_simple_api_test, logged_in_headers, created_api_key
+):
+    from lfx.services.deps import get_catalog_policy_service
+
+    catalog_policy_service = get_catalog_policy_service()
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    flow_payload = orjson.loads(json_simple_api_test)
+    flow = FlowCreate(
+        name="Catalog Policy Run Test",
+        data=flow_payload["data"],
+        description="Catalog policy route test",
+    )
+    create_response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+    await catalog_policy_service.replace_blocked_component_keys(["ChatInput"], actor_user_id=None)
+
+    blocked_response = await client.post(
+        f"/api/v1/run/{flow_id}",
+        headers={"x-api-key": created_api_key.api_key},
+    )
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    allowed_response = await client.post(
+        f"/api/v1/run/{flow_id}",
+        headers={"x-api-key": created_api_key.api_key},
+    )
+
+    assert blocked_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert blocked_response.json()["detail"].endswith("ChatInput")
+    assert allowed_response.status_code == status.HTTP_200_OK, allowed_response.text
 
 
 async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
@@ -407,7 +995,13 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
@@ -442,7 +1036,13 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
@@ -490,7 +1090,13 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput or ChatInput in the component_id
@@ -636,3 +1242,460 @@ async def test_concurrent_stream_run_with_input_type_chat(client: AsyncClient, s
 
     # Run all streaming tests concurrently
     await asyncio.gather(*tasks)
+
+
+# ============================================================================
+# Security Tests: User Permission Checks for Flow Access
+# ============================================================================
+
+
+@pytest.mark.benchmark
+async def test_user_can_run_own_flow(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that a user can successfully run their own flow using their API key."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that a user cannot run another user's flow.
+
+    Post-fix behavior is 404 (not 403) so we don't leak flow existence
+    via a 403-vs-404 oracle.  See ``get_flow_for_api_key_user`` in
+    ``api/v1/endpoints.py``.
+    """
+    # simple_api_test belongs to active_user, but we're using user_two's API key
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    # Must not leak that the flow exists under another user's account.
+    assert "permission" not in response.text.lower()
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that a user cannot run another user's flow even with valid payload."""
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test message",
+    }
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
+
+
+@pytest.mark.benchmark
+async def test_user_can_run_own_flow_with_streaming(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that a user can run their own flow with streaming enabled."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test",
+    }
+
+    async with client.stream("POST", f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload) as response:
+        assert response.status_code == status.HTTP_200_OK, response.text
+        assert response.headers["content-type"].startswith("text/event-stream")
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that a user cannot run another user's flow with streaming."""
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test",
+    }
+
+    response = await client.post(f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
+
+
+@pytest.mark.benchmark
+async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that a user can run their own flow using the advanced endpoint."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "inputs": [{"components": [], "input_value": "test"}],
+        "outputs": [],
+        "tweaks": {},
+        "stream": False,
+    }
+
+    response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_advanced_endpoint(
+    client: AsyncClient, simple_api_test, user_two_api_key
+):
+    """Test that a user cannot run another user's flow using the advanced endpoint."""
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "inputs": [{"components": [], "input_value": "test"}],
+        "outputs": [],
+        "tweaks": {},
+        "stream": False,
+    }
+
+    response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_session_endpoint(
+    client: AsyncClient, simple_api_test, logged_in_headers, monkeypatch
+):
+    """Regression: cross-user access on /run/session/{flow_id} returns 404.
+
+    ``simplified_run_flow_session`` is feature-flagged behind
+    ``agentic_experience`` and uses session auth (``CurrentActiveUser``).
+    We flip the flag on via monkeypatch and log in as ``active_super_user``
+    (a different user than ``active_user`` who owns ``simple_api_test``) to
+    exercise the session-auth variant of the wrapper dependency.
+    """
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_settings_service
+    from lfx.services.deps import session_scope
+    from sqlmodel import select
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "agentic_experience", True)
+
+    # Create a second user with session credentials and log in.
+    other_username = "cross_user_session_user"
+    other_password = "testpassword"  # noqa: S105  # pragma: allowlist secret
+    async with session_scope() as session:
+        existing = (await session.exec(select(User).where(User.username == other_username))).first()
+        if existing is None:
+            session.add(
+                User(
+                    username=other_username,
+                    password=get_password_hash(other_password),
+                    is_active=True,
+                    is_superuser=False,
+                )
+            )
+    try:
+        login_response = await client.post(
+            "api/v1/login",
+            data={"username": other_username, "password": other_password},
+        )
+        assert login_response.status_code == 200
+        other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+        flow_id = simple_api_test["id"]  # owned by active_user via logged_in_headers
+        response = await client.post(f"/api/v1/run/session/{flow_id}", headers=other_headers)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+        assert "permission" not in response.text.lower()
+    finally:
+        async with session_scope() as session:
+            user = (await session.exec(select(User).where(User.username == other_username))).first()
+            if user is not None:
+                await session.delete(user)
+
+    # Silence the unused-fixture warning -- we depend on logged_in_headers to
+    # ensure active_user (the flow owner) exists before we attack as a peer.
+    _ = logged_in_headers
+
+
+@pytest.mark.benchmark
+async def test_run_rejects_malformed_user_id_query_param(client: AsyncClient, simple_api_test, created_api_key):
+    """Regression: a malformed ``?user_id=`` query param returns 404, not 500.
+
+    FastAPI exposes ``user_id`` as a free query parameter on routes that
+    previously used ``Depends(get_flow_by_id_or_endpoint_name)``.  The auth-aware
+    wrapper ignores the query value entirely (it derives user_id from the
+    authenticated caller), and the helper itself converts a malformed UUID
+    into 404 rather than a 500.  Both defenses must hold.
+    """
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+
+    for bad in ("not-a-uuid", "", "12345"):
+        response = await client.post(
+            f"/api/v1/run/{flow_id}",
+            headers=headers,
+            params={"user_id": bad},
+        )
+        # Same user owns the flow, so the wrapper resolves the flow
+        # successfully regardless of the junk query param; the run itself
+        # returns 200 (the flow executes) rather than leaking a 500.
+        assert response.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR, (
+            f"Malformed user_id={bad!r} triggered 500: {response.text}"
+        )
+
+
+@pytest.mark.benchmark
+async def test_permission_check_with_nonexistent_flow(client: AsyncClient, created_api_key):
+    """Test permission check with a non-existent flow ID."""
+    headers = {"x-api-key": created_api_key.api_key}
+    nonexistent_flow_id = uuid4()
+
+    response = await client.post(f"/api/v1/run/{nonexistent_flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+
+
+@pytest.mark.benchmark
+async def test_permission_check_with_invalid_flow_id(client: AsyncClient, created_api_key):
+    """Test permission check with an invalid flow ID format."""
+    headers = {"x-api-key": created_api_key.api_key}
+    invalid_flow_id = "not-a-valid-uuid"
+
+    response = await client.post(f"/api/v1/run/{invalid_flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+
+
+@pytest.mark.benchmark
+async def test_permission_check_blocks_before_execution(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that permission check happens before flow execution to prevent resource usage.
+
+    The 404 comes from ``get_flow_for_api_key_user`` which scopes lookups by
+    user_id, so cross-user access fails closed at the dependency layer rather
+    than via a downstream 403 (which would have given attackers a
+    403-vs-404 existence oracle on flow UUIDs).
+    """
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "complex computation",
+        "tweaks": {},
+    }
+
+    # This should fail immediately at the flow-lookup dependency, not during execution
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
+
+
+@pytest.mark.benchmark
+async def test_user_can_access_multiple_own_flows(
+    client: AsyncClient, logged_in_headers, json_simple_api_test, created_api_key
+):
+    """Test that a user can access multiple flows they own."""
+    # Create two flows for the same user
+    flow1_data = orjson.loads(json_simple_api_test)
+    flow1 = FlowCreate(name="Flow 1", data=flow1_data["data"], description="First flow")
+    response1 = await client.post("api/v1/flows/", json=flow1.model_dump(), headers=logged_in_headers)
+    assert response1.status_code == 201
+    flow1_id = response1.json()["id"]
+
+    flow2 = FlowCreate(name="Flow 2", data=flow1_data["data"], description="Second flow")
+    response2 = await client.post("api/v1/flows/", json=flow2.model_dump(), headers=logged_in_headers)
+    assert response2.status_code == 201
+    flow2_id = response2.json()["id"]
+
+    headers = {"x-api-key": created_api_key.api_key}
+
+    # User should be able to run both flows
+    response_flow1 = await client.post(f"/api/v1/run/{flow1_id}", headers=headers)
+    assert response_flow1.status_code == status.HTTP_200_OK, response_flow1.text
+
+    response_flow2 = await client.post(f"/api/v1/run/{flow2_id}", headers=headers)
+    assert response_flow2.status_code == status.HTTP_200_OK, response_flow2.text
+
+    # Cleanup
+    await client.delete(f"api/v1/flows/{flow1_id}", headers=logged_in_headers)
+    await client.delete(f"api/v1/flows/{flow2_id}", headers=logged_in_headers)
+
+
+# ============================================================================
+# OpenAI Responses API Tests
+# ============================================================================
+
+
+async def test_openai_responses_invalid_flow_id(client: AsyncClient, created_api_key):
+    """Test that OpenAI Responses endpoint returns error for invalid flow ID."""
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {
+        "model": "invalid-flow-id",
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK  # Returns 200 with error in body
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert json_response["error"]["code"] == "flow_not_found"
+
+
+async def test_openai_responses_tools_not_supported(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that OpenAI Responses endpoint returns error when tools parameter is provided."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "model": flow_id,
+        "input": "Hello",
+        "stream": False,
+        "tools": [{"type": "function", "function": {"name": "test"}}],
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK  # Returns 200 with error in body
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert json_response["error"]["code"] == "tools_not_supported"
+
+
+async def test_openai_responses_nonexistent_flow_uuid(client: AsyncClient, created_api_key):
+    """Test that OpenAI Responses endpoint returns error for nonexistent flow UUID."""
+    headers = {"x-api-key": created_api_key.api_key}
+    nonexistent_flow_id = str(uuid4())
+    payload = {
+        "model": nonexistent_flow_id,
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK  # Returns 200 with error in body
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert "not found" in json_response["error"]["message"].lower()
+
+
+async def test_openai_responses_response_schema_has_usage_field(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that OpenAI Responses response schema includes usage field (even if None)."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "model": flow_id,
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    # simple_api_test may not have ChatInput/ChatOutput, so it might error
+    # But if it succeeds, the response should have usage field
+    json_response = response.json()
+    if "error" not in json_response:
+        # If no error, verify response structure includes usage
+        assert "id" in json_response
+        assert "output" in json_response
+        assert "usage" in json_response  # usage field should always be present (can be None)
+
+
+async def test_openai_responses_rejects_cross_user_flow_access(
+    client: AsyncClient,
+    simple_api_test,
+    created_api_key,  # noqa: ARG001 - used only to establish the owner's API key
+):
+    """Regression: authenticated user cannot execute another user's flow.
+
+    Reproduces the IDOR scenario: a user with a valid API key passes a flow
+    UUID owned by a different user in the ``model`` field.  The pre-fix
+    behavior was that the endpoint executed the victim's flow and returned
+    200 with real output; after the fix the helper resolves to
+    flow_not_found because UUID lookups now enforce user scope.
+    """
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.user.model import User
+    from lfx.services.deps import session_scope
+    from sqlmodel import select
+
+    attacker_api_key = "attacker_random_key"  # pragma: allowlist secret
+    attacker_username = "idor_attacker_user"
+
+    # Create a second, unrelated user + API key inline.  Kept local to this
+    # test rather than promoted to a shared fixture to minimize blast radius.
+    async with session_scope() as session:
+        existing = (await session.exec(select(User).where(User.username == attacker_username))).first()
+        if existing is None:
+            attacker = User(
+                username=attacker_username,
+                password=get_password_hash("testpassword"),
+                is_active=True,
+                is_superuser=False,
+            )
+            session.add(attacker)
+            await session.flush()
+            await session.refresh(attacker)
+        else:
+            attacker = existing
+        existing_key = (await session.exec(select(ApiKey).where(ApiKey.api_key == attacker_api_key))).first()
+        if existing_key is None:
+            key = ApiKey(
+                name="idor_attacker_key",
+                user_id=attacker.id,
+                api_key=attacker_api_key,
+                hashed_api_key=get_password_hash(attacker_api_key),
+            )
+            session.add(key)
+            await session.flush()
+        attacker_id = attacker.id
+
+    try:
+        victim_flow_id = simple_api_test["id"]  # owned by active_user via logged_in_headers
+        payload = {
+            "model": victim_flow_id,
+            "input": "Hello",
+            "stream": False,
+        }
+        response = await client.post(
+            "/api/v1/responses",
+            json=payload,
+            headers={"x-api-key": attacker_api_key},
+        )
+
+        # The endpoint returns 200 with an OpenAI-style error body on flow-not-found
+        # (matches test_openai_responses_nonexistent_flow_uuid behavior).
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert "error" in body, f"Expected flow_not_found error for cross-user access, got: {body}"
+        assert body["error"]["code"] == "flow_not_found", (
+            f"Expected flow_not_found for cross-user access, got code: {body['error'].get('code')}"
+        )
+    finally:
+        # Clean up the second user + key we created for this test.
+        async with session_scope() as session:
+            for api_key_row in (await session.exec(select(ApiKey).where(ApiKey.user_id == attacker_id))).all():
+                await session.delete(api_key_row)
+            user = await session.get(User, attacker_id)
+            if user:
+                await session.delete(user)

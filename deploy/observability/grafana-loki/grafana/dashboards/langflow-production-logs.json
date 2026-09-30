@@ -1,0 +1,163 @@
+{
+  "uid": "langflow-prod-logs",
+  "title": "Langflow Logs",
+  "description": "Structured logs from Langflow and lfx: tracebacks, PII redaction, service labels, stdlib intercept, trace correlation.",
+  "tags": ["langflow", "lfx", "structured-logs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "type": "query",
+        "datasource": "Loki",
+        "query": "label_values({job=\"langflow\"}, environment)",
+        "current": {"text": "All", "value": "$__all"},
+        "includeAll": true,
+        "multi": true,
+        "refresh": 2
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Loki",
+        "query": "label_values({job=\"langflow\"}, service)",
+        "current": {"text": "All", "value": "$__all"},
+        "includeAll": true,
+        "multi": true,
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total log lines (window)",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "sum(count_over_time({job=\"langflow\", service=~\"$service\", environment=~\"$environment\"}[$__range]))", "refId": "A"}
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Errors (window)",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": "Loki",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+      "targets": [
+        {"expr": "sum(count_over_time({job=\"langflow\", level=~\"error|critical\", service=~\"$service\", environment=~\"$environment\"}[$__range]))", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Distinct loggers",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "count(count by (logger)({job=\"langflow\", service=~\"$service\", environment=~\"$environment\"}))", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "PII leak count (must be 0)",
+      "description": "Counts log lines that contain literal sensitive values that should have been redacted. Anything non-zero means redaction failed.",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": "Loki",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+      "targets": [
+        {"expr": "sum(count_over_time({job=\"langflow\"} |~ \"sk-do-not-leak|hunter2|Bearer xyz\"[$__range]))", "refId": "A"}
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Log rate by level",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "sum by (level) (rate({job=\"langflow\", service=~\"$service\", environment=~\"$environment\"}[1m]))", "refId": "A", "legendFormat": "{{level}}"}
+      ],
+      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["sum"]}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Log rate by logger (top 10)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "topk(10, sum by (logger) (rate({job=\"langflow\", service=~\"$service\", environment=~\"$environment\"}[1m])))", "refId": "A", "legendFormat": "{{logger}}"}
+      ],
+      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["sum"]}}
+    },
+    {
+      "id": 7,
+      "type": "logs",
+      "title": "Structured tracebacks (errors with exception array)",
+      "description": "Every error in JSON mode now ships a structured exception array (exc_type, exc_value, frames) instead of being silently dropped. Expand a row to see the structure.",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 12},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\"langflow\", level=~\"error|critical\", service=~\"$service\", environment=~\"$environment\"} |= \"exception\" | json", "refId": "A"}
+      ],
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true, "prettifyLogMessage": true, "dedupStrategy": "none"}
+    },
+    {
+      "id": 8,
+      "type": "logs",
+      "title": "PII redaction proof (look for *** sentinels, not the raw value)",
+      "description": "Sensitive keys (password, api_key, token, authorization, cookie) appear as *** before the JSON ever leaves the process.",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 24},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\"langflow\", service=~\"$service\"} |~ \"\\\\*\\\\*\\\\*\"", "refId": "A"}
+      ],
+      "options": {"showLabels": false, "showTime": true, "wrapLogMessage": true, "prettifyLogMessage": true}
+    },
+    {
+      "id": 9,
+      "type": "logs",
+      "title": "Stdlib intercept: third-party loggers routed into JSON",
+      "description": "uvicorn, sqlalchemy, httpx, langchain, asyncio used to emit unstructured text. With LANGFLOW_LOG_ENV=container they come through the same JSON stream with logger=<name>.",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 24},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\"langflow\", logger=~\"uvicorn.*|sqlalchemy.*|httpx.*|langchain.*|third_party.*\", service=~\"$service\"}", "refId": "A"}
+      ],
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true, "prettifyLogMessage": true}
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Top error sources",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 34},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "topk(10, sum by (logger) (count_over_time({job=\"langflow\", level=~\"error|critical\"}[$__range])))", "refId": "A", "instant": true, "format": "table"}
+      ]
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Service / environment / version coverage",
+      "description": "Confirms every record carries the service metadata Grafana dashboards key off of.",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 34},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "sum by (service, environment, version) (count_over_time({job=\"langflow\"}[$__range]))", "refId": "A", "instant": true, "format": "table"}
+      ]
+    }
+  ]
+}

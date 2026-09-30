@@ -1,4 +1,5 @@
 // Modals.tsx
+import { useTranslation } from "react-i18next";
 import TemplatesModal from "@/modals/templatesModal";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 
@@ -16,24 +17,28 @@ const ModalsComponent = ({
   openDeleteFolderModal = false,
   setOpenDeleteFolderModal = () => {},
   handleDeleteFolder = () => {},
-}: ModalsProps) => (
-  <>
-    {openModal && <TemplatesModal open={openModal} setOpen={setOpenModal} />}
-    {openDeleteFolderModal && (
-      <DeleteConfirmationModal
-        open={openDeleteFolderModal}
-        setOpen={setOpenDeleteFolderModal}
-        onConfirm={() => {
-          handleDeleteFolder();
-          setOpenDeleteFolderModal(false);
-        }}
-        description="folder"
-        note={"and all associated flows and components"}
-      >
-        <></>
-      </DeleteConfirmationModal>
-    )}
-  </>
-);
+}: ModalsProps) => {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      {openModal && <TemplatesModal open={openModal} setOpen={setOpenModal} />}
+      {openDeleteFolderModal && (
+        <DeleteConfirmationModal
+          open={openDeleteFolderModal}
+          setOpen={setOpenDeleteFolderModal}
+          onConfirm={() => {
+            handleDeleteFolder();
+            setOpenDeleteFolderModal(false);
+          }}
+          description={t("deleteModal.folder")}
+          note={t("deleteModal.noteFolderContents")}
+        >
+          <></>
+        </DeleteConfirmationModal>
+      )}
+    </>
+  );
+};
 
 export default ModalsComponent;

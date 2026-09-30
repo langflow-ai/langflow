@@ -1,26 +1,40 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import {
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
+} from "../../utils/open-advanced-options";
 
 test(
   "ToggleComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
+    await openBlankFlow(page);
 
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    // Open the sidebar options dropdown
+    await page.getByTestId("sidebar-options-trigger").click();
+
+    // Wait for and click the legacy switch
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .waitFor({ state: "visible" });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    expect(
+      await page
+        .getByTestId("sidebar-legacy-switch")
+        .getAttribute("aria-checked"),
+    ).toBe("true");
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("directory");
 
-    await page.waitForSelector('[data-testid="dataDirectory"]', {
+    await page.waitForSelector('[data-testid="files_and_knowledgeDirectory"]', {
       timeout: 30000,
     });
     await page
-      .getByTestId("dataDirectory")
+      .getByTestId("files_and_knowledgeDirectory")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -29,20 +43,18 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    // LE-1810: the parameters panel manages visibility through Add/Remove;
+    // the row swaps between the two buttons.
+    await openParametersPanel(page);
 
-    await page.locator('//*[@id="showload_hidden"]').click();
-    expect(
-      await page.locator('//*[@id="showload_hidden"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "load_hidden");
+    await expect(
+      page.getByTestId("inspector-remove-load_hidden"),
+    ).toBeVisible();
 
-    await page.getByText("Close").last().click();
+    await closeParametersPanel(page);
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("toggle_bool_load_hidden").click();
     expect(
@@ -73,64 +85,56 @@ test(
 
     await adjustScreenView(page);
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openParametersPanel(page);
 
     expect(
       await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeTruthy();
 
-    await page.locator('//*[@id="showload_hidden"]').click();
-    expect(
-      await page.locator('//*[@id="showload_hidden"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "load_hidden");
+    await expect(page.getByTestId("inspector-add-load_hidden")).toBeVisible();
 
-    await page.locator('//*[@id="showmax_concurrency"]').click();
-    expect(
-      await page.locator('//*[@id="showmax_concurrency"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "max_concurrency");
+    await expect(
+      page.getByTestId("inspector-remove-max_concurrency"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showpath"]').click();
-    expect(await page.locator('//*[@id="showpath"]').isChecked()).toBeFalsy();
+    await toggleParameterOnNode(page, "path");
+    await expect(page.getByTestId("inspector-add-path")).toBeVisible();
 
-    await page.locator('//*[@id="showrecursive"]').click();
-    expect(
-      await page.locator('//*[@id="showrecursive"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "recursive");
+    await expect(page.getByTestId("inspector-remove-recursive")).toBeVisible();
 
-    await page.locator('//*[@id="showsilent_errors"]').click();
-    expect(
-      await page.locator('//*[@id="showsilent_errors"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "silent_errors");
+    await expect(
+      page.getByTestId("inspector-remove-silent_errors"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showuse_multithreading"]').click();
-    expect(
-      await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "use_multithreading");
+    await expect(
+      page.getByTestId("inspector-remove-use_multithreading"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showmax_concurrency"]').click();
-    expect(
-      await page.locator('//*[@id="showmax_concurrency"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "max_concurrency");
+    await expect(
+      page.getByTestId("inspector-add-max_concurrency"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showpath"]').click();
-    expect(await page.locator('//*[@id="showpath"]').isChecked()).toBeTruthy();
+    await toggleParameterOnNode(page, "path");
+    await expect(page.getByTestId("inspector-remove-path")).toBeVisible();
 
-    await page.locator('//*[@id="showrecursive"]').click();
-    expect(
-      await page.locator('//*[@id="showrecursive"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "recursive");
+    await expect(page.getByTestId("inspector-add-recursive")).toBeVisible();
 
-    await page.locator('//*[@id="showsilent_errors"]').click();
-    expect(
-      await page.locator('//*[@id="showsilent_errors"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "silent_errors");
+    await expect(page.getByTestId("inspector-add-silent_errors")).toBeVisible();
 
-    await page.locator('//*[@id="showuse_multithreading"]').click();
-    expect(
-      await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "use_multithreading");
+    await expect(
+      page.getByTestId("inspector-add-use_multithreading"),
+    ).toBeVisible();
 
-    await page.getByText("Close").last().click();
+    await closeParametersPanel(page);
 
     const plusButtonLocator = page.getByTestId("toggle_bool_load_hidden");
     const elementCount = await plusButtonLocator?.count();
@@ -139,18 +143,18 @@ test(
 
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await openParametersPanel(page);
 
-      await page.locator('//*[@id="showload_hidden"]').click();
-      expect(
-        await page.locator('//*[@id="showload_hidden"]').isChecked(),
-      ).toBeTruthy();
+      await toggleParameterOnNode(page, "load_hidden");
+      await expect(
+        page.getByTestId("inspector-remove-load_hidden"),
+      ).toBeVisible();
 
       expect(
         await page.getByTestId("toggle_bool_load_hidden").isChecked(),
       ).toBeTruthy();
 
-      await page.getByText("Close").last().click();
+      await closeParametersPanel(page);
 
       await page.getByTestId("toggle_bool_load_hidden").click();
       expect(

@@ -1,0 +1,59 @@
+---
+title: Smart Router
+slug: /smart-router
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **Smart Router** component is an LLM-powered variation of the [**If-Else** component](/if-else).
+Instead of string matching, the **Smart Router** uses a connected [**Language Model** component](/components-models) to categorize and route incoming messages.
+
+You can use the **Smart Router** component anywhere you would use the **If-Else** component.
+For an example, create the [If-Else component example flow](/if-else#use-the-if-else-component-in-a-flow), then replace the **If-Else** component with a **Smart Router** component.
+Instead of a regex, use the **Routes** table to define the outputs for your messages.
+
+The **Routes** table defines the categories for routing.
+For example, a routes table for sentiment analysis might look like this:
+
+| Route Name | Route Description | Route Message |
+|------------|-------------------|---------------|
+| Positive | Positive feedback, satisfaction, or compliments | |
+| Negative | Complaints, issues, or dissatisfaction | |
+| Neutral | Questions, requests for information, or neutral statements | Thank you for your inquiry! |
+
+This component creates ports for the **Positive**, **Negative**, and **Neutral** routes.
+When the LLM categorizes the input text, it routes to the matching category's output port by route name.
+For the Positive and Negative routes, the original input text is passed through.
+For the Neutral route, the `"Thank you for your inquiry!"` route message is sent instead of the input text.
+
+The **Override Output** parameter sends a single message regardless of which route the LLM matches.
+The override message takes precedence over all other output options, and completely replaces both the original input text and any custom route messages.
+For the sentiment analysis example, if you set the **Override Output** to `"Message received"`, all routes send the same message.
+
+The **Additional Instructions** parameter adds extra guidance to the LLM.
+Use the `{input_text}` placeholder to reference the input text being categorized, and `{routes}` to reference the comma-separated list of route names.
+
+For example, to add domain-specific context for the LLM, include the following as the custom prompt:
+
+```
+The text "{input_text}" is from a customer support context.
+Consider the urgency and emotional tone when choosing from {routes}.
+```
+
+## Smart Router parameters
+
+<PartialParams />
+
+| Name                | Type     | Description                                                       |
+|---------------------|----------|-------------------------------------------------------------------|
+| Language Model      | [LanguageModel](/data-types#languagemodel) | Input parameter. The language model to use for categorization. The LLM receives the input text and available categories, then returns the exact category name that matches. Required. |
+| Input               | String   | Input parameter. The primary text input for categorization. Required. |
+| Routes              | Table    | Input parameter. Table defining categories for routing. Each row contains a route name (required), an optional route description to help LLMs understand the category, and an optional custom output message. The component creates one output port for each route category. Required. |
+| Override Output     | Message  | Input parameter. An optional override message that takes precedence over all other output options. When provided, this message replaces both the original input text and any custom route messages for all routes. Advanced. |
+| Additional Instructions | String   | Input parameter. Additional instructions for LLM-based categorization. These are added to the base classification prompt, which already includes the full Routes table (names and descriptions). Use `{input_text}` for the input text and `{routes}` for a comma-separated list of route names only.|
+| Include Else Output | Boolean  | Input parameter. Include an Else output for cases that don't match any route. When disabled, no output is produced if no match is found. Default: false. |
+| Else               | Message  | Output parameter. The Else output. Only available when **Include Else Output** is `true`. Uses the override message (if provided) or the original input text when no route matches. |

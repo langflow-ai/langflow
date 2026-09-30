@@ -1,0 +1,51 @@
+name: Deploy Storybook to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/frontend/**/*.stories.*'
+      - 'src/frontend/.storybook/**'
+      - 'src/frontend/package.json'
+      - '.github/workflows/deploy-storybook.yml'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy:
+    name: Deploy Storybook
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd src/frontend && npm ci
+
+      - name: Build Storybook
+        run: cd src/frontend && npm run build-storybook
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          include-hidden-files: true
+          path: src/frontend/storybook-static
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

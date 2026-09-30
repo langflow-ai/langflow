@@ -1,21 +1,21 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { ReactFlowJsonObject } from "@xyflow/react";
-import { ReactElement, ReactNode } from "react";
-import { InputOutput } from "../../constants/enums";
-import {
+import type { ReactFlowJsonObject } from "@xyflow/react";
+import type { InputHTMLAttributes, ReactElement, ReactNode } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type { InputOutput } from "../../constants/enums";
+import type {
   APIClassType,
   APITemplateType,
   InputFieldType,
   OutputFieldProxyType,
 } from "../api";
-import { ChatMessageType } from "../chat";
-import {
+import type { ChatMessageType } from "../chat";
+import type { sourceHandleType, targetHandleType } from "./../flow/index";
+import type {
   AllNodeType,
   FlowStyleType,
   FlowType,
   NodeDataType,
 } from "../flow/index";
-import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -26,12 +26,25 @@ export type InputComponentType = {
   password: boolean;
   required?: boolean;
   isForm?: boolean;
+  /**
+   * Opt back into browser / password-manager autofill (default false). Only set
+   * by real credential-entry forms (login / signup / admin login); node-config
+   * inputs leave it false so autofill cannot inject values that autosave
+   * persists. See utils/inputAutofill.ts.
+   */
+  allowAutofill?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
   placeholder?: string;
   className?: string;
   id?: string;
+  /**
+   * Scopes the rendered DOM id to a flow node so two nodes exposing the same
+   * field name do not collide (LE-2037). `data-testid` keeps using `id`.
+   */
+  nodeId?: string;
+  inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
   optionsPlaceholder?: string;
@@ -44,6 +57,7 @@ export type InputComponentType = {
   setSelectedOptions?: (value: string[]) => void;
   objectOptions?: Array<{ name: string; id: string }>;
   isObjectOption?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose event handler type
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
   isToolMode?: boolean;
@@ -51,6 +65,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
+  inspectionPanel?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -59,15 +74,28 @@ export type DropDownComponent = {
   combobox?: boolean;
   nodeId: string;
   nodeClass: APIClassType;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose handler type
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped metadata array
   optionsMetaData?: any[];
-  onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
+  onSelect: (
+    value: string,
+    dbValue?: boolean,
+    snapshot?: boolean,
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped metadata
+    selectedMetadata?: any,
+  ) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
   name: string;
-  dialogInputs?: any;
+  dialogInputs?: {
+    fields: { data: { node: APIClassType } };
+    functionality: string;
+  };
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
+  externalOptions?: any;
   toggle?: boolean;
 };
 export type ParameterComponentType = {
@@ -83,7 +111,7 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string | undefined;
-  optionalHandle?: Array<String> | null;
+  optionalHandle?: Array<string> | null;
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
@@ -98,6 +126,7 @@ export type NodeOutputFieldComponentType = {
   data: NodeDataType;
   title: string;
   id: sourceHandleType;
+  loopInputId?: sourceHandleType;
   colors: string[];
   tooltipTitle: string | undefined;
   showNode: boolean;
@@ -110,6 +139,10 @@ export type NodeOutputFieldComponentType = {
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
   hidden?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped outputs
+  outputs?: any;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped output handler
+  handleSelectOutput?: (output: any) => void;
 };
 
 export type NodeInputFieldComponentType = {
@@ -121,30 +154,36 @@ export type NodeInputFieldComponentType = {
   type: string | undefined;
   name: string;
   required: boolean;
-  optionalHandle: Array<String> | undefined | null;
+  optionalHandle: Array<string> | undefined | null;
   lastInput?: boolean;
   info: string;
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  isPrimaryInput?: boolean;
+  displayHandle?: boolean;
+  minimizedHandleTop?: string;
 };
 
 export type IOJSONInputComponentType = {
+  // biome-ignore lint/suspicious/noExplicitAny: JSON values are inherently untyped
   value: any;
   onChange: (value) => void;
   left?: boolean;
   output?: boolean;
 };
 export type outputComponentType = {
-  types: string[];
-  selected: string;
   nodeId: string;
   frozen?: boolean;
-  idx: number;
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped outputs
+  outputs?: any;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped output handler
+  handleSelectOutput?: (output: any) => void;
+  outputName?: string;
 };
 
 export type DisclosureComponentType = {
@@ -208,6 +247,8 @@ export type SliderComponentType = {
     id: number;
   }[];
   sliderInput?: boolean;
+  valueInverted?: boolean;
+  sliderColor?: "default" | "red";
 };
 
 export type FilePreviewType = {
@@ -272,6 +313,14 @@ export type ShadToolTipType = {
   delayDuration?: number;
   styleClasses?: string;
   avoidCollisions?: boolean;
+  /**
+   * Overrides Radix's automatic aria-describedby on the trigger. Pass a
+   * string to point at a specific description element, or `undefined` to
+   * suppress the description entirely (e.g. when the tooltip text just
+   * repeats the trigger's own aria-label and would otherwise be announced
+   * twice). Omit this prop to keep Radix's default behavior.
+   */
+  ariaDescribedBy?: string;
 };
 
 export type TextHighlightType = {
@@ -284,6 +333,11 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+  addCurlyBraces?: boolean;
+  /** Bare identifier used to decide whether the name is reserved, when it differs from `name`. */
+  variableName?: string;
+  /** Tooltip shown when the name is reserved. Must come from i18n, never from user input. */
+  invalidTitle?: string;
 }
 
 export type IconComponentProps = {
@@ -296,6 +350,11 @@ export type IconComponentProps = {
   id?: string;
   skipFallback?: boolean;
   dataTestId?: string;
+  /** Icons are decorative (aria-hidden) by default; pass false to expose. */
+  ariaHidden?: boolean;
+  /** Accessible name for meaningful icons; implies ariaHidden=false. */
+  ariaLabel?: string;
+  title?: string;
 };
 
 export type InputProps = {
@@ -335,6 +394,11 @@ export type TriggerProps = {
   children: ReactNode;
   tooltipContent?: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
+  // Forwarded onto the underlying trigger button. Used when the trigger acts
+  // as a toggle (e.g. the admin active/superuser controls) so it is announced
+  // as a named toggle button instead of nesting an interactive role inside it.
+  ariaLabel?: string;
+  ariaPressed?: boolean;
 };
 
 export interface languageMap {
@@ -377,6 +441,7 @@ export type ConfirmationModalType = {
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
   icon?: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   index?: number;
   onConfirm?: (index, data) => void;
@@ -392,6 +457,7 @@ export type ConfirmationModalType = {
     | "small-h-full"
     | "medium-h-full";
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onOpenAutoFocus?: (e: Event) => void;
 };
 
 export type UserManagementType = {
@@ -401,6 +467,7 @@ export type UserManagementType = {
   confirmationText: string;
   children: ReactElement;
   icon: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   index?: number;
   asChild?: boolean;
@@ -413,10 +480,12 @@ export type loginInputStateType = {
 };
 
 export type patchUserInputStateType = {
+  currentPassword: string;
   password: string;
   cnfPassword: string;
   profilePicture: string;
   apikey: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing gradient value (string or object)
   gradient?: any;
 };
 
@@ -432,6 +501,7 @@ export type UserInputType = {
 
 export type ApiKeyType = {
   children: ReactElement;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   onCloseModal?: () => void;
   modalProps?: {
@@ -471,10 +541,6 @@ export type groupedObjType = {
 export type nodeGroupedObjType = {
   displayName: string;
   node: string[] | string;
-};
-
-type test = {
-  [char: string]: string;
 };
 
 export type tweakType = Array<{
@@ -537,6 +603,7 @@ export type ChatInputType = {
     files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
   inputRef: {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing ref type for various input elements
     current: any;
   };
   noInput: boolean;
@@ -546,7 +613,7 @@ export type ChatInputType = {
   }: {
     repeat: number;
     files?: string[];
-  }) => void;
+  }) => Promise<void>;
   playgroundPage: boolean;
 };
 
@@ -578,12 +645,10 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  setShowNode: (boolean: any) => void;
+  setShowNode: (show: boolean) => void;
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
-  openAdvancedModal?: boolean;
-  onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
   isUserEdited: boolean;
   hasBreakingChange: boolean;
@@ -612,6 +677,9 @@ export type modalHeaderType = {
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 };
 
 export type codeAreaModalPropsType = {
@@ -626,18 +694,21 @@ export type codeAreaModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   componentId?: string;
+  size?: string;
 };
 
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lastMessage: boolean;
-  updateChat: (
+  updateChat?: (
     chat: ChatMessageType,
     message: string,
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  isThinking?: boolean;
+  thinkingDuration?: number | null;
 };
 
 export type genericModalPropsType = {
@@ -786,6 +857,7 @@ export type Log = {
 
 export type validationStatusType = {
   id: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing validation data shape
   data: object | any;
   outputs: Log[];
   progress?: number;
@@ -800,6 +872,7 @@ export type ApiKey = {
   created_at: string;
   last_used_at: string;
   total_uses: number;
+  expires_at?: string | null;
 };
 export type fetchErrorComponentType = {
   message: string;
@@ -835,7 +908,7 @@ export type chatViewProps = {
   }: {
     repeat: number;
     files?: string[];
-  }) => void;
+  }) => Promise<void>;
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
@@ -844,6 +917,7 @@ export type chatViewProps = {
 
 export type IOFileInputProps = {
   field: InputFieldType;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose event handler type
   updateValue: (e: any, type: string) => void;
 };
 

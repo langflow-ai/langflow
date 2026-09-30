@@ -1,0 +1,7 @@
+{"event": "vertices_sorted", "data": {"ids": ["ChatInput-XtBLx"], "to_run": ["Prompt-x74Ze", "ChatOutput-ylMzN", "ChatInput-XtBLx", "OpenAIModel-d1wOZ"]}}
+
+{"event": "add_message", "data": {"timestamp": "2025-03-03T17:42:23", "sender": "User", "sender_name": "User", "session_id": "d2bbd92b-187e-4c84-b2d4-5df365704201", "text": "Tell me a story", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "28879bd8-6a68-4dd5-b658-74d643a4dd92", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
+
+// ... Additional events as the flow executes ...
+
+{"event": "end", "data": {}}

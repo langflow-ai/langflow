@@ -1,7 +1,9 @@
+import re
+
 import pytest
-from langflow.components.processing.parser import ParserComponent
-from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
+from lfx.components.processing.parser import ParserComponent
+from lfx.schema import Data, DataFrame
+from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -56,6 +58,40 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Assert
         assert isinstance(result, Message)
         assert result.text == "text: Hello World"
+
+    def test_parse_data_list(self, component_class):
+        data = [
+            Data(data={"name": "John", "age": 30}),
+            Data(data={"name": "Jane", "age": 25}),
+        ]
+        component = component_class(
+            input_data=data,
+            pattern="{name} is {age} years old",
+            sep=" | ",
+            mode="Parser",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "John is 30 years old | Jane is 25 years old"
+
+    def test_parse_data_list_uses_each_item_default_value(self, component_class):
+        data = [
+            Data(data={"name": "John"}, default_value="unknown"),
+            Data(data={"name": "Jane"}, default_value="not provided"),
+        ]
+        component = component_class(
+            input_data=data,
+            pattern="{name}: {role}",
+            sep="\n",
+            mode="Parser",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "John: unknown\nJane: not provided"
 
     def test_stringify_dataframe(self, component_class):
         # Arrange
@@ -112,10 +148,34 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "Test message content"
 
+    def test_stringify_list_without_clean_data(self, component_class):
+        component = component_class(
+            input_data=[Message(text="First"), Message(text="Second")],
+            mode="Stringify",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "First\nSecond"
+
+    @pytest.mark.parametrize(("input_data", "expected"), [("", ""), (0, "0")])
+    def test_stringify_preserves_falsy_scalar_input(self, component_class, input_data, expected):
+        component = component_class(input_data=input_data, mode="Stringify")
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == expected
+
     def test_clean_data_with_stringify(self, component_class):
         # Arrange
         data_frame = DataFrame(
-            {"Name": ["John", "Jane\n", "\nBob"], "Age": [30, None, 25], "Notes": ["Good\n\nPerson", "", "Nice\n"]}
+            {
+                "Name": ["John", "Jane\n", "\nBob"],
+                "Age": [30, None, 25],
+                "Notes": ["Good\n\nPerson", "", "Nice\n"],
+            }
         )
         kwargs = {
             "input_data": data_frame,
@@ -137,8 +197,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert "| John" in result.text
         assert "| Jane" in result.text
         assert "| Bob" in result.text
-        assert "| Good" in result.text
-        assert "| Person" in result.text
+        assert "| Good<br/>Person" in result.text
         assert "| Nice" in result.text
         # Verify data is cleaned
         assert "Jane\n" not in result.text
@@ -156,7 +215,10 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'int'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame, Data, or list[Data]."),
+        ):
             component.parse_combined_text()
 
     def test_none_input(self, component_class):
@@ -169,7 +231,10 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame, Data, or list[Data]."),
+        ):
             component.parse_combined_text()
 
     def test_invalid_template(self, component_class):
@@ -210,3 +275,21 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         expected = "John is 30 years old | Jane is 25 years old | Bob is 35 years old"
         assert result.text == expected
+
+    def test_empty_data_with_template(self, component_class):
+        # Arrange - Data with empty data dict but template expects keys
+        data = Data(text_key="text", data={}, default_value="")
+        kwargs = {
+            "input_data": data,
+            "pattern": "Text: {text}",
+            "sep": "\n",
+            "mode": "Parser",
+        }
+        component = component_class(**kwargs)
+
+        # Act
+        result = component.parse_combined_text()
+
+        # Assert - Should use default_value when key is missing
+        assert isinstance(result, Message)
+        assert result.text == "Text: "

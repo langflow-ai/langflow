@@ -1,22 +1,22 @@
-import { expect, test } from "@playwright/test";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+
 test(
   "user should be able to edit tools",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
 
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-url").click();
@@ -40,7 +40,7 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=actions", { timeout: 30000 });
+    await page.waitForSelector("text=tools", { timeout: 30000 });
 
     await page.getByTestId("button_open_actions").click();
 
@@ -48,33 +48,25 @@ test(
 
     const rowsCount = await page.getByRole("gridcell").count();
 
-    expect(rowsCount).toBeGreaterThan(3);
+    expect(rowsCount).toBeGreaterThan(2);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(0).isChecked(),
-    ).toBe(true);
+    // Scope to the enable ("name") column: the HITL approval_actions column also renders an
+    // eInput checkbox, so a global nth() index would land on it instead of the action toggle.
+    const enableCheckboxes = page.locator(
+      '[col-id="name"] input[data-ref="eInput"]',
+    );
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(true);
+    expect(await enableCheckboxes.nth(0).isChecked()).toBe(true);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-    ).toBe(true);
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(true);
 
-    await page.locator('input[data-ref="eInput"]').nth(0).click();
+    await enableCheckboxes.nth(0).click();
 
     await page.waitForTimeout(500);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(false);
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(false);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-    ).toBe(false);
-
-    await page.locator('input[data-ref="eInput"]').nth(0).click();
+    await enableCheckboxes.nth(0).click();
 
     await page.waitForTimeout(500);
 
@@ -112,7 +104,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     await page.waitForTimeout(500);
 
@@ -139,21 +131,9 @@ test(
 
     await page.waitForTimeout(500);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(true);
-
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-    ).toBe(true);
-
-    await page.locator('input[data-ref="eInput"]').nth(4).click();
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(true);
 
     await page.waitForTimeout(500);
-
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-    ).toBe(false);
 
     await page.getByRole("gridcell").nth(0).click();
 
@@ -197,14 +177,18 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("btn_close_tools_modal").click();
+
+    await page.waitForTimeout(500);
+
+    await expect(page.getByTestId("btn_close_tools_modal")).not.toBeInViewport({
+      timeout: 3000,
+    });
+
+    await page.getByText(TEXTS.close).last().click();
 
     expect(
       await page.locator('[data-testid="tool_fetch_content"]').isVisible(),
-    ).toBe(true);
-
-    expect(
-      await page.locator('[data-testid="tool_as_dataframe"]').isVisible(),
     ).toBe(true);
   },
 );

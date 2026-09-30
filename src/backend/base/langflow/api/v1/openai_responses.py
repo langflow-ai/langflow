@@ -1,0 +1,959 @@
+import asyncio
+import json
+import time
+import uuid
+from collections.abc import AsyncGenerator
+from typing import Annotated, Any
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
+from lfx.log.logger import logger
+from lfx.observability import execution_protocol
+from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
+from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.workflow.end_user_identity import (
+    EndUserIdentityRequiredError,
+    end_user_required_detail,
+    resolve_serving_scope,
+)
+
+from langflow.api.utils import extract_global_variables_from_headers
+from langflow.api.utils.execution_errors import SAFE_TOOL_ERROR_MESSAGE, error_for_client
+from langflow.api.v1.endpoints import (
+    _caller_owns_flow,
+    _reject_shared_secret_variable_overrides,
+    consume_and_yield,
+    run_flow_generator,
+    simple_run_flow,
+)
+from langflow.api.v1.schemas import SimplifiedAPIRequest
+from langflow.events.event_manager import create_stream_tokens_event_manager
+from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.schema import (
+    OpenAIErrorResponse,
+    OpenAIResponsesRequest,
+    OpenAIResponsesResponse,
+    OpenAIResponsesStreamChunk,
+)
+from langflow.services.auth.utils import api_key_security
+from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.user.model import UserRead
+from langflow.services.deps import get_telemetry_service
+from langflow.services.telemetry.schema import RunPayload
+from langflow.services.telemetry.service import TelemetryService
+
+router = APIRouter(tags=["OpenAI Responses API"])
+
+
+def _flow_not_found_response(model: str) -> OpenAIErrorResponse:
+    error_response = create_openai_error(
+        message=f"Flow with id '{model}' not found",
+        type_="invalid_request_error",
+        code="flow_not_found",
+    )
+    return OpenAIErrorResponse(error=error_response["error"])
+
+
+def _is_tool_step(block: Any) -> bool:
+    """True for a ``tool_use`` content block, whichever content-types module built it."""
+    return getattr(block, "type", None) == "tool_use"
+
+
+def _tool_error_text(error: Any) -> str:
+    """Render a ``ToolContent.error`` payload as the ``error`` string of a tool-call item."""
+    if isinstance(error, str):
+        return error
+    try:
+        return json.dumps(error, default=str)
+    except (TypeError, ValueError):
+        return str(error)
+
+
+def _client_tool_error(error: Any, *, expose_details: bool) -> str:
+    """Tool-error text that may cross the API boundary.
+
+    Same ownership policy as ``error_for_client``: the flow owner sees the tool's own
+    message, a delegated or shared caller only learns that the tool failed.
+    """
+    return _tool_error_text(error) if expose_details else SAFE_TOOL_ERROR_MESSAGE
+
+
+def _streamed_message_key(data: Any) -> str:
+    """Key a ``token`` or ``add_message`` event by the message it belongs to.
+
+    ``Component._send_message_event`` and both token emitters (``Component._process_chunk``,
+    ``lfx.base.agents.events``) put the stored message id at ``data["id"]``; a raw
+    ``Message.model_dump()`` keeps it at ``data["data"]["id"]``. Events carrying neither share
+    the anonymous key, so the tokens and the complete message of a producer that streams
+    outside ``send_message`` still pair up.
+    """
+    if not isinstance(data, dict):
+        return ""
+    nested = data.get("data")
+    message_id = data.get("id") or (nested.get("id") if isinstance(nested, dict) else None)
+    return str(message_id) if message_id else ""
+
+
+def _already_delivered(text: str, delivered: str) -> bool:
+    """Whether ``text`` carries nothing the client has not already received.
+
+    True when what the client has already ends with ``text``. Whitespace is ignored: token
+    concatenation and the stored text of one answer can differ by it alone. A suffix rather
+    than equality covers an agent whose final text is the last model round while its tokens
+    spanned every round. Empty text is trivially delivered.
+    """
+    return "".join(delivered.split()).endswith("".join(text.split()))
+
+
+def _split_already_sent(chunk: str, already_sent: str) -> tuple[str, str]:
+    """Split a token ``chunk`` into what the client still needs and what it already has.
+
+    Chat Output publishes the first streamed chunk twice: as the text of a
+    ``state="partial"`` add_message and, right after, as the first ``token`` event
+    of the same message. The partial text is forwarded the moment it arrives, so
+    the token repeating it must not be forwarded again.
+
+    Returns ``(text_to_send, still_ahead)``: ``still_ahead`` is the part of
+    ``already_sent`` that later tokens are still expected to repeat. A chunk that
+    matches neither way means the token stream diverged from the partial text; it
+    is then sent whole rather than risk dropping text.
+    """
+    if not already_sent:
+        return chunk, ""
+    if already_sent.startswith(chunk):
+        return "", already_sent[len(chunk) :]
+    if chunk.startswith(already_sent):
+        return chunk[len(already_sent) :], ""
+    return chunk, ""
+
+
+def has_chat_input(flow_data: dict | None) -> bool:
+    """Check if the flow has a chat input component."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    return any(node.get("data", {}).get("type") in ["ChatInput", "Chat Input"] for node in flow_data["nodes"])
+
+
+def has_chat_output(flow_data: dict | None) -> bool:
+    """Check if the flow has a chat input component."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    return any(node.get("data", {}).get("type") in ["ChatOutput", "Chat Output"] for node in flow_data["nodes"])
+
+
+async def run_flow_for_openai_responses(
+    flow: FlowRead,
+    request: OpenAIResponsesRequest,
+    api_key_user: UserRead,
+    *,
+    stream: bool = False,
+    variables: dict[str, str] | None = None,
+    http_request: Request | None = None,
+) -> OpenAIResponsesResponse | StreamingResponse:
+    """Run a flow for OpenAI Responses API compatibility."""
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
+    _reject_shared_secret_variable_overrides(flow, api_key_user, variables)
+    # Check if flow has chat input
+    if not has_chat_input(flow.data):
+        msg = "Flow must have a ChatInput component to be compatible with OpenAI Responses API"
+        raise ValueError(msg)
+
+    if not has_chat_output(flow.data):
+        msg = "Flow must have a ChatOutput component to be compatible with OpenAI Responses API"
+        raise ValueError(msg)
+
+    # Use previous_response_id as session_id for conversation continuity
+    # If no previous_response_id, create a new session_id
+    session_id = request.previous_response_id or str(uuid.uuid4())
+
+    # Store header variables in context for global variable override
+    context = {}
+    if variables:
+        context["request_variables"] = variables
+        await logger.adebug(f"Added request variables to context: {list(variables.keys())}")
+
+    # Convert OpenAI request to SimplifiedAPIRequest
+    # Note: We're moving away from tweaks to a context-based approach
+    simplified_request = SimplifiedAPIRequest(
+        input_value=request.input,
+        input_type="chat",  # Use chat input type for better compatibility
+        output_type="chat",  # Use chat output type for better compatibility
+        tweaks={},  # Empty tweaks, using context instead
+        session_id=session_id,
+    )
+
+    # Context will be passed separately to simple_run_flow
+
+    await logger.adebug(f"SimplifiedAPIRequest created with context keys: {list(context.keys())}")
+
+    # Use session_id as response_id for OpenAI compatibility
+    response_id = session_id
+    created_timestamp = int(time.time())
+
+    if stream:
+        # Handle streaming response
+        asyncio_queue: asyncio.Queue = asyncio.Queue()
+        asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+        event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
+
+        async def openai_stream_generator() -> AsyncGenerator[str, None]:
+            """Convert Langflow events to OpenAI Responses API streaming format."""
+            # Around the create_task only: the task copies the context at creation, and there is
+            # no await inside the scope, so nothing straddles a suspension point of this generator.
+            with execution_protocol("openai_responses"):
+                main_task = asyncio.create_task(
+                    run_flow_generator(
+                        flow=flow,
+                        input_request=simplified_request,
+                        api_key_user=api_key_user,
+                        event_manager=event_manager,
+                        client_consumed_queue=asyncio_queue_client_consumed,
+                        context=context,
+                        expose_error_details=expose_error_details,
+                        http_request=http_request,
+                    )
+                )
+
+            try:
+                await logger.adebug(
+                    "[OpenAIResponses][stream] start: response_id=%s model=%s session_id=%s",
+                    response_id,
+                    request.model,
+                    session_id,
+                )
+                # Send initial chunk to establish connection
+                initial_chunk = OpenAIResponsesStreamChunk(
+                    id=response_id,
+                    created=created_timestamp,
+                    model=request.model,
+                    delta={"content": ""},
+                )
+                yield f"data: {initial_chunk.model_dump_json()}\n\n"
+
+                tool_call_counter = 0
+                processed_tools = set()  # Track processed tool calls to avoid duplicates
+                previous_content = ""  # Track content already sent to calculate deltas
+                stream_usage_data = None  # Track usage from completed message
+                # Keys (see _streamed_message_key) of the messages whose text went out as
+                # non-empty ``token`` events. A ``state="complete"`` add_message repeats
+                # text the client already has only when its own id streamed. Every other
+                # complete message is the sole carrier of its text: a producer that never
+                # streamed (Stream toggle off, a Prompt feeding Chat Output), or a Chat
+                # Output re-publishing a streamed agent answer through a Prompt under the
+                # new id it stores it with.
+                streamed_message_ids: set[str] = set()
+                # Text already forwarded from an add_message that the token stream of the
+                # same message is expected to repeat, keyed like streamed_message_ids. Chat
+                # Output publishes the first streamed chunk as a partial add_message *before*
+                # the token event for it; an agent's interim text is republished *after* its
+                # tokens, so its delta is empty and nothing is recorded for it.
+                partial_text_ahead: dict[str, str] = {}
+                # A completion can repeat a partial answer or attach usage while other
+                # branches emit text in between. Remember each message's latest text
+                # independently of the response-wide delta baseline.
+                previous_message_text: dict[str, str] = {}
+
+                async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
+                    if event_data is None:
+                        await logger.adebug("[OpenAIResponses][stream] received None event_data; breaking loop")
+                        break
+
+                    content = ""
+                    token_data: str | dict[str, Any] = {}  # {} = no token in this event
+
+                    # Parse byte string events as JSON
+                    if isinstance(event_data, bytes):
+                        try:
+                            import json
+
+                            event_str = event_data.decode("utf-8")
+                            parsed_event = json.loads(event_str)
+
+                            if isinstance(parsed_event, dict):
+                                event_type = parsed_event.get("event")
+                                data = parsed_event.get("data", {})
+                                await logger.adebug(
+                                    "[OpenAIResponses][stream] event: %s keys=%s",
+                                    event_type,
+                                    list(data.keys()) if isinstance(data, dict) else type(data),
+                                )
+
+                                # Handle add_message events
+                                if event_type == "token":
+                                    token_data = data.get("chunk", "")
+                                    if isinstance(token_data, str) and token_data:
+                                        message_key = _streamed_message_key(data)
+                                        streamed_message_ids.add(message_key)
+                                        token_data, still_ahead = _split_already_sent(
+                                            token_data, partial_text_ahead.get(message_key, "")
+                                        )
+                                        if still_ahead:
+                                            partial_text_ahead[message_key] = still_ahead
+                                        else:
+                                            partial_text_ahead.pop(message_key, None)
+                                        previous_content += token_data
+                                    await logger.adebug(
+                                        "[OpenAIResponses][stream] token: token_data=%s",
+                                        token_data,
+                                    )
+                                if event_type == "error":
+                                    # Error message is in 'text' field, not 'error' field
+                                    # The 'error' field is a boolean flag
+                                    error_message = data.get("text") or data.get("error", "Unknown error")
+                                    # Ensure error_message is a string
+                                    if not isinstance(error_message, str):
+                                        error_message = str(error_message)
+                                    # Send error as content chunk with finish_reason="error"
+                                    # This ensures OpenAI SDK can parse and surface the error
+                                    error_chunk = create_openai_error_chunk(
+                                        response_id=response_id,
+                                        created_timestamp=created_timestamp,
+                                        model=request.model,
+                                        error_message=error_message,
+                                    )
+                                    yield f"data: {error_chunk.model_dump_json()}\n\n"
+                                    yield "data: [DONE]\n\n"
+                                    # Exit early after error
+                                    return
+
+                                if event_type == "add_message":
+                                    sender_name = data.get("sender_name", "")
+                                    text = data.get("text", "")
+                                    sender = data.get("sender", "")
+                                    content_blocks = data.get("content_blocks", [])
+
+                                    # Get message state from properties
+                                    properties = data.get("properties", {})
+                                    message_state = properties.get("state") if isinstance(properties, dict) else None
+
+                                    await logger.adebug(
+                                        (
+                                            "[OpenAIResponses][stream] add_message: "
+                                            "sender=%s sender_name=%s text_len=%d state=%s"
+                                        ),
+                                        sender,
+                                        sender_name,
+                                        len(text) if isinstance(text, str) else -1,
+                                        message_state,
+                                    )
+
+                                    if message_state == "complete":
+                                        # Extract usage from completed message properties
+                                        if isinstance(properties, dict) and "usage" in properties:
+                                            usage_obj = properties.get("usage")
+                                            if usage_obj and isinstance(usage_obj, dict):
+                                                # Convert None values to 0 for compatibility
+                                                stream_usage_data = {
+                                                    "input_tokens": usage_obj.get("input_tokens") or 0,
+                                                    "output_tokens": usage_obj.get("output_tokens") or 0,
+                                                    "total_tokens": usage_obj.get("total_tokens") or 0,
+                                                }
+                                                await logger.adebug(
+                                                    "[OpenAIResponses][stream] captured usage: %s", stream_usage_data
+                                                )
+                                        # The text of a complete message is a repeat of what the client
+                                        # already has only when this very message went out as token
+                                        # events. Blanking every complete message dropped the answer of
+                                        # runs that never streamed; blanking on any earlier token dropped
+                                        # the Chat Output that re-publishes a streamed agent answer
+                                        # through a Prompt under its own id. A complete message that did
+                                        # not stream falls through to the delta logic below, which also
+                                        # keeps a republished identical message (Chat Output re-sending
+                                        # once usage is attached, or storing an unchanged upstream answer
+                                        # under a new id) from being emitted twice.
+                                        message_key = _streamed_message_key(data)
+                                        if message_key in streamed_message_ids:
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] skipping text of add_message with "
+                                                "state=complete: message %r already streamed as tokens",
+                                                message_key,
+                                            )
+                                            # Still process content_blocks for tool calls, but skip text content
+                                            text = ""
+
+                                    # Look for Agent Steps in content_blocks
+                                    for block in content_blocks:
+                                        if block.get("title") == "Agent Steps":
+                                            contents = block.get("contents", [])
+                                            for step in contents:
+                                                # Look for tool_use type items
+                                                if step.get("type") == "tool_use":
+                                                    tool_name = step.get("name", "")
+                                                    tool_input = step.get("tool_input", {})
+                                                    tool_output = step.get("output")
+                                                    tool_error = step.get("error")
+                                                    # A step is terminal once it carries an output OR an
+                                                    # error. A failed tool never gets an output, so gating
+                                                    # on output alone dropped every failed call from the
+                                                    # stream while the persisted message still showed it.
+                                                    tool_finished = tool_output is not None or tool_error is not None
+
+                                                    # Only emit tool calls with explicit tool names and
+                                                    # meaningful arguments, once the step has resolved
+                                                    if tool_name and tool_input is not None and tool_finished:
+                                                        # Create unique identifier for this tool call
+                                                        tool_signature = (
+                                                            f"{tool_name}:{hash(str(sorted(tool_input.items())))}"
+                                                        )
+
+                                                        # Skip if we've already processed this tool call
+                                                        if tool_signature in processed_tools:
+                                                            continue
+
+                                                        processed_tools.add(tool_signature)
+                                                        tool_call_counter += 1
+                                                        call_id = f"call_{tool_call_counter}"
+                                                        tool_id = f"fc_{tool_call_counter}"
+                                                        tool_call_event = {
+                                                            "type": "response.output_item.added",
+                                                            "item": {
+                                                                "id": tool_id,
+                                                                "type": "function_call",  # OpenAI uses "function_call"
+                                                                "status": "in_progress",  # OpenAI includes status
+                                                                "name": tool_name,
+                                                                "arguments": "",  # Start with empty, build via deltas
+                                                                "call_id": call_id,
+                                                            },
+                                                        }
+                                                        yield (
+                                                            f"event: response.output_item.added\n"
+                                                            f"data: {json.dumps(tool_call_event)}\n\n"
+                                                        )
+
+                                                        # Send function call arguments as delta events (like OpenAI)
+                                                        arguments_str = json.dumps(tool_input)
+                                                        arg_delta_event = {
+                                                            "type": "response.function_call_arguments.delta",
+                                                            "delta": arguments_str,
+                                                            "item_id": tool_id,
+                                                            "output_index": 0,
+                                                        }
+                                                        yield (
+                                                            f"event: response.function_call_arguments.delta\n"
+                                                            f"data: {json.dumps(arg_delta_event)}\n\n"
+                                                        )
+
+                                                        # Send function call arguments done event
+                                                        arg_done_event = {
+                                                            "type": "response.function_call_arguments.done",
+                                                            "arguments": arguments_str,
+                                                            "item_id": tool_id,
+                                                            "output_index": 0,
+                                                        }
+                                                        yield (
+                                                            f"event: response.function_call_arguments.done\n"
+                                                            f"data: {json.dumps(arg_done_event)}\n\n"
+                                                        )
+                                                        await logger.adebug(
+                                                            "[OpenAIResponses][stream] tool_call.args.done name=%s",
+                                                            tool_name,
+                                                        )
+
+                                                        # The step resolved (output or error): send the completion
+                                                        # event. A failed call carries status="failed" plus the
+                                                        # error text, mirroring OpenAI's server-executed call
+                                                        # items (mcp_call / web_search_call), so consumers can
+                                                        # render the failure instead of an in-flight call.
+                                                        # The outcome follows ``output``: on_tool_end only fires
+                                                        # when a run succeeds and the same block is rebound across
+                                                        # retry attempts, so output + error together mean "failed
+                                                        # once, then succeeded". Only an output-less error fails.
+                                                        tool_failed = tool_output is None and tool_error is not None
+                                                        tool_status = "failed" if tool_failed else "completed"
+                                                        # Check if include parameter requests tool_call.results
+                                                        include_results = (
+                                                            request.include and "tool_call.results" in request.include
+                                                        )
+
+                                                        if include_results:
+                                                            # Format with detailed results
+                                                            tool_done_event = {
+                                                                "type": "response.output_item.done",
+                                                                "item": {
+                                                                    "id": f"{tool_name}_{tool_id}",
+                                                                    "inputs": tool_input,  # Raw inputs as-is
+                                                                    "status": tool_status,
+                                                                    "type": "tool_call",
+                                                                    "tool_name": f"{tool_name}",
+                                                                    # Raw output as-is; a failed call has none
+                                                                    "results": tool_output
+                                                                    if tool_output is not None
+                                                                    else [],
+                                                                },
+                                                                "output_index": 0,
+                                                                "sequence_number": tool_call_counter + 5,
+                                                            }
+                                                        else:
+                                                            # Regular function call format
+                                                            tool_done_event = {
+                                                                "type": "response.output_item.done",
+                                                                "item": {
+                                                                    "id": tool_id,
+                                                                    "type": "function_call",  # Match OpenAI format
+                                                                    "status": tool_status,
+                                                                    "arguments": arguments_str,
+                                                                    "call_id": call_id,
+                                                                    "name": tool_name,
+                                                                },
+                                                            }
+                                                        if tool_failed:
+                                                            tool_done_event["item"]["error"] = _client_tool_error(
+                                                                tool_error, expose_details=expose_error_details
+                                                            )
+
+                                                        yield (
+                                                            f"event: response.output_item.done\n"
+                                                            f"data: {json.dumps(tool_done_event)}\n\n"
+                                                        )
+                                                        await logger.adebug(
+                                                            "[OpenAIResponses][stream] tool_call.done %s status=%s",
+                                                            tool_name,
+                                                            tool_status,
+                                                        )
+
+                                    # Extract text content for streaming (only AI responses)
+                                    if (
+                                        sender in ["Machine", "AI", "Agent"]
+                                        and text != request.input
+                                        and sender_name in ["Agent", "AI"]
+                                    ):
+                                        message_key = _streamed_message_key(data)
+                                        is_republished_complete = (
+                                            message_state == "complete"
+                                            and previous_message_text.get(message_key) == text
+                                        )
+                                        if text:
+                                            previous_message_text[message_key] = text
+                                        # Calculate delta: only send newly generated content
+                                        if is_republished_complete or _already_delivered(text, previous_content):
+                                            # Nothing new: this completed snapshot was already handled,
+                                            # the text was blanked because its id streamed, the frame is
+                                            # text-less, or a new id repeats what the tokens delivered.
+                                            # The baseline must survive here; letting such a frame fall
+                                            # into the reset below emptied it, so the next message was
+                                            # measured against nothing and re-sent the whole answer.
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] text already delivered; skipping len=%d",
+                                                len(text),
+                                            )
+                                        elif text.startswith(previous_content):
+                                            content = text[len(previous_content) :]
+                                            previous_content = text
+                                            if content:
+                                                partial_text_ahead[message_key] = (
+                                                    partial_text_ahead.get(message_key, "") + content
+                                                )
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] delta computed len=%d total_len=%d",
+                                                len(content),
+                                                len(previous_content),
+                                            )
+                                        else:
+                                            # If text doesn't start with previous content, send full text
+                                            # This handles cases where the content might be reset
+                                            content = text
+                                            previous_content = text
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] content reset; sending full text len=%d",
+                                                len(content),
+                                            )
+
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            await logger.adebug("[OpenAIResponses][stream] failed to decode event bytes; skipping")
+                            continue
+
+                    # Only send chunks with actual content
+                    if content or token_data:
+                        if isinstance(token_data, str):
+                            content = token_data
+                            await logger.adebug(
+                                f"[OpenAIResponses][stream] sent chunk with content={content}",
+                            )
+                        chunk = OpenAIResponsesStreamChunk(
+                            id=response_id,
+                            created=created_timestamp,
+                            model=request.model,
+                            delta={"content": content},
+                        )
+                        yield f"data: {chunk.model_dump_json()}\n\n"
+                        await logger.adebug(
+                            "[OpenAIResponses][stream] sent chunk with delta_len=%d",
+                            len(content),
+                        )
+
+                # Send final completion chunk
+                final_chunk = OpenAIResponsesStreamChunk(
+                    id=response_id,
+                    created=created_timestamp,
+                    model=request.model,
+                    delta={},
+                    status="completed",
+                    finish_reason="stop",
+                )
+                yield f"data: {final_chunk.model_dump_json()}\n\n"
+
+                # Send response.completed event with usage (OpenAI format)
+                completed_event = {
+                    "type": "response.completed",
+                    "response": {
+                        "id": response_id,
+                        "object": "response",
+                        "created_at": created_timestamp,
+                        "status": "completed",
+                        "model": request.model,
+                        "usage": stream_usage_data,
+                    },
+                }
+                yield f"event: response.completed\ndata: {json.dumps(completed_event)}\n\n"
+
+                yield "data: [DONE]\n\n"
+                await logger.adebug(
+                    "[OpenAIResponses][stream] completed: response_id=%s total_sent_len=%d usage=%s",
+                    response_id,
+                    len(previous_content),
+                    stream_usage_data,
+                )
+
+            except Exception as e:  # noqa: BLE001
+                await logger.aexception("Error in OpenAI Responses stream generator")
+                client_error = error_for_client(e, expose_details=expose_error_details)
+                # Send error as content chunk with finish_reason="error"
+                error_chunk = create_openai_error_chunk(
+                    response_id=response_id,
+                    created_timestamp=created_timestamp,
+                    model=request.model,
+                    error_message=str(client_error),
+                )
+                yield f"data: {error_chunk.model_dump_json()}\n\n"
+                yield "data: [DONE]\n\n"
+            finally:
+                if not main_task.done():
+                    main_task.cancel()
+
+        return StreamingResponse(
+            openai_stream_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+            },
+        )
+
+    # Handle non-streaming response
+    with execution_protocol("openai_responses"):
+        result = await simple_run_flow(
+            flow=flow,
+            input_request=simplified_request,
+            stream=False,
+            api_key_user=api_key_user,
+            context=context,
+            expose_error_details=expose_error_details,
+            http_request=http_request,
+        )
+
+    # Extract output text, tool calls, and usage from result
+    output_text = ""
+    tool_calls: list[dict[str, Any]] = []
+    usage_data: dict[str, int] | None = None
+    try:
+        outputs_len = len(result.outputs) if getattr(result, "outputs", None) else 0
+        await logger.adebug("[OpenAIResponses][non-stream] result.outputs len=%d", outputs_len)
+    except Exception:  # noqa: BLE001
+        await logger.adebug("[OpenAIResponses][non-stream] unable to read result.outputs len")
+
+    if result.outputs:
+        for run_output in result.outputs:
+            if run_output and run_output.outputs:
+                for component_output in run_output.outputs:
+                    if component_output:
+                        # First, try to extract usage from results (contains actual Message objects)
+                        if hasattr(component_output, "results") and component_output.results:
+                            for value in component_output.results.values():
+                                # Extract usage from Message properties if available
+                                if (
+                                    not usage_data
+                                    and hasattr(value, "properties")
+                                    and hasattr(value.properties, "usage")
+                                    and value.properties.usage
+                                ):
+                                    usage_obj = value.properties.usage
+                                    usage_data = {
+                                        "input_tokens": getattr(usage_obj, "input_tokens", None) or 0,
+                                        "output_tokens": getattr(usage_obj, "output_tokens", None) or 0,
+                                        "total_tokens": getattr(usage_obj, "total_tokens", None) or 0,
+                                    }
+                                    break
+                        # Handle messages (final chat outputs) for text extraction
+                        if hasattr(component_output, "messages") and component_output.messages:
+                            for msg in component_output.messages:
+                                if hasattr(msg, "message"):
+                                    output_text = msg.message
+                                    break
+                        # Handle results for text extraction if not found in messages
+                        if not output_text and hasattr(component_output, "results") and component_output.results:
+                            for value in component_output.results.values():
+                                if hasattr(value, "get_text"):
+                                    output_text = value.get_text()
+                                    break
+                                if isinstance(value, str):
+                                    output_text = value
+                                    break
+
+                        if hasattr(component_output, "results") and component_output.results:
+                            message = component_output.results.get("message")
+                            for block in getattr(message, "content_blocks", None) or []:
+                                # The agent's flat log carries tool_use as top-level
+                                # ToolContent leaves; the legacy/grouped shape nests
+                                # them inside a group's ``contents``. Handle both.
+                                # Match on the ``type`` discriminator rather than
+                                # ``isinstance``: the agent builds its blocks from
+                                # ``lfx.schema.content_types``, a different class than
+                                # the langflow-side copy, so an isinstance check never
+                                # matched a real message and no tool call was returned.
+                                leaves = [block] if _is_tool_step(block) else getattr(block, "contents", None) or []
+                                tool_calls.extend(
+                                    {
+                                        "name": content.name,
+                                        "input": content.tool_input,
+                                        "output": content.output,
+                                        "error": content.error,
+                                    }
+                                    for content in leaves
+                                    if _is_tool_step(content)
+                                )
+                    if output_text:
+                        break
+            if output_text:
+                break
+
+    await logger.adebug(
+        "[OpenAIResponses][non-stream] extracted output_text_len=%d tool_calls=%d usage=%s",
+        len(output_text) if isinstance(output_text, str) else -1,
+        len(tool_calls),
+        usage_data,
+    )
+
+    # Build output array
+    output_items = []
+
+    # Add tool calls if includes parameter requests them
+    include_results = request.include and "tool_call.results" in request.include
+
+    tool_call_id_counter = 1
+    for tool_call in tool_calls:
+        # Same contract as the stream: an output-less error is a failure; otherwise the
+        # output wins (a retried call that eventually succeeded keeps its stale error).
+        tool_error = tool_call.get("error")
+        tool_failed = tool_call.get("output") is None and tool_error is not None
+        tool_status = "failed" if tool_failed else "completed"
+        if include_results:
+            # Format as detailed tool call with results (like file_search_call in sample)
+            tool_call_item = {
+                "id": f"{tool_call['name']}_{tool_call_id_counter}",
+                "queries": list(tool_call["input"].values())
+                if isinstance(tool_call["input"], dict)
+                else [str(tool_call["input"])],
+                "status": tool_status,
+                "tool_name": f"{tool_call['name']}",
+                "type": "tool_call",
+                "results": tool_call["output"] if tool_call["output"] is not None else [],
+            }
+        else:
+            # Format as basic function call
+            tool_call_item = {
+                "id": f"fc_{tool_call_id_counter}",
+                "type": "function_call",
+                "status": tool_status,
+                "name": tool_call["name"],
+                "arguments": json.dumps(tool_call["input"]) if tool_call["input"] is not None else "{}",
+            }
+        if tool_failed:
+            tool_call_item["error"] = _client_tool_error(tool_error, expose_details=expose_error_details)
+
+        output_items.append(tool_call_item)
+        tool_call_id_counter += 1
+
+    # Add the message output
+    output_message = {
+        "type": "message",
+        "id": f"msg_{response_id}",
+        "status": "completed",
+        "role": "assistant",
+        "content": [{"type": "output_text", "text": output_text, "annotations": []}],
+    }
+    output_items.append(output_message)
+
+    return OpenAIResponsesResponse(
+        id=response_id,
+        created_at=created_timestamp,
+        model=request.model,
+        output=output_items,
+        previous_response_id=request.previous_response_id,
+        usage=usage_data,
+    )
+
+
+@router.post("/responses", response_model=None)
+async def create_response(
+    request: OpenAIResponsesRequest,
+    background_tasks: BackgroundTasks,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
+    http_request: Request,
+) -> OpenAIResponsesResponse | StreamingResponse | OpenAIErrorResponse:
+    """Create a response using OpenAI Responses API format.
+
+    This endpoint accepts a flow_id in the model parameter and processes
+    the input through the specified Langflow flow.
+
+    Args:
+        request: OpenAI Responses API request with model (flow_id) and input
+        background_tasks: FastAPI background task manager
+        api_key_user: Authenticated user from API key
+        http_request: The incoming HTTP request
+        telemetry_service: Telemetry service for logging
+
+    Returns:
+        OpenAI-compatible response or streaming response
+
+    Raises:
+        HTTPException: For validation errors or flow execution issues
+    """
+    start_time = time.perf_counter()
+
+    # Extract global variables from X-LANGFLOW-GLOBAL-VAR-* headers
+    variables = extract_global_variables_from_headers(http_request.headers)
+
+    await logger.adebug(f"All headers received: {list(http_request.headers.keys())}")
+    await logger.adebug(f"Extracted global variables from headers: {list(variables.keys())}")
+
+    # Validate tools parameter - error out if tools are provided
+    if request.tools is not None:
+        error_response = create_openai_error(
+            message="Tools are not supported yet",
+            type_="invalid_request_error",
+            code="tools_not_supported",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
+
+    # Get flow using the model field (which contains flow_id). The lookup
+    # becomes share-aware when an authorization plugin is registered, so we
+    # also enforce ``flow:execute`` explicitly — otherwise an API key with
+    # cross-user fetch enabled would skip policy here.
+    try:
+        flow = await get_flow_by_id_or_endpoint_name(
+            request.model,
+            str(api_key_user.id),
+            widen_for_shares=True,
+        )
+    except HTTPException:
+        flow = None
+
+    if flow is None:
+        return _flow_not_found_response(request.model)
+
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
+
+    try:
+        await ensure_flow_permission(
+            api_key_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=getattr(flow, "workspace_id", None),
+            folder_id=getattr(flow, "folder_id", None),
+        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_403_FORBIDDEN:
+            return _flow_not_found_response(request.model)
+        raise
+
+    _reject_shared_secret_variable_overrides(flow, api_key_user, variables)
+
+    # Required-identity gate must fire BEFORE the run: create_response wraps the run in a blanket
+    # ``except Exception`` (below) that converts any raise — including the identity 401 from
+    # simple_run_flow — into an OpenAIErrorResponse returned at the route's default 200, and the
+    # streaming variant returns before the run even executes. Enforce it synchronously here so a
+    # required-but-absent identity is a real 401 (idempotent with the scope simple_run_flow applies
+    # again). Mirrors the webhook pre-check (I3). See BUG-01.
+    try:
+        resolve_serving_scope(http_request=http_request, requested_session_id=None, default_session_id=str(flow.id))
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
+    try:
+        # Process the request
+        result = await run_flow_for_openai_responses(
+            flow=flow,
+            request=request,
+            api_key_user=api_key_user,
+            stream=request.stream,
+            variables=variables,
+            http_request=http_request,
+        )
+
+    except CustomComponentValidationError as exc:
+        await logger.aerror("OpenAI Responses custom-component validation failed: %s", exc, exc_info=True)
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        error_response = create_openai_error(
+            message=str(client_error),
+            type_="invalid_request_error",
+            code="custom_components_blocked",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
+
+    except ValueError as exc:
+        await logger.aerror("OpenAI Responses flow validation failed: %s", exc, exc_info=True)
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        error_response = create_openai_error(
+            message=str(client_error),
+            type_="invalid_request_error",
+            code="invalid_flow_request",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
+
+    except Exception as exc:  # noqa: BLE001
+        await logger.aexception("Error processing OpenAI Responses request")
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+
+        # Log telemetry for failed completion
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=str(exc),
+                run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+            ),
+        )
+
+        # Return OpenAI-compatible error
+        error_response = create_openai_error(
+            message=str(client_error),
+            type_="processing_error",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
+
+    # Log telemetry for successful completion
+    if not request.stream:  # Only log for non-streaming responses
+        end_time = time.perf_counter()
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(end_time - start_time),
+                run_success=True,
+                run_error_message="",
+                run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+            ),
+        )
+
+    return result

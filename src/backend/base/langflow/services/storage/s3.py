@@ -1,101 +1,461 @@
-import boto3
-from botocore.exceptions import ClientError, NoCredentialsError
-from loguru import logger
+"""S3-based storage service implementation using aiobotocore.
 
-from .service import StorageService
+This service handles file storage operations with AWS S3, including
+file upload, download, deletion, and listing operations.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import os
+from http import HTTPStatus
+from typing import TYPE_CHECKING, Any
+
+from langflow.logging.logger import logger
+
+from .service import StorageReadiness, StorageService
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from langflow.services.session.service import SessionService
+    from langflow.services.settings.service import SettingsService
 
 
 class S3StorageService(StorageService):
-    """A service class for handling operations with AWS S3 storage."""
+    """A service class for handling S3 storage operations using aiobotocore."""
 
-    def __init__(self, session_service, settings_service) -> None:
-        """Initialize the S3 storage service with session and settings services."""
+    def __init__(self, session_service: SessionService, settings_service: SettingsService) -> None:
+        """Initialize the S3 storage service with session and settings services.
+
+        Args:
+            session_service: The session service instance
+            settings_service: The settings service instance
+
+        Raises:
+            ImportError: If aiobotocore is not installed
+            ValueError: If required S3 configuration is missing
+        """
         super().__init__(session_service, settings_service)
-        self.bucket = "langflow"
-        self.s3_client = boto3.client("s3")
+
+        # Validate required S3 configuration
+        self.bucket_name = settings_service.settings.object_storage_bucket_name
+        if not self.bucket_name:
+            msg = "S3 bucket name is required when using S3 storage"
+            raise ValueError(msg)
+
+        self.prefix = settings_service.settings.object_storage_prefix or ""
+        if self.prefix and not self.prefix.endswith("/"):
+            self.prefix += "/"
+
+        self.tags = settings_service.settings.object_storage_tags or {}
+
+        try:
+            from aiobotocore.session import get_session
+        except ImportError as exc:
+            msg = "aiobotocore is required for S3 storage. Install it with: uv pip install aiobotocore"
+            raise ImportError(msg) from exc
+
+        # Create session - AWS credentials are picked up from environment variables
+        self.session = get_session()
+        self._client = None
+
         self.set_ready()
+        logger.info(
+            f"S3 storage initialized: bucket={self.bucket_name}, prefix={self.prefix}, "
+            f"region={os.getenv('AWS_DEFAULT_REGION', 'default')}"
+        )
 
-    async def save_file(self, folder: str, file_name: str, data) -> None:
-        """Save a file to the S3 bucket.
+    def _validate_identifiers(self, flow_id: str, file_name: str | None = None) -> None:
+        """Reject flow_id / file_name values that could escape the flow namespace.
 
-        Args:
-            folder: The folder in the bucket to save the file.
-            file_name: The name of the file to be saved.
-            data: The byte content of the file.
-
-        Raises:
-            Exception: If an error occurs during file saving.
+        Defense in depth at the S3 backend for GHSA-rcjh-r59h-gq37: the public-flow
+        boundary in chat.py is the primary gate, but any caller reaching this
+        backend with untrusted identifiers must still fail safely. Validation is
+        synchronous and runs before any AWS call so a malformed input cannot be
+        turned into a get_object on an arbitrary bucket key.
         """
-        try:
-            self.s3_client.put_object(Bucket=self.bucket, Key=f"{folder}/{file_name}", Body=data)
-            logger.info(f"File {file_name} saved successfully in folder {folder}.")
-        except NoCredentialsError:
-            logger.exception("Credentials not available for AWS S3.")
-            raise
-        except ClientError:
-            logger.exception(f"Error saving file {file_name} in folder {folder}")
-            raise
+        if (
+            not isinstance(flow_id, str)
+            or not flow_id
+            or "/" in flow_id
+            or "\\" in flow_id
+            or ".." in flow_id
+            or "\x00" in flow_id
+        ):
+            logger.error("Invalid flow_id contains path separators or traversal sequences")
+            msg = "Invalid flow_id: contains path separators"
+            raise ValueError(msg)
 
-    async def get_file(self, folder: str, file_name: str):
-        """Retrieve a file from the S3 bucket.
+        if file_name is not None and (
+            not isinstance(file_name, str)
+            or not file_name
+            or "/" in file_name
+            or "\\" in file_name
+            or ".." in file_name
+            or "\x00" in file_name
+        ):
+            logger.error("Invalid file_name contains path separators or traversal sequences")
+            msg = "Invalid file name: contains path separators"
+            raise ValueError(msg)
+
+    def build_full_path(self, flow_id: str, file_name: str) -> str:
+        """Build the full S3 key for a file.
 
         Args:
-            folder: The folder in the bucket where the file is stored.
-            file_name: The name of the file to be retrieved.
+            flow_id: The flow/user identifier for namespacing
+            file_name: The name of the file
 
         Returns:
-            The byte content of the file.
+            str: The full S3 key (e.g., 'files/flow_123/myfile.txt')
 
         Raises:
-            Exception: If an error occurs during file retrieval.
+            ValueError: If either identifier carries separators or traversal sequences.
         """
-        try:
-            response = self.s3_client.get_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
-            logger.info(f"File {file_name} retrieved successfully from folder {folder}.")
-            return response["Body"].read()
-        except ClientError:
-            logger.exception(f"Error retrieving file {file_name} from folder {folder}")
-            raise
+        # Defense in depth: every file operation validates its own identifiers, but this is a
+        # public key builder whose result is also handed to callers directly (component path
+        # resolution). Path shape must never be treated as authorization, so reject anything
+        # that could compose a key outside the ``flow_id`` namespace. ``file_name`` is empty
+        # when building a listing prefix (see ``list_files``), which stays allowed.
+        self._validate_identifiers(flow_id, file_name or None)
+        # note: prefix already contains the / at the end
+        return f"{self.prefix}{flow_id}/{file_name}"
 
-    async def list_files(self, folder: str):
-        """List all files in a specified folder of the S3 bucket.
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full S3 path to extract flow_id and file_name.
 
         Args:
-            folder: The folder in the bucket to list files from.
+            full_path: S3 path, may or may not include prefix
+                e.g., "files/user_123/image.png" or "user_123/image.png"
 
         Returns:
-            A list of file names.
+            tuple[str, str]: A tuple of (flow_id, file_name)
 
-        Raises:
-            Exception: If an error occurs during file listing.
+        Examples:
+            >>> parse_file_path("files/user_123/image.png")  # with prefix
+            ("user_123", "image.png")
+            >>> parse_file_path("user_123/image.png")  # without prefix
+            ("user_123", "image.png")
         """
-        try:
-            response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=folder)
-        except ClientError:
-            logger.exception(f"Error listing files in folder {folder}")
-            raise
+        # Remove prefix if present (but don't require it)
+        path_without_prefix = full_path
+        if self.prefix and full_path.startswith(self.prefix):
+            path_without_prefix = full_path[len(self.prefix) :]
 
-        files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
-        logger.info(f"{len(files)} files listed in folder {folder}.")
-        return files
+        # Split from the right to get the filename
+        # Everything before the last "/" is the flow_id
+        if "/" not in path_without_prefix:
+            return "", path_without_prefix
 
-    async def delete_file(self, folder: str, file_name: str) -> None:
-        """Delete a file from the S3 bucket.
+        # Use rsplit to split from the right, limiting to 1 split
+        flow_id, file_name = path_without_prefix.rsplit("/", 1)
+        return flow_id, file_name
+
+    def resolve_component_path(self, logical_path: str) -> str:
+        """Return logical path as-is for S3 storage.
+
+        For S3, components work with logical paths (flow_id/filename) and the
+        storage service adds the prefix internally when performing operations.
 
         Args:
-            folder: The folder in the bucket where the file is stored.
-            file_name: The name of the file to be deleted.
+            logical_path: Path in format "flow_id/filename"
+
+        Returns:
+            str: The same logical path (components use this with storage service)
+        """
+        return logical_path
+
+    def _get_client(self):
+        """Get or create an S3 client using the async context manager."""
+        return self.session.create_client("s3")
+
+    async def check_readiness(self) -> StorageReadiness:
+        """Verify S3 credentials resolve and the configured bucket is reachable.
+
+        Used by the production preflight. Resolves AWS credentials from the
+        environment/instance role, then issues a ``head_bucket`` to confirm the
+        bucket exists and is accessible. Distinguishes missing credentials,
+        missing bucket, access denied, and general unreachability.
+        """
+        # Resolve credentials before any network call so "no creds" is reported
+        # distinctly from "bucket unreachable". A misconfigured AWS profile/config
+        # surfaces here too and is treated as a credentials failure.
+        try:
+            credentials = await self.session.get_credentials()
+        except Exception as exc:  # noqa: BLE001 — botocore config errors (e.g. ProfileNotFound)
+            return StorageReadiness(
+                ok=False,
+                backend="s3",
+                detail=f"could not resolve AWS credentials: {exc}",
+                reason="no-credentials",
+            )
+        if credentials is None:
+            return StorageReadiness(
+                ok=False,
+                backend="s3",
+                detail="no AWS credentials resolved (set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or an instance role)",
+                reason="no-credentials",
+            )
+
+        try:
+            async with self._get_client() as s3_client:
+                await s3_client.head_bucket(Bucket=self.bucket_name)
+        except Exception as exc:  # noqa: BLE001 — normalize any botocore/network error into a typed reason
+            status_code = None
+            error_code = None
+            if hasattr(exc, "response") and isinstance(exc.response, dict):
+                status_code = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+                error_code = exc.response.get("Error", {}).get("Code")
+
+            if status_code == HTTPStatus.NOT_FOUND or error_code in {"404", "NoSuchBucket"}:
+                return StorageReadiness(
+                    ok=False,
+                    backend="s3",
+                    detail=f"bucket '{self.bucket_name}' does not exist",
+                    reason="bucket-missing",
+                )
+            if status_code == HTTPStatus.FORBIDDEN or error_code in {"403", "AccessDenied", "InvalidAccessKeyId"}:
+                return StorageReadiness(
+                    ok=False,
+                    backend="s3",
+                    detail=f"access denied to bucket '{self.bucket_name}' (check credentials and bucket policy)",
+                    reason="access-denied",
+                )
+            return StorageReadiness(
+                ok=False,
+                backend="s3",
+                detail=f"could not reach bucket '{self.bucket_name}': {exc}",
+                reason="unreachable",
+            )
+
+        return StorageReadiness(ok=True, backend="s3", detail=f"bucket reachable ({self.bucket_name})")
+
+    async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
+        """Save a file to S3.
+
+        Args:
+            flow_id: The flow/user identifier for namespacing
+            file_name: The name of the file to be saved
+            data: The byte content of the file
+            append: If True, append to existing file (not supported in S3, will raise error)
 
         Raises:
-            Exception: If an error occurs during file deletion.
+            Exception: If the file cannot be saved to S3
+            NotImplementedError: If append=True (not supported in S3)
         """
+        if append:
+            msg = "Append mode is not supported for S3 storage"
+            raise NotImplementedError(msg)
+
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+
         try:
-            self.s3_client.delete_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
-            logger.info(f"File {file_name} deleted successfully from folder {folder}.")
-        except ClientError:
-            logger.exception(f"Error deleting file {file_name} from folder {folder}")
+            async with self._get_client() as s3_client:
+                put_params: dict[str, Any] = {
+                    "Bucket": self.bucket_name,
+                    "Key": key,
+                    "Body": data,
+                }
+
+                if self.tags:
+                    tag_string = "&".join([f"{k}={v}" for k, v in self.tags.items()])
+                    put_params["Tagging"] = tag_string
+
+                await s3_client.put_object(**put_params)
+
+            await logger.ainfo(f"File {file_name} saved successfully to S3: s3://{self.bucket_name}/{key}")
+
+        except Exception as e:
+            error_msg = str(e)
+            error_code = None
+
+            if hasattr(e, "response") and isinstance(e.response, dict):
+                error_info = e.response.get("Error", {})
+                error_code = error_info.get("Code")
+                error_msg = error_info.get("Message", str(e))
+
+            logger.exception(f"Error saving file {file_name} to S3 in flow {flow_id}: {error_msg}")
+
+            if error_code == "NoSuchBucket":
+                msg = f"S3 bucket '{self.bucket_name}' does not exist"
+                raise FileNotFoundError(msg) from e
+            if error_code == "AccessDenied":
+                msg = "Access denied to S3 bucket. Please check your AWS credentials and bucket permissions"
+                raise PermissionError(msg) from e
+            if error_code == "InvalidAccessKeyId":
+                msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
+                raise PermissionError(msg) from e
+            msg = f"Failed to save file to S3: {error_msg}"
+            raise RuntimeError(msg) from e
+
+    async def get_file(self, flow_id: str, file_name: str) -> bytes:
+        """Retrieve a file from S3.
+
+        Args:
+            flow_id: The flow/user identifier for namespacing
+            file_name: The name of the file to be retrieved
+
+        Returns:
+            bytes: The file content
+
+        Raises:
+            FileNotFoundError: If the file does not exist in S3
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+
+        try:
+            async with self._get_client() as s3_client:
+                response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
+                content = await response["Body"].read()
+
+            logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
+        except Exception as e:
+            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
+                await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
+                msg = f"File not found: {file_name}"
+                raise FileNotFoundError(msg) from e
+
+            logger.exception(f"Error retrieving file {file_name} from S3 in flow {flow_id}")
             raise
+        else:
+            return content
+
+    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+        """Retrieve a file from S3 as a stream.
+
+        Args:
+            flow_id: The flow/user identifier for namespacing
+            file_name: The name of the file to retrieve
+            chunk_size: Size of chunks to yield (default: 8192 bytes)
+
+        Yields:
+            bytes: Chunks of the file content
+
+        Raises:
+            FileNotFoundError: If the file does not exist in S3
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+
+        try:
+            async with self._get_client() as s3_client:
+                response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
+                body = response["Body"]
+
+                try:
+                    async for chunk in body.iter_chunks(chunk_size):
+                        yield chunk
+                finally:
+                    if hasattr(body, "close"):
+                        with contextlib.suppress(Exception):
+                            await body.close()
+
+        except Exception as e:
+            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
+                await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
+                msg = f"File not found: {file_name}"
+                raise FileNotFoundError(msg) from e
+
+            logger.exception(f"Error streaming file {file_name} from S3 in flow {flow_id}")
+            raise
+
+    async def list_files(self, flow_id: str) -> list[str]:
+        """List all files in a specified S3 prefix (flow namespace).
+
+        Args:
+            flow_id: The flow/user identifier for namespacing
+
+        Returns:
+            list[str]: A list of file names (without the prefix)
+
+        Raises:
+            Exception: If there's an error listing files from S3
+        """
+        self._validate_identifiers(flow_id)
+
+        prefix = self.build_full_path(flow_id, "")
+
+        try:
+            async with self._get_client() as s3_client:
+                paginator = s3_client.get_paginator("list_objects_v2")
+                files = []
+
+                async for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
+                    if "Contents" in page:
+                        for obj in page["Contents"]:
+                            # Extract just the filename (remove the prefix)
+                            full_key = obj["Key"]
+                            # Remove the flow_id prefix to get just the filename
+                            file_name = full_key[len(prefix) :]
+                            if file_name:  # Skip the directory marker if it exists
+                                files.append(file_name)
+
+        except Exception:
+            logger.exception(f"Error listing files in S3 flow {flow_id}")
+            raise
+        else:
+            return files
+
+    async def delete_file(self, flow_id: str, file_name: str) -> None:
+        """Delete a file from S3.
+
+        Args:
+            flow_id: The flow/user identifier for namespacing
+            file_name: The name of the file to be deleted
+
+        Note:
+            S3 delete_object doesn't raise an error if the object doesn't exist
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+
+        try:
+            async with self._get_client() as s3_client:
+                await s3_client.delete_object(Bucket=self.bucket_name, Key=key)
+
+        except Exception:
+            logger.exception(f"Error deleting file {file_name} from S3 in flow {flow_id}")
+            raise
+
+    async def get_file_size(self, flow_id: str, file_name: str) -> int:
+        """Get the size of a file in S3.
+
+        Args:
+            flow_id: The flow/user identifier for namespacing
+            file_name: The name of the file
+
+        Returns:
+            int: Size of the file in bytes
+
+        Raises:
+            FileNotFoundError: If the file does not exist in S3
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+
+        try:
+            async with self._get_client() as s3_client:
+                response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
+                file_size = response["ContentLength"]
+
+        except Exception as e:
+            # Check if it's a 404 error
+            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+                await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
+                msg = f"File not found: {file_name}"
+                raise FileNotFoundError(msg) from e
+
+            logger.exception(f"Error getting file size for {file_name} in S3 flow {flow_id}")
+            raise
+        else:
+            return file_size
 
     async def teardown(self) -> None:
-        """Perform any cleanup operations when the service is being torn down."""
-        # No specific teardown actions required for S3 storage at the moment.
+        """Perform any cleanup operations when the service is being torn down.
+
+        For S3, we don't need to do anything as aiobotocore handles cleanup
+        via context managers.
+        """
+        logger.info("S3 storage service teardown complete")

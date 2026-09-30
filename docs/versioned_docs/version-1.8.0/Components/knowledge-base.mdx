@@ -1,0 +1,46 @@
+---
+title: Knowledge Base
+slug: /knowledge-base
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
+
+<PartialKbSummary />
+
+The **Knowledge Base** component reads from an existing knowledge base using semantic search.
+
+The output is a [`DataFrame`](/data-types#dataframe) containing the top matching results from the queried knowledge base.
+
+## Knowledge Base parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| knowledge_base | Knowledge | Input parameter. Select the knowledge base to retrieve data from. |
+| api_key | Embedding Provider API Key | Input parameter. Optional API key for the embedding provider to override a previously-provided key. The embedding provider and model are chosen when you create a knowledge base. |
+| search_query | Search Query | Input parameter. Optional search query to filter knowledge base data using semantic similarity. If omitted, the top results are returned from an arbitrary sort. |
+| top_k | Top K Results | Input parameter. Number of search results to return. Default: `5`. |
+| include_metadata | Include Metadata | Input parameter. Whether to include all metadata and embeddings in the output. If enabled, each output row includes all metadata, embeddings, and content. If disabled, only the content is returned. Default: Enabled (true). |
+
+## Use the Knowledge Base component in a flow
+
+After you create and load data to a [knowledge base](/knowledge), you can use the **Knowledge Base** component in any flow to retrieve data from your knowledge base using semantic search:
+
+1. Add a **Knowledge Base** component to your flow.
+
+2. In the **Knowledge** field, select the knowledge base you want to search, such as the customer sales data knowledge base created in the previous steps.
+
+3. To view the search results as chat messages, connect the **Results** output to a **Chat Output** component.
+
+4. In **Search query**, enter a query that relates to your embedded data.
+
+   For the customer sales data example, enter a product name like `laptop` or `wireless devices`.
+
+5. Click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Knowledge Base** component, and then open the **Playground** to view the output.
+
+## See also
+
+* [Manage vector data](/knowledge)

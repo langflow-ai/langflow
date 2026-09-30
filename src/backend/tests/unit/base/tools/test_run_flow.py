@@ -1,0 +1,1094 @@
+from contextlib import asynccontextmanager
+from copy import deepcopy
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
+from uuid import uuid4
+
+import pytest
+from langflow.services.database.models.flow.model import FlowCreate
+from lfx.base.tools.run_flow import RunFlowBaseComponent
+from lfx.components.flow_controls.run_flow import RunFlowComponent
+from lfx.components.input_output import TextInputComponent, TextOutputComponent
+from lfx.exceptions.tweaks import TweakRefusedError
+from lfx.graph.graph.base import Graph
+from lfx.graph.vertex.base import Vertex
+from lfx.interface.components import component_cache
+from lfx.processing.process import process_tweaks_on_graph
+from lfx.schema.data import Data
+from lfx.schema.dotdict import dotdict
+from lfx.services.cache.utils import CacheMiss
+from lfx.template.field.base import Output
+from lfx.utils.flow_validation import CustomComponentValidationError
+
+
+@asynccontextmanager
+async def _authorized_target_scope(**_kwargs):
+    """Unit-test seam; target-scope behavior has dedicated DB-backed coverage."""
+    yield
+
+
+@pytest.fixture
+def mock_shared_cache():
+    """Mock the shared component cache service."""
+    with patch("lfx.base.tools.run_flow.get_shared_component_cache_service") as mock_get_cache:
+        mock_cache = MagicMock()
+        mock_cache.get = AsyncMock()
+        mock_cache.set = AsyncMock()
+        mock_cache.delete = AsyncMock()
+        mock_get_cache.return_value = mock_cache
+        yield mock_cache
+
+
+class TestRunFlowBaseComponentInitialization:
+    """Test RunFlowBaseComponent initialization."""
+
+    def test_init_creates_cache_service(self):
+        """Test that __init__ creates the shared component cache service."""
+        with patch("lfx.base.tools.run_flow.get_shared_component_cache_service") as mock_get_cache:
+            mock_cache = MagicMock()
+            mock_get_cache.return_value = mock_cache
+
+            component = RunFlowBaseComponent()
+
+            assert hasattr(component, "_shared_component_cache")
+            assert component._shared_component_cache is not None
+            assert component._shared_component_cache == mock_cache
+
+    def test_init_creates_cache_dispatcher(self):
+        """Test that __init__ creates the cache flow dispatcher."""
+        component = RunFlowBaseComponent()
+
+        assert hasattr(component, "_cache_flow_dispatcher")
+        assert isinstance(component._cache_flow_dispatcher, dict)
+        assert "get" in component._cache_flow_dispatcher
+        assert "set" in component._cache_flow_dispatcher
+        assert "delete" in component._cache_flow_dispatcher
+        assert "_build_key" in component._cache_flow_dispatcher
+        assert "_build_graph" in component._cache_flow_dispatcher
+
+    def test_init_sets_last_run_outputs_to_none(self):
+        """Test that __init__ sets _last_run_outputs to None."""
+        component = RunFlowBaseComponent()
+
+        assert hasattr(component, "_last_run_outputs")
+        assert component._last_run_outputs is None
+
+    def test_init_sets_add_tool_output_flag(self):
+        """Test that __init__ sets add_tool_output to True."""
+        component = RunFlowBaseComponent()
+
+        assert component.add_tool_output is True
+
+
+class TestRunFlowBaseComponentFlowRetrieval:
+    """Test flow retrieval methods."""
+
+    @pytest.fixture(autouse=True)
+    def _target_scope(self):
+        # The caller-aware component-policy seam has dedicated coverage in
+        # test_run_flow_nested_component_policy.py; neutralize it here so these
+        # tests stay on the retrieval/caching behavior.
+        with (
+            patch(
+                "lfx.base.tools.run_flow.scoped_model_provider_policy_for_target_flow",
+                _authorized_target_scope,
+            ),
+            patch(
+                "lfx.base.tools.run_flow.get_user_is_superuser",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch(
+                "lfx.base.tools.run_flow.admin_only_build_required",
+                lambda *, is_superuser: False,  # noqa: ARG005
+            ),
+            patch(
+                "lfx.base.tools.run_flow.custom_component_admin_only_enabled",
+                lambda: None,
+            ),
+            patch(
+                "lfx.base.tools.run_flow.prepare_flow_build_for_user",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+        ):
+            yield
+
+    @pytest.mark.asyncio
+    async def test_get_flow_with_id(self):
+        """Test getting a flow by ID."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        flow_id = str(uuid4())
+        expected_flow = Data(data={"name": "test_flow"})
+
+        with patch("lfx.base.tools.run_flow.get_flow_by_id_or_name", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = expected_flow
+
+            result = await component.get_flow(flow_id_selected=flow_id)
+
+            assert result == expected_flow
+            mock_get.assert_called_once_with(
+                user_id=component._user_id,
+                flow_id=flow_id,
+                flow_name=None,
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_flow_with_name(self):
+        """Test getting a flow by name."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        flow_name = "test_flow"
+        expected_flow = Data(data={"name": flow_name})
+
+        with patch("lfx.base.tools.run_flow.get_flow_by_id_or_name", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = expected_flow
+
+            result = await component.get_flow(flow_name_selected=flow_name)
+
+            assert result == expected_flow
+            mock_get.assert_called_once_with(
+                user_id=component._user_id,
+                flow_id=None,
+                flow_name=flow_name,
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_flow_returns_empty_data_when_none(self):
+        """Test that get_flow returns empty Data when flow is not found."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+
+        with patch("lfx.base.tools.run_flow.get_flow_by_id_or_name", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = None
+
+            result = await component.get_flow(flow_id_selected=str(uuid4()))
+
+            assert isinstance(result, Data)
+            assert result.data == {}
+
+    @pytest.mark.asyncio
+    async def test_get_graph_raises_error_without_id_or_name(self):
+        """Test that get_graph raises ValueError when neither ID nor name is provided."""
+        component = RunFlowBaseComponent()
+
+        with pytest.raises(ValueError, match="Flow name or id is required"):
+            await component.get_graph()
+
+    @pytest.mark.asyncio
+    async def test_get_graph_uses_cache_when_available_and_up_to_date(self):
+        """Test that get_graph returns cached graph when available and up-to-date."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = True
+        flow_id = str(uuid4())
+        updated_at = "2024-01-01T00:00:00Z"
+
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.flow_id = flow_id
+        mock_graph.updated_at = updated_at
+
+        with (
+            patch.object(component, "_flow_cache_call") as mock_cache_call,
+            patch.object(component, "_is_cached_flow_up_to_date") as mock_is_up_to_date,
+        ):
+            mock_cache_call.return_value = mock_graph
+            mock_is_up_to_date.return_value = True
+
+            result = await component.get_graph(flow_id_selected=flow_id, updated_at=updated_at)
+
+            assert result == mock_graph
+            mock_cache_call.assert_called_once_with("get", flow_id=flow_id)
+            mock_is_up_to_date.assert_called_once_with(mock_graph, updated_at)
+
+    @pytest.mark.asyncio
+    async def test_get_graph_fetches_and_caches_when_not_cached(self):
+        """Test that get_graph fetches flow and caches it when not in cache."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = True
+        flow_name = "test_flow"
+        flow_id = str(uuid4())
+
+        flow_data = Data(data={"data": {"nodes": [], "edges": []}, "description": "Test flow"})
+
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.vertices = []
+
+        with (
+            patch.object(component, "_flow_cache_call") as mock_cache_call,
+            patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow,
+            patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload,
+        ):
+            mock_cache_call.return_value = None  # Not in cache
+            mock_get_flow.return_value = flow_data
+            mock_from_payload.return_value = mock_graph
+
+            result = await component.get_graph(flow_name_selected=flow_name, flow_id_selected=flow_id)
+
+            assert result == mock_graph
+            mock_get_flow.assert_called_once_with(flow_name_selected=flow_name, flow_id_selected=flow_id)
+            mock_from_payload.assert_called_once()
+            # Verify cache set was called
+            assert mock_cache_call.call_count == 2  # get and set
+
+    @pytest.mark.asyncio
+    async def test_get_graph_deletes_stale_cache_and_refetches(self):
+        """Test that get_graph deletes stale cached graph and fetches fresh one."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = True
+        flow_id = str(uuid4())
+        old_updated_at = "2024-01-01T00:00:00Z"
+        new_updated_at = "2024-01-02T00:00:00Z"
+
+        stale_graph = MagicMock(spec=Graph)
+        stale_graph.flow_id = flow_id
+        stale_graph.updated_at = old_updated_at
+
+        flow_data = Data(
+            data={"data": {"nodes": [], "edges": []}, "description": "Test flow", "updated_at": new_updated_at}
+        )
+
+        fresh_graph = MagicMock(spec=Graph)
+        fresh_graph.updated_at = new_updated_at
+        fresh_graph.vertices = []
+
+        with (
+            patch.object(component, "_flow_cache_call") as mock_cache_call,
+            patch.object(component, "_is_cached_flow_up_to_date") as mock_is_up_to_date,
+            patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow,
+            patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload,
+        ):
+            # First call returns stale graph, second call is delete, third call is set
+            mock_cache_call.side_effect = [stale_graph, None, None]
+            mock_is_up_to_date.return_value = False  # Cache is stale
+            mock_get_flow.return_value = flow_data
+            mock_from_payload.return_value = fresh_graph
+
+            result = await component.get_graph(flow_id_selected=flow_id, updated_at=new_updated_at)
+
+            assert result == fresh_graph
+            # Should have called cache "get", "delete", and "set"
+            assert mock_cache_call.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_get_graph_blocks_custom_components_when_disabled(self, monkeypatch):
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = False
+        blocked_flow = Data(
+            data={
+                "data": {
+                    "nodes": [
+                        {
+                            "id": "node-1",
+                            "data": {
+                                "id": "node-1",
+                                "type": "TotallyCustom",
+                                "node": {
+                                    "display_name": "Blocked Node",
+                                    "template": {
+                                        "code": {"value": "print('blocked')"},
+                                    },
+                                },
+                            },
+                        }
+                    ],
+                    "edges": [],
+                },
+                "description": "Blocked flow",
+            }
+        )
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: MagicMock(settings=MagicMock(allow_custom_components=False)),
+        )
+        monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+
+        with patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow:
+            mock_get_flow.return_value = blocked_flow
+            with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+                await component.get_graph(flow_name_selected="blocked-flow", flow_id_selected=str(uuid4()))
+
+
+class TestRunFlowBaseComponentFlowCaching:
+    """Test flow caching methods."""
+
+    def test_build_flow_cache_key_with_flow_id(self):
+        """Test building cache key with flow ID."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        flow_id = str(uuid4())
+
+        key = component._build_flow_cache_key(flow_id=flow_id)
+
+        assert f"run_flow:{component._user_id}:{flow_id}" == key
+
+    @patch.object(RunFlowBaseComponent, "user_id", new_callable=PropertyMock, return_value=None)
+    def test_build_flow_cache_key_without_user_id_raises_error(self, mock_user_id):  # noqa: ARG002
+        """Test that building cache key without user_id raises ValueError."""
+        component = RunFlowBaseComponent()
+
+        with pytest.raises(ValueError, match="Flow ID and user ID are required"):
+            component._build_flow_cache_key(flow_id=str(uuid4()))
+
+    def test_build_flow_cache_key_without_flow_id_raises_error(self):
+        """Test that building cache key without flow_id raises ValueError."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+
+        with pytest.raises(ValueError, match="Flow ID and user ID are required"):
+            component._build_flow_cache_key(flow_id=None)
+
+    def test_flow_cache_call_returns_none_when_cache_disabled(self):
+        """Test that _flow_cache_call returns None when cache_flow is False."""
+        component = RunFlowBaseComponent()
+        component.cache_flow = False
+
+        result = component._flow_cache_call("get", flow_name="test")
+
+        assert result is None
+
+    def test_flow_cache_call_returns_none_when_cache_service_unavailable(self):
+        """Test that _flow_cache_call returns None when cache service is None."""
+        component = RunFlowBaseComponent()
+        component.cache_flow = True
+        component._shared_component_cache = None
+
+        result = component._flow_cache_call("get", flow_name="test")
+
+        assert result is None
+
+    def test_flow_cache_call_raises_error_for_unknown_action(self):
+        """Test that _flow_cache_call raises ValueError for unknown action."""
+        component = RunFlowBaseComponent()
+        component.cache_flow = True
+
+        with pytest.raises(ValueError, match="Unknown cache action"):
+            component._flow_cache_call("invalid_action")
+
+    def test_get_cached_flow_returns_none_on_cache_miss(self):
+        """Test that _get_cached_flow returns None on cache miss."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = True
+        flow_id = str(uuid4())
+
+        mock_cache_miss = MagicMock(spec=CacheMiss)
+        component._shared_component_cache = MagicMock()
+        component._shared_component_cache.get = Mock(return_value=mock_cache_miss)
+
+        with patch.object(component, "_build_flow_cache_key") as mock_build_key:
+            mock_build_key.return_value = "test_key"
+
+            result = component._get_cached_flow(flow_id=flow_id)
+
+            assert result is None
+
+    def test_set_cached_flow_stores_graph_data(self):
+        """Test that _set_cached_flow stores graph data in cache."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = True
+
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.flow_name = "test_flow"
+        mock_graph.flow_id = str(uuid4())
+        mock_graph.description = "Test description"
+        mock_graph.updated_at = "2024-01-01T12:00:00Z"
+        mock_graph.dump = Mock(return_value={"name": "test_flow"})
+
+        component._shared_component_cache = MagicMock()
+        component._shared_component_cache.set = Mock()
+
+        with patch.object(component, "_build_flow_cache_key") as mock_build_key:
+            mock_build_key.return_value = "test_key"
+
+            component._set_cached_flow(flow=mock_graph)
+
+            component._shared_component_cache.set.assert_called_once()
+            args = component._shared_component_cache.set.call_args[0]
+            assert args[0] == "test_key"
+            assert "graph_dump" in args[1]
+            assert "flow_id" in args[1]
+            assert "user_id" in args[1]
+
+    def test_is_cached_flow_up_to_date_returns_true_for_same_timestamp(self):
+        """Test that cached flow is considered up-to-date with same timestamp."""
+        component = RunFlowBaseComponent()
+
+        cached_graph = MagicMock(spec=Graph)
+        cached_graph.updated_at = "2024-01-01T12:00:00Z"
+
+        updated_at = "2024-01-01T12:00:00Z"
+
+        result = component._is_cached_flow_up_to_date(cached_graph, updated_at)
+
+        assert result is True
+
+    def test_is_cached_flow_up_to_date_returns_true_for_newer_cache(self):
+        """Test that cached flow is considered up-to-date when cache is newer."""
+        component = RunFlowBaseComponent()
+
+        cached_graph = MagicMock(spec=Graph)
+        cached_graph.updated_at = "2024-01-02T12:00:00Z"
+
+        updated_at = "2024-01-01T12:00:00Z"
+
+        result = component._is_cached_flow_up_to_date(cached_graph, updated_at)
+
+        assert result is True
+
+    def test_is_cached_flow_up_to_date_returns_false_for_older_cache(self):
+        """Test that cached flow is considered stale when cache is older."""
+        component = RunFlowBaseComponent()
+
+        cached_graph = MagicMock(spec=Graph)
+        cached_graph.updated_at = "2024-01-01T12:00:00Z"
+
+        updated_at = "2024-01-02T12:00:00Z"
+
+        result = component._is_cached_flow_up_to_date(cached_graph, updated_at)
+
+        assert result is False
+
+    def test_is_cached_flow_up_to_date_returns_false_when_updated_at_missing(self):
+        """Test that cached flow is considered stale when updated_at is None."""
+        component = RunFlowBaseComponent()
+
+        cached_graph = MagicMock(spec=Graph)
+        cached_graph.updated_at = "2024-01-01T12:00:00Z"
+
+        result = component._is_cached_flow_up_to_date(cached_graph, None)
+
+        assert result is False
+
+    def test_is_cached_flow_up_to_date_returns_false_when_cached_timestamp_missing(self):
+        """Test that cached flow is considered stale when cached updated_at is None."""
+        component = RunFlowBaseComponent()
+
+        cached_graph = MagicMock(spec=Graph)
+        cached_graph.updated_at = None
+
+        updated_at = "2024-01-01T12:00:00Z"
+
+        result = component._is_cached_flow_up_to_date(cached_graph, updated_at)
+
+        assert result is False
+
+    def test_parse_timestamp_parses_iso_format(self):
+        """Test parsing ISO format timestamp."""
+        timestamp_str = "2024-01-01T12:34:56Z"
+
+        result = RunFlowBaseComponent._parse_timestamp(timestamp_str)
+
+        assert result is not None
+        assert result.year == 2024
+        assert result.month == 1
+        assert result.day == 1
+        assert result.hour == 12
+        assert result.minute == 34
+        assert result.second == 56
+        assert result.microsecond == 0  # Should normalize microseconds
+
+    def test_parse_timestamp_parses_iso_with_offset(self):
+        """Test parsing ISO format timestamp with timezone offset."""
+        timestamp_str = "2024-01-01T12:34:56+05:00"
+
+        result = RunFlowBaseComponent._parse_timestamp(timestamp_str)
+
+        assert result is not None
+        assert result.year == 2024
+
+    def test_parse_timestamp_returns_none_for_none(self):
+        """Test that None input returns None."""
+        result = RunFlowBaseComponent._parse_timestamp(None)
+
+        assert result is None
+
+    def test_parse_timestamp_returns_none_for_invalid_format(self):
+        """Test that invalid timestamp format returns None."""
+        result = RunFlowBaseComponent._parse_timestamp("invalid-timestamp")
+
+        assert result is None
+
+
+class TestRunFlowBaseComponentInputOutputHandling:
+    """Test input/output handling methods."""
+
+    def test_get_ioput_name_creates_unique_name(self):
+        """Test that _get_ioput_name creates unique input/output name."""
+        component = RunFlowBaseComponent()
+        vertex_id = "vertex_123"
+        ioput_name = "input_1"
+
+        result = component._get_ioput_name(vertex_id, ioput_name)
+
+        assert result == f"{vertex_id}{component.IOPUT_SEP}{ioput_name}"
+
+    def test_get_ioput_name_raises_error_without_vertex_id(self):
+        """Test that _get_ioput_name raises ValueError without vertex_id."""
+        component = RunFlowBaseComponent()
+
+        with pytest.raises(ValueError, match="Vertex ID and input/output name are required"):
+            component._get_ioput_name("", "input_1")
+
+    def test_get_ioput_name_raises_error_without_ioput_name(self):
+        """Test that _get_ioput_name raises ValueError without ioput_name."""
+        component = RunFlowBaseComponent()
+
+        with pytest.raises(ValueError, match="Vertex ID and input/output name are required"):
+            component._get_ioput_name("vertex_123", "")
+
+    def test_extract_ioputs_from_keyed_values(self):
+        """Test extracting ioputs from keyed values."""
+        component = RunFlowBaseComponent()
+
+        values = {
+            "vertex1~param1": "value1",
+            "vertex1~param2": "value2",
+            "vertex2~param1": "value3",
+            "invalid_key": "should_be_ignored",
+        }
+
+        ioputs = component._extract_ioputs_from_keyed_values(values)
+
+        assert "vertex1" in ioputs
+        assert ioputs["vertex1"]["param1"] == "value1"
+        assert ioputs["vertex1"]["param2"] == "value2"
+        assert "vertex2" in ioputs
+        assert ioputs["vertex2"]["param1"] == "value3"
+        assert "invalid_key" not in ioputs
+
+    def test_build_inputs_from_ioputs(self):
+        """Test building inputs from ioputs."""
+        component = RunFlowBaseComponent()
+
+        ioputs = {
+            "vertex1": {"input_value": "test_input", "type": "chat"},
+            "vertex2": {"input_value": "another_input"},
+            "vertex3": {"other_param": "value"},  # Should be skipped
+        }
+
+        inputs = component._build_inputs_from_ioputs(ioputs)
+
+        assert len(inputs) == 2
+        assert inputs[0]["components"] == ["vertex1"]
+        assert inputs[0]["input_value"] == "test_input"
+        assert inputs[0]["type"] == "chat"
+        assert inputs[1]["components"] == ["vertex2"]
+        assert inputs[1]["input_value"] == "another_input"
+
+    def test_build_inputs_from_ioputs_handles_data_object(self):
+        """Test that _build_inputs_from_ioputs handles Data objects in input_value."""
+        component = RunFlowBaseComponent()
+        data_obj = MagicMock(spec=Data)
+        data_obj.get_text.return_value = "extracted_text"
+
+        ioputs = {"vertex1": {"input_value": data_obj}}
+
+        inputs = component._build_inputs_from_ioputs(ioputs)
+
+        assert len(inputs) == 1
+        assert inputs[0]["input_value"] == "extracted_text"
+        data_obj.get_text.assert_called_once()
+
+    def test_format_flow_outputs_creates_output_objects(self):
+        """Test that _format_flow_outputs creates Output objects from graph."""
+        component = RunFlowBaseComponent()
+
+        mock_vertex = MagicMock()
+        mock_vertex.id = "vertex_123"
+        mock_vertex.is_output = True
+        mock_vertex.outputs = [
+            {"name": "output1", "display_name": "Output 1"},
+            {"name": "output2", "display_name": "Output 2"},
+        ]
+
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.vertices = [mock_vertex]
+        mock_graph.successor_map = {}
+
+        outputs = component._format_flow_outputs(mock_graph)
+
+        assert len(outputs) == 2
+        assert all(isinstance(output, Output) for output in outputs)
+        assert outputs[0].name == f"vertex_123{component.IOPUT_SEP}output1"
+        # The method name is dynamically generated with sanitized vertex and output names
+        assert outputs[0].method == "_resolve_flow_output__vertex_123__output1"
+        assert outputs[1].name == f"vertex_123{component.IOPUT_SEP}output2"
+        assert outputs[1].method == "_resolve_flow_output__vertex_123__output2"
+
+    def test_format_flow_outputs_skips_vertices_with_successors(self):
+        """Test that _format_flow_outputs skips vertices with outgoing edges."""
+        component = RunFlowBaseComponent()
+
+        mock_vertex = MagicMock()
+        mock_vertex.id = "vertex_123"
+        mock_vertex.is_output = True
+        mock_vertex.outputs = [{"name": "output1"}]
+
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.vertices = [mock_vertex]
+        # Simulate successor map with outgoing edge
+        mock_graph.successor_map = {"vertex_123": ["some_other_vertex"]}
+
+        outputs = component._format_flow_outputs(mock_graph)
+
+        assert len(outputs) == 0
+
+    def test_delete_fields_with_list(self):
+        """Test deleting fields from build_config with list."""
+        component = RunFlowBaseComponent()
+        build_config = dotdict({"field1": "value1", "field2": "value2", "field3": "value3"})
+
+        component.delete_fields(build_config, ["field1", "field3"])
+
+        assert "field1" not in build_config
+        assert "field2" in build_config
+        assert "field3" not in build_config
+
+    def test_delete_fields_with_dict(self):
+        """Test deleting fields from build_config with dict."""
+        component = RunFlowBaseComponent()
+        build_config = dotdict({"field1": "value1", "field2": "value2"})
+
+        component.delete_fields(build_config, {"field1": {}, "field2": {}})
+
+        assert "field1" not in build_config
+        assert "field2" not in build_config
+
+    def test_update_input_types_sets_empty_list_for_none(self):
+        """Test that update_input_types sets empty list for None or missing input_types."""
+        component = RunFlowBaseComponent()
+
+        fields = [
+            dotdict({"name": "field1", "input_types": None}),
+            dotdict({"name": "field2", "input_types": ["str"]}),
+            dotdict({"name": "field3"}),  # No input_types key
+        ]
+
+        updated = component.update_input_types(fields)
+
+        assert updated[0]["input_types"] == []
+        assert updated[1]["input_types"] == ["str"]
+        assert updated[2]["input_types"] == []  # Should be added as empty list
+
+    def test_resolve_exposed_input_types_restores_message_for_empty_text_field(self):
+        """Empty input_types on a text field should be restored to ["Message"]."""
+        entry = {"type": "str", "input_types": []}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == ["Message"]
+
+    def test_resolve_exposed_input_types_restores_message_when_missing(self):
+        """Missing input_types on a text field should default to ["Message"]."""
+        entry = {"type": "Text"}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == ["Message"]
+
+    def test_resolve_exposed_input_types_preserves_existing_input_types(self):
+        """Existing input_types must be preserved without modification."""
+        entry = {"type": "str", "input_types": ["Message", "Data"]}
+
+        result = RunFlowBaseComponent._resolve_exposed_input_types(entry)
+
+        assert result == ["Message", "Data"]
+        # Returns a copy, not the original list, to avoid accidental shared mutation.
+        assert result is not entry["input_types"]
+
+    def test_resolve_exposed_input_types_skips_non_text_fields(self):
+        """Non-text fields with empty input_types are left untouched."""
+        entry = {"type": "bool", "input_types": []}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == []
+
+    def test_get_new_fields_exposes_message_handle_for_chat_input_value(self):
+        """Run Flow must expose a Message handle for ChatInput-style input_value fields.
+
+        Regression test for LE-1233: ChatInput sets input_types=[] on its input_value,
+        which previously propagated to the Run Flow dynamic field and prevented users
+        from wiring upstream components into the exposed Input Text field.
+        """
+        component = RunFlowBaseComponent()
+
+        chat_input_vertex = MagicMock(spec=Vertex)
+        chat_input_vertex.id = "ChatInput-abcde"
+        chat_input_vertex.display_name = "Chat Input"
+        chat_input_vertex.data = {
+            "node": {
+                "template": {
+                    "input_value": {
+                        "name": "input_value",
+                        "display_name": "Input Text",
+                        "type": "str",
+                        "input_types": [],
+                        "advanced": False,
+                    },
+                    "should_store_message": {
+                        "name": "should_store_message",
+                        "display_name": "Store Messages",
+                        "type": "bool",
+                        "input_types": [],
+                        "advanced": True,
+                    },
+                },
+                "field_order": ["input_value", "should_store_message"],
+            }
+        }
+
+        new_fields = component.get_new_fields([chat_input_vertex])
+
+        input_value_field = next(f for f in new_fields if f["name"].endswith("~input_value"))
+        bool_field = next(f for f in new_fields if f["name"].endswith("~should_store_message"))
+
+        assert input_value_field["input_types"] == ["Message"], (
+            "Text-typed exposed inputs must receive a Message handle so upstream components can be wired in (LE-1233)."
+        )
+        # Bool fields don't expose a Message handle — handle visibility is driven by `type`.
+        assert bool_field["input_types"] == []
+
+
+class TestRunFlowBaseComponentOutputMethods:
+    """Test output methods."""
+
+    @pytest.mark.asyncio
+    async def test_resolve_flow_output_finds_correct_output(self):
+        """Test that _resolve_flow_output finds the correct output."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.session_id = None
+        component.flow_tweak_data = {}
+
+        vertex_id = "vertex_123"
+        output_name = "output1"
+        expected_value = "test_value"
+
+        mock_result = MagicMock()
+        mock_result.component_id = vertex_id
+        mock_result.results = {output_name: expected_value}
+
+        mock_run_output = MagicMock()
+        mock_run_output.outputs = [mock_result]
+
+        with patch.object(component, "_get_cached_run_outputs", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = [mock_run_output]
+
+            result = await component._resolve_flow_output(vertex_id=vertex_id, output_name=output_name)
+
+            assert result == expected_value
+
+
+class TestRunFlowBaseComponentToolGeneration:
+    """Test tool generation methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_required_data_returns_description_and_fields(self):
+        """Test that get_required_data returns flow description and tool-mode fields."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.flow_name_selected = "test_flow"
+        component.flow_id_selected = str(uuid4())
+
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.description = "Test flow description"
+        mock_graph.successor_map = {}
+
+        mock_vertex = MagicMock()
+        mock_vertex.id = "vertex_1"
+        mock_vertex.data = {
+            "node": {
+                "template": {
+                    "input1": {"name": "input1", "display_name": "Input 1", "advanced": False},
+                },
+                "field_order": ["input1"],
+            }
+        }
+        mock_graph.vertices = [mock_vertex]
+
+        with patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph:
+            mock_get_graph.return_value = mock_graph
+
+            with patch.object(component, "get_new_fields_from_graph") as mock_get_fields:
+                mock_get_fields.return_value = [dotdict({"name": "input1", "tool_mode": True, "input_types": None})]
+
+                description, fields = await component.get_required_data()
+
+                assert description == "Test flow description"
+                assert len(fields) == 1
+                assert fields[0]["name"] == "input1"
+
+
+class TestRunFlowBaseComponentTweakData:
+    """Test tweak data building methods."""
+
+    def test_build_flow_tweak_data_merges_tool_tweaks(self):
+        """Test that _build_flow_tweak_data merges tool tweaks correctly."""
+        component = RunFlowBaseComponent()
+
+        # Base attributes
+        component._attributes = {
+            "vertex1~param1": "value1",
+            "vertex1~param2": "value2",
+            "flow_tweak_data": {
+                "vertex1~param1": "new_value1",  # Should override
+                "vertex2~param3": "value3",  # Should be added
+            },
+        }
+
+        tweak_data = component._build_flow_tweak_data()
+
+        assert "vertex1" in tweak_data
+        assert tweak_data["vertex1"]["param1"] == "new_value1"
+        assert tweak_data["vertex1"]["param2"] == "value2"
+        assert "vertex2" in tweak_data
+        assert tweak_data["vertex2"]["param3"] == "value3"
+
+
+class TestRunFlowBaseComponentUpdateOutputs:
+    """Test update_outputs method."""
+
+    @pytest.mark.asyncio
+    async def test_update_outputs_with_flow_name_selected(self):
+        """Test update_outputs when flow_name_selected is changed."""
+        component = RunFlowBaseComponent()
+        frontend_node = {
+            "template": {"flow_name_selected": {"selected_metadata": {"id": "flow_id", "updated_at": "timestamp"}}}
+        }
+        mock_graph = MagicMock(spec=Graph)
+        mock_output = MagicMock(spec=Output)
+        mock_output.model_dump.return_value = {"name": "output1"}
+
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "_format_flow_outputs") as mock_format_outputs,
+            patch.object(component, "_sync_flow_outputs") as mock_sync_outputs,
+        ):
+            mock_get_graph.return_value = mock_graph
+            mock_format_outputs.return_value = [mock_output]
+
+            result = await component.update_outputs(frontend_node, "flow_name_selected", "new_flow")
+
+            assert result["outputs"] == [{"name": "output1"}]
+            mock_get_graph.assert_called_once()
+            mock_format_outputs.assert_called_once_with(mock_graph)
+            mock_sync_outputs.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_outputs_with_tool_mode_false(self):
+        """Test update_outputs when tool_mode is set to False."""
+        component = RunFlowBaseComponent()
+        frontend_node = {
+            "template": {
+                "flow_name_selected": {
+                    "value": "test_flow",
+                    "selected_metadata": {"id": "flow_id", "updated_at": "timestamp"},
+                }
+            }
+        }
+        mock_graph = MagicMock(spec=Graph)
+        mock_output = MagicMock(spec=Output)
+        mock_output.model_dump.return_value = {"name": "output1"}
+
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "_format_flow_outputs") as mock_format_outputs,
+            patch.object(component, "_sync_flow_outputs"),
+        ):
+            mock_get_graph.return_value = mock_graph
+            mock_format_outputs.return_value = [mock_output]
+
+            result = await component.update_outputs(frontend_node, "tool_mode", field_value=False)
+
+            assert result["outputs"] == [{"name": "output1"}]
+            mock_get_graph.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_outputs_ignored_fields(self):
+        """Test update_outputs with fields that should be ignored."""
+        component = RunFlowBaseComponent()
+        frontend_node = {}
+
+        result = await component.update_outputs(frontend_node, "other_field", "value")
+
+        assert result == frontend_node
+
+
+class TestRunFlowBaseComponentTweaks:
+    """Test tweak processing methods."""
+
+    def _graph_with(self, *vertices):
+        graph = MagicMock(spec=Graph)
+        graph.vertices = list(vertices)
+        return graph
+
+    def _vertex(self, vertex_id, template, node_type):
+        vertex = MagicMock(spec=Vertex)
+        vertex.id = vertex_id
+        vertex.data = {"type": node_type, "node": {"template": template}}
+        vertex.params = {}
+        vertex.load_from_db_fields = []
+        return vertex
+
+    def test_process_tweaks_on_graph_applies_declared_fields(self):
+        """An ordinary tweak reaches the vertex; unknown keys and ids are skipped.
+
+        The component no longer owns a private copy of this logic. It calls the
+        shared helper so the graph path enforces the same floor as the sync path.
+        """
+        vertex1 = self._vertex("vertex1", {"param": {"type": "str"}}, "TextInput")
+        vertex2 = self._vertex("vertex2", {"param": {"type": "str"}}, "TextInput")
+        graph = self._graph_with(vertex1, vertex2)
+
+        tweaks = {
+            "vertex1": {"param": "value", "undeclared": "ignored"},
+            "vertex3": {"param": "ignored"},  # Not in graph
+        }
+
+        process_tweaks_on_graph(graph, tweaks)
+
+        vertex1.update_raw_params.assert_called_once()
+        assert vertex1.update_raw_params.call_args[0][0] == {"param": "value"}
+        vertex2.update_raw_params.assert_not_called()
+
+    def test_process_tweaks_on_graph_refuses_protected_fields(self):
+        """A protected field is refused, and the refusal applies nothing at all.
+
+        ``function_code`` on a code-execution component is sandbox-widening. The
+        accepted sibling must not be written either: this graph is cached and
+        reused, so a partial write would survive into later runs.
+        """
+        vertex1 = self._vertex(
+            "vertex1",
+            {
+                "param": {"type": "str"},
+                "code": {"type": "code"},
+                "function_code": {"type": "str"},
+            },
+            "PythonFunction",
+        )
+        graph = self._graph_with(vertex1)
+
+        tweaks = {
+            "vertex1": {
+                "param": "value",
+                "code": "ignored",
+                "function_code": "def run():\n    return __import__('os').system('id')",
+            }
+        }
+
+        with pytest.raises(TweakRefusedError) as exc_info:
+            process_tweaks_on_graph(graph, tweaks)
+
+        assert set(exc_info.value.refused) == {"code", "function_code"}
+        vertex1.update_raw_params.assert_not_called()
+
+
+class TestRunFlowToolInvocation:
+    """The tool wrapper copies the component per call; that copy must be the one that runs.
+
+    Regression coverage for #15034: the tool call carried the right arguments,
+    the sub-flow ran without them, and the tool answered with empty content.
+    """
+
+    @staticmethod
+    def _tool_mode_vertex(flow_id: str) -> SimpleNamespace:
+        """A Run Flow node the way it is saved once tool mode is on.
+
+        ``run_and_validate_update_outputs`` collapses the node's outputs to the
+        single ``component_as_tool`` handle, so the vertex-built component
+        registers no selected-flow resolvers of its own; ``to_toolkit`` creates
+        them on the instance when the agent asks for the tool.
+        """
+        return SimpleNamespace(
+            id="RunFlow-le2650",
+            outputs=[
+                {
+                    "name": "component_as_tool",
+                    "display_name": "Toolset",
+                    "method": "to_toolkit",
+                    "types": ["Tool"],
+                    "selected": "Tool",
+                }
+            ],
+            data={"node": {"template": {"flow_name_selected": {"selected_metadata": {"id": flow_id}}}}},
+            outgoing_edges=[],
+            edges_source_names={"component_as_tool"},
+        )
+
+    @staticmethod
+    async def _echo_sub_flow(client, logged_in_headers, user_id: str) -> tuple[str, str, str]:
+        """A saved Text Input -> Text Output flow that returns whatever it is given."""
+        text_in = TextInputComponent()
+        text_out = TextOutputComponent()
+        text_out.set(input_value=text_in.text_response)
+        flow_dict = Graph(start=text_in, end=text_out).dump(name="LE2650 Echo", description="echoes its input")
+        for node in flow_dict["data"]["nodes"]:
+            node_data = node["data"]["node"]
+            # The UI writes a field_order on every node; Graph.dump leaves it empty,
+            # and get_new_fields skips a node without one, so no tool-mode field
+            # would be exposed and the component would produce no tool at all.
+            node_data["field_order"] = [
+                name for name in node_data.get("template", {}) if not name.startswith("_") and name != "code"
+            ]
+
+        response = await client.post(
+            "api/v1/flows/",
+            json=FlowCreate(**flow_dict, user_id=user_id).model_dump(mode="json"),
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 201, response.text
+        flow = response.json()
+        return flow["id"], flow["name"], text_in.get_id()
+
+    @pytest.mark.asyncio
+    async def test_tool_call_reaches_the_component_that_runs(self, client, logged_in_headers, active_user):
+        """The sub-flow must run with the arguments the agent passed to the tool."""
+        client.follow_redirects = True
+        flow_id, flow_name, text_input_id = await self._echo_sub_flow(client, logged_in_headers, str(active_user.id))
+
+        component = RunFlowComponent(
+            _vertex=self._tool_mode_vertex(flow_id), _id="RunFlow-le2650", _user_id=str(active_user.id)
+        )
+        component._user_id = str(active_user.id)
+        # loading.instantiate_class feeds the node's params in this way
+        component.set_attributes({"flow_name_selected": flow_name, "flow_id_selected": flow_id})
+        component._pre_run_setup()
+
+        tools = await component.to_toolkit()
+        assert [tool.name for tool in tools] == ["LE2650-Echo_tool"]
+
+        result = await tools[0].coroutine(flow_tweak_data={f"{text_input_id}~input_value": "Test123"})
+
+        assert "Test123" in str(result)
+        # The arguments belong to the copy; the component the toolkit was built
+        # from must not have been the one that ran.
+        assert component._attributes.get("flow_tweak_data") is None
+
+    @pytest.mark.asyncio
+    async def test_a_copy_keeps_its_own_flow_output_methods(self):
+        """A copied component must resolve flow outputs through itself.
+
+        ``Component.__deepcopy__`` rebuilds the component instead of copying its
+        ``__dict__``, and a tool-mode node carries no selected-flow outputs to
+        rebuild them from, so the copy used to advertise resolver names in
+        ``_outputs_map`` that it did not have.
+        """
+        component = RunFlowBaseComponent(_id="RunFlow-copy")
+        component._outputs_map["TextOutput-1~text"] = Output(
+            name="TextOutput-1~text", display_name="text", method=None, types=["Message"]
+        )
+        component.map_outputs()
+        component._cached_flow_updated_at = "2026-09-15T10:00:00Z"
+        method_name = component._outputs_map["TextOutput-1~text"].method
+
+        copied = deepcopy(component)
+
+        assert getattr(copied, method_name).__self__ is copied
+        assert getattr(component, method_name).__self__ is component
+        # _pre_run_setup only runs on the vertex-built component, so without this
+        # the copy reads every cached graph as stale and refetches it per call.
+        assert copied._cached_flow_updated_at == "2026-09-15T10:00:00Z"

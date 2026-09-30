@@ -1,30 +1,37 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
+import { useTranslation } from "react-i18next";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import DataDisplayComponent from "@/components/core/parameterRenderComponent/components/dataDisplayComponent";
+import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
+import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
+import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { useMemo } from "react";
-import ToolsComponent from "./components/ToolsComponent";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import type { APIClassType, InputFieldType } from "@/types/api";
+import AccordionPromptComponent from "./components/accordionPromptComponent";
+import ActionPickerComponent from "./components/actionPickerComponent";
 import DictComponent from "./components/dictComponent";
+import DurationComponent from "./components/durationComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
-import InputFileComponent from "./components/inputFileComponent";
 import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
-import LinkComponent from "./components/linkComponent";
+import McpComponent, { type McpServerValue } from "./components/mcpComponent";
 import MultiselectComponent from "./components/multiselectComponent";
+import MustachePromptAreaComponent from "./components/mustachePromptComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
-import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
+import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
-import { InputProps, NodeInfoType } from "./types";
+import type { InputProps, NodeInfoType } from "./types";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -33,12 +40,15 @@ export function ParameterRenderComponent({
   templateData,
   templateValue,
   editNode,
+  showParameter,
+  inspectionPanel = false,
   handleNodeClass,
   nodeClass,
   disabled,
   placeholder,
   isToolMode,
   nodeInformationMetadata,
+  ariaLabelledBy,
 }: {
   handleOnNewValue:
     | handleOnNewValueType
@@ -46,15 +56,19 @@ export function ParameterRenderComponent({
   name: string;
   nodeId: string;
   templateData: Partial<InputFieldType>;
-  templateValue: any;
+  templateValue: unknown;
   editNode: boolean;
-  handleNodeClass: (value: any, code?: string, type?: string) => void;
+  showParameter: boolean;
+  inspectionPanel: boolean;
+  handleNodeClass: (value: unknown, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
+  ariaLabelledBy?: string;
 }) {
+  const { t } = useTranslation();
   const id = (
     templateData.type +
     "_" +
@@ -74,10 +88,13 @@ export function ParameterRenderComponent({
       nodeId,
       helperText: templateData?.helper_text,
       readonly: templateData.readonly,
-      placeholder,
+      placeholder: placeholder || templateData?.placeholder,
       isToolMode,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
+      showParameter,
+      inspectionPanel,
+      ariaLabelledBy,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
@@ -92,7 +109,7 @@ export function ParameterRenderComponent({
             />
           );
         }
-        if (!!templateData.options) {
+        if (templateData.options) {
           return (
             <MultiselectComponent
               {...baseInputProps}
@@ -159,20 +176,21 @@ export function ParameterRenderComponent({
           <FloatComponent
             {...baseInputProps}
             id={`float_${id}`}
-            rangeSpec={templateData.range_spec}
+            rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
           />
         );
       case "int":
         return (
           <IntComponent
             {...baseInputProps}
-            rangeSpec={templateData.range_spec}
+            name={name}
+            rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
             id={`int_${id}`}
           />
         );
       case "file":
         return (
-          <InputFileComponent
+          <CustomInputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
             file_path={templateData.file_path}
@@ -182,12 +200,36 @@ export function ParameterRenderComponent({
           />
         );
       case "prompt":
-        return (
+        return ENABLE_INSPECTION_PANEL && !baseInputProps.editNode ? (
+          <AccordionPromptComponent
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`promptarea_${id}`}
+          />
+        ) : (
           <PromptAreaComponent
             {...baseInputProps}
             readonly={!!nodeClass.flow}
             field_name={name}
             id={`promptarea_${id}`}
+          />
+        );
+      case "mustache":
+        return ENABLE_INSPECTION_PANEL && !baseInputProps.editNode ? (
+          <AccordionPromptComponent
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`mustachepromptarea_${id}`}
+            isDoubleBrackets={true}
+          />
+        ) : (
+          <MustachePromptAreaComponent
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`mustachepromptarea_${id}`}
           />
         );
       case "code":
@@ -196,8 +238,10 @@ export function ParameterRenderComponent({
         return (
           <TableNodeComponent
             {...baseInputProps}
-            description={templateData.info || "Add or edit data"}
-            columns={templateData?.table_schema?.columns}
+            description={templateData.info || t("paramRender.addOrEditData")}
+            columns={
+              templateData?.table_schema?.columns ?? templateData?.table_schema
+            }
             tableTitle={templateData?.display_name ?? "Table"}
             table_options={templateData?.table_options}
             trigger_icon={templateData?.trigger_icon}
@@ -209,7 +253,7 @@ export function ParameterRenderComponent({
         return (
           <ToolsComponent
             {...baseInputProps}
-            description={templateData.info || "Add or edit data"}
+            description={templateData.info || t("paramRender.addOrEditData")}
             title={nodeClass?.display_name ?? "Tools"}
             icon={nodeClass?.icon ?? ""}
             template={nodeClass?.template}
@@ -220,7 +264,7 @@ export function ParameterRenderComponent({
           <SliderComponent
             {...baseInputProps}
             value={templateValue}
-            rangeSpec={templateData.range_spec}
+            rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
             minLabel={templateData?.min_label}
             maxLabel={templateData?.max_label}
             minLabelIcon={templateData?.min_label_icon}
@@ -228,6 +272,8 @@ export function ParameterRenderComponent({
             sliderButtons={templateData?.slider_buttons}
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
+            valueInverted={templateData?.value_inverted}
+            sliderColor={templateData?.slider_color}
             id={`slider_${id}`}
           />
         );
@@ -240,12 +286,35 @@ export function ParameterRenderComponent({
             options={templateData?.options}
             searchCategory={templateData?.search_category}
             limit={templateData?.limit}
+            id={`sortablelist_${id}`}
           />
         );
-      case "connect":
+      case "duration":
+        return (
+          <DurationComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            id={`duration_${id}`}
+          />
+        );
+      case "actionPicker":
+        return (
+          <ActionPickerComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            combobox={templateData.combobox}
+            id={`actionpicker_${id}`}
+          />
+        );
+      case "connect": {
         const link =
           templateData?.options?.find(
-            (option: any) => option?.name === templateValue,
+            (option: { name?: unknown; link?: unknown }) =>
+              option?.name === templateValue,
           )?.link || "";
 
         return (
@@ -262,6 +331,7 @@ export function ParameterRenderComponent({
             connectionLink={link as string}
           />
         );
+      }
       case "tab":
         return (
           <TabComponent
@@ -280,25 +350,53 @@ export function ParameterRenderComponent({
             id={`query_${id}`}
           />
         );
+      case "mcp":
+        return (
+          <McpComponent
+            {...baseInputProps}
+            id={`mcp_${id}`}
+            editNode={editNode}
+            disabled={disabled}
+            value={templateValue as McpServerValue}
+          />
+        );
+      case "model":
+        return (
+          <ModelInputComponent
+            {...baseInputProps}
+            options={templateData?.options || []}
+            placeholder={templateData?.placeholder}
+            externalOptions={templateData?.external_options}
+          />
+        );
+      case "knowledge_backend":
+        return (
+          <DBProviderInputComponent
+            {...baseInputProps}
+            id={`dbprovider_${id}`}
+          />
+        );
+      case "data_display":
+        return (
+          <DataDisplayComponent
+            {...baseInputProps}
+            buttonText={templateData?.button_text}
+            buttonIcon={templateData?.button_icon}
+            id={`data_display_${id}`}
+          />
+        );
       default:
         return <EmptyParameterComponent {...baseInputProps} />;
     }
   };
 
-  return useMemo(
-    () => (
-      <RefreshParameterComponent
-        templateData={templateData}
-        disabled={disabled}
-        nodeId={nodeId}
-        editNode={editNode}
-        nodeClass={nodeClass}
-        handleNodeClass={handleNodeClass}
-        name={name}
-      >
-        {renderComponent()}
-      </RefreshParameterComponent>
-    ),
-    [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
-  );
+  // No wrapping role="group" here: a screen reader announces a group's own
+  // name on entry, then the focused control's name right after — since
+  // every widget that actually applies ariaLabelledBy composes the same
+  // field label into its own accessible name, a wrapper would double up
+  // ("Model Name" from the group, then "Model Name gpt-4" from the
+  // combobox). Widgets that don't yet apply it themselves get nothing from
+  // wrapping either way — role="group" doesn't propagate a name to a
+  // focused descendant control, only to the group boundary itself.
+  return renderComponent();
 }

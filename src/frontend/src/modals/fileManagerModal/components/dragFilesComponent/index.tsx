@@ -1,27 +1,77 @@
+import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { createFileUpload } from "@/helpers/create-file-upload";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import type { FileType } from "@/types/file_management";
+import { getRelativePathForServerPath } from "@/utils/file-relative-path-map";
 import { formatFileSize } from "@/utils/stringManipulation";
-import { useState } from "react";
+
+import {
+  dedupeFolderRootIfNeeded,
+  filterFilesByTypes,
+  filterHiddenAndIgnoredFolderFiles,
+  getDroppedFilesFromDragEvent,
+  getRootFolderFromRelativePath,
+} from "./helpers";
 
 export default function DragFilesComponent({
   onUpload,
   types,
   isList,
+  allowFolderSelection = false,
+  existingFiles,
 }: {
   onUpload: (filesPaths: string[]) => void;
   types: string[];
   isList: boolean;
+  allowFolderSelection?: boolean;
+  existingFiles?: FileType[];
 }) {
+  const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
-  const uploadFile = useUploadFile({
+
+  const sessionUsedFolderRootsRef = useRef<Set<string>>(new Set());
+
+  const existingFolderRoots = useMemo(() => {
+    const roots = new Set<string>();
+    for (const file of existingFiles ?? []) {
+      const relativePath =
+        getRelativePathForServerPath(file.path) ??
+        file.file?.webkitRelativePath;
+      const root = getRootFolderFromRelativePath(relativePath);
+      if (root) roots.add(root);
+    }
+    return roots;
+  }, [existingFiles]);
+  const uploadFiles = useUploadFile({
     types,
     multiple: isList,
+    webkitdirectory: false,
+  });
+  const uploadFolder = useUploadFile({
+    types,
+    multiple: true,
+    webkitdirectory: true,
   });
   const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+
+  const shouldTreatDropAsFolder = (args: {
+    hasDirectories: boolean;
+    files: File[];
+  }) => {
+    if (!allowFolderSelection) return false;
+    if (args.hasDirectories) return true;
+    // Some browsers may not flag hasDirectories but still provide webkitRelativePath.
+    return args.files.some((file) =>
+      Boolean(getRootFolderFromRelativePath(file.webkitRelativePath)),
+    );
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -47,40 +97,142 @@ export default function DragFilesComponent({
     e.stopPropagation();
     setIsDragging(false);
 
-    const droppedFiles = Array.from(e.dataTransfer.files);
+    let droppedFiles = Array.from(e.dataTransfer.files);
+    let hasDirectories = false;
+
+    try {
+      const resolved = await getDroppedFilesFromDragEvent(e);
+      droppedFiles = resolved.files;
+      hasDirectories = resolved.hasDirectories;
+    } catch {
+      droppedFiles = Array.from(e.dataTransfer.files);
+    }
+
     if (droppedFiles.length > 0) {
       try {
-        const filesIds = await uploadFile({
+        const shouldTreatAsFolder = shouldTreatDropAsFolder({
+          hasDirectories,
           files: droppedFiles,
         });
+
+        if (shouldTreatAsFolder) {
+          const hiddenFiltered =
+            filterHiddenAndIgnoredFolderFiles(droppedFiles);
+          const typeFiltered = filterFilesByTypes(
+            hiddenFiltered.filtered,
+            types,
+          );
+          const deduped = dedupeFolderRootIfNeeded({
+            files: typeFiltered,
+            existingRoots: new Set([
+              ...Array.from(existingFolderRoots),
+              ...Array.from(sessionUsedFolderRootsRef.current),
+            ]),
+            renameOnCollision: true,
+          });
+
+          const finalRootName = deduped.renamedRootName ?? deduped.rootName;
+          if (finalRootName) {
+            sessionUsedFolderRootsRef.current.add(finalRootName);
+          }
+
+          droppedFiles = deduped.files;
+        }
+
+        if (shouldTreatAsFolder && droppedFiles.length > 1000) {
+          throw new Error(
+            `Too many files detected (${droppedFiles.length}). This likely includes large/hidden directories. Please drop a smaller folder or exclude folders like node_modules.`,
+          );
+        }
+
+        const filesIds = shouldTreatAsFolder
+          ? await uploadFolder({ files: droppedFiles })
+          : await uploadFiles({ files: droppedFiles });
         if (filesIds.length > 0) {
           onUpload(filesIds);
           setSuccessData({
-            title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+            title:
+              filesIds.length > 1
+                ? t("fileManager.filesUploadedSuccessfully")
+                : t("fileManager.fileUploadedSuccessfully"),
           });
         }
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (error: any) {
         setErrorData({
-          title: "Error uploading file",
-          list: [error.message || "An error occurred while uploading the file"],
+          title: t("fileManager.errorUploadingFile"),
+          list: [error.message || t("fileManager.errorUploadingFileDetail")],
         });
       }
     }
   };
 
-  const handleClick = async () => {
+  const handleSelectFolder = async () => {
     try {
-      const filesIds = await uploadFile({});
+      const selected = await createFileUpload({
+        accept: types?.map((type) => `.${type}`).join(",") ?? "",
+        multiple: true,
+        webkitdirectory: true,
+      });
+
+      if (selected.length > 1000) {
+        throw new Error(t("errors.tooManyFiles", { count: selected.length }));
+      }
+
+      const hiddenFiltered = filterHiddenAndIgnoredFolderFiles(selected);
+      const typeFiltered = filterFilesByTypes(hiddenFiltered.filtered, types);
+      const deduped = dedupeFolderRootIfNeeded({
+        files: typeFiltered,
+        existingRoots: new Set([
+          ...Array.from(existingFolderRoots),
+          ...Array.from(sessionUsedFolderRootsRef.current),
+        ]),
+        renameOnCollision: true,
+      });
+
+      const finalRootName = deduped.renamedRootName ?? deduped.rootName;
+      if (finalRootName) {
+        sessionUsedFolderRootsRef.current.add(finalRootName);
+      }
+
+      // When merging into an existing folder, we intentionally do not show a rename toast.
+
+      const filesIds = await uploadFolder({ files: deduped.files });
       if (filesIds.length > 0) {
         onUpload(filesIds);
         setSuccessData({
-          title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+          title:
+            filesIds.length > 1
+              ? t("fileManager.filesUploadedSuccessfully")
+              : t("fileManager.fileUploadedSuccessfully"),
         });
       }
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (error: any) {
       setErrorData({
-        title: "Error uploading file",
-        list: [error.message || "An error occurred while uploading the file"],
+        title: t("fileManager.errorUploadingFile"),
+        list: [error.message || t("fileManager.errorUploadingFileDetail")],
+      });
+    }
+  };
+
+  const handleSelectFiles = async () => {
+    try {
+      const filesIds = await uploadFiles({});
+      if (filesIds.length > 0) {
+        onUpload(filesIds);
+        setSuccessData({
+          title:
+            filesIds.length > 1
+              ? t("fileManager.filesUploadedSuccessfully")
+              : t("fileManager.fileUploadedSuccessfully"),
+        });
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+    } catch (error: any) {
+      setErrorData({
+        title: t("fileManager.errorUploadingFile"),
+        list: [error.message || t("fileManager.errorUploadingFileDetail")],
       });
     }
   };
@@ -95,28 +247,58 @@ export default function DragFilesComponent({
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={handleClick}
+        onClick={handleSelectFiles}
         data-testid="drag-files-component"
         role="button"
         tabIndex={0}
       >
         <h3 className="text-sm font-semibold">
-          {isDragging ? "Drop files here" : "Click or drag files here"}
+          {isDragging
+            ? allowFolderSelection
+              ? t("fileManager.dropFilesOrFoldersHere")
+              : t("fileManager.dropFilesHere")
+            : allowFolderSelection
+              ? t("fileManager.clickToSelectFilesOrDropFolder")
+              : t("fileManager.clickOrDragFilesHere")}
         </h3>
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span>{types.slice(0, 3).join(", ")}</span>
-          {types.length > 3 && (
-            <ShadTooltip content={types.slice(3).join(", ")}>
-              <span className="text-accent-pink-foreground underline">
-                +{types.length - 3} more
-              </span>
-            </ShadTooltip>
-          )}
-          <span className="font-semibold">
-            {formatFileSize(maxFileSizeUpload)}
+        {allowFolderSelection && (
+          <div className="text-xs text-muted-foreground text-center max-w-md space-y-2">
+            <p>{t("fileManager.dragDropSupportsFilesAndFolders")}</p>
+            <p className="text-accent-amber-foreground font-medium">
+              {t("fileManager.avoidLargeHiddenDirectories")}
+            </p>
+            <button
+              type="button"
+              className="text-xs underline underline-offset-4 text-foreground/80 hover:text-foreground"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleSelectFolder();
+              }}
+            >
+              {t("fileManager.selectFolderInstead")}
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span>{types.slice(0, 3).join(", ")}</span>
+            {types.length > 3 && (
+              <ShadTooltip content={types.slice(3).toSorted().join(", ")}>
+                <span
+                  className="text-muted-foreground flex items-center gap-1"
+                  data-testid="info-types"
+                >
+                  {t("fileManager.moreTypes", { count: types.length - 3 })}
+                  <ForwardedIconComponent name="info" className="w-3 h-3" />
+                </span>
+              </ShadTooltip>
+            )}
           </span>
-          <span>max</span>
-        </p>
+          <span className="font-semibold">
+            {formatFileSize(maxFileSizeUpload)} max
+          </span>
+        </div>
         <div className="pointer-events-none absolute inset-0 h-full w-full">
           <svg
             width="100%"

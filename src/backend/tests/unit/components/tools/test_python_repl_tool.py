@@ -1,7 +1,37 @@
 import pytest
-from langflow.components.tools import PythonREPLComponent
+from langchain_core.tools import ToolException
+from lfx.components.tools.python_repl import PythonREPLToolComponent
+from lfx.components.utilities.python_repl_core import PythonREPLComponent
+from lfx.graph import Graph
 
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
+
+DYNAMIC_FORMAT_TRAVERSAL_CODE = """
+parts = ["__loader__", "find_spec", "__globals__"]
+field = "{0." + parts[0] + "." + parts[1] + "." + parts[2] + "[sys].modules[os].environ}"
+print("canary_present=" + str("PVR0800453_CANARY" in field.format(math)))
+"""
+
+# Sibling formatter sinks: the same __globals__ traversal lives in a *string* argument
+# (invisible to the AST attribute check) when fed through string.Formatter primitives or
+# operator.attrgetter. Each leaks os.environ unless the validator rejects the call.
+FORMATTER_VFORMAT_TRAVERSAL_CODE = """
+f = lambda: 0
+leaked = string.Formatter().vformat("{0.__globals__[os].environ[PVR0800453_CANARY]}", (f,), {})
+print("leaked=" + str(leaked))
+"""
+
+FORMATTER_GET_FIELD_TRAVERSAL_CODE = """
+f = lambda: 0
+obj, _ = string.Formatter().get_field("0.__globals__[os].environ[PVR0800453_CANARY]", (f,), {})
+print("leaked=" + str(obj))
+"""
+
+ATTRGETTER_TRAVERSAL_CODE = """
+f = lambda: 0
+leaked = operator.attrgetter("__globals__")(f)["os"].environ["PVR0800453_CANARY"]
+print("leaked=" + str(leaked))
+"""
 
 
 class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
@@ -45,9 +75,299 @@ class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
 
         # Test python_code configuration
         python_code = template["python_code"]
-        assert python_code["type"] == "code"
+        # assert python_code["type"] == "code"  # TODO: Restore when CodeInput is included in component
+        assert python_code["type"] == "str"  # TODO: Remove when CodeInput is included in component
         assert python_code["value"] == "print('Hello, World!')"
         assert python_code["required"] is True
 
-        # Test base configuration
-        assert "Data" in node_data["base_classes"]
+        # Test base configuration - JSON is the new name (Data is alias for backward compatibility)
+        assert "JSON" in node_data["base_classes"]
+
+
+class TestPythonREPLComponentSecurity:
+    """Regression tests for the __builtins__ sandbox-bypass RCE in the Python Interpreter.
+
+    The Global Imports allow-list must not be silently bypassable: dangerous builtins
+    (__import__, open, eval, ...) and the builtin-free escape gadgets must be blocked,
+    while ordinary code keeps working.
+    """
+
+    def _run(self, code, global_imports="math"):
+        return PythonREPLComponent(global_imports=global_imports, python_code=code).run_python_repl().data
+
+    def test_legitimate_code_still_runs(self):
+        """The default example (and print()) must keep working after restricting builtins."""
+        assert self._run("print('Hello, World!')").get("result") == "Hello, World!"
+
+    def test_whitelisted_module_works(self):
+        """A module from Global Imports remains usable."""
+        assert "4.0" in self._run("print(math.sqrt(16))").get("result", "")
+
+    def test_import_builtin_is_blocked(self):
+        """__import__ is not in the restricted builtins, so the headline RCE payload fails."""
+        rendered = str(self._run('print(__import__("subprocess").check_output(["echo", "PWNED"]))'))
+        assert "PWNED" not in rendered
+        assert "NameError" in rendered
+
+    def test_open_builtin_is_blocked(self):
+        """Filesystem access via open() is blocked."""
+        rendered = str(self._run('print(open("/etc/passwd").read())'))
+        assert "root:" not in rendered
+        assert "NameError" in rendered
+
+    def test_eval_builtin_is_blocked(self):
+        """eval() is not exposed."""
+        assert "NameError" in str(self._run('print(eval("1+1"))'))
+
+    def test_subclasses_escape_is_blocked(self):
+        """The classic builtin-free escape gadget is rejected before execution."""
+        data = self._run("print(().__class__.__bases__[0].__subclasses__())")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+
+    def test_inline_import_is_blocked(self):
+        """Inline imports are rejected; modules must come from the Global Imports field."""
+        data = self._run("import os\nprint(os.getcwd())")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+
+    def test_format_string_dunder_escape_is_blocked(self):
+        """str.format() dunder traversal (invisible to the AST attr check) is rejected."""
+        data = self._run('f = lambda: 0\nprint("{0.__globals__}".format(f))')
+        assert "error" in data
+        assert "not allowed" in data["error"]
+
+    def test_dynamic_format_string_traversal_is_blocked(self, monkeypatch):
+        """Dynamically-built str.format() fields cannot bypass the AST validator."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(DYNAMIC_FORMAT_TRAVERSAL_CODE)
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_formatter_vformat_traversal_is_blocked(self, monkeypatch):
+        """string.Formatter().vformat carries the dunder chain in a string arg; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(FORMATTER_VFORMAT_TRAVERSAL_CODE, global_imports="math,string")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_formatter_get_field_traversal_is_blocked(self, monkeypatch):
+        """string.Formatter().get_field traverses a dotted string path; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(FORMATTER_GET_FIELD_TRAVERSAL_CODE, global_imports="math,string")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_attrgetter_traversal_is_blocked(self, monkeypatch):
+        """operator.attrgetter('__globals__') reaches os.environ via a string arg; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(ATTRGETTER_TRAVERSAL_CODE, global_imports="math,operator")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_default_global_imports_excludes_pandas(self):
+        """The default allow-list is minimal (no pandas) to avoid bundling a deserialization sink."""
+        template = PythonREPLComponent().to_frontend_node()["data"]["node"]["template"]
+        assert template["global_imports"]["value"] == "math"
+
+    def test_execution_refused_when_custom_components_disabled(self, monkeypatch):
+        """GHSA-8qpj-27x8-pwpq: run_python_repl must consult the gate, not just exec.
+
+        Locks in the wiring: a refactor dropping ensure_code_execution_enabled() from
+        run_python_repl would make this fail, independent of the gate's own unit tests.
+        """
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+        )
+        data = PythonREPLComponent(global_imports="math", python_code="print('SHOULD_NOT_RUN')").run_python_repl().data
+        assert "error" in data
+        assert "allow_custom_components" in data["error"]
+        # The code must never have executed.
+        assert "SHOULD_NOT_RUN" not in str(data)
+
+
+class TestPythonREPLToolComponentToolNameDescription(ComponentTestBaseWithoutClient):
+    """build_tool must honor the "Tool Name" / "Tool Description" inputs.
+
+    The class attributes `name = "PythonREPLTool"` and `description = "A tool for..."`
+    shadow the StrInputs of the same names — Component.__getattr__ only fires when
+    normal attribute lookup fails, so self.name/self.description in build_tool always
+    returned the class attributes and the user's input values were silently ignored.
+    """
+
+    @pytest.fixture
+    def component_class(self):
+        return PythonREPLToolComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {
+            "name": "python_repl",
+            "description": "run code",
+            "global_imports": "math",
+            "code": "print('x')",
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    def test_tool_uses_name_and_description_inputs(self):
+        component = PythonREPLToolComponent(
+            name="my_custom_repl",
+            description="Custom description the agent should see.",
+            global_imports="math",
+            code="print('x')",
+        )
+        tool = component.build_tool()
+        assert tool.name == "my_custom_repl"
+        assert tool.description == "Custom description the agent should see."
+
+    def test_tool_uses_input_defaults_when_unset(self):
+        """With no explicit inputs, the input defaults win over the class attributes."""
+        tool = PythonREPLToolComponent().build_tool()
+        assert tool.name == "python_repl"
+        assert tool.description.startswith("A Python shell.")
+
+    def test_tool_falls_back_to_input_defaults_when_inputs_empty(self):
+        """Empty explicit inputs fall back to the input defaults."""
+        component = PythonREPLToolComponent(name="", description="")
+        tool = component.build_tool()
+        assert tool.name == "python_repl"
+        assert tool.description.startswith("A Python shell.")
+
+    def test_tool_falls_back_to_class_attributes_when_all_values_empty(self):
+        """When both the attribute and the input value are empty, the class attributes back-fill."""
+        component = PythonREPLToolComponent(name="", description="")
+        component._inputs["name"].value = ""
+        component._inputs["description"].value = ""
+        tool = component.build_tool()
+        assert tool.name == "PythonREPLTool"
+        assert tool.description == "A tool for running Python code in a REPL environment."
+
+    def test_tool_coerces_non_string_inputs(self):
+        """StrInput only warns on non-string values; tool metadata must still be strings.
+
+        Without coercion a non-string description crashes inside
+        StructuredTool.from_function (it dedents/strips the description).
+        """
+        component = PythonREPLToolComponent(name=123, description=456)
+        tool = component.build_tool()
+        assert tool.name == "123"
+        assert tool.description == "456"
+
+
+class TestPythonREPLToolComponentRunModel:
+    """run_model must execute the Python Code input, not the component's own source.
+
+    `BaseComponent.code` is a class-level property returning the component's source;
+    it shadowed the former StrInput named "code". The runtime field now serializes as
+    "python_code", while "code" remains accepted as a programmatic compatibility alias.
+    """
+
+    def test_run_model_executes_code_input(self):
+        component = PythonREPLToolComponent(
+            name="python_repl",
+            description="run code",
+            global_imports="math",
+            code="print(math.sqrt(16))",
+        )
+        results = component.run_model()
+        assert len(results) == 1
+        assert "4.0" in results[0].data["result"]
+
+    def test_run_model_uses_default_code_when_unset(self):
+        results = PythonREPLToolComponent().run_model()
+        assert "Hello, World!" in results[0].data["result"]
+
+    def test_run_model_does_not_execute_component_source(self):
+        """The input must win over the component's own source.
+
+        The component source starts with imports, so passing it to the tool would
+        raise ToolException("Imports are not allowed...").
+        """
+        component = PythonREPLToolComponent(code="print('input wins')")
+        results = component.run_model()
+        assert "input wins" in results[0].data["result"]
+
+    def test_run_model_accepts_legacy_code_setter(self):
+        component = PythonREPLToolComponent()
+        component.set(code="print('legacy setter input')")
+        results = component.run_model()
+        assert "legacy setter input" in results[0].data["result"]
+
+    @pytest.mark.asyncio
+    async def test_run_model_executes_python_code_after_frontend_round_trip(self):
+        component = PythonREPLToolComponent(python_code="print('round trip input')", _id="python-repl")
+        node = component.to_frontend_node()
+        graph = Graph.from_payload({"nodes": [node], "edges": []})
+
+        _ = [result async for result in graph.async_start()]
+
+        output = graph.get_vertex("python-repl").built_object["api_run_model"]
+        assert output[0].data["result"].strip() == "round trip input"
+
+
+class TestPythonREPLToolComponentSecurity:
+    """The same hardening applies to the legacy Python REPL *tool* component."""
+
+    def _func(self, global_imports="math"):
+        component = PythonREPLToolComponent(
+            name="python_repl",
+            description="run code",
+            global_imports=global_imports,
+            code="print('x')",
+        )
+        return component.build_tool().func
+
+    def test_tool_runs_legitimate_code(self):
+        assert "hi" in self._func()("print('hi')")
+
+    def test_tool_blocks_inline_import(self):
+        with pytest.raises(ToolException, match="not allowed"):
+            self._func()("import os")
+
+    def test_tool_blocks_subclasses_escape(self):
+        with pytest.raises(ToolException, match="not allowed"):
+            self._func()("().__class__.__bases__[0].__subclasses__()")
+
+    def test_tool_blocks_dynamic_format_string_traversal(self, monkeypatch):
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        with pytest.raises(ToolException, match="not allowed") as exc_info:
+            self._func()(DYNAMIC_FORMAT_TRAVERSAL_CODE)
+        assert "SHOULD_NOT_LEAK" not in str(exc_info.value)
+
+    def test_tool_blocks_import_builtin(self):
+        """__import__ is a bare name; PythonREPL surfaces the NameError as a string."""
+        result = self._func()('__import__("subprocess").check_output(["echo", "PWNED"])')
+        assert "PWNED" not in result
+        assert "NameError" in result
+
+    def test_tool_invocations_do_not_share_state(self):
+        """Each tool call gets a fresh namespace, so variables do not leak across calls."""
+        func = self._func()
+        func("leaked = 12345")
+        result = func("print(leaked)")
+        assert "NameError" in result
+
+    def test_execution_refused_when_custom_components_disabled(self, monkeypatch):
+        """GHSA-8qpj-27x8-pwpq: run_python_code must consult the gate, not just exec.
+
+        Locks in the wiring: a refactor dropping ensure_code_execution_enabled() from
+        run_python_code would make this fail, independent of the gate's own unit tests.
+        """
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+        )
+        with pytest.raises(ToolException, match="allow_custom_components"):
+            self._func()("print('SHOULD_NOT_RUN')")

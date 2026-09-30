@@ -1,5 +1,5 @@
-import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -10,23 +10,42 @@ interface DeleteMessagesParams {
 
 export const useDeleteMessages: useMutationFunctionType<
   undefined,
-  DeleteMessagesParams
+  DeleteMessagesParams,
+  DeleteMessagesParams,
+  Error
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
-  const deleteMessage = async ({ ids }: DeleteMessagesParams): Promise<any> => {
-    const response = await api.delete(`${getURL("MESSAGES")}`, {
-      data: ids,
-    });
+  const deleteMessage = async ({
+    ids,
+  }: DeleteMessagesParams): Promise<DeleteMessagesParams> => {
+    const response = await api.delete<DeleteMessagesParams>(
+      `${getURL("MESSAGES")}`,
+      {
+        data: ids,
+      },
+    );
 
     return response.data;
   };
 
   const mutation: UseMutationResult<
     DeleteMessagesParams,
-    any,
+    Error,
     DeleteMessagesParams
-  > = mutate(["useDeleteMessages"], deleteMessage, options);
+  > = mutate(["useDeleteMessages"], deleteMessage, {
+    ...options,
+    onSettled: (...args) => {
+      // Deletions shift offsets; refresh loaded pages before requesting older rows.
+      queryClient.invalidateQueries({
+        queryKey: ["useGetMessagesQuery"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["useGetSessionsFromFlowQuery"],
+      });
+      options?.onSettled?.(...args);
+    },
+  });
 
   return mutation;
 };

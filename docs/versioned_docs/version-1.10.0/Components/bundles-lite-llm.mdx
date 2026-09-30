@@ -1,0 +1,39 @@
+---
+title: LiteLLM
+slug: /bundles-lite-llm
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+The **LiteLLM** bundle component connects to models through a LiteLLM proxy, which routes requests to multiple LLM providers.
+Using a proxy lets you change model providers without changing credentials in your flows.
+You authenticate to the proxy using a single key, and the proxy then uses its own configured credentials to call providers.
+Virtual keys are created by the proxy administrator. For more information on managing virtual keys, see [Virtual Keys](https://docs.litellm.ai/docs/proxy/virtual_keys) in the LiteLLM documentation.
+
+## LiteLLM Proxy text generation
+
+The **LiteLLM Proxy** component generates text using an LLM provider.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a LiteLLM proxy-backed model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+### LiteLLM Proxy parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_base | String | Input parameter. Base URL of the LiteLLM proxy. Default: `"http://localhost:4000/v1"`. |
+| api_key | String | Input parameter. Virtual key for authentication with the LiteLLM proxy. |
+| model_name | String | Input parameter. Model name to use, such as `gpt-4o`, `claude-3-opus`. |
+| temperature | Float | Input parameter. Controls randomness. Lower values are more deterministic. Range: `[0.0, 2.0]`. Default: `0.7`. |
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Set to `0` for no limit. Range: `[0, 128000]`. Advanced. |
+| timeout | Integer | Input parameter. Request timeout in seconds. Default: `60`. |
+| max_retries | Integer | Input parameter. Maximum number of retries on failure. Default: `2`. |
+| stream | Boolean | Input parameter. Whether to stream the response. |

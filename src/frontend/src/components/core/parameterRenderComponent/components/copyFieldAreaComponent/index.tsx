@@ -1,12 +1,14 @@
+import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
-import { InputProps, TextAreaComponentType } from "../../types";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
+import type { InputProps, TextAreaComponentType } from "../../types";
 
 const BACKEND_URL = "BACKEND_URL";
 const MCP_SSE_VALUE = "MCP_SSE";
@@ -59,14 +61,18 @@ export default function CopyFieldAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-}: InputProps<string, TextAreaComponentType>): JSX.Element {
+  nodeId,
+  showParameter = true,
+  ariaLabelledBy,
+}: InputProps<string, TextAreaComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const endpointName = currentFlow?.endpoint_name ?? "";
+  const endpointName = currentFlow?.endpoint_name ?? currentFlow?.id ?? "";
 
   const valueToRender = useMemo(() => {
     if (value === BACKEND_URL) {
@@ -89,13 +95,13 @@ export default function CopyFieldAreaComponent({
     handleOnNewValue({ value: e.target.value });
   };
 
-  const handleCopy = (event?: React.MouseEvent<HTMLDivElement>) => {
+  const handleCopy = (event?: React.MouseEvent<HTMLButtonElement>) => {
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
     navigator.clipboard.writeText(valueToRender);
 
     setSuccessData({
-      title: "Endpoint URL copied",
+      title: t("success.endpointUrlCopied"),
     });
 
     event?.stopPropagation();
@@ -121,9 +127,15 @@ export default function CopyFieldAreaComponent({
           aria-hidden="true"
         />
       )}
-      <div onClick={handleCopy}>
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label={isCopied ? "Copied" : "Copy"}
+      >
         <IconComponent
-          dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
+          dataTestId={`btn_copy_${id?.toLowerCase()}${
+            editNode ? "_advanced" : ""
+          }`}
           name={isCopied ? "Check" : "Copy"}
           className={cn(
             "cursor-pointer bg-muted",
@@ -134,21 +146,26 @@ export default function CopyFieldAreaComponent({
             "bg-muted text-foreground",
           )}
         />
-      </div>
+      </button>
     </>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full")}>
       <Input
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         data-testid={id}
         value={valueToRender}
         onChange={handleInputChange}
         className={cn(getInputClassName())}
-        aria-label={valueToRender}
+        aria-label={!ariaLabelledBy ? valueToRender : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         type="text"
         disabled

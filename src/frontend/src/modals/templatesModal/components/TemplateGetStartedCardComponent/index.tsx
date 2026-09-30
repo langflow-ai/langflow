@@ -1,11 +1,19 @@
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
-import { useParams } from "react-router-dom";
-import { CardData } from "../../../../types/templates/types";
+import { cn } from "@/utils/utils";
+import type { CardData } from "../../../../types/templates/types";
+
+interface TemplateGetStartedCardComponentProps extends CardData {
+  loading: boolean;
+  onFlowCreating: (loading: boolean) => void;
+}
 
 export default function TemplateGetStartedCardComponent({
   bgImage,
@@ -13,20 +21,35 @@ export default function TemplateGetStartedCardComponent({
   icon,
   category,
   flow,
-}: CardData) {
+  loading,
+  onFlowCreating,
+}: TemplateGetStartedCardComponentProps) {
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
+  const dismissWelcomeForNavigation = useFlowBuilderWelcomeStore(
+    (state) => state.dismissForNavigation,
+  );
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const folderIdUrl = folderId ?? myCollectionId;
 
   const handleClick = () => {
+    if (loading) return;
+
     if (flow) {
+      onFlowCreating(true);
       updateIds(flow.data!);
-      addFlow({ flow }).then((id) => {
-        navigate(`/flow/${id}/folder/${folderIdUrl}`);
-      });
+      addFlow({ flow })
+        .then((id) => {
+          // Same tick as the navigate — see ``dismissForNavigation``.
+          dismissWelcomeForNavigation();
+          navigate(`/flow/${id}/folder/${folderIdUrl}`);
+        })
+        .finally(() => {
+          onFlowCreating(false);
+        });
+
       track("New Flow Created", { template: `${flow.name} Template` });
     } else {
       console.error(`Flow template not found`);
@@ -42,8 +65,13 @@ export default function TemplateGetStartedCardComponent({
 
   return flow ? (
     <div
-      className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring"
-      tabIndex={1}
+      className={cn(
+        "group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]",
+        loading ? "cursor-default opacity-80" : "cursor-pointer",
+      )}
+      role="button"
+      aria-label={flow.name}
+      tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={handleClick}
     >
@@ -60,14 +88,19 @@ export default function TemplateGetStartedCardComponent({
         />
       </div>
       <div className="card-shine-effect absolute inset-2 flex h-[calc(100%-16px)] min-w-[calc(100%-16px)] flex-col items-start gap-1 rounded-2xl p-4 text-white md:gap-3 lg:gap-4 lg:py-6">
-        <div className="flex items-center gap-2 text-zinc-400 mix-blend-plus-lighter">
+        <div className="flex items-center gap-2 text-muted-foreground mix-blend-plus-lighter">
           <ForwardedIconComponent name={icon} className="h-4 w-4" />
           <span className="font-mono text-xs font-semibold uppercase tracking-wider">
             {category}
           </span>
         </div>
         <div className="flex w-full items-center justify-between">
-          <h3 className="line-clamp-3 text-lg font-bold lg:text-xl">
+          <h3
+            data-testid={`template-get-started-card-${convertTestName(
+              flow?.name,
+            )}`}
+            className="line-clamp-3 text-lg font-bold lg:text-xl"
+          >
             {flow.name}
           </h3>
           <ForwardedIconComponent

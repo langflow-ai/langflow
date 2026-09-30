@@ -1,6 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
+import {
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
+} from "../../utils/open-advanced-options";
 
 test(
   "user must see on handle click the possibility connections",
@@ -14,18 +20,16 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 3000,
-    });
+    await waitForFlowEditorReady(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("api request");
 
-    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
       timeout: 3000,
     });
     await page
-      .getByTestId("dataAPI Request")
+      .getByTestId("data_sourceAPI Request")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -39,12 +43,10 @@ test(
     );
     await page.getByTestId("handle-apirequest-shownode-url-left").click();
 
-    await page.waitForTimeout(500);
-
-    expect(await page.getByTestId("icon-ListFilter").first()).toBeVisible();
+    await expect(page.getByTestId("icon-ListFilter").first()).toBeVisible();
 
     await page
-      .getByTestId("icon-X")
+      .getByTestId("sidebar-filter-reset")
       .first()
       .hover()
       .then(async () => {
@@ -56,12 +58,10 @@ test(
           .isVisible();
       });
 
-    await expect(page.getByTestId("disclosure-inputs")).toBeVisible();
-    await expect(page.getByTestId("disclosure-outputs")).toBeVisible();
-    await expect(page.getByTestId("disclosure-prompts")).toBeVisible();
-    await expect(page.getByTestId("disclosure-models")).toBeVisible();
-    await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-agents")).toBeVisible();
+    await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
+    await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
+    await expect(page.getByTestId("disclosure-llm operations")).toBeVisible();
+    await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page
@@ -70,13 +70,14 @@ test(
     await page.getByTestId("sidebar-legacy-switch").click();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
-
-    await expect(page.getByTestId("inputsChat Input")).toBeVisible();
-    await expect(page.getByTestId("outputsChat Output")).toBeVisible();
-    await expect(page.getByTestId("promptsPrompt")).toBeVisible();
-    await expect(page.getByTestId("helpersMessage History")).toBeVisible();
-    await expect(page.getByTestId("langchain_utilitiesCSVAgent")).toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
+    await expect(page.getByTestId("input_outputChat Output")).toBeVisible();
+    await expect(
+      page.getByTestId("models_and_agentsPrompt Template"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesCSV Agent"),
+    ).toBeVisible();
     await expect(
       page.getByTestId("langchain_utilitiesConversationChain"),
     ).toBeVisible();
@@ -97,10 +98,11 @@ test(
 
     await page.getByTestId("sidebar-filter-reset").click();
 
-    await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
-    await expect(page.getByTestId("outputsChat Output")).not.toBeVisible();
-    await expect(page.getByTestId("promptsPrompt")).not.toBeVisible();
-    await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Output")).not.toBeVisible();
+    await expect(
+      page.getByTestId("models_and_agentsPrompt Template"),
+    ).not.toBeVisible();
     await expect(
       page.getByTestId("agentsTool Calling Agent"),
     ).not.toBeVisible();
@@ -109,23 +111,25 @@ test(
     ).not.toBeVisible();
     await expect(page.getByTestId("logicCondition")).not.toBeVisible();
 
-    await page.getByTestId("edit-button-modal").click();
+    // LE-1810: the parameters panel adds the hidden headers field to the node
+    await openParametersPanel(page);
 
-    await page.getByTestId("showheaders").click();
-    await page.getByText("Close").last().click();
+    await toggleParameterOnNode(page, "headers");
+    await closeParametersPanel(page);
     await page.getByTestId("handle-apirequest-shownode-headers-left").click();
 
-    await expect(page.getByTestId("disclosure-data")).toBeVisible();
-    await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
-    await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
-    await expect(page.getByTestId("disclosure-embeddings")).toBeVisible();
-    await expect(page.getByTestId("disclosure-tools")).toBeVisible();
+    await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
+    await expect(page.getByTestId("disclosure-llm operations")).toBeVisible();
+    await expect(page.getByTestId("disclosure-processing")).toBeVisible();
 
-    await expect(page.getByTestId("dataAPI Request")).toBeVisible();
-    await expect(page.getByTestId("helpersMessage History")).toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
-    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
+    await expect(page.getByTestId("data_sourceAPI Request")).toBeVisible();
+    // Astra DB ships in the temporarily-unpublished datastax bundle; assert it
+    // only when present so the rest of the sidebar-filter coverage still runs.
+    const astraDbCard = page.getByTestId("datastaxAstra DB");
+    if (await astraDbCard.isVisible().catch(() => false)) {
+      await expect(astraDbCard).toBeVisible();
+    }
+    await expect(page.getByTestId("flow_controlsSub Flow")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
@@ -133,18 +137,15 @@ test(
     await expect(page.getByTestId("sidebar-beta-switch")).toBeChecked();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
+    await expect(page.getByTestId("flow_controlsSub Flow")).toBeVisible();
 
-    await expect(page.getByTestId("processingSplit Text")).toBeVisible();
+    await expect(page.getByTestId("processingJSON Operations")).toBeVisible();
 
-    await page.getByTestId("icon-X").first().click();
+    await page.getByTestId("sidebar-filter-reset").first().click();
 
-    await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
-    await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
-    await expect(
-      page.getByTestId("logicSub Flow [Deprecated]"),
-    ).not.toBeVisible();
+    await expect(page.getByTestId("data_sourceAPI Request")).not.toBeVisible();
+    await expect(page.getByTestId("datastaxAstra DB")).not.toBeVisible();
+    await expect(page.getByTestId("flow_controlsSub Flow")).not.toBeVisible();
 
     await expect(page.getByTestId("processingSplit Text")).not.toBeVisible();
   },

@@ -1,0 +1,2316 @@
+"""Security scanning for LLM-generated component code.
+
+Security: Analyzes generated Python code for dangerous patterns using AST, and scans its text
+for abusive content. Never executes the code. Called AFTER code extraction, BEFORE returning
+to user.
+"""
+
+import ast
+import re
+import sys
+from collections.abc import Iterator
+from dataclasses import dataclass, field
+
+from langflow.agentic.helpers.content_safety import check_content
+
+# Dangerous function calls that should never appear in component code
+DANGEROUS_CALLS: dict[str, str] = {
+    "exec": "Use of exec() is forbidden in components",
+    "eval": "Use of eval() is forbidden in components",
+    "compile": "Use of compile() is forbidden in components",
+    "__import__": "Use of __import__() is forbidden in components",
+    "globals": "Use of globals() is forbidden in components",
+    "locals": "Use of locals() is forbidden in components",
+    # Raw file access — components must use Langflow's File components,
+    # not open arbitrary paths (e.g. /etc/passwd, SSH keys).
+    "open": "Use of open() is forbidden in components — use Langflow's File components",
+    "breakpoint": "Use of breakpoint() is forbidden in components",
+}
+
+# Attribute access that is a sandbox-escape vector regardless of the object it
+# is read from. ALL dunder (``__``-prefixed) attributes are rejected: the
+# escape chains (``().__class__.__base__``, ``func.__globals__``,
+# ``getattr(obj, name)``) are built entirely from dunders, and a fixed denylist
+# of "dangerous" dunders is bypassable the moment one is missed — H1-3977745
+# escaped via ``__class__`` / ``__base__`` / ``__init__``, which the previous
+# list deliberately did not flag. Component code never needs to *read* a dunder
+# attribute; dunder *methods* are defined with ``def`` and stay allowed. This
+# matches the stricter sibling lfx/utils/python_repl_security.py.
+#
+# The non-dunder names below are the equivalent gadgets that need no dunder at
+# all: ``int.mro()`` reaches the object hierarchy, frame/coroutine/traceback
+# introspection (``gen.gi_frame.f_globals``) reaches running code's globals and
+# builtins, and the formatter sinks evaluate attribute chains from runtime
+# strings that are invisible to the AST attribute check
+# (``"{0.__globals__[__builtins__]}".format(f)``).
+_BLOCKED_INTROSPECTION_ATTRS: frozenset[str] = frozenset(
+    {
+        "mro",
+        "gi_frame",
+        "gi_code",
+        "cr_frame",
+        "cr_code",
+        "ag_frame",
+        "ag_code",
+        "f_globals",
+        "f_locals",
+        "f_builtins",
+        "f_back",
+        "f_code",
+        "f_trace",
+        "tb_frame",
+        "tb_next",
+        "func_globals",
+        "func_code",
+        "format",
+        "format_map",
+        "vformat",
+        "get_field",
+        "get_value",
+        "format_field",
+        "convert_field",
+        "attrgetter",
+        "methodcaller",
+    }
+)
+
+# Matches a dunder reached inside a str.format()/Formatter replacement field,
+# e.g. "{0.__globals__}" or "{0[__builtins__]}". Such traversals live inside a
+# literal template string and are invisible to the AST attribute check, so a
+# literal dunder-bearing template is rejected regardless of which formatter
+# ultimately consumes it.
+_FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
+
+
+# Dunders that only ever yield a ``str``. A string cannot be traversed to a
+# frame, a namespace or a callable — its own ``format`` and ``__class__`` are
+# blocked below — so reading one reaches nothing, while blocking them rejects
+# ``type(x).__name__`` and ``err.__class__.__name__``, which ordinary component
+# code uses constantly for logging and error messages.
+_INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__module__", "__doc__"})
+
+
+def _is_blocked_attribute(attr: str | None) -> bool:
+    """True if reading attribute ``attr`` is a sandbox-escape vector on any object.
+
+    ``None`` (an attribute name that could not be resolved statically) is not
+    blocked here: callers decide separately whether an unresolvable name is a
+    violation, because that answer differs by receiver.
+    """
+    if attr is None or attr in _INERT_DUNDER_ATTRS:
+        return False
+    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS
+
+
+# Non-call attribute *reads* that are forbidden: (module, attr, message).
+# Secret/env exfiltration is the concrete threat — components must use
+# Langflow's variable/secret service, never raw process env.
+DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
+    ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+    ("os.path", "os", "os.path.os is forbidden in components"),
+    ("sys", "modules", "sys.modules is forbidden in components"),
+    # PyYAML loaders that resolve ``!!python/object*`` tags — arbitrary
+    # constructor invocation (deserialization RCE) on untrusted text. Blocking
+    # the Loader attribute also blocks ``yaml.load(..., Loader=...)`` variants;
+    # ``yaml.safe_load`` / ``yaml.SafeLoader`` remain available.
+    ("yaml", "Loader", "yaml.Loader is forbidden in components — use yaml.safe_load() / yaml.SafeLoader"),
+    ("yaml", "UnsafeLoader", "yaml.UnsafeLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "FullLoader", "yaml.FullLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "CLoader", "yaml.CLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "CUnsafeLoader", "yaml.CUnsafeLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "CFullLoader", "yaml.CFullLoader is forbidden in components — use yaml.SafeLoader"),
+    (
+        "pandas.compat",
+        "pickle_compat",
+        "pandas.compat.pickle_compat is forbidden — unsafe pickle deserialization",
+    ),
+    ("pandas.io", "pickle", "pandas.io.pickle is forbidden — unsafe pickle deserialization"),
+    ("pandas.core.generic", "pickle", "pandas.core.generic.pickle is forbidden — unsafe pickle deserialization"),
+    # These stdlib modules re-export pickle (or multiprocessing) without an
+    # explicit import of the blocked module in generated component code.
+    ("pickletools", "pickle", "pickletools.pickle is forbidden — unsafe pickle deserialization"),
+    ("trace", "pickle", "trace.pickle is forbidden — unsafe pickle deserialization"),
+    ("tracemalloc", "pickle", "tracemalloc.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "concurrent.futures.process",
+        "mp",
+        "concurrent.futures.process.mp is forbidden — multiprocessing exposes unsafe pickle deserialization",
+    ),
+    # NumPy's array modules re-export the stdlib pickle module while also
+    # exposing safe readers. Deny the re-export without blocking those readers.
+    ("numpy.lib.format", "pickle", "numpy.lib.format.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "numpy.lib._format_impl",
+        "pickle",
+        "numpy.lib._format_impl.pickle is forbidden — unsafe pickle deserialization",
+    ),
+    ("numpy.lib.npyio", "pickle", "numpy.lib.npyio.pickle is forbidden — unsafe pickle deserialization"),
+    (
+        "numpy.lib._npyio_impl",
+        "pickle",
+        "numpy.lib._npyio_impl.pickle is forbidden — unsafe pickle deserialization",
+    ),
+    ("numpy._core._methods", "pickle", "numpy._core._methods.pickle is forbidden — unsafe pickle deserialization"),
+]
+
+# Dangerous attribute calls: (module, method, violation_message)
+DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
+    ("asyncio", "create_subprocess_exec", "asyncio.create_subprocess_exec() is forbidden"),
+    ("asyncio", "create_subprocess_shell", "asyncio.create_subprocess_shell() is forbidden"),
+    ("asyncio.subprocess", "create_subprocess_exec", "asyncio.subprocess.create_subprocess_exec() is forbidden"),
+    ("asyncio.subprocess", "create_subprocess_shell", "asyncio.subprocess.create_subprocess_shell() is forbidden"),
+    ("os", "system", "os.system() is forbidden — use Langflow's built-in integrations"),
+    ("os", "popen", "os.popen() is forbidden"),
+    ("os", "execl", "os.execl() is forbidden"),
+    ("os", "execle", "os.execle() is forbidden"),
+    ("os", "execlp", "os.execlp() is forbidden"),
+    ("os", "execlpe", "os.execlpe() is forbidden"),
+    ("os", "execv", "os.execv() is forbidden"),
+    ("os", "execve", "os.execve() is forbidden"),
+    ("os", "execvp", "os.execvp() is forbidden"),
+    ("os", "execvpe", "os.execvpe() is forbidden"),
+    ("os", "spawn", "os.spawn*() is forbidden"),
+    ("os", "spawnl", "os.spawnl() is forbidden"),
+    ("os", "spawnle", "os.spawnle() is forbidden"),
+    ("os", "spawnlp", "os.spawnlp() is forbidden"),
+    ("os", "spawnlpe", "os.spawnlpe() is forbidden"),
+    ("os", "spawnv", "os.spawnv() is forbidden"),
+    ("os", "spawnve", "os.spawnve() is forbidden"),
+    ("os", "spawnvp", "os.spawnvp() is forbidden"),
+    ("os", "spawnvpe", "os.spawnvpe() is forbidden"),
+    ("os", "posix_spawn", "os.posix_spawn() is forbidden"),
+    ("os", "posix_spawnp", "os.posix_spawnp() is forbidden"),
+    ("os", "fork", "os.fork() is forbidden"),
+    ("os", "forkpty", "os.forkpty() is forbidden"),
+    ("os", "startfile", "os.startfile() is forbidden"),
+    ("os", "open", "os.open() is forbidden in components — use Langflow's File components"),
+    ("os", "write", "os.write() is forbidden in components — use Langflow's File components"),
+    ("os", "remove", "os.remove() is forbidden in components"),
+    ("os", "rmdir", "os.rmdir() is forbidden in components"),
+    ("os", "unlink", "os.unlink() is forbidden in components"),
+    ("subprocess", "run", "subprocess.run() is forbidden"),
+    ("subprocess", "call", "subprocess.call() is forbidden"),
+    ("subprocess", "Popen", "subprocess.Popen() is forbidden"),
+    ("subprocess", "check_output", "subprocess.check_output() is forbidden"),
+    ("subprocess", "check_call", "subprocess.check_call() is forbidden"),
+    # File-descriptor redirection wires a socket to a shell (reverse shell).
+    ("os", "dup2", "os.dup2() is forbidden in components"),
+    ("os", "dup", "os.dup() is forbidden in components"),
+    ("os", "getenv", "os.getenv() is forbidden — use Langflow's variable/secret service"),
+    ("os", "putenv", "os.putenv() is forbidden in components"),
+    ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
+    ("shutil", "move", "shutil.move() is forbidden in components"),
+    ("sys", "exit", "sys.exit() is forbidden in components"),
+    # Raw file access through stdlib equivalents of the blocked bare open().
+    # io.StringIO/BytesIO and codecs.encode/decode stay allowed; only the
+    # filesystem entry points are forbidden.
+    ("io", "open", "io.open() is forbidden in components — use Langflow's File components"),
+    ("io", "open_code", "io.open_code() is forbidden in components — use Langflow's File components"),
+    ("codecs", "open", "codecs.open() is forbidden in components — use Langflow's File components"),
+    # FileIO is the raw constructor behind open(): io.FileIO(path) opens the file
+    # directly - read, write or append - without going through open(). Its
+    # buffered/text wrappers (BufferedReader, TextIOWrapper, ...) take an
+    # already-open raw object rather than a path, so blocking the constructor
+    # closes those routes too. StringIO/BytesIO touch no filesystem and stay
+    # allowed, as do codecs.encode/decode.
+    ("io", "FileIO", "io.FileIO() is forbidden in components — use Langflow's File components"),
+    # PyYAML unsafe deserialization entry points (``!!python/object*`` tags).
+    ("yaml", "unsafe_load", "yaml.unsafe_load() is forbidden — use yaml.safe_load()"),
+    ("yaml", "unsafe_load_all", "yaml.unsafe_load_all() is forbidden — use yaml.safe_load_all()"),
+    # full_load/full_load_all are public wrappers that select FullLoader without
+    # ever naming it, so blocking the Loader attribute alone left the same
+    # constructor-invocation surface reachable through a plain function call.
+    ("yaml", "full_load", "yaml.full_load() is forbidden — use yaml.safe_load()"),
+    ("yaml", "full_load_all", "yaml.full_load_all() is forbidden — use yaml.safe_load_all()"),
+    # pandas.read_pickle delegates to pickle.load, so it can invoke a callable
+    # while the generated component is being validated in the backend process.
+    ("pandas", "read_pickle", "pandas.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas.io.api", "read_pickle", "pandas.io.api.read_pickle() is forbidden — unsafe pickle deserialization"),
+]
+
+# NumPy's array readers are safe by default, but allow_pickle=True enables
+# object constructors. The value's positional index differs between APIs.
+_NUMPY_PICKLE_READER_ARG_INDEX = {
+    "numpy.load": 2,
+    "numpy.lib.npyio.load": 2,
+    "numpy.lib._npyio_impl.load": 2,
+    "numpy.lib.format.read_array": 1,
+    "numpy.lib._format_impl.read_array": 1,
+    "numpy.lib.npyio.NpzFile": 2,
+    "numpy.lib._npyio_impl.NpzFile": 2,
+}
+_NUMPY_WILDCARD_READERS = {
+    "numpy": (("load", "numpy.load"),),
+    "numpy.lib.npyio": (("load", "numpy.lib.npyio.load"), ("NpzFile", "numpy.lib.npyio.NpzFile")),
+    "numpy.lib._npyio_impl": (
+        ("load", "numpy.lib._npyio_impl.load"),
+        ("NpzFile", "numpy.lib._npyio_impl.NpzFile"),
+    ),
+    "numpy.lib.format": (("read_array", "numpy.lib.format.read_array"),),
+    "numpy.lib._format_impl": (("read_array", "numpy.lib._format_impl.read_array"),),
+}
+_NUMPY_NPZ_CLASSES = frozenset(name for name in _NUMPY_PICKLE_READER_ARG_INDEX if name.endswith(".NpzFile"))
+_NUMPY_ARCHIVE_READER_CALLS = frozenset(
+    name for name in _NUMPY_PICKLE_READER_ARG_INDEX if name.endswith((".load", ".NpzFile"))
+)
+_NUMPY_ARCHIVE_RESULT = "<numpy-archive-reader-result>"
+_SETATTR_CALLABLE_NAMES = frozenset({"setattr", "builtins.setattr", "__builtins__.setattr"})
+
+# Imports that are forbidden entirely
+DANGEROUS_IMPORTS: set[str] = {
+    "subprocess",
+    "shutil",
+    # Native FFI modules can load arbitrary shared libraries. Include the
+    # lower-level backends so blocking only the public frontends is not bypassable.
+    "ctypes",
+    "_ctypes",
+    "cffi",
+    "_cffi_backend",
+    "pickle",
+    "_pickle",
+    # These loaders also deserialize pickle objects; blocking their imports is
+    # safer than trying to enumerate each package's load/loads aliases.
+    "joblib",
+    "dill",
+    "cloudpickle",
+    "shelve",
+    "marshal",
+    "code",
+    "codeop",
+    "compileall",
+    "importlib",
+    # These profiling helpers execute source strings, bypassing AST checks on
+    # the outer component (profilers, tracers, debuggers, and doctest runners).
+    "timeit",
+    "profile",
+    "cProfile",
+    "trace",
+    "bdb",
+    "pdb",
+    "doctest",
+    # Direct process-spawning modules. ``asyncio`` itself remains allowed, but
+    # its subprocess entry points are blocked in DANGEROUS_ATTR_CALLS above.
+    "multiprocessing",
+    "posix",
+    # Network / IPC primitives — same attack class as subprocess (reverse
+    # shells, raw exfil, SSRF, non-HTTP protocol egress). High-level HTTP via
+    # ``requests``/``httpx`` stays allowed by design (legit API components need
+    # it); these provide raw sockets and non-HTTP channels a component never
+    # legitimately needs.
+    "socket",
+    "socketserver",
+    "ftplib",
+    "telnetlib",
+    "smtplib",
+    "poplib",
+    "imaplib",
+    "nntplib",
+    "xmlrpc",
+    # Pseudo-terminal — spawns an interactive shell (pty.spawn).
+    "pty",
+    # pathlib is the object-oriented raw filesystem API (Path.read_text /
+    # write_text / open / unlink / ...). Path objects are constructed from
+    # call results, so member-level rules cannot relate them back to the
+    # module; the whole module is blocked, same as shutil. Components must
+    # use Langflow's File components for file access.
+    "pathlib",
+}
+
+# Dangerous *submodules* of packages that also expose safe siblings. Block the
+# dotted prefix while leaving the safe parts of the package importable (e.g.
+# ``urllib.parse`` for urlencode/quote, ``from http import HTTPStatus``).
+# ``urllib.request`` additionally supports ``file://`` / ``ftp://`` schemes, so
+# it is a local-file-read and SSRF bypass beyond what plain HTTP allows.
+DANGEROUS_SUBMODULES: tuple[str, ...] = (
+    "urllib.request",
+    "urllib.error",
+    "http.client",
+    "http.server",
+    # All useful members of this module are pickle entry points or re-exports
+    # of pickle / pandas.compat.pickle_compat, not just read_pickle().
+    "pandas.io.pickle",
+    # This compatibility module exposes several pickle entry points, including
+    # Unpickler and the underlying pickle module. Block its whole namespace.
+    "pandas.compat.pickle_compat",
+)
+
+# Imports where only specific names are dangerous (module -> set of dangerous names)
+RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
+    "os": {
+        "system",
+        "popen",
+        "execl",
+        "execle",
+        "execlp",
+        "execlpe",
+        "execv",
+        "execve",
+        "execvp",
+        "execvpe",
+        "spawn",
+        "spawnl",
+        "spawnle",
+        "spawnlp",
+        "spawnlpe",
+        "spawnv",
+        "spawnve",
+        "spawnvp",
+        "spawnvpe",
+        "posix_spawn",
+        "posix_spawnp",
+        "fork",
+        "forkpty",
+        "startfile",
+        "open",
+        "write",
+        "remove",
+        "rmdir",
+        "unlink",
+        "dup2",
+        "dup",
+    },
+    "sys": {"modules"},
+    # Filesystem openers behind stdlib modules that otherwise stay importable.
+    "io": {"open", "open_code", "FileIO"},
+    "codecs": {"open"},
+    # `from yaml import UnsafeLoader` style imports: same deserialization RCE
+    # as the dotted attribute reads blocked above.
+    "yaml": {
+        "Loader",
+        "UnsafeLoader",
+        "FullLoader",
+        "CLoader",
+        "CUnsafeLoader",
+        "CFullLoader",
+        "unsafe_load",
+        "unsafe_load_all",
+        "full_load",
+        "full_load_all",
+    },
+    "pandas": {"read_pickle"},
+}
+
+
+def _is_dangerous_submodule(dotted: str) -> bool:
+    """True if a dotted module path is (or is under) a blocked submodule.
+
+    e.g. ``urllib.request`` and ``urllib.request.foo`` match; ``urllib`` and
+    ``urllib.parse`` do not.
+    """
+    return any(dotted == prefix or dotted.startswith(prefix + ".") for prefix in DANGEROUS_SUBMODULES)
+
+
+def _dotted_parts(node: ast.AST) -> list[str] | None:
+    """Reconstruct a pure ``a.b.c`` Name/Attribute chain into ``["a", "b", "c"]``.
+
+    Returns None if the chain is not rooted in a plain Name (e.g. ``foo().bar``).
+    """
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return list(reversed(parts))
+    return None
+
+
+class StaticEvaluationBudgetExceededError(Exception):
+    """Resolving a static string would cost more than one scan is allowed to spend.
+
+    Raised rather than returning ``None`` on purpose: ``None`` means "this value
+    is dynamic", which several callers treat permissively. A budget overrun is
+    not a dynamic value, it is a refusal to do the work, and it must surface as
+    a security violation.
+    """
+
+
+# One shared ceiling per top-level static expression. These are resolved only to
+# recover attribute/member *names* -- ``getattr(io, "op" + "en")`` and friends --
+# so a few kilobytes is already far past any honest use, while the evaluator
+# itself can amplify: a generator repeats its element once per item, so nesting
+# ``"".join(<expr> for _ in ("a", "b"))`` doubles the resolved string at every
+# level while the source grows by a constant. 544 bytes of source resolved to
+# 512 KiB before this cap existed, and 30 levels implies a gigabyte.
+_STATIC_EVAL_MAX_RESOLVED_CHARS = 16_384
+_STATIC_EVAL_MAX_ELEMENTS = 1_024
+_STATIC_EVAL_MAX_DEPTH = 24
+_STATIC_EVAL_MAX_STEPS = 4_096
+
+
+class _StaticEvalBudget:
+    """Bytes / elements / nesting / work allowance shared by one resolution."""
+
+    __slots__ = ("depth", "remaining_chars", "remaining_elements", "remaining_steps")
+
+    def __init__(self) -> None:
+        self.remaining_chars = _STATIC_EVAL_MAX_RESOLVED_CHARS
+        self.remaining_elements = _STATIC_EVAL_MAX_ELEMENTS
+        self.remaining_steps = _STATIC_EVAL_MAX_STEPS
+        self.depth = 0
+
+    def step(self) -> None:
+        self.remaining_steps -= 1
+        if self.remaining_steps < 0:
+            raise StaticEvaluationBudgetExceededError
+
+    def enter(self) -> None:
+        self.depth += 1
+        if self.depth > _STATIC_EVAL_MAX_DEPTH:
+            raise StaticEvaluationBudgetExceededError
+
+    def leave(self) -> None:
+        self.depth -= 1
+
+    def charge_chars(self, count: int) -> None:
+        """Charge for characters *about to be* produced, before allocating them."""
+        self.remaining_chars -= count
+        if self.remaining_chars < 0:
+            raise StaticEvaluationBudgetExceededError
+
+    def charge_elements(self, count: int) -> None:
+        self.remaining_elements -= count
+        if self.remaining_elements < 0:
+            raise StaticEvaluationBudgetExceededError
+
+
+def _static_string_iterable(node: ast.AST, budget: _StaticEvalBudget) -> list[str] | None:
+    """Resolve a literal list/tuple of static strings, or a pass-through generator over one."""
+    budget.step()
+    budget.enter()
+    try:
+        if isinstance(node, (ast.List, ast.Tuple)):
+            budget.charge_elements(len(node.elts))
+            parts: list[str] = []
+            for element in node.elts:
+                if isinstance(element, ast.Starred):
+                    return None
+                value = _static_string_value(element, budget)
+                if value is None:
+                    return None
+                parts.append(value)
+            return parts
+        if isinstance(node, ast.GeneratorExp) and len(node.generators) == 1:
+            generator = node.generators[0]
+            if generator.is_async or generator.ifs or not isinstance(generator.target, ast.Name):
+                return None
+            values = _static_string_iterable(generator.iter, budget)
+            if values is None:
+                return None
+            if isinstance(node.elt, ast.Name) and node.elt.id == generator.target.id:
+                return values
+            if (element := _static_string_value(node.elt, budget)) is not None:
+                # The repeat is where the amplification lives: price the whole
+                # expansion before materializing any of it.
+                budget.charge_elements(len(values))
+                budget.charge_chars(len(element) * len(values))
+                return [element] * len(values)
+        return None
+    finally:
+        budget.leave()
+
+
+def _static_string_value(node: ast.AST, budget: _StaticEvalBudget | None = None) -> str | None:
+    """Resolve a literal string assembled with ``+``, a static f-string, or ``str.join``.
+
+    Every construction step is charged against ``budget`` *before* it allocates,
+    so a small source expression cannot make the scanner build a large string.
+    Callers that do not pass a budget get a fresh one for that expression.
+
+    Raises:
+        StaticEvaluationBudgetExceededError: If the expression costs more than
+            one resolution is allowed. Callers must treat this as a violation,
+            not as an unresolvable (dynamic) value.
+    """
+    if budget is None:
+        budget = _StaticEvalBudget()
+    budget.step()
+    budget.enter()
+    try:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            budget.charge_chars(len(node.value))
+            return node.value
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "join"
+            and not node.keywords
+            and len(node.args) == 1
+            and (separator := _static_string_value(node.func.value, budget)) is not None
+            and (parts := _static_string_iterable(node.args[0], budget)) is not None
+        ):
+            projected = sum(len(part) for part in parts) + len(separator) * max(len(parts) - 1, 0)
+            budget.charge_chars(projected)
+            return separator.join(parts)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            left = _static_string_value(node.left, budget)
+            right = _static_string_value(node.right, budget)
+            if left is not None and right is not None:
+                budget.charge_chars(len(left) + len(right))
+                return left + right
+        if isinstance(node, ast.JoinedStr):
+            resolved: list[str] = []
+            budget.charge_elements(len(node.values))
+            for value in node.values:
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    budget.charge_chars(len(value.value))
+                    resolved.append(value.value)
+                elif (
+                    isinstance(value, ast.FormattedValue)
+                    and value.conversion == -1
+                    and value.format_spec is None
+                    and (formatted := _static_string_value(value.value, budget)) is not None
+                ):
+                    resolved.append(formatted)
+                else:
+                    return None
+            budget.charge_chars(sum(len(part) for part in resolved))
+            return "".join(resolved)
+        return None
+    finally:
+        budget.leave()
+
+
+def _static_positional_argument_count(arguments: list[ast.expr]) -> int | None:
+    """Count positional arguments when every starred tuple/list has a known size."""
+
+    def _expanded_length(node: ast.AST) -> int | None:
+        if not isinstance(node, (ast.Tuple, ast.List)):
+            return None
+        length = 0
+        for element in node.elts:
+            if isinstance(element, ast.Starred):
+                nested_length = _expanded_length(element.value)
+                if nested_length is None:
+                    return None
+                length += nested_length
+            else:
+                length += 1
+        return length
+
+    count = 0
+    for argument in arguments:
+        if isinstance(argument, ast.Starred):
+            expanded_length = _expanded_length(argument.value)
+            if expanded_length is None:
+                return None
+            count += expanded_length
+        else:
+            count += 1
+    return count
+
+
+# A namespace mapping this scanner could not attribute to a named object:
+# ``vars(type(f))``, ``vars(some_call())``, ``opaque.__dict__``. Reflection does
+# not need the owner to be nameable - ``vars(X)`` yields ``X.__dict__`` for any
+# X - so the mapping has to be tracked even when X is opaque, or a dynamically
+# selected key walks straight out of the sandbox. The ".__dict__" suffix is
+# deliberate: every existing mapping rule keys off that suffix.
+_UNRESOLVED_REFLECTIVE_NAMESPACE = "<unresolved>.__dict__"
+
+# The only methods modeled on a namespace mapping. ``values()`` / ``items()``
+# return the descriptors themselves, so the key checks never see a selector at
+# all; anything not listed here fails closed rather than growing this list into
+# another bypassable denylist.
+_NAMESPACE_MAPPING_METHODS: frozenset[str] = frozenset(
+    {"get", "keys", "copy", "__getitem__", "__contains__", "__len__", "__iter__"}
+)
+
+
+def _expand_static_arguments(arguments: list[ast.expr]) -> list[ast.expr] | None:
+    """Splice statically known starred tuples/lists into the argument list.
+
+    Returns None when any starred value is opaque, mirroring
+    ``_static_positional_argument_count``.
+    """
+    expanded: list[ast.expr] = []
+    for argument in arguments:
+        if isinstance(argument, ast.Starred):
+            if not isinstance(argument.value, (ast.Tuple, ast.List)):
+                return None
+            nested = _expand_static_arguments(argument.value.elts)
+            if nested is None:
+                return None
+            expanded.extend(nested)
+        else:
+            expanded.append(argument)
+    return expanded
+
+
+def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    """Per-module dangerous member names, derived from the call/read tables.
+
+    Used to catch wildcard imports (``from os import *``) where a restricted
+    member is then referenced as a bare name (``dup2(...)`` / ``environ[...]``).
+    Kept in sync automatically so a new entry in the tables above is covered.
+    """
+    call_members: dict[str, set[str]] = {}
+    for mod, method, _ in DANGEROUS_ATTR_CALLS:
+        call_members.setdefault(mod, set()).add(method)
+    for mod, names in RESTRICTED_IMPORT_NAMES.items():
+        call_members.setdefault(mod, set()).update(names)
+
+    read_members: dict[str, set[str]] = {}
+    for mod, attr, _ in DANGEROUS_ATTRIBUTE_READS:
+        read_members.setdefault(mod, set()).add(attr)
+
+    return call_members, read_members
+
+
+_DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
+
+# Importing arbitrary packages to inspect ``__all__`` would execute code during
+# the scan. These are verified star exports from packages with nested sinks;
+# the sink tables below determine which of the exported names need binding.
+_KNOWN_WILDCARD_SUBMODULE_EXPORTS: dict[str, frozenset[str]] = {
+    "concurrent": frozenset({"futures"}),
+    "numpy": frozenset({"lib"}),
+    "numpy.lib": frozenset({"format", "npyio"}),
+    "os": frozenset({"path"}),
+    "pandas": frozenset({"io"}),
+    "pandas.io": frozenset({"api", "pickle"}),
+    "pandas.core": frozenset({"generic"}),
+    "urllib": frozenset({"error", "request"}),
+}
+
+
+def _build_wildcard_submodule_bindings() -> dict[str, dict[str, str]]:
+    """Bind verified star-exported submodules along known dangerous paths.
+
+    A star import from ``numpy.lib`` exposes ``format`` and ``npyio`` as bare
+    names. A path alone does not prove an export: ``pandas.core`` is reachable
+    by name but is absent from ``pandas.__all__``.
+    """
+    sink_paths = {
+        f"{module}.{member}"
+        for table in (_DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS)
+        for module, members in table.items()
+        for member in members
+    }
+    sink_paths.update(_NUMPY_PICKLE_READER_ARG_INDEX)
+    module_paths = {path.rpartition(".")[0] for path in sink_paths}
+    module_paths.update(DANGEROUS_SUBMODULES)
+
+    bindings: dict[str, dict[str, str]] = {}
+    for module_path in module_paths:
+        parts = module_path.split(".")
+        for index in range(1, len(parts)):
+            package = ".".join(parts[:index])
+            if parts[index] not in _KNOWN_WILDCARD_SUBMODULE_EXPORTS.get(package, ()):
+                continue
+            bindings.setdefault(package, {})[parts[index]] = ".".join(parts[: index + 1])
+    return bindings
+
+
+_WILDCARD_SUBMODULE_BINDINGS = _build_wildcard_submodule_bindings()
+
+# Modules importable under a second name that yields the *same* objects. ``io``
+# is a thin Python wrapper over the C module ``_io``: ``io.FileIO is _io.FileIO``
+# is true at runtime, so a rule written for ``io`` has to cover both spellings or
+# it only blocks the obvious one. Canonicalizing at import binding keeps the
+# tables above single-sourced - every present and future ``io`` rule applies to
+# ``_io`` for free.
+_CANONICAL_MODULE_NAMES: dict[str, str] = {"_io": "io"}
+
+
+def _canonical_module(module: str) -> str:
+    """Return the public name of a module importable under two names."""
+    head, _, rest = module.partition(".")
+    canonical = _CANONICAL_MODULE_NAMES.get(head, head)
+    return f"{canonical}.{rest}" if rest else canonical
+
+
+# Submodules that a package re-exports wholesale, so ``pkg.sub.Member`` is the
+# same object as ``pkg.Member``: ``yaml.loader.FullLoader is yaml.FullLoader``
+# and ``yaml.cyaml.CUnsafeLoader is yaml.CUnsafeLoader``. Resolving the
+# submodule back to its package lets the member rules above cover the dotted
+# spelling without a second copy of every loader name.
+_PACKAGE_REEXPORT_SUBMODULES: dict[str, frozenset[str]] = {
+    "yaml": frozenset({"loader", "cyaml"}),
+}
+
+_PACKAGE_REEXPORT_MODULE_PATHS: dict[str, str] = {
+    f"{package}.{submodule}": package
+    for package, submodules in _PACKAGE_REEXPORT_SUBMODULES.items()
+    for submodule in submodules
+}
+
+
+# Known stdlib modules that expose restricted modules as attributes, mapping
+# the attribute name to the canonical restricted module it resolves to. Keep
+# this exact-host allowlist narrow: an arbitrary third-party module's ``.os``
+# or ``.sys`` attribute is not necessarily the stdlib module. ``tempfile``
+# imports both under private aliases (``_os`` / ``_sys``), which are the real
+# modules at runtime.
+# Hosts listed here are additionally treated as fully restricted modules: they
+# cannot cross opaque boundaries (returns, call arguments, class attributes)
+# and their ``__dict__`` rejects dynamic reads. Stdlib modules beyond this list
+# still have their ``.os`` / ``.sys`` members canonicalized — see
+# _reexported_restricted_module below.
+_RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
+    "glob": {"os": "os", "sys": "sys"},
+    "logging": {"os": "os"},
+    "os": {"sys": "sys"},
+    "os.path": {"os": "os", "sys": "sys"},
+    "pathlib": {"os": "os", "sys": "sys"},
+    "platform": {"os": "os", "sys": "sys"},
+    "tempfile": {"_os": "os", "_sys": "sys"},
+}
+
+# A stdlib module that runs ``import os`` / ``import sys`` at module level
+# re-exports the real restricted module under its original name
+# (``platform.os is os``), which is how the allowlist above would otherwise be
+# bypassed (``platform.os.system(...)``). Unlike third-party modules, a
+# stdlib-rooted attribute named ``os`` or ``sys`` is near-certainly the stdlib
+# module, so canonicalize it for every stdlib host.
+_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys"})
+_STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
+
+
+def _reexported_restricted_module(module_name: str, member_name: str) -> str | None:
+    """The restricted module ``<module_name>.<member_name>`` resolves to, if it is one."""
+    if (canonical := _RESTRICTED_MODULE_REEXPORTS.get(module_name, {}).get(member_name)) is not None:
+        return canonical
+    if member_name in _STDLIB_REEXPORTED_MODULE_NAMES and module_name.split(".")[0] in _STDLIB_MODULE_NAMES:
+        return member_name
+    return None
+
+
+# Modules with a mix of allowed and forbidden members may be used directly so
+# legitimate operations such as ``os.path.join`` remain available. They must
+# not, however, be passed through an opaque boundary where this scanner can no
+# longer relate the eventual member access back to the module.
+_RESTRICTED_MODULE_REFERENCES: set[str] = {
+    *_DANGEROUS_CALL_MEMBERS,
+    *_DANGEROUS_READ_MEMBERS,
+    *(prefix.split(".")[0] for prefix in DANGEROUS_SUBMODULES),
+    *_RESTRICTED_MODULE_REEXPORTS,
+    "builtins",
+    "__builtins__",
+}
+
+
+def _is_stdlib_reexport_host(resolved_name: str) -> bool:
+    """Whether a value is a bare stdlib module, and so a potential ``os``/``sys`` carrier.
+
+    ``_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the real
+    ``os`` for every stdlib host, which is what closed ``platform.os.system(...)``.
+    That canonicalization only runs while the host is still a *named* value, so
+    the boundary rule has to cover the same set: handing ``zipfile`` to a helper
+    and reading ``m.os`` inside it otherwise reaches ``os`` with the scanner
+    unable to relate ``m`` back to a module.
+
+    Exact membership only, so it matches a module value (``zipfile``) and not a
+    member of one (``json.JSONDecodeError``), which is not a carrier and must
+    stay usable as an ordinary argument.
+    """
+    return resolved_name in _STDLIB_MODULE_NAMES
+
+
+def _is_restricted_module_reference(resolved_name: str) -> bool:
+    """Whether a value retains access to a restricted module across an opaque boundary."""
+    if resolved_name in _RESTRICTED_MODULE_REFERENCES or _is_stdlib_reexport_host(resolved_name):
+        return True
+    module_name, separator, member_name = resolved_name.rpartition(".")
+    return bool(
+        separator
+        and member_name == "__dict__"
+        and (module_name in _RESTRICTED_MODULE_REFERENCES or _is_stdlib_reexport_host(module_name))
+    )
+
+
+def _restricted_mapping_owner(resolved_name: str) -> str | None:
+    """Return the restricted module owning a resolved ``__dict__`` value or member."""
+    module_name, separator, _ = resolved_name.partition(".__dict__")
+    if separator and module_name in _RESTRICTED_MODULE_REFERENCES:
+        return module_name
+    return None
+
+
+def _is_restricted_reflective_capability(resolved_name: str) -> bool:
+    """Whether a bound callable can recover restricted module members after alias tracking is lost."""
+    receiver_name, separator, method_name = resolved_name.rpartition(".")
+    if separator and method_name == "__getattribute__" and receiver_name in _RESTRICTED_MODULE_REFERENCES:
+        return True
+    return _restricted_mapping_owner(resolved_name) is not None and not resolved_name.endswith(".__dict__")
+
+
+_AliasState = tuple[dict[str, frozenset[str]], set[str]]
+
+
+def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
+    """Map local binding names to canonical modules; collect ``import *`` modules.
+
+    Resolves alias bypasses (``import os as o`` → ``o`` maps to ``os``) and
+    wildcard bypasses (``from os import *``) so the checks below see them as
+    plain ``os.<member>`` access. Order-independent (whole-tree walk).
+    """
+    aliases: dict[str, str] = {}
+    wildcard_modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.asname:
+                    aliases[alias.asname] = _canonical_module(alias.name)
+                else:
+                    top = alias.name.split(".")[0]
+                    aliases[top] = _canonical_module(top)
+        elif isinstance(node, ast.ImportFrom) and node.module and any(a.name == "*" for a in node.names):
+            wildcard_modules.add(node.module.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                if (canonical := _reexported_restricted_module(node.module, alias.name)) is not None:
+                    aliases[alias.asname or alias.name] = canonical
+    return aliases, wildcard_modules
+
+
+@dataclass(frozen=True)
+class SecurityScanResult:
+    """Result of code security scan."""
+
+    is_safe: bool
+    violations: tuple[str, ...] = field(default_factory=tuple)
+
+
+class _SecurityChecker(ast.NodeVisitor):
+    """AST visitor that detects dangerous patterns in generated code."""
+
+    def __init__(self, module_aliases: dict[str, str] | None = None, wildcard_modules: set[str] | None = None):
+        self.violations: list[str] = []
+        # local-name -> possible canonical module values. A set is needed when
+        # control-flow branches bind the same name differently.
+        self.module_aliases: dict[str, frozenset[str]] = {
+            name: frozenset({module}) for name, module in (module_aliases or {}).items()
+        }
+        # Names explicitly rebound to non-module values must not fall back to
+        # their spelling (e.g. ``os = object(); os.system()`` is not os.system).
+        self.shadowed_aliases: set[str] = set()
+        # modules pulled in via ``from <mod> import *``.
+        self.wildcard_modules: set[str] = wildcard_modules or set()
+        # Active try-suite collectors retain transient bindings from nested
+        # control flow so a later finally sees every state that can reach it.
+        self._alias_scope_depth = 0
+        self._alias_state_collectors: list[tuple[int, list[_AliasState]]] = []
+        # Depth of enclosing class bodies. A name bound directly in a class body
+        # also becomes a class attribute, read later as ``self.x`` / ``Cls.x``.
+        self._class_body_depth = 0
+        # Names declared ``global`` / ``nonlocal`` in the current function scope:
+        # their bindings outlive the alias state restored at scope exit.
+        self._escaping_names: set[str] = set()
+        # A reader result can pass through arbitrary Python helpers before vars()
+        # or type() is called. Track these calls for an order-independent refusal.
+        self.saw_numpy_archive_reader = False
+        self.saw_vars_call = False
+        self.saw_one_arg_type_call = False
+
+    def _resolved_names(self, name: str) -> frozenset[str]:
+        """Return possible canonical values for a local name."""
+        if name in self.shadowed_aliases:
+            return frozenset()
+        return self.module_aliases.get(name, frozenset({name}))
+
+    def _resolved_member_names(self, base_names: frozenset[str], member_name: str) -> frozenset[str]:
+        """Resolve a member while canonicalizing imported modules that re-export ``os``."""
+        resolved: set[str] = set()
+        for base_name in base_names:
+            if member_name == "__call__":
+                resolved.add(base_name)
+            elif (canonical := _reexported_restricted_module(base_name, member_name)) is not None:
+                resolved.add(canonical)
+            elif member_name in _PACKAGE_REEXPORT_SUBMODULES.get(base_name, ()):
+                # yaml.loader.FullLoader is yaml.FullLoader: stay on the package.
+                resolved.add(base_name)
+            else:
+                resolved.add(f"{base_name}.{member_name}")
+        return frozenset(resolved)
+
+    def _static_name(self, node: ast.AST) -> str | None:
+        """Resolve a static string used as a member/attribute name, failing closed.
+
+        A budget overrun is recorded as a violation instead of being reported as
+        an unresolvable value: several callers treat ``None`` as "dynamic but
+        harmless here", which would turn a refusal to evaluate into a pass.
+        """
+        try:
+            return _static_string_value(node)
+        except StaticEvaluationBudgetExceededError:
+            self.violations.append(
+                "A statically resolvable string in this component is too large or too deeply "
+                "nested to analyze (scanner resource exhaustion)"
+            )
+            return None
+
+    def _resolved_assignment_value(self, node: ast.AST) -> frozenset[str]:
+        """Resolve a statically identifiable reference RHS without executing it."""
+        if isinstance(node, ast.Name):
+            return self._resolved_names(node.id)
+        if isinstance(node, ast.IfExp):
+            return frozenset(
+                {*self._resolved_assignment_value(node.body), *self._resolved_assignment_value(node.orelse)}
+            )
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            values = {name for element in node.elts for name in self._resolved_assignment_value(element)}
+            markers = {_NUMPY_ARCHIVE_RESULT} if _NUMPY_ARCHIVE_RESULT in values else set()
+            if any(name.endswith(".__dict__") for name in values):
+                markers.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
+            return frozenset(markers)
+        if isinstance(node, ast.Attribute):
+            base_names = self._resolved_assignment_value(node.value)
+            if not base_names and node.attr == "__dict__":
+                return frozenset({_UNRESOLVED_REFLECTIVE_NAMESPACE})
+            return self._resolved_member_names(base_names, node.attr)
+        if isinstance(node, ast.Subscript):
+            module_dicts = self._resolved_assignment_value(node.value)
+            if _NUMPY_ARCHIVE_RESULT in module_dicts:
+                return frozenset({_NUMPY_ARCHIVE_RESULT})
+            if (member_name := self._static_name(node.slice)) is None:
+                return frozenset()
+            module_names = frozenset(
+                mapping_name.removesuffix(".__dict__")
+                for mapping_name in module_dicts
+                if mapping_name.endswith(".__dict__")
+            )
+            return self._resolved_member_names(module_names, member_name)
+        if isinstance(node, ast.Call):
+            function_names = self._resolved_assignment_value(node.func)
+            resolved: set[str] = set()
+            if function_names & _NUMPY_ARCHIVE_READER_CALLS:
+                resolved.add(_NUMPY_ARCHIVE_RESULT)
+            if {"type", "builtins.type", "__builtins__.type"} & function_names and len(node.args) == 1:
+                instance_names = self._resolved_assignment_value(node.args[0])
+                if _NUMPY_ARCHIVE_RESULT in instance_names:
+                    resolved.update(_NUMPY_NPZ_CLASSES)
+
+            if (
+                {"getattr", "builtins.getattr", "__builtins__.getattr"} & function_names
+                and node.args[1:]
+                and (member_name := self._static_name(node.args[1])) is not None
+            ):
+                resolved.update(self._resolved_member_names(self._resolved_assignment_value(node.args[0]), member_name))
+
+            if {"vars", "builtins.vars", "__builtins__.vars"} & function_names and len(node.args) == 1:
+                base_names = self._resolved_assignment_value(node.args[0])
+                resolved.update(f"{base_name}.__dict__" for base_name in base_names)
+                if not base_names:
+                    # vars(type(f)) / vars(f()) - the owner is opaque, the
+                    # mapping is a namespace all the same.
+                    resolved.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
+
+            if node.args and (member_name := self._static_name(node.args[0])) is not None:
+                for function_name in function_names:
+                    module_name, separator, method_name = function_name.rpartition(".")
+                    if separator and method_name == "__getattribute__" and module_name in _RESTRICTED_MODULE_REFERENCES:
+                        resolved.update(self._resolved_member_names(frozenset({module_name}), member_name))
+                    elif separator and method_name in {"get", "__getitem__"} and module_name.endswith(".__dict__"):
+                        resolved.update(
+                            self._resolved_member_names(frozenset({module_name.removesuffix(".__dict__")}), member_name)
+                        )
+
+            if (
+                {"object.__getattribute__", "builtins.object.__getattribute__", "__builtins__.object.__getattribute__"}
+                & function_names
+                and node.args[1:]
+                and (member_name := self._static_name(node.args[1])) is not None
+            ):
+                resolved.update(self._resolved_member_names(self._resolved_assignment_value(node.args[0]), member_name))
+
+            if (
+                {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"} & function_names
+                and node.args[1:]
+                and (member_name := self._static_name(node.args[1])) is not None
+            ):
+                module_names = frozenset(
+                    mapping_name.removesuffix(".__dict__")
+                    for mapping_name in self._resolved_assignment_value(node.args[0])
+                    if mapping_name.endswith(".__dict__")
+                )
+                resolved.update(self._resolved_member_names(module_names, member_name))
+
+            if not any(name.endswith(".__dict__") for name in resolved) and self._call_reaches_namespace_mapping(node):
+                # A namespace laundered through a call - ``dict(ns)``,
+                # ``ns.copy()``, ``copy.deepcopy(ns)``, or any helper this
+                # scanner cannot model - keeps the marker. Without it the copy
+                # reads as an ordinary application dictionary and every mapping
+                # rule above stops applying, which is the whole escape:
+                # ``dict(vars(type(f)))["__globals__".lower()]``. Enumerating
+                # copy spellings would be another bypassable denylist, so the
+                # marker rides the value instead.
+                resolved.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
+
+            return frozenset(resolved)
+        if isinstance(node, ast.Dict):
+            values = {name for value in node.values for name in self._resolved_assignment_value(value)}
+            markers = {_NUMPY_ARCHIVE_RESULT} if _NUMPY_ARCHIVE_RESULT in values else set()
+            if any(name.endswith(".__dict__") for name in values):
+                markers.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
+            return frozenset(markers)
+        return frozenset()
+
+    def _call_reaches_namespace_mapping(self, node: ast.Call) -> bool:
+        """True if a namespace mapping is this call's receiver or one of its arguments."""
+        if isinstance(node.func, ast.Attribute) and any(
+            name.endswith(".__dict__") for name in self._resolved_assignment_value(node.func.value)
+        ):
+            return True
+        arguments: list[ast.AST] = [
+            argument.value if isinstance(argument, ast.Starred) else argument for argument in node.args
+        ]
+        arguments.extend(keyword.value for keyword in node.keywords)
+        return any(
+            name.endswith(".__dict__") for argument in arguments for name in self._resolved_assignment_value(argument)
+        )
+
+    @staticmethod
+    def _dangerous_callable_message(resolved_name: str) -> str | None:
+        """Return the violation for a resolved builtin or module callable."""
+        if resolved_name in DANGEROUS_CALLS:
+            return DANGEROUS_CALLS[resolved_name]
+
+        module_name, separator, member_name = resolved_name.rpartition(".")
+        if separator and module_name in {"builtins", "__builtins__"} and member_name in DANGEROUS_CALLS:
+            return DANGEROUS_CALLS[member_name]
+
+        return next(
+            (message for mod, method, message in DANGEROUS_ATTR_CALLS if resolved_name == f"{mod}.{method}"),
+            None,
+        )
+
+    def _opaque_reference_violation(self, node: ast.AST) -> str | None:
+        """Reject dangerous values crossing a boundary alias tracking cannot follow."""
+        if isinstance(node, ast.Starred):
+            return self._opaque_reference_violation(node.value)
+        if isinstance(node, ast.NamedExpr):
+            # The Store target still resolves to its previous binding until the
+            # assignment is visited. Only the new value becomes the callable or
+            # receiver represented by this expression.
+            return self._opaque_reference_violation(node.value)
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            return next(
+                (violation for item in node.elts if (violation := self._opaque_reference_violation(item))), None
+            )
+        if isinstance(node, ast.Dict):
+            items = [*node.keys, *node.values]
+            return next(
+                (
+                    violation
+                    for item in items
+                    if item is not None and (violation := self._opaque_reference_violation(item))
+                ),
+                None,
+            )
+
+        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            expressions = (node.key, node.value) if isinstance(node, ast.DictComp) else (node.elt,)
+            enclosing_state = self._snapshot_alias_state()
+            try:
+                for generator in node.generators:
+                    if violation := self._opaque_reference_violation(generator.iter):
+                        return violation
+                    self._bind_iterated_target(generator.target, generator.iter)
+                    for condition in generator.ifs:
+                        if violation := self._opaque_reference_violation(condition):
+                            return violation
+                return next(
+                    (
+                        violation
+                        for expression in expressions
+                        if (violation := self._opaque_reference_violation(expression))
+                    ),
+                    None,
+                )
+            finally:
+                self._restore_alias_state(enclosing_state)
+
+        resolved_names = self._resolved_assignment_value(node)
+        for resolved_name in resolved_names:
+            if resolved_name in _SETATTR_CALLABLE_NAMES:
+                return "Indirect setattr() reference is forbidden in components (numpy pickle risk)"
+            if resolved_name in _NUMPY_PICKLE_READER_ARG_INDEX:
+                return f"Indirect {resolved_name}() reference is forbidden — allow_pickle cannot be verified"
+            if _is_restricted_module_reference(resolved_name):
+                return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
+            if _is_restricted_reflective_capability(resolved_name):
+                return f"Indirect reference to reflective capability '{resolved_name}' is forbidden in components"
+            if violation := self._dangerous_callable_message(resolved_name):
+                return violation
+        if resolved_names:
+            return None
+
+        if isinstance(node, ast.Call):
+            # visit_Call checks the callee (including NumPy allow_pickle) directly.
+            # A call result is not an indirect reference to its function: assigning
+            # ``np.load(path, allow_pickle=False)`` must remain allowed. Its arguments
+            # can still carry restricted references through this opaque boundary.
+            return next(
+                (
+                    violation
+                    for argument in (*node.args, *(keyword.value for keyword in node.keywords))
+                    if (violation := self._opaque_reference_violation(argument))
+                ),
+                None,
+            )
+
+        return next(
+            (
+                violation
+                for child in ast.iter_child_nodes(node)
+                if (violation := self._opaque_reference_violation(child))
+            ),
+            None,
+        )
+
+    def _check_opaque_reference(self, node: ast.AST) -> None:
+        if violation := self._opaque_reference_violation(node):
+            self.violations.append(violation)
+
+    def visit_Return(self, node: ast.Return):
+        if node.value is not None:
+            self._check_opaque_reference(node.value)
+        self.generic_visit(node)
+
+    def visit_Yield(self, node: ast.Yield):
+        if node.value is not None:
+            self._check_opaque_reference(node.value)
+        self.generic_visit(node)
+
+    def visit_YieldFrom(self, node: ast.YieldFrom):
+        self._check_opaque_reference(node.value)
+        self.generic_visit(node)
+
+    def _bind_name(self, name: str, values: frozenset[str]) -> None:
+        if values:
+            self.module_aliases[name] = values
+            self.shadowed_aliases.discard(name)
+        else:
+            self.module_aliases.pop(name, None)
+            self.shadowed_aliases.add(name)
+        if self._alias_state_collectors:
+            state = self._snapshot_alias_state()
+            for scope_depth, states in self._alias_state_collectors:
+                if scope_depth == self._alias_scope_depth:
+                    states.append(state)
+
+    def _iter_assignment_leaves(self, target: ast.AST, value: ast.AST) -> Iterator[tuple[ast.AST, ast.AST]]:
+        """Pair assignment target leaves with the values bound to them."""
+        if isinstance(target, (ast.Name, ast.Attribute, ast.Subscript)):
+            yield target, value
+            return
+        if isinstance(target, ast.Starred):
+            yield from self._iter_assignment_leaves(target.value, value)
+            return
+        if isinstance(target, (ast.Tuple, ast.List)):
+            if isinstance(value, (ast.Tuple, ast.List)):
+                starred_index = next(
+                    (
+                        index
+                        for index, target_element in enumerate(target.elts)
+                        if isinstance(target_element, ast.Starred)
+                    ),
+                    None,
+                )
+                if starred_index is None and len(target.elts) == len(value.elts):
+                    for target_element, value_element in zip(target.elts, value.elts, strict=True):
+                        yield from self._iter_assignment_leaves(target_element, value_element)
+                    return
+                if starred_index is not None and len(value.elts) >= len(target.elts) - 1:
+                    for target_element, value_element in zip(
+                        target.elts[:starred_index], value.elts[:starred_index], strict=True
+                    ):
+                        yield from self._iter_assignment_leaves(target_element, value_element)
+
+                    trailing_count = len(target.elts) - starred_index - 1
+                    if trailing_count:
+                        for target_element, value_element in zip(
+                            target.elts[-trailing_count:], value.elts[-trailing_count:], strict=True
+                        ):
+                            yield from self._iter_assignment_leaves(target_element, value_element)
+
+                    remaining_end = len(value.elts) - trailing_count if trailing_count else len(value.elts)
+                    remaining_values = ast.List(
+                        elts=value.elts[starred_index:remaining_end],
+                        ctx=ast.Load(),
+                    )
+                    yield from self._iter_assignment_leaves(target.elts[starred_index], remaining_values)
+                    return
+
+            for target_element in target.elts:
+                yield from self._iter_assignment_leaves(target_element, value)
+
+    def _binding_escapes(self, name: str) -> bool:
+        """True when a name binding outlives the alias state that would track it.
+
+        Binding a resolvable value to a plain name is normally safe to defer to
+        the use site, because alias tracking keeps following the value. That only
+        holds while the binding stays inside the scope being analysed. A class
+        body publishes the name as a class attribute (later read as ``self.x`` /
+        ``Cls.x``, which cannot be related back to the module or callable), and
+        ``global`` / ``nonlocal`` publish it into a scope this visitor has already
+        restored by the time the reader is visited. Both are opaque boundaries.
+        """
+        return self._class_body_depth > 0 or name in self._escaping_names
+
+    def _check_escaping_binding(self, name: str, values: frozenset[str]) -> None:
+        """Flag a dangerous value published through a binding alias tracking cannot follow."""
+        if not self._binding_escapes(name):
+            return
+        for value in sorted(values):
+            if value in _SETATTR_CALLABLE_NAMES:
+                self.violations.append("Indirect setattr() reference is forbidden in components (numpy pickle risk)")
+                return
+            if value in _NUMPY_PICKLE_READER_ARG_INDEX:
+                self.violations.append(f"Indirect {value}() reference is forbidden — allow_pickle cannot be verified")
+                return
+            if _is_restricted_module_reference(value):
+                self.violations.append(f"Indirect reference to restricted module '{value}' is forbidden in components")
+                return
+            if _is_restricted_reflective_capability(value):
+                self.violations.append(
+                    f"Indirect reference to reflective capability '{value}' is forbidden in components"
+                )
+                return
+            if violation := self._dangerous_callable_message(value):
+                self.violations.append(violation)
+                return
+
+    def _check_assignment_value(self, target: ast.AST, value: ast.AST) -> None:
+        """Check assignment values that cannot remain visible to alias tracking."""
+        for target_leaf, value_leaf in self._iter_assignment_leaves(target, value):
+            if (
+                isinstance(target_leaf, ast.Name)
+                and not self._binding_escapes(target_leaf.id)
+                and self._resolved_assignment_value(value_leaf)
+            ):
+                continue
+            self._check_opaque_reference(value_leaf)
+
+    def _bind_assignment_target(self, target: ast.AST, value: ast.AST) -> None:
+        """Apply assignment aliasing, including matching tuple/list unpacking."""
+        for target_leaf, value_leaf in self._iter_assignment_leaves(target, value):
+            if isinstance(target_leaf, ast.Name):
+                self._bind_name(target_leaf.id, self._resolved_assignment_value(value_leaf))
+
+    def _bind_iterated_target(self, target: ast.AST, iterable: ast.AST) -> None:
+        """Bind a loop target to every statically visible iterable value."""
+        if isinstance(iterable, (ast.List, ast.Tuple, ast.Set)):
+            values = iterable.elts
+        elif isinstance(iterable, ast.Dict):
+            values = [key for key in iterable.keys if key is not None]
+        else:
+            values = [iterable]
+
+        before_iteration = self._snapshot_alias_state()
+        iteration_states: list[_AliasState] = []
+        for value in values:
+            self._restore_alias_state(before_iteration)
+            self._bind_assignment_target(target, value)
+            iteration_states.append(self._snapshot_alias_state())
+
+        if iteration_states:
+            self._merge_alias_states(iteration_states)
+        else:
+            self._bind_assignment_target(target, iterable)
+
+    def _snapshot_alias_state(self) -> _AliasState:
+        return self.module_aliases.copy(), self.shadowed_aliases.copy()
+
+    def _restore_alias_state(self, state: _AliasState) -> None:
+        aliases, shadowed = state
+        self.module_aliases = aliases.copy()
+        self.shadowed_aliases = shadowed.copy()
+
+    def _restore_target_names(self, target_names: set[str], state: _AliasState) -> None:
+        aliases, shadowed = state
+        for name in target_names:
+            if name in aliases:
+                self.module_aliases[name] = aliases[name]
+                self.shadowed_aliases.discard(name)
+            elif name in shadowed:
+                self.module_aliases.pop(name, None)
+                self.shadowed_aliases.add(name)
+            else:
+                self.module_aliases.pop(name, None)
+                self.shadowed_aliases.discard(name)
+
+    def _assignment_target_names(self, target: ast.AST) -> set[str]:
+        if isinstance(target, ast.Name):
+            return {target.id}
+        if isinstance(target, ast.Starred):
+            return self._assignment_target_names(target.value)
+        if isinstance(target, (ast.Tuple, ast.List)):
+            return set().union(*(self._assignment_target_names(element) for element in target.elts))
+        return set()
+
+    def _merge_alias_states(self, states: list[_AliasState]) -> None:
+        """Conservatively retain every module value reachable from a branch."""
+        names = set().union(*(set(aliases) | shadowed for aliases, shadowed in states))
+        merged_aliases: dict[str, frozenset[str]] = {}
+        merged_shadowed: set[str] = set()
+        for name in names:
+            possible_values: set[str] = set()
+            for aliases, shadowed in states:
+                if name in aliases:
+                    possible_values.update(aliases[name])
+                elif name not in shadowed:
+                    possible_values.add(name)
+            if possible_values:
+                merged_aliases[name] = frozenset(possible_values)
+            else:
+                merged_shadowed.add(name)
+        self.module_aliases = merged_aliases
+        self.shadowed_aliases = merged_shadowed
+
+    def visit_Import(self, node: ast.Import):
+        for alias in node.names:
+            module = _canonical_module(alias.name.split(".")[0])
+            if module in DANGEROUS_IMPORTS or _is_dangerous_submodule(alias.name):
+                self.violations.append(f"Import of '{alias.name}' is forbidden in components")
+            binding = alias.asname or module
+            imported_name = _canonical_module(alias.name if alias.asname else module)
+            imported_name = _PACKAGE_REEXPORT_MODULE_PATHS.get(imported_name, imported_name)
+            self._bind_name(binding, frozenset({imported_name}))
+            # An import inside a class body binds a class attribute, not a local.
+            self._check_escaping_binding(binding, frozenset({imported_name}))
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom):
+        if not node.module:
+            return self.generic_visit(node)
+
+        root_module = _canonical_module(node.module.split(".")[0])
+
+        if root_module in DANGEROUS_IMPORTS or _is_dangerous_submodule(node.module):
+            self.violations.append(f"Import from '{node.module}' is forbidden in components")
+        else:
+            restricted = (
+                RESTRICTED_IMPORT_NAMES.get(root_module, set())
+                | _DANGEROUS_READ_MEMBERS.get(node.module, set())
+                | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
+            )
+            for alias in node.names:
+                if alias.name in restricted:
+                    self.violations.append(f"Import of '{root_module}.{alias.name}' is forbidden in components")
+                # `from urllib import request` / `from http import client`:
+                # the imported name *is* a blocked submodule. This also
+                # applies to packages with other restricted member names.
+                if _is_dangerous_submodule(f"{node.module}.{alias.name}"):
+                    self.violations.append(f"Import of '{node.module}.{alias.name}' is forbidden in components")
+
+        for alias in node.names:
+            if alias.name == "*":
+                # Both defaults must be sets: "tuple | set" is a TypeError, so a
+                # wildcard import from any module absent from the call table
+                # (``from typing import *``) crashed the scan out to the caller.
+                for name in (
+                    _DANGEROUS_CALL_MEMBERS.get(root_module, set())
+                    | _DANGEROUS_READ_MEMBERS.get(root_module, set())
+                    | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
+                    | _DANGEROUS_READ_MEMBERS.get(node.module, set())
+                ):
+                    self._bind_name(name, frozenset({f"{node.module}.{name}"}))
+                for reader_name, reader_path in _NUMPY_WILDCARD_READERS.get(node.module, ()):
+                    self._bind_name(reader_name, frozenset({reader_path}))
+                for binding, submodule in _WILDCARD_SUBMODULE_BINDINGS.get(node.module, {}).items():
+                    self._bind_name(binding, frozenset({submodule}))
+            else:
+                binding = alias.asname or alias.name
+                imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
+                imported_names = frozenset({imported_name})
+                self._bind_name(binding, imported_names)
+                self._check_escaping_binding(binding, imported_names)
+
+        return self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign):
+        self.visit(node.value)
+        for target in node.targets:
+            self.visit(target)
+            self._check_assignment_value(target, node.value)
+            self._bind_assignment_target(target, node.value)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign):
+        self.visit(node.annotation)
+        if node.value is not None:
+            self.visit(node.value)
+            self.visit(node.target)
+            self._check_assignment_value(node.target, node.value)
+            self._bind_assignment_target(node.target, node.value)
+
+    def visit_NamedExpr(self, node: ast.NamedExpr):
+        self.visit(node.value)
+        self.visit(node.target)
+        self._check_assignment_value(node.target, node.value)
+        self._bind_assignment_target(node.target, node.value)
+
+    def visit_Global(self, node: ast.Global):
+        self._escaping_names.update(node.names)
+
+    def visit_Nonlocal(self, node: ast.Nonlocal):
+        self._escaping_names.update(node.names)
+
+    def visit_AugAssign(self, node: ast.AugAssign):
+        self.visit(node.target)
+        self.visit(node.value)
+        self._check_opaque_reference(node.value)
+        if isinstance(node.target, ast.Name):
+            self._bind_name(node.target.id, frozenset())
+
+    def visit_If(self, node: ast.If):
+        """Merge aliases from both possible branches instead of trusting visit order."""
+        self.visit(node.test)
+        before_branches = self._snapshot_alias_state()
+        branch_states: list[_AliasState] = []
+        for branch in (node.body, node.orelse):
+            self._restore_alias_state(before_branches)
+            for statement in branch:
+                self.visit(statement)
+            branch_states.append(self._snapshot_alias_state())
+        self._merge_alias_states(branch_states)
+
+    def visit_IfExp(self, node: ast.IfExp):
+        """Merge assignments from both conditional-expression branches."""
+        self.visit(node.test)
+        before_branches = self._snapshot_alias_state()
+        branch_states: list[_AliasState] = []
+        for branch in (node.body, node.orelse):
+            self._restore_alias_state(before_branches)
+            self.visit(branch)
+            branch_states.append(self._snapshot_alias_state())
+        self._merge_alias_states(branch_states)
+
+    def visit_BoolOp(self, node: ast.BoolOp):
+        """Retain the alias state at every possible short-circuit exit."""
+        exit_states: list[_AliasState] = []
+        for value in node.values:
+            self.visit(value)
+            exit_states.append(self._snapshot_alias_state())
+        self._merge_alias_states(exit_states)
+
+    def visit_Compare(self, node: ast.Compare):
+        """Retain assignments from every possible chained-comparison exit."""
+        self.visit(node.left)
+        exit_states: list[_AliasState] = []
+        for comparator in node.comparators:
+            self.visit(comparator)
+            exit_states.append(self._snapshot_alias_state())
+        self._merge_alias_states(exit_states)
+
+    @staticmethod
+    def _pattern_bound_names(pattern: ast.AST) -> set[str]:
+        """Return names captured by a match pattern."""
+        names: set[str] = set()
+        for child in ast.walk(pattern):
+            if isinstance(child, (ast.MatchAs, ast.MatchStar)) and child.name:
+                names.add(child.name)
+            elif isinstance(child, ast.MatchMapping) and child.rest:
+                names.add(child.rest)
+        return names
+
+    @classmethod
+    def _is_irrefutable_pattern(cls, pattern: ast.pattern) -> bool:
+        """Whether a pattern is guaranteed to match its subject."""
+        if isinstance(pattern, ast.MatchAs):
+            return pattern.pattern is None or cls._is_irrefutable_pattern(pattern.pattern)
+        if isinstance(pattern, ast.MatchOr):
+            return any(cls._is_irrefutable_pattern(option) for option in pattern.patterns)
+        return False
+
+    def visit_Match(self, node: ast.Match):
+        """Merge successful cases and stateful guard fallthrough paths."""
+        self.visit(node.subject)
+        before_cases = self._snapshot_alias_state()
+        fallthrough_states = [before_cases]
+        completed_states: list[_AliasState] = []
+        for case in node.cases:
+            self._merge_alias_states(fallthrough_states)
+            case_entry_state = self._snapshot_alias_state()
+            for name in self._pattern_bound_names(case.pattern):
+                self._bind_name(name, frozenset())
+            self.visit(case.pattern)
+            if case.guard is not None:
+                self.visit(case.guard)
+                next_fallthrough_states = [self._snapshot_alias_state()]
+                if not self._is_irrefutable_pattern(case.pattern):
+                    next_fallthrough_states.append(case_entry_state)
+            elif self._is_irrefutable_pattern(case.pattern):
+                next_fallthrough_states = []
+            else:
+                next_fallthrough_states = [case_entry_state]
+            for statement in case.body:
+                self.visit(statement)
+            completed_states.append(self._snapshot_alias_state())
+            fallthrough_states = next_fallthrough_states
+        self._merge_alias_states([*completed_states, *fallthrough_states])
+
+    def _visit_with(self, node: ast.With | ast.AsyncWith) -> None:
+        """Evaluate context expressions before shadowing names bound by ``as`` targets."""
+        for item in node.items:
+            self.visit(item.context_expr)
+            if item.optional_vars is not None:
+                self.visit(item.optional_vars)
+                archive_result = _NUMPY_ARCHIVE_RESULT in self._resolved_assignment_value(item.context_expr)
+                for name in self._assignment_target_names(item.optional_vars):
+                    self._bind_name(name, frozenset({_NUMPY_ARCHIVE_RESULT}) if archive_result else frozenset())
+        for statement in node.body:
+            self.visit(statement)
+
+    def visit_With(self, node: ast.With):
+        self._visit_with(node)
+
+    def visit_AsyncWith(self, node: ast.AsyncWith):
+        self._visit_with(node)
+
+    def _visit_iterating_loop(self, node: ast.For | ast.AsyncFor) -> None:
+        """Bind the loop target and merge zero-iteration and body states."""
+        self.visit(node.iter)
+        if any(self._binding_escapes(name) for name in self._assignment_target_names(node.target)):
+            self._check_opaque_reference(node.iter)
+        before_loop = self._snapshot_alias_state()
+        self.visit(node.target)
+        self._bind_iterated_target(node.target, node.iter)
+        for statement in node.body:
+            self.visit(statement)
+        self._merge_alias_states([before_loop, self._snapshot_alias_state()])
+
+        if node.orelse:
+            before_else = self._snapshot_alias_state()
+            for statement in node.orelse:
+                self.visit(statement)
+            self._merge_alias_states([before_else, self._snapshot_alias_state()])
+
+    def _visit_while_loop(self, node: ast.While) -> None:
+        """Merge zero-iteration and loop-body alias states conservatively."""
+        self.visit(node.test)
+        before_loop = self._snapshot_alias_state()
+        for statement in node.body:
+            self.visit(statement)
+        self._merge_alias_states([before_loop, self._snapshot_alias_state()])
+
+        if node.orelse:
+            before_else = self._snapshot_alias_state()
+            for statement in node.orelse:
+                self.visit(statement)
+            # The else suite is skipped when a loop exits through break.
+            self._merge_alias_states([before_else, self._snapshot_alias_state()])
+
+    def visit_For(self, node: ast.For):
+        self._visit_iterating_loop(node)
+
+    def visit_AsyncFor(self, node: ast.AsyncFor):
+        self._visit_iterating_loop(node)
+
+    def visit_While(self, node: ast.While):
+        self._visit_while_loop(node)
+
+    def _visit_alias_suite(self, statements: list[ast.stmt], entry_state: _AliasState) -> list[_AliasState]:
+        """Visit a statement suite and retain every state that can reach a later finally."""
+        self._restore_alias_state(entry_state)
+        states = [entry_state]
+        collector = (self._alias_scope_depth, states)
+        self._alias_state_collectors.append(collector)
+        try:
+            for statement in statements:
+                self.visit(statement)
+                states.append(self._snapshot_alias_state())
+        finally:
+            self._alias_state_collectors.pop()
+        return states
+
+    def _visit_try(self, node: ast.Try, *, sequential_handlers: bool = False) -> None:
+        """Merge every alias state that can reach a try continuation or finally."""
+        before_try = self._snapshot_alias_state()
+        body_states = self._visit_alias_suite(node.body, before_try)
+
+        # The else suite runs only after the whole try body succeeds.
+        else_states = self._visit_alias_suite(node.orelse, body_states[-1])
+        success_state = else_states[-1]
+
+        # A handler can observe bindings made before any statement that raises.
+        self._merge_alias_states(body_states)
+        handler_entry_state = self._snapshot_alias_state()
+        handler_states: list[_AliasState] = []
+        partial_handler_states: list[_AliasState] = []
+        for handler in node.handlers:
+            self._restore_alias_state(handler_entry_state)
+            if handler.type is not None:
+                self.visit(handler.type)
+            if handler.name:
+                self._bind_name(handler.name, frozenset())
+            handler_states_for_suite = self._visit_alias_suite(handler.body, self._snapshot_alias_state())
+            handler_states.append(handler_states_for_suite[-1])
+            partial_handler_states.extend(handler_states_for_suite)
+            if sequential_handlers:
+                # Multiple except* clauses can run for disjoint subgroups, and
+                # later handlers can observe bindings from earlier handlers.
+                self._merge_alias_states([handler_entry_state, *handler_states_for_suite])
+                handler_entry_state = self._snapshot_alias_state()
+
+        continuation_states = (
+            [success_state, handler_entry_state] if sequential_handlers else [success_state, *handler_states]
+        )
+        if node.finalbody:
+            # Finally also runs for exceptions raised partway through the body,
+            # else suite, or a handler, so preserve every partial suite state.
+            self._merge_alias_states([*continuation_states, *body_states, *else_states, *partial_handler_states])
+            for statement in node.finalbody:
+                self.visit(statement)
+        else:
+            self._merge_alias_states(continuation_states)
+
+    def visit_Try(self, node: ast.Try):
+        self._visit_try(node)
+
+    # Keep this unannotated because ast.TryStar does not exist on Python 3.10.
+    def visit_TryStar(self, node):
+        self._visit_try(node, sequential_handlers=True)
+
+    def _visit_comprehension_expression(
+        self, generators: list[ast.comprehension], expressions: tuple[ast.AST, ...]
+    ) -> None:
+        """Visit comprehensions in evaluation order with isolated target bindings."""
+        enclosing_state = self._snapshot_alias_state()
+        target_names: set[str] = set()
+        for generator in generators:
+            self.visit(generator.iter)
+            self.visit(generator.target)
+            self._bind_iterated_target(generator.target, generator.iter)
+            target_names.update(self._assignment_target_names(generator.target))
+            for condition in generator.ifs:
+                self.visit(condition)
+        for expression in expressions:
+            self.visit(expression)
+        self._restore_target_names(target_names, enclosing_state)
+
+    def visit_ListComp(self, node: ast.ListComp):
+        self._visit_comprehension_expression(node.generators, (node.elt,))
+
+    def visit_SetComp(self, node: ast.SetComp):
+        self._visit_comprehension_expression(node.generators, (node.elt,))
+
+    def visit_DictComp(self, node: ast.DictComp):
+        self._visit_comprehension_expression(node.generators, (node.key, node.value))
+
+    def visit_GeneratorExp(self, node: ast.GeneratorExp):
+        self._visit_comprehension_expression(node.generators, (node.elt,))
+
+    def _shadow_arguments(self, arguments: ast.arguments) -> None:
+        positional = [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
+        for argument in positional:
+            self._bind_name(argument.arg, frozenset())
+        if arguments.vararg:
+            self._bind_name(arguments.vararg.arg, frozenset())
+        if arguments.kwarg:
+            self._bind_name(arguments.kwarg.arg, frozenset())
+
+    def _visit_function_definition(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        # Decorators, defaults, and annotations are evaluated in the enclosing
+        # scope; the function body receives an isolated alias state.
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        self.visit(node.args)
+        if node.returns:
+            self.visit(node.returns)
+        for type_parameter in getattr(node, "type_params", ()):
+            self.visit(type_parameter)
+        for default in (*node.args.defaults, *(item for item in node.args.kw_defaults if item is not None)):
+            self._check_opaque_reference(default)
+
+        enclosing_state = self._snapshot_alias_state()
+        enclosing_class_body_depth = self._class_body_depth
+        enclosing_escaping_names = self._escaping_names
+        self._alias_scope_depth += 1
+        # A function body is its own scope: names bound here are locals, not class
+        # attributes, and ``global`` / ``nonlocal`` declarations do not carry in.
+        self._class_body_depth = 0
+        self._escaping_names = set()
+        try:
+            self._bind_name(node.name, frozenset())
+            self._shadow_arguments(node.args)
+            for statement in node.body:
+                self.visit(statement)
+        finally:
+            self._alias_scope_depth -= 1
+            self._class_body_depth = enclosing_class_body_depth
+            self._escaping_names = enclosing_escaping_names
+            self._restore_alias_state(enclosing_state)
+        self._bind_name(node.name, frozenset())
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self._visit_function_definition(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        self._visit_function_definition(node)
+
+    def visit_Lambda(self, node: ast.Lambda):
+        self.visit(node.args)
+        for default in (*node.args.defaults, *(item for item in node.args.kw_defaults if item is not None)):
+            self._check_opaque_reference(default)
+        enclosing_state = self._snapshot_alias_state()
+        enclosing_class_body_depth = self._class_body_depth
+        enclosing_escaping_names = self._escaping_names
+        self._alias_scope_depth += 1
+        self._class_body_depth = 0
+        self._escaping_names = set()
+        try:
+            self._shadow_arguments(node.args)
+            self._check_opaque_reference(node.body)
+            self.visit(node.body)
+        finally:
+            self._alias_scope_depth -= 1
+            self._class_body_depth = enclosing_class_body_depth
+            self._escaping_names = enclosing_escaping_names
+            self._restore_alias_state(enclosing_state)
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        for base in node.bases:
+            if self._resolved_assignment_value(base) & _NUMPY_NPZ_CLASSES:
+                self.violations.append("Subclassing numpy.NpzFile is forbidden — allow_pickle cannot be verified")
+            # Container, Boolean, and call expressions can hide a NumPy reader class
+            # even when the base expression itself has no resolvable name.
+            self._check_opaque_reference(base)
+            self.visit(base)
+        for keyword in node.keywords:
+            self.visit(keyword)
+        for type_parameter in getattr(node, "type_params", ()):
+            self.visit(type_parameter)
+
+        enclosing_state = self._snapshot_alias_state()
+        enclosing_escaping_names = self._escaping_names
+        self._alias_scope_depth += 1
+        # Names bound in a class body escape as class attributes; see _binding_escapes.
+        self._class_body_depth += 1
+        self._escaping_names = set()
+        try:
+            for statement in node.body:
+                self.visit(statement)
+        finally:
+            self._alias_scope_depth -= 1
+            self._class_body_depth -= 1
+            self._escaping_names = enclosing_escaping_names
+            self._restore_alias_state(enclosing_state)
+        self._bind_name(node.name, frozenset())
+
+    def visit_Attribute(self, node: ast.Attribute):
+        """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
+        if isinstance(node.ctx, ast.Store) and node.attr == "allow_pickle":
+            self.violations.append("Assignment to numpy allow_pickle is forbidden — unsafe pickle deserialization")
+        if node.attr == "__dict__" and _NUMPY_ARCHIVE_RESULT in self._resolved_assignment_value(node.value):
+            self.violations.append(
+                "Access to numpy archive reader internals is forbidden — unsafe pickle deserialization"
+            )
+        if _is_blocked_attribute(node.attr):
+            self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
+        else:
+            receiver_names = self._resolved_assignment_value(node.value)
+            for module_name in receiver_names:
+                violation = next(
+                    (
+                        message
+                        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                        if module_name == mod and node.attr == attr
+                    ),
+                    None,
+                )
+                if violation:
+                    self.violations.append(violation)
+                    break
+            if not receiver_names and node.attr in {attr for _, attr, _ in DANGEROUS_ATTRIBUTE_READS}:
+                # A restricted receiver can be hidden behind an inline
+                # container, boolean expression, named expression, or
+                # comprehension. Inspect the unresolved receiver before a
+                # dangerous attribute name crosses that opaque boundary.
+                self._check_opaque_reference(node.value)
+        # Dotted access to a blocked submodule (``urllib.request`` / ``http.client``),
+        # which a bare ``import urllib`` / ``import http`` makes reachable at runtime
+        # without an explicit submodule import. Alias-resolved on the root name.
+        if dotted := self._dangerous_submodule_access(node):
+            self.violations.append(f"Access to '{dotted}' is forbidden in components")
+        return self.generic_visit(node)
+
+    def visit_Constant(self, node: ast.Constant):
+        """Reject literal format templates that traverse blocked attributes.
+
+        ``"{0.__globals__[__builtins__]}".format(f)`` carries the attribute
+        chain inside a string, invisible to the ast.Attribute check.
+        """
+        if isinstance(node.value, str) and _FORMAT_FIELD_DUNDER_RE.search(node.value):
+            self.violations.append(
+                "Format-string access to dunder attributes is forbidden in components (sandbox escape)"
+            )
+        return self.generic_visit(node)
+
+    def visit_Subscript(self, node: ast.Subscript):
+        """Reject dunder-key reads on any receiver and dangerous reads from a module ``__dict__``."""
+        member_name = self._static_name(node.slice)
+        if _is_blocked_attribute(member_name):
+            # Dunder keys are sandbox escapes regardless of the receiver:
+            # ``vars(X)`` returns ``X.__dict__`` for ANY object, so gating the
+            # check on a restricted-module receiver lets
+            # ``vars(type)["__subclasses__"]`` slip through.
+            self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+            return self.generic_visit(node)
+        if isinstance(node.slice, ast.Slice) or (
+            isinstance(node.slice, ast.Constant) and not isinstance(node.slice.value, str)
+        ):
+            # ``value[0]`` / ``value[1:2]`` is a sequence read, not a member
+            # lookup. The marker rides through unmodeled calls, so it lands on
+            # values that are not mappings at all (``json.dumps(vars(o))[:100]``).
+            return self.generic_visit(node)
+        mapping_values = frozenset(
+            name for name in self._resolved_assignment_value(node.value) if name.endswith(".__dict__")
+        )
+        if not mapping_values:
+            return self.generic_visit(node)
+        restricted_mapping_names = frozenset(name for name in mapping_values if _is_restricted_module_reference(name))
+        if member_name is None:
+            if restricted_mapping_names:
+                restricted_name = sorted(restricted_mapping_names)[0]
+                self.violations.append(
+                    f"Dynamic mapping access on module '{restricted_name}' is forbidden in components"
+                )
+            else:
+                # The key cannot be resolved, so it may be "__globals__" or any
+                # other escape at runtime, and the owner being unnameable is
+                # exactly the case a static-key check cannot cover. Fail closed.
+                self.violations.append(
+                    "Dynamic key access into a namespace mapping (vars()/__dict__) is forbidden in components "
+                    "(sandbox escape)"
+                )
+        elif restricted_mapping_names:
+            # A static key into a restricted module's namespace reaches the
+            # same dangerous members as dotted access (``yaml.__dict__['UnsafeLoader']``).
+            module_names = {name.removesuffix(".__dict__") for name in restricted_mapping_names}
+            violation = next(
+                (
+                    message
+                    for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                    if mod in module_names and attr == member_name
+                ),
+                None,
+            ) or next(
+                (
+                    message
+                    for mod, method, message in DANGEROUS_ATTR_CALLS
+                    if mod in module_names and method == member_name
+                ),
+                None,
+            )
+            if violation:
+                self.violations.append(violation)
+        return self.generic_visit(node)
+
+    def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
+        """Possible dotted names of an attribute chain, with its root alias-resolved."""
+        parts = _dotted_parts(node)
+        if not parts:
+            return frozenset()
+        return frozenset(".".join([root, *parts[1:]]) for root in self._resolved_names(parts[0]))
+
+    def _resolved_receiver_names(self, node: ast.Name | ast.Attribute) -> frozenset[str]:
+        """Resolve a direct or dotted module receiver to its canonical names."""
+        return self._resolved_names(node.id) if isinstance(node, ast.Name) else self._resolved_assignment_value(node)
+
+    def _dangerous_submodule_access(self, node: ast.Attribute) -> str | None:
+        # Exact match (not prefix): the ``urllib.request`` node itself is visited
+        # within ``urllib.request.urlopen``, so matching exactly avoids double-flagging.
+        return next((name for name in sorted(self._resolved_dotted(node)) if name in DANGEROUS_SUBMODULES), None)
+
+    def visit_Name(self, node: ast.Name):
+        """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
+        if isinstance(node.ctx, ast.Load):
+            for resolved_name in self._resolved_names(node.id):
+                if resolved_name in DANGEROUS_SUBMODULES:
+                    self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
+                    break
+                if violation := next(
+                    (message for mod, attr, message in DANGEROUS_ATTRIBUTE_READS if resolved_name == f"{mod}.{attr}"),
+                    None,
+                ):
+                    self.violations.append(violation)
+                    break
+            if node.id in self.shadowed_aliases:
+                return self.generic_visit(node)
+            for mod in self.wildcard_modules:
+                if node.id in _DANGEROUS_READ_MEMBERS.get(mod, ()):
+                    self.violations.append(f"Use of '{node.id}' (via 'from {mod} import *') is forbidden in components")
+                    break
+        return self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call):
+        self._check_name_call(node)
+        self._check_attribute_call(node)
+        getattr_arguments_validated = self._check_getattr_access(node)
+        self._check_dunder_mapping_read(node)
+        self._check_namespace_mapping_method(node)
+        resolved_call_names = self._resolved_assignment_value(node.func)
+        self._check_numpy_pickle_load(node, resolved_call_names)
+        if resolved_call_names & _NUMPY_ARCHIVE_READER_CALLS:
+            self.saw_numpy_archive_reader = True
+        if {"type", "builtins.type", "__builtins__.type"} & resolved_call_names and (
+            len(node.args) == 1 or any(isinstance(argument, ast.Starred) for argument in node.args)
+        ):
+            self.saw_one_arg_type_call = True
+        if _SETATTR_CALLABLE_NAMES & resolved_call_names:
+            if any(isinstance(argument, ast.Starred) for argument in node.args) or any(
+                keyword.arg is None for keyword in node.keywords
+            ):
+                self.violations.append("Unpacked setattr() arguments are forbidden in components (sandbox escape)")
+            elif len(node.args) > 1:
+                attribute_name = self._static_name(node.args[1])
+                if attribute_name is None:
+                    self.violations.append(
+                        "Dynamic setattr() attribute names are forbidden in components (numpy pickle risk)"
+                    )
+                elif attribute_name == "allow_pickle":
+                    self.violations.append(
+                        "Assignment to numpy allow_pickle is forbidden — unsafe pickle deserialization"
+                    )
+        reflective_arguments_validated = self._check_restricted_reflection_access(node, resolved_call_names)
+        vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
+        if vars_names & resolved_call_names:
+            self.saw_vars_call = True
+            positional = _expand_static_arguments(node.args)
+            if positional and _NUMPY_ARCHIVE_RESULT in self._resolved_assignment_value(positional[0]):
+                self.violations.append(
+                    "Access to numpy archive reader internals through vars() is forbidden "
+                    "— unsafe pickle deserialization"
+                )
+        if vars_names & resolved_call_names and _static_positional_argument_count(node.args) != 1:
+            self.violations.append(
+                "Use of vars() without exactly one statically known positional argument is forbidden in components"
+            )
+        if not resolved_call_names:
+            # Calls through an unmodeled expression must not hide restricted
+            # modules or dangerous callables inside an inline container,
+            # boolean expression, named expression, or comprehension. Ordinary
+            # lambdas and safe callable expressions contain no such value and
+            # therefore remain allowed.
+            self._check_opaque_reference(node.func)
+        elif not isinstance(node.func, (ast.Name, ast.Attribute)):
+            for resolved_name in resolved_call_names:
+                if violation := self._dangerous_callable_message(resolved_name):
+                    self.violations.append(violation)
+                    break
+        # getattr is explicitly modeled below, including dynamic access to
+        # restricted modules. Passing the module as its first argument is not
+        # itself an opaque escape and safe members such as os.path must remain usable.
+        getattr_names = {"getattr", "builtins.getattr", "__builtins__.getattr"}
+        exempt_getattr_arguments = 2 if getattr_names & resolved_call_names and getattr_arguments_validated else 0
+        exempt_arguments = max(exempt_getattr_arguments, reflective_arguments_validated)
+        for argument in (*node.args[exempt_arguments:], *(keyword.value for keyword in node.keywords)):
+            self._check_opaque_reference(argument)
+        self.generic_visit(node)
+
+    def _check_numpy_pickle_load(self, node: ast.Call, resolved_call_names: frozenset[str]) -> None:
+        loader_names = resolved_call_names.intersection(_NUMPY_PICKLE_READER_ARG_INDEX)
+        if not loader_names:
+            return
+        positional = _expand_static_arguments(node.args)
+        keyword_value = next((keyword.value for keyword in node.keywords if keyword.arg == "allow_pickle"), None)
+        for loader_name in sorted(loader_names):
+            if positional is None or any(keyword.arg is None for keyword in node.keywords):
+                self.violations.append(
+                    f"{loader_name}() with dynamic arguments may enable unsafe pickle deserialization"
+                )
+                return
+            allow_pickle = keyword_value
+            allow_pickle_arg_index = _NUMPY_PICKLE_READER_ARG_INDEX[loader_name]
+            if allow_pickle is None and len(positional) > allow_pickle_arg_index:
+                allow_pickle = positional[allow_pickle_arg_index]
+            if allow_pickle is not None and not (
+                isinstance(allow_pickle, ast.Constant) and allow_pickle.value is False
+            ):
+                self.violations.append(
+                    f"{loader_name}() with allow_pickle enabled is forbidden — unsafe pickle deserialization"
+                )
+                return
+
+    def _check_name_call(self, node: ast.Call):
+        """Check bare-name calls: builtins (exec) and wildcard-imported members.
+
+        e.g. ``exec(...)`` and, after ``from os import *``, a bare ``dup2(...)``.
+        """
+        if not isinstance(node.func, ast.Name):
+            return
+        name = node.func.id
+        for resolved_name in self._resolved_names(name):
+            if violation := self._dangerous_callable_message(resolved_name):
+                self.violations.append(violation)
+                return
+        if name in self.shadowed_aliases:
+            return
+        for mod in self.wildcard_modules:
+            if name in _DANGEROUS_CALL_MEMBERS.get(mod, ()):
+                self.violations.append(f"Use of '{name}()' (via 'from {mod} import *') is forbidden in components")
+                return
+
+    def _check_attribute_call(self, node: ast.Call):
+        """Check attribute calls like os.system(), subprocess.run().
+
+        Resolves import aliases so ``import os as o; o.system()`` is caught.
+        """
+        if not isinstance(node.func, ast.Attribute):
+            return
+
+        for resolved_name in self._resolved_assignment_value(node.func):
+            if violation := self._dangerous_callable_message(resolved_name):
+                self.violations.append(violation)
+                return
+
+    def _check_namespace_mapping_method(self, node: ast.Call) -> None:
+        """Reject namespace methods that yield members without presenting a selector.
+
+        ``vars(X).values()`` / ``.items()`` hand out the descriptors directly, so
+        the dunder-key and dynamic-key rules never see a key. Only the modeled
+        methods are allowed on a namespace mapping.
+        """
+        if not isinstance(node.func, ast.Attribute) or node.func.attr in _NAMESPACE_MAPPING_METHODS:
+            return
+        receiver_names = self._resolved_assignment_value(node.func.value)
+        if any(name.endswith(".__dict__") for name in receiver_names):
+            self.violations.append(
+                f"Use of '{node.func.attr}()' on a namespace mapping (vars()/__dict__) is forbidden "
+                "in components (sandbox escape)"
+            )
+
+    def _check_dunder_mapping_read(self, node: ast.Call):
+        """Reject ``.get()``/``__getitem__()`` reads of dangerous dunder keys.
+
+        Mirrors the unconditional ``getattr`` dunder check: a dunder key is a
+        sandbox escape regardless of the receiver, because ``vars(X)`` yields
+        ``X.__dict__`` for any object — so ``vars(init).get("__globals__")``
+        must be blocked even when the receiver does not resolve to a
+        restricted module's mapping.
+        """
+        selectors: list[ast.AST] = []
+        function_names = self._resolved_assignment_value(node.func)
+        # A starred argument with no statically known size is treated like any
+        # other dynamic key; only expanded arguments expose a static selector.
+        arguments = _expand_static_arguments(node.args) or node.args
+        unbound_accessors = {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}
+        is_unbound = bool(function_names & unbound_accessors)
+        namespace_receiver = False
+        if is_unbound:
+            # Unbound form: ``dict.get(mapping, key)`` — the mapping is args[0]
+            # and the key args[1]. ``dict.get`` is itself an ``ast.Attribute``
+            # whose attr is "get", so this has to be settled before the bound
+            # form below, or the mapping gets read as the key.
+            if arguments[1:]:
+                selectors.append(arguments[1])
+            namespace_receiver = bool(
+                arguments and any(name.endswith(".__dict__") for name in self._resolved_assignment_value(arguments[0]))
+            )
+        elif isinstance(node.func, ast.Attribute) and node.func.attr in {"get", "__getitem__"} and arguments:
+            # Bound form: ``mapping.get(key)`` / ``mapping.__getitem__(key)``.
+            selectors.append(arguments[0])
+            namespace_receiver = any(
+                name.endswith(".__dict__") for name in self._resolved_assignment_value(node.func.value)
+            )
+        elif arguments and any(name.endswith((".__dict__.get", ".__dict__.__getitem__")) for name in function_names):
+            # Aliased bound accessor: ``lookup = vars(X).get; lookup(key)``.
+            selectors.append(arguments[0])
+            namespace_receiver = True
+        for selector in selectors:
+            member_name = self._static_name(selector)
+            if _is_blocked_attribute(member_name):
+                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+                break
+            if member_name is None and namespace_receiver:
+                self.violations.append(
+                    "Dynamic key access into a namespace mapping (vars()/__dict__) is forbidden in components "
+                    "(sandbox escape)"
+                )
+                break
+
+    def _check_restricted_reflection_access(self, node: ast.Call, function_names: frozenset[str]) -> int:
+        """Validate reflective access to restricted modules and return modeled positional arguments."""
+
+        def _restricted_names(value: ast.AST) -> frozenset[str]:
+            return frozenset(
+                name for name in self._resolved_assignment_value(value) if name in _RESTRICTED_MODULE_REFERENCES
+            )
+
+        def _restricted_mappings(value: ast.AST) -> frozenset[str]:
+            return frozenset(
+                name for name in self._resolved_assignment_value(value) if _is_restricted_module_reference(name)
+            )
+
+        def _validate_selector(selector: ast.AST, module_names: frozenset[str], operation: str) -> None:
+            member_name = self._static_name(selector)
+            if member_name is None:
+                self.violations.append(
+                    f"Dynamic {operation} access on module '{sorted(module_names)[0]}' is forbidden in components"
+                )
+            elif _is_blocked_attribute(member_name):
+                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+            else:
+                module_owners = {name.removesuffix(".__dict__") for name in module_names}
+                if violation := next(
+                    (
+                        message
+                        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                        if mod in module_owners and attr == member_name
+                    ),
+                    None,
+                ):
+                    self.violations.append(violation)
+
+        vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
+        if function_names & vars_names and len(node.args) == 1 and _restricted_names(node.args[0]):
+            return 1
+
+        object_getattribute_names = {
+            "object.__getattribute__",
+            "builtins.object.__getattribute__",
+            "__builtins__.object.__getattribute__",
+        }
+        if function_names & object_getattribute_names and node.args[1:]:
+            module_names = _restricted_names(node.args[0])
+            if module_names:
+                _validate_selector(node.args[1], module_names, "__getattribute__()")
+                return 2
+
+        for function_name in function_names:
+            receiver_name, separator, method_name = function_name.rpartition(".")
+            if not separator:
+                continue
+            if node.args and method_name == "__getattribute__" and receiver_name in _RESTRICTED_MODULE_REFERENCES:
+                _validate_selector(node.args[0], frozenset({receiver_name}), "__getattribute__()")
+                return 1
+            if node.args and method_name in {"get", "__getitem__"} and receiver_name.endswith(".__dict__"):
+                if _is_restricted_module_reference(receiver_name):
+                    _validate_selector(node.args[0], frozenset({receiver_name}), f"{method_name}()")
+                    return 1
+                # Every imported module's ``__dict__`` carries ``__builtins__``
+                # (and loader dunders), whether or not the module is on the
+                # restricted list, so a dunder key is rejected on any module
+                # mapping — mirroring visit_Subscript.
+                member_name = self._static_name(node.args[0])
+                if _is_blocked_attribute(member_name):
+                    self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+                    return 1
+            if _restricted_mapping_owner(receiver_name) is not None:
+                self.violations.append(
+                    f"Use of '{method_name}()' on restricted module mapping '{receiver_name}' is forbidden"
+                )
+                return 0
+
+        dict_access_names = {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}
+        if function_names & dict_access_names and node.args[1:]:
+            mapping_names = _restricted_mappings(node.args[0])
+            if mapping_names:
+                _validate_selector(node.args[1], mapping_names, "module mapping")
+                return 2
+            # Same dunder-key rule as above for non-restricted module mappings.
+            member_name = self._static_name(node.args[1])
+            if _is_blocked_attribute(member_name) and any(
+                name.endswith(".__dict__") for name in self._resolved_assignment_value(node.args[0])
+            ):
+                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+                return 2
+
+        return 0
+
+    def _check_getattr_access(self, node: ast.Call) -> bool:
+        """Check reflective access via ``getattr``.
+
+        ``getattr`` is common in legitimate components, so it stays allowed for
+        ordinary objects and safe module attributes when the attribute name is a
+        statically known, non-dunder string. A runtime-built attribute name is
+        rejected on ANY receiver: it can resolve to a sandbox-escape dunder
+        (``"__subclasses__".upper().lower()``, ``"".join([...])``, slicing) at
+        runtime, which the static-dunder guard cannot see, and a receiver that
+        is a literal container, a call result, or an untracked local (e.g.
+        ``getattr(getattr((), _c), _b)[0]``) leaves nothing to resolve. Fail
+        closed. Returns whether the object and attribute arguments were fully
+        validated here.
+        """
+        function_names = self._resolved_assignment_value(node.func)
+
+        if not ({"getattr", "builtins.getattr", "__builtins__.getattr"} & function_names and node.args):
+            return False
+        if any(isinstance(argument, ast.Starred) for argument in node.args) or any(
+            keyword.arg is None for keyword in node.keywords
+        ):
+            # ``getattr(*(f, "__globals__"))`` presents one starred argument, so
+            # ``node.args[1]`` does not exist and the attribute name is never
+            # validated. The unpacked sequence cannot be modeled, so fail closed.
+            self.violations.append("Unpacked getattr() arguments are forbidden in components (sandbox escape)")
+            return True
+        try:
+            attr_node = node.args[1]
+        except IndexError:
+            return False
+        attr_name = self._static_name(attr_node)
+        if _is_blocked_attribute(attr_name):
+            self.violations.append(f"Access to '{attr_name}' is forbidden in components (sandbox escape)")
+            return True
+
+        receiver = node.args[0]
+        if attr_name is None:
+            self.violations.append("Dynamic getattr() attribute names are forbidden in components (sandbox escape)")
+            return True
+        if not isinstance(receiver, (ast.Name, ast.Attribute)):
+            return False
+
+        module_names = self._resolved_receiver_names(receiver)
+        for receiver_name in module_names:
+            if violation := self._dangerous_callable_message(receiver_name):
+                self.violations.append(violation)
+                return True
+
+        if any(module_name in {"builtins", "__builtins__"} for module_name in module_names) and (
+            violation := DANGEROUS_CALLS.get(attr_name)
+        ):
+            self.violations.append(violation)
+            return True
+        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS:
+            if mod in module_names and attr_name == attr:
+                self.violations.append(message)
+                return True
+        for mod, method, message in DANGEROUS_ATTR_CALLS:
+            if mod in module_names and attr_name == method:
+                self.violations.append(message)
+                return True
+        return True
+
+
+def scan_code_security(code: str) -> SecurityScanResult:
+    """Scan generated code for security violations using AST analysis.
+
+    Security: This function MUST NOT execute the code.
+    All checks use AST parsing only.
+
+    Returns SecurityScanResult with is_safe=True if no violations found.
+    SyntaxError in code returns is_safe=True (syntax is validated by validation.py).
+    """
+    if not code or not code.strip():
+        return SecurityScanResult(is_safe=True)
+
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return SecurityScanResult(is_safe=True)
+
+    module_aliases, wildcard_modules = _collect_imports(tree)
+    checker = _SecurityChecker(module_aliases=module_aliases, wildcard_modules=wildcard_modules)
+    checker.visit(tree)
+
+    violations = list(checker.violations)
+    if checker.saw_numpy_archive_reader and checker.saw_vars_call:
+        violations.append("vars() is forbidden in code using numpy archive readers — unsafe pickle deserialization")
+    if checker.saw_numpy_archive_reader and checker.saw_one_arg_type_call:
+        violations.append("type() is forbidden in code using numpy archive readers — unsafe pickle deserialization")
+
+    # The AST checks look at what the code DOES; a slur baked into a prompt or a string literal
+    # is invisible to them, and this code is about to be saved into the user's flow.
+    content = check_content(code)
+    if not content.is_safe:
+        violations.append(f"{content.violation} in generated code")
+
+    return SecurityScanResult(
+        is_safe=len(violations) == 0,
+        violations=tuple(violations),
+    )

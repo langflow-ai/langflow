@@ -1,7 +1,7 @@
 import { uniqueId } from "lodash";
 import { create } from "zustand";
-import { AlertItemType } from "../types/alerts";
-import { AlertStoreType } from "../types/zustand/alert";
+import type { AlertItemType } from "../types/alerts";
+import type { AlertStoreType } from "../types/zustand/alert";
 import { customStringify } from "../utils/reactflowUtils";
 
 const useAlertStore = create<AlertStoreType>((set, get) => ({
@@ -56,24 +56,30 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
       get().addNotificationToTempList(notification);
     }
   },
-  setNoticeData: (newState: { title: string; link?: string }) => {
+  setNoticeData: (newState: {
+    title: string;
+    link?: string;
+    list?: Array<string>;
+  }) => {
     if (newState.title && newState.title !== "") {
       set({ noticeData: newState });
       const notification: Omit<AlertItemType, "id"> = {
         type: "notice",
         title: newState.title,
         link: newState.link,
+        list: newState.list,
       };
       get().addNotificationToHistory(notification);
       get().addNotificationToTempList(notification);
     }
   },
-  setSuccessData: (newState: { title: string }) => {
+  setSuccessData: (newState: { title: string; list?: Array<string> }) => {
     if (newState.title && newState.title !== "") {
       set({ successData: newState });
       const notification: Omit<AlertItemType, "id"> = {
         type: "success",
         title: newState.title,
+        list: newState.list,
       };
       get().addNotificationToHistory(notification);
       get().addNotificationToTempList(notification);

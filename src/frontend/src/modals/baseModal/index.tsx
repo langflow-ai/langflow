@@ -1,6 +1,8 @@
-import { ReactNode, useEffect } from "react";
-
-import React from "react";
+import { DialogClose } from "@radix-ui/react-dialog";
+import * as Form from "@radix-ui/react-form";
+import React, { type ReactNode, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,17 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../components/ui/dialog";
-
-import {
   Dialog as Modal,
-  DialogContent as ModalContent,
-} from "../../components/ui/dialog-with-no-close";
-
-import { DialogClose } from "@radix-ui/react-dialog";
-import * as Form from "@radix-ui/react-form";
-import { Button } from "../../components/ui/button";
-import { modalHeaderType } from "../../types/components";
+  DialogContentPlain as ModalContent,
+  VisuallyHidden,
+} from "../../components/ui/dialog";
+import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
 
@@ -35,6 +31,8 @@ type TriggerProps = {
   asChild?: boolean;
   disable?: boolean;
   className?: string;
+  ariaLabel?: string;
+  ariaPressed?: boolean;
 };
 
 const Content: React.FC<ContentProps> = ({
@@ -59,15 +57,41 @@ const Trigger: React.FC<TriggerProps> = ({
   asChild,
   disable,
   className,
+  ariaLabel,
+  ariaPressed,
 }) => {
+  const childCount = React.Children.count(children);
+  const isEmptyFragment =
+    React.isValidElement(children) &&
+    children.type === React.Fragment &&
+    React.Children.count(
+      // children.props is unknown by default; narrow with a type guard
+      (children.props as { children?: React.ReactNode }).children,
+    ) === 0;
+
+  // Only show the trigger as “visible” when there is usable child content
+  const hasUsableChild = childCount > 0 && !isEmptyFragment;
+
+  // Ensure a valid element for Radix asChild (fragments can't receive props)
+  const triggerChild =
+    hasUsableChild &&
+    React.isValidElement(children) &&
+    children.type !== React.Fragment ? (
+      children
+    ) : (
+      <span />
+    );
+
   return (
     <DialogTrigger
       className={asChild ? "" : cn("w-full", className)}
-      hidden={children ? false : true}
+      hidden={!hasUsableChild}
       disabled={disable}
       asChild={asChild}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
     >
-      {children}
+      {triggerChild}
     </DialogTrigger>
   );
 };
@@ -76,19 +100,33 @@ const Header: React.FC<{
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 }> = ({
   children,
   description,
   clampDescription,
+  className,
+  titleClassName,
+  descriptionClassName,
 }: modalHeaderType): JSX.Element => {
   return (
-    <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
+    <DialogHeader className={className}>
+      <DialogTitle
+        className={cn(
+          "line-clamp-1 flex items-center pb-0.5 text-base",
+          titleClassName,
+        )}
+      >
         {children}
       </DialogTitle>
       {description && (
         <DialogDescription
-          className={`line-clamp-${clampDescription ?? 2} text-sm`}
+          className={cn(
+            `line-clamp-${clampDescription ?? 2} text-sm`,
+            descriptionClassName,
+          )}
         >
           {description}
         </DialogDescription>
@@ -109,26 +147,30 @@ const Footer: React.FC<{
   };
   close?: boolean;
   centered?: boolean;
-}> = ({ children, submit, close, centered }) => {
+  className?: string;
+}> = ({ children, submit, close, centered, className }) => {
+  const { t } = useTranslation();
   return (
     <div
-      className={
+      className={cn(
         centered
           ? "flex flex-shrink-0 justify-center"
-          : "flex flex-shrink-0 flex-row-reverse"
-      }
+          : "flex flex-shrink-0 flex-row-reverse",
+        className,
+      )}
     >
       {submit ? (
         <div className="flex w-full items-center justify-between">
           {children ?? <div />}
-          <div className="flex items-center gap-3">
+          {/* p-2/-m-2 keeps layout unchanged while giving ring-offset-2 room to paint */}
+          <div className="-m-2 flex items-center gap-3 overflow-visible p-2">
             <DialogClose asChild>
               <Button
                 variant="outline"
                 type="button"
                 data-testid="btn-cancel-modal"
               >
-                Cancel
+                {t("modal.cancelButton")}
               </Button>
             </DialogClose>
             <Button
@@ -170,6 +212,7 @@ interface BaseModalProps {
   size?:
     | "notice"
     | "x-small"
+    | "x-small-h-full"
     | "retangular"
     | "smaller"
     | "small"
@@ -189,15 +232,25 @@ interface BaseModalProps {
     | "sm-thin"
     | "smaller-h-full"
     | "medium-log"
-    | "x-large";
+    | "x-large"
+    | "auth";
   className?: string;
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
   type?: "modal" | "dialog" | "full-screen";
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onOpenAutoFocus?: (e: Event) => void;
+  onCloseAutoFocus?: (e: Event) => void;
   closeButtonClassName?: string;
   dialogContentWithouFixed?: boolean;
+  height?: string;
+  width?: string;
+  /**
+   * Accessible name for modals that render no BaseModal.Header, and therefore
+   * no DialogTitle — required for type="full-screen", optional elsewhere.
+   */
+  ariaLabel?: string;
 }
 function BaseModal({
   className,
@@ -209,8 +262,13 @@ function BaseModal({
   type = "dialog",
   onSubmit,
   onEscapeKeyDown,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   closeButtonClassName,
   dialogContentWithouFixed = false,
+  height: customHeight,
+  width: customWidth,
+  ariaLabel,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -225,7 +283,28 @@ function BaseModal({
     (child) => (child as React.ReactElement).type === Footer,
   );
 
-  let { minWidth, height } = switchCaseModalSize(size);
+  const { minWidth, height } = switchCaseModalSize(size);
+
+  // Modals with no BaseModal.Header render no DialogTitle, so Radix warns and
+  // DialogContent injects its "Dialog" fallback. Name those from `ariaLabel`
+  // with a real hidden title instead. type="full-screen" is a plain div rather
+  // than a Radix dialog, so it keeps naming itself with the aria-label
+  // attribute — a DialogTitle outside a Dialog root would throw.
+  const hiddenTitle =
+    ariaLabel && !headerChild && type !== "full-screen" ? (
+      <VisuallyHidden>
+        <DialogTitle>{ariaLabel}</DialogTitle>
+      </VisuallyHidden>
+    ) : null;
+
+  // BaseModal.Header renders DialogTitle/Description inside its own component
+  // body, so DialogContent's child-tree scan cannot see them and would inject a
+  // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
+  // fallback whenever this component supplies a title of its own.
+  const hideTitleFallback = !!headerChild || !!hiddenTitle;
+  const hideDescriptionFallback =
+    React.isValidElement(headerChild) &&
+    !!(headerChild.props as { description?: unknown }).description;
 
   useEffect(() => {
     if (onChangeOpenModal) {
@@ -235,20 +314,26 @@ function BaseModal({
 
   const modalContent = (
     <>
+      {hiddenTitle}
       {headerChild && headerChild}
       {ContentChild}
       {ContentFooter && ContentFooter}
     </>
   );
 
+  const customStyle: React.CSSProperties = {
+    ...(customHeight ? { height: customHeight } : {}),
+    ...(customWidth ? { width: customWidth, minWidth: customWidth } : {}),
+  };
+
   const contentClasses = cn(
-    minWidth,
-    height,
+    !customWidth && minWidth,
+    !customHeight && height,
     "flex flex-col flex-1 overflow-hidden max-h-[98dvh]",
     className,
   );
 
-  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
+  const formClasses = "flex min-h-0 flex-col flex-1 gap-6";
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
@@ -256,10 +341,20 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={contentClasses}>{modalContent}</ModalContent>
+          <ModalContent
+            className={contentClasses}
+            style={customHeight || customWidth ? customStyle : undefined}
+          >
+            {modalContent}
+          </ModalContent>
         </Modal>
       ) : type === "full-screen" ? (
-        <div className="min-h-full w-full flex-1 overflow-hidden">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel ?? "Dialog"}
+          className="min-h-full w-full flex-1 overflow-hidden"
+        >
           {modalContent}
         </div>
       ) : (
@@ -268,10 +363,14 @@ function BaseModal({
           {dialogContentWithouFixed ? (
             <DialogContentWithouFixed
               onClick={(e) => e.stopPropagation()}
-              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
+              onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
+              style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root
@@ -290,10 +389,14 @@ function BaseModal({
           ) : (
             <DialogContent
               onClick={(e) => e.stopPropagation()}
-              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
+              onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
+              style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root

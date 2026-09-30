@@ -1,33 +1,25 @@
+import { useTranslation } from "react-i18next";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
+import "ace-builds/src-noconflict/theme-monokai";
+import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
-import ReactAce from "react-ace/lib/ace";
+import type ReactAce from "react-ace/lib/ace";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import {
-  BUG_ALERT,
-  CODE_ERROR_ALERT,
-  CODE_SUCCESS_ALERT,
-  FUNC_ERROR_ALERT,
-  IMPORT_ERROR_ALERT,
-} from "../../constants/alerts_constants";
-import {
-  CODE_PROMPT_DIALOG_SUBTITLE,
-  EDIT_CODE_TITLE,
-} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import { CodeErrorDataTypeAPI } from "../../types/api";
-import { codeAreaModalPropsType } from "../../types/components";
+import type { CodeErrorDataTypeAPI } from "../../types/api";
+import type { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
 
@@ -42,7 +34,14 @@ export default function CodeAreaModal({
   open: myOpen,
   setOpen: mySetOpen,
   componentId,
+  size = "x-large",
 }: codeAreaModalPropsType): JSX.Element {
+  const { t } = useTranslation();
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
+  const isBlocked = !allowCustomComponents;
+
   const [code, setCode] = useState(value);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -75,38 +74,37 @@ export default function CodeAreaModal({
       {
         onSuccess: (apiReturn) => {
           if (apiReturn) {
-            let importsErrors = apiReturn.imports.errors;
-            let funcErrors = apiReturn.function.errors;
+            const importsErrors = apiReturn.imports.errors;
+            const funcErrors = apiReturn.function.errors;
             if (funcErrors.length === 0 && importsErrors.length === 0) {
               setSuccessData({
-                title: CODE_SUCCESS_ALERT,
+                title: t("success.codeReady"),
               });
               setOpen(false);
               setValue(code);
-              // setValue(code);
             } else {
               if (funcErrors.length !== 0) {
                 setErrorData({
-                  title: FUNC_ERROR_ALERT,
+                  title: t("errors.function"),
                   list: funcErrors,
                 });
               }
               if (importsErrors.length !== 0) {
                 setErrorData({
-                  title: IMPORT_ERROR_ALERT,
+                  title: t("errors.imports"),
                   list: importsErrors,
                 });
               }
             }
           } else {
             setErrorData({
-              title: BUG_ALERT,
+              title: t("errors.generic"),
             });
           }
         },
         onError: (error) => {
           setErrorData({
-            title: CODE_ERROR_ALERT,
+            title: t("errors.code"),
             list: [error.response.data.detail],
           });
         },
@@ -118,10 +116,30 @@ export default function CodeAreaModal({
     validateComponentCode(
       { code, frontend_node: nodeClass! },
       {
-        onSuccess: ({ data, type }) => {
+        onSuccess: (response) => {
+          if (!response) return;
+          const { data, type } = response;
           if (data && type) {
             setValue(code);
-            setNodeClass(data, type);
+            try {
+              const merged = cloneDeep(data);
+              if (nodeClass?.template && merged?.template) {
+                for (const fieldName of Object.keys(merged.template)) {
+                  if (fieldName === "code") continue;
+                  const existing = nodeClass.template[fieldName];
+                  if (existing && Object.hasOwn(existing, "value")) {
+                    // Preserve the user's current value for this parameter
+                    merged.template[fieldName].value = existing.value;
+                  }
+                }
+              }
+
+              clearHandlesFromAdvancedFields(componentId!, merged);
+              setNodeClass(merged, type);
+            } catch {
+              clearHandlesFromAdvancedFields(componentId!, data);
+              setNodeClass(data, type);
+            }
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
           }
@@ -188,18 +206,18 @@ export default function CodeAreaModal({
       }}
       open={open}
       setOpen={setOpen}
-      size="x-large"
+      size={size as "x-large" | "large" | "medium" | "small"}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
-        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
+      <BaseModal.Header description={t("dialog.codePrompt")}>
+        <span className="pr-2"> {t("input.editCodeTitle")} </span>
         <IconComponent
           name="prompts"
           className="h-6 w-6 pl-1 text-primary"
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Content>
+      <BaseModal.Content overflowHidden={true}>
         <Input
           value={code}
           readOnly
@@ -210,7 +228,7 @@ export default function CodeAreaModal({
           <div className="h-full w-full">
             <AceEditor
               ref={codeRef}
-              readOnly={readonly}
+              readOnly={readonly || isBlocked}
               value={code}
               mode="python"
               setOptions={{ fontFamily: "monospace" }}
@@ -220,12 +238,14 @@ export default function CodeAreaModal({
               fontSize={14}
               showGutter
               enableLiveAutocompletion
-              theme={dark ? "twilight" : "github"}
+              theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
-                setCode(value);
+                if (!isBlocked) {
+                  setCode(value);
+                }
               }}
-              className="h-full min-w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
+              className="h-full min-w-full rounded-lg border-[1px] border-border custom-scroll"
             />
           </div>
           <div
@@ -249,15 +269,27 @@ export default function CodeAreaModal({
             </div>
           </div>
           <div className="flex h-fit w-full justify-end">
-            <Button
-              className="mt-3"
-              onClick={processCode}
-              type="submit"
-              id="checkAndSaveBtn"
-              disabled={readonly}
-            >
-              Check & Save
-            </Button>
+            {readonly ? (
+              <Button
+                className="mt-3"
+                onClick={() => setOpen(false)}
+                type="button"
+                data-testid="codeModalOkBtn"
+              >
+                {t("modal.secretKey.doneButton")}
+              </Button>
+            ) : (
+              <Button
+                className="mt-3"
+                onClick={processCode}
+                type="submit"
+                id="checkAndSaveBtn"
+                disabled={isBlocked}
+                data-testid="checkAndSaveBtn"
+              >
+                {t("modal.prompt.checkAndSave")}
+              </Button>
+            )}
           </div>
         </div>
         <ConfirmationModal
@@ -270,18 +302,18 @@ export default function CodeAreaModal({
           }}
           size="x-small"
           icon="AlertTriangle"
-          confirmationText="Check & Save"
-          cancelText="Discard Changes"
+          confirmationText={t("modal.prompt.checkAndSave")}
+          cancelText={t("modal.discardChanges")}
           open={openConfirmation}
           onCancel={() => setOpen(false)}
           onConfirm={() => {
             processCode();
             setOpenConfirmation(false);
           }}
-          title="Caution"
+          title={t("modal.caution")}
         >
           <ConfirmationModal.Content>
-            <p>Are you sure you want to exit without saving your changes?</p>
+            <p>{t("modal.exitWithoutSaving")}</p>
           </ConfirmationModal.Content>
         </ConfirmationModal>
       </BaseModal.Content>

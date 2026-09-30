@@ -1,0 +1,16 @@
+{
+  "description": "Starter project flows frozen at a specific Langflow release tag. These files must never be modified — they represent the exact flow state from that release and are used to verify that the upgrade machinery works on real-world flows.",
+  "sources": [
+    {
+      "tag": "v1.9.0",
+      "repo": "langflow-ai/langflow",
+      "source_dir": "src/backend/base/langflow/initial_setup/starter_projects",
+      "files": {
+        "basic_prompting.json": "Basic Prompting.json",
+        "meeting_summary.json": "Meeting Summary.json",
+        "research_agent.json": "Research Agent.json",
+        "sequential_tasks_agents.json": "Sequential Tasks Agents.json"
+      }
+    }
+  ]
+}

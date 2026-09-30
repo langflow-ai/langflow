@@ -1,17 +1,32 @@
+import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep, debounce } from "lodash";
+import { useCallback, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { DEBOUNCE_FIELD_LIST } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { AllNodeType } from "@/types/flow";
-import { useUpdateNodeInternals } from "@xyflow/react";
-import { cloneDeep, debounce } from "lodash";
-import { useCallback, useMemo, useRef } from "react";
+import type { APIClassType, InputFieldType } from "@/types/api";
+import type { AllNodeType } from "@/types/flow";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 const DEBOUNCE_TIME_1_SECOND = 1000;
+
+// Must match ALL_OPERATION_FIELDS in data_operations.py
+const DATA_OPERATIONS_OPERATION_FIELDS = [
+  "select_keys_input",
+  "filter_key",
+  "operator",
+  "filter_values",
+  "append_update_data",
+  "remove_keys_input",
+  "rename_keys_input",
+  "mapped_json_display",
+  "selected_key",
+  "query",
+];
 
 export type handleOnNewValueType = (
   changes: Partial<InputFieldType>,
@@ -35,6 +50,7 @@ const useHandleOnNewValue = ({
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
   ) => void;
 }) => {
+  const { t } = useTranslation();
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = setNodeExternal ?? useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -75,6 +91,7 @@ const useHandleOnNewValue = ({
     [nodeId, setNode, updateNodeInternals],
   );
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const debouncedMutateRef = useRef<any>(null);
 
   const handleOnNewValue: handleOnNewValueType = useCallback(
@@ -90,14 +107,14 @@ const useHandleOnNewValue = ({
       }
 
       if (!template) {
-        setErrorData({ title: "Template not found in the component" });
+        setErrorData({ title: t("errors.templateNotFound") });
         return;
       }
 
       const parameter = template[name];
 
       if (!parameter) {
-        setErrorData({ title: "Parameter not found in the template" });
+        setErrorData({ title: t("errors.parameterNotFound") });
         return;
       }
 
@@ -110,6 +127,25 @@ const useHandleOnNewValue = ({
       Object.entries(changes).forEach(([key, value]) => {
         if (value !== undefined) parameter[key] = value;
       });
+
+      // When Data Operations "operations" list is cleared, optimistically hide operation-specific fields
+      // so the UI updates immediately without waiting for the debounced API response
+      if (
+        name === "operations" &&
+        Array.isArray(changes.value) &&
+        changes.value.length === 0 &&
+        node.display_name === "Data Operations"
+      ) {
+        for (const field of DATA_OPERATIONS_OPERATION_FIELDS) {
+          if (
+            template[field] &&
+            typeof template[field] === "object" &&
+            "show" in template[field]
+          ) {
+            template[field].show = false;
+          }
+        }
+      }
 
       const shouldUpdate = parameter.real_time_refresh;
 

@@ -1,0 +1,34 @@
+schema_version: 1
+release: 1.9.x
+
+entries:
+
+- id: GH-12591
+  title: Loop component fails with vector database components inside the loop
+  status: resolved
+  area: components
+  first_bad_version: 1.8.x
+  last_known_good_version: 1.7.3
+  resolved_in_version: 1.10.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12877
+  workaround: none
+
+- id: GH-12731
+  title: Shareable Playground strips spaces from text input
+  status: resolved
+  area: flow_editor
+  first_bad_version: 1.9.0
+  last_known_good_version: 1.8.4
+  resolved_in_version: 1.9.1
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12833
+  workaround: none
+
+- id: GH-12732
+  title: Deleting a flow fails on PostgreSQL when tracing data exists
+  status: resolved
+  area: database
+  first_bad_version: 1.9.0
+  last_known_good_version: unknown
+  resolved_in_version: 1.8.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12242
+  workaround: Duplicate of an issue originally fixed in 1.8.2.

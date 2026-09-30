@@ -1,6 +1,12 @@
-import { expect, test } from "@playwright/test";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "sticky-notes");
+});
 
 test(
   "user should be able to interact with sticky notes",
@@ -33,27 +39,16 @@ Despite its many benefits, AI also raises important ethical and societal questio
 
 The future of AI is both exciting and uncertain. As the technology continues to advance, it will undoubtedly bring about profound changes in society. The challenge will be to harness AI's potential for good while addressing the ethical and societal issues that arise. Whether it's through smarter healthcare, more efficient transportation, or enhanced creativity, AI has the potential to reshape the world in ways we are only beginning to imagine. The journey of AI is far from over, and its impact will be felt for generations to come.
   `;
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
-    await page.getByTestId("add_note").click();
+    await openBlankFlow(page);
+    await page.getByTestId("canvas-add-note-button").click();
 
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
 
     await page.mouse.up();
     await page.mouse.down();
+    await adjustScreenView(page, { numberOfZoomOut: 6 });
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await zoomOut(page, 6);
     await page.getByTestId("note_node").click();
 
     await page.locator(".generic-node-desc-text").last().dblclick();
@@ -119,8 +114,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.getByTestId("more-options-modal").click();
 
     await page.getByText("Copy").click();
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     //double click
     await targetElement.click();
@@ -132,7 +126,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.getByTestId("note_node").last().click();
     await page.getByTestId("more-options-modal").click();
-    await page.getByText("Delete").first().click();
+    await page.getByText(TEXTS.delete).first().click();
 
     titleNumber = await page.getByText(randomTitle).count();
 

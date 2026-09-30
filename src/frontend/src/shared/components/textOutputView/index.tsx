@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Textarea } from "../../../components/ui/textarea";
 
 const TextOutputView = ({
@@ -5,8 +6,10 @@ const TextOutputView = ({
   value,
 }: {
   left: boolean | undefined;
+  // biome-ignore lint/suspicious/noExplicitAny: polymorphic output value (string | object | ...) rendered as text
   value: any;
 }) => {
+  const { t } = useTranslation();
   if (typeof value === "object" && Object.keys(value).includes("text")) {
     value = value.text;
   }
@@ -17,10 +20,9 @@ const TextOutputView = ({
     <>
       {" "}
       <Textarea
-        className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"}`}
-        placeholder={"Empty"}
+        className={`w-full resize-none custom-scroll ${left ? "min-h-32" : "h-full"}`}
+        placeholder={t("common.empty")}
         readOnly
-        // update to real value on flowPool
         value={value}
       />
       {isTruncated && (

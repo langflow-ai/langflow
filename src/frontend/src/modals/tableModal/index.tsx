@@ -1,10 +1,11 @@
+import type { AgGridReact } from "ag-grid-react";
+import { type ForwardedRef, forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent, {
-  TableComponentProps,
+  type TableComponentProps,
 } from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { TableOptionsTypeAPI } from "@/types/api";
-import { AgGridReact } from "ag-grid-react";
-import { ForwardedRef, forwardRef } from "react";
+import type { TableOptionsTypeAPI } from "@/types/api";
 import BaseModal from "../baseModal";
 
 interface TableModalProps extends TableComponentProps {
@@ -37,6 +38,7 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
     }: TableModalProps,
     ref: ForwardedRef<AgGridReact>,
   ) => {
+    const { t } = useTranslation();
     const handleSetOpen = (newOpen: boolean) => {
       if (!newOpen && onCancel) {
         onCancel();
@@ -81,11 +83,16 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
           <TableComponent
             className="h-full w-full"
             ref={ref}
+            tableLabel={tableTitle}
             {...props}
           ></TableComponent>
         </BaseModal.Content>
         <BaseModal.Footer
-          submit={onSave ? { label: "Save", onClick: onSave } : undefined}
+          submit={
+            onSave
+              ? { label: t("tableModal.save"), onClick: onSave }
+              : undefined
+          }
         ></BaseModal.Footer>
       </BaseModal>
     );

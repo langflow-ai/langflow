@@ -1,0 +1,603 @@
+"""Unit tests for CORS security configuration."""
+
+import os
+import tempfile
+import warnings
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from fastapi import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from lfx.services.settings.base import Settings
+
+
+class TestCORSConfiguration:
+    """Test CORS configuration and security validations."""
+
+    def test_default_cors_settings_current_behavior(self):
+        """Test current CORS settings behavior (warns about security implications)."""
+        with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
+            settings = Settings()
+
+            # Current behavior: wildcard origins with credentials ENABLED (insecure).
+            # pydantic-settings normalizes the env var "*" differently across Python
+            # versions (Python 3.13 -> "*", Python 3.14+ -> ["*"]). Both shapes mean
+            # "all origins" semantically; the test must accept either to stay
+            # cross-version stable.
+            assert settings.cors_origins in ("*", ["*"])
+            assert settings.cors_allow_credentials is True  # Currently defaults to True (insecure)
+            assert settings.cors_allow_methods == "*"
+            assert settings.cors_allow_headers == "*"
+
+            # Warn about CRITICAL security implications
+            warnings.warn(
+                "CRITICAL SECURITY WARNING: Current CORS configuration uses wildcard origins (*) "
+                "WITH CREDENTIALS ENABLED! This allows any website to make authenticated requests "
+                "to your Langflow instance and potentially steal user credentials. "
+                "This will be changed to more secure defaults in v1.7. "
+                "Please configure LANGFLOW_CORS_ORIGINS with specific domains for production use.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    @pytest.mark.skip(reason="Uncomment in v1.7 - represents future secure behavior")
+    def test_default_cors_settings_secure_future(self):
+        """Test future default CORS settings that will be secure (skip until v1.7)."""
+        # This test represents the behavior we want in v1.7
+        # with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
+        #     settings = Settings()
+        #     # Future secure defaults:
+        #     assert settings.cors_origins == ["http://localhost:3000", "http://127.0.0.1:3000"]
+        #     assert settings.cors_allow_credentials is True
+        #     assert settings.cors_allow_methods == ["GET", "POST", "PUT", "DELETE"]
+        #     assert settings.cors_allow_headers == ["Content-Type", "Authorization"]
+
+    def test_cors_origins_string_to_list_conversion(self):
+        """Test comma-separated origins are converted to list."""
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "https://app1.example.com,https://app2.example.com",
+                },
+            ),
+        ):
+            settings = Settings()
+            assert settings.cors_origins == ["https://app1.example.com", "https://app2.example.com"]
+
+    def test_single_origin_converted_to_list(self):
+        """Test single origin is converted to list for consistency."""
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "https://app.example.com",
+                },
+            ),
+        ):
+            settings = Settings()
+            assert settings.cors_origins == ["https://app.example.com"]
+
+    def test_wildcard_with_credentials_allowed_current_behavior(self):
+        """Test that credentials are NOT disabled when using wildcard origins (current insecure behavior)."""
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "*",
+                    "LANGFLOW_CORS_ALLOW_CREDENTIALS": "true",
+                },
+            ),
+        ):
+            settings = Settings()
+            # pydantic-settings parses LANGFLOW_CORS_ORIGINS="*" as the raw string
+            # on Python 3.13 and as ["*"] on Python 3.14+ (the str | list[str] union
+            # resolves differently across versions). Accept either; both represent
+            # the same "all origins" semantic.
+            assert settings.cors_origins in ("*", ["*"])
+            # Current behavior: credentials are NOT prevented (INSECURE!)
+            assert settings.cors_allow_credentials is True
+
+            # Warn about the CRITICAL security implications
+            warnings.warn(
+                "CRITICAL SECURITY WARNING: Wildcard CORS origins (*) WITH CREDENTIALS ENABLED! "
+                "This is a severe security vulnerability that allows any website to make "
+                "authenticated requests and potentially steal user credentials. "
+                "This MUST be fixed in production! Configure specific origins immediately.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    def test_specific_origins_allow_credentials(self):
+        """Test that credentials work with specific origins."""
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "https://app.example.com",
+                    "LANGFLOW_CORS_ALLOW_CREDENTIALS": "true",
+                },
+            ),
+        ):
+            settings = Settings()
+            assert settings.cors_origins == ["https://app.example.com"]
+            assert settings.cors_allow_credentials is True
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    def test_cors_middleware_configuration(self, mock_get_settings, mock_add_sentry_middleware):
+        """Test that CORS middleware is configured correctly in the app."""
+        from langflow.main import create_app
+
+        # Mock settings
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = ["https://app.example.com"]
+        mock_settings.settings.cors_allow_credentials = True
+        mock_settings.settings.cors_allow_methods = ["GET", "POST"]
+        mock_settings.settings.cors_allow_headers = ["Content-Type"]
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        # Create app
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        # Find CORS middleware
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_origins"] == ["https://app.example.com"]
+        assert cors_middleware.kwargs["allow_credentials"] is True
+        assert cors_middleware.kwargs["allow_methods"] == ["GET", "POST"]
+        assert cors_middleware.kwargs["allow_headers"] == ["Content-Type"]
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    @patch("langflow.main.logger")
+    def test_cors_wildcard_credentials_disabled_at_middleware(
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
+    ):
+        """Wildcard CORS origins must NOT be paired with credentials at the middleware.
+
+        Even though the setting defaults to credentials=True, a wildcard origin makes
+        the credentialed-CORS combination unsafe (and invalid per the spec), so the
+        middleware must be configured with allow_credentials=False.
+        """
+        from langflow.main import create_app
+
+        # Mock settings with the insecure wildcard + credentials combination.
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = "*"
+        mock_settings.settings.cors_allow_credentials = True  # Gets disabled for security
+        mock_settings.settings.cors_allow_methods = "*"
+        mock_settings.settings.cors_allow_headers = "*"
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        # Create app
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        # The permissive-defaults warning still fires (the setting is unchanged).
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        assert any("CORS" in str(call) and "permissive" in str(call) for call in warning_calls), (
+            f"Expected CORS security warning but got: {warning_calls}"
+        )
+
+        # Find CORS middleware and verify credentials were force-disabled for the wildcard.
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_origins"] == "*"
+        assert cors_middleware.kwargs["allow_credentials"] is False  # wildcard => credentials disabled
+
+        # The override must be surfaced so an operator who set credentials on purpose
+        # can see why credentialed requests stopped working.
+        assert any(
+            "CORS" in str(call) and "wildcard" in str(call) and "credentials" in str(call) for call in warning_calls
+        ), f"Expected a wildcard-credentials override warning but got: {warning_calls}"
+
+    @pytest.mark.parametrize(
+        ("origins", "expected"),
+        [
+            ("*", True),
+            (["*"], True),
+            (["https://app.example.com", "*"], True),
+            ("https://app.example.com", False),
+            (["https://app.example.com"], False),
+            (["https://a.example.com", "https://b.example.com"], False),
+            ([], False),
+        ],
+    )
+    def test_cors_origins_contain_wildcard(self, origins, expected):
+        """The shared wildcard predicate detects every wildcard origin shape."""
+        from langflow.main import cors_origins_contain_wildcard
+
+        assert cors_origins_contain_wildcard(origins) is expected
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    @patch("langflow.main.logger")
+    def test_cors_list_wildcard_credentials_disabled_and_warned(
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
+    ):
+        """A wildcard mixed into a list of specific origins must still disable credentials and warn.
+
+        This is the gap the string-only check missed: ``LANGFLOW_CORS_ORIGINS="https://app.com,*"``
+        parses to ``["https://app.com", "*"]``. Credentials must be force-disabled, and both the
+        permissive-defaults warning and the explicit override warning must fire so the operator is
+        not left guessing why credentialed requests stopped working.
+        """
+        from langflow.main import create_app
+
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = ["https://app.example.com", "*"]
+        mock_settings.settings.cors_allow_credentials = True  # Gets disabled for security
+        mock_settings.settings.cors_allow_methods = "*"
+        mock_settings.settings.cors_allow_headers = "*"
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        # The shared predicate now makes the permissive-defaults warning fire for list-form wildcards.
+        assert any("CORS" in str(call) and "permissive" in str(call) for call in warning_calls), (
+            f"Expected CORS permissive-defaults warning but got: {warning_calls}"
+        )
+        # And the explicit override warning points at the wildcard as the cause.
+        assert any(
+            "CORS" in str(call) and "wildcard" in str(call) and "credentials" in str(call) for call in warning_calls
+        ), f"Expected a wildcard-credentials override warning but got: {warning_calls}"
+
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_origins"] == ["https://app.example.com", "*"]
+        assert cors_middleware.kwargs["allow_credentials"] is False  # wildcard in list => credentials disabled
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    @patch("langflow.main.logger")
+    def test_cors_wildcard_without_credentials_no_override_warning(
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
+    ):
+        """When credentials are already off, a wildcard origin must not log a spurious override warning.
+
+        The override warning is only meaningful when we actually flip ``allow_credentials`` from True
+        to False; otherwise there is nothing to surface.
+        """
+        from langflow.main import create_app
+
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = "*"
+        mock_settings.settings.cors_allow_credentials = False  # already disabled by the operator
+        mock_settings.settings.cors_allow_methods = "*"
+        mock_settings.settings.cors_allow_headers = "*"
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        # No credentials => no permissive-defaults warning and no override warning.
+        assert not any("permissive" in str(call) for call in warning_calls), (
+            f"Did not expect a permissive-defaults warning but got: {warning_calls}"
+        )
+        assert not any("disabling credentials" in str(call) for call in warning_calls), (
+            f"Did not expect a wildcard-credentials override warning but got: {warning_calls}"
+        )
+
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_credentials"] is False
+
+
+class TestRefreshTokenSecurity:
+    """Test refresh token security improvements."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="Token type validation not implemented - security enhancement for future")
+    async def test_refresh_token_type_validation(self):
+        """Test that refresh token validates token type.
+
+        NOTE: Currently the code doesn't validate that the token type is 'refresh'.
+        It only checks if the token_type is empty. This should be enhanced.
+        """
+        from langflow.services.deps import get_auth_service
+
+        mock_db = MagicMock()
+
+        with patch("langflow.services.auth.utils.jwt.decode") as mock_decode:
+            # Test with wrong token type - use a valid UUID string
+            mock_decode.return_value = {"sub": "123e4567-e89b-12d3-a456-426614174000", "type": "access"}  # Wrong type
+
+            with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
+                mock_settings.return_value.auth_settings.SECRET_KEY.get_secret_value.return_value = "secret"
+                mock_settings.return_value.auth_settings.ALGORITHM = "HS256"
+                mock_settings.return_value.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS = 3600
+                mock_settings.return_value.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS = 86400
+
+                # This SHOULD raise an exception for wrong token type, but currently doesn't
+                with pytest.raises(HTTPException) as exc_info:
+                    await get_auth_service().create_refresh_token("fake-token", mock_db)
+
+                assert exc_info.value.status_code == 401
+                assert "Invalid refresh token" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="User activity check not implemented yet - security enhancement for future")
+    async def test_refresh_token_user_active_check(self):
+        """Test that inactive users cannot refresh tokens.
+
+        NOTE: This is a security enhancement that should be implemented.
+        Currently, the system does not check if a user is active when refreshing tokens.
+        """
+        from langflow.services.deps import get_auth_service
+
+        mock_db = MagicMock()
+        mock_user = MagicMock()
+        mock_user.is_active = False  # Inactive user
+
+        with patch("langflow.services.auth.utils.jwt.decode") as mock_decode:
+            mock_decode.return_value = {"sub": "user-123", "type": "refresh"}  # Correct type
+
+            with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
+                mock_settings.return_value.auth_settings.SECRET_KEY.get_secret_value.return_value = "secret"
+                mock_settings.return_value.auth_settings.ALGORITHM = "HS256"
+                mock_settings.return_value.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS = 3600  # 1 hour
+                mock_settings.return_value.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS = 86400  # 1 day
+
+                with patch("langflow.services.auth.utils.get_user_by_id") as mock_get_user:
+                    mock_get_user.return_value = mock_user
+
+                    # This SHOULD raise an exception for inactive users, but currently doesn't
+                    with pytest.raises(HTTPException) as exc_info:
+                        await get_auth_service().create_refresh_token("fake-token", mock_db)
+
+                    assert exc_info.value.status_code == 401
+                    assert "inactive" in str(exc_info.value.detail).lower()
+
+    @pytest.mark.asyncio
+    async def test_refresh_token_valid_flow(self):
+        """Test that valid refresh tokens work correctly."""
+        from uuid import uuid4
+
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import create_refresh_token
+
+        mock_db = AsyncMock()
+        mock_user = MagicMock()
+        mock_user.is_active = True  # Active user
+        user_id = uuid4()
+        mock_user.id = user_id
+
+        # Create a langflow AuthService instance (not lfx) with mocked settings
+        mock_settings_service = MagicMock()
+        auth_service = AuthService(mock_settings_service)
+
+        with (
+            patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+            patch("langflow.services.auth.service.jwt.decode") as mock_decode,
+        ):
+            mock_decode.return_value = {"sub": str(user_id), "type": "refresh"}  # Correct type
+
+            with patch("langflow.services.auth.utils.get_jwt_verification_key") as mock_verification_key:
+                mock_verification_key.return_value = "secret"
+
+                with patch("langflow.services.auth.service.get_user_by_id", new_callable=AsyncMock) as mock_get_user:
+                    mock_get_user.return_value = mock_user
+
+                    with patch.object(auth_service, "create_user_tokens", new_callable=AsyncMock) as mock_create_tokens:
+                        expected_access = "new-access-token"
+                        expected_refresh = "new-refresh-token"
+                        mock_create_tokens.return_value = {
+                            "access_token": expected_access,
+                            "refresh_token": expected_refresh,
+                        }
+
+                        result = await create_refresh_token("fake-token", mock_db)
+
+                        assert result["access_token"] == expected_access
+                        assert result["refresh_token"] == expected_refresh
+                        # user_id is converted to string in JWT payload, then back to UUID in service
+                        mock_create_tokens.assert_called_once_with(str(user_id), mock_db)
+
+    def test_refresh_cookie_defaults_support_same_site_http(self):
+        """Refresh cookies use the same safe, HTTP-compatible defaults as access cookies."""
+        from lfx.services.settings.auth import AuthSettings
+
+        with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
+            auth_settings = AuthSettings(CONFIG_DIR=temp_dir)
+            assert auth_settings.REFRESH_SAME_SITE == "lax"
+            assert auth_settings.REFRESH_SECURE is False
+            assert auth_settings.ACCESS_SAME_SITE == "lax"
+            assert auth_settings.ACCESS_SECURE is False
+            assert auth_settings.ACCESS_HTTPONLY is True
+
+    def test_refresh_cookie_cross_site_https_can_be_enabled(self):
+        """Operators can retain cross-site HTTPS refresh cookies explicitly."""
+        from lfx.services.settings.auth import AuthSettings
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            auth_settings = AuthSettings(
+                CONFIG_DIR=temp_dir,
+                REFRESH_SAME_SITE="none",
+                REFRESH_SECURE=True,
+            )
+            assert auth_settings.REFRESH_SAME_SITE == "none"
+            assert auth_settings.REFRESH_SECURE is True
+
+
+class TestCORSIntegration:
+    """Integration tests for CORS with actual HTTP requests."""
+
+    @pytest.mark.asyncio
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    async def test_cors_headers_in_response_current_behavior(self, mock_add_sentry_middleware):
+        """Test that CORS headers are properly set in responses (current behavior)."""
+        from fastapi.testclient import TestClient
+
+        with patch("langflow.main.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.cors_origins = ["https://app.example.com"]
+            mock_settings.settings.cors_allow_credentials = True
+            mock_settings.settings.cors_allow_methods = "*"
+            mock_settings.settings.cors_allow_headers = "*"
+            mock_settings.settings.prometheus_enabled = False
+            mock_settings.settings.mcp_server_enabled = False
+            mock_settings.settings.sentry_dsn = None  # Disable Sentry
+            mock_settings.settings.root_path = ""
+            mock_get_settings.return_value = mock_settings
+
+            from langflow.main import create_app
+
+            mock_add_sentry_middleware.return_value = None  # Use the mock
+            app = create_app()
+            client = TestClient(app)
+
+            # Make OPTIONS request (CORS preflight)
+            response = client.options(
+                "/api/v1/version",
+                headers={
+                    "Origin": "https://app.example.com",
+                    "Access-Control-Request-Method": "GET",
+                },
+            )
+
+            assert response.status_code == 200
+            assert response.headers.get("access-control-allow-origin") == "https://app.example.com"
+            assert response.headers.get("access-control-allow-credentials") == "true"
+
+            # Warn that this is testing current behavior
+            warnings.warn(
+                "This test validates current CORS behavior. In v1.7, default origins will be more restrictive.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    @pytest.mark.skip(reason="Uncomment in v1.7 - represents future secure CORS blocking behavior")
+    async def test_cors_blocks_unauthorized_origin_future_secure(self):
+        """Test that future secure CORS configuration blocks unauthorized origins (skip until v1.7)."""
+        # This test represents the behavior we want in v1.7 with secure defaults
+
+    @pytest.mark.asyncio
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    async def test_cors_blocks_unauthorized_origin_current_behavior(self, mock_add_sentry_middleware):
+        """Test that CORS blocks requests from unauthorized origins."""
+        from fastapi.testclient import TestClient
+
+        with patch("langflow.main.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.cors_origins = ["https://app.example.com"]
+            mock_settings.settings.cors_allow_credentials = True
+            mock_settings.settings.cors_allow_methods = "*"
+            mock_settings.settings.cors_allow_headers = "*"
+            mock_settings.settings.prometheus_enabled = False
+            mock_settings.settings.mcp_server_enabled = False
+            mock_settings.settings.sentry_dsn = None  # Disable Sentry
+            mock_settings.settings.root_path = ""
+            mock_get_settings.return_value = mock_settings
+
+            from langflow.main import create_app
+
+            mock_add_sentry_middleware.return_value = None  # Use the mock
+            app = create_app()
+            client = TestClient(app)
+
+            # Make OPTIONS request from unauthorized origin
+            response = client.options(
+                "/api/v1/version",
+                headers={
+                    "Origin": "https://evil.com",
+                    "Access-Control-Request-Method": "GET",
+                },
+            )
+
+            assert response.status_code == 400  # CORS will block this
+
+            # Warn about current behavior implications
+            warnings.warn(
+                "This test shows current CORS behavior with specific origins. "
+                "Note that current default behavior uses wildcard origins (*) which would NOT block this. "
+                "In v1.7, secure defaults will be implemented to prevent unauthorized origins.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+
+class TestFutureSecureCORSBehavior:
+    """Tests for future secure CORS behavior in v1.7 - currently skipped."""
+
+    @pytest.mark.skip(reason="Uncomment in v1.7 - represents future secure default CORS configuration")
+    def test_future_secure_defaults(self):
+        """Test that v1.7 will have secure CORS defaults."""
+        # Future secure behavior (uncomment in v1.7):
+        # with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
+        #     settings = Settings()
+        #     # v1.7 secure defaults:
+        #     assert settings.cors_origins == ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:7860"]
+        #     assert settings.cors_allow_credentials is True  # Safe with specific origins
+        #     assert settings.cors_allow_methods == ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        #     assert settings.cors_allow_headers == ["Content-Type", "Authorization", "X-Requested-With"]
+
+    @pytest.mark.skip(reason="Uncomment in v1.7 - represents future secure wildcard rejection")
+    def test_future_wildcard_rejection(self):
+        """Test that v1.7 will warn about or reject wildcard origins in production."""
+        # Future behavior (uncomment in v1.7):
+        # with (
+        #     tempfile.TemporaryDirectory() as temp_dir,
+        #     patch.dict(
+        #         os.environ,
+        #         {
+        #             "LANGFLOW_CONFIG_DIR": temp_dir,
+        #             "LANGFLOW_CORS_ORIGINS": "*",
+        #         },
+        #     ),
+        # ):
+        #     # Should either warn strongly or reject wildcard in production mode
+        #     with pytest.warns(UserWarning, match="SECURITY WARNING.*wildcard.*production"):
+        #         settings = Settings()
+        #         # Or potentially: pytest.raises(ValueError, match="Wildcard origins not allowed in production")
+
+    @pytest.mark.skip(reason="Uncomment in v1.7 - represents future secure middleware configuration")
+    async def test_future_secure_middleware_config(self):
+        """Test that v1.7 middleware will use secure defaults."""
+        # Future secure middleware behavior (uncomment in v1.7):
+        # Test that the app creates middleware with secure defaults
+        # and properly validates origins in production mode

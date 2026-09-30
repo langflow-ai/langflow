@@ -1,103 +1,173 @@
+import type { ColDef } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { cloneDeep } from "lodash";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APITemplateType } from "@/types/api";
-import { parseString } from "@/utils/stringManipulation";
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
+import { RequiresApprovalToggle } from "./RequiresApprovalToggle";
 
 export default function ToolsTable({
   rows,
   data,
   setData,
   isAction,
+  placeholder,
   open,
   handleOnNewValue,
 }: {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   rows: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   setData: (data: any[]) => void;
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
   isAction: boolean;
+  placeholder: string;
 }) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
   const agGrid = useRef<AgGridReact>(null);
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [focusedRow, setFocusedRow] = useState<any | null>(null);
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
 
+  const editedSelection = useRef<boolean>(false);
+  const applyingSelection = useRef<boolean>(false);
+  const previousRowsCount = useRef<number>(0);
+  const skipSelectionReapply = useRef<number>(0);
+  const [isGridReady, setIsGridReady] = useState(false);
+
+  // The approval toggle persists through a deferred callback that may have
+  // been created a render ago; keep the latest data reachable from it.
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
-    return (params: any) => params.data.display_name ?? params.data.name;
+    return (params: {
+      data: { _uniqueId?: string; name?: string; display_name?: string };
+    }) =>
+      params.data._uniqueId ||
+      `${params.data.name}_${params.data.display_name}`;
   }, []);
 
   useEffect(() => {
-    const initialData = cloneDeep(rows);
+    if (!open) {
+      setIsGridReady(false);
+      return;
+    }
+    previousRowsCount.current = rows.length;
+    const initialData = cloneDeep(rows).map((row, index) => ({
+      ...row,
+      _uniqueId: `${row.name}_${row.display_name}_${index}`,
+    }));
     setData(initialData);
     const filter = initialData.filter((row) => row.status === true);
     setSelectedRows(filter);
-  }, [rows, open]);
+    editedSelection.current = false;
+  }, [open]);
 
   useEffect(() => {
-    const initialData = cloneDeep(rows);
-    const filter = initialData.filter((row) => row.status === true);
-    if (agGrid.current) {
-      agGrid.current?.api?.forEachNode((node) => {
-        if (
-          filter.some(
-            (row) =>
-              (row.display_name ?? row.name) ===
-              (node.data.display_name ?? node.data.name),
-          )
-        ) {
-          node.setSelected(true);
-        } else {
-          node.setSelected(false);
-        }
-      });
+    if (!open || !selectedRows) return;
+    if (previousRowsCount.current === rows.length) return;
+
+    previousRowsCount.current = rows.length;
+    const updatedData = cloneDeep(rows).map((row, index) => ({
+      ...row,
+      _uniqueId: `${row.name}_${row.display_name}_${index}`,
+    }));
+
+    // Increment skip counter to prevent re-applying selection
+    skipSelectionReapply.current++;
+
+    setData(updatedData);
+
+    const updatedSelection = updatedData.filter((row) =>
+      selectedRows.some((selected) => selected.name === row.name),
+    );
+    setSelectedRows(updatedSelection);
+  }, [rows]);
+
+  useEffect(() => {
+    if (!agGrid.current?.api || !selectedRows || !open || !isGridReady) return;
+
+    // Don't re-apply selection if we're just editing data fields (slug/description)
+    if (skipSelectionReapply.current > 0) {
+      skipSelectionReapply.current--;
+      return;
     }
-  }, [agGrid.current]);
+
+    applyingSelection.current = true;
+    agGrid.current.api.setGridOption("suppressRowClickSelection", true);
+
+    const selectedIds = new Set(selectedRows.map((row) => row.name));
+    agGrid.current.api.forEachNode((node) => {
+      const shouldSelect = selectedIds.has(node.data.name);
+      if (node.isSelected() !== shouldSelect) {
+        node.setSelected(shouldSelect, false);
+      }
+    });
+
+    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
+    setTimeout(() => {
+      applyingSelection.current = false;
+    }, 50);
+  }, [selectedRows, open, isGridReady]);
 
   useEffect(() => {
-    if (!open && selectedRows) {
+    if (!open) {
       handleOnNewValue({
         value: data.map((row) => {
+          const name = parseString(row.name, [
+            "snake_case",
+            "no_blank",
+            "lowercase",
+          ]);
+          const display_name = parseString(row.display_name, [
+            "snake_case",
+            "no_blank",
+            "lowercase",
+          ]);
           const processedValue = (
-            row.name !== ""
-              ? parseString(row.name, ["snake_case", "no_blank", "lowercase"])
-              : parseString(row.display_name, [
-                  "snake_case",
-                  "no_blank",
-                  "lowercase",
-                ])
+            name !== "" && name !== display_name
+              ? name
+              : isAction
+                ? sanitizeMcpName(display_name || row.name, 46)
+                : display_name
           ).slice(0, 46);
 
           const processedDescription =
-            row.description !== "" ? row.description : row.display_description;
+            row.description !== "" &&
+            row.description !== row.display_description
+              ? row.description
+              : isAction
+                ? ""
+                : row.display_description;
 
-          return selectedRows?.some(
-            (selected) =>
-              (selected.display_name ?? selected.name) ===
-              (row.display_name ?? row.name),
-          )
+          return selectedRows?.some((selected) => selected.name === row.name)
             ? {
                 ...row,
                 status: true,
@@ -128,7 +198,9 @@ export default function ToolsTable({
   const columnDefs: ColDef[] = [
     {
       field: isAction ? "display_name" : "name",
-      headerName: isAction ? "Flow Name" : "Name",
+      headerName: isAction
+        ? t("toolsModal.columnFlowName")
+        : t("toolsModal.columnName"),
       flex: 1,
       valueGetter: (params) =>
         !isAction
@@ -142,15 +214,16 @@ export default function ToolsTable({
     },
     {
       field: "description",
-      headerName: "Description",
+      headerName: t("toolsModal.columnDescription"),
       flex: 2,
       cellClass: "text-muted-foreground",
     },
     {
       field: "name",
-      headerName: isAction ? "Action" : "Slug",
+      headerName: isAction
+        ? t("toolsModal.columnTool")
+        : t("toolsModal.columnSlug"),
       flex: 1,
-      resizable: false,
       valueGetter: (params) =>
         params.data.name !== ""
           ? parseString(params.data.name, [
@@ -159,16 +232,38 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? parseString(params.data.display_name, [
-                "snake_case",
-                "no_blank",
-                "uppercase",
-              ])
+            ? (() => {
+                const raw = sanitizeMcpName(params.data.display_name, 46);
+                return (
+                  raw === "unnamed" ? t("common.unnamed") : raw
+                ).toUpperCase();
+              })()
             : parseString(params.data.tags.join(", "), [
                 "snake_case",
                 "uppercase",
               ]),
       cellClass: "text-muted-foreground",
+    },
+    {
+      field: "approval_actions",
+      headerName: t("toolsModal.columnApproval", "Requires Approval"),
+      width: 150,
+      flex: 0,
+      resizable: false,
+      sortable: false,
+      cellRenderer: (params: {
+        data: { _uniqueId?: string; approval_actions?: string[] } & Record<
+          string,
+          unknown
+        >;
+      }) => (
+        <div data-hitl-cell className="flex h-full items-center">
+          <RequiresApprovalToggle
+            selected={params.data?.approval_actions ?? []}
+            onChange={(next) => handleApprovalChange(params.data, next)}
+          />
+        </div>
+      ),
     },
     {
       field: "tags",
@@ -177,11 +272,13 @@ export default function ToolsTable({
       hide: true,
     },
   ];
+
   const handleSelectionChanged = (event) => {
-    if (open) {
-      const selectedData = event.api.getSelectedRows();
-      setSelectedRows(selectedData);
-    }
+    if (!open || applyingSelection.current) return;
+
+    const selectedData = event.api.getSelectedRows();
+    editedSelection.current = true;
+    setSelectedRows(selectedData);
   };
 
   const handleSidebarInputChange = (
@@ -190,26 +287,60 @@ export default function ToolsTable({
   ) => {
     if (!focusedRow) return;
 
-    const originalName = focusedRow.display_name;
+    const originalUniqueId = focusedRow._uniqueId;
+    const updatedRow = {
+      ...focusedRow,
+      [field]: value,
+      _uniqueId: originalUniqueId,
+    };
 
-    setFocusedRow((prev) => (prev ? { ...prev, [field]: value } : null));
+    setFocusedRow(updatedRow);
 
-    if (agGrid.current) {
-      const updatedRow = { ...focusedRow, [field]: value };
+    if (agGrid.current && originalUniqueId) {
+      // Increment skip counter to prevent re-applying selection
+      skipSelectionReapply.current++;
 
+      // Update only via applyTransaction
       agGrid.current.api.applyTransaction({
         update: [updatedRow],
       });
 
       const updatedData = data.map((row) =>
-        (row.display_name ?? row.name) === originalName ? updatedRow : row,
+        row._uniqueId === originalUniqueId ? updatedRow : row,
       );
       setData(updatedData);
+
+      // Update selectedRows to reflect the updated data
+      setSelectedRows(
+        (prevSelected) =>
+          prevSelected?.map((row) =>
+            row._uniqueId === originalUniqueId ? updatedRow : row,
+          ) || null,
+      );
     }
+  };
+
+  const handleApprovalChange = (
+    row: { _uniqueId?: string } & Record<string, unknown>,
+    actions: string[],
+  ) => {
+    if (!row?._uniqueId) return;
+    // The deferred persist can fire from a closure that predates the latest
+    // sidebar edits; rebuild from the current row so it can't revert them.
+    const latestData = dataRef.current;
+    const currentRow = latestData.find((r) => r._uniqueId === row._uniqueId);
+    if (!currentRow) return;
+    skipSelectionReapply.current++;
+    const updatedRow = { ...currentRow, approval_actions: actions };
+    agGrid.current?.api.applyTransaction({ update: [updatedRow] });
+    setData(
+      latestData.map((r) => (r._uniqueId === row._uniqueId ? updatedRow : r)),
+    );
   };
 
   const actionArgs = useMemo(() => {
     return Object.entries(focusedRow?.args ?? {}).map(
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       ([key, value]: [string, any]) => ({
         display_name: value.title,
         name: key,
@@ -224,17 +355,24 @@ export default function ToolsTable({
   };
 
   const handleNameChange = (e) => {
-    setSidebarName(e.target.value);
-    handleSidebarInputChange("name", e.target.value);
+    const rawValue = e.target.value;
+    const sanitizedValue = isAction ? sanitizeMcpName(rawValue, 46) : rawValue;
+    setSidebarName(sanitizedValue);
+    handleSidebarInputChange("name", sanitizedValue);
   };
 
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
 
   const tableOptions = {
     block_hide: true,
+    hide_options: false,
   };
 
   const handleRowClicked = (event) => {
+    // Clicking the HITL cell opens its own popover; don't also open the row sidebar
+    // (that re-render would close the popover).
+    const target = event.event?.target as HTMLElement | undefined;
+    if (target?.closest("[data-hitl-cell]")) return;
     setFocusedRow(event.data);
     setSidebarOpen(true);
   };
@@ -245,13 +383,23 @@ export default function ToolsTable({
     ]);
   }, [focusedRow]);
 
+  const handleClose = () => {
+    setSidebarOpen(false);
+  };
+
+  const handleGridReady = () => {
+    setIsGridReady(true);
+  };
+
   return (
     <>
-      <main className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
+      {/* Not a <main>: the flow canvas underneath already owns the single
+          main landmark (WCAG 2.4.1). */}
+      <div className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
         <div className="flex-none px-4">
           <Input
             icon="Search"
-            placeholder="Search actions..."
+            placeholder={t("toolsModal.searchPlaceholder")}
             inputClassName="h-8"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -272,23 +420,28 @@ export default function ToolsTable({
             tableOptions={tableOptions}
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
+            pagination={true}
+            paginationPageSize={50}
+            onGridReady={handleGridReady}
           />
         </div>
-      </main>
+      </div>
       <Sidebar
         side="right"
         className="flex h-full flex-col overflow-auto border-l border-border"
       >
-        <SidebarHeader className="flex-none px-4 py-4">
+        <SidebarContent className="flex flex-1 flex-col gap-2 overflow-y-auto p-0">
           {focusedRow &&
             (isAction || !focusedRow.readonly ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-4">
                 <div className="flex flex-col gap-2">
                   <label
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    Name
+                    {isAction
+                      ? t("toolsModal.labelToolName")
+                      : t("toolsModal.labelSlug")}
                   </label>
 
                   <Input
@@ -296,13 +449,13 @@ export default function ToolsTable({
                     value={sidebarName}
                     onChange={handleNameChange}
                     maxLength={46}
-                    placeholder="Edit name..."
+                    placeholder={t("toolsModal.editNamePlaceholder")}
                     data-testid="input_update_name"
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "Used as the function name when this flow is exposed to clients."
-                      : "Used as the function name when this tool is exposed to the agent."}
+                      ? t("toolsModal.actionSlugHint")
+                      : t("toolsModal.slugHint")}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -310,26 +463,31 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-desc-input"
                   >
-                    Description
+                    {isAction
+                      ? t("toolsModal.labelToolDescription")
+                      : t("toolsModal.labelDescription")}
                   </label>
 
                   <Textarea
                     id="sidebar-desc-input"
                     value={sidebarDescription}
                     onChange={handleDescriptionChange}
-                    placeholder="Edit description..."
+                    placeholder={t("toolsModal.editDescriptionPlaceholder")}
                     className="h-24"
                     data-testid="input_update_description"
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "This is the description for the action exposed to the clients."
-                      : "This is the description for the tool exposed to the agents."}
+                      ? t("toolsModal.actionDescriptionHint")
+                      : t("toolsModal.descriptionHint")}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-1" data-testid="sidebar_header">
+              <div
+                className="flex flex-col gap-1 p-4"
+                data-testid="sidebar_header"
+              >
                 <h3
                   className="text-base font-medium"
                   data-testid="sidebar_header_name"
@@ -344,21 +502,19 @@ export default function ToolsTable({
                 </p>
               </div>
             ))}
-        </SidebarHeader>
-        {!isAction && <Separator />}
-        <SidebarContent className="flex flex-1 flex-col gap-0 overflow-visible px-2">
+          {!isAction && actionArgs.length > 0 && <Separator />}
           {focusedRow && (
-            <div className="flex h-full flex-col gap-4">
+            <div className="flex h-full flex-col gap-4 p-2">
               <SidebarGroup className="flex-1">
-                <SidebarGroupContent className="h-full pb-4">
+                <SidebarGroupContent className="h-full">
                   <div className="flex h-full flex-col gap-4">
                     {actionArgs.length > 0 && (
                       <div className="flex flex-col gap-1.5">
-                        <h3 className="mt-2 text-base font-medium">
-                          Parameters
+                        <h3 className="text-base font-medium">
+                          {t("toolsModal.parametersTitle")}
                         </h3>
                         <p className="text-mmd text-muted-foreground">
-                          Manage inputs for this action
+                          {t("toolsModal.parametersSubtitle")}
                         </p>
                       </div>
                     )}
@@ -381,7 +537,7 @@ export default function ToolsTable({
                         <Input
                           id="sidebar-desc-input"
                           disabled
-                          placeholder="Input controlled by the agent"
+                          placeholder={t("toolsModal.inputControlledByAgent")}
                           onChange={(e) => {}}
                         />
                       </div>
@@ -392,6 +548,18 @@ export default function ToolsTable({
             </div>
           )}
         </SidebarContent>
+        <SidebarFooter>
+          <div className="flex justify-end w-full p-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleClose}
+              data-testid="btn_close_tools_modal"
+            >
+              {t("toolsModal.close")}
+            </Button>
+          </div>
+        </SidebarFooter>
       </Sidebar>
     </>
   );

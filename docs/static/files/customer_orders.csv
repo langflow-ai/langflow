@@ -1,0 +1,36 @@
+customer_id,customer_email,product_id,product_name,product_category,order_date,order_id
+1,alice.smith@example.com,1,Laptop,Electronics,2024-01-10,1001
+1,alice.smith@example.com,4,Notebook,Stationery,2024-01-15,1002
+1,alice.smith@example.com,6,Wireless Mouse,Electronics,2024-01-28,1003
+1,alice.smith@example.com,8,Desk Lamp,Home,2024-02-05,1004
+2,bob.johnson@example.com,2,Headphones,Electronics,2024-01-12,1005
+2,bob.johnson@example.com,3,Coffee Mug,Home,2024-01-18,1006
+2,bob.johnson@example.com,7,Bluetooth Speaker,Electronics,2024-01-25,1007
+2,bob.johnson@example.com,10,Water Bottle,Sports,2024-02-10,1008
+3,carol.davis@example.com,1,Laptop,Electronics,2024-01-05,1009
+3,carol.davis@example.com,2,Headphones,Electronics,2024-01-20,1010
+3,carol.davis@example.com,5,Backpack,Fashion,2024-01-30,1011
+3,carol.davis@example.com,9,Yoga Mat,Sports,2024-02-15,1012
+4,david.wilson@example.com,3,Coffee Mug,Home,2024-01-08,1013
+4,david.wilson@example.com,4,Notebook,Stationery,2024-01-22,1014
+4,david.wilson@example.com,6,Wireless Mouse,Electronics,2024-02-01,1015
+4,david.wilson@example.com,11,Plant Pot,Home,2024-02-20,1016
+5,emma.brown@example.com,1,Laptop,Electronics,2024-01-14,1017
+5,emma.brown@example.com,3,Coffee Mug,Home,2024-01-25,1018
+5,emma.brown@example.com,5,Backpack,Fashion,2024-02-03,1019
+5,emma.brown@example.com,12,Phone Case,Electronics,2024-02-25,1020
+6,frank.miller@example.com,2,Headphones,Electronics,2024-01-16,1021
+6,frank.miller@example.com,7,Bluetooth Speaker,Electronics,2024-01-28,1022
+6,frank.miller@example.com,10,Water Bottle,Sports,2024-02-08,1023
+7,grace.lee@example.com,4,Notebook,Stationery,2024-01-19,1024
+7,grace.lee@example.com,8,Desk Lamp,Home,2024-02-02,1025
+7,grace.lee@example.com,9,Yoga Mat,Sports,2024-02-18,1026
+8,henry.chen@example.com,1,Laptop,Electronics,2024-01-22,1027
+8,henry.chen@example.com,6,Wireless Mouse,Electronics,2024-02-05,1028
+8,henry.chen@example.com,11,Plant Pot,Home,2024-02-28,1029
+9,isabella.rodriguez@example.com,2,Headphones,Electronics,2024-01-25,1030
+9,isabella.rodriguez@example.com,5,Backpack,Fashion,2024-02-10,1031
+9,isabella.rodriguez@example.com,12,Phone Case,Electronics,2024-02-22,1032
+10,james.taylor@example.com,3,Coffee Mug,Home,2024-01-30,1033
+10,james.taylor@example.com,7,Bluetooth Speaker,Electronics,2024-02-12,1034
+10,james.taylor@example.com,10,Water Bottle,Sports,2024-02-25,1035

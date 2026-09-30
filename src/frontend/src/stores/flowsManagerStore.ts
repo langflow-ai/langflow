@@ -1,11 +1,12 @@
-import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import { cloneDeep } from "lodash";
 import { create } from "zustand";
-import { FlowType } from "../types/flow";
-import {
+import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
+import type { FlowType } from "../types/flow";
+import type {
   FlowsManagerStoreType,
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";
+import useAssistantManagerStore from "./assistantManagerStore";
 import useFlowStore from "./flowStore";
 
 const defaultOptions: UseUndoRedoOptions = {
@@ -15,6 +16,33 @@ const defaultOptions: UseUndoRedoOptions = {
 
 const past = {};
 const future = {};
+
+/**
+ * ``currentFlow`` is the persisted version of the open flow: the editor diffs
+ * the canvas against it, and the unsaved-changes dialog reads its
+ * ``updated_at`` for the "Last saved" line.
+ *
+ * The refreshed list is not always that shape. The app header polls
+ * ``GET /flows/?get_all=true&header_flows=true``, whose rows are ``FlowHeader``
+ * objects — they carry no ``updated_at`` at all, and ``data`` is nulled for
+ * anything that is not a component. Taking such a row wholesale blanks both,
+ * which is what made the exit dialog claim "Last saved: Never" for a flow that
+ * was in fact persisted. Apply what the refreshed row knows, keep what only the
+ * full flow can tell us.
+ */
+const mergeRefreshedCurrentFlow = (
+  saved: FlowType | undefined,
+  refreshed: FlowType | undefined,
+): FlowType | undefined => {
+  if (!refreshed) return undefined;
+  if (!saved || saved.id !== refreshed.id) return refreshed;
+  return {
+    ...saved,
+    ...refreshed,
+    data: refreshed.data ?? saved.data,
+    updated_at: refreshed.updated_at ?? saved.updated_at,
+  };
+};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   IOModalOpen: false,
@@ -40,6 +68,8 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       currentFlowId: flow?.id ?? "",
     });
     useFlowStore.getState().resetFlow(flow);
+    // Close assistant when changing flows
+    useAssistantManagerStore.getState().setAssistantSidebarOpen(false);
   },
   getFlowById: (id: string) => {
     return get().flows?.find((flow) => flow.id === id);
@@ -48,7 +78,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setFlows: (flows: FlowType[]) => {
     set({
       flows,
-      currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
+      currentFlow: mergeRefreshedCurrentFlow(
+        get().currentFlow,
+        flows.find((flow) => flow.id === get().currentFlowId),
+      ),
     });
   },
   currentFlow: undefined,
@@ -132,7 +165,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   resetStore: () => {
     set({
-      flows: [],
+      flows: undefined,
       currentFlow: undefined,
       currentFlowId: "",
       searchFlowsComponents: "",

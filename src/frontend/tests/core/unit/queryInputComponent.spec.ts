@@ -1,5 +1,14 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
+import {
+  closeParametersPanel,
+  openParametersPanel,
+} from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -15,23 +24,26 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("openai");
+    await page
+      .getByTestId("sidebar-search-input")
+      .fill(TEXTS.providerOpenAiSearch);
 
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
-      timeout: 3000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByTestId("openaiOpenAI"),
+      "OpenAI",
+    );
 
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("title-OpenAI").click();
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
-    let cleanCode = await extractAndCleanCode(page);
+    const cleanCode = await extractAndCleanCode(page);
 
     // Replace the multiline string in the code
     let newCode = cleanCode.replace(
@@ -53,8 +65,8 @@ test(
     );
 
     newCode = newCode.replace(
-      `from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput`,
-      `from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput, QueryInput`,
+      `from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput`,
+      `from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput, QueryInput`,
     );
 
     // make sure codes are different
@@ -63,8 +75,7 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page
       .getByTestId("query_query_openai_api_base")
@@ -89,16 +100,13 @@ test(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IS A NEW VALUE");
 
-    await page.getByTestId("edit-button-modal").click();
-
-    expect(
-      await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
-    ).toEqual("THIS IS A NEW VALUE");
+    // LE-1810: the panel only manages parameters — the value is edited on
+    // the node itself.
+    await openParametersPanel(page);
+    await closeParametersPanel(page);
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_query_query_edit_openai_api_base_advanced",
-      )
+      .getByTestId("button_open_text_area_modal_query_query_openai_api_base")
       .click();
 
     await page
@@ -108,34 +116,7 @@ test(
     await page.getByTestId("genericModalBtnSave").click();
 
     expect(
-      await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
-    ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
-
-    await page.getByText("Close").last().click();
-
-    expect(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
   },
 );
-
-async function extractAndCleanCode(page: Page): Promise<string> {
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the HTML");
-  }
-
-  let codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/");
-
-  return codeContent;
-}

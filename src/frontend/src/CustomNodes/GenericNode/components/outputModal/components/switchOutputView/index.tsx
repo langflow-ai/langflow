@@ -1,7 +1,8 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
-import { LogsLogType, OutputLogType } from "@/types/api";
-import { useMemo } from "react";
+import type { LogsLogType, OutputLogType } from "@/types/api";
 import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
 import DataOutputComponent from "../../../../../../components/core/dataOutputComponent";
 import {
@@ -12,12 +13,14 @@ import {
 import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
+import type { OutputModalTab } from "../../index";
 import ErrorOutput from "./components";
+
 // Define the props type
 interface SwitchOutputViewProps {
   nodeId: string;
   outputName: string;
-  type: "Outputs" | "Logs";
+  type: OutputModalTab;
 }
 
 const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
@@ -25,18 +28,32 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   outputName,
   type,
 }) => {
+  const { t } = useTranslation();
   const flowPool = useFlowStore((state) => state.flowPool);
+  const nodes = useFlowStore((state) => state.nodes);
 
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
 
-  let results: OutputLogType | LogsLogType =
-    (type === "Outputs"
+  // Get the node to access output configuration
+  const currentNode = nodes.find((node) => node.id === nodeId);
+  const outputConfig = currentNode?.data?.node?.outputs?.find(
+    (output) => output.name === outputName,
+  );
+
+  // Check if this is a Tool output
+  const isToolOutput =
+    outputConfig &&
+    (outputConfig.method === "to_toolkit" ||
+      (outputConfig.types && outputConfig.types.includes("Tool")));
+
+  const results: OutputLogType | LogsLogType[] =
+    (type === "outputs"
       ? flowPoolNode?.data?.outputs?.[outputName]
       : flowPoolNode?.data?.logs?.[outputName]) ?? {};
-  const resultType = results?.type;
-  let resultMessage = results?.message ?? {};
+  const resultType = Array.isArray(results) ? undefined : results?.type;
+  let resultMessage = Array.isArray(results) ? {} : (results?.message ?? {});
   const RECORD_TYPES = ["array", "message"];
   const JSON_TYPES = ["data", "object"];
   if (resultMessage?.raw) {
@@ -72,29 +89,93 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     return resultMessage;
   }, [resultMessage]);
 
-  return type === "Outputs" ? (
+  // Custom component for Tool output display
+  const ToolOutputDisplay = ({ tools }) => {
+    if (!Array.isArray(tools) || tools.length === 0) {
+      return <div>{t("output.noToolsAvailable")}</div>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {tools?.map((tool, index) => (
+          <div key={index} className="border rounded-lg p-4 bg-muted/20">
+            <div
+              data-testid="tool_name"
+              className={
+                "font-medium text-lg" + (tool?.description ? " mb-2" : "")
+              }
+            >
+              {tool.name || `Tool ${index + 1}`}
+            </div>
+            {tool?.description && (
+              <div
+                data-testid="tool_description"
+                className="text-sm text-muted-foreground mb-3"
+              >
+                {tool.description}
+              </div>
+            )}
+            {tool?.tags && tool?.tags?.length > 0 && (
+              <div data-testid="tool_tags" className="flex flex-wrap gap-2">
+                {tool.tags.map((tag, tagIndex) => (
+                  <span
+                    key={tagIndex}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return type === "outputs" ? (
     <>
-      <Case condition={!resultType || resultType === "unknown"}>
-        <div>NO OUTPUT</div>
+      <Case condition={isToolOutput && resultMessageMemoized}>
+        <ToolOutputDisplay
+          tools={
+            Array.isArray(resultMessageMemoized)
+              ? resultMessageMemoized
+              : [resultMessageMemoized]
+          }
+        />
       </Case>
-      <Case condition={resultType === "error" || resultType === "ValueError"}>
+      <Case
+        condition={(!resultType || resultType === "unknown") && !isToolOutput}
+      >
+        <div>{t("output.noOutput")}</div>
+      </Case>
+      <Case
+        condition={
+          (resultType === "error" || resultType === "ValueError") &&
+          !isToolOutput
+        }
+      >
         <ErrorOutput
           value={`${resultMessageMemoized?.errorMessage}\n\n${resultMessageMemoized?.stackTrace}`}
         />
       </Case>
 
-      <Case condition={resultType === "text"}>
+      <Case condition={resultType === "text" && !isToolOutput}>
         <TextOutputView left={false} value={resultMessageMemoized} />
       </Case>
 
-      <Case condition={RECORD_TYPES.includes(resultType)}>
+      <Case
+        condition={RECORD_TYPES.includes(resultType ?? "") && !isToolOutput}
+      >
         <DataOutputComponent
           rows={
             Array.isArray(resultMessageMemoized)
-              ? (resultMessageMemoized as Array<any>).every(
+              ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+                (resultMessageMemoized as Array<any>).every(
                   (item) => item?.data,
                 )
-                ? (resultMessageMemoized as Array<any>).map(
+                ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+                  (resultMessageMemoized as Array<any>).map(
                     (item) => item?.data,
                   )
                 : resultMessageMemoized
@@ -106,7 +187,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
           columnMode="union"
         />
       </Case>
-      <Case condition={JSON_TYPES.includes(resultType)}>
+      <Case condition={JSON_TYPES.includes(resultType ?? "") && !isToolOutput}>
         <JsonOutputViewComponent
           nodeId={nodeId}
           outputName={outputName}
@@ -114,14 +195,14 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         />
       </Case>
 
-      <Case condition={resultType === "stream"}>
+      <Case condition={resultType === "stream" && !isToolOutput}>
         <div className="flex h-full w-full items-center justify-center align-middle">
           <Alert variant={"default"} className="w-fit">
             <ForwardedIconComponent
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{"Streaming is not supported"}</AlertTitle>
+            <AlertTitle>{t("output.streamingNotSupported")}</AlertTitle>
             <AlertDescription>
               {
                 "Use the playground to interact with components that stream data"
@@ -135,8 +216,10 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     <DataOutputComponent
       rows={
         Array.isArray(results)
-          ? (results as Array<any>).every((item) => item?.data)
-            ? (results as Array<any>).map((item) => item?.data)
+          ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+            (results as Array<any>).every((item) => item?.data)
+            ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+              (results as Array<any>).map((item) => item?.data)
             : results
           : Object.keys(results)?.length > 0
             ? [results]

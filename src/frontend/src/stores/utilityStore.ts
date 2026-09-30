@@ -1,15 +1,19 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
-import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
+import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
+import { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
+import type { UtilityStoreType } from "@/types/zustand/utility";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
+  awaitingBotResponse: false,
+  setAwaitingBotResponse: (awaitingBotResponse: boolean) =>
+    set({ awaitingBotResponse }),
   clientId: "",
   setClientId: (clientId: string) => set({ clientId }),
   chatValueStore: "",
   setChatValueStore: (value: string) => set({ chatValueStore: value }),
-  selectedItems: [],
-  setSelectedItems: (itemId) => {
+  selectedItems: [] as string[],
+  setSelectedItems: (itemId: string) => {
     if (get().selectedItems.includes(itemId)) {
       set({
         selectedItems: get().selectedItems.filter((item) => item !== itemId),
@@ -27,6 +31,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   maxFileSizeUpload: 100 * 1024 * 1024, // 100MB in bytes
   setMaxFileSizeUpload: (maxFileSizeUpload: number) =>
     set({ maxFileSizeUpload: maxFileSizeUpload * 1024 * 1024 }),
+  serializationMaxItemsLength: 100,
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) =>
+    set({ serializationMaxItemsLength }),
   flowsPagination: {
     page: 1,
     size: 10,
@@ -35,14 +42,76 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   tags: [],
   setTags: (tags: Tag[]) => set({ tags }),
   featureFlags: {},
-  setFeatureFlags: (featureFlags: Record<string, any>) => set({ featureFlags }),
-  webhookPollingInterval: 5000,
+  setFeatureFlags: (featureFlags: Record<string, unknown>) =>
+    set({ featureFlags }),
+  webhookPollingInterval: 0, // Disabled: SSE provides real-time updates
   setWebhookPollingInterval: (webhookPollingInterval: number) =>
     set({ webhookPollingInterval }),
   currentSessionId: "",
   setCurrentSessionId: (sessionId: string) =>
     set({ currentSessionId: sessionId }),
-  eventDelivery: EventDeliveryType.POLLING,
+  eventDelivery: EventDeliveryType.STREAMING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
+  webhookAuthEnable: true,
+  setWebhookAuthEnable: (webhookAuthEnable: boolean) =>
+    set({ webhookAuthEnable }),
+  defaultFolderName: "Starter Project",
+  setDefaultFolderName: (defaultFolderName: string) =>
+    set({ defaultFolderName }),
+  hideGettingStartedProgress: false,
+  setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) =>
+    set({ hideGettingStartedProgress }),
+  allowCustomComponents: true,
+  setAllowCustomComponents: (allowCustomComponents: boolean) =>
+    set({ allowCustomComponents }),
+  substituteOutdatedComponentCode: true,
+  setSubstituteOutdatedComponentCode: (
+    substituteOutdatedComponentCode: boolean,
+  ) => set({ substituteOutdatedComponentCode }),
+  catalogGovernanceEnabled: false,
+  setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) =>
+    set({ catalogGovernanceEnabled }),
+  blockedComponentTypes: new Set<string>(),
+  setBlockedComponentTypes: (blockedComponentTypes: Iterable<string>) =>
+    set({ blockedComponentTypes: new Set(blockedComponentTypes) }),
+  a2aEnabled: false,
+  setA2aEnabled: (a2aEnabled: boolean) => set({ a2aEnabled }),
+  // Default true (backend default) so the panel doesn't flash the disabled
+  // state before the /config reply lands.
+  agenticExperienceEnabled: true,
+  setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) =>
+    set({ agenticExperienceEnabled }),
+  assistantMaxMessageLength: DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
+  setAssistantMaxMessageLength: (assistantMaxMessageLength: number) =>
+    set({ assistantMaxMessageLength }),
+  localVectorStoreAvailable: true,
+  setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
+    set({ localVectorStoreAvailable }),
+  mcpBaseUrl: "",
+  setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
+  // Default false to match the backend's "reload disabled" default until the
+  // /config query overwrites it on first load.
+  enableExtensionReload: false,
+  setEnableExtensionReload: (enableExtensionReload: boolean) =>
+    set({ enableExtensionReload }),
+  // Embedded mode flags
+  embeddedMode: false,
+  setEmbeddedMode: (embeddedMode: boolean) => set({ embeddedMode }),
+  hideLogoutButton: false,
+  setHideLogoutButton: (hideLogoutButton: boolean) => set({ hideLogoutButton }),
+  hideNewProjectButton: false,
+  setHideNewProjectButton: (hideNewProjectButton: boolean) =>
+    set({ hideNewProjectButton }),
+  hideNewFlowButton: false,
+  setHideNewFlowButton: (hideNewFlowButton: boolean) =>
+    set({ hideNewFlowButton }),
+  hideStarterProjects: false,
+  setHideStarterProjects: (hideStarterProjects: boolean) =>
+    set({ hideStarterProjects }),
+  mcpServersLocked: false,
+  setMcpServersLocked: (mcpServersLocked: boolean) => set({ mcpServersLocked }),
+  customComponentAdminOnly: false,
+  setCustomComponentAdminOnly: (customComponentAdminOnly: boolean) =>
+    set({ customComponentAdminOnly }),
 }));

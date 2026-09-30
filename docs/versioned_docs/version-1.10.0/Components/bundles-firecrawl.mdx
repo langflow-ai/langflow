@@ -1,0 +1,77 @@
+---
+title: Firecrawl
+slug: /bundles-firecrawl
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Firecrawl** bundle.
+
+For more information, see the [Firecrawl documentation](https://docs.firecrawl.dev).
+
+## Firecrawl Scrape API
+
+This component scrapes a single URL and returns its content.
+
+It outputs the API response as [`Data`](/data-types#data).
+
+### Firecrawl Scrape API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firecrawl API Key (`api_key`) | SecretString | Input parameter. The API key to use Firecrawl API. |
+| URL (`url`) | String | Input parameter. The URL to scrape. |
+| Timeout (`timeout`) | Integer | Input parameter. Timeout in milliseconds for the request. |
+| Scrape Options (`scrapeOptions`) | Data | Input parameter. The page options to send with the request. |
+| Extractor Options (`extractorOptions`) | Data | Input parameter. The extractor options to send with the request. |
+
+## Firecrawl Crawl API
+
+This component crawls a URL and its accessible sub-pages, returning the results.
+
+It outputs the API response as [`Data`](/data-types#data).
+
+### Firecrawl Crawl API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firecrawl API Key (`api_key`) | SecretString | Input parameter. The API key to use Firecrawl API. |
+| URL (`url`) | String | Input parameter. The URL to crawl. |
+| Timeout (`timeout`) | Integer | Input parameter. Timeout in milliseconds for the request. |
+| Idempotency Key (`idempotency_key`) | String | Input parameter. Optional idempotency key to ensure unique requests. |
+| Crawler Options (`crawlerOptions`) | Data | Input parameter. The crawler options to send with the request. |
+| Scrape Options (`scrapeOptions`) | Data | Input parameter. The page options to send with the request. |
+
+## Firecrawl Map API
+
+This component maps a URL and returns a list of related URLs.
+
+It outputs the API response as [`Data`](/data-types#data).
+
+### Firecrawl Map API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firecrawl API Key (`api_key`) | SecretString | Input parameter. The API key to use Firecrawl API. |
+| URLs (`urls`) | String | Input parameter. List of URLs to create maps from (separated by commas or new lines). |
+| Ignore Sitemap (`ignore_sitemap`) | Boolean | Input parameter. When true, the `sitemap.xml` file is ignored during crawling. |
+| Sitemap Only (`sitemap_only`) | Boolean | Input parameter. When true, only links found in the sitemap are returned. |
+| Include Subdomains (`include_subdomains`) | Boolean | Input parameter. When true, subdomains of the provided URL are also scanned. |
+
+## Firecrawl Extract API
+
+This component extracts structured data from one or more URLs using a prompt or schema.
+
+It outputs the API response as [`Data`](/data-types#data).
+
+### Firecrawl Extract API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firecrawl API Key (`api_key`) | SecretString | Input parameter. The API key to use Firecrawl API. |
+| URLs (`urls`) | String | Input parameter. List of URLs to extract data from (separated by commas or new lines). |
+| Prompt (`prompt`) | String | Input parameter. Prompt to guide the extraction process. |
+| Schema (`schema`) | Data | Input parameter. Schema to define the structure of the extracted data. |
+| Enable Web Search (`enable_web_search`) | Boolean | Input parameter. When true, the extraction uses web search to find additional data. |

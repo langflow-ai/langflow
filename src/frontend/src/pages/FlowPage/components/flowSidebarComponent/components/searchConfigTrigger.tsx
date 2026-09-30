@@ -1,0 +1,38 @@
+import { useTranslation } from "react-i18next";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
+
+interface SearchConfigTriggerProps {
+  showConfig: boolean;
+  setShowConfig: (show: boolean) => void;
+}
+
+export const SearchConfigTrigger = ({
+  showConfig,
+  setShowConfig,
+}: SearchConfigTriggerProps) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center">
+      <ShadTooltip
+        content={t("sidebar.componentSettings")}
+        styleClasses="z-50"
+        ariaDescribedBy={undefined}
+      >
+        <Button
+          variant={showConfig ? "ghostActive" : "ghost"}
+          size="iconMd"
+          data-testid="sidebar-options-trigger"
+          onClick={() => setShowConfig(!showConfig)}
+          className="hover:text-primary text-muted-foreground"
+          style={{ padding: "0px" }}
+          aria-label={t("sidebar.componentSettings")}
+          aria-expanded={showConfig}
+        >
+          <ForwardedIconComponent name="Settings2" className="h-4 w-4" />
+        </Button>
+      </ShadTooltip>
+    </div>
+  );
+};

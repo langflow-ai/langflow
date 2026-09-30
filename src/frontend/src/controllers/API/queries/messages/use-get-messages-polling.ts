@@ -1,8 +1,15 @@
-import { useMessagesStore } from "@/stores/messagesStore";
-import { UseMutationResult } from "@tanstack/react-query";
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import type {
+  UseMutationOptions,
+  UseMutationResult,
+} from "@tanstack/react-query";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useRef } from "react";
-import { extractColumnsFromRows } from "../../../../utils/utils";
+import { useMessagesStore } from "@/stores/messagesStore";
+import type { Message } from "@/types/messages";
+import {
+  extractColumnsFromRows,
+  prepareSessionIdForAPI,
+} from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -26,7 +33,7 @@ interface PollingItem {
   interval: NodeJS.Timeout;
   timestamp: number;
   id: string;
-  callback: () => Promise<void>;
+  callback: () => Promise<MessagesResponse>;
 }
 
 const MessagesPollingManager = {
@@ -39,7 +46,7 @@ const MessagesPollingManager = {
     this.pollingQueue.clear();
     this.pollingQueue.set(id, [pollingItem]);
 
-    this.startNextPolling(id);
+    return this.startNextPolling(id);
   },
 
   startNextPolling(id: string) {
@@ -51,7 +58,7 @@ const MessagesPollingManager = {
 
     const nextPoll = queue[0];
     this.activePolls.set(id, nextPoll);
-    nextPoll.callback();
+    return nextPoll.callback();
   },
 
   stopPoll(id: string) {
@@ -75,7 +82,10 @@ const MessagesPollingManager = {
 };
 
 export const useGetMessagesPollingMutation = (
-  options?: any,
+  options?: Omit<
+    UseMutationOptions<MessagesResponse, unknown, MessagesQueryParams, unknown>,
+    "mutationFn" | "mutationKey"
+  >,
 ): UseMutationResult<
   MessagesResponse,
   unknown,
@@ -89,11 +99,17 @@ export const useGetMessagesPollingMutation = (
   // Default polling interval of 5 seconds (5000ms)
   const POLLING_INTERVAL = 5000;
 
+  // Keep in sync with the backend monitor router default (_MESSAGES_DEFAULT_LIMIT).
+  // Every poll must pass an explicit limit so a large message history is never
+  // fetched in full on each 5s cycle (issue #15023). Callers may still override
+  // it via payload.params.
+  const DEFAULT_MESSAGES_LIMIT = 100;
+
   const getMessagesFn = async (
     payload: MessagesQueryParams,
   ): Promise<MessagesResponse> => {
     const requestId = payload.id || "default";
-    const sessionId = payload.session_id;
+    const _sessionId = payload.session_id;
 
     if (requestInProgressRef.current[requestId]) {
       return Promise.reject("Request already in progress");
@@ -104,15 +120,23 @@ export const useGetMessagesPollingMutation = (
       const { id, mode, excludedFields, params } = payload;
       const config = {};
 
+      config["params"] = { limit: DEFAULT_MESSAGES_LIMIT };
       if (id) {
-        config["params"] = { flow_id: id };
+        config["params"]["flow_id"] = id;
       }
 
       if (params) {
-        config["params"] = { ...config["params"], ...params };
+        // Process params to ensure session_id is properly encoded
+        const processedParams: Record<string, unknown> = { ...params };
+        if (processedParams.session_id) {
+          processedParams.session_id = prepareSessionIdForAPI(
+            processedParams.session_id as string,
+          );
+        }
+        config["params"] = { ...config["params"], ...processedParams };
       }
 
-      const data = await api.get<any>(`${getURL("MESSAGES")}`, config);
+      const data = await api.get<Message[]>(`${getURL("MESSAGES")}`, config);
       const columns = extractColumnsFromRows(data.data, mode, excludedFields);
       useMessagesStore.getState().setMessages(data.data);
 
@@ -150,6 +174,7 @@ export const useGetMessagesPollingMutation = (
       if (payload.stopPollingOn?.(data)) {
         MessagesPollingManager.stopPoll(requestId);
       }
+      return data;
     };
 
     const intervalId = setInterval(pollCallback, POLLING_INTERVAL);
@@ -161,15 +186,14 @@ export const useGetMessagesPollingMutation = (
       callback: pollCallback,
     };
 
-    MessagesPollingManager.enqueuePolling(requestId, pollingItem);
-
-    return getMessagesFn(payload).then((data) => {
-      payload.onSuccess?.(data);
-      if (payload.stopPollingOn?.(data)) {
+    // The manager starts the initial request; expose that same promise to
+    // React Query so its success/error callbacks describe the actual fetch.
+    return MessagesPollingManager.enqueuePolling(requestId, pollingItem)?.catch(
+      (error: unknown) => {
         MessagesPollingManager.stopPoll(requestId);
-      }
-      return data;
-    });
+        throw error;
+      },
+    );
   };
 
   useEffect(() => {

@@ -1,0 +1,42 @@
+---
+title: Agents
+slug: /components-agents
+---
+
+import PartialAgentsWork from '@site/docs/_partial-agents-work.mdx';
+
+Langflow's **Agent** component is critical for building agent flows.
+This component defines the behavior and capabilities of AI agents in your flows.
+
+<PartialAgentsWork />
+
+## Examples of agent flows
+
+For examples of flows using the **Agent** component, see the following:
+
+* [Langflow quickstart](/get-started-quickstart): Start with the **Simple Agent** template, modify its tools, and then learn how to use an agent flow in an application.
+
+    The **Simple Agent** template creates a basic agent flow with an **Agent** component that can use two other Langflow components as tools.
+    The LLM specified in the **Agent** component's settings can use its own built-in functionality as well as the functionality provided by the connected tools when generating responses.
+
+* [Use an agent as a tool](/agents-tools#use-an-agent-as-a-tool): Create a multi-agent flow.
+
+* [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server): Use the **Agent** and [**MCP Tools** component](/mcp-tools) to implement the Model Context Protocol (MCP) in your flows.
+
+## Agent component {#agent-component}
+
+The **Agent** component is the primary agent actor in your agent flows.
+This component uses an LLM integration to respond to input, such as a chat message or file upload.
+
+The agent can use the tools already available in the base LLM as well as additional tools that you connect to the **Agent** component's **Tools** port.
+You can connect any Langflow component as a tool, including other **Agent** components and MCP servers through the [**MCP Tools** component](/mcp-tools).
+
+For more information about using this component, see [Use Langflow agents](/agents).
+
+## See also
+
+* [**MCP Tools** component](/mcp-tools)
+* [**Message History** component](/message-history)
+* [Store chat memory](/memory#store-chat-memory)
+* [Bundles](/components-bundle-components)
+* [Legacy LangChain components](/bundles-langchain#legacy-langchain-components)

@@ -1,15 +1,27 @@
+import { useTranslation } from "react-i18next";
+import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import { useEffect, useMemo, useRef } from "react";
-
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
 import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputGlobalComponentType, InputProps } from "../../types";
+import type { InputGlobalComponentType, InputProps } from "../../types";
 import InputComponent from "../inputComponent";
+import {
+  useGlobalVariableValue,
+  useInitialLoad,
+  useUnavailableField,
+} from "./hooks";
+import type { GlobalVariable, GlobalVariableHandlers } from "./types";
+
+// Pydantic input classes that intrinsically represent secret fields. Only
+// fields of these types should accept Credential-typed global variables. The
+// dynamic `password` flag isn't sufficient on its own — components like
+// TextInput's `use_global_variable` toggle flip `password=true` for display
+// masking on a field whose intrinsic type (MultilineInput) is non-secret.
+const SECRET_INPUT_TYPES = new Set(["SecretStrInput", "MultilineSecretInput"]);
 
 export default function InputGlobalComponent({
   display_name,
@@ -17,77 +29,166 @@ export default function InputGlobalComponent({
   handleOnNewValue,
   value,
   id,
+  nodeId,
   load_from_db,
   password,
+  _input_type,
   editNode = false,
   placeholder,
   isToolMode = false,
   hasRefreshButton = false,
-}: InputProps<string, InputGlobalComponentType>): JSX.Element {
-  const { data: globalVariables } = useGetGlobalVariables();
-  const unavailableFields = useGlobalVariablesStore(
-    (state) => state.unavailableFields,
+  showParameter = true,
+  ariaLabelledBy,
+}: InputProps<string | null, InputGlobalComponentType> & {
+  _input_type?: string;
+}): JSX.Element | null {
+  const { t } = useTranslation();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const providerScope = currentFlowId ? { flowId: currentFlowId } : undefined;
+  const {
+    data: globalVariables,
+    isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
+    isFetching: isGlobalVariablesFetching,
+    fetchStatus: globalVariablesFetchStatus,
+    isSuccess: isGlobalVariablesFetchSuccessful,
+  } = useGetGlobalVariables({
+    ...providerScope,
+    enabled: Boolean(currentFlowId),
+  });
+
+  const currentValue = value ?? "";
+  const isDisabled = disabled ?? false;
+  const loadFromDb = load_from_db ?? false;
+  const canUseScopedGlobalVariables =
+    Boolean(currentFlowId) &&
+    isGlobalVariablesFetchSuccessful &&
+    !isGlobalVariablesFetching &&
+    globalVariablesFetchStatus === "idle" &&
+    globalVariables !== undefined;
+
+  // Cached credentials are authorization-sensitive. Keep saved references in
+  // the flow data, but do not surface them while the exact flow-scoped query is
+  // fetching, paused, or failed. A successful result may come from another
+  // observer of the same scoped cache entry after this component remounts.
+  const typedGlobalVariables: GlobalVariable[] = canUseScopedGlobalVariables
+    ? (globalVariables ?? [])
+    : [];
+
+  // // Extract complex logic into custom hooks
+  const valueExists = useGlobalVariableValue(
+    currentValue,
+    typedGlobalVariables,
+  );
+  const unavailableField = useUnavailableField(
+    display_name,
+    currentValue,
+    typedGlobalVariables,
+  );
+  // Clearing a saved reference is destructive, so require this observer's own
+  // post-mount validation even when settled scoped data is safe to display.
+  // A shared-flow read hides the owner's variable name as null. Keep that
+  // redacted binding in the canvas instead of treating it as a missing name.
+  const canValidateMissingVariable =
+    canUseScopedGlobalVariables &&
+    isGlobalVariablesFetchedAfterMount &&
+    value !== null;
+
+  useInitialLoad(
+    isDisabled,
+    loadFromDb,
+    canValidateMissingVariable,
+    valueExists,
+    value === null ? null : unavailableField,
+    handleOnNewValue,
   );
 
-  const initialLoadCompleted = useRef(false);
+  // Create handlers object for better organization
+  const handlers: GlobalVariableHandlers = {
+    // Handler for deleting global variables
+    handleVariableDelete: (variableName: string) => {
+      if (value === variableName) {
+        handleOnNewValue({
+          value: "",
+          load_from_db: false,
+        });
+      }
+    },
 
-  const valueExists = useMemo(() => {
-    return (
-      globalVariables?.some((variable) => variable.name === value) ?? false
-    );
-  }, [globalVariables, value]);
+    // Handler for selecting a global variable
+    handleVariableSelect: (selectedValue: string) => {
+      if (!canUseScopedGlobalVariables) return;
+      handleOnNewValue({
+        value: selectedValue,
+        load_from_db: selectedValue !== "",
+      });
+    },
 
-  const unavailableField = useMemo(() => {
-    if (
-      display_name &&
-      unavailableFields &&
-      Object.keys(unavailableFields).includes(display_name) &&
-      value === ""
-    ) {
-      return unavailableFields[display_name];
-    }
-    return null;
-  }, [unavailableFields, display_name]);
-
-  useMemo(() => {
-    if (disabled) {
-      return;
-    }
-
-    if (load_from_db && globalVariables && !valueExists) {
+    // Handler for input changes
+    handleInputChange: (inputValue: string, skipSnapshot?: boolean) => {
       handleOnNewValue(
-        { value: "", load_from_db: false },
-        { skipSnapshot: true },
+        { value: inputValue, load_from_db: false },
+        { skipSnapshot },
       );
-    }
-  }, [
-    globalVariables,
-    unavailableFields,
-    disabled,
-    load_from_db,
-    valueExists,
-    unavailableField,
-    value,
-    handleOnNewValue,
-  ]);
+    },
+  };
 
-  useEffect(() => {
-    if (initialLoadCompleted.current || disabled || unavailableField === null) {
-      return;
-    }
+  // Render add new variable button
+  const renderAddVariableButton = () => (
+    <GlobalVariableModal
+      referenceField={display_name}
+      disabled={disabled}
+      providerScope={providerScope}
+    >
+      <CommandItem value="doNotFilter-addNewVariable">
+        <ForwardedIconComponent
+          name="Plus"
+          className={cn("mr-2 h-4 w-4 text-primary")}
+          aria-hidden="true"
+        />
+        <span>{t("input.addNewVariable")}</span>
+      </CommandItem>
+    </GlobalVariableModal>
+  );
 
-    handleOnNewValue(
-      { value: unavailableField, load_from_db: true },
-      { skipSnapshot: true },
-    );
+  // Render delete button for each option
+  const renderDeleteButton = (option: string) => (
+    <GlobalVariableDeleteConfirmation
+      option={option}
+      variableId={typedGlobalVariables.find((v) => v.name === option)?.id}
+      onConfirmDelete={() => handlers.handleVariableDelete(option)}
+      providerScope={providerScope}
+    />
+  );
 
-    initialLoadCompleted.current = true;
-  }, [unavailableField, disabled, load_from_db, value, handleOnNewValue]);
+  const variableOptions = typedGlobalVariables.map((variable) => variable.name);
 
-  function handleDelete(key: string) {
-    if (value === key) {
-      handleOnNewValue({ value: "", load_from_db: load_from_db });
-    }
+  // Disable Credential-typed variables unless this is a true secret field
+  // (SecretStrInput / MultilineSecretInput by intrinsic class). Falls back to
+  // the dynamic `password` flag when the backend hasn't supplied `_input_type`.
+  // Rule mirrors the backend validator's intent: credentials shouldn't flow
+  // into fields whose values render in Message.text/status/traces.
+  const isSecretField = _input_type
+    ? SECRET_INPUT_TYPES.has(_input_type)
+    : (password ?? false);
+  const disabledOptions: Record<string, string> = isSecretField
+    ? {}
+    : Object.fromEntries(
+        typedGlobalVariables
+          .filter((v) => v.type === "Credential")
+          .map((v) => [
+            v.name,
+            "Credential variables can only be used in secret fields (API keys, tokens). Select a Generic-typed variable, or change this variable's type to Generic if it isn't sensitive.",
+          ]),
+      );
+
+  const selectedOption =
+    loadFromDb && canUseScopedGlobalVariables && valueExists
+      ? currentValue
+      : "";
+  const visibleValue = loadFromDb && !selectedOption ? "" : currentValue;
+
+  if (!showParameter) {
+    return null;
   }
 
   return (
@@ -96,46 +197,23 @@ export default function InputGlobalComponent({
       popoverWidth="17.5rem"
       placeholder={getPlaceholder(disabled, placeholder)}
       id={id}
+      nodeId={nodeId}
       editNode={editNode}
       disabled={disabled}
       password={password ?? false}
-      value={value ?? ""}
-      options={globalVariables?.map((variable) => variable.name) ?? []}
-      optionsPlaceholder={"Global Variables"}
+      value={visibleValue}
+      options={variableOptions}
+      disabledOptions={disabledOptions}
+      optionsPlaceholder={t("globalVars.pageTitle")}
       optionsIcon="Globe"
-      optionsButton={
-        <GlobalVariableModal referenceField={display_name} disabled={disabled}>
-          <CommandItem value="doNotFilter-addNewVariable">
-            <ForwardedIconComponent
-              name="Plus"
-              className={cn("mr-2 h-4 w-4 text-primary")}
-              aria-hidden="true"
-            />
-            <span>Add New Variable</span>
-          </CommandItem>
-        </GlobalVariableModal>
-      }
-      optionButton={(option) => (
-        <GeneralDeleteConfirmationModal
-          option={option}
-          onConfirmDelete={() => handleDelete(option)}
-        />
-      )}
-      selectedOption={load_from_db && valueExists ? value : ""}
-      setSelectedOption={(value) => {
-        handleOnNewValue({
-          value: value,
-          load_from_db: value !== "" ? true : false,
-        });
-      }}
-      onChange={(value, skipSnapshot) => {
-        handleOnNewValue(
-          { value: value, load_from_db: false },
-          { skipSnapshot },
-        );
-      }}
+      optionsButton={renderAddVariableButton()}
+      optionButton={renderDeleteButton}
+      selectedOption={selectedOption}
+      setSelectedOption={handlers.handleVariableSelect}
+      onChange={handlers.handleInputChange}
       isToolMode={isToolMode}
       hasRefreshButton={hasRefreshButton}
+      ariaLabelledBy={ariaLabelledBy}
     />
   );
 }

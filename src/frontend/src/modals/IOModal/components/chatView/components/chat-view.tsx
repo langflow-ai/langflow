@@ -1,28 +1,28 @@
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { StickToBottom } from "use-stick-to-bottom";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
+import CustomChatInput from "@/customization/components/custom-chat-input";
+import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
+import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import { ResponseCompleteStatus } from "@/shared/components/response-complete-status";
+import { useResponseCompleteCue } from "@/shared/hooks/use-response-complete-cue";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import useDetectScroll, {
-  Axis,
-  Direction,
-} from "@smakss/react-scroll-direction";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../../stores/flowStore";
-import { ChatMessageType } from "../../../../../types/chat";
-import { chatViewProps } from "../../../../../types/components";
+import type { ChatMessageType } from "../../../../../types/chat";
+import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
-import ChatInput from "../chatInput/chat-input";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
-import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
-import { ChatScrollAnchor } from "./chat-scroll-anchor";
+import sortSenderMessages from "../helpers/sort-sender-messages";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -43,13 +43,10 @@ export default function ChatView({
   playgroundPage,
   sidebarOpen,
 }: chatViewProps): JSX.Element {
+  const { t } = useTranslation();
   const inputs = useFlowStore((state) => state.inputs);
-  const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage
-    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
-    : realFlowId;
-  const messagesRef = useRef<HTMLDivElement | null>(null);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = useGetFlowId();
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
   );
@@ -91,12 +88,13 @@ export default function ChatView({
             files = [];
           }
         }
+
         return {
           isSend: message.sender === "User",
           message: message.text,
           sender_name: message.sender_name,
           files: files,
-          id: message.id,
+          id: message.id || "",
           timestamp: message.timestamp,
           session: message.session_id,
           edit: message.edit,
@@ -107,9 +105,10 @@ export default function ChatView({
           properties: message.properties || {},
         };
       });
-    const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
+
+    const finalChatHistory = [...messagesFromMessagesStore].sort(
+      sortSenderMessages,
+    );
 
     if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
@@ -120,20 +119,18 @@ export default function ChatView({
     setChatHistory(finalChatHistory);
   }, [messages, visibleSession]);
 
+  const responseCue = useResponseCompleteCue(isBuilding, chatHistory);
+
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (ref.current) {
+    if (ref.current && focusChat) {
       ref.current.focus();
     }
     // trigger focus on chat when new session is set
   }, [focusChat]);
 
-  function updateChat(
-    chat: ChatMessageType,
-    message: string,
-    stream_url?: string,
-  ) {
+  function updateChat(chat: ChatMessageType, message: string) {
     chat.message = message;
     if (chat.componentId)
       updateFlowPool(chat.componentId, {
@@ -143,7 +140,10 @@ export default function ChatView({
       });
   }
 
-  const { files, setFiles, handleFiles } = useFileHandler(realFlowId);
+  const { files, setFiles, handleFiles } = useCustomUseFileHandler(
+    realFlowId,
+    !!playgroundPage,
+  );
   const [isDragging, setIsDragging] = useState(false);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
@@ -151,11 +151,7 @@ export default function ChatView({
     !!playgroundPage,
   );
 
-  const onDrop = (e) => {
-    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
-      e.stopPropagation();
-      return;
-    }
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -170,46 +166,8 @@ export default function ChatView({
     (state) => state.isVoiceAssistantActive,
   );
 
-  const [customElement, setCustomElement] = useState<HTMLDivElement>();
-
-  useEffect(() => {
-    if (messagesRef.current) {
-      setCustomElement(messagesRef.current);
-    }
-  }, [messagesRef]);
-
-  const { scrollDir } = useDetectScroll({
-    target: customElement,
-    axis: Axis.Y,
-    thr: 0,
-  });
-
-  const [canScroll, setCanScroll] = useState<boolean>(false);
-  const [scrolledUp, setScrolledUp] = useState<boolean>(false);
-
-  const handleScroll = () => {
-    if (!messagesRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
-    const atBottom = scrollHeight - clientHeight <= scrollTop + 3;
-
-    if (scrollDir === Direction.Up) {
-      setCanScroll(false);
-      setScrolledUp(true);
-    } else {
-      if (atBottom || !scrolledUp) {
-        setCanScroll(true);
-      }
-      setScrolledUp(false);
-    }
-  };
-
-  useEffect(() => {
-    setCanScroll(true);
-  }, [chatHistory?.length]);
-
   return (
-    <div
+    <StickToBottom
       className={cn(
         "flex h-full w-full flex-col rounded-md",
         visibleSession ? "h-[95%]" : "h-full",
@@ -221,39 +179,39 @@ export default function ChatView({
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
       onDrop={onDrop}
+      resize="instant"
+      initial="instant"
     >
-      <div
-        ref={messagesRef}
-        onScroll={handleScroll}
-        className="chat-message-div"
-      >
-        {chatHistory &&
-          (isBuilding || chatHistory?.length > 0 ? (
-            <>
-              {chatHistory?.map((chat, index) => (
+      <StickToBottom.Content className="flex flex-col min-h-full ">
+        {/* aria-live="off" neutralizes role="log"'s implicit politeness: React
+            remounts earlier messages on send (lastMessage flips), which a live
+            list region re-announces as additions — Safari/VoiceOver read the
+            whole history on every send (LE-2041 QA). The completion cue is
+            announced solely by ResponseCompleteStatus below. */}
+        <div
+          className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]"
+          role="log"
+          aria-live="off"
+          aria-label={t("chat.messagesRegionLabel")}
+        >
+          {chatHistory &&
+            (isBuilding || chatHistory?.length > 0 ? (
+              chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
-                  key={`${chat.id}-${index}`}
+                  key={chat.id}
                   updateChat={updateChat}
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}
                 />
-              ))}
-              {chatHistory?.length > 0 && (
-                <ChatScrollAnchor
-                  trackVisibility={chatHistory?.[chatHistory.length - 1]}
-                  canScroll={canScroll}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              <div className="flex h-full w-full flex-col items-center justify-center">
+              ))
+            ) : (
+              <div className="flex flex-grow w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
                   <LangflowLogo
-                    title="Langflow logo"
                     className="h-10 w-10 scale-[1.5]"
+                    aria-hidden="true"
                   />
                   <div className="flex flex-col items-center justify-center">
                     <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
@@ -270,8 +228,8 @@ export default function ChatView({
                   </div>
                 </div>
               </div>
-            </>
-          ))}
+            ))}
+        </div>
         <div
           className={
             displayLoadingMessage
@@ -284,14 +242,20 @@ export default function ChatView({
             !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
-      </div>
+      </StickToBottom.Content>
+      <ResponseCompleteStatus
+        completedCount={responseCue.completedCount}
+        completedText={responseCue.completedText}
+        isAnnouncing={responseCue.isAnnouncing}
+      />
+      <SafariScrollFix />
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
-        <ChatInput
+        <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
-          sendMessage={({ repeat, files }) => {
-            sendMessage({ repeat, files });
+          sendMessage={async ({ repeat, files }) => {
+            await sendMessage({ repeat, files });
             track("Playground Message Sent");
           }}
           inputRef={ref}
@@ -300,6 +264,6 @@ export default function ChatView({
           isDragging={isDragging}
         />
       </div>
-    </div>
+    </StickToBottom>
   );
 }

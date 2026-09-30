@@ -1,0 +1,492 @@
+import type {
+  CellKeyDownEvent,
+  ColDef,
+  NewValueParams,
+} from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import DataTableTab from "@/components/core/dataTableTabComponent";
+import { Button } from "@/components/ui/button";
+import Loading from "@/components/ui/loading";
+import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
+import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
+import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
+import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
+import useUploadFile from "@/hooks/files/use-upload-file";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
+import useAlertStore from "@/stores/alertStore";
+import type { FileType } from "@/types/file_management";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { formatFileSize } from "@/utils/stringManipulation";
+import { FILE_ICONS } from "@/utils/styleUtils";
+import { cn } from "@/utils/utils";
+import { sortByDate } from "../../../utils/sort-flows";
+import DragWrapComponent from "./dragWrapComponent";
+
+interface FilesTabProps {
+  quickFilterText: string;
+  setQuickFilterText: (text: string) => void;
+  selectedFiles: FileType[];
+  setSelectedFiles: (files: FileType[]) => void;
+  quantitySelected: number;
+  setQuantitySelected: (quantity: number) => void;
+  isShiftPressed: boolean;
+}
+
+const getFileExtension = (path: string) => {
+  const fileName = path.split("/").pop() ?? "";
+  const extensionStart = fileName.lastIndexOf(".");
+  if (extensionStart <= 0 || extensionStart === fileName.length - 1) {
+    return undefined;
+  }
+  return fileName.slice(extensionStart + 1).toLowerCase();
+};
+
+const FilesTab = ({
+  quickFilterText,
+  setQuickFilterText,
+  selectedFiles,
+  setSelectedFiles,
+  quantitySelected,
+  setQuantitySelected,
+  isShiftPressed,
+}: FilesTabProps) => {
+  const { t } = useTranslation();
+  const tableRef = useRef<AgGridReact<FileType>>(null);
+  const { data: files } = useGetFilesV2();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+
+  const { mutate: rename } = usePostRenameFileV2();
+  const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
+  const handleRename = (params: NewValueParams<FileType, string>) => {
+    if (typeof params.newValue !== "string") {
+      return;
+    }
+    rename(
+      {
+        id: params.data.id,
+        name: params.newValue,
+      },
+      {
+        onError: (error) => {
+          setErrorData({
+            title: t("files.errorRenaming"),
+            list: extractApiErrorMessages(error),
+          });
+        },
+      },
+    );
+  };
+
+  const handleOpenRename = (id: string, name: string) => {
+    const rowIndex = files?.findIndex((file) => file.id === id) ?? 0;
+    tableRef.current?.api.startEditingCell({ rowIndex, colKey: "name" });
+    // Rename is triggered from a Radix dropdown item; when that menu closes it
+    // restores focus to its trigger button once, asynchronously, stealing focus
+    // from the cell editor. Re-assert focus on the editor input across a few
+    // frames so it outlasts that restore and a keyboard user can type
+    // immediately (WCAG 2.4.3 Focus Order).
+    let frame = 0;
+    const focusEditor = () => {
+      const input = document.querySelector<HTMLInputElement>(
+        ".ag-cell-inline-editing .ag-input-field-input",
+      );
+      if (input && document.activeElement !== input) {
+        input.focus();
+        input.select();
+      }
+      if (frame++ < 6) {
+        requestAnimationFrame(focusEditor);
+      }
+    };
+    requestAnimationFrame(focusEditor);
+  };
+
+  const uploadFile = useUploadFile({ multiple: true });
+
+  const handleUpload = async (files?: File[]) => {
+    try {
+      const filesIds = await uploadFile({
+        files: files,
+      });
+      if (filesIds.length > 0) {
+        setSuccessData({
+          title:
+            filesIds.length > 1
+              ? t("files.filesUploadedSuccessfully")
+              : t("files.uploadedSuccessfully"),
+        });
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("files.errorUploadingDetail");
+      setErrorData({
+        title: t("files.errorUploading"),
+        list: [message],
+      });
+    }
+  };
+
+  const { mutate: uploadFileDirect } = customPostUploadFileV2();
+
+  useEffect(() => {
+    if (files) {
+      setQuantitySelected(0);
+      setSelectedFiles([]);
+    }
+  }, [files, setQuantitySelected, setSelectedFiles]);
+
+  // AG Grid navigates cell-by-cell and never focuses the action button inside a
+  // cell, so keyboard users can't open the row actions menu. Open it when
+  // Enter/Space is pressed while the actions cell is focused (WCAG 2.1.1).
+  const handleCellKeyDown = (event: CellKeyDownEvent<FileType>) => {
+    const keyboardEvent = event.event as KeyboardEvent | undefined;
+    if (keyboardEvent?.key !== "Enter" && keyboardEvent?.key !== " ") {
+      return;
+    }
+    if (event.column?.getColId() !== "actions") {
+      return;
+    }
+    const target = keyboardEvent.target as HTMLElement | null;
+    // The key was already re-dispatched onto the trigger button: let Radix's own
+    // keyboard handler open the menu and don't recurse.
+    if (target?.tagName === "BUTTON") {
+      return;
+    }
+    const actionsButton = target
+      ?.closest?.('[role="gridcell"]')
+      ?.querySelector<HTMLElement>("button");
+    if (!actionsButton) {
+      return;
+    }
+    // Replay the key before moving focus. Focusing first lets AG Grid remount
+    // the cell and leaves this reference pointing at a detached Radix trigger.
+    keyboardEvent.preventDefault();
+    actionsButton.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: keyboardEvent.key,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  };
+
+  const colDefs: ColDef[] = [
+    {
+      headerName: t("files.columnName"),
+      field: "name",
+      flex: 2,
+      headerCheckboxSelection: true,
+      checkboxSelection: true,
+      editable: true,
+      filter: "agTextColumnFilter",
+      cellClass:
+        "cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
+      cellRenderer: (params) => {
+        const type = getFileExtension(params.data.path);
+        return (
+          <div className="flex items-center gap-4 font-medium">
+            {params.data.progress !== undefined &&
+            params.data.progress !== -1 ? (
+              <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
+                {Math.round(params.data.progress * 100)}%
+              </div>
+            ) : (
+              <div className="file-icon pointer-events-none relative">
+                <ForwardedIconComponent
+                  name={FILE_ICONS[type]?.icon ?? "File"}
+                  className={cn(
+                    "-mx-[3px] h-6 w-6 shrink-0",
+                    params.data.progress !== undefined
+                      ? "text-placeholder-foreground"
+                      : (FILE_ICONS[type]?.color ?? undefined),
+                  )}
+                />
+              </div>
+            )}
+            <div
+              className={cn(
+                "flex items-center gap-2 text-sm font-medium",
+                params.data.progress !== undefined &&
+                  params.data.progress === -1 &&
+                  "pointer-events-none text-placeholder-foreground",
+              )}
+            >
+              {params.value}.{type}
+            </div>
+            {params.data.progress !== undefined &&
+            params.data.progress === -1 ? (
+              <span className="text-xs text-primary">
+                {t("files.uploadFailed")}{" "}
+                <button
+                  type="button"
+                  className="cursor-pointer text-accent-pink-foreground underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (params.data.file) {
+                      uploadFileDirect({ file: params.data.file });
+                    }
+                  }}
+                >
+                  {t("files.tryAgain")}
+                </button>
+              </span>
+            ) : (
+              <></>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      headerName: t("files.columnType"),
+      field: "path",
+      flex: 1,
+      filter: "agTextColumnFilter",
+      editable: false,
+      valueFormatter: (params) => {
+        return getFileExtension(params.value)?.toUpperCase();
+      },
+      cellClass:
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
+    },
+    {
+      headerName: t("files.columnSize"),
+      field: "size",
+      flex: 1,
+      valueFormatter: (params) => {
+        return formatFileSize(params.value);
+      },
+      editable: false,
+      cellClass:
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
+    },
+    {
+      headerName: t("files.columnModified"),
+      field: "updated_at",
+      valueFormatter: (params) => {
+        return params.data.progress
+          ? ""
+          : new Date(params.value + "Z").toLocaleString();
+      },
+      editable: false,
+      flex: 1,
+      resizable: false,
+      cellClass:
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
+    },
+    {
+      // Icon-only actions column: the header stays visually empty but keeps an
+      // accessible name (hidden via the `ag-sr-only-header` class) so the
+      // columnheader is not nameless (WCAG 4.1.2 / IBM aria_accessiblename_exists).
+      colId: "actions",
+      headerName: t("files.columnActions"),
+      headerClass: "ag-sr-only-header",
+      maxWidth: 60,
+      editable: false,
+      resizable: false,
+      // The table-level key handler forwards Enter/Space to the Radix trigger.
+      // Keep AG Grid from also treating Space as row selection, which can
+      // remount the cell before the trigger receives the key.
+      suppressKeyboardEvent: (params) =>
+        params.event.key === "Enter" || params.event.key === " ",
+      cellClass: "cursor-default",
+      cellRenderer: (params) => {
+        return (
+          <div className="flex h-full cursor-default items-center justify-center">
+            {!params.data.progress && (
+              <FilesContextMenuComponent
+                file={params.data}
+                handleRename={handleOpenRename}
+              >
+                <Button
+                  variant="ghost"
+                  size="iconMd"
+                  aria-label={t("files.actionsMenu", {
+                    defaultValue: "File actions for {{name}}",
+                    name: params.data.name,
+                  })}
+                >
+                  <ForwardedIconComponent name="EllipsisVertical" />
+                </Button>
+              </FilesContextMenuComponent>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  const onFileDrop = async (e: React.DragEvent) => {
+    e.preventDefault;
+    e.stopPropagation();
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      await handleUpload(droppedFiles);
+    }
+  };
+
+  const handleDelete = () => {
+    deleteFiles(
+      {
+        ids: selectedFiles.map((file) => file.id),
+      },
+      {
+        onSuccess: (data) => {
+          setSuccessData({ title: data.message });
+          setQuantitySelected(0);
+          setSelectedFiles([]);
+        },
+        onError: (error) => {
+          setErrorData({
+            title: t("files.errorDeleting"),
+            list: [error.message || t("files.errorDeletingDetail")],
+          });
+        },
+      },
+    );
+  };
+
+  const UploadButtonComponent = useMemo(() => {
+    return (
+      <ShadTooltip content={t("files.uploadFile")} side="bottom">
+        <Button
+          className="!px-3 md:!px-4 md:!pl-3.5"
+          onClick={async (e) => {
+            const button = e.currentTarget;
+            // Keyboard-activated clicks report detail === 0. For mouse clicks
+            // we blur to dismiss the lingering tooltip (#13178); for keyboard
+            // we must return focus to the trigger after the native file picker
+            // closes so focus isn't dropped to <body> (WCAG 2.4.3).
+            const keyboardActivated = e.detail === 0;
+            if (!keyboardActivated) {
+              button.blur();
+            }
+            await handleUpload();
+            if (keyboardActivated) {
+              button.focus();
+            }
+          }}
+          id="upload-file-btn"
+          data-testid="upload-file-btn"
+          aria-label={t("files.uploadFiles")}
+        >
+          <ForwardedIconComponent
+            name="Plus"
+            aria-hidden="true"
+            className="h-4 w-4"
+          />
+          <span className="hidden whitespace-nowrap font-semibold md:inline">
+            {t("files.uploadFiles")}
+          </span>
+        </Button>
+      </ShadTooltip>
+    );
+  }, []);
+
+  const isLoadingFiles = !files || !Array.isArray(files);
+  const sortedFiles = isLoadingFiles
+    ? []
+    : files.sort((a, b) => {
+        return sortByDate(
+          a.updated_at ?? a.created_at,
+          b.updated_at ?? b.created_at,
+        );
+      });
+
+  return (
+    <DataTableTab<FileType>
+      columnDefs={colDefs}
+      rowData={sortedFiles}
+      isLoading={isLoadingFiles}
+      loadingState={
+        <div className="flex h-full flex-col">
+          <div className="flex h-full flex-col py-4">
+            <div className="flex h-full w-full items-center justify-center">
+              <Loading />
+            </div>
+          </div>
+        </div>
+      }
+      emptyState={
+        <div className="flex h-full flex-col">
+          <div className="flex h-full flex-col py-4">
+            <DragWrapComponent onFileDrop={onFileDrop}>
+              <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
+                <div className="flex flex-col items-center gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {t("files.noFiles")}
+                  </h3>
+                  <p className="text-lg text-secondary-foreground">
+                    {t("files.emptyDescription")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {UploadButtonComponent}
+                </div>
+              </div>
+            </DragWrapComponent>
+          </div>
+        </div>
+      }
+      searchPlaceholder={t("files.searchFiles")}
+      searchInputTestId="search-store-input"
+      searchInputClassName="mr-2"
+      quickFilterText={quickFilterText}
+      setQuickFilterText={setQuickFilterText}
+      toolbarActions={
+        <div className="flex items-center gap-2">
+          {quantitySelected > 0 ? (
+            <DeleteConfirmationModal
+              asChild
+              onConfirm={handleDelete}
+              description={"file" + (quantitySelected > 1 ? "s" : "")}
+            >
+              <Button
+                variant="destructive"
+                className="flex items-center gap-2 !px-3 font-semibold md:!px-4 md:!pl-3.5"
+                loading={isDeleting}
+                data-testid="bulk-delete-btn"
+                aria-label={t("files.deleteSelected", {
+                  count: quantitySelected,
+                })}
+              >
+                <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+                <span className="hidden whitespace-nowrap md:inline">
+                  {t("files.deleteSelected", { count: quantitySelected })}
+                </span>
+              </Button>
+            </DeleteConfirmationModal>
+          ) : (
+            UploadButtonComponent
+          )}
+        </div>
+      }
+      setSelectedRows={setSelectedFiles}
+      setQuantitySelected={setQuantitySelected}
+      quantitySelected={quantitySelected}
+      isShiftPressed={isShiftPressed}
+      tableRef={tableRef}
+      editable={[
+        {
+          field: "name",
+          onUpdate: handleRename,
+          editableCell: true,
+        },
+      ]}
+      onCellKeyDown={handleCellKeyDown}
+      renderTableWrapper={(table) => (
+        <DragWrapComponent onFileDrop={onFileDrop}>{table}</DragWrapComponent>
+      )}
+    />
+  );
+};
+
+export default FilesTab;

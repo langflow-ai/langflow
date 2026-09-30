@@ -3,22 +3,22 @@ from __future__ import annotations
 import asyncio
 import os
 from collections import defaultdict
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
+from lfx.log.logger import logger
 
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
+    from lfx.custom.custom_component.component import Component
+    from lfx.graph.vertex.base import Vertex
+    from lfx.services.settings.service import SettingsService
 
-    from langflow.custom.custom_component.component import Component
-    from langflow.graph.vertex.base import Vertex
-    from langflow.services.settings.service import SettingsService
     from langflow.services.tracing.base import BaseTracer
     from langflow.services.tracing.schema import Log
 
@@ -53,6 +53,24 @@ def _get_opik_tracer():
     return OpikTracer
 
 
+def _get_traceloop_tracer():
+    from langflow.services.tracing.traceloop import TraceloopTracer
+
+    return TraceloopTracer
+
+
+def _get_native_tracer():
+    from langflow.services.tracing.native import NativeTracer
+
+    return NativeTracer
+
+
+def _get_openlayer_tracer():
+    from langflow.services.tracing.openlayer import OpenlayerTracer
+
+    return OpenlayerTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -65,12 +83,18 @@ class TraceContext:
         project_name: str | None,
         user_id: str | None,
         session_id: str | None,
+        flow_id: str | None = None,
+        tracing_user_id: str | None = None,
     ):
         self.run_id: UUID | None = run_id
         self.run_name: str | None = run_name
         self.project_name: str | None = project_name
+        # ``user_id`` is the authenticated Langflow user and drives ``trace.userId``;
+        # ``tracing_user_id`` is an optional caller label providers surface separately.
         self.user_id: str | None = user_id
+        self.tracing_user_id: str | None = tracing_user_id
         self.session_id: str | None = session_id
+        self.flow_id: str | None = flow_id
         self.tracers: dict[str, BaseTracer] = {}
         self.all_inputs: dict[str, dict] = defaultdict(dict)
         self.all_outputs: dict[str, dict] = defaultdict(dict)
@@ -127,7 +151,7 @@ class TracingService(Service):
             try:
                 trace_func(*args)
             except Exception:  # noqa: BLE001
-                logger.exception("Error processing trace_func")
+                await logger.aexception("Error processing trace_func")
             finally:
                 trace_context.traces_queue.task_done()
 
@@ -138,7 +162,7 @@ class TracingService(Service):
             trace_context.running = True
             trace_context.worker_task = asyncio.create_task(self._trace_worker(trace_context))
         except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
+            await logger.aexception("Error starting tracing service")
 
     def _initialize_langsmith_tracer(self, trace_context: TraceContext) -> None:
         langsmith_tracer = _get_langsmith_tracer()
@@ -168,6 +192,8 @@ class TracingService(Service):
         if self.deactivated:
             return
         langfuse_tracer = _get_langfuse_tracer()
+        # ``user_id`` carries the authenticated Langflow user and drives ``trace.userId``;
+        # ``tracing_user_id`` is the optional caller label LangFuseTracer stamps into metadata.
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
@@ -175,6 +201,7 @@ class TracingService(Service):
             trace_id=trace_context.run_id,
             user_id=trace_context.user_id,
             session_id=trace_context.session_id,
+            tracing_user_id=trace_context.tracing_user_id,
         )
 
     def _initialize_arize_phoenix_tracer(self, trace_context: TraceContext) -> None:
@@ -201,6 +228,46 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    def _initialize_traceloop_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        traceloop_tracer = _get_traceloop_tracer()
+        trace_context.tracers["traceloop"] = traceloop_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
+    def _initialize_native_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        native_tracer = _get_native_tracer()
+        trace_context.tracers["native"] = native_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            flow_id=trace_context.flow_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
+    def _initialize_openlayer_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        openlayer_tracer = _get_openlayer_tracer()
+        trace_context.tracers["openlayer"] = openlayer_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -208,40 +275,76 @@ class TracingService(Service):
         user_id: str | None,
         session_id: str | None,
         project_name: str | None = None,
+        flow_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         """Start a trace for a graph run.
 
         - create a trace context
         - start a worker for this trace context
         - initialize the tracers
+
+        ``user_id`` is the authenticated Langflow user (e.g. API-key owner)
+        and drives ``trace.userId`` for tracing providers. ``tracing_user_id``
+        is an optional caller-supplied label forwarded to providers, which
+        surface it separately (e.g. LangFuseTracer stamps it into trace metadata
+        as ``langflow.tracing_user_id``).
         """
         if self.deactivated:
             return
         try:
             project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
-            trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id)
+            trace_context = TraceContext(
+                run_id,
+                run_name,
+                project_name,
+                user_id,
+                session_id,
+                flow_id,
+                tracing_user_id=tracing_user_id,
+            )
             trace_context_var.set(trace_context)
             await self._start(trace_context)
-            self._initialize_langsmith_tracer(trace_context)
-            self._initialize_langwatch_tracer(trace_context)
-            self._initialize_langfuse_tracer(trace_context)
-            self._initialize_arize_phoenix_tracer(trace_context)
-            self._initialize_opik_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error initializing tracers: {e}")
+            await logger.adebug(f"Error initializing tracers: {e}")
+            return
+
+        for initialize_tracer in (
+            self._initialize_langsmith_tracer,
+            self._initialize_langwatch_tracer,
+            self._initialize_langfuse_tracer,
+            self._initialize_arize_phoenix_tracer,
+            self._initialize_opik_tracer,
+            self._initialize_traceloop_tracer,
+            self._initialize_native_tracer,
+            self._initialize_openlayer_tracer,
+        ):
+            try:
+                initialize_tracer(trace_context)
+            except Exception as e:  # noqa: BLE001
+                await logger.adebug(f"Error initializing tracers: {e}")
 
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
             trace_context.running = False
-            # check the qeue is empty
-            if not trace_context.traces_queue.empty():
-                await trace_context.traces_queue.join()
+            # Cancel the worker, then drain inline so a late end event (typically the terminal
+            # component's, enqueued as end_tracers runs) is flushed, not lost with the worker.
             if trace_context.worker_task:
                 trace_context.worker_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await trace_context.worker_task
                 trace_context.worker_task = None
+            while not trace_context.traces_queue.empty():
+                trace_func, args = trace_context.traces_queue.get_nowait()
+                try:
+                    trace_func(*args)
+                except Exception:  # noqa: BLE001
+                    await logger.aexception("Error draining trace_func")
+                finally:
+                    trace_context.traces_queue.task_done()
 
         except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+            await logger.aexception("Error stopping tracing service")
 
     def _end_all_tracers(self, trace_context: TraceContext, outputs: dict, error: Exception | None = None) -> None:
         for tracer in trace_context.tracers.values():
@@ -262,23 +365,40 @@ class TracingService(Service):
 
         - stop worker for current trace_context
         - call end for all the tracers
+        - wait for native tracer to flush to database
         """
         if self.deactivated:
             return
         trace_context = trace_context_var.get()
         if trace_context is None:
-            msg = "called end_tracers but no trace context found"
-            raise RuntimeError(msg)
+            return
         await self._stop(trace_context)
         self._end_all_tracers(trace_context, outputs, error)
+
+        native_tracer = trace_context.tracers.get("native")
+        if native_tracer:
+            # Deferred import breaks the circular dependency between service.py and native.py.
+            from langflow.services.tracing.native import NativeTracer
+
+            if isinstance(native_tracer, NativeTracer):
+                await native_tracer.wait_for_flush()
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
         inputs = inputs.copy()
-        for key in inputs:
-            if "api_key" in key:
-                inputs[key] = "*****"  # avoid logging api_keys for security reasons
-        return inputs
+        sensitive_keywords = {"api_key", "password", "server_url"}
+
+        def _mask(obj: Any):
+            if isinstance(obj, dict):
+                return {
+                    k: "*****" if any(word in k.lower() for word in sensitive_keywords) else _mask(v)
+                    for k, v in obj.items()
+                }
+            if isinstance(obj, list):
+                return [_mask(i) for i in obj]
+            return obj
+
+        return _mask(inputs)
 
     def _start_component_traces(
         self,
@@ -302,6 +422,33 @@ class TracingService(Service):
                 )
             except Exception:  # noqa: BLE001
                 logger.exception(f"Error starting trace {component_trace_context.trace_name}")
+
+    def record_event_span(
+        self,
+        *,
+        span_id: str,
+        name: str,
+        outputs: dict[str, Any],
+        span_type: str = "chain",
+    ) -> None:
+        """Record a standalone, instantaneous span into the active trace.
+
+        Used for non-component steps such as the resolved HITL gate, which has no vertex of its own
+        but should be persisted in the trace so it survives a page refresh (not only in client state).
+        """
+        if self.deactivated:
+            return
+        trace_context = trace_context_var.get()
+        if trace_context is None:
+            return
+        for tracer in trace_context.tracers.values():
+            if not tracer.ready:
+                continue
+            try:
+                tracer.add_trace(span_id, name, span_type, {}, {}, None)
+                tracer.end_trace(trace_id=span_id, trace_name=name, outputs=outputs)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error recording event span {name}")
 
     def _end_component_traces(
         self,
@@ -341,17 +488,19 @@ class TracingService(Service):
             yield self
             return
         trace_id = trace_name
-        if component._vertex:
-            trace_id = component._vertex.id
+        vertex = component.get_vertex()
+        if vertex:
+            trace_id = vertex.id
         trace_type = component.trace_type
-        component_trace_context = ComponentTraceContext(
-            trace_id, trace_name, trace_type, component._vertex, inputs, metadata
-        )
+        inputs = self._cleanup_inputs(inputs)
+        component_trace_context = ComponentTraceContext(trace_id, trace_name, trace_type, vertex, inputs, metadata)
         component_context_var.set(component_trace_context)
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called trace_component but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            yield self
+            return
         trace_context.all_inputs[trace_name] |= inputs or {}
         await trace_context.traces_queue.put((self._start_component_traces, (component_trace_context, trace_context)))
         try:
@@ -373,7 +522,8 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called project_name but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return None
         return trace_context.project_name
 
     def add_log(self, trace_name: str, log: Log) -> None:
@@ -382,8 +532,8 @@ class TracingService(Service):
             return
         component_context = component_context_var.get()
         if component_context is None:
-            msg = "called add_log but no component context found"
-            raise RuntimeError(msg)
+            logger.debug("called add_log but no component context found")
+            return
         component_context.logs[trace_name].append(log)
 
     def set_outputs(
@@ -397,21 +547,29 @@ class TracingService(Service):
             return
         component_context = component_context_var.get()
         if component_context is None:
-            msg = "called set_outputs but no component context found"
-            raise RuntimeError(msg)
+            logger.debug("called set_outputs but no component context found")
+            return
         component_context.outputs[trace_name] |= outputs or {}
         component_context.outputs_metadata[trace_name] |= output_metadata or {}
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called set_outputs but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return
         trace_context.all_outputs[trace_name] |= outputs or {}
 
     def get_tracer(self, tracer_name: str) -> BaseTracer | None:
+        # When tracing is deactivated there is no trace context by construction, so the warning
+        # below is guaranteed noise: it fired once per component per run and accounted for the
+        # majority of the log volume on a box with LANGFLOW_DEACTIVATE_TRACING=true. Every other
+        # public method here already guards this way.
+        if self.deactivated:
+            return None
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called get_tracer but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return None
         return trace_context.tracers.get(tracer_name)
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
@@ -421,11 +579,17 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called get_langchain_callbacks but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return []
         for tracer in trace_context.tracers.values():
             if not tracer.ready:  # type: ignore[truthy-function]
                 continue
-            langchain_callback = tracer.get_langchain_callback()
+            try:
+                # A broken tracer (e.g. partial Langfuse creds) must never fail the run.
+                langchain_callback = tracer.get_langchain_callback()
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Tracer {type(tracer).__name__} failed to provide a callback; skipping: {e}")
+                continue
             if langchain_callback:
                 callbacks.append(langchain_callback)
         return callbacks

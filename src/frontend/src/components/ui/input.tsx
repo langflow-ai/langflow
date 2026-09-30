@@ -1,4 +1,8 @@
 import * as React from "react";
+import {
+  getSuppressedAutoComplete,
+  PASSWORD_MANAGER_IGNORE_PROPS,
+} from "@/utils/inputAutofill";
 import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
@@ -6,44 +10,113 @@ export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: string;
   inputClassName?: string;
+  placeholder?: string;
+  placeholderClassName?: string;
+  endIcon?: React.ReactNode;
+  /** @deprecated use endIcon with JSX directly */
+  endIconClassName?: string;
+  /**
+   * Opt back into browser / password-manager autofill. Defaults to false so
+   * Langflow inputs (node-config fields, modals) suppress autofill — otherwise
+   * the browser can inject saved credentials that autosave then persists,
+   * corrupting flows. Only real credential-entry forms (login / signup / admin
+   * login) set this to true.
+   */
+  allowAutofill?: boolean;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, inputClassName, icon = "", type, ...props }, ref) => {
-    if (icon) {
-      return (
-        <label className={cn("relative block h-fit w-full", className)}>
+  (
+    {
+      className,
+      inputClassName,
+      icon = "",
+      endIcon,
+      endIconClassName = "",
+      type,
+      placeholder,
+      autoComplete,
+      allowAutofill = false,
+      ...props
+    },
+    ref,
+  ) => {
+    // Suppress browser/password-manager autofill by default; credential forms
+    // opt back in via `allowAutofill`. A caller-provided `autoComplete` always
+    // wins. See utils/inputAutofill.ts for the rationale.
+    const autofillProps = allowAutofill
+      ? autoComplete !== undefined
+        ? { autoComplete }
+        : {}
+      : {
+          autoComplete:
+            autoComplete ?? getSuppressedAutoComplete(type === "password"),
+          ...PASSWORD_MANAGER_IGNORE_PROPS,
+        };
+
+    // Support legacy string endIcon (icon name) for backwards compatibility
+    const resolvedEndIcon =
+      typeof endIcon === "string" ? (
+        <ForwardedIconComponent
+          name={endIcon}
+          className={cn(
+            "pointer-events-none h-4 w-4 text-muted-foreground",
+            endIconClassName,
+          )}
+        />
+      ) : (
+        endIcon
+      );
+
+    return (
+      // Neutral wrapper: a wrapping <label> would add the visual placeholder
+      // span to the input's accessible name and double-label fields that are
+      // already labeled externally (a11y-action-plan 1.2).
+      <div
+        className={cn(
+          "relative block h-fit w-full text-sm",
+          icon ? className : "",
+        )}
+      >
+        {icon && (
           <ForwardedIconComponent
             name={icon}
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground"
           />
-          <input
-            autoComplete="off"
-            data-testid=""
-            type={type}
-            className={cn(
-              "nopan nodelete nodrag noflow form-input block w-full appearance-none truncate rounded-md border-border bg-background px-3 pl-9 text-left text-sm placeholder:text-muted-foreground focus:border-black focus:placeholder-transparent focus:ring-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:border-white dark:focus:ring-zinc-800",
-              inputClassName,
-            )}
-            ref={ref}
-            {...props}
-          />
-        </label>
-      );
-    } else {
-      return (
+        )}
         <input
-          data-testid=""
+          {...autofillProps}
           type={type}
+          placeholder={placeholder}
           className={cn(
-            "nopan nodelete nodrag noflow primary-input",
-            className,
+            "nopan nodelete nodrag noflow primary-input !placeholder-transparent",
+            icon && "pl-9",
+            resolvedEndIcon && "pr-9",
+            icon ? inputClassName : className,
           )}
           ref={ref}
           {...props}
         />
-      );
-    }
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
+            icon ? "left-9" : "left-3",
+            props.value && "hidden",
+          )}
+        >
+          {placeholder}
+        </span>
+        {resolvedEndIcon && (
+          <div
+            data-testid="input-end-icon"
+            className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center"
+          >
+            {resolvedEndIcon}
+          </div>
+        )}
+      </div>
+    );
   },
 );
 Input.displayName = "Input";

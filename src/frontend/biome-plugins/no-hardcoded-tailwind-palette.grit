@@ -1,0 +1,9 @@
+// Flags hardcoded Tailwind palette colors (e.g. bg-zinc-900, text-slate-500, border-gray-200).
+// Use semantic tokens defined in src/style/index.css (bg-background, text-foreground, border-border, etc.) instead.
+
+language js
+
+`$str` where {
+  $str <: r".*-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+.*",
+  register_diagnostic(span=$str, message="Hardcoded Tailwind palette color is not allowed. Use a semantic token from src/style/index.css (e.g. bg-background, text-foreground, border-border) instead.")
+}

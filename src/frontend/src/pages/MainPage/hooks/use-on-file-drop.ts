@@ -1,9 +1,10 @@
-import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useCallback, useRef } from "react";
-import { CONSOLE_ERROR_MSG } from "../../../constants/alerts_constants";
+import { useTranslation } from "react-i18next";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import useAlertStore from "../../../stores/alertStore";
 
 const useFileDrop = (type?: string) => {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const uploadFlow = useUploadFlow();
@@ -38,10 +39,9 @@ const useFileDrop = (type?: string) => {
               });
             })
             .catch((error) => {
-              console.log(error);
               setErrorData({
-                title: CONSOLE_ERROR_MSG,
-                list: [(error as Error).message],
+                title: t("errors.uploadFile"),
+                list: [error instanceof Error ? error.message : String(error)],
               });
             });
         }

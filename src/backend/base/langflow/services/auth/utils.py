@@ -1,475 +1,522 @@
+from __future__ import annotations
+
 import base64
+import hashlib
 import random
-import warnings
-from collections.abc import Coroutine
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Annotated
-from uuid import UUID
+from typing import TYPE_CHECKING, Annotated, Final
 
-from cryptography.fernet import Fernet
-from fastapi import Depends, HTTPException, Security, WebSocketException, status
+from cryptography.fernet import Fernet, MultiFernet
+from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
-from jose import JWTError, jwt
-from loguru import logger
-from sqlmodel.ext.asyncio.session import AsyncSession
-from starlette.websockets import WebSocket
+from fastapi.security.utils import get_authorization_scheme_param
+from lfx.log.logger import logger
+from lfx.services.deps import injectable_session_scope, session_scope
+from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
 
-from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
-from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service
-from langflow.services.settings.service import SettingsService
+from langflow.services.auth.exceptions import (
+    AuthBackendUnavailableError,
+    AuthenticationError,
+    InsufficientPermissionsError,
+    InvalidCredentialsError,
+    MissingCredentialsError,
+)
+from langflow.services.auth.external import extract_external_token
+from langflow.services.deps import get_auth_service, get_settings_service
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.api_key.model import ApiKey
+    from collections.abc import Coroutine
+    from datetime import timedelta
 
-oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
+    from lfx.services.settings.service import SettingsService
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.database.models.user.model import User, UserRead
+
+
+class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
+    """Custom OAuth2 scheme that checks Authorization header first, then cookies.
+
+    This allows the application to work with HttpOnly cookies while supporting
+    explicit Authorization headers for backward compatibility and testing scenarios.
+    If an explicit Authorization header is provided, it takes precedence over cookies.
+    When external trusted auth is enabled, the configured external header/cookie
+    is consulted last so the native JWT path is always tried first.
+    """
+
+    async def __call__(self, request: Request) -> str | None:
+        # First, check for explicit Authorization header (for backward compatibility and testing)
+        authorization = request.headers.get("Authorization")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if scheme.lower() == "bearer" and param:
+            return param
+
+        # Fall back to cookie (for HttpOnly cookie support in browser-based clients)
+        token = request.cookies.get("access_token_lf")
+        if token:
+            return token
+
+        # Final fallback: external trusted credential (validated downstream).
+        if external := _get_external_token(request.headers, request.cookies):
+            return external
+
+        # If auto_error is True, this would raise an exception
+        # Since we set auto_error=False, return None
+        return None
+
+
+def _get_external_token(headers, cookies) -> str | None:
+    """Return the configured external credential, swallowing transient failures."""
+    try:
+        auth_settings = get_settings_service().auth_settings
+    except Exception:  # noqa: BLE001
+        return None
+    return extract_external_token(headers, cookies, auth_settings)
+
+
+oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
-MINIMUM_KEY_LENGTH = 32
+
+def _auth_service():
+    """Return the currently configured auth service.
+
+    This is an internal helper to keep imports local to the auth services layer.
+    **New code should prefer calling `get_auth_service()` directly** instead of
+    using this helper or adding new thin wrapper functions here.
+    """
+    return get_auth_service()
 
 
-# Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
-async def api_key_security(
-    query_param: Annotated[str, Security(api_key_query)],
-    header_param: Annotated[str, Security(api_key_header)],
-) -> UserRead | None:
-    settings_service = get_settings_service()
-    result: ApiKey | User | None
+REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
+ACCESS_TOKEN_TYPE: Final[str] = "access"  # noqa: S105
 
-    async with get_db_service().with_session() as db:
-        if settings_service.auth_settings.AUTO_LOGIN:
-            # Get the first user
-            if not settings_service.auth_settings.SUPERUSER:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Missing first superuser credentials",
-                )
-            warnings.warn(
-                (
-                    "In v1.5, the default behavior of AUTO_LOGIN authentication will change to require a valid API key"
-                    " or JWT. If you integrated with Langflow prior to v1.5, make sure to update your code to pass an "
-                    "API key or JWT when authenticating with protected endpoints."
-                ),
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if query_param or header_param:
-                result = await check_key(db, query_param or header_param)
-            else:
-                result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
-
-        elif not query_param and not header_param:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="An API key must be passed as query or header",
-            )
-
-        elif query_param:
-            result = await check_key(db, query_param)
-
-        else:
-            result = await check_key(db, header_param)
-
-        if not result:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid or missing API key",
-            )
-        if isinstance(result, User):
-            return UserRead.model_validate(result, from_attributes=True)
-    msg = "Invalid result type"
-    raise ValueError(msg)
+# JWT key configuration error messages
+PUBLIC_KEY_NOT_CONFIGURED_ERROR: Final[str] = (
+    "Server configuration error: Public key not configured for asymmetric JWT algorithm."
+)
+SECRET_KEY_NOT_CONFIGURED_ERROR: Final[str] = "Server configuration error: Secret key not configured."  # noqa: S105
 
 
-async def ws_api_key_security(
-    api_key: str | None,
-) -> UserRead:
-    settings = get_settings_service()
-    async with get_db_service().with_session() as db:
-        if settings.auth_settings.AUTO_LOGIN:
-            if not settings.auth_settings.SUPERUSER:
-                # internal server misconfiguration
-                raise WebSocketException(
-                    code=status.WS_1011_INTERNAL_ERROR,
-                    reason="Missing first superuser credentials",
-                )
-            warnings.warn(
-                ("In v1.5, AUTO_LOGIN will *require* a valid API key or JWT. Please update your clients accordingly."),
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if api_key:
-                result = await check_key(db, api_key)
-            else:
-                result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+class JWTKeyError(HTTPException):
+    """Raised when JWT key configuration is invalid."""
 
-        # normal path: must provide an API key
-        else:
-            if not api_key:
-                raise WebSocketException(
-                    code=status.WS_1008_POLICY_VIOLATION,
-                    reason="An API key must be passed as query or header",
-                )
-            result = await check_key(db, api_key)
-
-        # key was invalid or missing
-        if not result:
-            raise WebSocketException(
-                code=status.WS_1008_POLICY_VIOLATION,
-                reason="Invalid or missing API key",
-            )
-
-        # convert SQL-model User → pydantic UserRead
-        if isinstance(result, User):
-            return UserRead.model_validate(result, from_attributes=True)
-
-    # fallback: something unexpected happened
-    raise WebSocketException(
-        code=status.WS_1011_INTERNAL_ERROR,
-        reason="Authentication subsystem error",
-    )
+    def __init__(self, detail: str, *, include_www_authenticate: bool = True):
+        headers = {"WWW-Authenticate": "Bearer"} if include_www_authenticate else None
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            headers=headers,
+        )
 
 
-async def get_current_user(
-    token: Annotated[str, Security(oauth2_login)],
-    query_param: Annotated[str, Security(api_key_query)],
-    header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
-) -> User:
-    if token:
-        return await get_current_user_by_jwt(token, db)
-    user = await api_key_security(query_param, header_param)
-    if user:
-        return user
+def get_jwt_verification_key(settings_service: SettingsService) -> str:
+    """Get the appropriate key for JWT verification based on configured algorithm.
 
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Invalid or missing API key",
-    )
+    For asymmetric algorithms (RS256, RS512): returns public key
+    For symmetric algorithms (HS256): returns secret key
+    """
+    algorithm = settings_service.auth_settings.ALGORITHM
 
-
-async def get_current_user_by_jwt(
-    token: str,
-    db: AsyncSession,
-) -> User:
-    settings_service = get_settings_service()
-
-    if isinstance(token, Coroutine):
-        token = await token
+    if algorithm.is_asymmetric():
+        verification_key = settings_service.auth_settings.PUBLIC_KEY
+        if not verification_key:
+            logger.error("Public key is not set in settings for RS256/RS512.")
+            raise JWTKeyError(PUBLIC_KEY_NOT_CONFIGURED_ERROR)
+        return verification_key
 
     secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     if secret_key is None:
         logger.error("Secret key is not set in settings.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            # Careful not to leak sensitive information
-            detail="Authentication failure: Verify authentication settings.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise JWTKeyError(SECRET_KEY_NOT_CONFIGURED_ERROR)
+    return secret_key
 
+
+def get_jwt_signing_key(settings_service: SettingsService) -> str:
+    """Get the appropriate key for JWT signing based on configured algorithm.
+
+    For asymmetric algorithms (RS256, RS512): returns private key
+    For symmetric algorithms (HS256): returns secret key
+    """
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    if algorithm.is_asymmetric():
+        return settings_service.auth_settings.PRIVATE_KEY.get_secret_value()
+
+    return settings_service.auth_settings.SECRET_KEY.get_secret_value()
+
+
+async def api_key_security(
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+) -> UserRead | None:
+    return await _auth_service().api_key_security(query_param, header_param)
+
+
+async def ws_api_key_security(api_key: str | None) -> UserRead:
+    return await _auth_service().ws_api_key_security(api_key)
+
+
+def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
+    """Map auth exceptions to 503 Service Unavailable, 403 Forbidden or 401 Unauthorized.
+
+    Langflow returns 403 for missing/invalid credentials; 401 for invalid/expired tokens.
+    A backend failure never judged the credential, so it is reported as a
+    retryable 503 rather than as a verdict on the caller's token.
+    """
+    if isinstance(e, AuthBackendUnavailableError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message,
+            headers={"Retry-After": "1"},
+        )
+    if isinstance(
+        e,
+        (MissingCredentialsError, InvalidCredentialsError, InsufficientPermissionsError),
+    ):
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
+
+
+async def get_current_user(
+    request: Request,
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
+) -> User:
+    # Keep the native token (resolved by oauth2_login, which may already have
+    # collapsed to the external credential) separate from a freshly-extracted
+    # external credential so a present-but-invalid native cookie cannot shadow a
+    # valid external one. The auth service tries the native token first and only
+    # falls back to the external credential when it differs from the token.
+    external_token = _get_external_token(request.headers, request.cookies)
     try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
-        user_id: UUID = payload.get("sub")  # type: ignore[assignment]
-        token_type: str = payload.get("type")  # type: ignore[assignment]
-        if expires := payload.get("exp", None):
-            expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
-            if datetime.now(timezone.utc) > expires_datetime:
-                logger.info("Token expired for user")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token has expired.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
-        if user_id is None or token_type is None:
-            logger.info(f"Invalid token payload. Token type: {token_type}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token details.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    except JWTError as e:
-        logger.debug("JWT validation failed: Invalid token format or signature")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from e
-
-    user = await get_user_by_id(db, user_id)
-    if user is None or not user.is_active:
-        logger.info("User not found or inactive.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or is inactive.",
-            headers={"WWW-Authenticate": "Bearer"},
+        return await _auth_service().get_current_user(
+            token, query_param, header_param, db, external_token=external_token
         )
-    return user
+    except AuthenticationError as e:
+        raise _auth_error_to_http(e) from e
+
+
+async def get_current_user_from_access_token(
+    token: str | Coroutine | None,
+    db: AsyncSession,
+    external_token: str | None = None,
+) -> User:
+    """Compatibility helper to resolve a user from an access token.
+
+    This simply delegates to the active auth service's
+    `get_current_user_from_access_token` implementation. ``external_token`` is an
+    optional, separately-extracted external credential tried as a fallback when
+    native token authentication fails; when ``None`` behavior is unchanged.
+
+    **For new code, prefer calling
+    `get_auth_service().get_current_user_from_access_token(...)` directly**
+    instead of importing this function.
+    """
+    try:
+        return await _auth_service().get_current_user_from_access_token(token, db, external_token=external_token)
+    except AuthenticationError as e:
+        raise _auth_error_to_http(e) from e
+
+
+WS_AUTH_REASON = "Missing or invalid credentials (cookie, token or API key)."
 
 
 async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: AsyncSession,
 ) -> User | UserRead:
+    """Extracts credentials from WebSocket and delegates to auth service."""
+    # Keep the native token and the external credential separate so a present but
+    # invalid/expired native token cannot shadow a valid external credential; the
+    # auth service tries the external token as a fallback when native auth fails.
     token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
-    if token:
-        user = await get_current_user_by_jwt(token, db)
-        if user:
-            return user
-
+    external_token = _get_external_token(websocket.headers, websocket.cookies)
     api_key = (
         websocket.query_params.get("x-api-key")
         or websocket.query_params.get("api_key")
         or websocket.headers.get("x-api-key")
         or websocket.headers.get("api_key")
     )
-    if api_key:
-        user_read = await ws_api_key_security(api_key)
-        if user_read:
-            return user_read
-
-    raise WebSocketException(
-        code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
-    )
-
-
-async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
-    if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
-    return current_user
-
-
-async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
-    if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges")
-    return current_user
-
-
-def verify_password(plain_password, hashed_password):
-    settings_service = get_settings_service()
-    return settings_service.auth_settings.pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password):
-    settings_service = get_settings_service()
-    return settings_service.auth_settings.pwd_context.hash(password)
-
-
-def create_token(data: dict, expires_delta: timedelta):
-    settings_service = get_settings_service()
-
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode["exp"] = expire
-
-    return jwt.encode(
-        to_encode,
-        settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-        algorithm=settings_service.auth_settings.ALGORITHM,
-    )
-
-
-async def create_super_user(
-    username: str,
-    password: str,
-    db: AsyncSession,
-) -> User:
-    super_user = await get_user_by_username(db, username)
-
-    if not super_user:
-        super_user = User(
-            username=username,
-            password=get_password_hash(password),
-            is_superuser=True,
-            is_active=True,
-            last_login_at=None,
-        )
-
-        db.add(super_user)
-        await db.commit()
-        await db.refresh(super_user)
-
-    return super_user
-
-
-async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
-    settings_service = get_settings_service()
-
-    username = settings_service.auth_settings.SUPERUSER
-    super_user = await get_user_by_username(db, username)
-    if not super_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
-    access_token_expires_longterm = timedelta(days=365)
-    access_token = create_token(
-        data={"sub": str(super_user.id), "type": "access"},
-        expires_delta=access_token_expires_longterm,
-    )
-
-    # Update: last_login_at
-    await update_user_last_login_at(super_user.id, db)
-
-    return super_user.id, {
-        "access_token": access_token,
-        "refresh_token": None,
-        "token_type": "bearer",
-    }
-
-
-def create_user_api_key(user_id: UUID) -> dict:
-    access_token = create_token(
-        data={"sub": str(user_id), "type": "api_key"},
-        expires_delta=timedelta(days=365 * 2),
-    )
-
-    return {"api_key": access_token}
-
-
-def get_user_id_from_token(token: str) -> UUID:
-    try:
-        user_id = jwt.get_unverified_claims(token)["sub"]
-        return UUID(user_id)
-    except (KeyError, JWTError, ValueError):
-        return UUID(int=0)
-
-
-async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
-    settings_service = get_settings_service()
-
-    access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
-    access_token = create_token(
-        data={"sub": str(user_id), "type": "access"},
-        expires_delta=access_token_expires,
-    )
-
-    refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
-    refresh_token = create_token(
-        data={"sub": str(user_id), "type": "refresh"},
-        expires_delta=refresh_token_expires,
-    )
-
-    # Update: last_login_at
-    if update_last_login:
-        await update_user_last_login_at(user_id, db)
-
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-    }
-
-
-async def create_refresh_token(refresh_token: str, db: AsyncSession):
-    settings_service = get_settings_service()
 
     try:
-        # Ignore warning about datetime.utcnow
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            payload = jwt.decode(
-                refresh_token,
-                settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-                algorithms=[settings_service.auth_settings.ALGORITHM],
-            )
-        user_id: UUID = payload.get("sub")  # type: ignore[assignment]
-        token_type: str = payload.get("type")  # type: ignore[assignment]
+        return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
+    except AuthBackendUnavailableError as e:
+        # The credential was never judged, so closing as a policy violation
+        # would tell the client to fix a credential that is not the problem.
+        raise WebSocketException(code=status.WS_1013_TRY_AGAIN_LATER, reason=e.message) from e
+    except AuthenticationError as e:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
-        if user_id is None or token_type == "":
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
-        user_exists = await get_user_by_id(db, user_id)
+async def get_current_user_for_sse(
+    request: Request,
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
+) -> User | UserRead:
+    """Extracts credentials from request and delegates to auth service.
 
-        if user_exists is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    Accepts cookie (access_token_lf) or API key (x-api-key query param).
+    """
+    # Keep the native token and the external credential separate (see
+    # get_current_user_for_websocket) so the external credential remains a usable
+    # fallback even when a stale native cookie is present.
+    token = request.cookies.get("access_token_lf")
+    external_token = _get_external_token(request.headers, request.cookies)
+    api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
-        return await create_user_tokens(user_id, db)
-
-    except JWTError as e:
-        logger.exception("JWT decoding error")
+    try:
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+    except AuthBackendUnavailableError as e:
+        raise _auth_error_to_http(e) from e
+    except AuthenticationError as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Missing or invalid credentials (cookie or API key).",
         ) from e
 
 
-async def authenticate_user(username: str, password: str, db: AsyncSession) -> User | None:
-    user = await get_user_by_username(db, username)
+async def get_current_user_for_workflow(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+) -> UserRead:
+    """Combined session-or-API-key auth that does not hold a DB session.
 
-    if not user:
+    Resolves the user from a session cookie/token *or* an API key inside a
+    short-lived session that is committed and closed before the path operation
+    runs. Unlike `get_current_active_user` (a generator dependency whose session
+    stays open for the whole request), this is required by endpoints that
+    execute a graph inline: a held auth connection contends with the run's own
+    writes (on SQLite it blocks the run's INSERTs with "database is locked").
+    """
+    from langflow.services.database.models.user.model import UserRead
+
+    async with session_scope() as db:
+        try:
+            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        except AuthenticationError as e:
+            raise _auth_error_to_http(e) from e
+        active_user = await _auth_service().get_current_active_user(user)
+        if active_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        return UserRead.model_validate(active_user, from_attributes=True)
+
+
+async def get_optional_user(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
+) -> User | None:
+    """Get the current user if authenticated, otherwise return None.
+
+    This is useful for endpoints that need to behave differently for authenticated
+    vs unauthenticated users (e.g., returning different response types).
+
+    Returns:
+        User | None: The authenticated user if valid credentials are provided, None otherwise.
+    """
+    try:
+        user = await _auth_service().get_current_user(token, query_param, header_param, db)
+    except (AuthenticationError, HTTPException):
+        return None
+    else:
+        if user and user.is_active:
+            return user
         return None
 
-    if not user.is_active:
-        if not user.last_login_at:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
 
-    return user if verify_password(password, user.password) else None
+async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
+    """Get the user for webhook execution.
+
+    When WEBHOOK_AUTH_ENABLE=false, allows execution as the flow owner without API key.
+    When WEBHOOK_AUTH_ENABLE=true, requires API key authentication and validates flow ownership.
+
+    Args:
+        flow_id: The ID of the flow being executed
+        request: The FastAPI request object
+
+    Returns:
+        UserRead: The user to execute the webhook as
+
+    Raises:
+        HTTPException: If authentication fails or user doesn't have permission
+    """
+    return await _auth_service().get_webhook_user(flow_id, request)
 
 
-def add_padding(s):
-    # Calculate the number of padding characters needed
-    padding_needed = 4 - len(s) % 4
-    return s + "=" * padding_needed
+async def get_current_user_optional(
+    request: Request,
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
+) -> User | None:
+    """Resolve the current user if authenticated, otherwise return None.
+
+    Checks HttpOnly cookie (access_token_lf), Authorization header, and API key.
+    Used by endpoints that support both authenticated and unauthenticated access.
+    """
+    token = request.cookies.get("access_token_lf")
+    api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = token or auth_header[len("Bearer ") :]
+
+    # Keep the external credential separate so it remains a usable fallback when a
+    # stale/invalid native token is present (see get_current_user_for_websocket).
+    external_token = _get_external_token(request.headers, request.cookies)
+
+    if not token and not external_token and not api_key:
+        return None
+
+    try:
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+    except (AuthenticationError, HTTPException):
+        return None
 
 
-def ensure_valid_key(s: str) -> bytes:
-    # If the key is too short, we'll use it as a seed to generate a valid key
-    if len(s) < MINIMUM_KEY_LENGTH:
-        # Use the input as a seed for the random number generator
-        random.seed(s)
-        # Generate 32 random bytes
-        key = bytes(random.getrandbits(8) for _ in range(32))
-        key = base64.urlsafe_b64encode(key)
+async def get_current_active_user(user: User = Depends(get_current_user)) -> User | UserRead:
+    result = await _auth_service().get_current_active_user(user)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+        )
+    return result
+
+
+async def get_current_active_superuser(user: User = Depends(get_current_user)) -> User | UserRead:
+    result = await _auth_service().get_current_active_superuser(user)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    return result
+
+
+def add_base64_padding(value: str) -> str:
+    """Add base64 padding characters if needed.
+
+    Base64 strings must have a length that is a multiple of 4.
+    This adds the necessary '=' padding characters.
+    """
+    remainder = len(value) % 4
+    if remainder == 0:
+        return value
+    return value + "=" * (4 - remainder)
+
+
+def ensure_fernet_key(secret_key: str) -> bytes:
+    """Derive a valid Fernet key from a secret key string.
+
+    For short keys (< 32 chars), the 32-byte key is derived with SHA-256, a
+    cryptographic hash. For longer keys, base64 padding is added.
+
+    Security note: short keys previously seeded Python's ``random`` module to
+    generate key bytes. New encryption uses SHA-256 so it never depends on a
+    non-cryptographic PRNG or mutates global PRNG state. Short, guessable input
+    remains unsuitable for production; settings validation warns operators.
+    """
+    if len(secret_key) < MINIMUM_SECRET_KEY_LENGTH:
+        digest = hashlib.sha256(secret_key.encode()).digest()  # 32 bytes
+        key = base64.urlsafe_b64encode(digest)
     else:
-        key = add_padding(s).encode()
+        key = add_base64_padding(secret_key).encode()
     return key
 
 
-def get_fernet(settings_service: SettingsService):
+def _ensure_legacy_fernet_key(secret_key: str) -> bytes:
+    """Reproduce the pre-1.10.1 short-secret key for decryption only.
+
+    This compatibility key must never be used for encryption. A local PRNG
+    instance reproduces the legacy bytes without mutating global random state.
+    """
+    legacy_random = random.Random(secret_key)  # noqa: S311
+    legacy_bytes = bytes(legacy_random.getrandbits(8) for _ in range(32))
+    return base64.urlsafe_b64encode(legacy_bytes)
+
+
+def get_fernet(settings_service: SettingsService) -> Fernet:
+    """Get the current Fernet instance used for encryption and decryption."""
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    valid_key = ensure_valid_key(secret_key)
-    return Fernet(valid_key)
+    return Fernet(ensure_fernet_key(secret_key))
 
 
-def encrypt_api_key(api_key: str, settings_service: SettingsService):
-    fernet = get_fernet(settings_service)
-    # Two-way encryption
-    encrypted_key = fernet.encrypt(api_key.encode())
-    return encrypted_key.decode()
-
-
-def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
-    """Decrypt the provided encrypted API key using Fernet decryption.
-
-    This function first attempts to decrypt the API key by encoding it,
-    assuming it is a properly encoded string. If that fails, it logs a detailed
-    debug message including the exception information and retries decryption
-    using the original string input.
+def get_fernet_for_decryption(settings_service: SettingsService) -> Fernet | MultiFernet:
+    """Get a Fernet-compatible instance that can read legacy ciphertext.
 
     Args:
-        encrypted_api_key (str): The encrypted API key.
-        settings_service (SettingsService): Service providing authentication settings.
+        settings_service: Settings service to get the secret key
 
     Returns:
-        str: The decrypted API key, or an empty string if decryption cannot be performed.
+        For short secrets, MultiFernet with the current key first and the
+        pre-1.10.1 key second. This function is used only for decryption; all
+        encryption goes through :func:`get_fernet` and the current key.
     """
-    fernet = get_fernet(settings_service)
-    if isinstance(encrypted_api_key, str):
-        try:
-            return fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception as primary_exception:  # noqa: BLE001
-            logger.debug(
-                "Decryption using UTF-8 encoded API key failed. Error: %s. "
-                "Retrying decryption using the raw string input.",
-                primary_exception,
-            )
-            return fernet.decrypt(encrypted_api_key).decode()
-    return ""
+    secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    current_fernet = get_fernet(settings_service)
+    if len(secret_key) >= MINIMUM_SECRET_KEY_LENGTH:
+        return current_fernet
+
+    legacy_fernet = Fernet(_ensure_legacy_fernet_key(secret_key))
+    return MultiFernet([current_fernet, legacy_fernet])
+
+
+def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001
+    return _auth_service().encrypt_api_key(api_key)
+
+
+def decrypt_api_key(
+    encrypted_api_key: str,
+    settings_service: SettingsService | None = None,  # noqa: ARG001
+) -> str:
+    return _auth_service().decrypt_api_key(encrypted_api_key)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return _auth_service().verify_password(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    return _auth_service().get_password_hash(password)
+
+
+def create_token(data: dict, expires_delta: timedelta) -> str:
+    """Create a JWT token. Delegates to the active auth service."""
+    return _auth_service().create_token(data, expires_delta)
+
+
+async def create_refresh_token(refresh_token: str, db: AsyncSession) -> dict:
+    """Exchange a refresh token for new access/refresh tokens. Delegates to the active auth service."""
+    return await _auth_service().create_refresh_token(refresh_token, db)
+
+
+async def create_super_user(username: str, password: str, db: AsyncSession) -> User:
+    return await _auth_service().create_super_user(username, password, db)
+
+
+async def create_user_longterm_token(db: AsyncSession) -> tuple:
+    return await _auth_service().create_user_longterm_token(db)
+
+
+async def get_current_user_mcp(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
+) -> User:
+    try:
+        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
+    except AuthenticationError as e:
+        raise _auth_error_to_http(e) from e
+
+
+async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:
+    return await _auth_service().get_current_active_user_mcp(user)

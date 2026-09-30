@@ -1,22 +1,37 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
-import { InputProps } from "@/components/core/parameterRenderComponent/types";
-import { DialogHeader } from "@/components/ui/dialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
+import type { InputProps } from "@/components/core/parameterRenderComponent/types";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContentPlain as DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { testIdCase } from "@/utils/utils";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ListItem from "./ListItem";
 
 // Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
   onClose: () => void;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   options: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   setSelectedList: (action: any[]) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   selectedList: any[];
   searchCategories?: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   onSelection?: (action: any) => void;
   limit?: number;
+  headerSearchPlaceholder?: string;
+  addButtonText?: string;
+  onAddButtonClick?: () => void;
 }
 
 const ListSelectionComponent = ({
@@ -28,10 +43,16 @@ const ListSelectionComponent = ({
   selectedList = [],
   options,
   limit = 1,
+  headerSearchPlaceholder = "Search...",
+  addButtonText,
+  onAddButtonClick,
   ...baseInputProps
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any, ListSelectionComponentProps>) => {
+  const { t } = useTranslation();
   const { nodeClass } = baseInputProps;
   const [search, setSearch] = useState("");
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [hoveredItem, setHoveredItem] = useState<any | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isKeyboardNavActive, setIsKeyboardNavActive] = useState(false);
@@ -48,6 +69,7 @@ const ListSelectionComponent = ({
   }, [options, search]);
 
   const handleSelectAction = useCallback(
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     (action: any) => {
       if (limit !== 1) {
         // Multiple selection mode
@@ -164,33 +186,51 @@ const ListSelectionComponent = ({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent
-        className="flex max-h-[65vh] min-h-[15vh] flex-col rounded-xl p-0"
+        className="flex max-h-[65vh] min-h-[15vh] flex-col overflow-hidden rounded-xl p-0"
         onKeyDown={handleKeyDown}
       >
-        <DialogHeader className="flex w-full justify-between border-b px-3 py-3">
-          <div className="flex items-center gap-2">
-            <ForwardedIconComponent
-              name={nodeClass?.icon || "unknown"}
-              className="h-[18px] w-[18px] text-muted-foreground"
-            />
-            <div className="text-[13px] font-semibold">
-              {nodeClass?.display_name}
+        <DialogHeader className="flex w-full justify-between border-b p-2">
+          {nodeClass ? (
+            <div className="flex items-center gap-2 p-1">
+              <ForwardedIconComponent
+                name={nodeClass?.icon || "unknown"}
+                className="h-[18px] w-[18px] text-muted-foreground"
+              />
+              <DialogTitle className="text-[13px] font-semibold">
+                {nodeClass?.display_name}
+              </DialogTitle>
             </div>
-          </div>
+          ) : (
+            <div className="relative text-[13px] font-normal">
+              <DialogTitle className="sr-only">
+                {t("listSelection.dialogTitle")}
+              </DialogTitle>
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="border-none focus:ring-0"
+                placeholder={headerSearchPlaceholder}
+                aria-label={t("listSelection.searchAriaLabel")}
+                data-testid="search_bar_input"
+              />
+            </div>
+          )}
         </DialogHeader>
-        {(filteredList?.length > 20 || search) && (
-          <div className="flex w-full items-center justify-between px-3">
-            <SearchBarComponent
-              searchCategories={searchCategories}
-              search={search}
-              setSearch={setSearch}
-            />
-          </div>
-        )}
+        {(filteredList?.length > 20 || search) &&
+          !headerSearchPlaceholder &&
+          !nodeClass && (
+            <div className="flex w-full items-center justify-between px-3">
+              <SearchBarComponent
+                searchCategories={searchCategories}
+                search={search}
+                setSearch={setSearch}
+              />
+            </div>
+          )}
 
         <div
           ref={listContainerRef}
-          className="flex w-full flex-col gap-1 overflow-y-auto px-3 pb-3"
+          className="flex w-full flex-col gap-1 overflow-y-auto px-3"
         >
           {filteredList.length > 0 ? (
             filteredList.map((item, index) => (
@@ -221,11 +261,23 @@ const ListSelectionComponent = ({
               />
             ))
           ) : (
-            <div className="py-3 text-center text-gray-500">
+            <div className="py-3 text-center text-muted-foreground">
               No items match your search
             </div>
           )}
         </div>
+        <DialogFooter>
+          {onAddButtonClick && (
+            <Button
+              className="flex w-full items-center gap-2 border-t px-4 py-3 !text-mmd hover:bg-muted"
+              unstyled
+              onClick={onAddButtonClick}
+            >
+              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+              <span>{addButtonText}</span>
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

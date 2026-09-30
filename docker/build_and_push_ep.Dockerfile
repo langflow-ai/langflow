@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
+ARG UV_VERSION=0.10.4
+ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
+ARG NODE_VERSION=24.21.0
+
 ################################
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
@@ -9,7 +13,13 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_installer
+FROM ${PYTHON_IMAGE} AS builder
+USER root
+ARG MAIN_VERSION=""
+ARG BASE_VERSION=""
+COPY --from=uv_installer /uv /usr/local/bin/uv
+COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
 # Install the project into `/app`
 WORKDIR /app
@@ -20,74 +30,128 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
+# Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
+ENV RUSTFLAGS='--cfg reqwest_unstable'
+
+RUN microdnf install -y tar xz \
     # deps for building python deps
-    build-essential \
+    gcc gcc-c++ make python3.14-devel \
     git \
     # npm
     npm \
     # gcc
     gcc \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && microdnf clean all
+
+# Copy files first to avoid permission issues with bind mounts
+COPY ./uv.lock /app/uv.lock
+COPY ./README.md /app/README.md
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./src/backend/base/README.md /app/src/backend/base/README.md
+COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
+COPY ./src/lfx/README.md /app/src/lfx/README.md
+COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
+COPY ./src/sdk/README.md /app/src/sdk/README.md
+COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+COPY ./scripts/ci/rewrite_langflow_base_constraint.sh /tmp/rewrite_langflow_base_constraint.sh
+# Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
+# is a uv workspace member, so each bundle's pyproject.toml must be present
+# for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
+# whole tree once rather than enumerating each bundle, so a new bundle does
+# not require a Dockerfile edit.
+COPY ./src/bundles /app/src/bundles
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=README.md,target=README.md \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
-    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
-    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable --extra nv-ingest --extra postgresql
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv sync --frozen --no-install-project --no-editable --extra nv-ingest --extra postgresql --no-group dev
 
 COPY ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
+# PUPPETEER_SKIP_DOWNLOAD: puppeteer (via accessibility-checker, test-only)
+# must not download Chrome here - the builder image lacks unzip and the
+# production image never runs it.
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci \
-    && npm run build \
-    && cp -r build /app/src/backend/langflow/frontend \
+    PUPPETEER_SKIP_DOWNLOAD=true npm ci \
+    && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
+    && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app
-COPY ./pyproject.toml /app/pyproject.toml
-COPY ./uv.lock /app/uv.lock
-COPY ./README.md /app/README.md
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable --extra nv-ingest --extra postgresql
+    if [ -n "$MAIN_VERSION" ]; then \
+        sed -i "s/^version = .*/version = \"${MAIN_VERSION}\"/" /app/pyproject.toml; \
+    fi \
+    && if [ -n "$BASE_VERSION" ]; then \
+        sed -i "s/^version = .*/version = \"${BASE_VERSION}\"/" /app/src/backend/base/pyproject.toml; \
+        sh /tmp/rewrite_langflow_base_constraint.sh "$BASE_VERSION" /app/pyproject.toml; \
+    fi \
+    && RUSTFLAGS='--cfg reqwest_unstable' \
+        uv sync --frozen --no-editable --extra nv-ingest --extra postgresql --no-group dev \
+    && if [ -n "$MAIN_VERSION" ]; then \
+        MAIN_VERSION="$MAIN_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; assert m.version("langflow") == os.environ["MAIN_VERSION"]'; \
+    fi \
+    && if [ -n "$BASE_VERSION" ]; then \
+        BASE_VERSION="$BASE_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; assert m.version("langflow-base") == os.environ["BASE_VERSION"]'; \
+    fi
+
+# Use the release workflow's exact wheels when present, while retaining the
+# frontend compiled specifically for this image. Nightly and local builds leave
+# the artifact directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/base/langflow/frontend
 
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.3-slim AS runtime
-
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y \
-        curl \
-        git \
-        # Add PostgreSQL client libraries
-        libpq5 \
-        gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
-    && mkdir /data && chown -R 1000:0 /data
+FROM ${PYTHON_IMAGE} AS runtime
+USER root
+RUN microdnf update -y \
+    && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
+    && microdnf clean all
+RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
+# NODE_VERSION and the npm major below are coupled: npm 12 requires Node
+# ^22.22.2 || ^24.15.0 || >=26.0.0. Pin the npm major rather than tracking
+# @latest, so the next npm major raising its engines floor cannot break this
+# layer unannounced against a pinned NODE_VERSION.
+ARG NODE_VERSION
+COPY ./docker/install_hardened_npm.sh /tmp/install_hardened_npm.sh
+RUN ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
+       elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
+       else NODE_ARCH="$ARCH"; fi \
+    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
+    | tar -xJ -C /usr/local --strip-components=1 \
+    && sh /tmp/install_hardened_npm.sh \
+    && rm -f /tmp/install_hardened_npm.sh
+RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
-
-# curl is required for langflow health checks
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-# Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+ENV HOME=/app/data
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
+
+# Pre-create LANGFLOW_CONFIG_DIR (the default location used by the docker_example
+# compose file) with the non-root user as owner. When the official compose mounts
+# a fresh named volume at /app/langflow, Docker copies this directory's ownership
+# and permissions into the new volume, so the in-container uid=1000 user can
+# write secret_key, profile_pictures, etc. Without this, the volume is created
+# as root:root and Langflow crashes during startup with PermissionError on
+# /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
+RUN mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
@@ -100,6 +164,9 @@ WORKDIR /app
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 ENV LANGFLOW_EVENT_DELIVERY=polling
+
+# secuirty options
+ENV LANGFLOW_AUTO_LOGIN=false
 
 USER 1000
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]

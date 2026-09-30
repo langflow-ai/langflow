@@ -1,0 +1,1012 @@
+import ipaddress
+import os
+import socket
+from pathlib import Path
+from unittest.mock import patch
+
+import aiofiles
+import aiofiles.os
+import httpx
+import pytest
+import respx
+from httpx import Response
+from lfx.components.data_source.api_request import APIRequestComponent
+from lfx.schema import Data
+from lfx.schema.dotdict import dotdict
+
+from tests.base import ComponentTestBaseWithoutClient
+
+
+class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        """Return the component class to test."""
+        return APIRequestComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "url_input": "https://example.com/api/test",
+            "method": "GET",
+            "headers": [{"key": "User-Agent", "value": "test-agent"}],
+            "body": [],
+            "timeout": 30,
+            "follow_redirects": False,  # Changed default for SSRF security
+            "save_to_file": False,
+            "include_httpx_metadata": False,
+            "mode": "URL",
+            "curl_input": "",
+            "query_params": {},
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    @pytest.fixture
+    async def component(self, component_class, default_kwargs):
+        """Return a component instance."""
+        return component_class(**default_kwargs)
+
+    async def test_parse_curl(self, component):
+        # Test basic curl command parsing
+        curl_cmd = (
+            "curl -X GET https://example.com/api/test -H 'Content-Type: application/json' -d '{\"key\": \"value\"}'"
+        )
+        build_config = dotdict(
+            {
+                "method": {"value": ""},
+                "url_input": {"value": ""},
+                "headers": {"value": []},
+                "body": {"value": []},
+            }
+        )
+        new_build_config = component.parse_curl(curl_cmd, build_config.copy())
+
+        assert new_build_config["method"]["value"] == "GET"
+        assert new_build_config["url_input"]["value"] == "https://example.com/api/test"
+        assert new_build_config["headers"]["value"] == [{"key": "Content-Type", "value": "application/json"}]
+        assert new_build_config["body"]["value"] == [{"key": "key", "value": "value"}]
+
+    @respx.mock
+    async def test_make_request_success(self, component):
+        # Test successful request with JSON response
+        url = "https://example.com/api/test"
+        response_data = {"key": "value"}
+        respx.get(url).mock(return_value=Response(200, json=response_data))
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+        )
+
+        assert isinstance(result, Data), result
+        assert result.data["source"] == url
+        assert "result" in result.data, result.data
+        assert result.data["result"]["key"] == "value"
+
+    @respx.mock
+    async def test_make_request_falls_back_when_json_is_not_utf8(self, component):
+        url = "https://example.com/api/test"
+        respx.get(url).mock(
+            return_value=Response(
+                200,
+                content=b'{"label":"caf\xe9"}',
+                headers={"Content-Type": "application/json"},
+            )
+        )
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+        )
+
+        assert result.data["result"].decode("utf-8") == '{"label":"caf\ufffd"}'
+
+    @respx.mock
+    async def test_make_request_with_metadata(self, component):
+        # Test request with metadata included
+        url = "https://example.com/api/test"
+        headers = {"Custom-Header": "Value"}
+        response_data = {"key": "value"}
+        respx.get(url).mock(return_value=Response(200, json=response_data, headers=headers))
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+            include_httpx_metadata=True,
+        )
+
+        assert isinstance(result, Data)
+        assert result.data["source"] == url
+        assert result.data["status_code"] == 200
+        assert result.data["response_headers"]["custom-header"] == "Value"
+
+    @respx.mock
+    async def test_make_request_save_to_file(self, component):
+        # Test saving response to file
+        url = "https://example.com/api/test"
+        content = "Test content"
+        respx.get(url).mock(return_value=Response(200, text=content))
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+            save_to_file=True,
+        )
+
+        assert isinstance(result, Data)
+        assert "file_path" in result.data
+        file_path = Path(result.data["file_path"])
+
+        # Use async file operations
+        assert await aiofiles.os.path.exists(file_path)
+        async with aiofiles.open(file_path) as f:
+            saved_content = await f.read()
+        assert saved_content == content
+
+        # Cleanup using async operation
+        await aiofiles.os.remove(file_path)
+
+    @respx.mock
+    async def test_make_request_binary_response(self, component):
+        # Test handling binary response
+        url = "https://example.com/api/binary"
+        binary_content = b"Binary content"
+        headers = {"Content-Type": "application/octet-stream"}
+        respx.get(url).mock(return_value=Response(200, content=binary_content, headers=headers))
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+        )
+
+        assert isinstance(result, Data)
+        assert result.data["source"] == url
+        assert result.data["result"] == binary_content
+
+    @respx.mock
+    async def test_make_request_timeout(self, component):
+        # Test request timeout
+        url = "https://example.com/api/test"
+        respx.get(url).mock(side_effect=httpx.TimeoutException("Request timed out"))
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+            timeout=1,
+        )
+
+        assert isinstance(result, Data)
+        assert result.data["status_code"] == 500
+        assert "Request timed out" in result.data["error"]
+
+    @respx.mock
+    async def test_make_request_with_redirects(self, component):
+        # Test handling redirects
+        url = "https://example.com/api/test"
+        redirect_url = "https://example.com/api/redirect"
+        final_data = {"key": "value"}
+
+        respx.get(url).mock(return_value=Response(303, headers={"Location": redirect_url}))
+        respx.get(redirect_url).mock(return_value=Response(200, json=final_data))
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+            include_httpx_metadata=True,
+            follow_redirects=True,
+        )
+
+        assert isinstance(result, Data)
+        assert result.data["source"] == url
+        assert result.data["status_code"] == 200
+        assert result.data["redirection_history"] == [{"url": redirect_url, "status_code": 303}]
+
+    @respx.mock
+    async def test_get_request_does_not_send_body(self, component):
+        """GET requests must not include a body (HTTP spec); avoids 413 with Cloudflare etc."""
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+            body={"unused": "get-must-not-send-this"},
+        )
+
+        assert len(respx.calls) == 1
+        request = respx.calls[0].request
+        assert request.method == "GET"
+        assert request.content == b""
+        assert request.headers.get("content-type") is None
+
+    async def test_process_headers(self, component):
+        # Test header processing
+        headers_list = [
+            {"key": "Content-Type", "value": "application/json"},
+            {"key": "Authorization", "value": "Bearer token"},
+        ]
+        processed = component._process_headers(headers_list)
+        assert processed == {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer token",
+        }
+
+        # Test invalid headers
+        assert component._process_headers(None) == {}
+        assert component._process_headers([{"invalid": "format"}]) == {}
+
+    async def test_process_body(self, component):
+        # Test body processing
+        # Test dictionary body
+        dict_body = {"key": "value", "nested": {"inner": "value"}}
+        assert component._process_body(dict_body) == dict_body
+
+        # Test string body
+        json_str = '{"key": "value"}'
+        assert component._process_body(json_str) == {"key": "value"}
+
+        # Test list body
+        list_body = [{"key": "key1", "value": "value1"}, {"key": "key2", "value": "value2"}]
+        assert component._process_body(list_body) == {"key1": "value1", "key2": "value2"}
+
+        # Test Data object body
+        data_body = Data(data={"id": 123, "name": "John Doe"})
+        assert component._process_body(data_body) == {"id": 123, "name": "John Doe"}
+
+        # Test nested Data object (Data containing dict)
+        nested_data_body = Data(data={"user": {"id": 456, "email": "test@example.com"}})
+        assert component._process_body(nested_data_body) == {"user": {"id": 456, "email": "test@example.com"}}
+
+        # Test invalid body
+        assert component._process_body(None) == {}
+        assert component._process_body([{"invalid": "format"}]) == {}
+
+    async def test_add_query_params(self, component):
+        # Test query parameter handling
+        url = "https://example.com/api/test"
+        params = {"param1": "value1", "param2": "value2"}
+        result = component.add_query_params(url, params)
+        assert "param1=value1" in result
+        assert "param2=value2" in result
+
+        # Test with existing query params
+        url_with_params = "https://example.com/api/test?existing=true"
+        result = component.add_query_params(url_with_params, params)
+        assert "existing=true" in result
+        assert "param1=value1" in result
+        assert "param2=value2" in result
+
+    async def test_make_api_request(self, component):
+        # Test making API requests
+        url = "https://example.com/api/test"
+        response_data = {"key": "value"}
+
+        with respx.mock:
+            respx.get(url).mock(return_value=Response(200, json=response_data))
+
+            result = await component.make_api_request()
+
+            assert isinstance(result, Data)
+            assert result.data["source"] == url
+            assert result.data["result"]["key"] == "value"
+
+    async def test_invalid_urls(self, component):
+        # Test invalid URL handling
+        component.url_input = "not_a_valid_url"
+        with pytest.raises(ValueError, match="Invalid URL provided"):
+            await component.make_api_request()
+
+    async def test_update_build_config(self, component):
+        # Test build config updates
+        build_config = dotdict(
+            {
+                "method": {"value": "GET", "advanced": False},
+                "url_input": {"value": "", "advanced": False},
+                "headers": {"value": [], "advanced": True},
+                "body": {"value": [], "advanced": True},
+                "mode": {"value": "URL", "advanced": False},
+                "curl_input": {"value": "curl -X GET https://example.com/api/test", "advanced": True},
+                "timeout": {"value": 30, "advanced": True},
+                "follow_redirects": {"value": True, "advanced": True},
+                "save_to_file": {"value": False, "advanced": True},
+                "include_httpx_metadata": {"value": False, "advanced": True},
+                "query_params": {"value": {}, "advanced": True},
+            }
+        )
+
+        # Test URL mode
+        updated = component.update_build_config(build_config=build_config.copy(), field_value="URL", field_name="mode")
+        assert updated["curl_input"]["advanced"] is True
+        assert updated["url_input"]["advanced"] is False
+
+        # Set the component's curl_input attribute to match the build_config before switching to cURL mode
+        component.curl_input = build_config["curl_input"]["value"]
+        # Test cURL mode
+        updated = component.update_build_config(build_config=build_config.copy(), field_value="cURL", field_name="mode")
+        assert updated["curl_input"]["advanced"] is False
+        assert updated["url_input"]["advanced"] is True
+
+    @respx.mock
+    async def test_error_handling(self, component):
+        # Test various error scenarios
+        url = "https://example.com/api/test"
+
+        # Test connection error
+        respx.get(url).mock(side_effect=httpx.ConnectError("Connection failed"))
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+        )
+        assert result.data["status_code"] == 500
+        assert "Connection failed" in result.data["error"]
+
+        # Test invalid method
+        with pytest.raises(ValueError, match="Unsupported method"):
+            await component.make_request(
+                client=httpx.AsyncClient(),
+                method="INVALID",
+                url=url,
+            )
+
+    async def test_response_info(self, component):
+        # Test response info handling
+        url = "https://example.com/api/test"
+        request = httpx.Request("GET", url)
+        response = Response(200, text="test content", request=request)
+        is_binary, file_path = await component._response_info(response, with_file_path=True)
+
+        assert not is_binary
+        assert file_path is not None
+        assert file_path.suffix == ".txt"
+
+        # Test binary response
+        binary_response = Response(
+            200, content=b"binary content", headers={"Content-Type": "application/octet-stream"}, request=request
+        )
+        is_binary, file_path = await component._response_info(binary_response, with_file_path=True)
+
+        assert is_binary
+        assert file_path is not None
+        assert file_path.suffix == ".bin"
+
+    async def test_response_info_content_disposition_path_traversal(self, component):
+        """A malicious Content-Disposition filename must not escape the component temp dir.
+
+        Regression for GHSA-h3c6-fqr4-m99p path traversal.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": 'attachment; filename="../../../../tmp/evil.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        # The filename was reduced to its basename, so the file stays inside the temp dir.
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert file_path.name.endswith("evil.sh")
+        assert ".." not in file_path.parts
+
+    async def test_response_info_content_disposition_backslash_traversal(self, component):
+        """Windows-style backslash separators must also be reduced to the basename.
+
+        On POSIX, ``Path(...).name`` treats backslashes as ordinary filename
+        characters, so the header value must be normalized before stripping
+        directory parts. Regression for GHSA-h3c6-fqr4-m99p path traversal.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": r'attachment; filename="..\..\..\..\tmp\evil.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert file_path.name.endswith("evil.sh")
+        assert "\\" not in file_path.name
+        assert ".." not in file_path.parts
+
+    async def test_response_info_content_disposition_null_byte(self, component):
+        """A NUL byte in the Content-Disposition filename must be stripped, not crash.
+
+        A NUL byte survives ``Path(...).name`` and would otherwise make the
+        defense-in-depth ``.resolve()`` raise a cryptic "embedded null character"
+        ValueError. It must be stripped so the path stays inside the temp dir and
+        the file is written cleanly. Regression for GHSA-h3c6-fqr4-m99p.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": 'attachment; filename="evil\x00.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert "\x00" not in str(file_path)
+        assert file_path.name.endswith("evil.sh")
+        assert ".." not in file_path.parts
+
+
+class TestAPIRequestSSRFProtection:
+    """Rewritten SSRF Protection Tests for API Request Component.
+
+    These tests properly test the actual SSRF protection implementation without mocking
+    the core security functions. They verify:
+    1. Real SSRF blocking with actual private IPs
+    2. DNS pinning actually prevents rebinding
+    3. Allowlist functionality works correctly
+    4. Custom transport is used when protection is enabled.
+    """
+
+    @pytest.fixture
+    def component_class(self):
+        """Return the component class to test."""
+        return APIRequestComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "url_input": "https://example.com/api/test",
+            "method": "GET",
+            "headers": [],
+            "body": [],
+            "timeout": 30,
+            "follow_redirects": False,
+            "save_to_file": False,
+            "include_httpx_metadata": False,
+            "mode": "URL",
+            "curl_input": "",
+            "query_params": {},
+        }
+
+    @pytest.fixture
+    async def component(self, component_class, default_kwargs):
+        """Return a component instance."""
+        return component_class(**default_kwargs)
+
+    async def test_ssrf_protection_disabled_allows_all_urls(self, component):
+        """Test that when SSRF protection is disabled, all URLs are allowed."""
+        component.url_input = "http://127.0.0.1:8080"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
+            respx.get("http://127.0.0.1:8080").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
+
+    async def test_ssrf_protection_blocks_localhost_127_0_0_1(self, component):
+        """Test that SSRF protection blocks 127.0.0.1 (localhost)."""
+        component.url_input = "http://127.0.0.1:8080/admin"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    async def test_ssrf_protection_blocks_localhost_0_0_0_0(self, component):
+        """Test that SSRF protection blocks 0.0.0.0."""
+        component.url_input = "http://0.0.0.0:8080/admin"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    async def test_ssrf_protection_blocks_private_network_192_168(self, component):
+        """Test that SSRF protection blocks 192.168.x.x private network."""
+        component.url_input = "http://192.168.1.1/config"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    async def test_ssrf_protection_blocks_private_network_10_0(self, component):
+        """Test that SSRF protection blocks 10.x.x.x private network."""
+        component.url_input = "http://10.0.0.1/admin"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    async def test_ssrf_protection_blocks_private_network_172_16(self, component):
+        """Test that SSRF protection blocks 172.16.x.x private network."""
+        component.url_input = "http://172.16.0.1/internal"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    async def test_ssrf_protection_blocks_cloud_metadata_endpoint(self, component):
+        """Test that SSRF protection blocks AWS/GCP metadata endpoint."""
+        component.url_input = "http://169.254.169.254/latest/meta-data/"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    async def test_ssrf_protection_blocks_link_local_169_254(self, component):
+        """Test that SSRF protection blocks link-local addresses."""
+        component.url_input = "http://169.254.1.1/api"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    @respx.mock
+    async def test_ssrf_protection_allows_public_urls(self, component):
+        """Test that SSRF protection allows legitimate public URLs."""
+        public_urls = [
+            "https://api.openai.com/v1/chat/completions",
+            "https://api.github.com/repos/langflow-ai/langflow",
+            "https://www.google.com",
+        ]
+
+        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+            for url in public_urls:
+                component.url_input = url
+                respx.get(url).mock(return_value=Response(200, json={"status": "ok"}))
+
+                result = await component.make_api_request()
+                assert isinstance(result, Data)
+                assert result.data["result"]["status"] == "ok"
+
+    async def test_ssrf_allowlist_hostname(self, component):
+        """Test that allowlisted hostnames bypass SSRF protection."""
+        component.url_input = "http://internal.company.local/api"
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.company.local",
+                },
+            ),
+            respx.mock,
+        ):
+            respx.get("http://internal.company.local/api").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
+
+    async def test_ssrf_allowlist_ip_address(self, component):
+        """Test that allowlisted IP addresses bypass SSRF protection."""
+        component.url_input = "http://192.168.1.100/api"
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.100",
+                },
+            ),
+            respx.mock,
+        ):
+            respx.get("http://192.168.1.100/api").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
+
+    async def test_ssrf_allowlist_cidr_range(self, component):
+        """Test that CIDR ranges in allowlist work correctly."""
+        component.url_input = "http://192.168.1.5/api"
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.0/24",
+                },
+            ),
+            respx.mock,
+        ):
+            respx.get("http://192.168.1.5/api").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
+
+    async def test_ssrf_allowlist_multiple_entries(self, component):
+        """Test that multiple allowlist entries work correctly."""
+        component.url_input = "http://192.168.1.5/api"
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "localhost,192.168.1.0/24,internal.local",
+                },
+            ),
+            respx.mock,
+        ):
+            respx.get("http://192.168.1.5/api").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
+
+    async def test_dns_pinning_is_used_when_protection_enabled(self, component):
+        """Test that DNS pinning (custom transport) is used when SSRF protection is enabled."""
+        from unittest.mock import AsyncMock
+
+        component.url_input = "https://example.com/api"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("lfx.components.data_source.api_request.create_ssrf_protected_client") as mock_create_client,
+            respx.mock,
+        ):
+            # Mock the context manager returned by create_ssrf_protected_client
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_create_client.return_value = mock_client
+
+            # Mock the make_request to return a Data object
+            component.make_request = AsyncMock(return_value=Data(data={"status": "ok"}))
+
+            await component.make_api_request()
+
+            # Verify that create_ssrf_protected_client was called (DNS pinning is used)
+            mock_create_client.assert_called_once()
+            call_kwargs = mock_create_client.call_args[1]
+            assert call_kwargs["hostname"] == "example.com"
+            assert len(call_kwargs["validated_ips"]) > 0  # Should have validated IPs
+
+    def test_idn_url_pins_punycode_host(self, component):
+        """IDN URLs must pin under the punycode host httpx actually connects to.
+
+        Regression test: httpx/httpcore connect to the IDNA form of an IDN host, so a
+        Unicode pin key silently bypasses DNS pinning (rebinding SSRF for IDN hosts).
+        """
+        from unittest.mock import MagicMock
+
+        with (
+            patch("lfx.components.data_source.api_request.is_ssrf_protection_enabled", return_value=True),
+            patch("lfx.components.data_source.api_request.create_ssrf_protected_client") as mock_create_client,
+        ):
+            mock_create_client.return_value = MagicMock()
+            component._build_http_client("http://exämple-rebind.test/path", ["93.184.216.34"])
+
+        mock_create_client.assert_called_once_with(
+            hostname="xn--exmple-rebind-cfb.test", validated_ips=["93.184.216.34"]
+        )
+
+    async def test_normal_client_used_when_protection_disabled(self, component):
+        """Test that normal httpx client is used when SSRF protection is disabled."""
+        component.url_input = "https://example.com/api"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            patch("lfx.components.data_source.api_request.create_ssrf_protected_client") as mock_create_client,
+            respx.mock,
+        ):
+            respx.get("https://example.com/api").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+
+            # Verify that create_ssrf_protected_client was NOT called
+            mock_create_client.assert_not_called()
+            assert isinstance(result, Data)
+
+    async def test_follow_redirects_security_warning(self, component):
+        """Test that enabling follow_redirects logs a security warning."""
+        from unittest.mock import MagicMock
+
+        component.url_input = "https://example.com/api"
+        component.follow_redirects = True
+        component.log = MagicMock()
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
+            respx.get("https://example.com/api").mock(return_value=Response(200, json={"status": "ok"}))
+
+            await component.make_api_request()
+
+            # Verify security warning was logged
+            component.log.assert_called()
+            all_log_messages = [call[0][0] for call in component.log.call_args_list]
+            security_warning_found = any("Security Warning" in msg and "SSRF bypass" in msg for msg in all_log_messages)
+            assert security_warning_found, f"Security warning not found in: {all_log_messages}"
+
+    async def test_url_normalization_adds_https(self, component):
+        """Test that URLs without protocol get normalized to https://."""
+        component.url_input = "example.com"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
+            respx.get("https://example.com").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert result.data["source"] == "https://example.com"
+
+    async def test_url_normalization_preserves_http(self, component):
+        """Test that http:// protocol is preserved."""
+        component.url_input = "http://example.com"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
+            respx.get("http://example.com").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert result.data["source"] == "http://example.com"
+
+    async def test_invalid_url_raises_error(self, component):
+        """Test that invalid URLs raise ValueError."""
+        component.url_input = "not_a_valid_url"
+
+        with pytest.raises(ValueError, match="Invalid URL provided"):
+            await component.make_api_request()
+
+    async def test_follow_redirects_disabled_by_default(self, component):
+        """Test that follow_redirects is disabled by default for security."""
+        assert component.follow_redirects is False
+
+
+def _resolve_public(host, *_args, **_kwargs):
+    """socket.getaddrinfo stub: hostnames resolve to a public IP, literal IPs to themselves.
+
+    Mirrors real DNS: the public redirector hostnames map to a public address, while a
+    literal IP (e.g. an internal 127.0.0.1 / 192.168.x redirect target) resolves to
+    itself so SSRF validation still classifies it as internal.
+    """
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        ip = "93.184.216.34"  # hostname -> public IP
+    else:
+        ip = host  # literal IP -> itself
+    family = socket.AF_INET6 if ":" in ip else socket.AF_INET
+    return [(family, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+
+class TestAPIRequestRedirectSSRFProtection:
+    """Regression tests for the SSRF redirect-following bypass.
+
+    When SSRF protection is enabled, a validated public URL must not be able to reach
+    internal services by redirecting to them. The component follows redirects manually
+    and re-validates every hop with the same denylist + DNS pinning used for the
+    initial request, instead of trusting httpx to auto-follow unvalidated redirects.
+    """
+
+    @pytest.fixture
+    def component(self):
+        """Return a component configured to follow redirects."""
+        return APIRequestComponent(
+            url_input="http://public.example.com/start",
+            method="GET",
+            headers=[],
+            body=[],
+            timeout=30,
+            follow_redirects=True,
+            save_to_file=False,
+            include_httpx_metadata=True,
+            mode="URL",
+            curl_input="",
+            query_params={},
+        )
+
+    @respx.mock
+    @pytest.mark.parametrize(
+        ("internal_url", "description"),
+        [
+            ("http://127.0.0.1:9999/secret", "loopback"),
+            ("http://192.168.0.10/admin", "rfc1918-192"),
+            ("http://10.0.0.5/internal", "rfc1918-10"),
+            ("http://172.16.0.9/internal", "rfc1918-172"),
+            ("http://169.254.169.254/latest/meta-data/", "link-local-metadata"),
+            ("http://0.0.0.0:8080/admin", "unspecified"),
+        ],
+    )
+    async def test_redirect_to_internal_address_is_blocked(self, component, internal_url, description):
+        """A public URL that redirects to an internal address must be blocked, not followed."""
+        marker = "INTERNAL_REDIRECT_SECRET_7a51f4"
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": internal_url})
+        )
+        # If the fix regresses, the component would follow the redirect and serve this marker.
+        internal_route = respx.get(internal_url).mock(return_value=Response(200, text=marker))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+        assert not internal_route.called, f"Redirect to {description} ({internal_url}) must not be followed"
+
+    @respx.mock
+    async def test_redirect_scheme_change_is_blocked(self, component):
+        """A redirect that switches to a non-http(s) scheme (e.g. file://) must be blocked."""
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "file:///etc/passwd"})
+        )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+    @respx.mock
+    async def test_redirect_to_hostname_resolving_internal_is_blocked(self, component):
+        """A redirect to a hostname that resolves to an internal IP must be blocked.
+
+        Covers the DNS-rebinding-across-hops vector at the validation layer: the redirect
+        target host resolves to a blocked address and is rejected before any connection.
+        """
+
+        def resolve(host, *_args, **_kwargs):
+            ip = "127.0.0.1" if host == "internal.example.com" else "93.184.216.34"
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://internal.example.com/secret"})
+        )
+        internal_route = respx.get("http://internal.example.com/secret").mock(return_value=Response(200, text="SECRET"))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=resolve),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+        assert not internal_route.called
+
+    @respx.mock
+    async def test_chained_public_redirects_are_followed(self, component):
+        """Legitimate public-to-public redirect chains still work (redirects are not disabled)."""
+        component.url_input = "http://hop1.example.com/a"
+        respx.get("http://hop1.example.com/a").mock(
+            return_value=Response(302, headers={"Location": "http://hop2.example.com/b"})
+        )
+        respx.get("http://hop2.example.com/b").mock(
+            return_value=Response(307, headers={"Location": "http://hop3.example.com/c"})
+        )
+        respx.get("http://hop3.example.com/c").mock(return_value=Response(200, json={"status": "ok"}))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert result.data["status_code"] == 200
+        assert result.data["result"]["status"] == "ok"
+        assert result.data["redirection_history"] == [
+            {"url": "http://hop2.example.com/b", "status_code": 302},
+            {"url": "http://hop3.example.com/c", "status_code": 307},
+        ]
+
+    @respx.mock
+    async def test_too_many_redirects_raises(self, component):
+        """A redirect loop is bounded and raises instead of looping forever."""
+        component.url_input = "http://loop.example.com/a"
+        respx.get("http://loop.example.com/a").mock(
+            return_value=Response(302, headers={"Location": "http://loop.example.com/b"})
+        )
+        respx.get("http://loop.example.com/b").mock(
+            return_value=Response(302, headers={"Location": "http://loop.example.com/a"})
+        )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="exceeded the maximum"),
+        ):
+            await component.make_api_request()
+
+    @respx.mock
+    async def test_redirect_to_internal_allowed_when_protection_disabled(self, component):
+        """With SSRF protection disabled, redirect behavior is unchanged (user opted out)."""
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://127.0.0.1:9999/ok"})
+        )
+        respx.get("http://127.0.0.1:9999/ok").mock(return_value=Response(200, json={"status": "reached"}))
+
+        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}):
+            result = await component.make_api_request()
+
+        assert result.data["status_code"] == 200
+        assert result.data["result"]["status"] == "reached"
+
+    @respx.mock
+    async def test_sensitive_headers_dropped_on_cross_host_redirect(self, component):
+        """Authorization/Cookie must not be forwarded to a different host on redirect."""
+        component.headers = [
+            {"key": "Authorization", "value": "Bearer secret-token"},
+            {"key": "X-Custom", "value": "keep-me"},
+        ]
+
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://other.example.com/next"})
+        )
+        final_route = respx.get("http://other.example.com/next").mock(return_value=Response(200, json={"ok": True}))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert final_route.called
+        forwarded = final_route.calls.last.request.headers
+        assert "authorization" not in {k.lower() for k in forwarded}, "Authorization must be stripped cross-host"
+        assert forwarded.get("X-Custom") == "keep-me", "Non-sensitive headers should be preserved"
+
+    def test_method_for_redirect_semantics(self):
+        """301/302/303 downgrade POST to GET; 307/308 preserve the method."""
+        assert APIRequestComponent._method_for_redirect("POST", 301) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 302) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 303) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 307) == "POST"
+        assert APIRequestComponent._method_for_redirect("POST", 308) == "POST"
+        assert APIRequestComponent._method_for_redirect("GET", 302) == "GET"

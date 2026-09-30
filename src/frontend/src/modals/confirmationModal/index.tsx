@@ -1,9 +1,9 @@
-import GenericIconComponent from "@/components/common/genericIconComponent";
 import { DialogClose } from "@radix-ui/react-dialog";
 import React, { useEffect, useState } from "react";
+import GenericIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import {
+import type {
   ConfirmationModalType,
   ContentProps,
   TriggerProps,
@@ -41,6 +41,7 @@ function ConfirmationModal({
   index,
   onConfirm,
   open,
+  onOpenAutoFocus,
   onClose,
   onCancel,
   ...props
@@ -49,7 +50,7 @@ function ConfirmationModal({
   const [flag, setFlag] = useState(false);
 
   useEffect(() => {
-    if (open) setModalOpen(open);
+    if (open !== undefined) setModalOpen(open);
   }, [open]);
 
   useEffect(() => {
@@ -63,6 +64,8 @@ function ConfirmationModal({
   const triggerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Trigger,
   );
+  const triggerProps =
+    (triggerChild as React.ReactElement<TriggerProps>)?.props ?? undefined;
   const ContentChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Content,
   );
@@ -78,8 +81,18 @@ function ConfirmationModal({
   };
 
   return (
-    <BaseModal {...props} open={open} setOpen={setModalOpen}>
-      <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
+    <BaseModal
+      {...props}
+      open={modalOpen}
+      setOpen={setModalOpen}
+      onOpenAutoFocus={onOpenAutoFocus}
+    >
+      <BaseModal.Trigger
+        ariaLabel={triggerProps?.ariaLabel}
+        ariaPressed={triggerProps?.ariaPressed}
+      >
+        {triggerChild}
+      </BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
         {icon && (

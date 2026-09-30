@@ -132,3 +132,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 *.db
+
+# Generated pytest-cov config
+.coveragerc
+
+# LFX cache
+**/.cache/

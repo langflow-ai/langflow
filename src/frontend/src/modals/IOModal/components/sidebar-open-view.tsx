@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import IconComponent from "../../../components/common/genericIconComponent";
-import { SidebarOpenViewProps } from "../types/sidebar-open-view";
+import type { SidebarOpenViewProps } from "../types/sidebar-open-view";
 import SessionSelector from "./IOFieldView/components/session-selector";
 
 export const SidebarOpenView = ({
@@ -13,9 +16,17 @@ export const SidebarOpenView = ({
   visibleSession,
   selectedViewField,
   playgroundPage,
+  setActiveSession,
 }: SidebarOpenViewProps) => {
+  const { t } = useTranslation();
+  const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
+
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
+  );
+
+  const setNewChatOnPlayground = useFlowStore(
+    (state) => state.setNewChatOnPlayground,
   );
 
   return (
@@ -30,16 +41,18 @@ export const SidebarOpenView = ({
               />
               <div className="text-mmd font-normal">Chat</div>
             </div>
-            <ShadTooltip styleClasses="z-50" content="New Chat">
+            <ShadTooltip styleClasses="z-50" content={t("chat.newChat")}>
               <div>
                 <Button
                   data-testid="new-chat"
                   variant="ghost"
                   className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
+                  aria-label={t("chat.newChat")}
                   onClick={(_) => {
                     setvisibleSession(undefined);
                     setSelectedViewField(undefined);
                     setNewSessionCloseVoiceAssistant(true);
+                    setNewChatOnPlayground(true);
                   }}
                 >
                   <IconComponent
@@ -77,6 +90,13 @@ export const SidebarOpenView = ({
                   id: session,
                   type: "Session",
                 });
+              }}
+              setActiveSession={(session) => {
+                setActiveSession(session);
+              }}
+              menuOpen={openMenuSession === session}
+              onMenuOpenChange={(open) => {
+                setOpenMenuSession(open ? session : null);
               }}
             />
           ))}

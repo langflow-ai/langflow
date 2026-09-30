@@ -1,0 +1,1342 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import React from "react";
+import { BrowserRouter } from "react-router-dom";
+import type { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
+
+// ── Mocks (must precede component imports) ──────────────────────────────────
+
+const mockMutateAsync = jest.fn();
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base",
+  () => ({
+    useCreateKnowledgeBase: () => ({
+      mutateAsync: mockMutateAsync,
+      isLoading: false,
+    }),
+  }),
+);
+
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status",
+  () => ({
+    useGetIngestionJobStatus: () => ({ data: null }),
+  }),
+);
+
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs",
+  () => ({
+    useGetIngestionRuns: () => ({
+      data: { runs: [], total: 0, page: 1, limit: 10, total_pages: 0 },
+      isLoading: false,
+      isError: false,
+    }),
+  }),
+);
+
+const mockApiPost = jest.fn();
+jest.mock("@/controllers/API/api", () => ({
+  api: { post: mockApiPost, get: jest.fn() },
+}));
+
+jest.mock("@/controllers/API/helpers/constants", () => ({
+  getURL: jest.fn(() => "/api/v1/knowledge_bases"),
+}));
+
+const MODEL_PROVIDERS = [
+  {
+    provider: "OpenAI",
+    is_enabled: true,
+    icon: "OpenAI",
+    models: [
+      {
+        model_name: "text-embedding-3-small",
+        metadata: { model_type: "embeddings" },
+      },
+      {
+        model_name: "text-embedding-3-large",
+        metadata: { model_type: "embeddings" },
+      },
+      { model_name: "gpt-4", metadata: { model_type: "llm" } },
+    ],
+  },
+  {
+    provider: "HuggingFace",
+    is_enabled: true,
+    icon: "HuggingFace",
+    models: [
+      {
+        model_name: "sentence-transformers/all-MiniLM-L6-v2",
+        metadata: { model_type: "embeddings" },
+      },
+    ],
+  },
+  {
+    provider: "DisabledProvider",
+    is_enabled: false,
+    icon: "Bot",
+    models: [
+      {
+        model_name: "disabled-embedding",
+        metadata: { model_type: "embeddings" },
+      },
+    ],
+  },
+];
+
+let mockModelProvidersResult: Record<string, unknown>;
+type MockEnabledModelsResult = {
+  data: EnabledModelsResponse;
+  isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  fetchStatus: "idle" | "fetching" | "paused";
+};
+let mockEnabledModelsResult: MockEnabledModelsResult;
+let mockGlobalVariablesResult: Record<string, unknown>;
+const mockUseGetModelProviders = jest.fn();
+const mockUseGetEnabledModels = jest.fn();
+
+jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
+  useGetModelProviders: (...args: unknown[]) => {
+    mockUseGetModelProviders(...args);
+    return mockModelProvidersResult;
+  },
+}));
+
+jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
+  useGetEnabledModels: (...args: unknown[]) => {
+    mockUseGetEnabledModels(...args);
+    return mockEnabledModelsResult;
+  },
+}));
+
+jest.mock("@/controllers/API/queries/variables", () => ({
+  useGetGlobalVariables: () => mockGlobalVariablesResult,
+}));
+
+const mockSetSuccessData = jest.fn();
+const mockSetErrorData = jest.fn();
+jest.mock("@/stores/alertStore", () => {
+  const store = jest.fn((selector) => {
+    const state = {
+      setSuccessData: mockSetSuccessData,
+      setErrorData: mockSetErrorData,
+    };
+    return typeof selector === "function" ? selector(state) : state;
+  });
+  return { __esModule: true, default: store };
+});
+
+interface MockModelInputProps {
+  value: { id: string; name: string }[];
+  handleOnNewValue: (val: { value: { id: string; name: string }[] }) => void;
+  options: { id: string; name: string }[];
+  placeholder?: string;
+}
+
+// Renders as a plain <select> so tests can inspect options and fire selections
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/modelInputComponent",
+  () => ({
+    __esModule: true,
+    default: ({
+      value,
+      handleOnNewValue,
+      options,
+      placeholder,
+    }: MockModelInputProps) => (
+      <div data-testid="mock-model-input">
+        <select
+          data-testid="embedding-model-select"
+          value={value?.[0]?.id || ""}
+          onChange={(e) => {
+            const selected = options?.find((o) => o.id === e.target.value);
+            if (selected) handleOnNewValue({ value: [selected] });
+          }}
+        >
+          <option value="">{placeholder || "Select..."}</option>
+          {options?.map((opt) => (
+            <option key={opt.id} value={opt.id}>
+              {opt.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    ),
+  }),
+);
+
+// ── Imports after mocks ──────────────────────────────────────────────────────
+
+import { TooltipProvider } from "@radix-ui/react-tooltip";
+import KnowledgeBaseUploadModal from "../KnowledgeBaseUploadModal";
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <TooltipProvider>{children}</TooltipProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+};
+
+/** Types name and selects an embedding model — prerequisite for most flow tests. */
+const fillRequiredFields = async (
+  user: ReturnType<typeof userEvent.setup>,
+  name = "TestKnowledgeBase",
+) => {
+  await user.type(screen.getByTestId("kb-source-name-input"), name);
+  await user.selectOptions(
+    screen.getByTestId("embedding-model-select"),
+    "text-embedding-3-small",
+  );
+};
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+describe("KnowledgeBaseUploadModal", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockModelProvidersResult = {
+      data: MODEL_PROVIDERS,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isSuccess: true,
+      fetchStatus: "idle",
+    };
+    mockEnabledModelsResult = {
+      data: {
+        enabled_models: {
+          OpenAI: {
+            "text-embedding-3-small": true,
+            "text-embedding-3-large": true,
+            "gpt-4": true,
+          },
+          HuggingFace: {
+            "sentence-transformers/all-MiniLM-L6-v2": true,
+          },
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isSuccess: true,
+      fetchStatus: "idle",
+    };
+    mockGlobalVariablesResult = {
+      data: [],
+      isFetched: true,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isSuccess: true,
+      fetchStatus: "idle",
+    };
+    mockMutateAsync.mockResolvedValue({ id: "test_kb", name: "test_kb" });
+    mockApiPost.mockResolvedValue({ data: { files: [] } });
+  });
+
+  // ── Rendering ─────────────────────────────────────────────────────────────
+
+  describe("Rendering", () => {
+    it("renders modal when open", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByText("Create Knowledge Base")).toBeInTheDocument();
+    });
+
+    it("does not render modal content when closed", () => {
+      render(<KnowledgeBaseUploadModal open={false} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(
+        screen.queryByText("Create Knowledge Base"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders source name input", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId("kb-source-name-input")).toBeInTheDocument();
+    });
+
+    it("renders embedding model label", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByText("Embedding Model")).toBeInTheDocument();
+    });
+
+    it("renders DB Provider selector defaulting to Chroma", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByText("DB Provider")).toBeInTheDocument();
+      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent("Chroma");
+    });
+
+    it("renders Ingest Content section open by default", () => {
+      // Section heading + add-button labels are now driven by i18n keys
+      // (knowledge.configureSources / knowledge.addSources) but the English
+      // copy is intentionally kept as "Ingest Content" / "Add Files".
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByText(/Ingest Content/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Add Files/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("does not render the Hide Configuration footer toggle", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(
+        screen.queryByRole("button", { name: /Hide Configuration/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^Ingest Content$/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("disables chunking inputs until at least one source is added", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId("kb-chunk-size-input")).toBeDisabled();
+      expect(screen.getByTestId("kb-chunk-overlap-input")).toBeDisabled();
+      expect(screen.getByTestId("kb-separator-input")).toBeDisabled();
+
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      const event = {
+        target: {
+          files: [new File(["x"], "doc.txt", { type: "text/plain" })],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      fireEvent.change(fileInput, event);
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-chunk-size-input")).not.toBeDisabled(),
+      );
+      expect(screen.getByTestId("kb-chunk-overlap-input")).not.toBeDisabled();
+      expect(screen.getByTestId("kb-separator-input")).not.toBeDisabled();
+    });
+
+    it('shows "Add Files" title in add-sources mode', async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={{ name: "ExistingKB" }}
+        />,
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("heading", { name: /Add Files/i }),
+        ).toBeInTheDocument(),
+      );
+    });
+  });
+
+  // ── Embedding Model Filtering ──────────────────────────────────────────────
+
+  describe("Embedding Model Filtering", () => {
+    it("requests the global provider catalog for runtime use", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+
+      expect(mockUseGetModelProviders).toHaveBeenCalledWith({
+        includeDeprecated: true,
+        purpose: "use",
+      });
+      expect(mockUseGetEnabledModels).toHaveBeenCalledWith({ purpose: "use" });
+    });
+
+    it("includes only embeddings-type models in the select options", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const optionValues = Array.from(
+        screen.getByTestId("embedding-model-select").querySelectorAll("option"),
+      ).map((o) => (o as HTMLOptionElement).value);
+
+      expect(optionValues).toContain("text-embedding-3-small");
+      expect(optionValues).toContain("text-embedding-3-large");
+      expect(optionValues).toContain("sentence-transformers/all-MiniLM-L6-v2");
+    });
+
+    it("excludes LLM-type models (gpt-4) from embedding options", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const optionValues = Array.from(
+        screen.getByTestId("embedding-model-select").querySelectorAll("option"),
+      ).map((o) => (o as HTMLOptionElement).value);
+
+      expect(optionValues).not.toContain("gpt-4");
+    });
+
+    it("excludes models from disabled providers", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const optionValues = Array.from(
+        screen.getByTestId("embedding-model-select").querySelectorAll("option"),
+      ).map((o) => (o as HTMLOptionElement).value);
+
+      expect(optionValues).not.toContain("disabled-embedding");
+    });
+
+    it("excludes a model disabled in the latest global enabled-model catalog", () => {
+      mockEnabledModelsResult = {
+        ...mockEnabledModelsResult,
+        data: {
+          enabled_models: {
+            OpenAI: {
+              "text-embedding-3-small": true,
+              "text-embedding-3-large": false,
+            },
+          },
+        },
+      };
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+
+      const optionValues = Array.from(
+        screen.getByTestId("embedding-model-select").querySelectorAll("option"),
+      ).map((o) => (o as HTMLOptionElement).value);
+      expect(optionValues).toContain("text-embedding-3-small");
+      expect(optionValues).not.toContain("text-embedding-3-large");
+      expect(optionValues).not.toContain(
+        "sentence-transformers/all-MiniLM-L6-v2",
+      );
+    });
+
+    it("does not leak same-name LLM authorization into embedding options", () => {
+      mockModelProvidersResult = {
+        ...mockModelProvidersResult,
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            icon: "OpenAI",
+            models: [
+              { model_name: "shared", metadata: { model_type: "llm" } },
+              {
+                model_name: "shared",
+                metadata: { model_type: "embeddings" },
+              },
+            ],
+          },
+        ],
+      };
+      mockEnabledModelsResult = {
+        ...mockEnabledModelsResult,
+        data: {
+          enabled_models: { OpenAI: { shared: true } },
+          enabled_models_by_type: {
+            OpenAI: {
+              llm: { shared: true },
+              embeddings: { shared: false },
+            },
+          },
+        },
+      };
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+
+      const optionValues = Array.from(
+        screen.getByTestId("embedding-model-select").querySelectorAll("option"),
+      ).map((o) => (o as HTMLOptionElement).value);
+      expect(optionValues).not.toContain("shared");
+    });
+
+    it("masks stale options and disables progression during a global policy refresh", async () => {
+      const user = userEvent.setup();
+      const view = render(
+        <KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />,
+        { wrapper: createWrapper() },
+      );
+      await fillRequiredFields(user);
+
+      mockModelProvidersResult = {
+        ...mockModelProvidersResult,
+        isFetching: true,
+      };
+      view.rerender(
+        <KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />,
+      );
+
+      expect(
+        screen.getByTestId("embedding-model-select").querySelectorAll("option"),
+      ).toHaveLength(1);
+      expect(screen.getByRole("button", { name: /Next Step/i })).toBeDisabled();
+    });
+
+    it("fails closed when global DB-provider variables cannot be refreshed", async () => {
+      mockGlobalVariablesResult = {
+        ...mockGlobalVariablesResult,
+        isError: true,
+        isSuccess: false,
+      };
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await fillRequiredFields(user);
+
+      expect(screen.getByRole("button", { name: /Next Step/i })).toBeDisabled();
+    });
+
+    it("fails closed when global DB-provider variables are paused", async () => {
+      mockGlobalVariablesResult = {
+        ...mockGlobalVariablesResult,
+        fetchStatus: "paused",
+      };
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await fillRequiredFields(user);
+
+      expect(screen.getByRole("button", { name: /Next Step/i })).toBeDisabled();
+    });
+  });
+
+  // ── Form Validation ────────────────────────────────────────────────────────
+
+  describe("Form Validation", () => {
+    it("step 1 shows Next Step button rather than submit", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(
+        screen.getByRole("button", { name: /Next Step/i }),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("kb-create-button")).not.toBeInTheDocument();
+    });
+
+    it("Next Step does not advance when only source name is filled", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await user.type(
+        screen.getByTestId("kb-source-name-input"),
+        "MyKnowledgeBase",
+      );
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      expect(
+        screen.getByText("Embedding model is required"),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("kb-create-button")).not.toBeInTheDocument();
+    });
+
+    it("submit button enabled on step 2 when name and embedding model are provided", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await fillRequiredFields(user);
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).not.toBeDisabled(),
+      );
+    });
+
+    it("shows inline error when name is shorter than 3 characters", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await user.type(screen.getByTestId("kb-source-name-input"), "ab");
+      await user.selectOptions(
+        screen.getByTestId("embedding-model-select"),
+        "text-embedding-3-small",
+      );
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      await waitFor(() =>
+        expect(
+          screen.getByText("Name must be between 3 and 512 characters"),
+        ).toBeInTheDocument(),
+      );
+    });
+
+    it("shows inline error when name contains invalid characters", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await user.type(screen.getByTestId("kb-source-name-input"), "invalid!");
+      await user.selectOptions(
+        screen.getByTestId("embedding-model-select"),
+        "text-embedding-3-small",
+      );
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      await waitFor(() =>
+        expect(screen.getByText(/Name must only contain/)).toBeInTheDocument(),
+      );
+    });
+
+    it("shows inline error when name duplicates an existing knowledge base", async () => {
+      const user = userEvent.setup();
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBaseNames={["TestKnowledgeBase"]}
+        />,
+        { wrapper: createWrapper() },
+      );
+      await fillRequiredFields(user);
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      await waitFor(() =>
+        expect(
+          screen.getByText("A knowledge base with this name already exists"),
+        ).toBeInTheDocument(),
+      );
+    });
+  });
+
+  // ── Form Submission ────────────────────────────────────────────────────────
+
+  describe("Form Submission", () => {
+    const advanceToReview = async (
+      user: ReturnType<typeof userEvent.setup>,
+    ) => {
+      await fillRequiredFields(user);
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeInTheDocument(),
+      );
+    };
+
+    it("calls mutateAsync with correct payload on valid submission", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await advanceToReview(user);
+      await user.click(screen.getByTestId("kb-create-button"));
+      await waitFor(() =>
+        expect(mockMutateAsync).toHaveBeenCalledWith({
+          name: "TestKnowledgeBase",
+          embedding_provider: "OpenAI",
+          embedding_model: "text-embedding-3-small",
+          model_selection: {
+            id: "text-embedding-3-small",
+            name: "text-embedding-3-small",
+            icon: "OpenAI",
+            provider: "OpenAI",
+            metadata: { model_type: "embeddings" },
+          },
+          column_config: [
+            { column_name: "text", vectorize: true, identifier: true },
+          ],
+          // Omit the implicit Chroma choice so the server can apply its
+          // configured default backend.
+          backend_type: undefined,
+          backend_config: {},
+        }),
+      );
+    });
+
+    it("calls setSuccessData with the knowledge base name after creation", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await advanceToReview(user);
+      await user.click(screen.getByTestId("kb-create-button"));
+      await waitFor(() =>
+        expect(mockSetSuccessData).toHaveBeenCalledWith({
+          title: 'Knowledge base "TestKnowledgeBase" created',
+        }),
+      );
+    });
+
+    it("calls setOpen(false) after successful submission", async () => {
+      const mockSetOpen = jest.fn();
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={mockSetOpen} />, {
+        wrapper: createWrapper(),
+      });
+      await advanceToReview(user);
+      await user.click(screen.getByTestId("kb-create-button"));
+      await waitFor(() => expect(mockSetOpen).toHaveBeenCalledWith(false));
+    });
+
+    it("fires onSubmit callback with source name and files after creation", async () => {
+      const mockOnSubmit = jest.fn();
+      const user = userEvent.setup();
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          onSubmit={mockOnSubmit}
+        />,
+        { wrapper: createWrapper() },
+      );
+      await advanceToReview(user);
+      await user.click(screen.getByTestId("kb-create-button"));
+      await waitFor(() => expect(mockOnSubmit).toHaveBeenCalled());
+      expect(mockOnSubmit.mock.calls[0][0]).toMatchObject({
+        sourceName: "TestKnowledgeBase",
+        files: [],
+      });
+    });
+
+    it("calls setErrorData when the creation API returns an error", async () => {
+      mockMutateAsync.mockRejectedValueOnce({
+        response: { data: { detail: "Knowledge base already exists" } },
+      });
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await advanceToReview(user);
+      await user.click(screen.getByTestId("kb-create-button"));
+      await waitFor(() =>
+        expect(mockSetErrorData).toHaveBeenCalledWith({
+          title: "Knowledge base already exists",
+        }),
+      );
+    });
+  });
+
+  // ── User Interactions ──────────────────────────────────────────────────────
+
+  describe("User Interactions", () => {
+    it("allows typing in the source name input", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const input = screen.getByTestId("kb-source-name-input");
+      await user.type(input, "My Knowledge Base");
+      expect(input).toHaveValue("My Knowledge Base");
+    });
+
+    it("clears source name when the input is cleared", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const input = screen.getByTestId("kb-source-name-input");
+      await user.type(input, "Test");
+      await user.clear(input);
+      expect(input).toHaveValue("");
+    });
+
+    it("opens file-upload dropdown when Add Files button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await user.click(screen.getByTestId("kb-browse-btn"));
+      expect(screen.getByText("Upload Files")).toBeInTheDocument();
+      expect(screen.getByText("Upload Folder")).toBeInTheDocument();
+    });
+  });
+
+  // ── File Upload ────────────────────────────────────────────────────────────
+
+  describe("File Upload", () => {
+    it("adds an uploaded file to the files panel", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      await user.upload(
+        fileInput,
+        new File(["content"], "document.txt", { type: "text/plain" }),
+      );
+      expect(screen.getByText("document.txt")).toBeInTheDocument();
+    });
+
+    it("shows all uploaded files when multiple files are selected", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      await user.upload(fileInput, [
+        new File(["a"], "file-a.txt", { type: "text/plain" }),
+        new File(["b"], "file-b.txt", { type: "text/plain" }),
+      ]);
+      expect(screen.getByText("file-a.txt")).toBeInTheDocument();
+      expect(screen.getByText("file-b.txt")).toBeInTheDocument();
+    });
+
+    it("filters out unsupported file types and shows an error message with excluded files", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+
+      const validFile = new File(["content"], "valid.txt", {
+        type: "text/plain",
+      });
+      const invalidFile = new File(["content"], "invalid.exe", {
+        type: "application/x-msdownload",
+      });
+
+      // Manually trigger the change event to bypass userEvent.upload's attribute-based filtering
+      const event = {
+        target: {
+          files: [validFile, invalidFile],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      fireEvent.change(fileInput, event);
+
+      // Only the valid file should be rendered in the FilesPanel
+      expect(screen.getByText("valid.txt")).toBeInTheDocument();
+      expect(screen.queryByText("invalid.exe")).not.toBeInTheDocument();
+
+      // Verify that the alert store was called with the correct error information
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining("Some files were skipped"),
+          list: expect.arrayContaining(["invalid.exe"]),
+        }),
+      );
+    });
+
+    it("filters out unsupported file types during folder upload", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const folderInput = document.getElementById(
+        "folder-input",
+      ) as HTMLInputElement;
+
+      const validFile = new File(["content"], "valid.md", {
+        type: "text/markdown",
+      });
+      const invalidFile = new File(["content"], "invalid.exe", {
+        type: "application/x-msdownload",
+      });
+
+      // Manually trigger the change event
+      const event = {
+        target: {
+          files: [validFile, invalidFile],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      fireEvent.change(folderInput, event);
+
+      expect(screen.getByText("valid.md")).toBeInTheDocument();
+      expect(screen.queryByText("invalid.exe")).not.toBeInTheDocument();
+
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          list: expect.arrayContaining(["invalid.exe"]),
+        }),
+      );
+    });
+
+    it("verifies file panel doesn't open and error is shown when ALL files are unsupported", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+
+      const invalidFile = new File(["content"], "invalid.exe", {
+        type: "application/x-msdownload",
+      });
+
+      const event = {
+        target: {
+          files: [invalidFile],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      fireEvent.change(fileInput, event);
+
+      // The FilesPanel (implied by file names being visible) should not be open
+      expect(screen.queryByText("invalid.exe")).not.toBeInTheDocument();
+
+      // Verify that the error notification was shown
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining("Some files were skipped"),
+          list: expect.arrayContaining(["invalid.exe"]),
+        }),
+      );
+    });
+  });
+
+  // ── Step 2 Review ──────────────────────────────────────────────────────────
+
+  describe("Step 2 Review", () => {
+    const navigateToStep2 = async (
+      user: ReturnType<typeof userEvent.setup>,
+      name = "TestKnowledgeBase",
+    ) => {
+      await fillRequiredFields(user, name);
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+    };
+
+    it("transitions to the Review & Build step after clicking Next Step", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await navigateToStep2(user);
+      expect(screen.getByText("Review & Build")).toBeInTheDocument();
+    });
+
+    it('shows "No files selected" message in review when no files were uploaded', async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await navigateToStep2(user);
+      expect(
+        screen.getByText("No files selected. Go back to add files."),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the source name in the review summary", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await navigateToStep2(user, "MyDocuments");
+      expect(screen.getAllByText("MyDocuments").length).toBeGreaterThan(0);
+    });
+
+    it("returns to step 1 when Back is clicked in the review step", async () => {
+      const user = userEvent.setup();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      await navigateToStep2(user);
+      await user.click(screen.getByRole("button", { name: /Back/i }));
+      expect(screen.getByText("Create Knowledge Base")).toBeInTheDocument();
+      expect(screen.queryByText("Review & Build")).not.toBeInTheDocument();
+    });
+
+    it("calls the chunk preview API when entering review step with uploaded files", async () => {
+      const user = userEvent.setup();
+      mockApiPost.mockResolvedValue({
+        data: {
+          files: [
+            {
+              preview_chunks: [
+                { content: "preview chunk", char_count: 13, start: 0, end: 13 },
+              ],
+            },
+          ],
+        },
+      });
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      await user.upload(
+        fileInput,
+        new File(["hello world"], "test.txt", { type: "text/plain" }),
+      );
+      await navigateToStep2(user);
+      await waitFor(() =>
+        expect(mockApiPost).toHaveBeenCalledWith(
+          expect.stringContaining("preview-chunks"),
+          expect.any(FormData),
+          expect.objectContaining({
+            headers: { "Content-Type": "multipart/form-data" },
+          }),
+        ),
+      );
+    });
+
+    it("renders chunk content returned by the preview API", async () => {
+      const user = userEvent.setup();
+      mockApiPost.mockResolvedValue({
+        data: {
+          files: [
+            {
+              preview_chunks: [
+                {
+                  content: "Hello from chunk one",
+                  char_count: 20,
+                  start: 0,
+                  end: 20,
+                },
+              ],
+            },
+          ],
+        },
+      });
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      await user.upload(
+        fileInput,
+        new File(["Hello from chunk one"], "test.txt", { type: "text/plain" }),
+      );
+      await navigateToStep2(user);
+      await waitFor(() =>
+        expect(screen.getByText("Hello from chunk one")).toBeInTheDocument(),
+      );
+    });
+
+    it("disables the create button when chunk preview fails", async () => {
+      const user = userEvent.setup();
+      // The backend rejects e.g. chunk_overlap > chunk_size with a 422; the
+      // create button must grey out so the rejected config can't be submitted.
+      mockApiPost.mockRejectedValue({
+        response: {
+          data: {
+            detail:
+              "Chunk overlap (200) can't be larger than chunk size (100).",
+          },
+        },
+      });
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      await user.upload(
+        fileInput,
+        new File(["hello world"], "test.txt", { type: "text/plain" }),
+      );
+      await navigateToStep2(user);
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
+    });
+  });
+
+  // ── Add Sources Mode ───────────────────────────────────────────────────────
+
+  describe("Add Sources Mode", () => {
+    const existingKB = {
+      name: "ExistingKnowledgeBase",
+      embeddingModel: "text-embedding-3-small",
+      embeddingProvider: "OpenAI",
+    };
+
+    it("disables the name input", async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={existingKB}
+        />,
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-source-name-input")).toBeDisabled(),
+      );
+    });
+
+    it('displays "Add Files" as the modal title', async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={existingKB}
+        />,
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("heading", { name: /Add Files/i }),
+        ).toBeInTheDocument(),
+      );
+    });
+
+    it("shows the existing embedding model name instead of the model selector", async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={existingKB}
+        />,
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() =>
+        expect(screen.getByText("text-embedding-3-small")).toBeInTheDocument(),
+      );
+      expect(
+        screen.queryByTestId("embedding-model-select"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows the existing DB Provider as read-only", async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={{ ...existingKB, backendType: "opensearch" }}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-db-provider")).toBeDisabled(),
+      );
+      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent(
+        "OpenSearch",
+      );
+    });
+
+    it('labels the submit button "Add Files"', async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={existingKB}
+          hideAdvanced={true}
+        />,
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toHaveTextContent(
+          "Add Files",
+        ),
+      );
+    });
+
+    it("disables add-sources submission when the global model policy refresh fails", async () => {
+      mockEnabledModelsResult = {
+        ...mockEnabledModelsResult,
+        isError: true,
+        isSuccess: false,
+      };
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={existingKB}
+          hideAdvanced={true}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
+    });
+
+    it.each([undefined, "Unknown"])(
+      "recovers an existing model when the legacy provider is %s",
+      async (embeddingProvider) => {
+        render(
+          <KnowledgeBaseUploadModal
+            open={true}
+            setOpen={jest.fn()}
+            existingKnowledgeBase={{
+              name: existingKB.name,
+              embeddingModel: existingKB.embeddingModel,
+              embeddingProvider,
+            }}
+            hideAdvanced={true}
+          />,
+          { wrapper: createWrapper() },
+        );
+
+        await waitFor(() =>
+          expect(screen.getByTestId("kb-create-button")).toBeEnabled(),
+        );
+        expect(screen.getByText(existingKB.embeddingModel)).toBeInTheDocument();
+      },
+    );
+
+    it("does not replace a known but unavailable provider with another provider", async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={{
+            ...existingKB,
+            embeddingProvider: "Unavailable Provider",
+          }}
+          hideAdvanced={true}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
+    });
+
+    it("fails closed when an unknown legacy provider has ambiguous model matches", async () => {
+      mockModelProvidersResult = {
+        ...mockModelProvidersResult,
+        data: [
+          ...MODEL_PROVIDERS,
+          {
+            provider: "Azure AI Foundry",
+            is_enabled: true,
+            icon: "Azure",
+            models: [
+              {
+                model_name: existingKB.embeddingModel,
+                metadata: { model_type: "embeddings" },
+              },
+            ],
+          },
+        ],
+      };
+      mockEnabledModelsResult = {
+        ...mockEnabledModelsResult,
+        data: {
+          ...mockEnabledModelsResult.data,
+          enabled_models: {
+            ...mockEnabledModelsResult.data.enabled_models,
+            "Azure AI Foundry": {
+              [existingKB.embeddingModel]: true,
+            },
+          },
+        },
+      };
+
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={{
+            ...existingKB,
+            embeddingProvider: "Unknown",
+          }}
+          hideAdvanced={true}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
+    });
+
+    it("clears a recovered legacy model when a policy refresh makes it ambiguous", async () => {
+      const legacyKnowledgeBase = {
+        ...existingKB,
+        embeddingProvider: "Unknown",
+      };
+      const { rerender } = render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={legacyKnowledgeBase}
+          hideAdvanced={true}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeEnabled(),
+      );
+
+      mockModelProvidersResult = {
+        ...mockModelProvidersResult,
+        data: [
+          ...MODEL_PROVIDERS,
+          {
+            provider: "Azure AI Foundry",
+            is_enabled: true,
+            icon: "Azure",
+            models: [
+              {
+                model_name: existingKB.embeddingModel,
+                metadata: { model_type: "embeddings" },
+              },
+            ],
+          },
+        ],
+      };
+      mockEnabledModelsResult = {
+        ...mockEnabledModelsResult,
+        data: {
+          ...mockEnabledModelsResult.data,
+          enabled_models: {
+            ...mockEnabledModelsResult.data.enabled_models,
+            "Azure AI Foundry": {
+              [existingKB.embeddingModel]: true,
+            },
+          },
+        },
+      };
+      rerender(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={legacyKnowledgeBase}
+          hideAdvanced={true}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
+    });
+  });
+
+  // ── Form Reset ─────────────────────────────────────────────────────────────
+
+  describe("Form Reset", () => {
+    it("resets form fields when the modal is closed via the close button", async () => {
+      const user = userEvent.setup();
+      const mockSetOpen = jest.fn();
+      render(<KnowledgeBaseUploadModal open={true} setOpen={mockSetOpen} />, {
+        wrapper: createWrapper(),
+      });
+      await user.type(
+        screen.getByTestId("kb-source-name-input"),
+        "SomeKnowledgeBase",
+      );
+      expect(screen.getByTestId("kb-source-name-input")).toHaveValue(
+        "SomeKnowledgeBase",
+      );
+
+      // Closing the dialog triggers onOpenChange → resetForm()
+      await user.click(screen.getByRole("button", { name: /close/i }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-source-name-input")).toHaveValue(""),
+      );
+      expect(mockSetOpen).toHaveBeenCalledWith(false);
+    });
+  });
+});

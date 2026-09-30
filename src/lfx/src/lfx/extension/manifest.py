@@ -1,0 +1,732 @@
+"""Pydantic models for the v0 Extension manifest schema.
+
+A Langflow Extension is the distribution unit that gets pip-installed. It
+ships Bundles (named groups of components) and/or model providers, plus a
+manifest at the distribution root. The manifest tells Langflow:
+
+    - which Bundles to register (``bundles``),
+    - what component-base-class API surface the Bundle was built against
+      (``lfx.compat``),
+    - what optional capabilities the Bundle declares
+      (``capabilities.requiresCredentials`` is the only v0 slot).
+
+Manifest source forms (both supported):
+
+    1. ``extension.json`` at the package root.
+    2. ``[tool.langflow.extension]`` in ``pyproject.toml``.
+
+Use :func:`load_manifest` to discover and parse either form.
+
+Deferred fields (``services``, ``routes``, ``hooks``, ``starter_projects``,
+``userConfig``) are reserved here so that downstream tooling can detect their
+presence and emit ``field-deferred-in-this-milestone`` rather than silently
+dropping them.
+
+Each declared bundle is validated and loaded independently while sharing the
+extension's identity, compatibility declaration, and distribution.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any, Literal
+
+if sys.version_info >= (3, 11):
+    import tomllib  # stdlib on 3.11+
+else:
+    import tomli as tomllib  # 3.10 fallback (lfx already depends on tomli)
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictStr,
+    field_validator,
+    model_validator,
+)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+SCHEMA_VERSION: int = 1
+"""The integer version of the manifest schema.  Bumped only when a v0 manifest
+becomes invalid against the new shape."""
+
+BUNDLE_API_VERSION: int = 1
+"""The integer version of the BUNDLE_API.md contract that this lfx package
+implements.  Manifests declare the contract versions they support via
+``lfx.compat`` (a list of stringified integers); a manifest that does not
+include ``str(BUNDLE_API_VERSION)`` is rejected at install time with
+``version-constraint-unsatisfied``.
+
+This is a different concept from :data:`SCHEMA_VERSION` (which versions the
+manifest's own shape) and from the ``"v0"`` initial-state marker in
+BUNDLE_API.md's changelog (which is documentation prose); the integer
+contract version is ``1`` from day one."""
+
+EXTENSION_SCHEMA_URL: str = f"https://schemas.langflow.org/extension/v{SCHEMA_VERSION}.json"
+"""Canonical hosting URL for the published JSON Schema.  Authors point their
+``$schema`` field here for editor autocompletion."""
+
+# Identifier patterns
+_EXTENSION_ID_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
+"""Extension IDs are lowercase, hyphenated, must start with a letter, 2-64 chars.
+Mirrors the npm-package / PyPI normalization rules."""
+
+BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
+"""Bundle names use snake_case so they can be addressed in the registry as
+``ext:<bundle>:<Class>@<slot>`` without quoting."""
+
+_PROVIDER_ID_RE: re.Pattern[str] = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
+_SEMVER_RE: re.Pattern[str] = re.compile(
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?"
+    r"(?:\+(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?$"
+)
+"""SemVer 2.0.0 pattern (https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string)."""
+
+_REPOSITORY_PEP440_RE: re.Pattern[str] = re.compile(
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:(?:a|b|rc)(?:0|[1-9][0-9]*)|\.dev(?:0|[1-9][0-9]*))?$"
+)
+"""Canonical PEP 440 forms emitted by the repository's bundle release tooling."""
+
+
+def _json_schema_fullmatch(pattern: re.Pattern[str]) -> str:
+    """Adapt a Python-anchored regex to JSON Schema's search semantics.
+
+    The trailing lookahead prevents ``$`` from accepting a match immediately
+    before a final newline, keeping the authoring schema aligned with the
+    runtime validator's ``fullmatch`` behavior.
+    """
+    return rf"(?:{pattern.pattern})(?![\s\S])"
+
+
+_EXTENSION_VERSION_JSON_SCHEMA: dict[str, list[dict[str, str]]] = {
+    "anyOf": [{"pattern": _json_schema_fullmatch(pattern)} for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)]
+}
+
+# Deferred manifest fields.  Validators reject any non-null value with
+# ``field-deferred-in-this-milestone``.  Listed here so tests can iterate and so
+# the loader shares the same source of truth.
+DEFERRED_FIELDS: tuple[str, ...] = (
+    "services",
+    "routes",
+    "hooks",
+    "starter_projects",
+    "userConfig",
+)
+
+
+# ---------------------------------------------------------------------------
+# LfxCompat
+# ---------------------------------------------------------------------------
+
+_COMPAT_VERSION_RE: re.Pattern[str] = re.compile(r"^[1-9]\d*$")
+"""Manifest ``lfx.compat`` entries are stringified positive integers (no leading
+zeros) that name a frozen BUNDLE_API.md revision.  v0 only knows ``"1"``."""
+
+
+class LfxCompat(BaseModel):
+    """Declares which BUNDLE_API.md contract version(s) this Extension supports.
+
+    Each entry in ``compat`` is the string form of a frozen BUNDLE_API.md
+    revision (e.g. ``"1"``).  At install time the loader compares
+    ``str(BUNDLE_API_VERSION)`` against this list; a mismatch surfaces as
+    ``version-constraint-unsatisfied``.
+
+    v0 ships only ``compat=["1"]``; the field is a list so future bundles can
+    declare forward-compatible support like ``["1", "2"]``.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    compat: list[StrictStr] = Field(
+        ...,
+        description="Supported BUNDLE_API.md contract versions, as strings.  Must be non-empty.",
+        min_length=1,
+    )
+
+    @field_validator("compat")
+    @classmethod
+    def _compat_well_formed(cls, value: list[str]) -> list[str]:
+        for v in value:
+            if not _COMPAT_VERSION_RE.fullmatch(v):
+                msg = f"compat entries must be positive-integer strings (got {v!r})"
+                raise ValueError(msg)
+        if len(set(value)) != len(value):
+            msg = "compat entries must be unique"
+            raise ValueError(msg)
+        return value
+
+
+# ---------------------------------------------------------------------------
+# Capabilities
+# ---------------------------------------------------------------------------
+
+
+class Capabilities(BaseModel):
+    """Optional capabilities the Bundle declares.
+
+    Phase-1 ships exactly one capability slot (``requiresCredentials``) so the
+    shape exists for downstream tickets.  ``extra="forbid"`` ensures additional
+    capability keys are rejected with a descriptive error rather than silently
+    ignored.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    requiresCredentials: StrictBool = Field(  # noqa: N815 - manifest schema field name
+        default=False,
+        description=(
+            "If true, the loader records that components in this bundle "
+            "expect credential variables to be configured before use."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# BundleRef
+# ---------------------------------------------------------------------------
+
+
+class BundleRef(BaseModel):
+    """Pointer from the manifest to a Bundle directory inside the distribution.
+
+    ``path`` is interpreted relative to the manifest file's parent directory
+    and must remain inside it.  Path-safety (no ``..``, absolute paths, or
+    symlink escape) is enforced by ``validate_extension`` -- :class:`BundleRef`
+    only checks the syntactic shape so the model can be used for static
+    analysis without filesystem access.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: StrictStr = Field(
+        ...,
+        pattern=BUNDLE_NAME_RE.pattern,
+        description=(
+            "Bundle name; addressable as ext:<name>:<Class>@<slot>. "
+            "Lowercase snake_case, starting with a letter, 2-64 chars."
+        ),
+    )
+    path: StrictStr = Field(
+        ...,
+        min_length=1,
+        description="Path to the bundle directory, relative to the manifest.",
+    )
+    display_name: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        description=(
+            "Optional human-friendly label rendered in the sidebar header. "
+            "When omitted, the UI derives one by humanising ``name`` "
+            "(``my_bundle`` -> ``My Bundle``)."
+        ),
+    )
+    icon: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description=(
+            "Optional Lucide icon name used for the sidebar header glyph. "
+            "When omitted, the UI falls back to a generic ``Package`` icon "
+            "for installed extensions and ``folder`` otherwise."
+        ),
+    )
+
+    @field_validator("path")
+    @classmethod
+    def _validate_path_shape(cls, value: str) -> str:
+        if not value:
+            msg = "Bundle path must not be empty"
+            raise ValueError(msg)
+        # Reject absolute paths and parent-directory traversal at the syntactic
+        # level.  A more thorough symlink-aware check happens in
+        # validate_extension where the filesystem is available.
+        if Path(value).is_absolute():
+            msg = f"Bundle path {value!r} must be relative to the manifest"
+            raise ValueError(msg)
+        parts = Path(value).parts
+        if any(part == ".." for part in parts):
+            msg = f"Bundle path {value!r} must not contain '..'"
+            raise ValueError(msg)
+        return value
+
+
+# ---------------------------------------------------------------------------
+# Model providers
+# ---------------------------------------------------------------------------
+
+
+class ProviderClassRef(BaseModel):
+    """Lazy class-import pointer ``(module, attr, install_hint)`` for a provider.
+
+    Mirrors the tuples in ``unified_models.class_registry`` so the provider's
+    LangChain class is imported only at instantiation, never at discovery.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    module: StrictStr = Field(..., min_length=1, description="Importable module path, e.g. 'langchain_openai'.")
+    attr: StrictStr = Field(..., min_length=1, description="Attribute on the module, e.g. 'ChatOpenAI'.")
+    install_hint: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Optional pip package name surfaced when the import fails (defaults to the top module).",
+    )
+
+
+class ProviderEmbeddingRef(BaseModel):
+    """Embedding wiring for a provider that also offers embeddings."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    class_name: StrictStr = Field(..., min_length=1, description="Embedding class name, e.g. 'OpenAIEmbeddings'.")
+    module: StrictStr = Field(..., min_length=1, description="Importable module path of the embedding class.")
+    attr: StrictStr = Field(..., min_length=1, description="Attribute on the module for the embedding class.")
+    install_hint: StrictStr | None = Field(default=None, min_length=1, description="Optional pip package hint.")
+    param_mapping_key: StrictStr = Field(
+        ...,
+        min_length=1,
+        description="Key under which param_mapping is stored in EMBEDDING_PARAM_MAPPINGS.",
+    )
+    param_mapping: dict[str, StrictStr] = Field(
+        default_factory=dict,
+        description="Abstract-slot -> real-kwarg mapping for the embedding class constructor.",
+    )
+
+
+_PROVIDER_VARIABLE_KEYS: frozenset[str] = frozenset(
+    {
+        "base_url_suffix",
+        "combobox",
+        "component_metadata",
+        "description",
+        "header_name",
+        "is_header",
+        "is_list",
+        "is_secret",
+        "langchain_param",
+        "options",
+        "required",
+        "variable_key",
+        "variable_name",
+    }
+)
+
+
+class ProviderManifestEntry(BaseModel):
+    """A model provider contributed by an extension bundle (``providers[]``).
+
+    ``metadata`` mirrors a single ``MODEL_PROVIDER_METADATA`` value (``icon``,
+    ``variables``, ``mapping`` with at least ``model_class``, ``api_docs_url``).
+    The loader translates this into a ``provider_registry.ProviderSpec`` and
+    merges it into the core provider tables at load time.
+    """
+
+    # ``model_class`` lives in pydantic's protected ``model_`` namespace; opt
+    # out so the manifest can mirror the core table's field name verbatim.
+    model_config = ConfigDict(extra="forbid", frozen=True, protected_namespaces=())
+
+    name: StrictStr = Field(..., min_length=1, max_length=120, description="Canonical provider name, e.g. 'vLLM'.")
+    provider_id: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        pattern=_PROVIDER_ID_RE.pattern,
+        description=(
+            "Stable machine identity used by policy, e.g. 'openai' or 'acme.watsonx'. "
+            "Omit only for legacy manifests; Langflow then derives an ID from name."
+        ),
+    )
+    display_name: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        description="Optional user-facing label; changing it does not change provider_id or saved-flow identity.",
+    )
+    aliases: tuple[StrictStr, ...] = Field(
+        default=(),
+        description="Legacy provider names accepted when resolving stable provider identity.",
+    )
+    metadata: dict[str, Any] = Field(
+        ...,
+        description="MODEL_PROVIDER_METADATA value: icon, variables, mapping (with model_class), api_docs_url, etc.",
+        json_schema_extra={
+            "properties": {
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "base_url_suffix": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": (
+                                    "Optional path suffix appended to a variable mapped to the base_url LangChain "
+                                    "parameter when the configured URL does not already end with it."
+                                ),
+                            }
+                        },
+                    },
+                }
+            }
+        },
+    )
+    model_class: ProviderClassRef | None = Field(
+        default=None,
+        description="Lazy import for the LLM class in metadata.mapping.model_class. Omit when reusing a core class.",
+    )
+    embedding: ProviderEmbeddingRef | None = Field(default=None, description="Optional embedding wiring.")
+    api_key_required: StrictBool = Field(
+        default=True,
+        description="If False, get_llm/get_embeddings do not raise when no API key is configured.",
+    )
+    live: StrictBool = Field(default=False, description="Add to LIVE_MODEL_PROVIDERS (always-on live discovery).")
+    conditional_live: StrictBool = Field(
+        default=False,
+        description="Add to CONDITIONAL_LIVE_MODEL_PROVIDERS (live only when a custom endpoint is configured).",
+    )
+    live_discovery: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Dotted-path callable 'module:attr' for live models: (user_id, model_type) -> list[dict].",
+    )
+    validator: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Dotted-path callable 'module:attr' validating credentials: (provider, variables, model) -> None.",
+    )
+    catalog_loader: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Dotted-path callable 'module:attr' returning a flat list of static model metadata rows. "
+            "Langflow stamps provider ownership and validates model identities."
+        ),
+    )
+
+    @field_validator("aliases")
+    @classmethod
+    def _aliases_are_unique_and_non_empty(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized: set[str] = set()
+        for alias in value:
+            if not alias.strip():
+                msg = "provider.aliases must contain non-empty strings"
+                raise ValueError(msg)
+            folded = alias.casefold()
+            if folded in normalized:
+                msg = f"provider.aliases contains duplicate alias {alias!r}"
+                raise ValueError(msg)
+            normalized.add(folded)
+        return value
+
+    @field_validator("metadata")
+    @classmethod
+    def _metadata_is_valid(cls, value: dict[str, Any]) -> dict[str, Any]:
+        mapping = value.get("mapping") if isinstance(value, dict) else None
+        if not isinstance(mapping, dict) or not mapping.get("model_class"):
+            msg = "provider.metadata must include a 'mapping' object with a non-empty 'model_class'"
+            raise ValueError(msg)
+        variables = value.get("variables", [])
+        if isinstance(variables, list):
+            for index, variable in enumerate(variables):
+                if not isinstance(variable, dict):
+                    continue
+                langchain_param = variable.get("langchain_param")
+                if langchain_param == "base_url":
+                    unknown_keys = sorted(set(variable) - _PROVIDER_VARIABLE_KEYS)
+                    if unknown_keys:
+                        msg = (
+                            f"provider.metadata.variables[{index}] contains unrecognized base_url variable key(s): "
+                            f"{', '.join(unknown_keys)}"
+                        )
+                        raise ValueError(msg)
+                suffix = variable.get("base_url_suffix")
+                if suffix is None:
+                    continue
+                if langchain_param != "base_url":
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix requires langchain_param='base_url'"
+                    raise ValueError(msg)
+                if not isinstance(suffix, str) or not suffix.strip("/"):
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix must contain a non-empty path suffix"
+                    raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _live_mutually_exclusive(self) -> ProviderManifestEntry:
+        if self.live and self.conditional_live:
+            msg = f"provider {self.name!r} cannot set both 'live' and 'conditional_live'"
+            raise ValueError(msg)
+        return self
+
+
+# ---------------------------------------------------------------------------
+# ExtensionManifest
+# ---------------------------------------------------------------------------
+
+
+class ExtensionManifest(BaseModel):
+    """The v0 Langflow Extension manifest.
+
+    Required fields:
+        - id, version, name, bundles, lfx
+    Optional:
+        - description, capabilities, schema (``$schema``)
+    Deferred (rejected with ``field-deferred-in-this-milestone`` when set):
+        - services, routes, hooks, starter_projects, userConfig
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        populate_by_name=True,
+        # ``$schema`` is allowed via alias on the dedicated field below.
+    )
+
+    schema_field: str | None = Field(
+        default=None,
+        alias="$schema",
+        description="Optional JSON-Schema URL pointer for editor tooling.",
+    )
+
+    id: StrictStr = Field(
+        ...,
+        pattern=_EXTENSION_ID_RE.pattern,
+        description=("Globally-unique extension ID. Lowercase, hyphenated, starting with a letter, 2-64 chars."),
+    )
+    version: StrictStr = Field(
+        ...,
+        description=(
+            "SemVer 2.0.0 or repository-supported PEP 440 stable/dev/alpha/beta/rc version string "
+            "for this extension release."
+        ),
+        json_schema_extra=_EXTENSION_VERSION_JSON_SCHEMA,
+    )
+    name: StrictStr = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Human-readable display name shown in Langflow.",
+    )
+    description: StrictStr | None = Field(
+        default=None,
+        max_length=2000,
+        description="Optional human-readable summary of what the extension provides.",
+    )
+
+    lfx: LfxCompat = Field(
+        ...,
+        description="Compatibility declaration vs. the BUNDLE_API.md contract.",
+    )
+
+    bundles: list[BundleRef] = Field(
+        default_factory=list,
+        description=(
+            "Bundles (component groups) shipped by this extension. May be empty "
+            "for a provider-only extension that ships model providers but no "
+            "components; an extension must declare at least one of ``bundles`` "
+            "or ``providers``."
+        ),
+    )
+
+    providers: list[ProviderManifestEntry] = Field(
+        default_factory=list,
+        description=(
+            "Model providers contributed by this extension. Each is merged into "
+            "Langflow's unified model-provider tables (MODEL_PROVIDER_METADATA, the "
+            "class-import registries, LIVE_MODEL_PROVIDERS) at load time, so a "
+            "provider bundle adds a provider without editing core lfx."
+        ),
+    )
+
+    capabilities: Capabilities = Field(
+        default_factory=Capabilities,
+        description="Optional declared capabilities (v0: requiresCredentials only).",
+    )
+
+    # ------------------------------------------------------------------
+    # Deferred fields.  We model them as ``None``-only so that downstream
+    # tooling can distinguish "absent" from "explicitly set to a value the
+    # current milestone does not support".  A non-null value triggers a
+    # validation error; the validator records the field name so the CLI can
+    # emit ``field-deferred-in-this-milestone`` with a precise location.
+    # ------------------------------------------------------------------
+    services: None = Field(
+        default=None,
+        description="Reserved; non-component primitives are deferred (B2).",
+    )
+    routes: None = Field(
+        default=None,
+        description="Reserved; non-component primitives are deferred (B2).",
+    )
+    hooks: None = Field(
+        default=None,
+        description="Reserved; non-component primitives are deferred (B2).",
+    )
+    starter_projects: None = Field(
+        default=None,
+        alias="starterProjects",
+        description="Reserved; starter-project shipping is deferred.",
+    )
+    userConfig: None = Field(  # noqa: N815 - manifest schema field name
+        default=None,
+        description="Reserved; user-config UI is deferred.",
+    )
+
+    # ------------------------------------------------------------------
+    # Validators
+    # ------------------------------------------------------------------
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str) -> str:
+        if not any(pattern.fullmatch(value) for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)):
+            msg = (
+                "version must be SemVer 2.0.0 or a supported PEP 440 form: "
+                "X.Y.Z, X.Y.Z.devN, X.Y.ZaN, X.Y.ZbN, or X.Y.ZrcN"
+            )
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _validate_declares_something(self) -> ExtensionManifest:
+        # An extension must contribute at least one bundle (components) or one
+        # provider; an empty manifest is almost certainly a mistake.
+        if not self.bundles and not self.providers:
+            msg = "An extension must declare at least one bundle or one provider"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_provider_name_uniqueness(self) -> ExtensionManifest:
+        names = [p.name for p in self.providers]
+        if len(set(names)) != len(names):
+            msg = "Provider names must be unique within an extension"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_bundle_uniqueness(self) -> ExtensionManifest:
+        # Bundle names are public registry and saved-flow namespaces, so they
+        # must be unique within one extension.
+        names = [bundle.name for bundle in self.bundles]
+        if len(set(names)) != len(names):
+            msg = "Bundle names must be unique within an extension"
+            raise ValueError(msg)
+        return self
+
+
+# ---------------------------------------------------------------------------
+# ManifestSource
+# ---------------------------------------------------------------------------
+
+
+class ManifestSource(BaseModel):
+    """A parsed manifest paired with its origin path.
+
+    Returned by :func:`load_manifest` so callers can attribute errors back to
+    the file the user actually edited (``extension.json`` vs. ``pyproject.toml``).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    manifest: ExtensionManifest
+    path: Path
+    """Absolute path to the file the manifest was read from."""
+    kind: Literal["extension.json", "pyproject.toml"]
+
+
+# ---------------------------------------------------------------------------
+# Loading
+# ---------------------------------------------------------------------------
+
+
+def _read_extension_json(path: Path) -> dict[str, Any]:
+    """Read and parse an ``extension.json`` file.  Raises on failure."""
+    raw = path.read_text(encoding="utf-8")
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        msg = f"extension.json is not valid JSON ({exc.msg} at line {exc.lineno})"
+        raise ValueError(msg) from exc
+    if not isinstance(data, dict):
+        msg = "extension.json top-level value must be a JSON object"
+        raise TypeError(msg)
+    return data
+
+
+def _read_pyproject_extension(path: Path) -> dict[str, Any] | None:
+    """Read ``[tool.langflow.extension]`` from a pyproject.toml.
+
+    Returns the table as a dict, or ``None`` if the table is absent.  Raises
+    ``ValueError`` if the TOML is malformed or the section is not a table.
+    """
+    raw = path.read_bytes()
+    try:
+        data = tomllib.loads(raw.decode("utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        msg = f"pyproject.toml is not valid TOML: {exc}"
+        raise ValueError(msg) from exc
+    tool = data.get("tool")
+    if not isinstance(tool, dict):
+        return None
+    langflow = tool.get("langflow")
+    if not isinstance(langflow, dict):
+        return None
+    section = langflow.get("extension")
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        msg = "[tool.langflow.extension] must be a TOML table"
+        raise TypeError(msg)
+    return section
+
+
+def load_manifest(root: Path | str) -> ManifestSource:
+    """Discover and parse a v0 manifest at ``root``.
+
+    Discovery order: ``extension.json`` first, then ``[tool.langflow.extension]``
+    in ``pyproject.toml``.  Both present is allowed; ``extension.json`` wins, so
+    authors who add ``$schema`` to the JSON for editor support do not have to
+    duplicate it in pyproject.toml.
+
+    Raises:
+        FileNotFoundError: Neither manifest source exists.
+        ValueError | TypeError: The manifest source exists but cannot be
+            parsed or fails schema validation.  The exception message is
+            suitable for direct inclusion in an :class:`ExtensionError`
+            ``message`` field.
+    """
+    root_path = Path(root).resolve()
+    if not root_path.exists():
+        msg = f"Manifest root {root_path} does not exist"
+        raise FileNotFoundError(msg)
+
+    extension_json = root_path / "extension.json"
+    pyproject = root_path / "pyproject.toml"
+
+    if extension_json.is_file():
+        data = _read_extension_json(extension_json)
+        manifest = ExtensionManifest.model_validate(data)
+        return ManifestSource(manifest=manifest, path=extension_json, kind="extension.json")
+
+    if pyproject.is_file():
+        section = _read_pyproject_extension(pyproject)
+        if section is not None:
+            manifest = ExtensionManifest.model_validate(section)
+            return ManifestSource(manifest=manifest, path=pyproject, kind="pyproject.toml")
+
+    msg = (
+        f"No extension manifest found at {root_path}. Expected either "
+        f"'extension.json' or a [tool.langflow.extension] section in 'pyproject.toml'."
+    )
+    raise FileNotFoundError(msg)

@@ -1,4 +1,6 @@
 import { BuildStatus } from "@/constants/enums";
+import i18n from "@/i18n";
+import type { VertexBuildTypeAPI } from "@/types/api";
 import { base64ToFloat32Array } from "../helpers/utils";
 
 export const useHandleWebsocketMessage = (
@@ -16,7 +18,7 @@ export const useHandleWebsocketMessage = (
   setStatus: React.Dispatch<React.SetStateAction<string>>,
   messagesStore,
   setEdges,
-  addDataToFlowPool: (data: any, nodeId: string) => void,
+  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void,
   updateEdgesRunningByNodes: (nodeIds: string[], isRunning: boolean) => void,
   updateBuildStatus: (nodeIds: string[], status: BuildStatus) => void,
   hasOpenAIAPIKey: boolean,
@@ -37,7 +39,7 @@ export const useHandleWebsocketMessage = (
           data.response?.status_details?.error?.code?.replaceAll("_", " ");
         setStatus(`API key error: ${errorCode}`);
         showErrorAlert("API key error: " + errorCode, [
-          "Please check your API key and try again",
+          i18n.t("voiceAssistant.apiKeyError"),
         ]);
       }
       break;
@@ -67,14 +69,14 @@ export const useHandleWebsocketMessage = (
       }
       break;
 
-    case "flow.build.progress":
+    case "flow.build.progress": {
       const buildData = data.data;
       switch (buildData.event) {
         case "start":
           setIsBuilding(true);
           break;
 
-        case "start_vertex":
+        case "start_vertex": {
           updateBuildStatus([buildData.vertex_id], BuildStatus.BUILDING);
           const newEdges = edges.map((edge) => {
             if (buildData.vertex_id === edge.data?.targetHandle?.id) {
@@ -85,6 +87,7 @@ export const useHandleWebsocketMessage = (
           });
           setEdges(newEdges);
           break;
+        }
 
         case "end_vertex":
           updateBuildStatus([buildData.vertex_id], BuildStatus.BUILT);
@@ -116,19 +119,20 @@ export const useHandleWebsocketMessage = (
           break;
       }
       break;
+    }
 
     case "error":
       if (data.code === "api_key_missing") {
         setStatus("Error: " + "API key is missing");
         showErrorAlert("API key not valid", [
-          "Please check your API key and try again",
+          i18n.t("voiceAssistant.apiKeyError"),
         ]);
         return;
       }
       if (data.error.message.toLowerCase().includes("api key")) {
         setStatus("Error: " + "API key is missing");
         showErrorAlert("API key not valid", [
-          "Please check your API key and try again",
+          i18n.t("voiceAssistant.apiKeyError"),
         ]);
         return;
       }

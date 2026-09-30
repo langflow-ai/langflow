@@ -1,0 +1,203 @@
+import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { cn } from "@/utils/utils";
+
+export interface SessionMoreMenuProps {
+  onRename: () => void;
+  onMessageLogs?: (triggerElement: HTMLElement | null) => void;
+  onDelete: () => void;
+  onClearChat?: () => void;
+  showMessageLogs?: boolean;
+  showRename?: boolean;
+  showDelete?: boolean;
+  showClearChat?: boolean;
+  // Positioning props
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
+  sideOffset?: number;
+  triggerClassName?: string;
+  contentClassName?: string;
+  isVisible?: boolean;
+  tooltipContent?: string;
+  tooltipSide?: "top" | "right" | "bottom" | "left";
+  dataTestid?: string;
+  // Controlled state props
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  isDefaultSession?: boolean;
+}
+
+const DEFAULT_SIDE_OFFSET = 4;
+
+export function SessionMoreMenu({
+  onRename,
+  onMessageLogs,
+  onDelete,
+  onClearChat,
+  showMessageLogs = true,
+  showRename = true,
+  showDelete = true,
+  isDefaultSession = false,
+  showClearChat = false,
+  side = "bottom",
+  align = "end",
+  sideOffset = DEFAULT_SIDE_OFFSET,
+  triggerClassName,
+  contentClassName,
+  isVisible = true,
+  tooltipContent = "More options",
+  tooltipSide = "left",
+  dataTestid,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: SessionMoreMenuProps) {
+  const { t } = useTranslation();
+  const [selectValue, setSelectValue] = useState("");
+  const [internalOpen, setInternalOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Use controlled state if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
+
+  const handleValueChange = (value: string) => {
+    // Execute the action immediately
+    switch (value) {
+      case "rename":
+        onRename();
+        break;
+      case "messageLogs":
+        onMessageLogs?.(triggerRef.current);
+        break;
+      case "clearChat":
+        onClearChat?.();
+        break;
+      case "delete":
+        onDelete();
+        break;
+    }
+    setOpen(false);
+    setSelectValue("");
+  };
+
+  return (
+    <div className="relative">
+      <Select
+        value={selectValue}
+        onValueChange={handleValueChange}
+        open={open}
+        onOpenChange={setOpen}
+      >
+        <ShadTooltip
+          styleClasses="z-50"
+          side={tooltipSide}
+          content={tooltipContent}
+        >
+          <SelectTrigger
+            variant="plain"
+            ref={triggerRef}
+            className={cn(
+              "h-8 w-8 border-none bg-transparent p-2 rounded transition-colors text-muted-foreground hover:bg-accent hover:text-foreground focus:ring-0",
+              !isVisible && "invisible group-hover:visible",
+              triggerClassName,
+            )}
+            aria-label={tooltipContent}
+            aria-haspopup="true"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            data-testid={dataTestid}
+          >
+            <ForwardedIconComponent
+              name="MoreVertical"
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
+          </SelectTrigger>
+        </ShadTooltip>
+        <SelectContent
+          side={side}
+          align={align}
+          sideOffset={sideOffset}
+          className={cn("min-w-[11.5rem] p-0", contentClassName)}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            triggerRef.current?.focus();
+          }}
+        >
+          {showRename && (
+            <SelectItem
+              variant="plain"
+              value="rename"
+              className="session-more-menu-item"
+              data-testid="rename-session-option"
+            >
+              <div className="flex items-center">
+                <ForwardedIconComponent
+                  name="SquarePen"
+                  className="mr-2 h-4 w-4"
+                />
+                {t("playgroundComponent.rename")}
+              </div>
+            </SelectItem>
+          )}
+          {showMessageLogs && (
+            <SelectItem
+              variant="plain"
+              value="messageLogs"
+              className="session-more-menu-item"
+              data-testid="message-logs-option"
+            >
+              <div className="flex items-center">
+                <ForwardedIconComponent
+                  name="Scroll"
+                  className="mr-2 h-4 w-4"
+                />
+                {t("playgroundComponent.messageLogs")}
+              </div>
+            </SelectItem>
+          )}
+          {showClearChat && (
+            <SelectItem
+              variant="plain"
+              value="clearChat"
+              className="session-more-menu-item"
+              data-testid="clear-chat-option"
+            >
+              <div className="flex items-center text-status-red hover:text-status-red">
+                <ForwardedIconComponent name="X" className="mr-2 h-4 w-4" />
+                {t("playgroundComponent.clearChat")}
+              </div>
+            </SelectItem>
+          )}
+          {showDelete && (
+            <SelectItem
+              variant="plain"
+              value="delete"
+              className="session-more-menu-item"
+              data-testid="delete-session-option"
+            >
+              <div className="flex items-center text-status-red hover:text-status-red">
+                <ForwardedIconComponent
+                  name="Trash2"
+                  className="mr-2 h-4 w-4"
+                />
+                {isDefaultSession
+                  ? t("playgroundComponent.clearSession")
+                  : t("playgroundComponent.deleteSession")}
+              </div>
+            </SelectItem>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}

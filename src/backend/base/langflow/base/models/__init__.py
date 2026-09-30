@@ -1,3 +1,3 @@
-from .model import LCModelComponent
+"""Backwards compatibility module for langflow.base.models."""
 
-__all__ = ["LCModelComponent"]
+from lfx.base.models import *  # noqa: F403

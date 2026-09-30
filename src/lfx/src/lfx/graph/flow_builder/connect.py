@@ -1,0 +1,461 @@
+"""Connection management: wire component outputs to inputs.
+
+Connections are represented as edges in the flow JSON matching
+ReactFlow's edge format. Each edge needs:
+- source/target: Component IDs
+- sourceHandle/targetHandle: JSON-like strings with œ (U+0153) replacing quotes
+- data.sourceHandle/data.targetHandle: Dicts with type info
+- id: reactflow__edge-{source}{sourceHandle}-{target}{targetHandle}
+
+All functions are pure — they operate on flow dicts, no I/O.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from lfx.graph.edge.base import types_compatible
+from lfx.graph.flow_builder.component import sync_dropdown_selected_outputs
+
+# Langflow uses oe (U+0153) as a quote replacement in ReactFlow handle strings
+_Q = "\u0153"
+
+# Must match lfx.base.tools.constants.TOOL_OUTPUT_NAME \u2014 duplicated as a
+# literal to avoid a cross-package import in the flow_builder layer.
+_TOOL_OUTPUT_NAME = "component_as_tool"
+_TOOL_OUTPUT_DISPLAY_NAME = "Toolset"
+
+_MESSAGE_TYPE = "Message"
+# Data \u2261 JSON and DataFrame \u2261 Table per lfx.graph.edge.base.TYPE_MIGRATIONS.
+_DATA_LIKE_TYPES = frozenset({"Data", "JSON", "DataFrame", "Table"})
+
+
+def _conversion_hint(
+    source_id: str,
+    source_output: str,
+    source_types: list[str],
+    target_id: str,
+    target_input: str,
+    target_types: list[str],
+) -> str:
+    """Deterministic repair for the two common Data<->Message mismatches.
+
+    A bare "Type mismatch" dead-ends the flow-builder agent into a discovery
+    spiral (it re-searches/re-describes until its step budget is gone); naming
+    the exact converter edge lets it correct the wiring in a single retry.
+    """
+    src = set(source_types or [])
+    tgt = set(target_types or [])
+    if _MESSAGE_TYPE in tgt and src & _DATA_LIKE_TYPES:
+        return (
+            f" Fix: insert a ParserComponent between them \u2014 "
+            f"{source_id}.{source_output} -> ParserComponent.input_data, "
+            f"ParserComponent.parsed_text -> {target_id}.{target_input}."
+        )
+    if _MESSAGE_TYPE in src and tgt & _DATA_LIKE_TYPES:
+        converter_output = "data_output" if tgt & {"Data", "JSON"} else "dataframe_output"
+        return (
+            f" Fix: insert a TypeConverterComponent between them \u2014 "
+            f"{source_id}.{source_output} -> TypeConverterComponent.input_data, "
+            f"TypeConverterComponent.{converter_output} -> {target_id}.{target_input}."
+        )
+    return ""
+
+
+def _find_node_data(flow: dict, component_id: str) -> dict | None:
+    """Return the ``data`` dict of the node matching ``component_id``, or None."""
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        nid = node_data.get("id", node.get("id", ""))
+        if nid == component_id:
+            return node_data
+    return None
+
+
+def _has_template_input(flow: dict, component_id: str, input_name: str) -> bool:
+    """True when ``input_name`` is a non-empty template field on the component."""
+    node_data = _find_node_data(flow, component_id)
+    if node_data is None:
+        return False
+    field = node_data.get("node", {}).get("template", {}).get(input_name)
+    return isinstance(field, dict) and bool(field)
+
+
+def _declares_tool_mode(node: dict) -> bool:
+    """Both halves of Component._handle_tool_mode, read off one serialized node.
+
+    That method is the runtime authority that creates the ``component_as_tool``
+    output: it fires for an INPUT declaring ``tool_mode``, or for a class opting
+    in via ``add_tool_output``.
+
+    Output-side ``tool_mode`` is deliberately not consulted. That flag marks
+    which outputs a toolset exposes, not whether the component has one \u2014 89 of
+    the 127 bundled components set it, ChatInput and ChatOutput included \u2014 so
+    reading it as a capability signal made this guard accept everything.
+    """
+    if node.get("add_tool_output"):
+        return True
+    template = node.get("template", {})
+    return any(isinstance(fdata, dict) and fdata.get("tool_mode") for fdata in template.values())
+
+
+def _node_supports_tool_mode(node_data: dict, registry: dict[str, dict] | None = None) -> bool:
+    """Return True when the component can synthesize a toolset output.
+
+    Reads the node as saved, then falls back to ``registry`` -- the live
+    definition for the node's type -- when the saved copy declares neither
+    signal. ``add_tool_output`` only started being serialized into templates
+    this release, so a flow saved before it carries tool-capable nodes with no
+    capability signal at all. ``RunFlow`` is the whole of that set: it is the
+    one bundled component that opts in via ``add_tool_output`` while declaring
+    no ``tool_mode`` input, and being wrapped as a Tool is its entire purpose.
+    """
+    if _declares_tool_mode(node_data.get("node", {})):
+        return True
+    node_type = node_data.get("type")
+    entry = registry.get(node_type) if registry and isinstance(node_type, str) else None
+    return isinstance(entry, dict) and _declares_tool_mode(entry)
+
+
+def ensure_tool_mode_supported(
+    flow: dict,
+    component_id: str,
+    registry: dict[str, dict] | None = None,
+) -> dict:
+    """Validate that a component can be wrapped as a Tool. Mutates nothing.
+
+    Split out of ``_enable_tool_mode`` so a caller that performs the flip
+    remotely can refuse BEFORE it mutates the stored flow. The MCP
+    ``connect_components`` tool does exactly that: it hands the flip to
+    ``/custom_component/update`` because only the server's node rebuild
+    produces the ``tools_metadata`` template field.
+
+    Returns the node's ``data`` dict. Raises ValueError when the component is
+    missing from the flow or cannot produce a toolset output.
+    """
+    node_data = _find_node_data(flow, component_id)
+    if node_data is None:
+        msg = f"Component not found in flow: {component_id}"
+        raise ValueError(msg)
+    if not _node_supports_tool_mode(node_data, registry):
+        msg = (
+            f"Cannot connect '{component_id}.{_TOOL_OUTPUT_NAME}': this component does not "
+            "support tool mode - none of its inputs declare tool_mode=True and it does not "
+            "set add_tool_output. If this component IS tool-capable (RunFlow, for example), "
+            "this node's template predates the capability flag: refresh the component to "
+            "restore it. Otherwise pick a different output."
+        )
+        raise ValueError(msg)
+    return node_data
+
+
+def _enable_tool_mode(flow: dict, source_id: str, registry: dict[str, dict] | None = None) -> None:
+    """Flip a component to tool mode in place.
+
+    Mirrors Component._handle_tool_mode: when tool_mode is enabled the
+    outputs list is replaced with a single synthesized tool output. The
+    source node must already exist in the flow; raises ValueError otherwise.
+
+    Raises ValueError when the component cannot produce a toolset output
+    (i.e. it genuinely cannot be wrapped as a Tool). Checked before the
+    idempotence shortcut so a node already carrying the synthesized output —
+    flipped by this same guard back when it accepted output-side tool_mode —
+    is refused rather than kept alive.
+    """
+    node_data = ensure_tool_mode_supported(flow, source_id, registry)
+    inner = node_data.setdefault("node", {})
+    # Idempotent: already in tool mode with the synthesized output present.
+    if inner.get("tool_mode") and any(o.get("name") == _TOOL_OUTPUT_NAME for o in inner.get("outputs", [])):
+        return
+    inner["tool_mode"] = True
+    # Mirror the FULL Output schema (lfx.template.field.base.Output): the canvas
+    # serializers crash on partial output dicts ("string indices must be integers").
+    inner["outputs"] = [
+        {
+            "allows_loop": False,
+            "cache": True,
+            "display_name": _TOOL_OUTPUT_DISPLAY_NAME,
+            "group_outputs": False,
+            "hidden": False,
+            "method": "to_toolkit",
+            "name": _TOOL_OUTPUT_NAME,
+            "options": None,
+            "required_inputs": None,
+            "selected": "Tool",
+            "tool_mode": True,
+            "types": ["Tool"],
+            "value": "__UNDEFINED__",
+        }
+    ]
+
+
+def _scaped_json_stringify(obj: Any) -> str:
+    """Replicate Langflow frontend's scapedJSONStringfy: sorted keys, compact, oe for quotes."""
+    return _custom_stringify(obj).replace('"', _Q)
+
+
+def _custom_stringify(obj: Any) -> str:
+    """Replicate Langflow frontend's customStringify for edge handle data.
+
+    Covers the subset of types used in handle dicts. Uses json.dumps for
+    strings to handle escaping correctly.
+    """
+    if obj is None:
+        return "null"
+    if isinstance(obj, bool):
+        return "true" if obj else "false"
+    if isinstance(obj, (int, float)):
+        return str(obj)
+    if isinstance(obj, str):
+        import json
+
+        return json.dumps(obj)
+    if isinstance(obj, list):
+        items = ",".join(_custom_stringify(item) for item in obj)
+        return f"[{items}]"
+    if isinstance(obj, dict):
+        keys = sorted(obj.keys())
+        pairs = ",".join(f'"{k}":{_custom_stringify(obj[k])}' for k in keys)
+        return f"{{{pairs}}}"
+    return str(obj)
+
+
+def _resolve_output_types(flow: dict, component_id: str, output_name: str) -> list[str]:
+    """Look up output types from the component's node data in the flow.
+
+    Raises ValueError if the component or output is not found.
+    """
+    node_data = _find_node_data(flow, component_id)
+    if node_data is None:
+        msg = f"Component not found in flow: {component_id}"
+        raise ValueError(msg)
+    outputs = node_data.get("node", {}).get("outputs", [])
+    for output in outputs:
+        if output.get("name") == output_name:
+            return output.get("types", ["Message"])
+    available = [o.get("name") for o in outputs]
+    msg = f"Output '{output_name}' not found on component '{component_id}'. Available: {available}"
+    raise ValueError(msg)
+
+
+def _resolve_input_types(flow: dict, component_id: str, input_name: str) -> tuple[list[str], str]:
+    """Look up input types and field type from the component's template.
+
+    Raises ValueError if the component or input is not found.
+    """
+    node_data = _find_node_data(flow, component_id)
+    if node_data is None:
+        msg = f"Component not found in flow: {component_id}"
+        raise ValueError(msg)
+    template = node_data.get("node", {}).get("template", {})
+    field = template.get(input_name, {})
+    if isinstance(field, dict) and field:
+        return field.get("input_types", ["Message"]), field.get("type", "str")
+    available = [k for k, v in template.items() if isinstance(v, dict) and v.get("input_types")]
+    msg = f"Input '{input_name}' not found on component '{component_id}'. Available: {available}"
+    loop_ports = [o.get("name") for o in node_data.get("node", {}).get("outputs", []) if o.get("allows_loop")]
+    if loop_ports:
+        msg += f" Loop inputs: {loop_ports}"
+    raise ValueError(msg)
+
+
+def _resolve_loop_target(flow: dict, component_id: str, port_name: str) -> tuple[list[str], str] | None:
+    """Resolve ``port_name`` as a loop input: an ``allows_loop`` output on the target.
+
+    The Loop component's feedback port is an OUTPUT flagged ``allows_loop=True``,
+    not a template input. The canvas accepts ``[selected ?? types[0], *loop_types]``
+    into that handle and serializes the edge with an output-shaped targetHandle
+    (see ``reactflowUtils.ts`` and ``lfx.graph.edge.base.Edge``); this mirrors it.
+
+    Returns ``(accepted_types, node_data_type)`` or ``None`` when the component
+    or a matching loop output is not found (callers decide how to fail).
+    """
+    node_data = _find_node_data(flow, component_id)
+    if node_data is None:
+        return None
+    for output in node_data.get("node", {}).get("outputs", []):
+        if output.get("name") != port_name or not output.get("allows_loop"):
+            continue
+        types = output.get("types") or []
+        selected = output.get("selected") or (types[0] if types else "Message")
+        accepted = [selected, *(output.get("loop_types") or [])]
+        data_type = node_data.get("type") or (component_id.rsplit("-", 1)[0] if "-" in component_id else "")
+        return accepted, data_type
+    return None
+
+
+def add_connection(
+    flow: dict,
+    source_id: str,
+    source_output: str,
+    target_id: str,
+    target_input: str,
+    source_types: list[str] | None = None,
+    target_types: list[str] | None = None,
+    registry: dict[str, dict] | None = None,
+) -> dict:
+    """Add a connection (edge) between two components.
+
+    When source_types/target_types are None they are resolved from the flow
+    and type-compatibility is enforced.  When the caller passes explicit types
+    the check is skipped (the caller is taking responsibility).
+
+    When source_output is the synthesized "component_as_tool" handle, the
+    source node is automatically flipped into tool mode before resolving
+    types — this mirrors what the canvas does when a user drags from the
+    Tool Mode toggle, and is required because the static component template
+    does not list ``component_as_tool`` until tool mode is enabled.
+
+    ``registry`` is optional and consulted only for that tool-mode capability
+    check, where it rescues nodes whose saved template predates the
+    ``add_tool_output`` flag (see ``_node_supports_tool_mode``).
+    """
+    # dataType must equal the node's live data.type or the frontend drops the edge
+    # (generated components are typed "CustomComponent" but keep a class-named id).
+    source_node_data = _find_node_data(flow, source_id)
+    source_type = (source_node_data or {}).get("type") or (
+        source_id.rsplit("-", 1)[0] if "-" in source_id else source_id
+    )
+
+    # Raises ValueError when the source cannot be wrapped as a Tool, so the
+    # LLM gets a clear domain error instead of "output not found".
+    if source_output == _TOOL_OUTPUT_NAME:
+        _enable_tool_mode(flow, source_id, registry)
+
+    # Resolve types from the flow's node data if not explicitly provided
+    types_resolved = source_types is None and target_types is None
+    if source_types is None:
+        source_types = _resolve_output_types(flow, source_id, source_output)
+    loop_target: tuple[list[str], str] | None = None
+    if target_types is None:
+        try:
+            target_types, target_field_type = _resolve_input_types(flow, target_id, target_input)
+        except ValueError:
+            # Template inputs keep priority; only ports that are NOT template
+            # inputs may resolve as loop inputs (allows_loop outputs).
+            loop_target = _resolve_loop_target(flow, target_id, target_input)
+            if loop_target is None:
+                raise
+            target_types = loop_target[0]
+            target_field_type = ""
+    else:
+        target_field_type = "str"
+        # Template inputs keep priority here too: a same-named allows_loop
+        # output must not shadow a real template input (CollidingPorts case).
+        if _has_template_input(flow, target_id, target_input):
+            loop_target = None
+        else:
+            loop_target = _resolve_loop_target(flow, target_id, target_input)
+
+    if types_resolved and not types_compatible(source_types, target_types):
+        msg = (
+            f"Type mismatch: output '{source_output}' on '{source_id}' produces {source_types}, "
+            f"but input '{target_input}' on '{target_id}' accepts {target_types}."
+            f"{_conversion_hint(source_id, source_output, source_types, target_id, target_input, target_types)}"
+        )
+        raise ValueError(msg)
+
+    source_handle_dict = {
+        "dataType": source_type,
+        "id": source_id,
+        "name": source_output,
+        "output_types": source_types,
+    }
+    if loop_target is not None:
+        # Loop feedback edges use an output-shaped targetHandle — the runtime
+        # branches on `"name" in target_handle` (lfx.graph.edge.base.Edge).
+        target_handle_dict: dict[str, Any] = {
+            "dataType": loop_target[1],
+            "id": target_id,
+            "name": target_input,
+            "output_types": target_types,
+        }
+    else:
+        target_handle_dict = {
+            "fieldName": target_input,
+            "id": target_id,
+            "inputTypes": target_types,
+            "type": target_field_type,
+        }
+
+    source_handle_s = _scaped_json_stringify(source_handle_dict)
+    target_handle_s = _scaped_json_stringify(target_handle_dict)
+
+    edge_id = f"reactflow__edge-{source_id}{source_handle_s}-{target_id}{target_handle_s}"
+
+    # Idempotency is structural (ids + port names), not by edge id: UI-saved
+    # edges use a different id prefix (`xy-edge__` vs `reactflow__edge-`).
+    for existing in flow["data"]["edges"]:
+        existing_target = (existing.get("data") or {}).get("targetHandle", {})
+        existing_port = existing_target.get("fieldName") or existing_target.get("name")
+        if (
+            existing.get("source") == source_id
+            and existing.get("target") == target_id
+            and (existing.get("data") or {}).get("sourceHandle", {}).get("name") == source_output
+            and existing_port == target_input
+        ):
+            return existing
+
+    edge = {
+        "animated": False,
+        "className": "",
+        "data": {
+            "sourceHandle": source_handle_dict,
+            "targetHandle": target_handle_dict,
+        },
+        "id": edge_id,
+        "selected": False,
+        "source": source_id,
+        "sourceHandle": source_handle_s,
+        "target": target_id,
+        "targetHandle": target_handle_s,
+    }
+    flow["data"]["edges"].append(edge)
+    # Pinned here, not per-caller: the incremental edit tools and the external MCP
+    # tools reach this function directly and never run the spec builder (LE-1776).
+    sync_dropdown_selected_outputs(flow)
+    return edge
+
+
+def remove_connection(
+    flow: dict,
+    source_id: str,
+    target_id: str,
+    source_output: str | None = None,
+    target_input: str | None = None,
+) -> int:
+    """Remove connections between two components. Returns count removed."""
+    edges = flow["data"]["edges"]
+    original_count = len(edges)
+
+    def keep(e: dict) -> bool:
+        if e.get("source") != source_id or e.get("target") != target_id:
+            return True
+        if source_output and e.get("data", {}).get("sourceHandle", {}).get("name") != source_output:
+            return True
+        if not target_input:
+            return False
+        target_handle = e.get("data", {}).get("targetHandle", {})
+        return (target_handle.get("fieldName") or target_handle.get("name")) != target_input
+
+    flow["data"]["edges"] = [e for e in edges if keep(e)]
+    return original_count - len(flow["data"]["edges"])
+
+
+def list_connections(flow: dict) -> list[dict]:
+    """List all connections in a flow."""
+    results = []
+    for edge in flow.get("data", {}).get("edges", []):
+        source_handle = edge.get("data", {}).get("sourceHandle", {})
+        target_handle = edge.get("data", {}).get("targetHandle", {})
+        results.append(
+            {
+                "source_id": edge.get("source", ""),
+                "target_id": edge.get("target", ""),
+                "source_output": source_handle.get("name", ""),
+                "target_input": target_handle.get("fieldName") or target_handle.get("name", ""),
+                "source_types": source_handle.get("output_types", []),
+                "target_types": target_handle.get("inputTypes") or target_handle.get("output_types", []),
+            }
+        )
+    return results

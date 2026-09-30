@@ -1,7 +1,6 @@
-import { useDurationStore } from "@/stores/durationStore";
 import { useEffect } from "react";
+import { useDurationStore } from "@/stores/durationStore";
 import { AnimatedNumber } from "../../common/animatedNumbers";
-import ForwardedIconComponent from "../../common/genericIconComponent";
 import Loading from "../../ui/loading";
 
 interface DurationDisplayProps {
@@ -16,8 +15,9 @@ export default function DurationDisplay({
   const {
     durations,
     setDuration,
-    incrementDuration,
+    startTimer,
     clearInterval: clearDurationInterval,
+    clearStartTime,
     setInterval: setDurationInterval,
   } = useDurationStore();
 
@@ -25,12 +25,25 @@ export default function DurationDisplay({
     if (duration !== undefined) {
       setDuration(chatId, duration);
       clearDurationInterval(chatId);
+      clearStartTime(chatId);
       return;
     }
 
+    // Only start timer if one doesn't already exist for this chatId
+    // This prevents resetting the timer when the playground is reopened
+    const state = useDurationStore.getState();
+    if (!state.startTimes[chatId]) {
+      startTimer(chatId);
+    }
+
     const intervalId = setInterval(() => {
-      incrementDuration(chatId);
-    }, 10);
+      // Update duration based on elapsed time from start
+      const startTime = useDurationStore.getState().startTimes[chatId];
+      if (startTime) {
+        const elapsed = Date.now() - startTime;
+        setDuration(chatId, elapsed);
+      }
+    }, 100);
 
     setDurationInterval(chatId, intervalId);
 
@@ -41,7 +54,8 @@ export default function DurationDisplay({
 
   const displayTime = duration ?? durations[chatId] ?? 0;
   const secondsValue = displayTime / 1000;
-  const humanizedTime = `${secondsValue.toFixed(1)}s`;
+  const humanizedTime =
+    secondsValue < 0.05 ? "< 0.1s" : `${secondsValue.toFixed(1)}s`;
 
   return (
     <div

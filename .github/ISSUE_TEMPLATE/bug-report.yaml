@@ -7,6 +7,8 @@ body:
       value: |
         Thanks for taking the time to fill out this bug report!
 
+        If this bug worked in a previous version and broke in a newer one, it may be a regression. Please mention which version it last worked in — a maintainer will apply the `regression` label.
+
   - type: textarea
     id: description
     attributes:

@@ -1,0 +1,1 @@
+"""Baidu components test package."""

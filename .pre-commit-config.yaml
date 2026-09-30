@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v5.0.0
     hooks:
       - id: check-case-conflict
       - id: end-of-file-fixer
@@ -11,13 +11,115 @@ repos:
         args:
           - --fix=lf
       - id: trailing-whitespace
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.3
+  - repo: local
     hooks:
       - id: ruff
         name: ruff check
+        entry: uv run ruff check
+        language: system
         types_or: [python, pyi]
         args: [--fix]
+        exclude: ^docs/.*/API-Reference/python-examples/
       - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
         types_or: [python, pyi]
         args: [--config, pyproject.toml]
+        exclude: ^docs/.*/API-Reference/python-examples/
+      - id: validate-migrations
+        name: Validate Alembic Migrations (Expand-Contract)
+        entry: python src/backend/base/langflow/alembic/migration_validator.py
+        language: python
+        files: (alembic|migrations)/versions/.*\.py$
+        additional_dependencies: [sqlalchemy, alembic]
+        pass_filenames: true
+        always_run: false
+        verbose: true
+      - id: check-migration-phase
+        name: Check Migration Phase Documentation
+        entry: python -c "import sys, re; content = open(sys.argv[1]).read(); sys.exit(0 if re.search(r'Phase:\s*(EXPAND|MIGRATE|CONTRACT)', content) else 1)"
+        language: python
+        files: (alembic|migrations)/versions/.*\.py$
+        pass_filenames: true
+      - id: extension-migration-bare-names
+        name: Extension migration table - bare-name uniqueness
+        entry: python scripts/migrate/check_bare_names.py
+        language: system
+        files: ^(src/lfx/src/lfx/extension/migration/migration_table\.json|src/lfx/src/lfx/components/.*\.py|src/bundles/.*\.py)$
+        pass_filenames: false
+      - id: extension-migration-append-only
+        name: Extension migration table - append-only
+        entry: python scripts/migrate/check_migration_append_only.py
+        language: system
+        files: ^src/lfx/src/lfx/extension/migration/migration_table\.json$
+        pass_filenames: false
+      - id: bundle-api-changelog
+        name: BUNDLE_API.md changelog gate
+        entry: python scripts/migrate/check_bundle_api_changelog.py
+        language: system
+        files: ^(BUNDLE_API\.md|src/lfx/src/lfx/extension/(manifest|schema|errors|discovery|registry|reload|bundle_registry|validate|__init__)\.py|src/lfx/src/lfx/extension/loader/(__init__|_orchestrator|_plugins|_types)\.py|src/lfx/src/lfx/extension/migration/schema\.py|src/backend/base/langflow/api/v1/extensions\.py)$
+        pass_filenames: false
+      - id: extension-router-trust
+        name: Extension router trust - no install/uninstall under /api/v1/extensions
+        entry: uv run python scripts/migrate/check_router_trust.py
+        language: system
+        files: ^src/backend/base/langflow/api/.*\.py$
+        pass_filenames: false
+      - id: component-env-writes
+        name: Components must not write to os.environ (process-global; bleeds across requests)
+        entry: python scripts/lint/check_component_env_writes.py
+        language: system
+        files: ^(src/lfx/src/lfx/components/.*\.py|src/backend/base/langflow/components/.*\.py|src/bundles/.*\.py)$
+        pass_filenames: false
+      - id: logged-exception-text
+        name: Log calls must not render the caught exception (leaks payloads, drops error.type)
+        entry: uv run python scripts/lint/check_logged_exception_text.py
+        language: system
+        # Scoped to the flow execution path, which is where a leaked exception message
+        # carries flow content. pass_filenames is false so the whole scope is re-checked on
+        # any touch rather than only the staged slice, which is what keeps it at zero
+        # without a baseline file.
+        files: ^(src/lfx/src/lfx/base/agents/.*\.py|src/lfx/src/lfx/graph/.*\.py|src/lfx/src/lfx/components/models_and_agents/.*\.py)$
+        pass_filenames: false
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        # Bundle starter projects are excluded for the same reason as the langflow ones listed
+        # just before them: both are generated flow templates that embed component source and
+        # its content hash, so a regeneration trips the high-entropy detector on a value that is
+        # a hash by construction. Only the langflow path was listed, because those regenerate on
+        # every component change while a bundled template's Agent changes far more rarely.
+        exclude: '(^docs/|^SECURITY\.md$|src/lfx/src/lfx/_assets/component_index\.json$|src/lfx/README\.md$|^src/backend/base/langflow/initial_setup/starter_projects/|^src/bundles/.*/starter_projects/)'
+  - repo: local
+    hooks:
+      - id: local-biome-check
+        name: biome check
+        entry: bash -c 'cd src/frontend && files=("${@#src/frontend/}") && npx @biomejs/biome check --write --files-ignore-unknown=true --diagnostic-level=error "${files[@]}"' --
+        language: system
+        types: [text]
+        files: "^src/frontend/.*\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"
+        exclude: (^docs/|src/lfx/src/lfx/_assets/component_index\.json$)
+        pass_filenames: true
+      - id: biome-lint-no-any-staged
+        name: biome no-any check (staged only)
+        entry: bash -c 'cd src/frontend && npx @biomejs/biome lint --staged --diagnostic-level=error --no-errors-on-unmatched'
+        language: system
+        files: "^src/frontend/.*\\.(tsx?|ts)$"
+        exclude: (^docs/)
+        pass_filenames: false
+      - id: validate-starter-projects
+        name: Validate Starter Project Templates
+        entry: uv run python src/backend/tests/unit/template/test_starter_projects.py
+        language: system
+        files: ^src/backend/base/langflow/initial_setup/starter_projects/.*\.json$
+        pass_filenames: false
+        args: [--security-check]
+      - id: check-deprecated-imports
+        name: Check for deprecated langchain imports
+        entry: uv run python scripts/check_deprecated_imports.py
+        language: system
+        files: ^src/lfx/src/lfx/components/.*\.py$
+        pass_filenames: false

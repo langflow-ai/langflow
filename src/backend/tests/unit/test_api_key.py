@@ -11,7 +11,7 @@ async def api_key(
 ):
     api_key = ApiKeyCreate(name="test-api-key")
 
-    response = await client.post("api/v1/api_key/", data=api_key.model_dump_json(), headers=logged_in_headers)
+    response = await client.post("api/v1/api_key/", json=api_key.model_dump(mode="json"), headers=logged_in_headers)
     assert response.status_code == 200, response.text
     return response.json()
 

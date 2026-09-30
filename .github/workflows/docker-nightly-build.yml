@@ -1,0 +1,191 @@
+name: Docker Nightly Build and Push
+run-name: Docker Nightly Build @${{ inputs.release_type }} by @${{ github.actor }}
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        required: true
+        type: string
+        description: "Nightly release type. One of 'nightly-main', 'nightly-base', 'nightly-main-all'."
+      ref:
+        required: true
+        type: string
+        description: "Ref containing the nightly version to build."
+      push_to_registry:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      TEMP_GHCR_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Nightly release type."
+        required: true
+        type: choice
+        options: [nightly-main, nightly-base, nightly-main-all]
+      ref:
+        required: true
+        type: string
+        description: "Ref containing the nightly version to build."
+      push_to_registry:
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-nightly-${{ inputs.release_type }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate nightly build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
+    steps:
+      - name: Validate release type
+        shell: bash
+        env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          set -euo pipefail
+          case "$RELEASE_TYPE" in
+            nightly-main | nightly-base | nightly-main-all) ;;
+            *)
+              echo "Invalid nightly release type: $RELEASE_TYPE" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Check out the code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Pin source revision
+        id: source
+        shell: bash
+        run: echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Read and validate nightly version
+        id: version
+        shell: bash
+        env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          set -euo pipefail
+          if [[ "$RELEASE_TYPE" == "nightly-base" ]]; then
+            version=$(python3 -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("src/backend/base/pyproject.toml").read_text())["project"]["version"])')
+          else
+            version=$(python3 -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Nightly version must match X.Y.Z.devN; got: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build-nightly:
+    name: Build nightly (${{ matrix.arch }})
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: '["Langflow-runner"]'
+          - arch: arm64
+            runner: '["self-hosted","linux","ARM64","langflow-ai-arm64-40gb-ephemeral"]'
+    uses: ./.github/workflows/docker-nightly-build-arch.yml
+    with:
+      release_type: ${{ inputs.release_type }}
+      ref: ${{ needs.validate.outputs.source_sha }}
+      version: ${{ needs.validate.outputs.version }}
+      arch: ${{ matrix.arch }}
+      runner: ${{ matrix.runner }}
+      push_to_registry: ${{ inputs.push_to_registry }}
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      TEMP_GHCR_TOKEN: ${{ secrets.TEMP_GHCR_TOKEN }}
+
+  create-manifest:
+    name: Create multi-architecture nightly manifest
+    needs: [validate, build-nightly]
+    if: ${{ always() && !cancelled() && inputs.push_to_registry && needs.validate.result == 'success' && needs.build-nightly.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set manifest tags
+        id: tags
+        shell: bash
+        env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          case "$RELEASE_TYPE" in
+            nightly-base)
+              final_tags="langflowai/langflow-nightly:base-${VERSION},langflowai/langflow-nightly:base-latest,langflowai/langflow:base-${VERSION},ghcr.io/langflow-ai/langflow-nightly:base-${VERSION},ghcr.io/langflow-ai/langflow-nightly:base-latest,ghcr.io/langflow-ai/langflow:base-${VERSION}"
+              docker_arch_base="langflowai/langflow-nightly:base-${VERSION}"
+              ghcr_arch_base="ghcr.io/langflow-ai/langflow-nightly:base-${VERSION}"
+              ;;
+            nightly-main)
+              final_tags="langflowai/langflow-nightly:${VERSION},langflowai/langflow-nightly:latest,langflowai/langflow:${VERSION},ghcr.io/langflow-ai/langflow-nightly:${VERSION},ghcr.io/langflow-ai/langflow-nightly:latest,ghcr.io/langflow-ai/langflow:${VERSION}"
+              docker_arch_base="langflowai/langflow-nightly:${VERSION}"
+              ghcr_arch_base="ghcr.io/langflow-ai/langflow-nightly:${VERSION}"
+              ;;
+            nightly-main-all)
+              final_tags="langflowai/langflow-nightly-all:${VERSION},langflowai/langflow-nightly-all:latest,langflowai/langflow-all:${VERSION},ghcr.io/langflow-ai/langflow-nightly-all:${VERSION},ghcr.io/langflow-ai/langflow-nightly-all:latest,ghcr.io/langflow-ai/langflow-all:${VERSION}"
+              docker_arch_base="langflowai/langflow-nightly-all:${VERSION}"
+              ghcr_arch_base="ghcr.io/langflow-ai/langflow-nightly-all:${VERSION}"
+              ;;
+          esac
+          echo "final_tags=$final_tags" >> "$GITHUB_OUTPUT"
+          echo "docker_arch_base=$docker_arch_base" >> "$GITHUB_OUTPUT"
+          echo "ghcr_arch_base=$ghcr_arch_base" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN }}
+
+      - name: Create and push manifests
+        shell: bash
+        env:
+          DOCKER_ARCH_BASE: ${{ steps.tags.outputs.docker_arch_base }}
+          FINAL_TAGS: ${{ steps.tags.outputs.final_tags }}
+          GHCR_ARCH_BASE: ${{ steps.tags.outputs.ghcr_arch_base }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra tags <<< "$FINAL_TAGS"
+          for tag in "${tags[@]}"; do
+            if [[ "$tag" == ghcr.io/* ]]; then
+              arch_base="$GHCR_ARCH_BASE"
+            else
+              arch_base="$DOCKER_ARCH_BASE"
+            fi
+            docker buildx imagetools create \
+              --tag "$tag" \
+              "${arch_base}-amd64" \
+              "${arch_base}-arm64"
+          done

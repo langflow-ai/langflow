@@ -1,6 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  configureLoopbackOpenAI,
+  LOOPBACK_OPENAI_API_KEY,
+} from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
+import { unselectNodes } from "../../utils/unselect-nodes";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -8,11 +17,6 @@ test(
   "user must be able to check similarity between embedding texts",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
@@ -23,14 +27,15 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
-    await page.waitForSelector("text=OpenAI Embeddings", {
-      timeout: 1000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByText("OpenAI Embeddings", { exact: true }),
+      "OpenAI Embeddings",
+    );
 
     await page
       .getByText("OpenAI Embeddings", { exact: true })
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 100, y: 100 },
       });
 
     await zoomOut(page, 5);
@@ -86,13 +91,13 @@ test(
     //seventh component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector("text=Text Output", {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
@@ -111,7 +116,7 @@ test(
 
     await updateOldComponents(page);
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page
       .getByTestId("textarea_str_template")
@@ -125,7 +130,7 @@ test(
     await page
       .getByTestId("popover-anchor-input-message")
       .first()
-      .fill("langflow");
+      .fill(TEXTS.authDefaultCredential);
 
     const firstApiKeyInput = page
       .getByTestId("popover-anchor-input-openai_api_key")
@@ -138,11 +143,11 @@ test(
     const isSecondInputVisible = await secondApiKeyInput.isVisible();
 
     if (isFirstInputVisible) {
-      await firstApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+      await firstApiKeyInput.fill(LOOPBACK_OPENAI_API_KEY);
     }
 
     if (isSecondInputVisible) {
-      await secondApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+      await secondApiKeyInput.fill(LOOPBACK_OPENAI_API_KEY);
     }
 
     await page
@@ -150,16 +155,19 @@ test(
       .nth(0)
       .fill("similarity_score");
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
+
     await page.mouse.wheel(0, 500);
 
     await page.locator(".react-flow__pane").click();
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     //connection 1
     const openAiEmbeddingOutput_0 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
+      .getByTestId(
+        "handle-openaiembeddingscomponent-shownode-embedding model-right",
+      )
       .nth(0);
     await openAiEmbeddingOutput_0.hover();
     await page.mouse.down();
@@ -172,7 +180,9 @@ test(
 
     //connection 2
     const openAiEmbeddingOutput_1 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
+      .getByTestId(
+        "handle-openaiembeddingscomponent-shownode-embedding model-right",
+      )
       .nth(0);
     await openAiEmbeddingOutput_1.hover();
     await page.mouse.down();
@@ -214,7 +224,7 @@ test(
     await embeddingSimilarityOutput.hover();
     await page.mouse.down();
     const filterDataInput = await page
-      .getByTestId("handle-filterdata-shownode-data-left")
+      .getByTestId("handle-filterdata-shownode-json-left")
       .nth(0);
     await filterDataInput.hover();
     await page.mouse.up();
@@ -226,7 +236,7 @@ test(
     await filterDataOutput.hover();
     await page.mouse.down();
     const parseDataInput = await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0);
     await parseDataInput.hover();
     await page.mouse.up();
@@ -238,18 +248,97 @@ test(
     await parseDataOutput.hover();
     await page.mouse.down();
     const textOutputInput = await page
-      .getByTestId("handle-textoutput-shownode-text-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .nth(0);
     await textOutputInput.hover();
+    const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
+    if (!flowId) {
+      throw new Error(`Expected a flow URL, received ${page.url()}`);
+    }
+    const persistedGraph = page.waitForResponse((response) => {
+      const request = response.request();
+      if (
+        request.method() !== "PATCH" ||
+        new URL(response.url()).pathname !== `/api/v1/flows/${flowId}`
+      ) {
+        return false;
+      }
+      const body = request.postDataJSON() as
+        | { data?: { edges?: Array<{ source?: string; target?: string }> } }
+        | undefined;
+      const edges = body?.data?.edges ?? [];
+      return (
+        edges.length === 7 &&
+        edges.some(
+          (edge) =>
+            edge.source?.startsWith("ParseData-") &&
+            edge.target?.startsWith("TextOutput-"),
+        )
+      );
+    });
     await page.mouse.up();
+    await expect(page.locator(".react-flow__edge")).toHaveCount(7);
+    const graphResponse = await persistedGraph;
+    expect(
+      graphResponse.ok(),
+      `Persisting the complete similarity graph returned ${graphResponse.status()}`,
+    ).toBeTruthy();
 
+    await configureLoopbackOpenAI(page);
+
+    const buildResponsePromise = page.waitForResponse((response) => {
+      const request = response.request();
+      return (
+        request.method() === "POST" &&
+        new URL(response.url()).pathname === "/api/v2/workflows"
+      );
+    });
     await page.getByTestId("button_run_text output").click();
+    const buildResponse = await buildResponsePromise;
+    expect(buildResponse.ok(), "Similarity workflow request").toBeTruthy();
+    const buildPayload = buildResponse.request().postDataJSON() as {
+      data?: {
+        edges?: unknown[];
+        nodes?: Array<{
+          data?: {
+            type?: string;
+            node?: {
+              template?: Record<
+                string,
+                { load_from_db?: boolean; value?: unknown }
+              >;
+            };
+          };
+        }>;
+      };
+    };
+    expect(buildPayload.data?.edges).toHaveLength(7);
+    const embeddingNode = buildPayload.data?.nodes?.find((node) =>
+      /OpenAIEmbeddings/.test(node.data?.type ?? ""),
+    );
+    expect(
+      embeddingNode,
+      "Similarity workflow contains its OpenAI Embeddings node",
+    ).toBeTruthy();
+    expect(embeddingNode?.data?.node?.template?.openai_api_key).toMatchObject({
+      load_from_db: false,
+      value: LOOPBACK_OPENAI_API_KEY,
+    });
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 120000,
+    });
+
+    await unselectNodes(page);
+
+    // Data to Message, Filter Data, and Text Output are legacy components; their
+    // "Legacy" warning bars increase node height and can overlap the Text Output
+    // inspection button. Dismiss the bars so the button is clickable.
+    await dismissLegacyWarnings(page);
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
-      .getByTestId("output-inspection-message-textoutput")
+      .getByTestId("output-inspection-output text-textoutput")
       .first()
       .click();
     const valueSimilarity = await page.getByTestId("textarea").textContent();

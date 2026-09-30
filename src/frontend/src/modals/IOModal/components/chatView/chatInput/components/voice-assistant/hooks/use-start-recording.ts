@@ -1,10 +1,11 @@
-import { MutableRefObject } from "react";
+import type { MutableRefObject } from "react";
 
 export const useStartRecording = async (
   audioContextRef: MutableRefObject<AudioContext | null>,
   microphoneRef: MutableRefObject<MediaStreamAudioSourceNode | null>,
   analyserRef: MutableRefObject<AnalyserNode | null>,
   wsRef: MutableRefObject<WebSocket | null>,
+  mediaStreamRef: MutableRefObject<MediaStream | null>,
   setIsRecording: (isRecording: boolean) => void,
   playNextAudioChunk: () => void,
   isPlayingRef: MutableRefObject<boolean>,
@@ -31,6 +32,9 @@ export const useStartRecording = async (
     });
     if (!audioContextRef.current) return;
 
+    // Store the MediaStream reference so we can stop it later
+    mediaStreamRef.current = stream;
+
     microphoneRef.current =
       audioContextRef?.current?.createMediaStreamSource(stream);
     analyserRef.current = audioContextRef?.current?.createAnalyser();
@@ -49,7 +53,7 @@ export const useStartRecording = async (
           err instanceof DOMException &&
           err.message.includes("already been loaded")
         ) {
-          console.log("AudioWorklet module already loaded, continuing...");
+          console.error("AudioWorklet module already loaded, continuing...");
         } else {
           throw err;
         }

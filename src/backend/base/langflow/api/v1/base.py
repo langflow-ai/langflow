@@ -1,6 +1,5 @@
+from lfx.template.frontend_node.base import FrontendNode
 from pydantic import BaseModel, field_validator, model_serializer
-
-from langflow.template.frontend_node.base import FrontendNode
 
 
 class CacheResponse(BaseModel):
@@ -26,6 +25,7 @@ class ValidatePromptRequest(BaseModel):
     template: str
     custom_fields: dict | None = None
     frontend_node: FrontendNodeRequest | None = None
+    mustache: bool = False
 
 
 # Build ValidationResponse class for {"imports": {"errors": []}, "function": {"errors": []}}

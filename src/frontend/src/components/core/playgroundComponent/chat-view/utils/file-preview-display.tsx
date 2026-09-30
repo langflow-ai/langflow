@@ -1,0 +1,174 @@
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import Loading from "@/components/ui/loading";
+import { cn } from "@/utils/utils";
+import {
+  extractFileInfo,
+  formatFileName,
+  getFilePreviewUrl,
+} from "./file-utils";
+
+export type FilePreviewDisplayProps = {
+  /**
+   * File can be:
+   * - Browser File object (for input context)
+   * - Server file path object { path: string; type?: string; name?: string;}
+   * - Server file path string
+   */
+  file: File | { path: string; type?: string; name?: string } | string;
+  /**
+   * Loading state (for input context when file is being processed)
+   */
+  loading?: boolean;
+  /**
+   * Error state (for input context)
+   */
+  error?: boolean;
+  /**
+   * Show delete button (only for input context)
+   */
+  showDelete?: boolean;
+  /**
+   * Delete callback (only used if showDelete is true)
+   */
+  onDelete?: () => void;
+  /**
+   * Variant: "compact" for input, "expanded" for messages
+   */
+  variant?: "compact" | "expanded";
+  /**
+   * Custom className
+   */
+  className?: string;
+};
+
+/**
+ * Unified file preview display component that handles both:
+ * - Input context: Browser File objects with delete functionality
+ * - Message context: Server file paths (read-only)
+ */
+export default function FilePreviewDisplay({
+  file,
+  loading = false,
+  error = false,
+  showDelete = false,
+  onDelete,
+  variant = "compact",
+  className,
+}: FilePreviewDisplayProps) {
+  const { t } = useTranslation();
+  const [imageError, setImageError] = useState(false);
+  const previewUrl = getFilePreviewUrl(file);
+  const fileInfo = extractFileInfo(file);
+
+  // Reset error state when preview URL changes
+  useEffect(() => {
+    setImageError(false);
+  }, [previewUrl]);
+
+  // Cleanup blob URLs for File objects
+  useEffect(() => {
+    return () => {
+      // Only cleanup blob URLs from File objects
+      if (
+        file instanceof File &&
+        previewUrl &&
+        previewUrl.startsWith("blob:")
+      ) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [file, previewUrl]);
+
+  // Compact variant (for input-wrapper)
+  if (variant === "compact") {
+    return (
+      <div
+        className={cn(
+          "relative h-16 w-16 shrink-0 rounded-xl border border-border/70 bg-primary-foreground shadow-sm",
+          error && "border-error",
+          className,
+        )}
+      >
+        {/* Clipping lives on this inner box so the delete button, which sits
+            outside the thumbnail bounds, is not cut off by overflow-hidden. */}
+        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl">
+          {loading ? (
+            <Loading className="h-4 w-4" />
+          ) : previewUrl && !imageError ? (
+            <img
+              src={previewUrl}
+              alt={fileInfo.name}
+              className="h-full w-full rounded-xl object-cover p-1"
+              crossOrigin={file instanceof File ? undefined : "use-credentials"}
+              onError={() => {
+                setImageError(true);
+                console.error("Failed to load image:", previewUrl);
+              }}
+            />
+          ) : (
+            <div className="p-3">
+              <ForwardedIconComponent name="File" className="h-6 w-6" />
+            </div>
+          )}
+        </div>
+
+        {showDelete && onDelete && (
+          <button
+            onClick={onDelete}
+            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            type="button"
+            aria-label={t("playgroundComponent.deleteFile")}
+          >
+            <ForwardedIconComponent name="X" className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Expanded variant (for user-message)
+  return (
+    <div
+      className={cn(
+        "relative flex w-full overflow-hidden lg:w-1/2 items-center justify-center rounded-xl border border-border/70 bg-primary-foreground shadow-sm",
+        error && "border-error",
+        className,
+      )}
+    >
+      {loading ? (
+        <Loading className="h-4 w-4" />
+      ) : previewUrl && !imageError ? (
+        <img
+          src={previewUrl}
+          alt={fileInfo.name}
+          className="h-full w-full rounded-xl object-cover p-1"
+          crossOrigin={file instanceof File ? undefined : "use-credentials"}
+          onError={() => {
+            setImageError(true);
+            console.error("Failed to load image:", previewUrl);
+          }}
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-2 px-4 py-3 text-center">
+          <ForwardedIconComponent name="File" className="h-6 w-6" />
+          <span className="text-xs text-muted-foreground">
+            {formatFileName(fileInfo.name, 10)}
+          </span>
+        </div>
+      )}
+
+      {showDelete && onDelete && (
+        <button
+          onClick={onDelete}
+          className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          type="button"
+          aria-label={t("playgroundComponent.deleteFile")}
+        >
+          <ForwardedIconComponent name="X" className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}

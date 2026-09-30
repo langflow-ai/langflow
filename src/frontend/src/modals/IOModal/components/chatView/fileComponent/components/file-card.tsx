@@ -1,8 +1,9 @@
-import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
+import { getBaseUrl } from "@/customization/utils/urls";
 import { ForwardedIconComponent } from "../../../../../../components/common/genericIconComponent";
-import { BASE_URL_API } from "../../../../../../constants/constants";
-import { fileCardPropsType } from "../../../../../../types/components";
+import type { fileCardPropsType } from "../../../../../../types/components";
 import formatFileName from "../utils/format-file-name";
 import getClasses from "../utils/get-classes";
 import DownloadButton from "./download-button";
@@ -15,6 +16,7 @@ export default function FileCard({
   fileType,
   showFile = true,
 }: fileCardPropsType): JSX.Element | undefined {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const { mutate } = useGetDownloadFileMutation({
     filename: fileName,
@@ -29,7 +31,8 @@ export default function FileCard({
 
   const fileWrapperClasses = getClasses(isHovered);
 
-  const imgSrc = `${BASE_URL_API}files/images/${path}`;
+  // Use direct URL like in v1.7.2 - the server handles authentication via cookies
+  const imgSrc = `${getBaseUrl()}files/images/${path}`;
 
   if (showFile) {
     if (imgTypes.has(fileType)) {
@@ -45,6 +48,7 @@ export default function FileCard({
               src={imgSrc}
               alt="generated image"
               className="m-0 h-auto w-auto rounded-lg border border-border p-0 transition-all"
+              crossOrigin="use-credentials"
             />
             <DownloadButton
               isHovered={isHovered}
@@ -66,7 +70,7 @@ export default function FileCard({
           <ForwardedIconComponent name="File" className="h-8 w-8" />
           <div className="flex flex-col">
             <span className="font-bold">{formatFileName(fileName, 20)}</span>
-            <span>File</span>
+            <span>{t("chat.file")}</span>
           </div>
         </div>
         <DownloadButton

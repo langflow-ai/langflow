@@ -1,12 +1,40 @@
+import type { ReactFlowJsonObject } from "@xyflow/react";
+import { useTranslation } from "react-i18next";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import { ReactFlowJsonObject } from "@xyflow/react";
+
+// Opt-out for callers that recover from a save failure themselves.
+export type SaveFlowOptions = { suppressErrorToast?: boolean };
+
+/**
+ * Applies a save's persisted settings to an editor whose graph moved on while
+ * the save was in flight. The live graph stays, since the response predates
+ * it. Every other field is taken from the response unless the user changed it
+ * after the save started — dropping them all left a persisted lock showing as
+ * unlocked, and the next canvas edit then unlocked the flow on the server.
+ */
+const adoptSavedSettings = (
+  live: FlowType,
+  atSaveStart: FlowType | undefined,
+  saved: FlowType,
+): FlowType => {
+  const savedSettings = Object.fromEntries(
+    Object.entries(saved).filter(
+      ([key]) =>
+        key !== "data" &&
+        live[key as keyof FlowType] === atSaveStart?.[key as keyof FlowType],
+    ),
+  );
+  return { ...live, ...savedSettings };
+};
+
 const useSaveFlow = () => {
+  const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
@@ -15,12 +43,35 @@ const useSaveFlow = () => {
   const { mutate: getFlow } = useGetFlow();
   const { mutate } = usePatchUpdateFlow();
 
-  const saveFlow = async (flow?: FlowType): Promise<void> => {
+  const saveFlow = async (
+    flow?: FlowType,
+    options?: SaveFlowOptions,
+  ): Promise<void> => {
     const currentFlow = useFlowStore.getState().currentFlow;
     const currentSavedFlow = useFlowsManagerStore.getState().currentFlow;
-    if (
-      customStringify(flow || currentFlow) !== customStringify(currentSavedFlow)
-    ) {
+    const requestedFlow = flow || currentFlow;
+    const isCurrentEditorFlowLocked =
+      currentFlow?.id === requestedFlow?.id && currentFlow?.locked === true;
+    const isPersistedFlowLocked =
+      isCurrentEditorFlowLocked ||
+      (currentSavedFlow?.id === requestedFlow?.id &&
+        currentSavedFlow?.locked === true);
+    const isUnlockingPersistedFlow =
+      isPersistedFlowLocked && requestedFlow?.locked === false;
+
+    // Hydrating a flow can change client-only node metadata and the viewport.
+    // Do not let those differences trigger saves while the persisted flow is
+    // locked. Unlocking is handled separately below.
+    if (isPersistedFlowLocked && !isUnlockingPersistedFlow) {
+      return;
+    }
+
+    const reportSaveError = (detail: string) => {
+      if (options?.suppressErrorToast) return;
+      setErrorData({ title: t("errors.failedToSaveFlow"), list: [detail] });
+    };
+
+    if (customStringify(requestedFlow) !== customStringify(currentSavedFlow)) {
       setSaveLoading(true);
 
       const flowData = currentFlow?.data;
@@ -69,59 +120,101 @@ const useSaveFlow = () => {
             endpoint_name,
             locked,
           } = flow;
-          if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
-            mutate(
-              {
-                id,
-                name,
-                data: data!,
-                description,
-                folder_id,
-                endpoint_name,
-                locked,
-              },
-              {
-                onSuccess: (updatedFlow) => {
-                  const flows = useFlowsManagerStore.getState().flows;
-                  setSaveLoading(false);
-                  if (flows) {
-                    // updates flow in state
-                    setFlows(
-                      flows.map((flow) => {
-                        if (flow.id === updatedFlow.id) {
-                          return updatedFlow;
-                        }
-                        return flow;
-                      }),
-                    );
+          const persistedFlowForScope =
+            currentSavedFlow?.id === id
+              ? currentSavedFlow
+              : useFlowsManagerStore
+                  .getState()
+                  .flows?.find((savedFlow) => savedFlow.id === id);
+          const providerScopeChanged =
+            persistedFlowForScope !== undefined &&
+            persistedFlowForScope.folder_id !== folder_id;
+          const updatePayload = {
+            id,
+            name,
+            data: data!,
+            description,
+            folder_id,
+            endpoint_name,
+            locked,
+            ...(providerScopeChanged && { providerScopeChanged: true }),
+          };
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
+          const handleError = (e: any) => {
+            reportSaveError(
+              e.response?.data?.detail || e.message || "Unknown error",
+            );
+            setSaveLoading(false);
+            reject(e);
+          };
+          const persistFlow = () => {
+            mutate(updatePayload, {
+              onSuccess: (updatedFlow) => {
+                const flows = useFlowsManagerStore.getState().flows;
+                setSaveLoading(false);
+                if (flows) {
+                  // updates flow in state
+                  setFlows(
+                    flows.map((flow) => {
+                      if (flow.id === updatedFlow.id) {
+                        return updatedFlow;
+                      }
+                      return flow;
+                    }),
+                  );
+                  // Only update useFlowStore.currentFlow when on the flow page.
+                  // When saving from the list page (e.g., renaming via settings modal),
+                  // setting this would leave stale unprocessed flow data in the store,
+                  // causing a crash when the user later navigates to the flow page.
+                  //
+                  // The graph is adopted only when the canvas still holds the
+                  // one this request carried. `currentFlow` is the baseline the
+                  // next autosave diffs against, so adopting the response of a
+                  // save that started before an edit makes that edit look
+                  // persisted and the follow-up save is skipped — the edit is
+                  // lost. The store swaps these arrays on every change, so
+                  // identity is an exact "nothing moved while we were away"
+                  // check.
+                  const liveState = useFlowStore.getState();
+                  const liveFlow = liveState.currentFlow;
+                  const graphUnchanged =
+                    liveState.nodes === nodes && liveState.edges === edges;
+                  if (liveState.onFlowPage && graphUnchanged) {
                     setCurrentFlow(updatedFlow);
-                    resolve();
-                  } else {
-                    setErrorData({
-                      title: "Failed to save flow",
-                      list: ["Flows variable undefined"],
-                    });
-                    reject(new Error("Flows variable undefined"));
+                  } else if (
+                    liveState.onFlowPage &&
+                    liveFlow &&
+                    liveFlow.id === updatedFlow.id
+                  ) {
+                    setCurrentFlow(
+                      adoptSavedSettings(liveFlow, currentFlow, updatedFlow),
+                    );
                   }
-                },
-                onError: (e) => {
-                  setErrorData({
-                    title: "Failed to save flow",
-                    list: [e.message],
-                  });
-                  setSaveLoading(false);
-                  reject(e);
-                },
+                  resolve();
+                } else {
+                  reportSaveError(t("errors.flowsVariableUndefined"));
+                  reject(new Error("Flows variable undefined"));
+                }
+              },
+              onError: handleError,
+            });
+          };
+
+          if (isUnlockingPersistedFlow) {
+            mutate(
+              { id, locked: false },
+              {
+                // Preserve any settings edits by applying them only after the
+                // backend has committed the unlock-only request.
+                onSuccess: persistFlow,
+                onError: handleError,
               },
             );
           } else {
-            setSaveLoading(false);
+            persistFlow();
           }
         } else {
-          setErrorData({
-            title: "Failed to save flow",
-            list: ["Flow not found"],
-          });
+          reportSaveError(t("errors.flowNotFound"));
           reject(new Error("Flow not found"));
         }
       });

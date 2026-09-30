@@ -1,0 +1,55 @@
+name: GP Backend Auto-update Strings
+
+on:
+  pull_request:
+    paths:
+      - "src/lfx/src/lfx/components/**"
+      # Bundle component strings reach core locales/en.json through the
+      # lfx/components/<provider> import shims, so an edit to a bundle's
+      # display_name/description/info must re-trigger the extractor too --
+      # otherwise en.json silently drifts from src/bundles/**.
+      - "src/bundles/**"
+      - "src/backend/base/langflow/initial_setup/starter_projects/**"
+
+jobs:
+  auto-commit:
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    name: Auto-regenerate locales/en.json on PR branch
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bake i18n_key into template noteNodes
+        run: python scripts/gp/bake_note_keys.py
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+
+      - name: Install workspace (lfx + langflow-base)
+        run: uv sync --no-dev
+
+      - name: Generate en.json
+        run: uv run python scripts/gp/extract_backend_strings.py
+
+      - name: Commit updated files to PR branch if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/backend/base/langflow/initial_setup/starter_projects/
+          git add src/backend/base/langflow/locales/en.json
+          git diff --staged --quiet || git commit -m "chore: auto-bake note keys and regenerate backend locales/en.json [skip ci]"
+          git push

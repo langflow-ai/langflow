@@ -1,0 +1,171 @@
+import { useReactFlow, useStore } from "@xyflow/react";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { shallow } from "zustand/shallow";
+import IconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
+import DropdownControlButton from "./DropdownControlButton";
+import {
+  FIT_VIEW_OPTIONS,
+  FIT_VIEW_PADDING_WITH_INSPECTION_PANEL,
+} from "./fit-view-options";
+import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
+
+export const KEYBOARD_SHORTCUTS = {
+  ZOOM_IN: { key: "+", code: "Equal" },
+  ZOOM_OUT: { key: "-", code: "Minus" },
+  FIT_VIEW: { key: "1", code: "Digit1" },
+  RESET_ZOOM: { key: "0", code: "Digit0" },
+} as const;
+
+const CanvasControlsDropdown = ({
+  selectedNode,
+}: {
+  selectedNode: AllNodeType | null;
+}) => {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
+
+  const { minZoomReached, maxZoomReached, zoom } = useStore(
+    reactFlowSelector,
+    shallow,
+  );
+
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+
+      if (!isModifierPressed) return;
+
+      switch (event.code) {
+        case KEYBOARD_SHORTCUTS.ZOOM_IN.code:
+          event.preventDefault();
+          if (!maxZoomReached) {
+            zoomIn();
+          }
+          break;
+        case KEYBOARD_SHORTCUTS.ZOOM_OUT.code:
+          event.preventDefault();
+          if (!minZoomReached) {
+            zoomOut();
+          }
+          break;
+        case KEYBOARD_SHORTCUTS.FIT_VIEW.code:
+          event.preventDefault();
+          fitView();
+          break;
+        case KEYBOARD_SHORTCUTS.RESET_ZOOM.code:
+          event.preventDefault();
+          zoomTo(1);
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached]);
+
+  const handleZoomIn = useCallback(() => {
+    zoomIn();
+  }, [zoomIn]);
+
+  const handleZoomOut = useCallback(() => {
+    zoomOut();
+  }, [zoomOut]);
+
+  const handleFitView = useCallback(() => {
+    fitView({
+      ...FIT_VIEW_OPTIONS,
+      // The inspection panel covers the right of the canvas, so the graph has
+      // to clear it rather than the usual edge padding.
+      padding:
+        inspectionPanelVisible && selectedNode
+          ? FIT_VIEW_PADDING_WITH_INSPECTION_PANEL
+          : FIT_VIEW_OPTIONS.padding,
+    });
+  }, [fitView, inspectionPanelVisible, selectedNode]);
+
+  const handleResetZoom = useCallback(() => {
+    zoomTo(1);
+  }, [zoomTo]);
+
+  return (
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          data-testid="canvas_controls_dropdown"
+          className="group flex h-8 items-center justify-center rounded-md px-0.5 hover:bg-muted"
+          unstyled
+          title={t("canvas.controls")}
+          aria-label={t("canvas.zoomControlAriaLabel", {
+            zoom: formatZoomPercentage(zoom),
+          })}
+        >
+          <div className="flex items-center justify-center gap-1">
+            <span className="w-11 pl-1.5 text-left text-sm tabular-nums text-muted-foreground group-hover:text-foreground">
+              {formatZoomPercentage(zoom)}
+            </span>
+            <IconComponent
+              name={isOpen ? "ChevronDown" : "ChevronUp"}
+              aria-hidden="true"
+              className="text-muted-foreground group-hover:text-foreground !h-5 !w-5"
+            />
+          </div>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="top"
+        align="center"
+        className="flex flex-col w-full"
+      >
+        <DropdownControlButton
+          tooltipText={t("canvas.zoomIn")}
+          onClick={handleZoomIn}
+          disabled={maxZoomReached}
+          testId="zoom_in"
+          label={t("canvas.zoomIn")}
+          shortcut={KEYBOARD_SHORTCUTS.ZOOM_IN.key}
+        />
+        <DropdownControlButton
+          tooltipText={t("canvas.zoomOut")}
+          onClick={handleZoomOut}
+          disabled={minZoomReached}
+          testId="zoom_out"
+          label={t("canvas.zoomOut")}
+          shortcut={KEYBOARD_SHORTCUTS.ZOOM_OUT.key}
+        />
+        <Separator />
+        <DropdownControlButton
+          tooltipText={t("canvas.resetZoomTooltip")}
+          onClick={handleResetZoom}
+          testId="reset_zoom"
+          label={t("canvas.zoomTo100")}
+          shortcut={KEYBOARD_SHORTCUTS.RESET_ZOOM.key}
+        />
+        <DropdownControlButton
+          tooltipText={t("canvas.fitViewTooltip")}
+          onClick={handleFitView}
+          testId="fit_view"
+          label={t("canvas.zoomToFit")}
+          shortcut={KEYBOARD_SHORTCUTS.FIT_VIEW.key}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+export default CanvasControlsDropdown;

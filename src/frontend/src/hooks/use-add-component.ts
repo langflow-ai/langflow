@@ -1,16 +1,21 @@
-import { NODE_WIDTH } from "@/constants/constants";
-import { track } from "@/customization/utils/analytics";
-import useFlowStore from "@/stores/flowStore";
-import { APIClassType } from "@/types/api";
-import { AllNodeType } from "@/types/flow";
-import { getNodeId } from "@/utils/reactflowUtils";
-import { getNodeRenderType } from "@/utils/utils";
 import { useStoreApi } from "@xyflow/react";
 import { useCallback } from "react";
+import { NODE_WIDTH } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
+import { track } from "@/customization/utils/analytics";
+import useFlowStore from "@/stores/flowStore";
+import type { APIClassType } from "@/types/api";
+import type { AllNodeType } from "@/types/flow";
+import { getNodeId } from "@/utils/reactflowUtils";
+import { getNodeRenderType } from "@/utils/utils";
 
 export function useAddComponent() {
   const store = useStoreApi();
   const paste = useFlowStore((state) => state.paste);
+  const filterEdge = useFlowStore((state) => state.getFilterEdge);
+  const filterType = useFlowStore((state) => state.filterType);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
   const addComponent = useCallback(
     (
@@ -18,6 +23,7 @@ export function useAddComponent() {
       type: string,
       position?: { x: number; y: number },
     ) => {
+      if (isReadOnly) return;
       track("Component Added", { componentType: component.display_name });
 
       const {
@@ -50,6 +56,12 @@ export function useAddComponent() {
 
       const newId = getNodeId(type);
 
+      const outputType = filterType?.type;
+
+      const outputToFilter = component.outputs?.find(
+        (output) => outputType && output.types.includes(outputType),
+      );
+
       const newNode: AllNodeType = {
         id: newId,
         type: getNodeRenderType("genericnode"),
@@ -59,12 +71,13 @@ export function useAddComponent() {
           showNode: !component.minimized,
           type: type,
           id: newId,
+          ...(outputToFilter && { selected_output: outputToFilter.name }),
         },
       };
 
       paste({ nodes: [newNode], edges: [] }, pos);
     },
-    [store, paste],
+    [store, paste, filterEdge, filterType, isReadOnly],
   );
 
   return addComponent;

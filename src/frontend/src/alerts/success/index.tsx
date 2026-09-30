@@ -1,14 +1,20 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../components/common/genericIconComponent";
-import { SuccessAlertType } from "../../types/alerts";
+import type { SuccessAlertType } from "../../types/alerts";
 
 export default function SuccessAlert({
   title,
   id,
   removeAlert,
 }: SuccessAlertType): JSX.Element {
+  const { t } = useTranslation();
   const [show, setShow] = useState(true);
+  const handleDismiss = () => {
+    setShow(false);
+    removeAlert(id);
+  };
   useEffect(() => {
     if (show) {
       setTimeout(() => {
@@ -30,10 +36,7 @@ export default function SuccessAlert({
       leaveTo={"transform translate-x-[-100%]"}
     >
       <div
-        onClick={() => {
-          setShow(false);
-          removeAlert(id);
-        }}
+        onClick={handleDismiss}
         className="success-alert noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
@@ -45,8 +48,19 @@ export default function SuccessAlert({
             />
           </div>
           <div className="ml-3">
-            <p className="success-alert-message line-clamp-2">{title}</p>
+            <p className="success-alert-message line-clamp-3">{title}</p>
           </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDismiss();
+            }}
+            aria-label={t("alerts.dismissAlert")}
+            className="ml-auto flex-shrink-0 self-start"
+          >
+            <IconComponent name="X" className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </Transition>

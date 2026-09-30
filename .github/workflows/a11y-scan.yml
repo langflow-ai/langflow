@@ -1,0 +1,356 @@
+name: A11y / IBM Equal Access Scans
+
+on:
+  pull_request:
+    paths:
+      - "src/frontend/**"
+      - ".github/workflows/a11y-scan.yml"
+  schedule:
+    # Run nightly at 02:00 UTC, after the nightly build window
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+      assert:
+        description: "Fail the run when scans differ from committed baselines"
+        required: false
+        type: boolean
+        default: false
+
+# A new push to the same PR supersedes the in-flight scan of the old commit.
+# Nightly / manual runs keep a unique group so they never cancel each other.
+concurrency:
+  group: a11y-scan-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  PYTHON_VERSION: "3.13"
+  # Define the directory where Playwright browsers will be installed.
+  # This path is used for caching across workflows
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
+  PLAYWRIGHT_VERSION: "1.60.0"
+
+jobs:
+  resolve-ref:
+    name: Resolve ref to scan
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.resolve_ref.outputs.ref }}
+    steps:
+      # Cron only fires from the default branch, so scheduled runs resolve the
+      # latest release-* branch and scan that (same pattern as nightly_build).
+      - name: Resolve Ref To Scan
+        id: resolve_ref
+        shell: bash
+        env:
+          # Read the dispatch input via env rather than interpolating it into
+          # the script, so a crafted value can't be executed as shell.
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          if [ -n "$INPUT_REF" ]; then
+            REF="$INPUT_REF"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            REF=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+              | awk '{print $2}' \
+              | sed 's|refs/heads/||' \
+              | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n 1)
+            if [ -z "$REF" ]; then
+              echo "No release-* branch found in ${{ github.repository }}"
+              exit 1
+            fi
+          else
+            REF="${{ github.ref }}"
+          fi
+          if ! [[ "$REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "Refusing to scan malformed ref: $REF"
+            exit 1
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Scanning ref: $REF"
+
+  a11y-scan:
+    name: Playwright scan runner (shard ${{ matrix.shardIndex }})
+    needs: resolve-ref
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each shard is a full Langflow backend + frontend + Playwright, so
+        # keep the count proportional to the spec count (~200 tests / 8 ≈ 25
+        # per shard). Adding an entry here is all it takes to add a shard.
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-ref.outputs.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v6
+        continue-on-error: true
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: Cache Playwright Browsers
+        id: cache-playwright
+        uses: actions/cache@v6
+        continue-on-error: true
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+          restore-keys: |
+            playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+
+      # No `--with-deps` on Linux: the hosted image already has every library
+      # Chromium needs (see typescript_test.yml for the history).
+      - name: Install Playwright Browsers
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        shell: bash
+        working-directory: ./src/frontend
+        run: npx playwright install chromium
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install Python Dependencies
+        run: uv sync
+
+      # A retry only costs time when a spec actually fails, and a red check
+      # from a single flake costs a full re-run, so allow one.
+      - name: Run IBM Equal Access Scans
+        shell: bash
+        env:
+          RUN_A11Y: "true"
+          RUN_A11Y_ASSERT: ${{ github.event_name == 'workflow_dispatch' && inputs.assert && 'true' || 'false' }}
+          LANGFLOW_DEACTIVATE_TRACING: "true"
+        run: |
+          cd src/frontend
+          # Only specs that call runA11yScan produce reports; discover them
+          # so new scan hosts are picked up without editing this workflow.
+          SCAN_SPECS=$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)
+          echo "Specs with a11y scans:"
+          echo "$SCAN_SPECS"
+          test -n "$SCAN_SPECS"
+          npx playwright test $SCAN_SPECS \
+            --project=chromium \
+            --shard=${{ matrix.shardIndex }}/${{ strategy.job-total }} \
+            --workers=2 \
+            --retries=1
+
+      - name: Upload Shard Accessibility Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ibm-a11y-reports-shard-${{ matrix.shardIndex }}-attempt-${{ github.run_attempt }}
+          path: src/frontend/coverage/accessibility-reports
+          retention-days: 1
+          if-no-files-found: ignore
+
+  a11y-report:
+    name: Build IBM scan summary
+    needs: [resolve-ref, a11y-scan]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-ref.outputs.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Every scan writes a flat `<label>.json` + `.html` pair, so the shard
+      # outputs merge into one directory without collisions. aChecker's own
+      # per-process `summary.json` does collide, but the report scripts skip it.
+      - name: Download Shard Accessibility Reports
+        uses: actions/download-artifact@v8
+        with:
+          path: src/frontend/coverage/accessibility-reports
+          pattern: ibm-a11y-reports-shard-*-attempt-${{ github.run_attempt }}
+          merge-multiple: true
+
+      - name: Build IBM Scan Summary
+        shell: bash
+        run: |
+          cd src/frontend
+          if ls coverage/accessibility-reports/*.json > /dev/null 2>&1; then
+            npm run a11y:html-report --silent
+            {
+              echo '## Accessibility Report'
+              echo ''
+              echo 'Full route-by-route HTML report: download the `ibm-a11y-reports-${{ github.run_attempt }}` artifact from this run and open `index.html`.'
+              echo ''
+              npm run a11y:job-summary --silent
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No accessibility reports were generated." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Accessibility Reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: ibm-a11y-reports-${{ github.run_attempt }}
+          path: src/frontend/coverage/accessibility-reports
+          retention-days: 30
+          overwrite: true
+          if-no-files-found: ignore
+
+  # The Python route scanner (scripts/a11y/a11y_scan.py) is the unmocked
+  # counterpart to the Playwright suite: it renders each static route against a
+  # real backend, so it sees DOM the mocked specs never build (e.g. real
+  # provider icon SVGs). Reporting only — the scanner exits 0 regardless of
+  # findings; publish-worthy numbers still come from the Playwright summary.
+  python-route-scan:
+    name: Python route scan (real backend, nightly)
+    needs: resolve-ref
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-ref.outputs.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install Python Dependencies
+        run: uv sync
+
+      - name: Install Scanner Browser
+        timeout-minutes: 10
+        run: uv run --with playwright playwright install chromium
+
+      - name: Start Backend And Frontend
+        shell: bash
+        env:
+          LANGFLOW_DATABASE_URL: "sqlite:///./temp"
+          LANGFLOW_AUTO_LOGIN: "true"
+          LANGFLOW_SUPERUSER: "langflow"
+          LANGFLOW_SUPERUSER_PASSWORD: "test-superuser-password" # pragma: allowlist secret
+          LANGFLOW_DEACTIVATE_TRACING: "true"
+          LANGFLOW_LOG_LEVEL: "ERROR"
+          DO_NOT_TRACK: "true"
+        run: |
+          uv run uvicorn --factory langflow.main:create_app \
+            --host localhost --port 7860 --loop asyncio \
+            --log-level error --no-access-log &
+          (cd src/frontend && npm start) &
+          timeout 300 bash -c 'until curl -sf http://localhost:7860/health; do sleep 2; done'
+          timeout 120 bash -c 'until curl -sf http://localhost:3000 > /dev/null; do sleep 2; done'
+
+      - name: Run Python Route Scan
+        shell: bash
+        run: |
+          uv run --with playwright python scripts/a11y/a11y_scan.py \
+            --url http://localhost:3000 \
+            --routes-file scripts/a11y/a11y_routes.json \
+            --route-group static \
+            --states-file scripts/a11y/states/settings-messages.json \
+            --out python-route-scan/report.json \
+            --markdown python-route-scan/report.md \
+            --html python-route-scan/report.html \
+            --timeout-ms 45000
+          {
+            echo '## Python route scan (unmocked)'
+            echo ''
+            cat python-route-scan/report.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Python Scan Report
+        # The scanner writes its report even when a route or state fails;
+        # keep it when the step above fails so the findings are not lost.
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-route-scan-${{ github.run_attempt }}
+          path: python-route-scan
+          retention-days: 30
+          if-no-files-found: error
+
+  # The Python scanner pins its engine (DEFAULT_ACE_URL) to the same version the
+  # Playwright suite resolves via the accessibility-checker npm dependency. This
+  # guard fails the workflow if the two pins drift apart again.
+  engine-pin-check:
+    name: Engine pin sync check
+    needs: resolve-ref
+    # Advisory for now: a drift failure annotates the run but never turns the
+    # PR red. Drop this line to make the guard enforcing.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-ref.outputs.ref }}
+
+      - name: Compare Engine Pins
+        shell: bash
+        run: |
+          NPM_PIN=$(node -p "require('./src/frontend/package.json').devDependencies['accessibility-checker'].replace(/^[^0-9]*/, '')")
+          PY_PIN=$(grep -oE 'accessibility-checker-engine@[0-9.]+' scripts/a11y/a11y_scan.py | cut -d@ -f2)
+          echo "npm accessibility-checker: $NPM_PIN"
+          echo "python DEFAULT_ACE_URL:    $PY_PIN"
+          if [ -z "$PY_PIN" ] || [ "$NPM_PIN" != "$PY_PIN" ]; then
+            echo "::error::Engine pins differ (npm=$NPM_PIN, python=$PY_PIN). Update DEFAULT_ACE_URL in scripts/a11y/a11y_scan.py or the accessibility-checker dependency so both scanners evaluate the same ruleset."
+            exit 1
+          fi

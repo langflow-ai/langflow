@@ -1,4 +1,7 @@
-from langflow.components import prototypes
+import pytest
+from lfx.components import prototypes
+from lfx.services.deps import get_settings_service
+from lfx.utils.python_repl_security import CodeExecutionDisabledError
 
 
 def test_python_function_component():
@@ -18,3 +21,14 @@ def test_python_function_component():
     assert result() == "Hello, World!"
     assert result_message.text == "Hello, World!"
     assert result_data[0].text == "Hello, World!"
+
+
+def test_python_function_component_respects_code_execution_policy(monkeypatch):
+    component = prototypes.PythonFunctionComponent()
+    component.function_code = "def function():\n    return 'unsafe'"
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+
+    with pytest.raises(CodeExecutionDisabledError):
+        component.get_function_callable()
+    with pytest.raises(CodeExecutionDisabledError):
+        component.execute_function()

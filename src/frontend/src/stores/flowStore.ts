@@ -1,48 +1,55 @@
-import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
-  track,
-  trackDataLoaded,
-  trackFlowBuild,
-} from "@/customization/utils/analytics";
-import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import { brokenEdgeMessage } from "@/utils/utils";
-import {
-  EdgeChange,
-  Node,
-  NodeChange,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
 } from "@xyflow/react";
-import { cloneDeep, zip } from "lodash";
+import { cloneDeep } from "lodash";
+import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
-import { BuildStatus, EventDeliveryType } from "../constants/enums";
-import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
-import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
+  blockedStopsExecution,
+  checkCodeValidity,
+} from "@/CustomNodes/helpers/check-code-validity";
+import { queryClient } from "@/contexts";
+import {
+  runFlowAGUI,
+  runFlowHITL,
+} from "@/controllers/API/agui/run-flow-bridge";
+import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
+import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import { track, trackFlowBuild } from "@/customization/utils/analytics";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
+import type { GlobalVariable } from "@/types/global_variables";
+import { brokenEdgeMessage } from "@/utils/utils";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
+import i18n from "../i18n";
+import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
+import type { ChatInputType, ChatOutputType } from "../types/chat";
+import type {
   AllNodeType,
   EdgeType,
   NodeDataType,
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import {
+import type {
   ComponentsToUpdateType,
   FlowStoreType,
   VertexLayerElementType,
 } from "../types/zustand/flow";
-import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
+import { filterPlaceableSelection } from "../utils/componentConstraints";
 import {
   buildPositionDictionary,
-  checkChatInput,
   cleanEdges,
-  detectBrokenEdgesEdges,
+  getConnectedSubgraph,
   getHandleId,
   getNodeId,
-  scapeJSONParse,
   scapedJSONStringfy,
+  scapeJSONParse,
   unselectAllNodesEdges,
   updateGroupRecursion,
   validateEdge,
@@ -50,10 +57,63 @@ import {
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
+import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
-import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
+import { useUtilityStore } from "./utilityStore";
+
+// Tracks in-progress node update operations (e.g. validateComponentCode calls).
+// buildFlow awaits these so "Run" doesn't race against a pending "Update".
+const pendingNodeUpdates = new Map<
+  string,
+  { promise: Promise<void>; resolve: () => void }
+>();
+
+export function registerNodeUpdate(nodeId: string): void {
+  // If there's already a pending update for this node, leave it
+  if (pendingNodeUpdates.has(nodeId)) return;
+  let resolveRef: () => void;
+  const promise = new Promise<void>((r) => {
+    resolveRef = r;
+  });
+  pendingNodeUpdates.set(nodeId, { promise, resolve: resolveRef! });
+}
+
+export function completeNodeUpdate(nodeId: string): void {
+  const entry = pendingNodeUpdates.get(nodeId);
+  if (entry) {
+    entry.resolve();
+    pendingNodeUpdates.delete(nodeId);
+  }
+}
+
+export async function waitForNodeUpdates(
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  if (pendingNodeUpdates.size === 0) return;
+  const pendingIds = Array.from(pendingNodeUpdates.keys());
+  const promises = Array.from(pendingNodeUpdates.values()).map(
+    (e) => e.promise,
+  );
+  let timedOut = false;
+  await Promise.race([
+    Promise.all(promises),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        timedOut = true;
+        resolve();
+      }, timeoutMs),
+    ),
+  ]);
+  if (timedOut) {
+    console.warn(
+      `waitForNodeUpdates timed out after ${timeoutMs}ms. ` +
+        `${pendingNodeUpdates.size} updates still pending: ${pendingIds.join(", ")}`,
+    );
+  }
+}
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -79,25 +139,46 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
     }
   },
+  fitViewRequest: { id: 0 },
+  // Fitting immediately would measure an incomplete graph, so this only records
+  // the intent — the canvas performs the fit once every node has dimensions and
+  // then runs `onFitted`. See `useFitViewWhenMeasured`.
+  requestFitView: (onFitted) => {
+    const superseded = get().fitViewRequest.onFitted;
+    set((state) => ({
+      fitViewRequest: { id: state.fitViewRequest.id + 1, onFitted },
+    }));
+    // A request replaced before it ran must not strand its caller: the welcome
+    // overlay waits on this callback before it uncovers the canvas.
+    superseded?.();
+  },
   autoSaveFlow: undefined,
   componentsToUpdate: [],
   setComponentsToUpdate: (change) => {
-    let newChange =
+    const newChange =
       typeof change === "function" ? change(get().componentsToUpdate) : change;
     set({ componentsToUpdate: newChange });
   },
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes: ComponentsToUpdateType[] = [];
+    const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
     nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const codeValidity = checkCodeValidity(node.data, templates);
-        if (codeValidity && codeValidity.outdated)
+        const codeValidity = checkCodeValidity(
+          node.data,
+          templates,
+          allowCustomComponents,
+        );
+        if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
             id: node.id,
+            type: node.data.type,
             icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
+            blocked: codeValidity.blocked,
             breakingChange: codeValidity.breakingChange,
             userEdited: codeValidity.userEdited,
           });
@@ -112,6 +193,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  awaitingInput: false,
+  buildStartTime: null,
+  buildDuration: null,
+  buildingFlowId: null,
+  buildingSessionId: null,
   stopBuilding: () => {
     get().buildController.abort();
     get().updateEdgesRunningByNodes(
@@ -121,7 +207,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
-      title: "Build stopped",
+      title: i18n.t("alerts.buildStopped"),
     });
   },
   isPending: true,
@@ -145,7 +231,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateToolMode: (nodeId: string, toolMode: boolean) => {
     get().setNode(nodeId, (node) => {
-      let newNode = cloneDeep(node);
+      const newNode = cloneDeep(node);
       if (newNode.type === "genericNode") {
         newNode.data.node!.tool_mode = toolMode;
       }
@@ -164,12 +250,58 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
-    let newFlowPool = cloneDeep({ ...get().flowPool });
-    if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
-    else {
-      newFlowPool[nodeId].push(data);
-    }
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    const newFlowPool = {
+      ...prevPool,
+      [nodeId]: prevEntries ? [...prevEntries, data] : [data],
+    };
     get().setFlowPool(newFlowPool);
+  },
+  appendLogToFlowPool: (
+    nodeId: string,
+    outputName: string,
+    log: LogsLogType,
+  ) => {
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    if (!prevEntries || prevEntries.length === 0) {
+      const newEntry: VertexBuildTypeAPI = {
+        id: nodeId,
+        inactivated_vertices: null,
+        next_vertices_ids: [],
+        top_level_vertices: [],
+        valid: true,
+        data: {
+          results: {},
+          outputs: {},
+          logs: { [outputName]: [log] },
+          messages: [],
+        },
+        timestamp: new Date().toISOString(),
+        params: null,
+        messages: [],
+        artifacts: null,
+      };
+      get().setFlowPool({ ...prevPool, [nodeId]: [newEntry] });
+    } else {
+      const latest = prevEntries[prevEntries.length - 1];
+      const existingLogs: LogsLogType[] = latest.data.logs[outputName] ?? [];
+      const updatedEntry: VertexBuildTypeAPI = {
+        ...latest,
+        data: {
+          ...latest.data,
+          logs: {
+            ...latest.data.logs,
+            [outputName]: [...existingLogs, log],
+          },
+        },
+      };
+      get().setFlowPool({
+        ...prevPool,
+        [nodeId]: [...prevEntries.slice(0, -1), updatedEntry],
+      });
+    }
   },
   getNodePosition: (nodeId: string) => {
     const node = get().nodes.find((node) => node.id === nodeId);
@@ -180,7 +312,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     data: VertexBuildTypeAPI | ChatOutputType | ChatInputType,
     buildId?: string,
   ) => {
-    let newFlowPool = cloneDeep({ ...get().flowPool });
+    const newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) {
       return;
     } else {
@@ -210,22 +342,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   resetFlow: (flow) => {
     const nodes = flow?.data?.nodes ?? [];
     const edges = flow?.data?.edges ?? [];
-    let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
+    const { edges: newEdges, brokenEdges } = cleanEdges(nodes, edges);
+
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
-        title: BROKEN_EDGES_WARNING,
+        title: i18n.t("flow.brokenEdgesWarning"),
         list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
-    let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
     set({
       dismissedNodes: JSON.parse(
         localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
       ) as string[],
+      dismissedNodesLegacy: JSON.parse(
+        localStorage.getItem(`dismiss_legacy_${flow?.id}`) ?? "[]",
+      ) as string[],
     });
-    unselectAllNodesEdges(nodes, edges);
+    unselectAllNodesEdges(nodes, newEdges);
+    if (flow?.id) {
+      useTweaksStore.getState().initialSetup(nodes, flow?.id);
+    }
     set({
       nodes,
       edges: newEdges,
@@ -237,10 +375,36 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowPool: {},
       currentFlow: flow,
       positionDictionary: {},
+      rightClickedNodeId: null,
     });
+    // Patch translatable fields if types are already loaded in the new language
+    syncNodeTranslations();
   },
   setIsBuilding: (isBuilding) => {
-    set({ isBuilding });
+    const current = get();
+    set({
+      isBuilding,
+      // Reset buildStartTime and buildDuration when a new build begins
+      buildStartTime:
+        isBuilding && !current.isBuilding ? null : current.buildStartTime,
+      buildDuration:
+        isBuilding && !current.isBuilding ? null : current.buildDuration,
+      // Clear building session when build ends
+      buildingFlowId: !isBuilding ? null : current.buildingFlowId,
+      buildingSessionId: !isBuilding ? null : current.buildingSessionId,
+    });
+  },
+  setAwaitingInput: (awaitingInput) => {
+    set({ awaitingInput });
+  },
+  setBuildStartTime: (time) => {
+    set({ buildStartTime: time });
+  },
+  setBuildDuration: (duration) => {
+    set({ buildDuration: duration });
+  },
+  setBuildingSession: (flowId, sessionId) => {
+    set({ buildingFlowId: flowId, buildingSessionId: sessionId });
   },
   setFlowState: (flowState) => {
     const newFlowState =
@@ -266,8 +430,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   setNodes: (change) => {
-    let newChange = typeof change === "function" ? change(get().nodes) : change;
-    let newEdges = cleanEdges(newChange, get().edges);
+    const newChange =
+      typeof change === "function" ? change(get().nodes) : change;
+    const { edges: newEdges } = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
     get().updateComponentsToUpdate(newChange);
     set({
@@ -284,12 +449,32 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   setEdges: (change) => {
-    let newChange = typeof change === "function" ? change(get().edges) : change;
+    const newChange =
+      typeof change === "function" ? change(get().edges) : change;
     set({
       edges: newChange,
       flowState: undefined,
     });
     get().updateCurrentFlow({ edges: newChange });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
+  },
+  setNodesAndEdges: (nodes, edges) => {
+    // Atomic single-render replace mirroring resetFlow (the F5 load path); a
+    // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
+    const { edges: newEdges } = cleanEdges(nodes, edges);
+    const { inputs, outputs } = getInputsAndOutputs(nodes);
+    get().updateComponentsToUpdate(nodes);
+    set({
+      nodes,
+      edges: newEdges,
+      flowState: undefined,
+      inputs,
+      outputs,
+      hasIO: inputs.length > 0 || outputs.length > 0,
+    });
+    get().updateCurrentFlow({ nodes, edges: newEdges });
     if (get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
@@ -300,7 +485,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     isUserChange: boolean = true,
     callback?: () => void,
   ) => {
-    let newChange =
+    if (!get().nodes.find((node) => node.id === id)) {
+      throw new Error("Node not found");
+    }
+
+    const newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
@@ -317,7 +506,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       return node;
     });
 
-    const newEdges = cleanEdges(newNodes, get().edges);
+    const { edges: newEdges, brokenEdges } = cleanEdges(newNodes, get().edges);
+
+    // An edit that reshapes a node's handles (e.g. disabling Human Input's fallback
+    // with a wired branch) strands the downstream node; surface it like resetFlow does.
+    if (brokenEdges.length > 0) {
+      useAlertStore.getState().setErrorData({
+        title: i18n.t("flow.brokenEdgesWarning"),
+        list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
+      });
+    }
 
     set((state) => {
       if (callback) {
@@ -362,6 +560,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     get().setNodes(filteredNodes);
 
+    // Clear rightClickedNodeId if the deleted node was right-clicked
+    const rightClickedNodeId = get().rightClickedNodeId;
+    if (rightClickedNodeId && deletedNode) {
+      const isRightClickedNodeDeleted =
+        typeof nodeId === "string"
+          ? nodeId === rightClickedNodeId
+          : nodeId.includes(rightClickedNodeId);
+
+      if (isRightClickedNodeDeleted) {
+        set({ rightClickedNodeId: null });
+      }
+    }
+
     if (deletedNode) {
       track("Component Deleted", { componentType: deletedNode.data.type });
     }
@@ -377,26 +588,41 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     track("Component Connection Deleted", { edgeId });
   },
   paste: (selection, position) => {
-    if (
-      selection.nodes.some((node) => node.data.type === "ChatInput") &&
-      checkChatInput(get().nodes)
-    ) {
-      useAlertStore.getState().setNoticeData({
-        title: "You can only have one Chat Input component in a flow.",
-      });
-      selection.nodes = selection.nodes.filter(
-        (node) => node.data.type !== "ChatInput",
+    if (get().currentFlow?.locked) return;
+    // Collect IDs of nodes in the selection
+    const selectedNodeIds = new Set(selection.nodes.map((node) => node.id));
+    // Find existing edges in the flow that connect nodes within the selection
+    const existingEdgesToCopy = get().edges.filter((edge) => {
+      return (
+        selectedNodeIds.has(edge.source) &&
+        selectedNodeIds.has(edge.target) &&
+        !selection.edges.some((selEdge) => selEdge.id === edge.id)
       );
-      selection.edges = selection.edges.filter(
-        (edge) =>
-          selection.nodes.some((node) => edge.source === node.id) &&
-          selection.nodes.some((node) => edge.target === node.id),
-      );
+    });
+    // Add these edges to the selection's edges
+    if (existingEdgesToCopy.length > 0) {
+      selection.edges = selection.edges.concat(existingEdgesToCopy);
+    }
+
+    // Enforce placement constraints (singleton + mutual exclusivity) on paste so
+    // they cannot be bypassed by copy/paste; surfacing the notice is the caller's job.
+    const placeable = filterPlaceableSelection(selection, get().nodes);
+    selection.nodes = placeable.nodes;
+    selection.edges = placeable.edges;
+    if (placeable.violations.length > 0) {
+      const messages: string[] = [];
+      if (placeable.violations.some((v) => v.reason === "singleton")) {
+        messages.push(i18n.t("flow.duplicateComponentsNotPasted"));
+      }
+      if (placeable.violations.some((v) => v.reason === "exclusivity")) {
+        messages.push(i18n.t("flow.exclusiveComponentsNotPasted"));
+      }
+      useAlertStore.getState().setNoticeData({ title: messages.join(" ") });
     }
 
     let minimumX = Infinity;
     let minimumY = Infinity;
-    let idsMap = {};
+    const idsMap = {};
     let newNodes: AllNodeType[] = get().nodes;
     let newEdges = get().edges;
     selection.nodes.forEach((node: Node) => {
@@ -426,9 +652,23 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     internalPostionDictionary[insidePosition.x] = insidePosition.y;
     get().setPositionDictionary(internalPostionDictionary);
 
+    const currentFlowId = useFlowsManagerStore.getState().currentFlowId;
+    const scopedGlobalVariables = currentFlowId
+      ? getSettledSuccessfulQueryData<GlobalVariable[]>(
+          queryClient,
+          getGlobalVariablesQueryKey({ flowId: currentFlowId }),
+        )
+      : undefined;
+    const scopedUnavailableFields = scopedGlobalVariables
+      ? getUnavailableFields(scopedGlobalVariables)
+      : undefined;
+    const scopedGlobalVariableEntries = scopedGlobalVariables?.map(
+      (variable) => variable.name,
+    );
+
     selection.nodes.forEach((node: AllNodeType) => {
       // Generate a unique node ID
-      let newId = getNodeId(node.data.type);
+      const newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
 
       // Create a new node object with the correct type
@@ -443,13 +683,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...cloneDeep(node.data),
           id: newId,
         },
+        // Preserve width and height for noteNodes (sticky notes)
+        ...(node.width !== undefined && { width: node.width }),
+        ...(node.height !== undefined && { height: node.height }),
       } as AllNodeType;
 
       updateGroupRecursion(
         newNode,
         selection.edges,
-        useGlobalVariablesStore.getState().unavailableFields,
-        useGlobalVariablesStore.getState().globalVariablesEntries,
+        scopedUnavailableFields,
+        scopedGlobalVariableEntries,
       );
 
       // Add the new node to the list of nodes in state
@@ -460,12 +703,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     get().setNodes(newNodes);
 
     selection.edges.forEach((edge: EdgeType) => {
-      let source = idsMap[edge.source];
-      let target = idsMap[edge.target];
+      const source = idsMap[edge.source];
+      const target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
         edge.sourceHandle!,
       );
-      let sourceHandle = scapedJSONStringfy({
+      const sourceHandle = scapedJSONStringfy({
         ...sourceHandleObject,
         id: source,
       });
@@ -474,7 +717,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!,
       );
-      let targetHandle = scapedJSONStringfy({
+      const targetHandle = scapedJSONStringfy({
         ...targetHandleObject,
         id: target,
       });
@@ -485,7 +728,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         targetHandle: targetHandleObject,
       };
 
-      let id = getHandleId(source, sourceHandle, target, targetHandle);
+      const id = getHandleId(source, sourceHandle, target, targetHandle);
       newEdges = addEdge(
         {
           source,
@@ -541,31 +784,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ getFilterEdge: newState });
   },
   getFilterEdge: [],
+  setFilterComponent: (newState) => {
+    set({ getFilterComponent: newState });
+  },
+  getFilterComponent: "",
+  rightClickedNodeId: null,
+  setRightClickedNodeId: (nodeId) => {
+    set({ rightClickedNodeId: nodeId });
+  },
   onConnect: (connection) => {
-    const dark = useDarkStore.getState().dark;
-    // const commonMarkerProps = {
-    //   type: MarkerType.ArrowClosed,
-    //   width: 20,
-    //   height: 20,
-    //   color: dark ? "#555555" : "#000000",
-    // };
+    const _dark = useDarkStore.getState().dark;
 
     // const inputTypes = INPUT_TYPES;
     // const outputTypes = OUTPUT_TYPES;
-
-    // const findNode = useFlowStore
-    //   .getState()
-    //   .nodes.find(
-    //     (node) => node.id === connection.source || node.id === connection.target
-    //   );
-
-    // const sourceType = findNode?.data?.type;
-    // let isIoIn = false;
-    // let isIoOut = false;
-    // if (sourceType) {
-    //   isIoIn = inputTypes.has(sourceType);
-    //   isIoOut = outputTypes.has(sourceType);
-    // }
 
     let newEdges: EdgeType[] = [];
     get().setEdges((oldEdges) => {
@@ -584,14 +815,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   unselectAll: () => {
-    let newNodes = cloneDeep(get().nodes);
+    const newNodes = cloneDeep(get().nodes);
     newNodes.forEach((node) => {
       node.selected = false;
-      let newEdges = cleanEdges(newNodes, get().edges);
-      set({
-        nodes: newNodes,
-        edges: newEdges,
-      });
+    });
+    const { edges: newEdges } = cleanEdges(newNodes, get().edges);
+    set({
+      nodes: newNodes,
+      edges: newEdges,
     });
   },
   pastBuildFlowParams: null,
@@ -631,238 +862,209 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
       buildInfo: null,
     });
-    const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
     set({ flowBuildStatus: {} });
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
-    const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
 
     const edges = get().edges;
-    let error = false;
     let errors: string[] = [];
-    for (const edge of edges) {
-      const errorsEdge = validateEdge(edge, get().nodes, edges);
+
+    // Only validate upstream nodes/edges if startNodeId is provided
+    let nodesToValidate = get().nodes;
+    let edgesToValidate = edges;
+    if (startNodeId) {
+      const downstream = getConnectedSubgraph(
+        startNodeId,
+        get().nodes,
+        edges,
+        "downstream",
+      );
+      nodesToValidate = downstream.nodes;
+      edgesToValidate = downstream.edges;
+    } else if (stopNodeId) {
+      get().setStopNodeId(stopNodeId);
+      const upstream = getConnectedSubgraph(
+        stopNodeId,
+        get().nodes,
+        edges,
+        "upstream",
+      );
+      nodesToValidate = upstream.nodes;
+      edgesToValidate = upstream.edges;
+    }
+    if (!stopNodeId) {
+      get().setStopNodeId(undefined);
+    }
+
+    for (const edge of edgesToValidate) {
+      const errorsEdge = validateEdge(edge, nodesToValidate, edgesToValidate);
       if (errorsEdge.length > 0) {
-        error = true;
         errors.push(errorsEdge.join("\n"));
-        useAlertStore.getState().addNotificationToHistory({
-          title: MISSED_ERROR_ALERT,
-          type: "error",
-          list: errorsEdge,
-        });
       }
     }
-    if (error) {
+    const errorsObjs = validateNodes(nodesToValidate, edges);
+
+    errors = errors.concat(errorsObjs.flatMap((obj) => obj.errors));
+    if (errors.length > 0) {
+      setErrorData({
+        title: i18n.t("errors.missedFields"),
+        list: errors,
+      });
+      const ids = errorsObjs.flatMap((obj) => obj.id);
+      get().updateBuildStatus(ids, BuildStatus.ERROR); // Set only the build status as error without adding info to the flow pool
+
       get().setIsBuilding(false);
-      get().setBuildInfo({ error: errors, success: false });
       throw new Error("Invalid components");
     }
 
-    function validateSubgraph(nodes: string[]) {
-      const errorsObjs = validateNodes(
-        get().nodes.filter((node) => nodes.includes(node.id)),
-        get().edges,
-      );
+    // Wait for any in-progress component updates (e.g. user clicked "Update"
+    // then immediately clicked "Run") before checking outdated state.
+    await waitForNodeUpdates();
 
-      const errors = errorsObjs.map((obj) => obj.errors).flat();
-      if (errors.length > 0) {
-        get().setBuildInfo({ error: errors, success: false });
-        useAlertStore.getState().addNotificationToHistory({
-          title: MISSED_ERROR_ALERT,
-          type: "error",
-          list: errors,
+    // Recalculate from current nodes (setNode does not run updateComponentsToUpdate).
+    // Unknown code-bearing types always block in restricted mode; known drift only blocks when
+    // the server-side trusted-code substitution policy is disabled.
+    get().updateComponentsToUpdate(get().nodes);
+    const {
+      allowCustomComponents,
+      substituteOutdatedComponentCode,
+      blockedComponentTypes,
+    } = useUtilityStore.getState();
+    // A missing template is the normal state of a user-authored custom
+    // component when those are allowed, so it only stops a run under
+    // restricted mode or when the policy names this component.
+    const stopsExecution = (component: { type?: string }) =>
+      blockedStopsExecution(
+        allowCustomComponents,
+        blockedComponentTypes,
+        component.type,
+      );
+    // A partial build only executes its own subgraph, so only that subgraph can
+    // block it. componentsToUpdate stays whole-flow for the update banner.
+    const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
+    const componentsToPreflight = get().componentsToUpdate.filter((component) =>
+      validatedNodeIds.has(component.id),
+    );
+    // A cold shareable Playground intentionally has no component-template registry, so it cannot
+    // distinguish a known server component from an unknown custom type. Its public endpoint owns
+    // that decision and sanitizes the stored graph before execution. Keep this client preflight
+    // for editor runs, where the template registry is loaded and its classification is reliable.
+    if (!get().playgroundPage && componentsToPreflight.length > 0) {
+      // A missing template blocks the run either way. Outdated components are
+      // only enforced in restricted mode, as before.
+      const blockedComponents = componentsToPreflight.filter(
+        (component) => component.blocked && stopsExecution(component),
+      );
+      const outdatedComponents =
+        substituteOutdatedComponentCode || allowCustomComponents
+          ? []
+          : componentsToPreflight.filter((component) => component.outdated);
+      const mustBlockBuild =
+        blockedComponents.length > 0 || outdatedComponents.length > 0;
+      if (mustBlockBuild) {
+        const errorList: string[] = [];
+
+        if (blockedComponents.length > 0) {
+          const names = blockedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ");
+          errorList.push(
+            allowCustomComponents
+              ? `The following components are no longer available in the approved catalog: ${names}`
+              : `The following custom components cannot run while custom components are disabled: ${names}`,
+          );
+        }
+
+        if (outdatedComponents.length > 0) {
+          errorList.push(
+            `The following components are outdated and must be updated: ${outdatedComponents
+              .map((component) => component.display_name ?? component.id)
+              .join(", ")}`,
+          );
+        }
+
+        const blockedTitle = allowCustomComponents
+          ? "Components disabled by an administrator must be removed before building"
+          : "Custom components are blocked while custom components are disabled";
+
+        setErrorData({
+          title:
+            blockedComponents.length > 0
+              ? blockedTitle
+              : "Outdated components must be updated before building",
+          list: errorList,
         });
         get().setIsBuilding(false);
-        const ids = errorsObjs.map((obj) => obj.id).flat();
-
-        get().updateBuildStatus(ids, BuildStatus.ERROR);
-        throw new Error("Invalid components");
+        throw new Error(
+          blockedComponents.length > 0
+            ? blockedTitle
+            : "Outdated components must be updated",
+        );
       }
-      // get().updateEdgesRunningByNodes(nodes, true);
     }
-    function handleBuildUpdate(
-      vertexBuildData: VertexBuildTypeAPI,
-      status: BuildStatus,
-      runId: string,
-    ) {
-      if (vertexBuildData && vertexBuildData.inactivated_vertices) {
-        get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
-        if (vertexBuildData.inactivated_vertices.length > 0) {
-          get().updateBuildStatus(
-            vertexBuildData.inactivated_vertices,
-            BuildStatus.INACTIVE,
-          );
-        }
-      }
 
-      if (vertexBuildData.next_vertices_ids) {
-        // next_vertices_ids is a list of vertices that are going to be built next
-        // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
-        // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
-        // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
+    // One AbortController per build so stopBuilding cancels only the in-flight run;
+    // the signal reaches runFlowAGUI so Stop aborts the actual SSE request.
+    const buildController = new AbortController();
+    get().setBuildController(buildController);
 
-        // const nextVertices will be the zip of vertexBuildData.next_vertices_ids and
-        // vertexBuildData.top_level_vertices
-        // the VertexLayerElementType as {id: next_vertices_id, layer: top_level_vertex}
-
-        // next_vertices_ids should be next_vertices_ids without the inactivated vertices
-        const next_vertices_ids = vertexBuildData.next_vertices_ids.filter(
-          (id) => !vertexBuildData.inactivated_vertices?.includes(id),
-        );
-        const top_level_vertices = vertexBuildData.top_level_vertices.filter(
-          (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
-        );
-        let nextVertices: VertexLayerElementType[] = zip(
-          next_vertices_ids,
-          top_level_vertices,
-        ).map(([id, reference]) => ({ id: id!, reference }));
-
-        // Now we filter nextVertices to remove any vertices that are in verticesLayers
-        // because they are already being built
-        // each layer is a list of vertexlayerelementtypes
-        let lastLayer =
-          get().verticesBuild!.verticesLayers[
-            get().verticesBuild!.verticesLayers.length - 1
-          ];
-
-        nextVertices = nextVertices.filter(
-          (vertexElement) =>
-            !lastLayer.some(
-              (layerElement) =>
-                layerElement.id === vertexElement.id &&
-                layerElement.reference === vertexElement.reference,
-            ),
-        );
-        const newLayers = [
-          ...get().verticesBuild!.verticesLayers,
-          nextVertices,
-        ];
-        const newIds = [
-          ...get().verticesBuild!.verticesIds,
-          ...next_vertices_ids,
-        ];
-        if (
-          ENABLE_DATASTAX_LANGFLOW &&
-          vertexBuildData?.id?.includes("AstraDB")
-        ) {
-          const search_results: LogsLogType[] = Object.values(
-            vertexBuildData?.data?.logs?.search_results,
-          );
-          search_results.forEach((log) => {
-            if (
-              log.message.includes("Adding") &&
-              log.message.includes("documents") &&
-              log.message.includes("Vector Store")
-            ) {
-              trackDataLoaded(
-                get().currentFlow?.id,
-                get().currentFlow?.name,
-                "AstraDB Vector Store",
-                vertexBuildData?.id,
-              );
-            }
-          });
-        }
-        get().updateVerticesBuild({
-          verticesIds: newIds,
-          verticesLayers: newLayers,
-          runId: runId,
-          verticesToRun: get().verticesBuild!.verticesToRun,
-        });
-
-        get().updateBuildStatus(top_level_vertices, BuildStatus.TO_BUILD);
-      }
-
-      get().addDataToFlowPool(
-        { ...vertexBuildData, run_id: runId },
-        vertexBuildData.id,
+    // Playground runs are namespaced by visitor id so unsaved tweaks run as the user sees them.
+    let buildingFlowId = currentFlow!.id;
+    if (get().playgroundPage) {
+      const authState = useAuthStore.getState();
+      const authenticatedVisitorId =
+        authState.isAuthenticated && authState.autoLogin === false
+          ? authState.userData?.id
+          : undefined;
+      const visitorId =
+        authenticatedVisitorId ?? useUtilityStore.getState().clientId;
+      const principalType = authenticatedVisitorId ? "user" : "client";
+      buildingFlowId = uuidv5(
+        `${principalType}:${visitorId}_${currentFlow!.id}`,
+        uuidv5.DNS,
       );
-      if (status !== BuildStatus.ERROR) {
-        get().updateBuildStatus([vertexBuildData.id], status);
-      }
     }
-    await buildFlowVerticesWithFallback({
-      session,
-      input_value,
-      files,
+    get().setBuildingSession(buildingFlowId, session ?? null);
+
+    // Only the durable background path supports a mid-run pause/resume.
+    const runArgs = {
       flowId: currentFlow!.id,
-      startNodeId,
-      stopNodeId,
-      onGetOrderSuccess: () => {},
-      onBuildComplete: (allNodesValid) => {
-        const nodeId = startNodeId || stopNodeId;
-        if (!silent) {
-          if (allNodesValid) {
-            get().setBuildInfo({ success: true });
-          }
-        }
-        get().updateEdgesRunningByNodes(
-          get().nodes.map((n) => n.id),
-          false,
-        );
-        get().setIsBuilding(false);
-        trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
-          flowId: get().currentFlow?.id,
-        });
-      },
-      onBuildUpdate: handleBuildUpdate,
-      onBuildError: (title: string, list: string[], elementList) => {
-        const idList =
-          (elementList
-            ?.map((element) => element.id)
-            .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate.length > 0)
-          setErrorData({
-            title:
-              "There are outdated components in the flow. The error could be related to them.",
-          });
-        get().updateEdgesRunningByNodes(
-          get().nodes.map((n) => n.id),
-          false,
-        );
-        get().setBuildInfo({ error: list, success: false });
-        useAlertStore.getState().addNotificationToHistory({
-          title: title,
-          type: "error",
-          list: list,
-        });
-        get().setIsBuilding(false);
-        get().buildController.abort();
-        trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
-          flowId: get().currentFlow?.id,
-          error: list,
-        });
-      },
-      onBuildStart: (elementList) => {
-        const idList = elementList
-          // reference is the id of the vertex or the id of the parent in a group node
-          .map((element) => element.reference)
-          .filter(Boolean) as string[];
-        get().updateBuildStatus(idList, BuildStatus.BUILDING);
-
-        const edges = get().edges;
-        const newEdges = edges.map((edge) => {
-          if (
-            edge.data?.targetHandle &&
-            idList.includes(edge.data.targetHandle.id ?? "")
-          ) {
-            edge.className = "ran";
-          }
-          return edge;
-        });
-        set({ edges: newEdges });
-      },
-      onValidateNodes: validateSubgraph,
-      nodes: get().nodes || undefined,
-      edges: get().edges || undefined,
-      logBuilds: get().onFlowPage,
-      playgroundPage,
-      eventDelivery,
+      message: input_value,
+      threadId: session,
+      startComponentId: startNodeId,
+      stopComponentId: stopNodeId,
+      flowData: { nodes: get().nodes, edges: get().edges },
+      files,
+      signal: buildController.signal,
+      silent,
+    };
+    const canSuspend = get().nodes.some((node) => {
+      if (node.data?.type === "HumanInput") return true;
+      const rows = node.data?.node?.template?.tools_metadata?.value;
+      return (
+        Array.isArray(rows) &&
+        rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
+      );
     });
-    get().setIsBuilding(false);
-    get().revertBuiltStatusFromBuilding();
+    await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
+
+    // Invalidate KB caches so a KnowledgeIngestion run surfaces updated stats on the
+    // next read; cheap when no subscribers are mounted (queries refetch only if read).
+    queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBaseChunks"] });
+
+    // Mirror v1 build analytics: every attempt logs success/error. runFlowAGUI always
+    // resolves and writes failures into buildInfo; a null buildInfo counts as success.
+    const finalBuildInfo = get().buildInfo;
+    const hasError = finalBuildInfo?.success === false;
+    trackFlowBuild(currentFlow?.name ?? "Unknown", hasError, {
+      flowId: currentFlow?.id,
+      ...(hasError && finalBuildInfo?.error
+        ? { error: finalBuildInfo.error }
+        : {}),
+    });
   },
   getFlow: () => {
     return {
@@ -873,10 +1075,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
+
     const newEdges = edges.map((edge) => {
       if (
         edge.data?.sourceHandle &&
-        ids.includes(edge.data.sourceHandle.id ?? "")
+        ids.includes(edge.data.sourceHandle.id ?? "") &&
+        edge.data.sourceHandle.id !== get().stopNodeId
       ) {
         edge.animated = running;
         edge.className = running ? "running" : "";
@@ -900,7 +1104,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       resolve();
     });
   },
+  clearAndSetEdgesRunning: (nextIds?: string[]) => {
+    const edges = get().edges;
+    const stopNodeId = get().stopNodeId;
+    const nextIdSet = nextIds ? new Set(nextIds) : null;
 
+    const newEdges = edges.map((edge) => {
+      const sourceId = edge.data?.sourceHandle?.id ?? "";
+      if (nextIdSet && nextIdSet.has(sourceId) && sourceId !== stopNodeId) {
+        return { ...edge, animated: true, className: "running" };
+      }
+      return { ...edge, animated: false, className: "" };
+    });
+    set({ edges: newEdges });
+  },
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
@@ -1015,6 +1232,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       isPending: true,
       positionDictionary: {},
       componentsToUpdate: [],
+      rightClickedNodeId: null,
     });
   },
   dismissedNodes: [],
@@ -1038,6 +1256,196 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ dismissedNodes: newDismissedNodes });
   },
+  dismissedNodesLegacy: [],
+  addDismissedNodesLegacy: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodesLegacy, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_legacy_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodesLegacy: newDismissedNodes });
+  },
+  helperLineEnabled: false,
+  setHelperLineEnabled: (helperLineEnabled: boolean) => {
+    set({ helperLineEnabled });
+  },
+  inspectionPanelVisible: ENABLE_INSPECTION_PANEL
+    ? localStorage.getItem("inspectionPanelVisible") === "true"
+    : false,
+  setInspectionPanelVisible: (visible: boolean) => {
+    if (!ENABLE_INSPECTION_PANEL) return;
+    localStorage.setItem("inspectionPanelVisible", String(visible));
+    set({ inspectionPanelVisible: visible });
+  },
+  setNewChatOnPlayground: (newChat: boolean) => {
+    set({ newChatOnPlayground: newChat });
+  },
+  newChatOnPlayground: false,
+  stopNodeId: undefined,
+  setStopNodeId: (nodeId: string | undefined) => {
+    set({ stopNodeId: nodeId });
+  },
 }));
+
+export function recomputeComponentsToUpdateIfNeeded(): void {
+  const { nodes, updateComponentsToUpdate } = useFlowStore.getState();
+  if (nodes.length > 0) {
+    updateComponentsToUpdate(nodes);
+  }
+}
+
+/** Normalize a component key: strip spaces, lowercase. Mirrors backend normalize_component_key(). */
+function normalizeComponentKey(name: string): string {
+  return name.replace(/\s+/g, "").toLowerCase();
+}
+
+export function syncNodeTranslations(): void {
+  const { nodes } = useFlowStore.getState();
+  if (nodes.length === 0) return;
+
+  const {
+    data: typesData,
+    types,
+    templates,
+    componentDisplayNames,
+  } = useTypesStore.getState();
+
+  // Build normalized lookup: normalize(registryKey) → registryKey
+  // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
+  const normalizedToRegistryKey: Record<string, string> = {};
+  for (const category of Object.values(typesData)) {
+    for (const registryKey of Object.keys(
+      category as Record<string, unknown>,
+    )) {
+      normalizedToRegistryKey[normalizeComponentKey(registryKey)] = registryKey;
+    }
+  }
+
+  let _noteIndex = 0;
+  const updatedNodes = nodes.map((node) => {
+    const nodeType = node.data.type;
+
+    // Skip note nodes — translations are handled by useGetNoteTranslationsQuery
+    if (node.type === "noteNode") {
+      _noteIndex += 1;
+      return node;
+    }
+
+    // Resolve category: try exact match first, then normalized match
+    const category =
+      types[nodeType] ??
+      types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
+
+    // Resolve registry key: exact match first, then normalized match
+    const registryKey =
+      typesData[category]?.[nodeType] !== undefined
+        ? nodeType
+        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ??
+          nodeType);
+
+    // Resolve definition: normal path first, then templates which has legacy aliases
+    // pre-resolved (e.g. "Prompt" -> Prompt Template, "parser" -> ParserComponent).
+    const freshDef =
+      category && typesData[category]?.[registryKey]
+        ? typesData[category][registryKey]
+        : templates[nodeType];
+
+    if (!freshDef) return node;
+
+    // display_name/description are translated only when the saved value is a known
+    // default in the translations set for this type; user-customized values stay.
+    const normKey = normalizeComponentKey(nodeType);
+    const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
+    const knownDescs = componentDisplayNames[normKey]?.description ?? [];
+    const shouldTranslateName = knownNames.includes(
+      node.data.node!.display_name,
+    );
+    const shouldTranslateDesc = knownDescs.includes(
+      node.data.node!.description,
+    );
+
+    // Update field display_names/info/placeholders only when the saved value matches
+    // a known locale translation; anything else is user-customized and kept as-is.
+    const updatedTemplate = { ...node.data.node!.template };
+    const knownFields = componentDisplayNames[normKey]?.fields ?? {};
+    for (const fieldName of Object.keys(updatedTemplate)) {
+      const freshField = freshDef.template?.[fieldName];
+      if (freshField?.display_name !== undefined) {
+        const currentDisplayName = updatedTemplate[fieldName]?.display_name;
+        const knownFieldDisplayNames =
+          knownFields[fieldName]?.display_name ?? [];
+        const isKnownTranslation =
+          knownFieldDisplayNames.length === 0 ||
+          knownFieldDisplayNames.includes(currentDisplayName!);
+        if (isKnownTranslation) {
+          updatedTemplate[fieldName] = {
+            ...updatedTemplate[fieldName],
+            display_name: freshField.display_name,
+            ...(freshField.info !== undefined && { info: freshField.info }),
+            ...(freshField.placeholder !== undefined && {
+              placeholder: freshField.placeholder,
+            }),
+          };
+        }
+      }
+    }
+
+    // Update output display_names and info
+    const updatedOutputs = node.data.node!.outputs?.map((output, i) => {
+      const freshOut = freshDef.outputs?.[i];
+      return freshOut
+        ? {
+            ...output,
+            ...(freshOut.display_name !== undefined && {
+              display_name: freshOut.display_name,
+            }),
+            ...(freshOut.info !== undefined && { info: freshOut.info }),
+          }
+        : output;
+    });
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: {
+          ...node.data.node!,
+          ...(shouldTranslateName && { display_name: freshDef.display_name }),
+          ...(shouldTranslateDesc && { description: freshDef.description }),
+          template: updatedTemplate,
+          ...(updatedOutputs && { outputs: updatedOutputs }),
+        },
+      },
+    };
+  });
+
+  useFlowStore.setState({ nodes: updatedNodes });
+}
+
+/**
+ * Apply translated note node descriptions to the canvas.
+ * Called from NoteNode when note_translations endpoint data arrives.
+ * translations is a map of node_id → translated markdown text.
+ */
+export function syncNoteTranslations(
+  translations: Record<string, string>,
+): void {
+  const { nodes } = useFlowStore.getState();
+  const updatedNodes = nodes.map((node) => {
+    if (node.type !== "noteNode") return node;
+    const translated = translations[node.id];
+    if (!translated) return node;
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: { ...node.data.node!, description: translated },
+      },
+    };
+  });
+  useFlowStore.setState({ nodes: updatedNodes });
+}
 
 export default useFlowStore;

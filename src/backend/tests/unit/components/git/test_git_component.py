@@ -2,7 +2,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from langflow.components.git import GitLoaderComponent
+
+pytest.importorskip("lfx_bundles")
+
+from lfx.components.git import GitLoaderComponent
 
 
 @pytest.fixture

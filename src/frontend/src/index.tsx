@@ -1,4 +1,6 @@
+import "./i18n";
 import ReactDOM from "react-dom/client";
+import { detectedLang, loadLanguage } from "./i18n";
 import reportWebVitals from "./reportWebVitals";
 
 import "./style/classes.css";
@@ -11,9 +13,10 @@ import "./style/applies.css";
 // @ts-ignore
 import App from "./customization/custom-App";
 
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement,
-);
-
-root.render(<App />);
-reportWebVitals();
+loadLanguage(detectedLang).then(() => {
+  const root = ReactDOM.createRoot(
+    document.getElementById("root") as HTMLElement,
+  );
+  root.render(<App />);
+  reportWebVitals();
+});

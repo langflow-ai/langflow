@@ -1,0 +1,60 @@
+---
+title: Milvus
+slug: /bundles-milvus
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Milvus** bundle.
+
+## Milvus vector store
+
+The **Milvus** component reads and writes to Milvus vector stores using an instance of `Milvus` vector store.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Milvus vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Milvus documentation](https://milvus.io/docs) or inspect [component code](/concepts-components#component-code).
+
+| Name                    | Type          | Description                                      |
+|-------------------------|---------------|--------------------------------------------------|
+| collection_name          | String        | Input parameter. Name of the Milvus collection.                   |
+| collection_description   | String        | Input parameter. Description of the Milvus collection.            |
+| uri                      | String        | Input parameter. Connection URI for Milvus.                       |
+| password                 | SecretString  | Input parameter. Password for Milvus.                             |
+| username                 | SecretString  | Input parameter. Username for Milvus.                             |
+| batch_size               | Integer       | Input parameter. Number of data to process in a single batch.     |
+| search_query             | String        | Input parameter. Query for similarity search.                     |
+| ingest_data              | Data          | Input parameter. Data to be ingested into the vector store.       |
+| embedding                | Embeddings    | Input parameter. Embedding function to use.                       |
+| number_of_results        | Integer       | Input parameter. Number of results to return in search.           |
+| search_type              | String        | Input parameter. Type of search to perform.                       |
+| search_score_threshold   | Float         | Input parameter. Minimum similarity score for search results.     |
+| search_filter            | Dict          | Input parameter. Metadata filters for search query.               |
+| setup_mode               | String        | Input parameter. Configuration mode for setting up the vector store. |
+| vector_dimensions        | Integer       | Input parameter. Number of dimensions of the vectors.             |
+| pre_delete_collection    | Boolean       | Input parameter. Whether to delete the collection before creating a new one. |

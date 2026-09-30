@@ -1,0 +1,412 @@
+"""Storage-aware file utilities for components.
+
+This module provides utilities that work with both local files and remote files
+stored in the storage service.
+
+TODO: Can abstract these into the storage service interface and update
+implementations.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from lfx.services.deps import get_settings_service, get_storage_service
+from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.file_path_security import enforce_local_file_access
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from lfx.services.storage.service import StorageService
+
+# Constants for path parsing
+EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
+
+
+class StorageServiceUnavailableError(RuntimeError):
+    """An object-storage read was requested, but no storage service is registered.
+
+    ``get_storage_service`` returns ``None`` whenever no ``StorageServiceFactory`` is
+    registered -- only ``langflow`` registers one, so a standalone ``lfx run`` / ``lfx serve``
+    never has one -- and ``lfx.services.deps.get_service`` also degrades to ``None`` when
+    resolution fails. The S3 branches in this module have no local file to fall back to, so
+    unlike ``ParameterHandler._resolve_storage_key`` they cannot keep going; they fail. This
+    type is what that failure looks like, instead of the ``AttributeError: 'NoneType' object
+    has no attribute 'get_file'`` that whichever attribute happened to be touched first would
+    otherwise raise.
+
+    It subclasses ``RuntimeError`` rather than ``ValueError``/``FileNotFoundError`` on
+    purpose: ``file_exists`` swallows those two, and a storage backend that was never
+    configured must not be reported to callers as a file that does not exist.
+    """
+
+
+def require_storage_service(storage_service: StorageService | None) -> StorageService:
+    """Return ``storage_service``, or raise if object storage is configured but unavailable."""
+    if storage_service is None:
+        msg = (
+            "storage_type is 's3' but no storage service is registered. Object storage is "
+            "provided by the langflow package; a standalone lfx run only supports "
+            "storage_type='local'."
+        )
+        raise StorageServiceUnavailableError(msg)
+    return storage_service
+
+
+def _is_existing_local_file(file_path: str) -> bool:
+    """Return True when file_path is an absolute path to a real local file.
+
+    Under S3 storage some callers still hand us genuine local paths (e.g. the
+    Langflow Assistant injects the installed lfx components dir into a Directory
+    node). A real local file is never an S3 key, so it must be read from disk
+    instead of being parsed as "flow_id/filename". See issue #13798.
+
+    The check is restricted to ABSOLUTE paths on purpose: S3 keys are always
+    relative ("flow_id/filename"), so requiring an absolute path makes it
+    impossible to mistake a relative S3 key for a same-named file that happens
+    to exist relative to the process CWD.
+    """
+    try:
+        path_obj = Path(file_path)
+        return path_obj.is_absolute() and path_obj.is_file()
+    except OSError:
+        return False
+
+
+def _confine_local_read(file_path: str, resolve_path: Callable[[str], str] | None = None) -> str:
+    """Apply local-file containment to the S3 branch's real-local-file short-circuit.
+
+    ``_is_existing_local_file`` is a deliberate escape hatch (#13798), but it must not become a
+    way to read server files that ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` blocks on local
+    storage. The restriction is documented as a property of the built-in file-reading
+    components, not of the storage backend, so it has to hold on both branches.
+
+    When the caller supplies ``resolve_path`` (components pass a closure that runs
+    ``enforce_local_file_access`` with the authenticated user/flow scope) that resolver is
+    authoritative and full tenant isolation applies. Callers with no scope to offer fall back to
+    the storage-root floor: the path must stay under ``config_dir`` and must not be one of the
+    server-managed secret/key/DB files. Both are no-ops when the restriction is disabled, so the
+    default (unrestricted) #13798 behavior is unchanged.
+    """
+    if resolve_path is not None:
+        return resolve_path(file_path)
+    return str(enforce_local_file_access(file_path, allow_storage_root=True))
+
+
+def parse_storage_path(path: str) -> tuple[str, str] | None:
+    """Parse a storage service path into flow_id and filename.
+
+    Storage service paths follow the format: flow_id/filename
+    This should only be called when storage_type == "s3".
+
+    Args:
+        path: The storage service path in format "flow_id/filename"
+
+    Returns:
+        tuple[str, str] | None: (flow_id, filename) or None if invalid format
+    """
+    if not path or "/" not in path:
+        return None
+
+    parts = path.split("/", 1)
+    if len(parts) != EXPECTED_PATH_PARTS or not parts[0] or not parts[1]:
+        return None
+
+    return parts[0], parts[1]
+
+
+def to_storage_path(file_path: str) -> str:
+    """Convert a storage backend key into the "flow_id/filename" form the helpers here expect.
+
+    ``StorageService.build_full_path`` returns backend keys (on S3 they carry the ``files/``
+    prefix), while ``parse_storage_path`` splits on the first slash and would read the prefix
+    as the flow_id. Local paths are returned unchanged.
+
+    Raises:
+        ValueError: under S3, if the path is absolute. A storage key never is, and passing one
+            on would reach the local-file escape hatch in ``get_file_size`` / ``read_file_bytes``.
+        StorageServiceUnavailableError: under S3, if no storage service is registered.
+    """
+    if get_settings_service().settings.storage_type != "s3":
+        return file_path
+
+    flow_id, file_name = require_storage_service(get_storage_service()).parse_file_path(file_path)
+    storage_path = f"{flow_id}/{file_name}"
+    if Path(storage_path).is_absolute():
+        msg = f"Not a storage key: {file_path}"
+        raise ValueError(msg)
+    return storage_path
+
+
+async def read_file_bytes(
+    file_path: str,
+    storage_service: StorageService | None = None,
+    resolve_path: Callable[[str], str] | None = None,
+) -> bytes:
+    """Read file bytes from either storage service or local filesystem.
+
+    Args:
+        file_path: Path to the file (S3 key format "flow_id/filename" or local path)
+        storage_service: Optional storage service instance (will get from deps if not provided)
+        resolve_path: Optional function that resolves and confines a local path (components
+                     pass a closure around ``enforce_local_file_access``). Used for local
+                     storage, and for the S3 branch's real-local-file short-circuit.
+
+    Returns:
+        bytes: The file content
+
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        StorageServiceUnavailableError: under S3, if no storage service is registered
+    """
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "s3":
+        if _is_existing_local_file(file_path):
+            return Path(_confine_local_read(file_path, resolve_path)).read_bytes()
+
+        parsed = parse_storage_path(file_path)
+        if not parsed:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        if storage_service is None:
+            storage_service = require_storage_service(get_storage_service())
+
+        flow_id, filename = parsed
+        return await storage_service.get_file(flow_id, filename)
+
+    # For local storage, resolve path if resolver provided
+    if resolve_path:
+        file_path = resolve_path(file_path)
+
+    path_obj = Path(file_path)
+    if not path_obj.exists():
+        msg = f"File not found: {file_path}"
+        raise FileNotFoundError(msg)
+
+    return path_obj.read_bytes()
+
+
+async def read_file_text(
+    file_path: str,
+    encoding: str = "utf-8",
+    storage_service: StorageService | None = None,
+    resolve_path: Callable[[str], str] | None = None,
+    newline: str | None = None,
+) -> str:
+    r"""Read file text from either storage service or local filesystem.
+
+    Args:
+        file_path: Path to the file (storage service path or local path)
+        encoding: Text encoding to use
+        storage_service: Optional storage service instance
+        resolve_path: Optional function that resolves and confines a local path (components
+                     pass a closure around ``enforce_local_file_access``). Used for local
+                     storage, and for the S3 branch's real-local-file short-circuit.
+        newline: Newline mode (None for default, "" for universal newlines like CSV).
+                 When set to "", normalizes all line endings to \\n for consistency.
+
+    Returns:
+        str: The file content as text
+
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+    """
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "s3":
+        content = await read_file_bytes(file_path, storage_service, resolve_path)
+        text = content.decode(encoding)
+        # Normalize newlines for S3 when newline="" is specified (universal newline mode)
+        if newline == "":
+            # Convert all line endings to \n (matches Python's universal newline mode)
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
+        return text
+    # For local storage, resolve path if resolver provided
+    if resolve_path:
+        file_path = resolve_path(file_path)
+
+    path_obj = Path(file_path)
+    if newline is not None:
+        with path_obj.open(newline=newline, encoding=encoding) as f:  # noqa: ASYNC230
+            return f.read()
+    return path_obj.read_text(encoding=encoding)
+
+
+def get_file_size(file_path: str, storage_service: StorageService | None = None) -> int:
+    """Get file size from either storage service or local filesystem.
+
+    Note: This is a sync wrapper - for async code, use the storage service directly.
+
+    Args:
+        file_path: Path to the file (S3 key format "flow_id/filename" or absolute local path)
+        storage_service: Optional storage service instance
+
+    Returns:
+        int: File size in bytes
+
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        StorageServiceUnavailableError: under S3, if no storage service is registered
+    """
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "s3":
+        if _is_existing_local_file(file_path):
+            # Same containment floor as ``read_file_bytes``: without it this is a size/existence
+            # oracle (via ``file_exists``) for any server file under restriction.
+            return Path(_confine_local_read(file_path)).stat().st_size
+
+        parsed = parse_storage_path(file_path)
+        if not parsed:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        if storage_service is None:
+            storage_service = require_storage_service(get_storage_service())
+
+        flow_id, filename = parsed
+        return run_until_complete(storage_service.get_file_size(flow_id, filename))
+
+    # Local file system
+    path_obj = Path(file_path)
+    if not path_obj.exists():
+        msg = f"File not found: {file_path}"
+        raise FileNotFoundError(msg)
+
+    return path_obj.stat().st_size
+
+
+def file_exists(file_path: str, storage_service: StorageService | None = None) -> bool:
+    """Check if a file exists in either storage service or local filesystem.
+
+    Args:
+        file_path: Path to the file (S3 key format "flow_id/filename" or absolute local path)
+        storage_service: Optional storage service instance
+
+    Returns:
+        bool: True if the file exists
+
+    Raises:
+        StorageServiceUnavailableError: under S3, if no storage service is registered. Only
+            "this file is not there" is answered with ``False``; a backend that was never
+            configured is a deployment fault and must not be reported as an absent file.
+    """
+    try:
+        get_file_size(file_path, storage_service)
+    except (FileNotFoundError, ValueError):
+        return False
+    else:
+        return True
+
+
+# Magic bytes signatures for common image formats
+MIN_IMAGE_HEADER_SIZE = 12  # Minimum bytes needed to detect image type
+
+IMAGE_SIGNATURES: dict[str, list[tuple[bytes, int]]] = {
+    "jpeg": [(b"\xff\xd8\xff", 0)],
+    "jpg": [(b"\xff\xd8\xff", 0)],
+    "png": [(b"\x89PNG\r\n\x1a\n", 0)],
+    "gif": [(b"GIF87a", 0), (b"GIF89a", 0)],
+    "webp": [(b"RIFF", 0)],  # WebP starts with RIFF, then has WEBP at offset 8
+    "bmp": [(b"BM", 0)],
+    "tiff": [(b"II*\x00", 0), (b"MM\x00*", 0)],  # Little-endian and big-endian TIFF
+}
+
+
+def detect_image_type_from_bytes(content: bytes) -> str | None:
+    """Detect the actual image type from file content using magic bytes.
+
+    Args:
+        content: The file content bytes (at least first 12 bytes needed)
+
+    Returns:
+        str | None: The detected image type (e.g., "jpeg", "png") or None if not recognized
+    """
+    if len(content) < MIN_IMAGE_HEADER_SIZE:
+        return None
+
+    # Check WebP specifically (needs to check both RIFF and WEBP)
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "webp"
+
+    # Check other image signatures
+    for image_type, signatures in IMAGE_SIGNATURES.items():
+        if image_type == "webp":
+            continue  # Already handled above
+        for signature, offset in signatures:
+            if content[offset : offset + len(signature)] == signature:
+                return image_type
+
+    return None
+
+
+def validate_image_content_type(
+    file_path: str,
+    content: bytes | None = None,
+    storage_service: StorageService | None = None,
+    resolve_path: Callable[[str], str] | None = None,
+) -> tuple[bool, str | None]:
+    """Validate that an image file's content matches its declared extension.
+
+    This prevents errors like "Image does not match the provided media type image/png"
+    when a JPEG file is saved with a .png extension.
+
+    Only rejects files when we can definitively detect a mismatch. Files with
+    unrecognized content are allowed through (they may fail later, but that's
+    better than false positives blocking valid files).
+
+    Args:
+        file_path: Path to the image file
+        content: Optional pre-read file content bytes. If not provided, will read from file.
+        storage_service: Optional storage service instance for S3 files
+        resolve_path: Optional function to resolve relative paths
+
+    Returns:
+        tuple[bool, str | None]: (is_valid, error_message)
+            - (True, None) if the content matches the extension, is unrecognized, or file is not an image
+            - (False, error_message) if there's a definite mismatch
+    """
+    # Get the file extension
+    path_obj = Path(file_path)
+    extension = path_obj.suffix[1:].lower() if path_obj.suffix else ""
+
+    # Only validate image files
+    image_extensions = {"jpeg", "jpg", "png", "gif", "webp", "bmp", "tiff"}
+    if extension not in image_extensions:
+        return True, None
+
+    # Read content if not provided
+    if content is None:
+        try:
+            content = run_until_complete(read_file_bytes(file_path, storage_service, resolve_path))
+        except (FileNotFoundError, ValueError):
+            # Can't read file - let it pass, will fail later with better error
+            return True, None
+
+    # Detect actual image type
+    detected_type = detect_image_type_from_bytes(content)
+
+    # If we can't detect the type, the file is not a valid image
+    if detected_type is None:
+        return False, (
+            f"File '{path_obj.name}' has extension '.{extension}' but its content "
+            f"is not a valid image format. The file may be corrupted, empty, or not a real image."
+        )
+
+    # Normalize extensions for comparison (jpg == jpeg, tif == tiff)
+    extension_normalized = "jpeg" if extension == "jpg" else extension
+    detected_normalized = "jpeg" if detected_type == "jpg" else detected_type
+
+    if extension_normalized != detected_normalized:
+        return False, (
+            f"File '{path_obj.name}' has extension '.{extension}' but contains "
+            f"'{detected_type.upper()}' image data. This mismatch will cause API errors. "
+            f"Please rename the file with the correct extension '.{detected_type}' or "
+            f"re-save it in the correct format."
+        )
+
+    return True, None

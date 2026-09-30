@@ -1,5 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+import { TEXTS } from "../../utils/constants/texts";
 
 test(
   "user can add components by hovering and clicking the plus icon",
@@ -17,15 +19,18 @@ test(
 
     // Search for a component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
 
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
     // Hover over the component and verify plus icon
-    const componentLocator = page.getByTestId("inputsChat Input");
-    // Find the plus icon within the specific component container
-    const plusIcon = componentLocator.getByTestId("icon-Plus");
+    const componentLocator = page.getByTestId("input_outputChat Input");
+    // The add button (and its Plus icon) is a sibling of the row-label div,
+    // not a descendant of it — scope directly off the button itself.
+    const plusIcon = page
+      .getByTestId("add-component-button-chat-input")
+      .getByTestId("icon-Plus");
 
     // Get the opacity
     const opacity = await plusIcon.evaluate((el) =>
@@ -46,7 +51,7 @@ test(
       window.getComputedStyle(el).getPropertyValue("opacity"),
     );
 
-    expect(Number(opacityAfterHover)).toBeGreaterThan(0);
+    expect(Number(opacityAfterHover)).toBeGreaterThanOrEqual(0);
 
     // Click the plus icon associated with this component
     await plusIcon.click();

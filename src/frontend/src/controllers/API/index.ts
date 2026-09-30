@@ -1,17 +1,17 @@
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import {
   customGetAppVersions,
   customGetLatestVersion,
 } from "@/customization/utils/custom-get-app-latest-version";
-import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { BASE_URL_API } from "../../constants/constants";
+import { getBaseUrl } from "@/customization/utils/urls";
 import { api } from "../../controllers/API/api";
-import {
+import type {
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
 } from "../../types/api/index";
-import { FlowStyleType, FlowType } from "../../types/flow";
-import { StoreComponentResponse } from "../../types/store";
+import type { FlowStyleType, FlowType } from "../../types/flow";
+import type { StoreComponentResponse } from "../../types/store";
 
 const GITHUB_API_URL = "https://api.github.com";
 const DISCORD_API_URL =
@@ -19,7 +19,9 @@ const DISCORD_API_URL =
 
 export async function getRepoStars(owner: string, repo: string) {
   try {
-    const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
+    const response = await axios.get(
+      `${GITHUB_API_URL}/repos/${owner}/${repo}`,
+    );
     return response?.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -29,7 +31,7 @@ export async function getRepoStars(owner: string, repo: string) {
 
 export async function getDiscordCount() {
   try {
-    const response = await api.get(DISCORD_API_URL);
+    const response = await axios.get(DISCORD_API_URL);
     return response?.data.approximate_member_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -40,9 +42,13 @@ export async function getDiscordCount() {
 export const getAppVersions = customGetAppVersions;
 export const getLatestVersion = customGetLatestVersion;
 
-export async function createApiKey(name: string) {
+export async function createApiKey(name: string, expiresAt?: string | null) {
   try {
-    const res = await api.post(`${BASE_URL_API}api_key/`, { name });
+    const payload: { name: string; expires_at?: string } = { name };
+    if (expiresAt) {
+      payload.expires_at = expiresAt;
+    }
+    const res = await api.post(`${getBaseUrl()}api_key/`, payload);
     if (res.status === 200) {
       return res.data;
     }
@@ -72,7 +78,7 @@ export async function saveFlowStore(
   publicFlow = false,
 ): Promise<FlowType> {
   try {
-    const response = await api.post(`${BASE_URL_API}store/components/`, {
+    const response = await api.post(`${getBaseUrl()}store/components/`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
@@ -120,8 +126,8 @@ export async function getStoreComponents({
   fields?: Array<string> | null;
 }): Promise<StoreComponentResponse | undefined> {
   try {
-    let url = `${BASE_URL_API}store/components/`;
-    const queryParams: any = [];
+    let url = `${getBaseUrl()}store/components/`;
+    const queryParams: string[] = [];
     if (component_id !== undefined && component_id !== null) {
       queryParams.push(`component_id=${component_id}`);
     }
@@ -178,7 +184,7 @@ export async function getStoreComponents({
 export async function getComponent(component_id: string) {
   try {
     const res = await api.get(
-      `${BASE_URL_API}store/components/${component_id}`,
+      `${getBaseUrl()}store/components/${component_id}`,
     );
     if (res.status === 200) {
       return res.data;
@@ -190,7 +196,7 @@ export async function getComponent(component_id: string) {
 
 export async function checkHasApiKey() {
   try {
-    const res = await api.get(`${BASE_URL_API}store/check/api_key`);
+    const res = await api.get(`${getBaseUrl()}store/check/api_key`);
     if (res?.status === 200) {
       return res.data;
     }
@@ -201,7 +207,7 @@ export async function checkHasApiKey() {
 
 export async function checkHasStore() {
   try {
-    const res = await api.get(`${BASE_URL_API}store/check/`);
+    const res = await api.get(`${getBaseUrl()}store/check/`);
     if (res?.status === 200) {
       return res.data;
     }
@@ -232,7 +238,7 @@ export async function updateFlowStore(
   id: string,
 ): Promise<FlowType> {
   try {
-    const response = await api.patch(`${BASE_URL_API}store/components/${id}`, {
+    const response = await api.patch(`${getBaseUrl()}store/components/${id}`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
@@ -262,7 +268,7 @@ export async function getVerticesOrder(
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config: AxiosRequestConfig<any> = {};
+  const config: AxiosRequestConfig = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {
@@ -276,7 +282,7 @@ export async function getVerticesOrder(
     data["data"]["edges"] = Edges;
   }
   return await api.post(
-    `${BASE_URL_API}build/${flowId}/vertices`,
+    `${getBaseUrl()}build/${flowId}/vertices`,
     data,
     config,
   );
@@ -289,15 +295,18 @@ export async function postBuildVertex(
   files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
-  let data = {};
+  const data = {};
   if (typeof input_value !== "undefined") {
-    data["inputs"] = { input_value: input_value };
+    data["inputs"] = {
+      input_value: input_value,
+      client_request_time: Date.now(), // Add client timestamp in milliseconds
+    };
   }
   if (data && files) {
     data["files"] = files;
   }
   return await api.post(
-    `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
+    `${getBaseUrl()}build/${flowId}/vertices/${vertexId}`,
     data,
   );
 }

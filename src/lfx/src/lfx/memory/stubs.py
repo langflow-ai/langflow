@@ -1,0 +1,348 @@
+"""Memory management functions for lfx package.
+
+This module provides message storage and retrieval functionality adapted for lfx's
+service-based architecture. It mirrors the langflow.memory API but works with
+lfx's Message model and service interfaces.
+"""
+
+from uuid import UUID
+
+from lfx.log.logger import logger
+from lfx.schema.message import Message
+from lfx.services.deps import session_scope
+from lfx.utils.async_helpers import run_until_complete
+
+
+async def astore_message(
+    message: Message,
+    flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
+) -> list[Message]:
+    """Store a message in the memory.
+
+    Args:
+        message (Message): The message to store.
+        flow_id (Optional[str | UUID]): The flow ID associated with the message.
+            When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
+
+    Returns:
+        List[Message]: A list containing the stored message.
+
+    Raises:
+        ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
+    """
+    if not message:
+        logger.warning("No message provided.")
+        return []
+
+    # Serving-plane ephemeral runs (anonymous end-user) must not persist chat
+    # memory. Mirrors the identical gate in langflow.memory.astore_message so the
+    # contract holds regardless of which memory implementation dispatch selects.
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return [message]
+
+    if not message.session_id or not message.sender or not message.sender_name:
+        msg = (
+            f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"
+            f" Sender: {message.sender}, Sender Name: {message.sender_name}"
+        )
+        raise ValueError(msg)
+
+    # Set flow_id if provided. The stub is the fallback when no real database is
+    # registered, so be tolerant of non-UUID flow_ids (e.g. synthetic IDs from tests
+    # or callers that pass a string identifier). UUID parsing here only normalizes
+    # format; an invalid string is preserved verbatim, but logged so downstream
+    # UUID-expecting code paths have a breadcrumb if they later fail.
+    if flow_id:
+        if isinstance(flow_id, str):
+            try:
+                flow_id = UUID(flow_id)
+            except ValueError:
+                logger.warning(
+                    f"flow_id {flow_id!r} is not a valid UUID; preserving verbatim. "
+                    "Downstream code that expects a UUID may surface a confusing error."
+                )
+        message.flow_id = str(flow_id)
+    if run_id:
+        if isinstance(run_id, UUID):
+            run_id = str(run_id)
+        message.run_id = str(run_id)
+
+    # In lfx, we use the service architecture - this is a simplified implementation
+    # that doesn't persist to database but maintains the message in memory
+    # Real implementation would require a database service
+    async with session_scope() as session:
+        # Since we're using NoopSession by default, this doesn't actually persist
+        # but maintains the same interface as langflow.memory
+        try:
+            # Generate an ID if not present
+            if not hasattr(message, "id") or not message.id:
+                try:
+                    import nanoid
+
+                    message.id = nanoid.generate()
+                except ImportError:
+                    # Fallback to uuid if nanoid is not available
+                    import uuid
+
+                    message.id = str(uuid.uuid4())
+
+            await session.add(message)
+            await session.commit()
+            logger.debug(f"Message stored with ID: {message.id}")
+        except Exception as e:
+            logger.exception(f"Error storing message: {e}")
+            await session.rollback()
+            raise
+        return [message]
+
+
+def store_message(
+    message: Message,
+    flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
+) -> list[Message]:
+    """DEPRECATED: Stores a message in the memory.
+
+    DEPRECATED: Use `astore_message` instead.
+
+    Args:
+        message (Message): The message to store.
+        flow_id (Optional[str | UUID]): The flow ID associated with the message.
+            When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
+
+    Returns:
+        List[Message]: A list containing the stored message.
+
+    Raises:
+        ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
+    """
+    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id))
+
+
+async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
+    """Update stored messages.
+
+    Args:
+        messages: Message or list of messages to update.
+
+    Returns:
+        List[Message]: Updated messages.
+
+    Raises:
+        ValueError: If message is not found for update.
+    """
+    if not isinstance(messages, list):
+        messages = [messages]
+
+    async with session_scope() as session:
+        updated_messages: list[Message] = []
+        for message in messages:
+            try:
+                # In a real implementation, this would update the database record
+                # For now, we just validate the message has an ID and return it
+                if not hasattr(message, "id") or not message.id:
+                    error_message = f"Message without ID cannot be updated: {message}"
+                    logger.warning(error_message)
+                    raise ValueError(error_message)
+
+                # Convert flow_id to string if it's a UUID
+                if message.flow_id and isinstance(message.flow_id, UUID):
+                    message.flow_id = str(message.flow_id)
+
+                await session.add(message)
+                await session.commit()
+                await session.refresh(message)
+                updated_messages.append(message)
+                logger.debug(f"Message updated: {message.id}")
+            except Exception as e:
+                logger.exception(f"Error updating message: {e}")
+                await session.rollback()
+                msg = f"Failed to update message: {e}"
+                logger.error(msg)
+                raise ValueError(msg) from e
+
+        return updated_messages
+
+
+async def delete_message(id_: str) -> None:
+    """Delete a message from the memory.
+
+    Args:
+        id_ (str): The ID of the message to delete.
+    """
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return
+
+    async with session_scope() as session:
+        try:
+            # In a real implementation, this would delete from database
+            # For now, this is a no-op since we're using NoopSession
+            await session.delete(id_)
+            await session.commit()
+            logger.debug(f"Message deleted: {id_}")
+        except Exception as e:
+            logger.exception(f"Error deleting message: {e}")
+            raise
+
+
+async def aget_messages(
+    sender: str | None = None,  # noqa: ARG001
+    sender_name: str | None = None,  # noqa: ARG001
+    session_id: str | UUID | None = None,  # noqa: ARG001
+    context_id: str | UUID | None = None,  # noqa: ARG001
+    order_by: str | None = "timestamp",  # noqa: ARG001
+    order: str | None = "DESC",  # noqa: ARG001
+    flow_id: UUID | None = None,  # noqa: ARG001
+    limit: int | None = None,  # noqa: ARG001
+    user_id: str | UUID | None = None,  # noqa: ARG001
+) -> list[Message]:
+    """Retrieve messages based on the provided filters.
+
+    Args:
+        sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
+        sender_name (Optional[str]): The name of the sender.
+        session_id (Optional[str]): The session ID associated with the messages.
+        context_id (Optional[str]): The context ID associated with the messages.
+        order_by (Optional[str]): The field to order the messages by. Defaults to "timestamp".
+        order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
+        flow_id (Optional[UUID]): The flow ID associated with the messages.
+        limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): When provided, scope retrieval to this owning user.
+
+    Returns:
+        List[Message]: A list of Message objects representing the retrieved messages.
+    """
+    async with session_scope() as session:
+        try:
+            # In a real implementation, this would query the database
+            # For now, return empty list since we're using NoopSession
+            result = await session.query()  # This returns [] from NoopSession
+            logger.debug(f"Retrieved {len(result)} messages")
+        except Exception as e:  # noqa: BLE001
+            logger.exception(f"Error retrieving messages: {e}")
+            return []
+        return result
+
+
+def get_messages(
+    sender: str | None = None,
+    sender_name: str | None = None,
+    session_id: str | UUID | None = None,
+    context_id: str | UUID | None = None,
+    order_by: str | None = "timestamp",
+    order: str | None = "DESC",
+    flow_id: UUID | None = None,
+    limit: int | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
+) -> list[Message]:
+    """DEPRECATED - Retrieve messages based on the provided filters.
+
+    DEPRECATED: Use `aget_messages` instead.
+    """
+    return run_until_complete(
+        aget_messages(
+            sender,
+            sender_name,
+            session_id,
+            context_id,
+            order_by,
+            order,
+            flow_id,
+            limit,
+        )
+    )
+
+
+async def adelete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
+    """Delete messages from the memory based on the provided session or context ID.
+
+    Args:
+        session_id (str): The session ID associated with the messages to delete.
+        context_id (str): The context ID associated with the messages to delete.
+    """
+    if not session_id and not context_id:
+        msg = "Either session_id or context_id must be provided to delete messages."
+        raise ValueError(msg)
+
+    async with session_scope() as session:
+        try:
+            # In a real implementation, this would delete from database
+            # For now, this is a no-op since we're using NoopSession
+            await session.delete(session_id or context_id)  # type: ignore  # noqa: PGH003
+            await session.commit()
+            logger.debug(f"Messages deleted for session: {session_id or context_id}")
+        except Exception as e:
+            logger.exception(f"Error deleting messages: {e}")
+            raise
+
+
+def delete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
+    """DEPRECATED - Delete messages based on the provided session ID.
+
+    DEPRECATED: Use `adelete_messages` instead.
+    """
+    return run_until_complete(adelete_messages(session_id, context_id))
+
+
+async def aadd_messages(
+    messages: Message | list[Message],
+    flow_id: str | UUID | None = None,  # noqa: ARG001
+    run_id: str | UUID | None = None,  # noqa: ARG001
+    user_id: str | UUID | None = None,  # noqa: ARG001
+) -> list[Message]:
+    """Add messages to the memory.
+
+    Args:
+        messages: Message or list of messages to add.
+        flow_id (Optional[str | UUID]): The flow ID associated with the messages.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the messages.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored messages.
+
+    Returns:
+        List[Message]: Added messages.
+    """
+    if not isinstance(messages, list):
+        messages = [messages]
+
+    result = []
+    for message in messages:
+        stored = await astore_message(message)
+        result.extend(stored)
+    return result
+
+
+def add_messages(messages: Message | list[Message]) -> list[Message]:
+    """Add messages to the memory (synchronous version).
+
+    Args:
+        messages: Message or list of messages to add.
+
+    Returns:
+        List[Message]: Added messages.
+    """
+    return run_until_complete(aadd_messages(messages))
+
+
+async def aadd_messagetables(messages: Message | list[Message]) -> list[Message]:
+    """Add message tables to the memory.
+
+    This is an alias for aadd_messages for backwards compatibility.
+
+    Args:
+        messages: Message or list of messages to add.
+
+    Returns:
+        List[Message]: Added messages.
+    """
+    return await aadd_messages(messages)

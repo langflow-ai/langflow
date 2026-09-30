@@ -1,0 +1,40 @@
+---
+title: API Request
+slug: /api-request
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **API Request** component constructs and sends HTTP requests using URLs or curl commands:
+
+* **URL mode**: Enter one or more comma-separated URLs, and then select the method for the request to each URL.
+* **curl mode**: Enter the curl command to execute.
+
+You can enable additional request options and fields in the component's parameters.
+
+Returns a [`Data` object](/data-types#data) containing the response.
+
+For provider-specific API components, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+## API Request parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| mode | Mode | Input parameter. Set the mode to either **URL** or **curl**. |
+| urls | URL | Input parameter. Enter one or more comma-separated URLs for the request. |
+| curl | curl | Input parameter. **curl mode** only. Enter a complete curl command. Other component parameters are populated from the command arguments. |
+| method | Method | Input parameter. The HTTP method to use. |
+| query_params | Query Parameters | Input parameter. The query parameters to append to the URL. |
+| body | Body | Input parameter. The body to send with POST, PATCH, and PUT requests as a dictionary. |
+| headers | Headers | Input parameter. The headers to send with the request as a dictionary. |
+| timeout | Timeout | Input parameter. The timeout to use for the request. |
+| follow_redirects | Follow Redirects | Input parameter. Whether to follow HTTP redirects. Starting in Langflow version 1.7, the **Follow Redirects** parameter is disabled (`false`) by default to prevent SSRF bypass attacks where a public URL redirects to internal resources. Only enable redirects if you trust the target server.  For more information, see [SSRF protection environment variables](/api-keys-and-authentication#ssrf-protection). |
+| save_to_file | Save to File | Input parameter. Whether to save the API response to a temporary file. Default: Disabled (`false`) |
+| include_httpx_metadata | Include HTTPx Metadata | Input parameter. Whether to include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. Default: Disabled (`false`) |
+

@@ -1,8 +1,47 @@
+import importlib
+import sys
+
 import pytest
-from langflow.components.processing.data_operations import DataOperationsComponent
-from langflow.schema import Data
+from lfx.components.processing.data_operations import DataOperationsComponent
+from lfx.schema import Data
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+def test_should_import_module_when_jq_not_installed(monkeypatch):
+    """Module must be importable even when jq is not installed (e.g. on Windows).
+
+    The jq library is a C extension not available on Windows. The module-level
+    import was removed so that update_build_config and non-jq operations work
+    on all platforms. jq is only imported lazily inside json_query/json_path.
+    """
+    # Remove jq from sys.modules and block re-import
+    monkeypatch.delitem(sys.modules, "jq", raising=False)
+    real_import = __import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "jq":
+            msg = "No module named 'jq'"
+            raise ModuleNotFoundError(msg)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", mock_import)
+
+    # Force reimport of the module
+    monkeypatch.delitem(sys.modules, "lfx.components.processing.data_operations", raising=False)
+
+    # This must NOT raise ModuleNotFoundError
+    mod = importlib.import_module("lfx.components.processing.data_operations")
+    component_cls = mod.DataOperationsComponent
+
+    # Non-jq operations must work
+    component = component_cls(
+        data=Data(data={"key1": "value1", "key2": "value2"}),
+        operations=[{"name": "Select Keys"}],
+        select_keys_input=["key1"],
+    )
+    result = component.as_data()
+    assert "key1" in result.data
 
 
 class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
@@ -129,30 +168,6 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         assert result.data["existing_key"] == "updated_value"
         assert result.data["new_key"] == "new_value"
 
-    def test_filter_values(self):
-        """Test the Filter Values operation."""
-        nested_data = {
-            "items": [
-                {"id": 1, "name": "Item 1"},
-                {"id": 2, "name": "Item 2"},
-                {"id": 3, "name": "Different Item"},
-            ]
-        }
-
-        component = DataOperationsComponent(
-            data=Data(data=nested_data),
-            operations=[{"name": "Filter Values"}],
-            filter_key=["items"],
-            filter_values={"name": "Item"},
-            operator="contains",
-        )
-
-        result = component.as_data()
-        assert isinstance(result, Data)
-        assert len(result.data["items"]) == 3
-        assert result.data["items"][0]["id"] == 1
-        assert result.data["items"][1]["id"] == 2
-
     def test_no_actions(self):
         """Test behavior when no actions are specified."""
         component = DataOperationsComponent(
@@ -191,3 +206,40 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
 
         with pytest.raises(ValueError, match="Select Keys operation is not supported for multiple data objects"):
             component.as_data()
+
+    def test_removed_operation_raises_instead_of_returning_empty(self):
+        """A persisted flow referencing the removed 'Filter Values' op fails fast, not silently."""
+        component = DataOperationsComponent(
+            data=Data(data={"items": [{"name": "a"}]}),
+            operations=[{"name": "Filter Values"}],
+        )
+        with pytest.raises(ValueError, match="no longer supported"):
+            component.as_data()
+
+    def test_update_build_config_clears_input_fields_when_operation_removed(self):
+        """Test that removing the selected operation hides all operation-specific input fields."""
+        from lfx.schema.dotdict import dotdict
+
+        component = DataOperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operations=[],
+        )
+        # Simulate build_config after "Rename Keys" was selected (operation-specific fields visible)
+        build_config = dotdict(
+            {
+                "operations": {"value": [], "show": True},
+                "data": {"value": None, "show": True},
+                "rename_keys_input": {"value": {"old_key": "new_key"}, "show": True},
+                "remove_keys_input": {"value": [], "show": True},
+                "select_keys_input": {"value": [], "show": False},
+            }
+        )
+        result = component.update_build_config(build_config, [], "operations")
+
+        # All operation-specific fields should be hidden when no operation is selected
+        assert result["rename_keys_input"]["show"] is False
+        assert result["remove_keys_input"]["show"] is False
+        assert result["select_keys_input"]["show"] is False
+        # Default fields (operations, data) should remain visible
+        assert result["operations"]["show"] is True
+        assert result["data"]["show"] is True

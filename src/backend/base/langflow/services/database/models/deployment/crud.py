@@ -1,0 +1,772 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, TypeVar
+
+from lfx.log.logger import logger
+from sqlalchemy import Select, column, values
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import col, delete, func, select, update
+
+from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.deployment.orm_guards import ensure_deployment_immutable_fields
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
+from langflow.services.database.utils import parse_uuid
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
+    from lfx.services.adapters.deployment.schema import DeploymentType
+    from lfx.services.authorization.base import ResourceVisibilityScope
+    from sqlalchemy.sql.selectable import CTE
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+class UnconfirmedDeleteRowcount:
+    """Sentinel returned when a DELETE's affected-row count cannot be confirmed.
+
+    Identity-compare with ``is UNCONFIRMED_DELETE_ROWCOUNT``. Distinct from
+    ``0`` (driver reported that zero rows matched).
+
+    Emitted when ``result.rowcount`` is not a non-negative ``int``:
+
+    * ``-1`` — PEP 249 / SQLAlchemy signal that rowcount could not be
+      determined (e.g. some RETURNING / executemany shapes).
+    * ``None`` — same undetermined-rowcount meaning (PEP 249 also allows
+      ``None`` instead of ``-1``). Also seen from test doubles that leave the
+      attribute unset. SQLAlchemy's ``CursorResult.rowcount`` is typed as
+      ``int`` and documents ``-1``.
+    """
+
+
+UNCONFIRMED_DELETE_ROWCOUNT = UnconfirmedDeleteRowcount()
+
+
+async def _interpret_delete_rowcount(delete_rowcount: object, *, context: str) -> int | UnconfirmedDeleteRowcount:
+    """Return a confirmed non-negative rowcount, or ``UNCONFIRMED_DELETE_ROWCOUNT``."""
+    if not isinstance(delete_rowcount, int) or delete_rowcount < 0:
+        await logger.aerror(
+            "DELETE rowcount unconfirmed (%r, %s) — expected a non-negative int; "
+            "PEP 249 uses -1 (or None) when rowcount cannot be determined",
+            delete_rowcount,
+            context,
+        )
+        return UNCONFIRMED_DELETE_ROWCOUNT
+    return delete_rowcount
+
+
+# Preserves the concrete statement type (scalar count select vs. multi-column
+# page select) through the authz scoping helper below.
+StmtT = TypeVar("StmtT", bound=Select[Any])
+
+
+@dataclass(frozen=True, slots=True)
+class DeploymentMetadataUpdate:
+    langflow_db_row: Deployment
+    display_name: str
+    description: str | None
+
+    def __post_init__(self) -> None:
+        _raise_if_blank(self.display_name, "display_name")
+
+
+def _raise_if_blank(value: str, field_name: str) -> str:
+    """Return *value* unchanged, or raise if it is blank."""
+    if not value.strip():
+        msg = f"{field_name} must not be empty"
+        raise ValueError(msg)
+    return value
+
+
+def _strip_or_raise(value: str, field_name: str) -> str:
+    """Return *value* stripped of whitespace, or raise if blank."""
+    stripped = value.strip()
+    if not stripped:
+        msg = f"{field_name} must not be empty"
+        raise ValueError(msg)
+    return stripped
+
+
+async def create_deployment(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    project_id: UUID,
+    deployment_provider_account_id: UUID,
+    resource_key: str,
+    deployment_type: DeploymentType,
+    display_name: str,
+    description: str | None = None,
+) -> Deployment:
+    resource_key_s = _strip_or_raise(resource_key, "resource_key")
+    display_name_s = _raise_if_blank(display_name, "display_name")
+
+    row = Deployment(
+        user_id=user_id,
+        project_id=project_id,
+        deployment_provider_account_id=deployment_provider_account_id,
+        resource_key=resource_key_s,
+        display_name=display_name_s,
+        deployment_type=deployment_type,
+        description=description,
+    )
+    db.add(row)
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        await logger.aerror("IntegrityError creating deployment: %s", exc)
+        msg = (
+            "Deployment conflicts with an existing record "
+            f"(resource_key={resource_key!r}, display_name={display_name_s!r})"
+        )
+        raise ValueError(msg) from exc
+    await db.refresh(row)
+    return row
+
+
+async def create_deployment_from_model(
+    db: AsyncSession,
+    *,
+    deployment: Deployment,
+) -> Deployment:
+    return await create_deployment(
+        db,
+        user_id=deployment.user_id,
+        project_id=deployment.project_id,
+        deployment_provider_account_id=deployment.deployment_provider_account_id,
+        resource_key=deployment.resource_key,
+        display_name=deployment.display_name,
+        deployment_type=deployment.deployment_type,
+        description=deployment.description,
+    )
+
+
+async def get_deployment_by_resource_key(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_provider_account_id: UUID,
+    resource_key: str,
+) -> Deployment | None:
+    stmt = select(Deployment).where(
+        Deployment.user_id == user_id,
+        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+        Deployment.resource_key == resource_key.strip(),
+    )
+    return (await db.exec(stmt)).first()
+
+
+async def get_deployment(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_id: UUID | str,
+) -> Deployment | None:
+    """Load a deployment by id, with share-aware fetch when supported.
+
+    When the registered authorization service supports cross-user fetch
+    (authorization plugin), the deployment is loaded by id alone and the route's
+    ``ensure_deployment_permission`` decides whether the caller may see it.
+    Otherwise the query stays owner-scoped so the OSS pass-through default
+    cannot widen visibility.
+    """
+    from langflow.services.authorization.fetch import authorized_or_owner_scoped
+
+    deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
+    return await authorized_or_owner_scoped(
+        db,
+        Deployment,
+        id_column=Deployment.id,
+        resource_id=deployment_uuid,
+        owner_column=Deployment.user_id,
+        owner_id=user_id,
+    )
+
+
+_UNSET = object()
+
+
+async def update_deployment(
+    db: AsyncSession,
+    *,
+    deployment: Deployment,
+    display_name: str | None = None,
+    project_id: UUID | None = None,
+    deployment_type: DeploymentType | object = _UNSET,
+    description: str | None | object = _UNSET,
+) -> Deployment:
+    next_project_id = project_id if project_id is not None else deployment.project_id
+    next_deployment_type = deployment.deployment_type if deployment_type is _UNSET else deployment_type
+    ensure_deployment_immutable_fields(
+        old_project_id=deployment.project_id,
+        new_project_id=next_project_id,
+        old_deployment_type=deployment.deployment_type,
+        new_deployment_type=next_deployment_type,
+        old_resource_key=deployment.resource_key,
+        new_resource_key=deployment.resource_key,
+        old_provider_account_id=deployment.deployment_provider_account_id,
+        new_provider_account_id=deployment.deployment_provider_account_id,
+    )
+
+    if display_name is not None:
+        deployment.display_name = _raise_if_blank(display_name, "display_name")
+    if project_id is not None:
+        deployment.project_id = project_id
+    if deployment_type is not _UNSET:
+        deployment.deployment_type = deployment_type  # type: ignore[assignment]
+    if description is not _UNSET:
+        deployment.description = description  # type: ignore[assignment]
+    deployment.updated_at = datetime.now(timezone.utc)
+    db.add(deployment)
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        await logger.aerror("IntegrityError updating deployment id=%s: %s", deployment.id, exc)
+        msg = "Deployment update conflicts with an existing record"
+        raise ValueError(msg) from exc
+    await db.refresh(deployment)
+    return deployment
+
+
+async def update_deployment_metadata(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment: Deployment,
+    display_name: str,
+    description: str | None,
+) -> Deployment:
+    """Update provider-owned metadata without changing local audit fields."""
+    owner_id = deployment.user_id
+    if user_id != owner_id:
+        msg = f"user_id must match the deployment owner for provider metadata sync (expected {owner_id}, got {user_id})"
+        raise ValueError(msg)
+
+    update_item = DeploymentMetadataUpdate(
+        langflow_db_row=deployment,
+        display_name=_raise_if_blank(display_name, "display_name"),
+        description=description,
+    )
+    if not _deployment_metadata_has_changed(update_item):
+        return deployment
+
+    stmt = (
+        update(Deployment)
+        .where(
+            Deployment.user_id == owner_id,
+            Deployment.id == deployment.id,
+        )
+        .values(
+            display_name=update_item.display_name,
+            description=update_item.description,
+            # Provider metadata sync should not look like a local edit.
+            updated_at=Deployment.updated_at,
+        )
+        .returning(Deployment)
+        .execution_options(populate_existing=True)
+    )
+    # Consume RETURNING rows so populate_existing refreshes the loaded Deployment instance.
+    if (await db.exec(stmt)).first() is None:
+        msg = f"Deployment not found. (id={deployment.id})"
+        raise ValueError(msg)
+    return deployment
+
+
+def _deployment_metadata_changed_fields(update_item: DeploymentMetadataUpdate) -> list[str]:
+    langflow_data = update_item.langflow_db_row
+    changed_fields: list[str] = []
+    if update_item.display_name != langflow_data.display_name:
+        changed_fields.append("display_name")
+    if update_item.description != langflow_data.description:
+        changed_fields.append("description")
+    return changed_fields
+
+
+def _deployment_metadata_has_changed(update_item: DeploymentMetadataUpdate) -> bool:
+    return bool(_deployment_metadata_changed_fields(update_item))
+
+
+def _deployment_metadata_updates_cte(
+    updates: Sequence[DeploymentMetadataUpdate],
+) -> CTE:
+    return (
+        values(
+            column("id", Deployment.__table__.c.id.type),
+            column("user_id", Deployment.__table__.c.user_id.type),
+            column("display_name", Deployment.__table__.c.display_name.type),
+            column("description", Deployment.__table__.c.description.type),
+        )
+        .data(
+            [
+                (
+                    item.langflow_db_row.id,
+                    item.langflow_db_row.user_id,
+                    item.display_name,
+                    item.description,
+                )
+                for item in updates
+            ],
+        )
+        .cte("metadata_updates")
+    )
+
+
+async def update_deployment_metadata_batch(
+    db: AsyncSession,
+    *,
+    deployment_updates: Sequence[DeploymentMetadataUpdate],
+) -> None:
+    """Update provider-owned metadata for multiple deployment rows in one statement.
+
+    Each update row is matched on ``(id, user_id)`` so shared-deployment list/get
+    sync writes in the deployment owner's namespace, not the actor's.
+    """
+    updates = [item for item in deployment_updates if _deployment_metadata_has_changed(item)]
+    if not updates:
+        return
+
+    metadata_updates = _deployment_metadata_updates_cte(updates)
+    stmt = (
+        update(Deployment)
+        .where(
+            Deployment.id == metadata_updates.c.id,
+            Deployment.user_id == metadata_updates.c.user_id,
+        )
+        .values(
+            display_name=metadata_updates.c.display_name,
+            description=metadata_updates.c.description,
+            # TODO: add a new synced_at column
+            # to differentiate between provider metadata sync and local updates.
+            # For now, explicitly preserve original updated_at value
+            # so that onupdate does not replace it.
+            updated_at=Deployment.updated_at,
+        )
+        .returning(Deployment)
+        .execution_options(populate_existing=True)
+    )
+    # Consume RETURNING rows so populate_existing refreshes loaded Deployment instances
+    # and callers see the updated values when re-reading the orm objects in the same session.
+    (await db.exec(stmt)).all()
+
+
+async def _scope_to_owner_or_allowed(
+    stmt: StmtT,
+    *,
+    user_id: UUID,
+    allowed_ids: list[UUID] | None,
+    visibility_scope: ResourceVisibilityScope | None = None,
+) -> StmtT:
+    """Scope a deployment query to owner rows plus concrete or domain grants.
+
+    ``allowed_ids`` meanings are distinct — do not treat ``None`` and ``[]`` as
+    interchangeable:
+
+    * ``None`` with no structured scope — no SQL prefilter. The OSS path remains
+      owner-only.
+    * A list — concrete prefilter; delegates to
+      :func:`langflow.services.authorization.apply_owned_or_visible_prefilter`,
+      which owns the owner-override vs visible-ids-only decision (``[]`` +
+      override off → no rows).
+
+    ``visibility_scope`` represents concrete, workspace, project, or global
+    grants without expanding wildcards to resource UUIDs and follows the same
+    scoped-API-key owner-override rule. Centralizing this predicate ensures the
+    page and count queries cannot drift. Imports stay lazy to avoid
+    authorization/database import cycles.
+    """
+    if visibility_scope is None and allowed_ids is None:
+        return stmt.where(Deployment.user_id == user_id)
+
+    from langflow.services.authorization.listing import (
+        apply_owned_or_visible_prefilter,
+        apply_owned_or_visible_scope_prefilter,
+    )
+
+    if visibility_scope is None:
+        return await apply_owned_or_visible_prefilter(
+            stmt,
+            id_column=Deployment.id,
+            owner_clause=Deployment.user_id == user_id,
+            visible_ids=allowed_ids or (),
+        )
+
+    from langflow.services.database.models.folder.model import Folder
+
+    # ``Deployment.workspace_id`` was introduced as denormalized plumbing and
+    # is absent on legacy rows (and on rows created through the current CRUD
+    # helper). Resolve the workspace from the authoritative project relation so
+    # Default-workspace access cannot absorb deployments whose project belongs
+    # to an explicit workspace.
+    project_workspace = (
+        select(Folder.workspace_id).where(Folder.id == Deployment.project_id).correlate(Deployment).scalar_subquery()
+    )
+    return await apply_owned_or_visible_scope_prefilter(
+        stmt,
+        id_column=Deployment.id,
+        owner_clause=Deployment.user_id == user_id,
+        workspace_expression=project_workspace,
+        project_column=Deployment.project_id,
+        visibility=visibility_scope,
+    )
+
+
+async def has_visible_deployment_for_provider(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_provider_account_id: UUID,
+    visibility_scope: ResourceVisibilityScope,
+) -> bool:
+    """Return whether this provider owns a deployment visible to the caller.
+
+    Cross-user deployment listing must resolve a foreign provider account to
+    select its adapter, but loading an arbitrary account by UUID creates an
+    existence oracle. Bind that relaxed lookup to the same owner/visibility
+    predicate used by the page and count queries, scoped to the requested
+    provider, before any provider metadata is loaded.
+    """
+    stmt = select(Deployment.id).where(Deployment.deployment_provider_account_id == deployment_provider_account_id)
+    stmt = await _scope_to_owner_or_allowed(
+        stmt,
+        user_id=user_id,
+        allowed_ids=None,
+        visibility_scope=visibility_scope,
+    )
+    return (await db.exec(stmt.limit(1))).first() is not None
+
+
+async def list_deployments_page(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_provider_account_id: UUID,
+    offset: int,
+    limit: int,
+    row_owner_id: UUID | None = None,
+    flow_version_ids: list[UUID] | None = None,
+    project_id: UUID | None = None,
+    allowed_ids: list[UUID] | None = None,
+    visibility_scope: ResourceVisibilityScope | None = None,
+) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
+    """Return a page of deployments with attachment counts and matched attachments.
+
+    The third tuple element contains ``(flow_version_id, provider_snapshot_id)``
+    pairs for attachments that matched the ``flow_version_ids`` filter (empty
+    list when no filter is active).
+
+    ``visibility_scope`` is the preferred DB-layer authorization prefilter;
+    ``allowed_ids`` remains its concrete-ID compatibility form. With neither,
+    the page is owner-scoped exactly as before.
+
+    ``user_id`` is the listing actor for the ownership half of the prefilter.
+    ``row_owner_id`` scopes attachment counts and filters to the provider-account
+    owner on shared listings; owner-only callers may omit it.
+    """
+    if offset < 0:
+        msg = "offset must be greater than or equal to 0"
+        raise ValueError(msg)
+    if limit <= 0:
+        msg = "limit must be greater than 0"
+        raise ValueError(msg)
+    attachment_owner_id = row_owner_id or user_id
+    attachment_counts_subquery = (
+        select(
+            col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
+            func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)).label("attached_count"),
+        )
+        # Join FlowVersion so stale attachment rows with missing version parent
+        # do not inflate attached_count in deployment list responses.
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+        )
+        .where(FlowVersionDeploymentAttachment.user_id == attachment_owner_id)
+        .group_by(FlowVersionDeploymentAttachment.deployment_id)
+        .subquery()
+    )
+    stmt = (
+        select(
+            Deployment,
+            func.coalesce(attachment_counts_subquery.c.attached_count, 0).label("attached_count"),
+        )
+        .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
+        .where(Deployment.deployment_provider_account_id == deployment_provider_account_id)
+    )
+    stmt = await _scope_to_owner_or_allowed(
+        stmt,
+        user_id=user_id,
+        allowed_ids=allowed_ids,
+        visibility_scope=visibility_scope,
+    )
+    if project_id is not None:
+        stmt = stmt.where(Deployment.project_id == project_id)
+    if flow_version_ids:
+        matched_deployments_subquery = (
+            select(FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersionDeploymentAttachment.user_id == attachment_owner_id,
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
+            )
+            .group_by(FlowVersionDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
+    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc()).offset(offset).limit(limit)
+    rows = (await db.exec(stmt)).all()
+    deployment_rows = [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
+    if not flow_version_ids or not deployment_rows:
+        return [(deployment, attached_count, []) for deployment, attached_count in deployment_rows]
+
+    deployment_ids = [deployment.id for deployment, _ in deployment_rows]
+    matched_rows = (
+        await db.exec(
+            select(
+                FlowVersionDeploymentAttachment.deployment_id,
+                FlowVersionDeploymentAttachment.flow_version_id,
+                FlowVersionDeploymentAttachment.provider_snapshot_id,
+            ).where(
+                FlowVersionDeploymentAttachment.user_id == attachment_owner_id,
+                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
+            )
+        )
+    ).all()
+    matched_by_deployment: dict[UUID, list[tuple[UUID, str | None]]] = {}
+    for deployment_id, flow_version_id, provider_snapshot_id in matched_rows:
+        entries = matched_by_deployment.setdefault(deployment_id, [])
+        pair = (flow_version_id, provider_snapshot_id)
+        if pair not in entries:
+            entries.append(pair)
+
+    return [
+        (
+            deployment,
+            attached_count,
+            matched_by_deployment.get(deployment.id, []),
+        )
+        for deployment, attached_count in deployment_rows
+    ]
+
+
+async def list_deployments_for_flows_with_provider_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_ids: list[UUID],
+    provider_account_id: UUID | None = None,
+) -> list[tuple[Deployment, str]]:
+    """Return distinct deployments linked to any flow in *flow_ids* with provider key."""
+    if not flow_ids:
+        return []
+
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    deployment_ids_subquery = (
+        select(FlowVersionDeploymentAttachment.deployment_id)
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+        )
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersion.flow_id.in_(flow_ids),
+        )
+        .distinct()
+        .subquery()
+    )
+
+    stmt = (
+        select(Deployment, DeploymentProviderAccount.provider_key)
+        .join(deployment_ids_subquery, deployment_ids_subquery.c.deployment_id == Deployment.id)
+        .join(
+            DeploymentProviderAccount,
+            DeploymentProviderAccount.id == Deployment.deployment_provider_account_id,
+        )
+        .where(Deployment.user_id == user_id)
+        .order_by(
+            Deployment.deployment_provider_account_id,
+            DeploymentProviderAccount.provider_key,
+            Deployment.id,
+        )
+    )
+    if provider_account_id is not None:
+        stmt = stmt.where(Deployment.deployment_provider_account_id == provider_account_id)
+    return list((await db.exec(stmt)).all())
+
+
+async def list_project_deployments_with_provider_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    project_id: UUID,
+    provider_account_id: UUID | None = None,
+) -> list[tuple[Deployment, str]]:
+    """Return project deployments with provider key for provider-scoped sync."""
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    stmt = (
+        select(Deployment, DeploymentProviderAccount.provider_key)
+        .join(
+            DeploymentProviderAccount,
+            DeploymentProviderAccount.id == Deployment.deployment_provider_account_id,
+        )
+        .where(
+            Deployment.user_id == user_id,
+            Deployment.project_id == project_id,
+        )
+        .order_by(
+            Deployment.deployment_provider_account_id,
+            DeploymentProviderAccount.provider_key,
+            Deployment.id,
+        )
+    )
+    if provider_account_id is not None:
+        stmt = stmt.where(Deployment.deployment_provider_account_id == provider_account_id)
+    return list((await db.exec(stmt)).all())
+
+
+async def count_deployments_by_provider(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_provider_account_id: UUID,
+    row_owner_id: UUID | None = None,
+    flow_version_ids: list[UUID] | None = None,
+    project_id: UUID | None = None,
+    allowed_ids: list[UUID] | None = None,
+    visibility_scope: ResourceVisibilityScope | None = None,
+) -> int:
+    """Count deployments for a provider account.
+
+    Authorization arguments mirror ``list_deployments_page`` so pagination
+    totals use exactly the same owner-plus-visible predicate as the page.
+    ``row_owner_id`` scopes attachment filters to the provider-account owner on
+    shared listings; owner-only callers may omit it.
+    """
+    attachment_owner_id = row_owner_id or user_id
+    stmt = select(func.count(Deployment.id)).where(
+        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+    )
+    stmt = await _scope_to_owner_or_allowed(
+        stmt,
+        user_id=user_id,
+        allowed_ids=allowed_ids,
+        visibility_scope=visibility_scope,
+    )
+    if project_id is not None:
+        stmt = stmt.where(Deployment.project_id == project_id)
+    if flow_version_ids:
+        matched_deployments_subquery = (
+            select(FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersionDeploymentAttachment.user_id == attachment_owner_id,
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
+            )
+            .group_by(FlowVersionDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
+    return int((await db.exec(stmt)).one() or 0)
+
+
+async def delete_deployment_by_resource_key(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_provider_account_id: UUID,
+    resource_key: str,
+) -> int | UnconfirmedDeleteRowcount:
+    resource_key_s = resource_key.strip()
+    # Delete attachment rows explicitly before deleting the deployment.
+    # This keeps behavior correct even when DB-level FK cascades are disabled
+    # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
+    deployment_id = (
+        await db.exec(
+            select(Deployment.id).where(
+                Deployment.user_id == user_id,
+                Deployment.deployment_provider_account_id == deployment_provider_account_id,
+                Deployment.resource_key == resource_key_s,
+            )
+        )
+    ).first()
+    if deployment_id is not None:
+        await db.exec(
+            delete(FlowVersionDeploymentAttachment).where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+            )
+        )
+
+    stmt = delete(Deployment).where(
+        Deployment.user_id == user_id,
+        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+        Deployment.resource_key == resource_key_s,
+    )
+    result = await db.exec(stmt)
+    return await _interpret_delete_rowcount(result.rowcount, context=f"resource_key={resource_key_s!r}")
+
+
+async def delete_deployment_by_id(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_id: UUID | str,
+) -> int | UnconfirmedDeleteRowcount:
+    deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
+    # Delete attachment rows explicitly before deleting the deployment.
+    # This keeps behavior correct even when DB-level FK cascades are disabled
+    # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_uuid,
+        )
+    )
+
+    stmt = delete(Deployment).where(
+        Deployment.user_id == user_id,
+        Deployment.id == deployment_uuid,
+    )
+    result = await db.exec(stmt)
+    return await _interpret_delete_rowcount(result.rowcount, context=f"deployment_id={deployment_uuid}")
+
+
+async def delete_deployments_by_ids(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_ids: list[UUID],
+) -> int | UnconfirmedDeleteRowcount:
+    """Delete multiple deployments (and their attachments) in two batched statements."""
+    if not deployment_ids:
+        return 0
+    # Delete attachment rows explicitly before deleting the deployments, mirroring
+    # delete_deployment_by_id so behavior stays correct when DB-level FK cascades
+    # are disabled (for example, SQLite with foreign_keys=OFF).
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+        )
+    )
+
+    stmt = delete(Deployment).where(
+        Deployment.user_id == user_id,
+        col(Deployment.id).in_(deployment_ids),
+    )
+    result = await db.exec(stmt)
+    return await _interpret_delete_rowcount(result.rowcount, context=f"deployment_ids={deployment_ids}")

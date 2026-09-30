@@ -3,9 +3,9 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.load.load import arun_flow_from_json
+from lfx.graph.schema import RunOutputs
+from lfx.load.load import arun_flow_from_json
 
 
 @pytest.mark.api_key_required
@@ -44,7 +44,7 @@ async def test_run_flow_with_caching_invalid_input_format(client: AsyncClient, s
     headers = {"x-api-key": created_api_key.api_key}
     payload = {"input_value": {"key": "value"}, "input_type": "text", "output_type": "text", "tweaks": {}}
     response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.api_key_required

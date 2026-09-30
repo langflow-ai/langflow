@@ -1,0 +1,127 @@
+export interface MemoryApiDTO {
+  id: string;
+  name: string;
+  flow_id: string;
+  user_id: string;
+  threshold: number;
+  auto_capture: boolean;
+  embedding_model: string;
+  preprocessing: boolean;
+  preproc_model?: string;
+  preproc_instructions?: string;
+  kb_name: string;
+  created_at: string;
+  // Vector-store backend of the backing knowledge_base row (e.g. "chroma",
+  // "opensearch"). Surfaced in the Memory Base Control Center config dropdown.
+  // ``backend_config`` distinguishes Chroma Local from Cloud (both are
+  // "chroma"; the discriminator is ``backend_config.mode === "cloud"``).
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
+}
+
+export interface GetMemoriesApiResponse {
+  items: MemoryApiDTO[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+export interface MemoryInfo {
+  id: string;
+  name: string;
+  description?: string;
+  kb_name: string;
+  embedding_model: string;
+  embedding_provider?: string;
+  is_active: boolean;
+  total_messages_processed: number;
+  sessions_count: number;
+  batch_size: number;
+  preprocessing_enabled: boolean;
+  preprocessing_model?: string;
+  preproc_instructions?: string;
+  pending_messages_count: number;
+  user_id: string;
+  flow_id: string;
+  created_at?: string;
+  last_generated_at?: string;
+  // Vector-store backend of the backing knowledge base (e.g. "chroma",
+  // "opensearch"), surfaced in the config dropdown. ``backend_config``
+  // distinguishes Chroma Local vs Cloud via its ``mode`` flag.
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
+}
+
+export interface MemoryDocumentItem {
+  content: string;
+  sender: string;
+  session_id: string;
+  timestamp: string;
+  job_id?: string;
+  ingestion_timestamp?: string;
+  message_id: string;
+}
+
+export interface MemorySessionInfo {
+  session_id: string;
+  cursor_id: string | null;
+  total_processed: number;
+  last_sync_at: string | null;
+  id: string;
+  memory_base_id: string;
+  pending_count: number;
+}
+
+export interface CreateMemoryPayload {
+  name: string;
+  flow_id: string;
+  embedding_model: string;
+  // Provider that serves `embedding_model`. Required: the server can only guess
+  // it from the model name otherwise, and that guess cannot see live-discovered
+  // models (e.g. an OpenAI-Compatible endpoint's catalog), which it would
+  // mislabel as OpenAI.
+  embedding_provider: string;
+  threshold?: number;
+  auto_capture?: boolean;
+  preprocessing?: boolean;
+  preproc_model?: string;
+  preproc_instructions?: string;
+  // Vector-store selection for the Memory Base's backing KB. `backend_type` is
+  // the API form (`chroma` for both local and Chroma Cloud — the server
+  // discriminates via `backend_config.mode`); `backend_config` carries the
+  // per-provider settings (variable-name references, index name, etc.).
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
+}
+
+export interface UpdateMemoryPayload {
+  name?: string;
+  embedding_model?: string;
+  preproc_model?: string;
+  preproc_instructions?: string;
+  threshold?: number;
+  auto_capture?: boolean;
+  preprocessing?: boolean;
+}
+
+export interface AddMessagesToMemoryParams {
+  memoryId: string;
+  messageIds: string[];
+}
+
+export interface DeleteMemoryParams {
+  memoryId: string;
+}
+
+export interface GetMemoriesParams {
+  flowId?: string;
+}
+
+export interface GetMemoryParams {
+  memoryId: string;
+}
+
+export interface UpdateMemoryParams extends UpdateMemoryPayload {
+  memoryId: string;
+}

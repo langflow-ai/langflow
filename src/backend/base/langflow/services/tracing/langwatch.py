@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
-from loguru import logger
+from lfx.log.logger import logger
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from typing_extensions import override
 
 from langflow.schema.data import Data
@@ -14,15 +18,19 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
+    from lfx.graph.vertex.base import Vertex
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 
 class LangWatchTracer(BaseTracer):
     flow_id: str
+    tracer_provider = None
+    # Guards the missing-``langwatch``-package warning so it is logged once per process
+    # rather than on every flow run (a tracer instance is created per run).
+    _missing_dependency_warned = False
 
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         self.trace_name = trace_name
@@ -36,9 +44,8 @@ class LangWatchTracer(BaseTracer):
             if not self._ready:
                 return
 
-            self.trace = self._client.trace(
-                trace_id=str(self.trace_id),
-            )
+            # Pass the dedicated tracer_provider here
+            self.trace = self._client.trace(trace_id=str(self.trace_id), tracer_provider=self.tracer_provider)
             self.trace.__enter__()
             self.spans: dict[str, ContextSpan] = {}
 
@@ -63,12 +70,69 @@ class LangWatchTracer(BaseTracer):
             return False
         try:
             import langwatch
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+            # Initialize the shared provider if it doesn't exist
+            if self.tracer_provider is None:
+                api_key = os.environ["LANGWATCH_API_KEY"]
+                endpoint = os.environ.get("LANGWATCH_ENDPOINT", "https://app.langwatch.ai")
+
+                resource = Resource.create(attributes={"service.name": "langflow"})
+                exporter = OTLPSpanExporter(
+                    endpoint=f"{endpoint}/api/otel/v1/traces", headers={"Authorization": f"Bearer {api_key}"}
+                )
+                provider = TracerProvider(resource=resource)
+                provider.add_span_processor(BatchSpanProcessor(exporter))
+                LangWatchTracer.tracer_provider = provider
+
+                # Initialize LangWatch client but skip OTEL setup to avoid touching the global provider
+                # causing it to not receive traces from FastAPIInstrumentor
+                langwatch.setup(
+                    api_key=api_key,
+                    endpoint_url=endpoint,
+                    skip_open_telemetry_setup=True,
+                )
 
             self._client = langwatch
-        except ImportError:
-            logger.exception("Could not import langwatch. Please install it with `pip install langwatch`.")
+
+            # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            get_http_instrumentation_manager().enable(self.tracer_provider)
+        except ImportError as e:
+            self._warn_langwatch_unavailable()
+            logger.debug(f"LangWatch tracing disabled; 'langwatch' import failed: {e}")
             return False
         return True
+
+    @classmethod
+    def _warn_langwatch_unavailable(cls) -> None:
+        """Log a single actionable warning when the optional ``langwatch`` package is missing.
+
+        ``LANGWATCH_API_KEY`` is set (so the user expects LangWatch), but ``langwatch`` could
+        not be imported. The most common cause is running on Python 3.14+, where ``langwatch``
+        is unavailable because it caps ``requires-python`` at ``<3.14`` -- which is the case for
+        the official Langflow Docker images. Warn only once to avoid log spam, since a tracer
+        instance is created on every flow run.
+        """
+        if cls._missing_dependency_warned:
+            return
+        cls._missing_dependency_warned = True
+        if sys.version_info >= (3, 14):
+            logger.warning(
+                "LANGWATCH_API_KEY is set but the 'langwatch' package is not installed, so "
+                "LangWatch tracing is disabled. 'langwatch' does not yet support Python "
+                f"{sys.version_info.major}.{sys.version_info.minor} (it requires Python <3.14), so "
+                "it is excluded from Python 3.14+ environments, including the official Langflow "
+                "Docker images. To enable LangWatch tracing, run Langflow on Python 3.10-3.13 "
+                "(for example via 'pip install langflow')."
+            )
+        else:
+            logger.warning(
+                "LANGWATCH_API_KEY is set but the 'langwatch' package is not installed, so "
+                "LangWatch tracing is disabled. Install it with 'pip install langwatch' or "
+                "'pip install \"langflow-base[langwatch]\"'."
+            )
 
     @override
     def add_trace(
@@ -138,11 +202,16 @@ class LangWatchTracer(BaseTracer):
         if metadata and "flow_name" in metadata:
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
-        if self.trace.api_key or self._client.api_key:
-            try:
+        if self.trace.api_key or self._client._api_key:
+            import contextlib
+
+            with contextlib.suppress(ValueError):
+                # Ignore "token was created in a different Context" errors
                 self.trace.__exit__(None, None, None)
-            except ValueError:  # ignoring token was created in a different Context errors
-                return
+
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values
@@ -155,9 +224,9 @@ class LangWatchTracer(BaseTracer):
         return autoconvert_typed_values(converted)
 
     def _convert_to_langwatch_type(self, value):
+        from langchain_core.messages import BaseMessage
         from langwatch.langchain import langchain_message_to_chat_message, langchain_messages_to_chat_messages
-
-        from langflow.schema.message import BaseMessage, Message
+        from lfx.schema.message import Message
 
         if isinstance(value, dict):
             value = {key: self._convert_to_langwatch_type(val) for key, val in value.items()}

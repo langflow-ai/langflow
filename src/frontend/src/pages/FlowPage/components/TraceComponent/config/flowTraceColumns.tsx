@@ -1,0 +1,139 @@
+import type { ColDef } from "ag-grid-community";
+import IconComponent from "@/components/common/genericIconComponent";
+import i18n from "@/i18n";
+import { formatSmartTimestamp } from "@/utils/dateTime";
+import { formatTotalLatency, getStatusIconProps } from "../traceViewHelpers";
+import {
+  formatObjectValue,
+  formatRunValue,
+  pickFirstNumber,
+} from "./flowTraceColumnsHelpers";
+
+export function createFlowTracesColumns({
+  flowId,
+  flowName,
+}: {
+  flowId?: string | null;
+  flowName?: string | null;
+} = {}): ColDef[] {
+  return [
+    {
+      headerName: i18n.t("trace.run"),
+      field: "run",
+      flex: 1.0,
+      minWidth: 240,
+      filter: false,
+      sortable: false,
+      editable: false,
+      valueGetter: () => formatRunValue(flowName, flowId),
+    },
+    {
+      headerName: i18n.t("trace.traceId"),
+      field: "id",
+      flex: 0.3,
+      minWidth: 240,
+      filter: false,
+      sortable: false,
+      editable: false,
+    },
+
+    {
+      headerName: i18n.t("trace.timestamp"),
+      field: "startTime",
+      flex: 0.5,
+      minWidth: 70,
+      filter: false,
+      sortable: false,
+      editable: false,
+      valueGetter: (params) => formatSmartTimestamp(params.data?.startTime),
+    },
+    {
+      headerName: i18n.t("trace.input"),
+      field: "input",
+      flex: 1,
+      minWidth: 150,
+      filter: false,
+      sortable: false,
+      editable: false,
+      valueGetter: (params) => formatObjectValue(params.data?.input),
+    },
+    {
+      headerName: i18n.t("trace.output"),
+      field: "output",
+      flex: 1,
+      minWidth: 150,
+      filter: false,
+      sortable: false,
+      editable: false,
+      cellRenderer: (params: {
+        data?: { status?: string | null; output?: unknown };
+      }) => {
+        if (params.data?.status === "awaiting_human") {
+          return (
+            <span className="italic text-accent-indigo-foreground">
+              Awaiting human action
+            </span>
+          );
+        }
+        return <span>{formatObjectValue(params.data?.output)}</span>;
+      },
+    },
+    {
+      headerName: i18n.t("trace.token"),
+      field: "totalTokens",
+      flex: 0.5,
+      minWidth: 50,
+      filter: false,
+      sortable: false,
+      editable: false,
+      valueGetter: (params) => {
+        const tokens = pickFirstNumber(
+          params.data?.totalTokens,
+          params.data?.total_tokens,
+        );
+        return tokens === null ? "" : String(tokens);
+      },
+    },
+    {
+      headerName: i18n.t("trace.latency"),
+      field: "totalLatencyMs",
+      flex: 0.6,
+      minWidth: 50,
+      filter: false,
+      sortable: false,
+      editable: false,
+      valueGetter: (params) => {
+        const latencyMs = pickFirstNumber(
+          params.data?.totalLatencyMs,
+          params.data?.total_latency_ms,
+        );
+        return formatTotalLatency(latencyMs);
+      },
+    },
+    {
+      headerName: i18n.t("trace.status"),
+      field: "status",
+      flex: 0.6,
+      minWidth: 100,
+      filter: false,
+      sortable: false,
+      editable: false,
+      cellRenderer: (params: { value: string | null | undefined }) => {
+        const status = params.value ?? "unknown";
+        const { colorClass, iconName, shouldSpin } = getStatusIconProps(status);
+
+        return (
+          <div className="flex items-center">
+            <IconComponent
+              name={iconName}
+              className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
+              aria-label={status}
+              dataTestId={`flow-log-status-${status}`}
+              skipFallback
+            />
+          </div>
+        );
+      },
+    },
+  ];
+}

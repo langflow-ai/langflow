@@ -1,8 +1,8 @@
 [project]
 name = "langflow-base"
-version = "0.4.2"
+version = "1.12.4"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -10,7 +10,6 @@ maintainers = [
     { name = "Carlos Coelho", email = "carlos@langflow.org" },
     { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
     { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
-    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
     { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
     { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
     { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
@@ -18,103 +17,133 @@ maintainers = [
 ]
 
 dependencies = [
-    "fastapi>=0.115.2,<1.0.0",
+    "lfx~=1.12.4",
+    "fastapi>=0.139.0,<1.0.0",
+    "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
+    "h2>=4.4.1",
     "aiofile>=3.9.0,<4.0.0",
-    "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=22.0.0,<24.0.0",
-    "langchain~=0.3.21",
-    "langchain-community~=0.3.20",
-    "langchain-core~=0.3.45",
+    "uvicorn>=0.45.0,<1.0.0",
+    "gunicorn>=25.3.0,<27.0.0",
+    "langchain~=1.3.0",
+    "langchain-community~=0.4.1",
+    "langchain-mongodb>=0.11.0",
+    # langchain-mongodb always installs pymongo; publish the patched floor on this unconditional path.
+    "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "langchain-perplexity>=1.0.0,<2.0.0",
+    "langchain-qdrant>=1.0.0,<2.0.0",
+    "langchain-weaviate>=0.0.6",
+    "langchain-core>=1.3.3,<2.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
+    "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
-    "langchain-experimental>=0.3.4,<1.0.0",
-    "sqlmodel==0.0.22",
-    "pydantic~=2.10.1",
+    "langchain-experimental~=0.4.1",
+    # SQLModel 0.0.45 changes inferred datetime storage; adopt it with a schema migration.
+    "sqlmodel>=0.0.37,<0.0.45",
+    "pydantic>=2.13.0,<2.14",
     "pydantic-settings>=2.2.0,<3.0.0",
+    "email-validator>=2.0.0",
     "typer>=0.13.0,<1.0.0",
-    "cachetools>=5.5.0,<6.0.0",
+    "cachetools>=6.0.0",
     "platformdirs>=4.2.0,<5.0.0",
     "python-multipart>=0.0.12,<1.0.0",
-    "orjson==3.10.15",
-    "alembic>=1.13.0,<2.0.0",
-    "passlib>=1.7.4,<2.0.0",
-    "bcrypt==4.0.1",
-    "pillow>=11.1.0,<12.0.0",
+    "orjson>=3.11.6,<4.0.0",
+    "alembic>=1.13.0,<1.19.0",
+    "pillow>=12.3.0,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
-    "python-jose>=3.3.0,<4.0.0",
-    "pandas==2.2.3",
+    "PyJWT>=2.12.1",
+    "pandas>=2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
     "duckdb>=1.0.0,<2.0.0",
     "python-docx>=1.1.0,<2.0.0",
     "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
     "nest-asyncio>=1.6.0,<2.0.0",
     "emoji>=2.12.0,<3.0.0",
-    "cryptography>=42.0.5,<44.0.0",
+    "cryptography>=50.0.0",
     "asyncer>=0.0.5,<1.0.0",
     "pyperclip>=1.8.2,<2.0.0",
     "uncurl>=0.0.11,<1.0.0",
     "sentry-sdk[fastapi,loguru]>=2.5.1,<3.0.0",
-    "chardet>=5.2.0,<6.0.0",
-    "firecrawl-py>=1.0.16,<2.0.0",
-    "opentelemetry-api>=1.25.0,<2.0.0",
-    "opentelemetry-sdk>=1.25.0,<2.0.0",
-    "opentelemetry-exporter-prometheus>=0.46b0,<1.0.0",
-    "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
+    "chardet>=7.3.0",
+    "opentelemetry-api>=1.30.0,<2.0.0",
+    "opentelemetry-sdk>=1.30.0,<2.0.0",
+    "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
+    "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-requests>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-urllib3>=0.50b0,<1.0.0",
+    # Process CPU, memory, GC and thread counts. Without it the only metrics the APM gets are
+    # request-shaped, so "is the service healthy" cannot be answered when nothing is failing yet.
+    "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "setuptools>=70,<76.0.0",
+    "pip>=26.2.1,<27.0.0",
+    "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
-    "filelock>=3.15.4,<4.0.0",
+    "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
-    "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
-    "pypdf~=5.1.0",
-    "validators>=0.34.0",
-    "networkx>=3.4.2",
-    "json-repair>=0.30.3",
-    "mcp>=1.6.0",
-    "aiosqlite>=0.20.0",
-    "greenlet>=3.1.1",
-    "jsonquerylang>=1.1.1",
+    "pypdf>=6.16.1,<7.0.0",
+    "validators>=0.34.0,<1.0.0",
+    "networkx>=3.4.2,<4.0.0",
+    "json-repair>=0.30.3,<1.0.0",
+    "mcp>=1.28.0,<2.0.0",
+    "a2a-sdk>=1.1.0,<2.0.0",
+    "ag-ui-protocol==0.1.18",
+    "aiosqlite>=0.20.0,<1.0.0",
+    "greenlet>=3.1.1,<4.0.0",
+    "jsonquerylang>=1.1.1,<2.0.0",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
-    "elevenlabs>=1.54.0",
-    "webrtcvad>=2.0.10",
-    "scipy>=1.15.2",
-    "ibm-watsonx-ai>=1.3.1",
-    "langchain-ibm>=0.3.8",
-    "trustcall>=0.0.38",
+    'elevenlabs==1.58.1; python_version == "3.12"',
+    'elevenlabs>=1.52.0,<2.0.0; python_version != "3.12"',
+    "scipy>=1.15.2,<2.0.0",
+    "ibm-watsonx-ai>=1.3.1,<2.0.0",
+    "langchain-ibm~=1.1.0",
+    "trustcall>=0.0.38,<1.0.0",
+    "langchain-chroma~=0.2.6",
+    "jaraco-context>=6.1.0",
+    "wheel>=0.46.2,<1.0.0",
+    "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
+    "onnxruntime>=1.26; python_version>='3.14'",
+    "dynaconf>=3.2.13,<4.0.0",
+    "pyasn1>=0.6.3,<0.7.0",
+    "langgraph-checkpoint>4.0.0,<5.0.0",
+    # CVE-2026-9856: reject path traversal when saving named chat templates (5.10.0 was yanked).
+    "transformers>=5.10.1,<6.0.0",
+    # Service-complete runtime dependencies. Provider component SDKs remain
+    # owned by lfx-* extension distributions.
+    "redis>=7.4.0,<8.0.0",
+    "chromadb>=1.0.0,<2.0.0",
+    "langfuse~=3.8",
+    "langwatch~=0.10.0; python_version < '3.14'",
+    "langsmith>=0.3.42,<1.0.0",
+    "arize-phoenix-otel>=0.6.1",
+    "openinference-instrumentation-langchain>=0.1.29",
+    "opik>=2.0.0,<3.0.0",
+    "traceloop-sdk>=0.43.1,<1.0.0",
+    "openlayer>=0.9.0,<1.0.0",
+    "kubernetes>=31.0.0,<33.0.0",
+    "aiobotocore>=3.7.0,<4.0.0",
 ]
 
 [dependency-groups]
 dev = [
     "asgi-lifespan>=2.1.0",
-    "pytest-codspeed>=3.0.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
-    "types-aiofiles>=24.1.0.20240626",
-    "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
-    "ruff>=0.6.2",
+    "ruff>=0.12.7",
     "httpx[http2]>=0.27",
-    "pytest>=8.2.0",
-    "types-requests>=2.32.0",
-    "requests>=2.32.0",
+    "pytest>=9.0.3",
+    "requests>=2.33.0",
     "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
-    "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-instafail>=0.5.0",
@@ -127,8 +156,8 @@ dev = [
     "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
     "types-markdown>=3.7.0.20240822",
-    "codeflash>=0.8.4"
-
+    "codeflash>=0.8.4",
+    "fakeredis>=2.0.0",
 ]
 
 
@@ -147,68 +176,6 @@ markers = ["async_test"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-follow_imports = "skip"
-disable_error_code = ["type-var"]
-namespace_packages = true
-mypy_path = "langflow"
-ignore_missing_imports = true
-
-[tool.ruff]
-target-version = "py310"
-exclude = ["langflow/alembic/versions"]
-line-length = 120
-
-[tool.ruff.lint]
-flake8-annotations.mypy-init-return = true
-flake8-bugbear.extend-immutable-calls = [
-    "fastapi.Depends",
-    "fastapi.File",
-    "fastapi.Query",
-    "typer.Option",
-]
-flake8-type-checking.runtime-evaluated-base-classes = [
-    "pydantic.BaseModel",
-    "typing.TypedDict", # Needed by fastapi
-    "typing_extensions.TypedDict", # Needed by fastapi
-]
-pydocstyle.convention = "google"
-select = ["ALL"]
-ignore = [
-    "C90", # McCabe complexity
-    "CPY", # Missing copyright
-    "COM812", # Messes with the formatter
-    "ERA", # Eradicate commented-out code
-    "FIX002", # Line contains TODO
-    "ISC001", # Messes with the formatter
-    "PERF203", # Rarely useful
-    "PLR09", # Too many something (arg, statements, etc)
-    "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
-    "TD002", # Missing author in TODO
-    "TD003", # Missing issue link in TODO
-    "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
-    # Rules that are TODOs
-    "ANN", # Missing type annotations
-    "D1", # Missing docstrings
-    "SLF001", # Using private attributes outside of class
-]
-
-[tool.ruff.lint.per-file-ignores]
-"langflow/api/v1/*" = [
-    "TCH", # FastAPI needs to evaluate types at runtime
-]
-"langflow/api/v2/*" = [
-    "TCH", # FastAPI needs to evaluate types at runtime
-]
-"langflow/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [
-    "S102", # Use of exec
-]
-"langflow/services/cache/*" = [
-    "S301", # Use of pickle
-]
-
 [tool.codeflash]
 # All paths are relative to this pyproject.toml's directory.
 module-root = "langflow"
@@ -216,47 +183,267 @@ tests-root = "../tests/unit"
 test-framework = "pytest"
 ignore-paths = ["langflow/components/"]
 formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
-#disable plugins that might interfere with runtime measurement
+# disable plugins that might interfere with runtime measurement
 pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
+
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-
-
-
-
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
-
-# Optional dependencies for uv
+# Optional dependencies
 [project.optional-dependencies]
+audio = [
+    "openai>=1.68.2,<3.0.0",
+    "webrtcvad>=2.0.10",
+]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
 
-]
-deploy = [
-    "celery>=5.3.1",
-    "redis>=4.6.0",
-    "flower>=1.0.0"
-]
 local = [
-    "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
     "ctransformers>=0.2"
 ]
-all = [
-    "celery>=5.3.1",
-    "redis>=4.6.0",
-    "flower>=1.0.0",
-    "llama-cpp-python>=0.2.0",
-    "sentence-transformers>=2.0.0",
-    "ctransformers>=0.2"
+
+# Opt-in microVM sandbox backend for code-execution components (issue #12029).
+sandbox = ["lfx[sandbox]~=1.12.4"]
+
+# Individual database providers
+couchbase = ["couchbase>=4.2.1"]
+cassandra = ["lfx[cassandra]~=1.12.4"]  # Compatibility spelling for the lfx-datastax extension.
+clickhouse = ["clickhouse-connect==0.7.19"]
+
+
+mongodb = ["pymongo>=4.18.2,<5.0.0"]
+supabase = ["supabase>=2.6.0,<3.0.0"]
+redis = ["redis>=7.4.0,<8.0.0"]
+elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
+
+# Individual vector store providers
+faiss = [
+    "faiss-cpu==1.9.0.post1; python_version<'3.14'",
+    "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
+qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
+qdrant-vectors = ["langchain-qdrant>=1.0.0,<2.0.0"]
+weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
+chroma = [
+    "chromadb>=1.0.0,<2.0.0",
+    "langchain-chroma~=0.2.6"
+]
+upstash = ["upstash-vector==0.6.0"]
+pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
+milvus = ["langchain-milvus~=0.3.2"]
+mongodb-vectors = ["langchain-mongodb>=0.11.0"]
+# astradb graduated to the standalone lfx-datastax bundle (a regular dep of
+# langflow); langchain-astradb lives there now, not in langflow-base.
+
+# Individual LLM providers
+google = [
+    "langchain-google-genai~=4.1.2",
+    "langchain-google-vertexai>=3.2.0",
+    "langchain-google-community~=5.0.0",
+    "langchain-google-calendar-tools~=0.0.1",
+    "google-api-python-client~=2.161",
+]
+ollama = ["langchain-ollama~=0.3.10"]
+nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0"]
+mistral = ["langchain-mistralai~=1.1.1"]
+sambanova = ["langchain-sambanova~=1.0.0"]
+groq = ["langchain-groq~=1.1.1"]
+
+# Individual local LLM providers
+sentence-transformers = ["sentence-transformers>=2.3.1"]
+ctransformers = ["ctransformers>=0.2.10"]
+
+# Individual monitoring providers
+# pydantic>=2.13 is required because langfuse v3 imports pydantic.v1.BaseModel,
+# which only supports Python 3.14 from pydantic 2.13 onward. Without this guard
+# the langfuse SDK raises pydantic.v1.errors.ConfigError on import in Python
+# 3.14 environments (e.g. the official Docker image), causing tracing to
+# silently no-op. See https://github.com/langflow-ai/langflow/issues/13317.
+langfuse = ["langfuse~=3.8", "pydantic>=2.13.0"]
+langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
+langsmith = ["langsmith>=0.3.42,<1.0.0"]
+arize = ["arize-phoenix-otel>=0.6.1"]
+
+# Individual document loaders
+pypdf = ["pypdf>=6.16.1,<7.0.0"]
+docx = ["python-docx>=1.1.0"]
+pytube = ["pytube==15.0.0"]
+
+# Individual agent frameworks
+# crewai is commented out due to httpx version conflict
+# crewai = ["crewai>=0.126.0"]
+smolagents = ["smolagents>=1.8.0"]
+
+# Individual tools
+beautifulsoup = ["lfx~=1.12.4"]  # beautifulsoup4 is now a hard lfx dependency
+serpapi = ["google-search-results>=2.4.1,<3.0.0"]
+google-api = ["google-api-python-client~=2.161"]
+wikipedia = ["wikipedia==1.4.0"]
+fake-useragent = ["fake-useragent>=2.0.0"]
+# duckduckgo: the runtime dep for the extracted lfx-duckduckgo bundle.
+# Public consumers should install lfx-duckduckgo directly. The compatibility
+# extra remains so older explicit langflow-base[duckduckgo] installs still work.
+duckduckgo = ["ddgs>=9.0.0"]
+yfinance = ["yfinance==0.2.50"]
+wolframalpha = ["wolframalpha==5.1.3"]
+
+# Individual utilities
+pyarrow = ["pyarrow>=23.0.1,<24.0.0"]
+fastavro = [
+    'fastavro==1.9.7; python_version < "3.13"',
+    'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
+]
+gitpython = ["GitPython>=3.1.58"]
+nltk = ["nltk>=3.10.3"]
+lark = ["lark==1.2.2"]
+
+# Additional dependencies from requirements
+huggingface = ["huggingface-hub>=1.0.0,<2.0.0"]
+# Backwards-compatible alias: the Exa Search component moved to the lfx-exa
+# bundle and now uses exa-py; metaphor-python is deprecated and unused.
+metaphor = ["exa-py>=1.14,<3"]
+metal = ["metal_sdk==2.5.1"]
+markup = ["MarkupSafe==3.0.2"]
+# Deliberately retained after the lfx-amazon graduation: boto3 backs lfx's
+# synchronous S3 file helpers. The backend storage service uses aiobotocore.
+aws = ["boto3>=1.34.162,<2.0.0"]
+numexpr = ["numexpr>=2.10.2"]
+qianfan = ["qianfan==0.3.5"]
+pgvector = [
+    "pgvector>=0.4.2",
+    "psycopg[binary]>=3.1,<4.0",
+]
+litellm = [
+    "litellm>=1.93.0,<2.0.0",
+    # Runtime deps from litellm[proxy] that langflow-ide hits when logging
+    # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
+    # Pull in only the modules Langflow uses from litellm[proxy] rather than
+    # its much larger dependency surface.
+    "apscheduler>=3.10.4,<4.0.0",
+    "cryptography",
+]
+zep = ["zep-python==2.0.2"]
+youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
+markdown = ["Markdown>=3.8.0"]
+kubernetes = ["kubernetes==31.0.0"]
+json-repair = ["json_repair>=0.60.1"]
+composio = [
+    "composio==0.16.0",
+    "composio-langchain==0.16.0"
+]
+ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
+opensearch = ["opensearch-py==2.8.0"]
+atlassian = ["atlassian-python-api==3.41.16"]
+mem0 = ["mem0ai>=2.0.2,<3.0.0"]
+needle = ["needle-python>=0.4.0"]
+sseclient = ["sseclient-py==1.8.0"]
+openinference = ["openinference-instrumentation-langchain>=0.1.29"]
+mcp = ["mcp>=1.28.0,<2.0.0"]
+ag2 = ["ag2>=0.1.0"]
+scrapegraph = ["scrapegraph-py>=1.12.0"]
+apify = ["apify-client>=1.8.1"]
+spider = ["spider-client>=0.0.27,<1.0.0"]
+
+# ALTK (Agent Lifecycle Toolkit)
+# Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
+# Upper bound prevents breaking changes in future major versions
+# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+
+# Toolguard Integration
+toolguard = ["lfx[toolguard]~=1.12.4"]  # toolguard relocated to lfx
+
+# Additional LangChain integrations
+# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
+langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+langchain-unstructured = ["langchain-unstructured~=1.0.0"]
+# graph-retriever graduated to the standalone lfx-datastax bundle (a regular
+# dep of langflow); langchain-graph-retriever / graph-retriever live there now.
+langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
+
+# Additional monitoring
+opik = ["opik>=2.0.0,<3.0.0"]
+traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
+openlayer = ["openlayer>=0.9.0,<1.0.0"]
+
+# Document processing / OCR
+docling = [
+    "docling-core>=2.77.0,<3.0.0",
+    "docling-slim[cli,convert-core,extract-core,feat-ocr-rapidocr,format-latex,format-office,format-pdf,format-web,models-local,service-client]>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+]
+docling-chunking = [
+    "langflow-base[docling]",
+    "docling-core[chunking]>=2.77.0,<3.0.0",
+    "tiktoken>=0.7.0",
+]
+docling-image-description = [
+    "langflow-base[docling]",
+    "langchain-docling>=1.1.0",
+]
+
+easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+
+# Additional tools
+cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
+twelvelabs = ["twelvelabs>=0.4.7,<1.0.0"]
+jigsawstack = ["jigsawstack==0.2.7"]
+assemblyai = ["assemblyai==0.35.1"]
+
+# Data processing
+datasets = ["datasets>2.14.7,<6.0.0"]
+fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
+
+# Vision / ML
+vlmrun = ["vlmrun[all]>=0.2.0"]
+cuga = [
+    "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
+    "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
+    "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+]
+mlx = [
+    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+    "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+]
+
+# MCP
+fastmcp = ["fastmcp>=3.2.0"]
+
+# AWS async client. S3 storage uses aiobotocore directly so boto3 is no longer
+# constrained by aioboto3's exact pin to aiobotocore 2.25.1.
+aiobotocore = ["aiobotocore>=3.7.0,<4.0.0"]
+# Preserve the legacy extra name so existing langflow-base[aioboto3] install
+# commands continue to enable Langflow's async S3 backend.
+aioboto3 = ["aiobotocore>=3.7.0,<4.0.0"]
+
+# Astra
+astrapy = ["astrapy>=2.1.0,<3.0.0"]
+
+# Windows-specific
+gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
+
+# SDKs for IBM watsonx Orchestrate deployment adapter.
+ibm-watsonx-clients = [
+    "ibm-cloud-sdk-core~=3.24.4",
+    "ibm-watsonx-orchestrate-core~=2.12.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
+]
+
+# Deprecated compatibility spellings for the 1.12 line. The base distribution
+# is service-complete without extras; retain these names so existing install
+# commands continue to resolve without changing the installed dependency set.
+complete = []
+all = []
 
 [project.scripts]
-langflow-base = "langflow.__main__:main"
+langflow = "langflow.langflow_launcher:main"

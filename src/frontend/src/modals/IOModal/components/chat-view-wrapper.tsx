@@ -1,10 +1,12 @@
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
-import { ChatViewWrapperProps } from "../types/chat-view-wrapper";
+import type { ChatViewWrapperProps } from "../types/chat-view-wrapper";
 import ChatView from "./chatView/components/chat-view";
+import { MessageHistoryLoader } from "./message-history-loader";
 
 export const ChatViewWrapper = ({
   selectedViewField,
@@ -13,17 +15,17 @@ export const ChatViewWrapper = ({
   sidebarOpen,
   currentFlowId,
   setSidebarOpen,
-  isPlayground,
   setvisibleSession,
   setSelectedViewField,
   messagesFetched,
+  messageHistory,
   sessionId,
   sendMessage,
   canvasOpen,
   setOpen,
-  playgroundTitle,
   playgroundPage,
 }: ChatViewWrapperProps) => {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -33,7 +35,7 @@ export const ChatViewWrapper = ({
     >
       <div
         className={cn(
-          "mb-4 flex h-[5%] items-center text-base font-semibold",
+          "flex h-10 shrink-0 items-center text-base font-semibold",
           playgroundPage ? "justify-between" : "lg:justify-start",
         )}
       >
@@ -44,10 +46,12 @@ export const ChatViewWrapper = ({
               size="icon"
               onClick={() => setSidebarOpen(true)}
               className="h-8 w-8"
+              aria-label={t("modal.io.showSidebar")}
             >
               <IconComponent
                 name="PanelLeftOpen"
                 className="h-[18px] w-[18px] text-ring"
+                aria-hidden="true"
               />
             </Button>
           </div>
@@ -61,18 +65,22 @@ export const ChatViewWrapper = ({
             )}
           >
             {visibleSession === currentFlowId
-              ? "Default Session"
+              ? t("modal.io.defaultSession")
               : `${visibleSession}`}
           </div>
         )}
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
           )}
         >
-          <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
+          <ShadTooltip
+            side="bottom"
+            styleClasses="z-50"
+            content={t("modal.io.newChat")}
+          >
             <Button
               className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
               variant="ghost"
@@ -81,10 +89,12 @@ export const ChatViewWrapper = ({
                 setvisibleSession(undefined);
                 setSelectedViewField(undefined);
               }}
+              aria-label={t("modal.io.newChat")}
             >
               <IconComponent
                 name="Plus"
                 className="!h-[18px] !w-[18px] text-ring"
+                aria-hidden="true"
               />
             </Button>
           </ShadTooltip>
@@ -92,6 +102,7 @@ export const ChatViewWrapper = ({
         </div>
       </div>
 
+      <MessageHistoryLoader history={messageHistory} />
       {messagesFetched && (
         <ChatView
           focusChat={sessionId}

@@ -17,6 +17,7 @@ qdrant_storage
 .vscode/settings.json
 .chroma
 .ruff_cache
+opendsstar_cache
 
 # PyCharm
 .idea/
@@ -194,6 +195,9 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# IBM Equal Access accessibility scan results
+docs/a11y-results/
+
 # PyBuilder
 target/
 
@@ -264,6 +268,7 @@ src/backend/langflow/frontend/
 src/backend/base/langflow/frontend/
 .docker
 scratchpad*
+scratch/
 chroma*/*
 stuff/*
 src/frontend/playwright-report/index.html
@@ -271,9 +276,42 @@ src/frontend/playwright-report/index.html
 prof/*
 
 src/frontend/temp
+src/frontend/temp-live
 *-shm
 *-wal
 .history
 
 .dspy_cache/
-*.db
+*.db*
+*.mcp.json
+
+news-aggregated.json
+.claude
+member_servers.json
+# Component index cache (user-specific)
+**/.cache/lfx/
+
+# data files used for desktop registration
+data/user
+
+sso-config.yaml
+AGENTS.md
+CLAUDE.local.md
+langflow.log.*
+tmp_toolguard/
+
+#whitesource
+whitesource/
+/.codex
+
+#ai folders
+.bob/
+_context
+
+# Cursor local (personal) settings
+.cursor/settings.local.json
+
+# Mend
+requirements-mend.txt
+requirements-workspace-mend.txt
+requirements-gp-mend.txt

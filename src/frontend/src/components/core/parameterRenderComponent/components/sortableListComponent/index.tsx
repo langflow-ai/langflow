@@ -1,18 +1,26 @@
+import { isEqual } from "lodash";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { type ItemInterface, ReactSortable } from "react-sortablejs";
+import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { ReactSortable } from "react-sortablejs";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
+
+export type SortableListItemType = {
+  name: string;
+  chosen?: boolean;
+  selected?: boolean;
+  [key: string]: unknown;
+};
 
 type SortableListComponentProps = {
   tooltip?: string;
   name?: string;
   helperText?: string;
-  helperMetadata?: any;
-  options?: any[];
+  helperMetadata?: { icon: string | undefined; variant: string };
+  options?: SortableListItemType[];
   searchCategory?: string[];
   icon?: string;
   limit?: number;
@@ -25,7 +33,7 @@ const SortableListItem = memo(
     onRemove,
     limit = 1,
   }: {
-    data: any;
+    data: SortableListItemType;
     index: number;
     onRemove: () => void;
     limit?: number;
@@ -79,14 +87,18 @@ const SortableListItem = memo(
 const SortableListComponent = ({
   tooltip = "",
   name,
+  editNode = false,
   helperText = "",
   helperMetadata = { icon: undefined, variant: "muted-foreground" },
   options = [],
   searchCategory = [],
   limit,
+  id,
+  showParameter = true,
   ...baseInputProps
-}: InputProps<any, SortableListComponentProps>) => {
-  const { placeholder, handleOnNewValue, value } = baseInputProps;
+}: InputProps<SortableListItemType[], SortableListComponentProps>) => {
+  const { placeholder, handleOnNewValue, value, ariaLabelledBy } =
+    baseInputProps;
   const [open, setOpen] = useState(false);
 
   // Convert value to an array if it exists, otherwise use empty array
@@ -101,10 +113,22 @@ const SortableListComponent = ({
   );
 
   const setListDataHandler = useCallback(
-    (newList: any[]) => {
-      handleOnNewValue({ value: newList });
+    (newList: SortableListItemType[]) => {
+      const sanitizedNewList = newList.map((item) => {
+        const { chosen, selected, ...rest } = item;
+        return rest;
+      });
+
+      const sanitizedListData = listData.map((item) => {
+        const { chosen, selected, ...rest } = item;
+        return rest;
+      });
+
+      if (!isEqual(sanitizedNewList, sanitizedListData)) {
+        handleOnNewValue({ value: sanitizedNewList });
+      }
     },
-    [handleOnNewValue],
+    [listData, handleOnNewValue],
   );
 
   const handleCloseListSelectionDialog = useCallback(() => {
@@ -130,6 +154,10 @@ const SortableListComponent = ({
     }
   }, [helperText, open]);
 
+  if (!showParameter) {
+    return null;
+  }
+
   return (
     <div className="flex w-full flex-col">
       <div className="flex w-full flex-row gap-2">
@@ -139,10 +167,24 @@ const SortableListComponent = ({
             size="xs"
             role="combobox"
             onClick={handleOpenListSelectionDialog}
-            className="dropdown-component-outline input-edit-node w-full py-2"
-            data-testid="button_open_list_selection"
+            className={cn(
+              "dropdown-component-outline input-edit-node w-full",
+              editNode ? "py-1" : "py-2",
+            )}
+            aria-labelledby={ariaLabelledBy}
+            aria-expanded={open}
+            data-testid={
+              id
+                ? `button_open_list_selection_${id}`
+                : "button_open_list_selection"
+            }
           >
-            <div className={cn("flex items-center text-sm font-semibold")}>
+            <div
+              className={cn(
+                "flex items-center",
+                editNode ? "text-xs" : "text-sm",
+              )}
+            >
               {placeholder}
             </div>
           </Button>
@@ -152,8 +194,14 @@ const SortableListComponent = ({
       {listData.length > 0 && (
         <div className="flex w-full flex-col">
           <ReactSortable
-            list={listData}
-            setList={setListDataHandler}
+            // react-sortablejs's ItemInterface requires an `id` field that
+            // these list items (real shape: { name, ...rest }) never carry;
+            // cast only at this third-party boundary rather than widening
+            // our own types back to `any`.
+            list={listData as unknown as ItemInterface[]}
+            setList={(newList) =>
+              setListDataHandler(newList as unknown as SortableListItemType[])
+            }
             className={"flex w-full flex-col"}
           >
             {listData.map((data, index) => (
@@ -182,10 +230,12 @@ const SortableListComponent = ({
         open={open}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
+        editNode={editNode}
         setSelectedList={setListDataHandler}
         selectedList={listData}
         options={options}
         limit={limit}
+        id={id}
         {...baseInputProps}
       />
     </div>

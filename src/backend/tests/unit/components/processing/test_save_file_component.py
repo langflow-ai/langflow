@@ -1,0 +1,989 @@
+import contextlib
+import json
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pandas as pd
+import pytest
+from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
+from lfx.schema import Data, DataFrame, Message
+
+from tests.base import ComponentTestBaseWithoutClient
+
+
+class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture(scope="class", autouse=True)
+    def cleanup_test_files(self):
+        """Clean up test files after all tests in the class complete."""
+        yield
+        # Clean up test files created during tests
+        test_files = ["test_data.json", "test_message.txt", "test_output.csv", "test_page.html", "test_s3_output.txt"]
+        for filename in test_files:
+            filepath = Path(filename)
+            if filepath.exists():
+                with contextlib.suppress(Exception):
+                    filepath.unlink()
+
+    @pytest.fixture
+    def component_class(self):
+        """Return the component class to test."""
+        return SaveToFileComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        sample_df = DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
+        return {"input": sample_df, "file_name": "test_output", "file_format": "csv"}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return the file names mapping for different versions."""
+        return []  # New component
+
+    def test_basic_setup(self, component_class, default_kwargs):
+        """Test basic component initialization."""
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        assert component.file_name == "test_output"
+        assert component.file_format == "csv"
+
+    def test_aws_fallback_inputs_are_optional(self, component_class):
+        """Allow the canvas to defer AWS fallback-backed inputs to runtime."""
+        inputs = {component_input.name: component_input for component_input in component_class.inputs}
+
+        for input_name in ("aws_access_key_id", "aws_secret_access_key", "bucket_name"):
+            assert inputs[input_name].required is False
+
+    @pytest.mark.asyncio
+    async def test_save_to_aws_uses_environment_and_settings_fallbacks(self, component_class, monkeypatch):
+        """Use resolved AWS values when the component credential inputs are empty."""
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "environment-access-key")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "environment-secret-key")
+        monkeypatch.setenv("AWS_SESSION_TOKEN", "environment-session-token")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-west-2")
+
+        settings_service = MagicMock()
+        settings_service.settings.object_storage_bucket_name = "settings-bucket"
+        mock_s3_client = MagicMock()
+
+        component = component_class()
+        component.set_attributes(
+            {
+                "input": Message(text="AWS fallback content"),
+                "file_name": "aws_report",
+                "storage_location": [{"name": "AWS"}],
+                "aws_format": "txt",
+                "aws_access_key_id": "",
+                "aws_secret_access_key": "",
+                "bucket_name": "",
+                "aws_region": "",
+                "s3_prefix": "reports",
+            }
+        )
+
+        with (
+            patch(
+                "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                return_value=settings_service,
+            ),
+            patch("boto3.client", return_value=mock_s3_client) as mock_boto3_client,
+        ):
+            result = await component.save_to_file()
+
+        mock_boto3_client.assert_called_once_with(
+            "s3",
+            aws_access_key_id="environment-access-key",
+            aws_secret_access_key="environment-secret-key",  # noqa: S106  # pragma: allowlist secret
+            aws_session_token="environment-session-token",  # noqa: S106  # pragma: allowlist secret
+            region_name="us-west-2",
+        )
+        upload_args = mock_s3_client.upload_file.call_args.args
+        assert upload_args[1:] == ("settings-bucket", "reports/aws_report.txt")
+        assert result.text == "File successfully uploaded to s3://settings-bucket/reports/aws_report.txt"
+
+    @pytest.mark.asyncio
+    async def test_save_to_aws_does_not_mix_environment_token_with_component_credentials(
+        self, component_class, monkeypatch
+    ):
+        """Keep an environment session token out of component-supplied credentials."""
+        monkeypatch.setenv("AWS_SESSION_TOKEN", "environment-session-token")
+        mock_s3_client = MagicMock()
+
+        component = component_class()
+        component.set_attributes(
+            {
+                "input": Message(text="AWS component credential content"),
+                "file_name": "aws_report",
+                "storage_location": [{"name": "AWS"}],
+                "aws_format": "txt",
+                "aws_access_key_id": "component-access-key",
+                "aws_secret_access_key": "component-secret-key",  # pragma: allowlist secret
+                "bucket_name": "component-bucket",
+                "aws_region": "us-west-2",
+                "s3_prefix": "reports",
+            }
+        )
+
+        with patch("boto3.client", return_value=mock_s3_client) as mock_boto3_client:
+            await component.save_to_file()
+
+        mock_boto3_client.assert_called_once_with(
+            "s3",
+            aws_access_key_id="component-access-key",
+            aws_secret_access_key="component-secret-key",  # noqa: S106  # pragma: allowlist secret
+            region_name="us-west-2",
+        )
+
+    def test_get_input_type_dataframe(self, component_class):
+        """Test input type detection for DataFrame."""
+        component = component_class()
+        df = DataFrame([{"a": 1}])
+        component.set_attributes({"input": df, "file_name": "test", "file_format": "csv"})
+        assert component._get_input_type() == "DataFrame"
+
+    def test_get_input_type_data(self, component_class):
+        """Test input type detection for Data."""
+        component = component_class()
+        data = Data(data={"a": 1})
+        component.set_attributes({"input": data, "file_name": "test", "file_format": "json"})
+        assert component._get_input_type() == "Data"
+
+    def test_get_input_type_message(self, component_class):
+        """Test input type detection for Message."""
+        component = component_class()
+        message = Message(text="test")
+        component.set_attributes({"input": message, "file_name": "test", "file_format": "txt"})
+        assert component._get_input_type() == "Message"
+
+    def test_get_default_format_dataframe(self, component_class):
+        """Test default format for DataFrame is csv."""
+        component = component_class()
+        df = DataFrame([{"a": 1}])
+        component.set_attributes({"input": df, "file_name": "test", "file_format": ""})
+        assert component._get_default_format() == "csv"
+
+    def test_get_default_format_data(self, component_class):
+        """Test default format for Data is json."""
+        component = component_class()
+        data = Data(data={"a": 1})
+        component.set_attributes({"input": data, "file_name": "test", "file_format": ""})
+        assert component._get_default_format() == "json"
+
+    def test_get_default_format_message(self, component_class):
+        """Test default format for Message is json."""
+        component = component_class()
+        message = Message(text="test")
+        component.set_attributes({"input": message, "file_name": "test", "file_format": ""})
+        assert component._get_default_format() == "json"
+
+    @pytest.mark.asyncio
+    async def test_save_dataframe_to_csv(self, component_class):
+        """Test saving DataFrame to CSV format - only mock upload."""
+        component = component_class(_user_id=str(uuid4()))
+        df = DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
+        component.set_attributes(
+            {"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
+
+        # Mock only the database and upload functions - let file operations run normally
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+            mock_upload.return_value = MagicMock(path="test_output.csv", provider="s3")
+
+            # Execute - real temp file creation, real DataFrame.to_csv(), real cleanup
+            result = await component.save_to_file()
+
+            # Verify
+            assert "saved successfully" in result.text
+            assert "test_output.csv" in result.text
+
+            # Verify upload was called with a real file
+            mock_upload.assert_called_once()
+            upload_file = mock_upload.call_args[1]["file"]
+            assert upload_file.filename == "test_output.csv"
+
+    @pytest.mark.asyncio
+    async def test_save_data_to_json(self, component_class):
+        """Test saving Data to JSON format - only mock upload."""
+        component = component_class(_user_id=str(uuid4()))
+        data = Data(data={"col1": "value1", "col2": "value2"})
+        component.set_attributes(
+            {"input": data, "file_name": "test_data", "local_format": "json", "storage_location": [{"name": "Local"}]}
+        )
+
+        # Mock only the database and upload functions - let file operations run normally
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+            mock_upload.return_value = MagicMock(path="test_data.json", provider="s3")
+
+            result = await component.save_to_file()
+
+            assert "saved successfully" in result.text
+            assert "test_data.json" in result.text
+
+    @pytest.mark.asyncio
+    async def test_save_message_to_txt(self, component_class):
+        """Test saving Message to txt format - only mock upload."""
+        component = component_class(_user_id=str(uuid4()))
+        message = Message(text="This is a test message")
+        component.set_attributes(
+            {
+                "input": message,
+                "file_name": "test_message",
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+
+        # Mock only the database and upload functions - let file operations run normally
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+            mock_upload.return_value = MagicMock(path="test_message.txt", provider="s3")
+
+            result = await component.save_to_file()
+
+            assert "saved successfully" in result.text
+            assert "test_message.txt" in result.text
+
+    @pytest.mark.asyncio
+    async def test_save_local_mode_with_s3_backend_cleans_staging_and_reports_storage_path(
+        self, component_class, tmp_path
+    ):
+        """Remote (S3) backend: Local mode deletes the staging file and reports the storage path.
+
+        This guards the fix for the leak where Local mode left a redundant copy in
+        cwd and surfaced a misleading local path when the backend was S3.
+        """
+        component = component_class(_user_id=str(uuid4()))
+        message = Message(text="This should end up only in S3")
+        component.set_attributes(
+            {
+                "input": message,
+                "file_name": "test_s3_output",
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+
+        # upload_user_file returns the durable storage location + provider
+        upload_response = MagicMock()
+        upload_response.path = "files/user-uuid/test_s3_output.txt"
+        upload_response.provider = "s3"
+
+        # Force the storage backend to look remote (S3) without restricting paths
+        settings_mock = MagicMock()
+        settings_mock.storage_type = "s3"
+        settings_mock.restrict_local_file_access = False
+        settings_mock.config_dir = str(tmp_path)
+        settings_service_mock = MagicMock()
+        settings_service_mock.settings = settings_mock
+
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+            patch(
+                "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                return_value=settings_service_mock,
+            ),
+            patch(
+                "lfx.utils.file_path_security.get_settings_service",
+                return_value=settings_service_mock,
+            ),
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+            mock_upload.return_value = upload_response
+
+            result = await component.save_to_file()
+
+        # Message reports the durable storage destination + provider, not a local path
+        assert "files/user-uuid/test_s3_output.txt" in result.text
+        assert "S3" in result.text
+        assert str(tmp_path) not in result.text
+        # The local staging file was cleaned up
+        assert not (Path.cwd() / "test_s3_output.txt").exists()
+
+    @pytest.mark.asyncio
+    async def test_append_mode_remote_backend_accumulates_across_calls(self, component_class, tmp_path):
+        """append_mode + remote (S3) backend keeps accumulating, not resetting to overwrite.
+
+        Guards against the staging cleanup deleting the local accumulator that append
+        relies on (should_append hinges on the file persisting across calls). Without
+        the append exception, the second call would silently overwrite.
+        """
+        file_name = "test_append_remote"
+        staging = Path.cwd() / f"{file_name}.txt"
+        if staging.exists():
+            staging.unlink()
+
+        settings_mock = MagicMock()
+        settings_mock.storage_type = "s3"
+        settings_mock.restrict_local_file_access = False
+        settings_mock.config_dir = str(tmp_path)
+        settings_service_mock = MagicMock()
+        settings_service_mock.settings = settings_mock
+
+        upload_response = MagicMock()
+        upload_response.path = f"files/uid/{file_name}.txt"
+        upload_response.provider = "s3"
+
+        def make_component(text):
+            component = component_class(_user_id=str(uuid4()))
+            component.set_attributes(
+                {
+                    "input": Message(text=text),
+                    "file_name": file_name,
+                    "local_format": "txt",
+                    "append_mode": True,
+                    "storage_location": [{"name": "Local"}],
+                }
+            )
+            return component
+
+        try:
+            with (
+                patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+                patch("lfx.services.deps.session_scope") as mock_session,
+                patch(
+                    "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+                ) as mock_get_user,
+                patch(
+                    "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+            ):
+                mock_db = AsyncMock()
+                mock_session.return_value.__aenter__.return_value = mock_db
+                mock_get_user.return_value = MagicMock()
+                mock_upload.return_value = upload_response
+
+                await make_component("line one").save_to_file()
+                # Staging file must survive so the next call can append to it
+                assert staging.exists()
+                await make_component("line two").save_to_file()
+
+            # Content accumulated across both calls — not overwritten
+            assert staging.read_text(encoding="utf-8") == "line one\nline two"
+        finally:
+            if staging.exists():
+                staging.unlink()
+
+    @pytest.mark.asyncio
+    async def test_save_aws_mode_namespaces_key_by_user_id(self, component_class):
+        """AWS mode namespaces the S3 key by user_id so multi-user runs don't collide.
+
+        Layout must be {s3_prefix}/{user_id}/{file_name}.{ext} — otherwise every
+        user writing the same file_name overwrites the same key.
+        """
+        user_id = str(uuid4())
+        component = component_class(_user_id=user_id)
+        component.set_attributes(
+            {
+                "input": Message(text="hello aws"),
+                "file_name": "report",
+                "aws_format": "txt",
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test-access-key",  # pragma: allowlist secret
+                "aws_secret_access_key": "test-secret-key",  # pragma: allowlist secret
+                "bucket_name": "my-bucket",
+                "aws_region": "us-east-1",
+                "s3_prefix": "files",
+            }
+        )
+
+        mock_s3 = MagicMock()
+        with (
+            patch("boto3.client", return_value=mock_s3),
+            patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials"),
+        ):
+            result = await component.save_to_file()
+
+        # upload_file(temp_path, bucket, key) — third positional arg is the S3 key
+        mock_s3.upload_file.assert_called_once()
+        key = mock_s3.upload_file.call_args[0][2]
+        assert key == f"files/{user_id}/report.txt"
+        assert "my-bucket" in result.text
+
+    @pytest.mark.asyncio
+    async def test_save_message_to_html(self, component_class):
+        """Test saving Message to html format."""
+        component = component_class(_user_id=str(uuid4()))
+        html_content = "<html><body><h1>Test</h1></body></html>"
+        message = Message(text=html_content)
+        component.set_attributes(
+            {
+                "input": message,
+                "file_name": "test_page",
+                "local_format": "html",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+            mock_upload.return_value = MagicMock(path="test_page.html", provider="s3")
+
+            result = await component.save_to_file()
+
+            assert "saved successfully" in result.text
+            assert "test_page.html" in result.text
+
+            # Verify upload was called with a real file containing the HTML
+            mock_upload.assert_called_once()
+            upload_file = mock_upload.call_args[1]["file"]
+            assert upload_file.filename == "test_page.html"
+
+    @pytest.mark.asyncio
+    async def test_cleanup_on_error(self, component_class):
+        """Test that temp file is cleaned up even when upload fails."""
+        component = component_class(_user_id=str(uuid4()))
+        df = DataFrame([{"col1": 1}])
+        component.set_attributes(
+            {"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
+
+        # Mock database and upload functions - let file operations run normally
+        with (
+            patch(
+                "langflow.api.v2.files.upload_user_file",
+                new_callable=AsyncMock,
+                side_effect=Exception("Upload failed"),
+            ),
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+
+            # Capture temp file path before it gets cleaned up
+            import tempfile
+
+            temp_dir = Path(tempfile.gettempdir())
+            temp_files_before = set(temp_dir.glob("test_output_*.csv"))
+
+            with pytest.raises(Exception, match="Upload failed"):
+                await component.save_to_file()
+
+            # Verify temp file was cleaned up
+            temp_files_after = set(temp_dir.glob("test_output_*.csv"))
+            # New temp files should have been created and cleaned up
+            assert temp_files_after == temp_files_before
+
+    @pytest.mark.asyncio
+    async def test_invalid_file_format_for_message(self, component_class):
+        """Test that invalid file format raises ValueError."""
+        component = component_class(_user_id=str(uuid4()))
+        message = Message(text="test")
+        component.set_attributes(
+            {"input": message, "file_name": "test", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
+
+        with pytest.raises(ValueError, match="Invalid file format"):
+            await component.save_to_file()
+
+    @pytest.mark.asyncio
+    async def test_invalid_file_format_for_dataframe(self, component_class):
+        """Test that invalid file format raises ValueError for DataFrame."""
+        component = component_class(_user_id=str(uuid4()))
+        df = DataFrame([{"a": 1}])
+        component.set_attributes(
+            {"input": df, "file_name": "test", "local_format": "txt", "storage_location": [{"name": "Local"}]}
+        )
+
+        with pytest.raises(ValueError, match="Invalid file format"):
+            await component.save_to_file()
+
+    @pytest.mark.asyncio
+    async def test_missing_file_name(self, component_class):
+        """Test that missing file name raises ValueError."""
+        component = component_class(_user_id=str(uuid4()))
+        df = DataFrame([{"a": 1}])
+        component.set_attributes(
+            {"input": df, "file_name": "", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
+
+        with pytest.raises(ValueError, match="File name must be provided"):
+            await component.save_to_file()
+
+    @pytest.mark.asyncio
+    async def test_file_name_with_extension_stripped(self, component_class):
+        """Test that file extension is properly handled when included in file_name."""
+        component = component_class(_user_id=str(uuid4()))
+        df = DataFrame([{"col1": 1}])
+        component.set_attributes(
+            {
+                "input": df,
+                "file_name": "test_output.csv",
+                "local_format": "csv",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+
+        # Mock only the database and upload functions - let file operations run normally
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+            mock_upload.return_value = MagicMock(path="test_output.csv", provider="s3")
+
+            result = await component.save_to_file()
+
+            # Should only have .csv once, not .csv.csv
+            assert "test_output.csv" in result.text
+            assert "test_output.csv.csv" not in result.text
+
+    @pytest.mark.asyncio
+    async def test_append_mode_txt_file(self, component_class):
+        """Test append mode for text files."""
+        from tempfile import NamedTemporaryFile
+
+        # Create a temporary file with existing content
+        with NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp_file:
+            tmp_file.write("Existing content")
+            tmp_path = Path(tmp_file.name)
+
+        try:
+            component = component_class(_user_id=str(uuid4()))
+            component.set_attributes(
+                {
+                    "input": Message(text="New content"),
+                    "file_name": tmp_path.stem,  # Use filename without extension
+                    "local_format": "txt",
+                    "storage_location": [{"name": "Local"}],
+                    "append_mode": True,
+                }
+            )
+
+            # This test verifies LOCAL-backend append semantics (the file persists on
+            # disk and is re-read), so pin the backend to local. Under a remote (S3)
+            # backend the staging file is intentionally deleted after upload.
+            settings_mock = MagicMock()
+            settings_mock.storage_type = "local"
+            settings_mock.restrict_local_file_access = False
+            settings_mock.config_dir = str(tmp_path.parent)
+            settings_service_mock = MagicMock()
+            settings_service_mock.settings = settings_mock
+
+            # Mock the path resolution to return our temp file
+            with (
+                patch("lfx.components.files_and_knowledge.save_file.Path") as mock_path_class,
+                patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+                patch("lfx.services.deps.session_scope") as mock_session,
+                patch(
+                    "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+                ) as mock_get_user,
+                patch(
+                    "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+            ):
+                # Make Path() return our temp file path
+                mock_path_class.return_value = tmp_path
+                mock_db = AsyncMock()
+                mock_session.return_value.__aenter__.return_value = mock_db
+                mock_get_user.return_value = MagicMock()
+                mock_upload.return_value = MagicMock(path=tmp_path.name, provider="local")
+
+                result = await component.save_to_file()
+
+                # Verify append happened
+                assert "appended to" in result.text
+                # Verify the file contains both old and new content
+                assert tmp_path.read_text(encoding="utf-8") == "Existing content\nNew content"
+        finally:
+            # Clean up temp file
+            if tmp_path.exists():
+                tmp_path.unlink()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("append_mode", [False, True])
+    async def test_local_save_rejects_absolute_paths_before_file_access(self, component_class, tmp_path, append_mode):
+        """Reject path-shaped local file names before they can read or write a file."""
+        owner_file = tmp_path / "owner-user-id" / "owner-file.txt"
+        owner_file.parent.mkdir()
+        owner_file.write_text("owner content", encoding="utf-8")
+
+        component = component_class(_user_id=str(uuid4()))
+        component.set_attributes(
+            {
+                "input": Message(text="attacker content"),
+                "file_name": str(owner_file),
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+                "append_mode": append_mode,
+            }
+        )
+
+        with (
+            patch.object(component, "_upload_file", new_callable=AsyncMock) as mock_upload,
+            pytest.raises(ValueError, match="Local file name must be a file name only"),
+        ):
+            await component.save_to_file()
+
+        assert owner_file.read_text(encoding="utf-8") == "owner content"
+        mock_upload.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "file_name",
+        [
+            "../owner-file",
+            "owner-user-id/owner-file",
+            r"owner-user-id\owner-file",
+            r"C:\Users\owner\file",
+            "C:owner-file",
+        ],
+    )
+    async def test_local_save_rejects_nested_or_traversal_paths(
+        self, component_class, tmp_path, monkeypatch, file_name
+    ):
+        """Reject relative path traversal and storage-prefix style local file names."""
+        monkeypatch.chdir(tmp_path)
+        component = component_class(_user_id=str(uuid4()))
+        component.set_attributes(
+            {
+                "input": Message(text="attacker content"),
+                "file_name": file_name,
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+
+        with (
+            patch.object(component, "_upload_file", new_callable=AsyncMock) as mock_upload,
+            pytest.raises(ValueError, match="Local file name must be a file name only"),
+        ):
+            await component.save_to_file()
+
+        assert not list(tmp_path.rglob("*.txt"))
+        mock_upload.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("fake_googleapiclient")
+    async def test_google_drive_credential_parsing_with_control_characters(self, component_class):
+        """Test that GCP service account JSON with literal newlines (control characters) can be parsed.
+
+        This tests the fix for the bug where pasted GCP service account JSON fails with:
+        'Invalid control character at: line 1 column 183 (char 182)'
+        """
+        component = component_class(_user_id=str(uuid4()))
+
+        # Simulate a GCP service account JSON with literal newlines in the private_key field.
+        # Use a clearly fake, short key to avoid tripping secret scanners while preserving the newline pattern.
+        fake_private_key = "-----BEGIN KEY-----\nFAKE\n-----END KEY-----\n"
+        service_account_json = (
+            f'{{"type": "service_account", "project_id": "test-project-123", "private_key": "{fake_private_key}"}}'
+        )
+
+        message = Message(text="test content")
+        component.set_attributes(
+            {
+                "input": message,
+                "file_name": "test_gdrive_file",
+                "gdrive_format": "txt",
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": service_account_json,
+                "folder_id": "test_folder_id_123",
+            }
+        )
+
+        # Mock Google Drive dependencies
+        with (
+            patch("google.oauth2.service_account.Credentials.from_service_account_info") as mock_creds,
+            patch("googleapiclient.discovery.build") as mock_build,
+        ):
+            mock_drive_service = MagicMock()
+            mock_build.return_value = mock_drive_service
+
+            # Mock the file upload response
+            mock_drive_service.files().create().execute.return_value = {"id": "file123"}
+
+            result = await component.save_to_file()
+
+            # Verify credentials were parsed successfully (should not raise JSONDecodeError)
+            mock_creds.assert_called_once()
+            creds_dict = mock_creds.call_args[0][0]
+
+            # Verify the parsed credentials have the expected structure
+            assert creds_dict["type"] == "service_account"
+            assert creds_dict["project_id"] == "test-project-123"
+            assert "private_key" in creds_dict
+            assert "BEGIN KEY" in creds_dict["private_key"]
+
+            # Verify successful upload message
+            assert "successfully uploaded to Google Drive" in result.text
+            assert "file123" in result.text
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("fake_googleapiclient")
+    async def test_google_drive_credential_parsing_strategies(self, component_class):
+        """Test various GCP credential parsing strategies."""
+        component = component_class(_user_id=str(uuid4()))
+
+        test_cases = [
+            # Case 1: Normal JSON (should work)
+            ('{"type": "service_account", "project_id": "test"}', "Normal JSON"),
+            # Case 2: JSON with literal newlines (the bug case)
+            ('{"type": "service_account", "private_key": "-----BEGIN\nKEY\n-----END"}', "With control chars"),
+            # Case 3: JSON with extra whitespace
+            ('  \n{"type": "service_account", "project_id": "test"}  \n', "With whitespace"),
+            # Case 4: Double-encoded JSON, as emitted by some secret pipelines (LE-2561)
+            (json.dumps('{"type": "service_account", "project_id": "test"}'), "Double-encoded"),
+        ]
+
+        for service_account_json, test_name in test_cases:
+            message = Message(text="test")
+            component.set_attributes(
+                {
+                    "input": message,
+                    "file_name": "test_file",
+                    "gdrive_format": "txt",
+                    "storage_location": [{"name": "Google Drive"}],
+                    "service_account_key": service_account_json,
+                    "folder_id": "test_folder",
+                }
+            )
+
+            with (
+                patch("google.oauth2.service_account.Credentials.from_service_account_info") as mock_creds,
+                patch("googleapiclient.discovery.build") as mock_build,
+            ):
+                mock_drive_service = MagicMock()
+                mock_build.return_value = mock_drive_service
+                mock_drive_service.files().create().execute.return_value = {"id": f"file_{test_name}"}
+
+                # Should not raise JSONDecodeError for any case
+                await component.save_to_file()
+
+                # Verify credentials were parsed
+                mock_creds.assert_called_once()
+                creds_dict = mock_creds.call_args[0][0]
+                assert isinstance(creds_dict, dict)
+                assert creds_dict["type"] == "service_account"
+
+                mock_creds.reset_mock()
+
+    def test_append_mode_hidden_for_cloud_storage(self, component_class):
+        """Test that append_mode is hidden for AWS and Google Drive storage."""
+        component = component_class()
+
+        # Test Local storage - append_mode should be visible
+        build_config = {
+            "file_name": {"show": False},
+            "append_mode": {"show": False},
+            "local_format": {"show": False},
+        }
+        result = component.update_build_config(build_config, [{"name": "Local"}], "storage_location")
+        assert result["append_mode"]["show"] is True, "append_mode should be visible for Local storage"
+        assert result["file_name"]["show"] is True
+        assert result["local_format"]["show"] is True
+
+        # Test AWS storage - append_mode should be hidden
+        build_config = {
+            "file_name": {"show": False},
+            "append_mode": {"show": False},
+            "aws_format": {"show": False},
+        }
+        result = component.update_build_config(build_config, [{"name": "AWS"}], "storage_location")
+        assert result["append_mode"]["show"] is False, "append_mode should be hidden for AWS storage"
+        assert result["file_name"]["show"] is True
+        assert result["aws_format"]["show"] is True
+
+        # Test Google Drive storage - append_mode should be hidden
+        build_config = {
+            "file_name": {"show": False},
+            "append_mode": {"show": False},
+            "gdrive_format": {"show": False},
+        }
+        result = component.update_build_config(build_config, [{"name": "Google Drive"}], "storage_location")
+        assert result["append_mode"]["show"] is False, "append_mode should be hidden for Google Drive storage"
+        assert result["file_name"]["show"] is True
+        assert result["gdrive_format"]["show"] is True
+
+    def test_storage_location_defaults_to_local(self, component_class):
+        """Test that storage_location input defaults to Local when component is dropped."""
+        storage_input = next(i for i in component_class.inputs if i.name == "storage_location")
+        assert storage_input.value == [{"name": "Local", "icon": "hard-drive"}]
+
+    def test_default_local_fields_are_visible(self, component_class):
+        """Test that required local fields are visible on first render."""
+        inputs_by_name = {component_input.name: component_input for component_input in component_class.inputs}
+
+        assert inputs_by_name["file_name"].show is True
+        assert inputs_by_name["append_mode"].show is True
+        assert inputs_by_name["local_format"].show is True
+        assert inputs_by_name["aws_format"].show is False
+        assert inputs_by_name["gdrive_format"].show is False
+
+    def test_storage_location_is_advanced(self, component_class):
+        """Test that storage_location is in advanced controls."""
+        storage_input = next(i for i in component_class.inputs if i.name == "storage_location")
+        assert storage_input.advanced is True
+
+    def test_get_input_type_raw_pandas_dataframe(self, component_class):
+        """Test that a raw pandas DataFrame is auto-wrapped into Langflow DataFrame."""
+        component = component_class()
+        raw_df = pd.DataFrame([{"a": 1, "b": 2}])
+        component.set_attributes({"input": raw_df, "file_name": "test", "file_format": "csv"})
+        assert component._get_input_type() == "DataFrame"
+        assert type(component.input) is DataFrame
+
+    def test_get_input_type_string_json_array(self, component_class):
+        """Test that a JSON array string is coerced into a DataFrame."""
+        component = component_class()
+        json_str = '[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]'
+        component.set_attributes({"input": json_str, "file_name": "test", "file_format": "csv"})
+        assert component._get_input_type() == "DataFrame"
+        assert type(component.input) is DataFrame
+
+    def test_get_input_type_string_json_object(self, component_class):
+        """Test that a single JSON object string is coerced into a DataFrame."""
+        component = component_class()
+        json_str = '{"name": "Alice", "age": 30}'
+        component.set_attributes({"input": json_str, "file_name": "test", "file_format": "csv"})
+        assert component._get_input_type() == "DataFrame"
+        assert type(component.input) is DataFrame
+
+    def test_get_input_type_string_plain_text(self, component_class):
+        """Test that plain text is coerced into a Message."""
+        component = component_class()
+        component.set_attributes({"input": "Hello world", "file_name": "test", "file_format": "txt"})
+        assert component._get_input_type() == "Message"
+        assert type(component.input) is Message
+
+    def test_file_format_overrides_storage_format(self, component_class):
+        """Test that tool-mode file_format overrides the storage-specific format."""
+        component = component_class()
+        df = DataFrame([{"a": 1}])
+        component.set_attributes(
+            {
+                "input": df,
+                "file_name": "test",
+                "local_format": "json",
+                "file_format": "csv",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+        assert component._get_file_format_for_location("Local") == "csv"
+
+    def test_file_format_empty_falls_back_to_storage_format(self, component_class):
+        """Test that empty file_format falls back to the storage-specific format."""
+        component = component_class()
+        df = DataFrame([{"a": 1}])
+        component.set_attributes(
+            {
+                "input": df,
+                "file_name": "test",
+                "local_format": "json",
+                "file_format": "",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+        assert component._get_file_format_for_location("Local") == "json"
+
+    def test_input_has_tool_mode(self, component_class):
+        """Test that the input field has tool_mode enabled."""
+        input_field = next(i for i in component_class.inputs if i.name == "input")
+        assert getattr(input_field, "tool_mode", False) is True
+
+    def test_file_format_has_tool_mode(self, component_class):
+        """Test that the file_format field has tool_mode enabled."""
+        format_field = next(i for i in component_class.inputs if i.name == "file_format")
+        assert getattr(format_field, "tool_mode", False) is True
+
+    def test_file_format_hidden_in_ui(self, component_class):
+        """Test that file_format is hidden in the flow UI."""
+        format_field = next(i for i in component_class.inputs if i.name == "file_format")
+        assert format_field.show is False
+
+
+# --- serving-plane end-user namespacing (files owned by the end user, not the SID) ---
+
+from types import SimpleNamespace  # noqa: E402
+
+
+def _save_component_with_end_user(end_user):
+    component = SaveToFileComponent()
+    component._vertex = MagicMock()
+    component._vertex.graph = SimpleNamespace(end_user_id=end_user)
+    return component
+
+
+def test_end_user_segment_none_when_absent():
+    # BC: no end user -> None -> save path falls back to the SID scope, unchanged.
+    assert _save_component_with_end_user(None)._serving_end_user_segment() is None
+
+
+def test_end_user_segment_readable_id_preserved():
+    assert _save_component_with_end_user("alice")._serving_end_user_segment() == "alice"
+
+
+def test_end_user_segment_uuid_preserved():
+    uid = "0c870455-b9e3-480c-bc84-0794de978f51"
+    assert _save_component_with_end_user(uid)._serving_end_user_segment() == uid
+
+
+def test_end_user_segment_blocks_path_traversal():
+    seg = _save_component_with_end_user("../../etc/passwd")._serving_end_user_segment()
+    assert seg is not None
+    # single path component -> cannot escape the root
+    assert "/" not in seg
+    assert "\\" not in seg
+
+
+def test_end_user_segment_sanitizes_separators():
+    assert _save_component_with_end_user("a/b\\c")._serving_end_user_segment() == "a_b_c"

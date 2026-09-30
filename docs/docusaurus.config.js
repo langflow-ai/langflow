@@ -1,9 +1,12 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const lightCodeTheme = require("prism-react-renderer/themes/github");
-const darkCodeTheme = require("prism-react-renderer/themes/dracula");
-const { remarkCodeHike } = require("@code-hike/mdx");
+const path = require("path");
+
+
+const { lightNeonPrismTheme, grafiteNeonTheme } = require("./src/prismThemes");
+
+const rehypeWbrUnderscore = require("./src/plugins/rehypeWbrUnderscore");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -16,12 +19,16 @@ const config = {
   url: "https://docs.langflow.org",
   baseUrl: process.env.BASE_URL ? process.env.BASE_URL : "/",
   onBrokenLinks: "throw",
-  onBrokenMarkdownLinks: "warn",
   onBrokenAnchors: "warn",
   organizationName: "langflow-ai",
   projectName: "langflow",
   trailingSlash: false,
   staticDirectories: ["static"],
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: "warn",
+    },
+  },
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
@@ -31,47 +38,66 @@ const config = {
       tagName: "link",
       attributes: {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Sora:wght@550;600&display=swap",
       },
     },
     ...(isProduction
       ? [
-          // Ketch consent management script
+          // Google Consent Mode - Set defaults before Google tags load
           {
             tagName: "script",
             attributes: {},
-            innerHTML: `!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();`,
+            innerHTML: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+
+              // Set default consent to denied
+              gtag('consent', 'default', {
+                'ad_storage': 'denied',
+                'ad_user_data': 'denied',
+                'ad_personalization': 'denied',
+                'analytics_storage': 'denied'
+              });
+            `,
           },
-          // Ketch jurisdiction dynamic link and GA4 consent tracking
+          // TrustArc Consent Update Listener
           {
             tagName: "script",
-            attributes: {
-              defer: "true",
-            },
+            attributes: {},
             innerHTML: `
-          ;(function () {
-            const onKetchConsentGtagTrack = (consent) => {
-              if (window.gtag &&
-                  consent.purposes &&
-                  'analytics' in consent.purposes &&
-                  'targeted_advertising' in consent.purposes
-              ) {
-                const analyticsString = consent.purposes.analytics === true ? 'granted' : 'denied'
-                const targetedAdsString = consent.purposes.targeted_advertising === true ? 'granted' : 'denied'
-                const gtagObject = {
-                  analytics_storage: analyticsString,
-                  ad_personalization: targetedAdsString,
-                  ad_storage: targetedAdsString,
-                  ad_user_data: targetedAdsString,
+              (function() {
+                function updateGoogleConsent() {
+                  if (typeof window.truste !== 'undefined' && window.truste.cma) {
+                    var consent = window.truste.cma.callApi('getConsent', window.location.href) || {};
+
+                    // Map TrustArc categories to Google consent types
+                    // Category 0 = Required, 1 = Functional, 2 = Advertising, 3 = Analytics
+                    var hasAdvertising = consent[2] === 1;
+                    var hasAnalytics = consent[3] === 1;
+
+                    gtag('consent', 'update', {
+                      'ad_storage': hasAdvertising ? 'granted' : 'denied',
+                      'ad_user_data': hasAdvertising ? 'granted' : 'denied',
+                      'ad_personalization': hasAdvertising ? 'granted' : 'denied',
+                      'analytics_storage': hasAnalytics ? 'granted' : 'denied'
+                    });
+                  }
                 }
-                window.gtag('consent', 'update', gtagObject)
-              }
-            }
-            if (window.ketch) {
-              window.ketch('on', 'consent', onKetchConsentGtagTrack)
-            }
-          })()
-        `,
+
+                // Listen for consent changes
+                if (window.addEventListener) {
+                  window.addEventListener('cm_data_subject_consent_changed', updateGoogleConsent);
+                  window.addEventListener('cm_consent_preferences_set', updateGoogleConsent);
+                }
+
+                // Initial check after TrustArc loads
+                if (document.readyState === 'complete') {
+                  updateGoogleConsent();
+                } else {
+                  window.addEventListener('load', updateGoogleConsent);
+                }
+              })();
+            `,
           },
         ]
       : []),
@@ -79,27 +105,42 @@ const config = {
 
   presets: [
     [
-      "docusaurus-preset-openapi",
+      "@docusaurus/preset-classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
-        api: {
-          path: "openapi.json", // Path to your OpenAPI file
-          routeBasePath: "/api", // The base URL for your API docs
-        },
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
-          beforeDefaultRemarkPlugins: [
-            [
-              remarkCodeHike,
-              {
-                theme: "github-dark",
-                showCopyButton: true,
-                lineNumbers: true,
-              },
-            ],
-          ],
+          // Versioning configuration
+          lastVersion: "1.12.0",
+          versions: {
+            current: {
+              label: "1.13.x (Next)",
+              path: "next",
+            },
+            "1.12.0": {
+              label: "1.12.x",
+              path: "",
+            },
+            "1.11.0": {
+              label: "1.11.x",
+              path: "1.11.0",
+            },
+            "1.10.0": {
+              label: "1.10.x",
+              path: "1.10.0",
+            },
+            "1.9.0": {
+              label: "1.9.x",
+              path: "1.9.0",
+            },
+            "1.8.0": {
+              label: "1.8.x",
+              path: "1.8.0",
+            },
+          },
+          rehypePlugins: [rehypeWbrUnderscore],
         },
         sitemap: {
           // https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-sitemap
@@ -107,29 +148,105 @@ const config = {
           lastmod: "datetime",
           changefreq: null,
           priority: null,
-          ignorePatterns: ["/preferences"],
+          ignorePatterns: [],
         },
         gtag: {
           trackingID: "G-SLQFLQ3KPT",
         },
         blog: false,
         theme: {
-          customCss: [
-            require.resolve("@code-hike/mdx/styles.css"),
-            require.resolve("./css/custom.css"),
-            require.resolve("./css/docu-notion-styles.css"),
-            require.resolve(
-              "./css/gifplayer.css"
-              //"./node_modules/react-gif-player/dist/gifplayer.css" // this gave a big red compile warning which is seaming unrelated "  Replace Autoprefixer browsers option to Browserslist config..."
-            ),
-          ],
+          customCss: [require.resolve("./css/custom.css")],
         },
       }),
     ],
+    [
+      "redocusaurus",
+      {
+        openapi: {
+          path: "openapi",
+          routeBasePath: "/api",
+        },
+        specs: [
+          {
+            id: "api",
+            spec: "openapi/openapi.json",
+            route: "/api",
+          },
+          {
+            id: "workflow",
+            spec: "openapi/langflow-workflows-openapi.json",
+            route: "/api/workflow",
+          },
+        ],
+        theme: {
+          primaryColor: "#F471B5",
+          options: {
+            disableSearch: true,
+          },
+          theme: {
+            sidebar: {
+              backgroundColor: "transparent",
+            },
+            colors: {
+              // Badge backgrounds carry white text — all pass WCAG AA (4.5:1)
+              http: {
+                get: "#1e6ff5",
+                post: "#0c875e",
+                put: "#a56a07",
+                delete: "#eb1616",
+                patch: "#8655f6",
+                head: "#6265f1",
+                options: "#6b7280",
+              },
+              // Response chips (2xx green / 4xx-5xx red) — darkened from Redoc
+              // defaults (#1d8127 / #d41f1c) to pass 4.5:1 on their tinted bg
+              success: {
+                main: "#186a20",
+              },
+              error: {
+                main: "#ce1e1b",
+              },
+            },
+            schema: {
+              linesColor: "#F471B5",
+              requireLabelColor: "#F471B5",
+            },
+            rightPanel: {
+              backgroundColor: "#00000000", // transparent — "transparent" not accepted by Redoc theme parser
+              textColor: "#c6c6d1",
+            },
+            typography: {
+              code: {
+                color: "#F471B5",
+              },
+            },
+            codeBlock: {
+              backgroundColor: "#161618",
+            },
+          },
+        },
+      },
+    ],
   ],
   plugins: [
+    // Alias so MDX can import code from the Langflow repo with !!raw-loader!@langflow/src/...
+    function langflowCodeImportPlugin(context) {
+      return {
+        name: "langflow-code-import",
+        configureWebpack() {
+          return {
+            resolve: {
+              alias: {
+                "@langflow": path.resolve(context.siteDir, ".."),
+              },
+            },
+          };
+        },
+      };
+    },
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
+    ["./src/plugins/segment", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
     [
       "@docusaurus/plugin-client-redirects",
       {
@@ -141,6 +258,7 @@ const config = {
               "/👋 Welcome-to-Langflow",
               "/getting-started-welcome-to-langflow",
               "/guides-new-to-llms",
+              "/about-langflow",
             ],
           },
           {
@@ -155,7 +273,7 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "concepts-overview",
+            to: "/concepts-overview",
             from: [
               "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
@@ -166,7 +284,18 @@ const config = {
           },
           {
             to: "/concepts-components",
-            from: ["/components", "/components-overview"],
+            from: [
+              "/components",
+              "/components-overview",
+              "/components-processing",
+              "/components-data",
+              "/components-files",
+              "/components-logic",
+              "/components-tools",
+              "/components-io",
+              "/components-helpers",
+              "/components-memories",
+            ],
           },
           {
             to: "/configuration-global-variables",
@@ -181,54 +310,53 @@ const config = {
             ],
           },
           {
-            to: "/concepts-objects",
+            to: "/data-types",
             from: ["/guides-data-message", "/configuration-objects"],
           },
           {
-            to: "/blog-writer",
-            from: ["/starter-projects-blog-writer", "/tutorials-blog-writer"],
-          },
-          {
-            to: "/memory-chatbot",
+            to: "/concepts-flows",
             from: [
-              "/starter-projects-memory-chatbot",
-              "/tutorials-memory-chatbot",
-            ],
-          },
-          {
-            to: "/document-qa",
-            from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
-          },
-          {
-            to: "/starter-projects-simple-agent",
-            from: [
-              "/math-agent",
-              "/starter-projects-math-agent",
-              "/tutorials-math-agent",
-            ],
-          },
-          {
-            to: "/sequential-agent",
-            from: [
-              "/starter-projects-sequential-agent",
-              "/tutorials-sequential-agent",
-            ],
-          },
-          {
-            to: "/travel-planning-agent",
-            from: [
+              "/travel-planning-agent",
               "/starter-projects-travel-planning-agent",
               "/tutorials-travel-planning-agent",
               "/starter-projects-dynamic-agent/",
+              "/simple-agent",
+              "/math-agent",
+              "/starter-projects-simple-agent",
+              "/starter-projects-math-agent",
+              "/tutorials-math-agent",
+              "/sequential-agent",
+              "/starter-projects-sequential-agent",
+              "/tutorials-sequential-agent",
+              "/memory-chatbot",
+              "/starter-projects-memory-chatbot",
+              "/tutorials-memory-chatbot",
+              "/financial-report-parser",
+              "/document-qa",
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa",
+              "/blog-writer",
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer",
+              "/basic-prompting",
+              "/starter-projects-basic-prompting",
+              "/vector-store-rag",
+              "/starter-projects-vector-store-rag",
             ],
           },
           {
-            to: "/components-vector-stores",
-            from: "/components-rag",
+            to: "/components-bundle-components",
+            from: [
+              "/components-rag",
+              "/components-vector-stores",
+              "/components-loaders",
+            ],
           },
           {
-            to: "/configuration-authentication",
+            to: "/api-keys-and-authentication",
             from: [
+              "/configuration-api-keys",
+              "/configuration-authentication",
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
             ],
@@ -244,15 +372,14 @@ const config = {
           },
           {
             to: "/concepts-publish",
-            from: ["/concepts-api", "/workspace-api"],
+            from: [
+              "/concepts-api",
+              "/workspace-api",
+            ],
           },
           {
             to: "/components-custom-components",
             from: "/components/custom",
-          },
-          {
-            to: "/components-bundle-components",
-            from: "/components-loaders",
           },
           {
             to: "/mcp-server",
@@ -260,9 +387,93 @@ const config = {
           },
           {
             to: "/deployment-kubernetes-dev",
+            from: "/deployment-kubernetes",
+          },
+          {
+            to: "/contributing-github-issues",
+            from: "/contributing-github-discussions",
+          },
+          {
+            to: "/agents",
+            from: "/agents-tool-calling-agent-component",
+          },
+          {
+            to: "/concepts-publish",
+            from: "/embedded-chat-widget",
+          },
+          {
+            to: "/bundles-google",
             from: [
-              "/deployment-kubernetes",
+              "/integrations-setup-google-oauth-langflow",
+              "/integrations-google-big-query",
             ],
+          },
+          {
+            to: "/bundles-vertexai",
+            from: "/integrations-setup-google-cloud-vertex-ai-langflow",
+          },
+          {
+            to: "/develop-application",
+            from: "/develop-overview",
+          },
+          {
+            to: "/data-types",
+            from: "/concepts-objects",
+          },
+          {
+            to: "/bundles-apify",
+            from: "/integrations-apify",
+          },
+          {
+            to: "/bundles-assemblyai",
+            from: "/integrations-assemblyai",
+          },
+          {
+            to: "/bundles-cleanlab",
+            from: "/integrations-cleanlab",
+          },
+          {
+            to: "/bundles-composio",
+            from: "/integrations-composio",
+          },
+          {
+            to: "/bundles-docling",
+            from: "/integrations-docling",
+          },
+          {
+            to: "/bundles-notion",
+            from: [
+              "/integrations/notion/setup",
+              "/integrations/notion/notion-agent-meeting-notes",
+              "/integrations/notion/notion-agent-conversational",
+            ],
+          },
+          {
+            to: "/bundles-nvidia",
+            from: [
+              "/integrations-nvidia-ingest-wsl2",
+              "/integrations-nvidia-ingest",
+              "/integrations-nvidia-g-assist",
+              "/integrations-nvidia-system-assist",
+            ]
+          },
+          {
+            to: "/next/guardrails",
+            from: "/next/guardrails-legacy",
+          },
+          {
+            to: "/legacy-core-components",
+            from: [
+              "/directory",
+              "/text-input-and-output",
+              "/data-operations",
+              "/dataframe-operations",
+              "/text-operations",
+            ]
+          },
+          {
+            to: "/api-keys-and-authentication",
+            from: "/jwt-authentication",
           },
           // add more redirects like this
           // {
@@ -285,17 +496,26 @@ const config = {
       };
     },
   ],
+  clientModules: [
+    require.resolve("./src/clientModules/tocProgress.js"),
+    require.resolve("./src/clientModules/redocA11y.js"),
+    require.resolve("./src/clientModules/codeBlockA11y.js"),
+  ],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        hideOnScroll: true,
+        hideOnScroll: false,
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs-light.svg",
+          srcDark: "img/lf-docs-dark.svg",
         },
         items: [
+          {
+            type: 'docsVersionDropdown',
+            position: 'left',
+          },
           // right
           {
             position: "right",
@@ -303,6 +523,13 @@ const config = {
             className: "header-github-link",
             target: "_blank",
             rel: null,
+            "aria-label": "GitHub",
+            'data-event': 'UI Interaction',
+            'data-action': 'clicked',
+            'data-channel': 'docs',
+            'data-element-id': 'social-github',
+            'data-namespace': 'header',
+            'data-platform-title': 'Langflow'
           },
           {
             position: "right",
@@ -310,6 +537,13 @@ const config = {
             className: "header-twitter-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Twitter",
+            'data-event': 'UI Interaction',
+            'data-action': 'clicked',
+            'data-channel': 'docs',
+            'data-element-id': 'social-twitter',
+            'data-namespace': 'header',
+            'data-platform-title': 'Langflow'
           },
           {
             position: "right",
@@ -317,6 +551,13 @@ const config = {
             className: "header-discord-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Discord",
+            'data-event': 'UI Interaction',
+            'data-action': 'clicked',
+            'data-channel': 'docs',
+            'data-element-id': 'social-discord',
+            'data-namespace': 'header',
+            'data-platform-title': 'Langflow'
           },
         ],
       },
@@ -328,8 +569,9 @@ const config = {
         respectPrefersColorScheme: true,
       },
       prism: {
-        theme: lightCodeTheme,
-        darkTheme: darkCodeTheme,
+        theme: lightNeonPrismTheme,
+        darkTheme: grafiteNeonTheme,
+        additionalLanguages: ["bash", "docker", "nginx", "powershell", "batch"],
       },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",
@@ -341,16 +583,10 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
+          autoCollapseCategories: false,
         },
       },
       footer: {
-        logo: {
-          alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
-          width: 160,
-          height: 40,
-        },
         links: [
           {
             title: null,
@@ -358,7 +594,7 @@ const config = {
               {
                 html: `<div class="footer-links">
                   <span>© ${new Date().getFullYear()} Langflow</span>
-                  <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
+                  <span id="preferenceCenterContainer"> ·&nbsp; <a href="#" onclick="if(typeof window !== 'undefined' && window.truste && window.truste.eu && window.truste.eu.clickListener) { window.truste.eu.clickListener(); } return false;" style="cursor: pointer;">Manage Privacy Choices</a></span>
                   </div>`,
               },
             ],

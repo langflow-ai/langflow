@@ -1,5 +1,5 @@
 import FetchErrorComponent from "@/components/common/fetchErrorComponent";
-import { fetchErrorComponentType } from "@/types/components";
+import type { fetchErrorComponentType } from "@/types/components";
 
 export function CustomFetchErrorComponent({
   message,

@@ -1,7 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+import { TEXTS } from "../../utils/constants/texts";
 
 test(
   "user should be able to download a flow or a component",
@@ -10,10 +12,12 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await adjustScreenView(page);
 
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
     await page.getByTestId("more-options-modal").click();
 
     await page.getByTestId("icon-SaveAll").first().click();
@@ -22,21 +26,23 @@ test(
       await page.getByTestId("replace-button").click();
     }
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 
-    const exitButton = await page.getByText("Exit", { exact: true }).count();
+    const exitButton = await page
+      .getByText(TEXTS.exit, { exact: true })
+      .count();
 
     if (exitButton > 0) {
-      await page.getByText("Exit", { exact: true }).click();
+      await page.getByText(TEXTS.exit, { exact: true }).click();
     }
 
     await page.getByTestId("icon-ChevronLeft").last().click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
-    await page.getByText("Export").first().isVisible();
-    await page.getByTestId("modal-export-button").isVisible();
+    await expect(page.getByText("Export").first()).toBeVisible();
+    await expect(page.getByTestId("modal-export-button")).toBeVisible();
     await page.getByTestId("modal-export-button").click();
     await expect(page.getByText(/.*exported successfully/)).toBeVisible({
       timeout: 10000,
@@ -45,15 +51,15 @@ test(
     await page.getByText("Flows", { exact: true }).click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
-    await page.getByText("Export").first().isVisible();
-    await page.getByTestId("modal-export-button").isVisible();
+    await expect(page.getByText("Export").first()).toBeVisible();
+    await expect(page.getByTestId("modal-export-button")).toBeVisible();
     await page.getByTestId("modal-export-button").click();
     await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
       timeout: 10000,
     });
 
-    if (await page.getByText("Components").first().isVisible()) {
-      await page.getByText("Components", { exact: true }).click();
+    if (await page.getByText(TEXTS.labelComponents).first().isVisible()) {
+      await page.getByText(TEXTS.labelComponents, { exact: true }).click();
       await page.getByTestId("home-dropdown-menu").nth(0).click();
       await page.getByTestId("btn-download-json").last().click();
       await expect(
@@ -90,10 +96,12 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await adjustScreenView(page);
 
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
     await page.getByTestId("more-options-modal").click();
 
     await page.getByTestId("icon-SaveAll").first().click();
@@ -102,14 +110,16 @@ test(
       await page.getByTestId("replace-button").click();
     }
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 
-    const exitButton = await page.getByText("Exit", { exact: true }).count();
+    const exitButton = await page
+      .getByText(TEXTS.exit, { exact: true })
+      .count();
 
     if (exitButton > 0) {
-      await page.getByText("Exit", { exact: true }).click();
+      await page.getByText(TEXTS.exit, { exact: true }).click();
     }
 
     const replaceButton = await page.getByTestId("replace-button").isVisible();

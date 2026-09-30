@@ -1,0 +1,352 @@
+---
+title: Catalog and model policy
+slug: /api-governance-policy
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+On a shared Langflow server, anyone who can build a flow can use every component and model.
+
+Superusers can create catalog and model policy to hide components, templates, model providers, and models from the Langflow visual builder.
+
+OSS Langflow has no visual editor for policy management.
+Instead, use the APIs on this page with a **superuser** API key or session.
+This is the same credential the [Users API](/api-users) requires.
+
+An empty policy is the default, and has no restrictions.
+Nothing is restricted until a superuser writes a policy.
+
+The four lists of restrictions are saved in one policy bundle.
+Replace the policy bundle with a `PUT` request.
+Send every list you want in effect with the `PUT` request.
+Send `[]` for a list you want unrestricted.
+
+| You want to… | Field | Example |
+|--------------|-------|---------|
+| Hide a component and refuse flows that use it | `blocked_component_keys` | `PythonREPLComponent` (Python Interpreter) |
+| Hide a starter template | `blocked_template_keys` | `basic_prompting` |
+| Allow only some providers | `approved_provider_ids` | `["openai", "anthropic"]`. `[]` means every provider. |
+| Block a model | `blocked_model_keys` | `gpt-4o`, `openai::gpt-4o`, or `openai::llm::gpt-4o` |
+
+A blocked component disappears from the palette.
+Saving or running a flow that still contains the component fails.
+
+A blocked template is omitted from the starter list.
+
+:::tip
+Catalog policy hides or refuses *named* components, including built-ins.
+
+To block creating and editing custom code, set [`LANGFLOW_ALLOW_CUSTOM_COMPONENTS`](/deployment-block-custom-components).
+To block built-in code-execution components at runtime without a policy bundle, set [`LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS`](/api-keys-and-authentication#multi-tenant-component-hardening).
+:::
+
+## Apply a policy {#policy-bundle}
+
+:::tip
+Apply any [database migrations](./database-migrations) before sending requests to these endpoints.
+An uninitialized bundle returns `503`.
+:::
+
+1. Create a [superuser API key](/api-keys-and-authentication#create-a-langflow-api-key).
+
+2.  Query how many flows a component would affect before you block it.
+
+    `GET /api/v1/catalog-policy/usage` returns the number of affected flows.
+    `GET /api/v1/catalog-policy/usage/flows?component=PythonREPLComponent` lists the affected flows.
+
+    For field names and key formats, see [How to name what you block](#keys).
+
+3. Read the current policy bundle, and copy `revision`.
+
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    ```python
+    import os
+
+    import requests
+
+    url = f"{os.environ['LANGFLOW_URL']}/api/v1/policy-bundle"
+    headers = {
+        "accept": "application/json",
+        "x-api-key": os.environ["LANGFLOW_API_KEY"],
+    }
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    print(response.json())
+    ```
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    ```javascript
+    const url = `${process.env.LANGFLOW_URL}/api/v1/policy-bundle`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "x-api-key": process.env.LANGFLOW_API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    console.log(await response.json());
+    ```
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    ```bash
+    curl -X GET \
+      "$LANGFLOW_URL/api/v1/policy-bundle" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+    </TabItem>
+    </Tabs>
+
+    <details>
+    <summary>Result</summary>
+
+    ```json
+    {
+      "revision": 1,
+      "initialized": true,
+      "source": "default",
+      "approved_provider_ids": [],
+      "blocked_component_keys": [],
+      "blocked_template_keys": [],
+      "blocked_model_keys": [],
+      "content_hash": "ef74cccb21593ac02fc514e669c911768e740b1135d7a91d3fb15f72837ab762",
+      "created_at": null,
+      "created_by": null,
+      "reason": null,
+      "rollback_of_revision": null,
+      "managed_externally": false
+    }
+    ```
+
+    </details>
+
+    :::tip
+    If `managed_externally` is `true`, an external controller owns policy.
+    Reads still work. Writes return `409`.
+    :::
+
+4. Replace the bundle with a `PUT` request that includes every list you want in effect. 
+    Send the `revision` number copied from step 3 as `expected_revision`.
+    Send `[]` for a list you want unrestricted.
+
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    ```python
+    import os
+
+    import requests
+
+    base = os.environ["LANGFLOW_URL"]
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/json",
+        "x-api-key": os.environ["LANGFLOW_API_KEY"],
+    }
+
+    current = requests.get(f"{base}/api/v1/policy-bundle", headers=headers)
+    current.raise_for_status()
+    revision = current.json()["revision"]
+
+    payload = {
+        "expected_revision": revision,
+        "approved_provider_ids": ["openai", "anthropic"],
+        "blocked_component_keys": ["PythonREPLComponent"],
+        "blocked_template_keys": [],
+        "blocked_model_keys": ["openai::llm::gpt-4o"],
+        "reason": "Limit providers and block code execution",
+    }
+
+    response = requests.put(f"{base}/api/v1/policy-bundle", headers=headers, json=payload)
+    response.raise_for_status()
+    print(response.json())
+    ```
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    ```javascript
+    const base = process.env.LANGFLOW_URL;
+    const headers = {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      "x-api-key": process.env.LANGFLOW_API_KEY,
+    };
+
+    const current = await fetch(`${base}/api/v1/policy-bundle`, { headers });
+    if (!current.ok) {
+      throw new Error(`HTTP ${current.status}`);
+    }
+    const revision = (await current.json()).revision;
+
+    const response = await fetch(`${base}/api/v1/policy-bundle`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        expected_revision: revision,
+        approved_provider_ids: ["openai", "anthropic"],
+        blocked_component_keys: ["PythonREPLComponent"],
+        blocked_template_keys: [],
+        blocked_model_keys: ["openai::llm::gpt-4o"],
+        reason: "Limit providers and block code execution",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    console.log(await response.json());
+    ```
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    ```bash
+    curl -X PUT \
+      "$LANGFLOW_URL/api/v1/policy-bundle" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{
+        "expected_revision": 1,
+        "approved_provider_ids": ["openai", "anthropic"],
+        "blocked_component_keys": ["PythonREPLComponent"],
+        "blocked_template_keys": [],
+        "blocked_model_keys": ["openai::llm::gpt-4o"],
+        "reason": "Limit providers and block code execution"
+      }'
+    ```
+
+    </TabItem>
+    </Tabs>
+
+    If another user updated the policy first, the `PUT` returns `409`.
+    Repeat from step 3 with an updated `revision` number.
+
+    ```json
+    {
+      "detail": {
+        "message": "Policy bundle revision conflict",
+        "expected_revision": 1,
+        "active_revision": 2
+      }
+    }
+    ```
+
+5. Optional: Undo a prior revision.
+
+    `GET /api/v1/policy-bundle/history` lists prior bundle policy revisions.
+
+    To restore a revision, `POST` to `/api/v1/policy-bundle/rollback/{revision}` with the current `expected_revision`:
+
+    ```bash
+    curl -X POST \
+      "$LANGFLOW_URL/api/v1/policy-bundle/rollback/1" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{"expected_revision": 2, "reason": "Revert last change"}'
+    ```
+
+## How to name blocked items {#keys}
+
+Components use the type stored in the flow JSON, such as `PythonREPLComponent` or `ChatInput`.
+That is the component's class identity, not the label in the visual builder.
+Keys are case-sensitive.
+Older aliases still match, so blocking `PythonREPLComponent` also catches nodes saved under a previous type for the same component.
+
+```json
+"blocked_component_keys": ["PythonREPLComponent"]
+```
+
+Starter templates use a lowercase slug of the English name with underscores, such as `basic_prompting`.
+
+```json
+"blocked_template_keys": ["basic_prompting"]
+```
+
+Providers use lowercase IDs, such as `openai`.
+`GET /api/v1/model-provider-policy` lists every provider the process is aware of, with `provider_id` and display name.
+
+```json
+"approved_provider_ids": ["openai", "anthropic"]
+```
+
+Models use the identities in the model picker.
+
+```json
+"blocked_model_keys": ["gpt-4o", "openai::gpt-4o", "openai::llm::gpt-4o"]
+```
+
+## Change one list at a time {#catalog-policy}
+
+Use these endpoints when you want to change only components, templates, or providers.
+If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle` instead. See [Apply a policy](#policy-bundle).
+
+1. To hide or unhide components, `PUT` the complete blocked list to `/api/v1/catalog-policy/components`.
+    A `PUT` replaces the whole list.
+    Send `{"blocked": []}` to unblock every component.
+
+    ```bash
+    curl -X PUT \
+      "$LANGFLOW_URL/api/v1/catalog-policy/components" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{"blocked": ["PythonREPLComponent"]}'
+    ```
+
+    To read the current list first, `GET /api/v1/catalog-policy/components`.
+
+2. To hide or unhide starter templates, `PUT` the complete blocked list to `/api/v1/catalog-policy/templates`.
+
+    ```bash
+    curl -X PUT \
+      "$LANGFLOW_URL/api/v1/catalog-policy/templates" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{"blocked": ["basic_prompting"]}'
+    ```
+
+    To read the current list first, `GET /api/v1/catalog-policy/templates`.
+
+3. Optional: List the flows that include a component.
+
+    `GET /api/v1/catalog-policy/usage` returns the number of flows.
+    `GET /api/v1/catalog-policy/usage/flows?component=PythonREPLComponent` lists the affected flows.
+
+4. To allow only some providers, `PUT` the complete approved list to `/api/v1/model-provider-policy`.
+    Send `{"approved_provider_ids": []}` to allow every provider.
+
+    ```bash
+    curl -X PUT \
+      "$LANGFLOW_URL/api/v1/model-provider-policy" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{"approved_provider_ids": ["openai", "anthropic"]}'
+    ```
+
+    Set `blocked_model_keys` with `PUT /api/v1/policy-bundle`.
+
+## See also
+
+* [Restrict API tweaks](./deployment-tweaks-policy)
+* [Users endpoints](/api-users)
+* [Block custom components](/deployment-block-custom-components)
+* [API keys and authentication](/api-keys-and-authentication)

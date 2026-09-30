@@ -1,4 +1,4 @@
-import { RefObject, useEffect } from "react";
+import { type RefObject, useEffect } from "react";
 
 interface UseChangeOnUnfocusProps<T> {
   selected?: boolean;
@@ -6,7 +6,7 @@ interface UseChangeOnUnfocusProps<T> {
   onChange?: (value: T) => void;
   defaultValue: T;
   shouldChangeValue?: (value: T) => boolean;
-  nodeRef: RefObject<HTMLDivElement>;
+  nodeRef: RefObject<HTMLDivElement | null>;
   callback?: () => void;
   callbackEscape?: () => void;
 }

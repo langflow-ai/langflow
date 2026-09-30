@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
 import { nodeColorsName } from "@/utils/styleUtils";
@@ -17,6 +18,7 @@ export default function HandleTooltipComponent({
   isSameNode: boolean;
   left: boolean;
 }) {
+  const { t } = useTranslation();
   const tooltips = tooltipTitle.split("\n");
   const plural = tooltips.length > 1 ? "s" : "";
 
@@ -32,7 +34,7 @@ export default function HandleTooltipComponent({
                 <span className="font-semibold">Connect</span> to
               </span>
             ) : (
-              <span>Incompatible with</span>
+              <span>{t("node.incompatibleWith")}</span>
             )
           ) : (
             <span className="text-xs">

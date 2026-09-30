@@ -1,7 +1,7 @@
-import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
-import { AllNodeType, EdgeType } from "@/types/flow";
-import ELK, { ElkNode } from "elkjs/lib/elk.bundled.js";
+import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { cloneDeep } from "lodash";
+import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
+import type { AllNodeType, EdgeType } from "@/types/flow";
 
 const layoutOptions = {
   "elk.algorithm": "layered",
@@ -17,6 +17,22 @@ const layoutOptions = {
 };
 const elk = new ELK();
 
+// Deterministic grid used when ELK cannot lay the graph out. Guarantees every
+// node still receives a numeric position so React Flow never adopts a node
+// whose `position` is undefined.
+export const getFallbackGridPositions = (
+  nodes: AllNodeType[],
+): AllNodeType[] => {
+  const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
+  return nodes.map((node, index) => ({
+    ...node,
+    position: {
+      x: (index % columns) * (NODE_WIDTH + 80),
+      y: Math.floor(index / columns) * (NODE_HEIGHT / 2 + 80),
+    },
+  }));
+};
+
 // uses elkjs to give each node a layouted position
 export const getLayoutedNodes = async (
   nodes: AllNodeType[],
@@ -26,8 +42,12 @@ export const getLayoutedNodes = async (
     id: "root",
     layoutOptions,
     children: cloneDeep(nodes).map((n) => {
+      // ELK rejects any id that is not a string or integer, so ports derived
+      // from an absent sourceHandle/targetHandle must be dropped rather than
+      // emitted with `id: undefined`. Edges referencing those handles fall back
+      // to the always-present node-id port below.
       const targetPorts = edges
-        .filter((e) => e.source === n.id)
+        .filter((e) => e.source === n.id && e.sourceHandle)
         .map((e) => ({
           id: e.sourceHandle,
           properties: {
@@ -36,7 +56,7 @@ export const getLayoutedNodes = async (
         }));
 
       const sourcePorts = edges
-        .filter((e) => e.target === n.id)
+        .filter((e) => e.target === n.id && e.targetHandle)
         .map((e) => ({
           id: e.targetHandle,
           properties: {
@@ -55,13 +75,25 @@ export const getLayoutedNodes = async (
         ports: [{ id: n.id }, ...targetPorts, ...sourcePorts],
       };
     }) as ElkNode[],
-    edges: edges.map((e) => ({
-      id: e.id,
+    edges: edges.map((e, index) => ({
+      // Flows built programmatically (e.g. the /starter-projects/ payload) have
+      // no edge id; ELK requires one.
+      id: e.id ?? `elk-edge-${index}`,
       sources: [e.sourceHandle || e.source],
       targets: [e.targetHandle || e.target],
     })),
   };
-  const layoutedGraph = await elk.layout(graph);
+
+  let layoutedGraph: ElkNode;
+  try {
+    layoutedGraph = await elk.layout(graph);
+  } catch (error) {
+    console.error(
+      "getLayoutedNodes: ELK layout failed, using grid fallback",
+      error,
+    );
+    return getFallbackGridPositions(nodes);
+  }
 
   const layoutedNodes = nodes.map((node) => {
     const layoutedNode = layoutedGraph.children?.find(

@@ -1,5 +1,5 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import { GetCodeType } from "@/types/tweaks";
+import type { GetCodeType } from "@/types/tweaks";
 
 /**
  * Function to get the widget code for the API
@@ -14,11 +14,10 @@ export default function getWidgetCode({
 }: GetCodeType): string {
   const source = copy
     ? `<script
-  src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js">
+  src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js">
 </script>`
     : `<script
-  src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/
-build/static/js/bundle.min.js">
+  src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js">
 </script>`;
 
   const { protocol, host } = customGetHostProtocol();

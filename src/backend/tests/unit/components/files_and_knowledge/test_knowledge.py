@@ -1,0 +1,843 @@
+"""Tests for the merged :class:`KnowledgeComponent`.
+
+The existing ``test_ingestion.py`` and ``test_retrieval.py`` exercise the
+ingest and retrieve code paths end-to-end through the backward-compat
+subclass shims (``KnowledgeIngestionComponent`` /
+``KnowledgeBaseComponent``); if those keep passing, the merged component's
+behavior on the run path is verified by reuse.
+
+This file covers the *new* surface area introduced by the merge:
+
+* the ``mode`` ``TabInput`` exists and defaults to ``MODE_INGEST``;
+* ``update_build_config`` toggles ``show`` on the ingest / retrieve input
+  groups in lockstep with the selected mode;
+* ``update_outputs`` swaps the single visible output between
+  ``ingest_result`` (Data) and ``retrieve_result`` (DataFrame);
+* the legacy subclasses pin themselves to the right mode at init time.
+"""
+
+from __future__ import annotations
+
+import json
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
+from lfx.components.files_and_knowledge.knowledge import (
+    MODE_INGEST,
+    MODE_RETRIEVE,
+    KnowledgeComponent,
+    _is_retrieve_mode,
+)
+from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _build_config_from_inputs(component: KnowledgeComponent) -> dict:
+    """Snapshot the component's declared inputs into a build_config-like dict.
+
+    The frontend hands ``update_build_config`` a dict keyed by input name
+    where each value carries ``show`` / ``value`` / ``options`` / etc. This
+    helper mirrors that shape from the class-level ``inputs`` declaration so
+    the tests don't need a real frontend session.
+    """
+    build_config: dict = {}
+    for inp in component.inputs:
+        entry = inp.to_dict() if hasattr(inp, "to_dict") else dict(inp.__dict__)
+        # ``show`` may be omitted when the input default is True; make it
+        # explicit so the toggle assertions read cleanly.
+        entry.setdefault("show", getattr(inp, "show", True))
+        entry.setdefault("value", getattr(inp, "value", None))
+        build_config[inp.name] = entry
+    return build_config
+
+
+def _mode_options(component: KnowledgeComponent) -> list[str]:
+    mode_input = next((i for i in component.inputs if i.name == "mode"), None)
+    assert mode_input is not None, "KnowledgeComponent must declare a 'mode' input"
+    return list(mode_input.options or [])
+
+
+# ---------------------------------------------------------------------------
+# Structural assertions on the merged component
+# ---------------------------------------------------------------------------
+class TestKnowledgeComponentShape:
+    def test_mode_input_exists_with_expected_options(self) -> None:
+        component = KnowledgeComponent()
+        options = _mode_options(component)
+        assert options == [MODE_INGEST, MODE_RETRIEVE]
+
+    def test_default_mode_is_ingest(self) -> None:
+        component = KnowledgeComponent()
+        mode_input = next(i for i in component.inputs if i.name == "mode")
+        assert mode_input.value == MODE_INGEST
+
+    def test_mode_config_partition_covers_only_known_fields(self) -> None:
+        """Each mode lists its fields exactly once; defaults never appear in either bucket.
+
+        ``mode_config`` must list every mode-specific field exactly once
+        and never list any of the ``default_keys`` that are always shown.
+        """
+        component = KnowledgeComponent()
+        all_input_names = {i.name for i in component.inputs}
+        partitioned = set(component.mode_config[MODE_INGEST]) | set(component.mode_config[MODE_RETRIEVE])
+        # No overlap between the two mode buckets.
+        assert not set(component.mode_config[MODE_INGEST]) & set(component.mode_config[MODE_RETRIEVE])
+        # No mode bucket lists a default-key field.
+        assert not partitioned & set(component.default_keys)
+        # Every name in the buckets is a real declared input.
+        assert partitioned <= all_input_names
+
+    def test_default_keys_are_always_present(self) -> None:
+        component = KnowledgeComponent()
+        all_input_names = {i.name for i in component.inputs}
+        assert set(component.default_keys) <= all_input_names
+        assert "mode" in component.default_keys
+        assert "knowledge_base" in component.default_keys
+
+    @pytest.mark.parametrize("name", ["docs.v2", "a" * 100, "a" * 512, "topology+collection"])
+    def test_collection_name_validation_accepts_shared_contract(self, name: str) -> None:
+        assert KnowledgeComponent().is_valid_collection_name(name)
+
+    @pytest.mark.parametrize(
+        "name",
+        ["Q&A docs", "trailing_", "catálogo", "a" * 513, "docs..v2", "127.0.0.1"],
+    )
+    def test_collection_name_validation_rejects_chroma_incompatible_names(self, name: str) -> None:
+        assert not KnowledgeComponent().is_valid_collection_name(name)
+
+
+# ---------------------------------------------------------------------------
+# update_build_config — input visibility toggling
+# ---------------------------------------------------------------------------
+class TestModeDrivenInputVisibility:
+    @pytest.fixture(autouse=True)
+    def _skip_astra_gate(self):
+        """Stub the astra-cloud gate so update_build_config can proceed in tests.
+
+        ``update_build_config`` calls the astra-cloud gate as its first
+        action — in tests we just need it to be a no-op.
+        """
+        with patch("lfx.components.files_and_knowledge.knowledge.raise_error_if_astra_cloud_disable_component") as gate:
+            gate.return_value = None
+            yield
+
+    async def test_switching_to_retrieve_hides_ingest_fields(self) -> None:
+        component = KnowledgeComponent()
+        build_config = _build_config_from_inputs(component)
+        build_config["mode"]["value"] = MODE_INGEST
+
+        updated = await component.update_build_config(build_config, MODE_RETRIEVE, "mode")
+
+        for fname in component.mode_config[MODE_INGEST]:
+            assert updated[fname]["show"] is False, f"{fname} should be hidden in retrieve mode"
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert updated[fname]["show"] is True, f"{fname} should be visible in retrieve mode"
+        # Default keys remain visible regardless of mode.
+        for fname in component.default_keys:
+            assert updated[fname]["show"] is True
+
+    async def test_switching_to_ingest_hides_retrieve_fields(self) -> None:
+        component = KnowledgeComponent()
+        build_config = _build_config_from_inputs(component)
+        # Start the build_config in retrieve mode so we can observe the flip.
+        build_config["mode"]["value"] = MODE_RETRIEVE
+        for fname in component.mode_config[MODE_INGEST]:
+            build_config[fname]["show"] = False
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            build_config[fname]["show"] = True
+
+        updated = await component.update_build_config(build_config, MODE_INGEST, "mode")
+
+        for fname in component.mode_config[MODE_INGEST]:
+            assert updated[fname]["show"] is True, f"{fname} should be visible in ingest mode"
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert updated[fname]["show"] is False, f"{fname} should be hidden in ingest mode"
+
+    async def test_unknown_mode_falls_back_to_ingest_visibility(self) -> None:
+        """Stale flows may carry an unknown mode value — fall back gracefully."""
+        component = KnowledgeComponent()
+        build_config = _build_config_from_inputs(component)
+        build_config["mode"]["value"] = "bogus-mode-value"
+
+        # field_name=None mirrors an initial node render with no triggering field.
+        updated = await component.update_build_config(build_config, None, None)
+
+        for fname in component.mode_config[MODE_INGEST]:
+            assert updated[fname]["show"] is True
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert updated[fname]["show"] is False
+
+
+# ---------------------------------------------------------------------------
+# Class-level outputs + update_outputs filtering
+# ---------------------------------------------------------------------------
+class TestModeDrivenOutputSwap:
+    def test_class_level_declares_both_outputs_for_runtime_dispatch(self) -> None:
+        """Both output methods are declared at the class level so the runtime can dispatch correctly.
+
+        Without this, the runtime falls back to the only declared output and
+        crashes when the wrong-mode method runs against missing inputs (e.g.
+        ``build_kb_info`` calling ``convert_to_dataframe(None)`` in retrieve
+        mode).
+        """
+        output_names = {o.name for o in KnowledgeComponent.outputs}
+        assert output_names == {"dataframe_output", "retrieve_data"}
+        method_names = {o.method for o in KnowledgeComponent.outputs}
+        assert method_names == {"build_kb_info", "retrieve_data"}
+
+    def test_retrieve_mode_replaces_output_with_retrieve_result(self) -> None:
+        component = KnowledgeComponent()
+        frontend_node: dict = {"outputs": list(component.outputs)}
+
+        result = component.update_outputs(frontend_node, "mode", MODE_RETRIEVE)
+
+        assert len(result["outputs"]) == 1
+        out = result["outputs"][0]
+        # Legacy output name preserved so saved flow edges keyed on
+        # ``retrieve_data`` continue to resolve.
+        assert out.name == "retrieve_data"
+        assert out.method == "retrieve_data"
+
+    def test_ingest_mode_replaces_output_with_ingest_result(self) -> None:
+        component = KnowledgeComponent()
+        # Pretend we were previously in retrieve mode.
+        frontend_node: dict = {
+            "outputs": [
+                {"name": "retrieve_data", "method": "retrieve_data", "display_name": "Results"},
+            ]
+        }
+
+        result = component.update_outputs(frontend_node, "mode", MODE_INGEST)
+
+        assert len(result["outputs"]) == 1
+        out = result["outputs"][0]
+        # Legacy output name preserved so saved flow edges keyed on
+        # ``dataframe_output`` continue to resolve.
+        assert out.name == "dataframe_output"
+        assert out.method == "build_kb_info"
+
+    def test_non_mode_field_change_leaves_outputs_untouched(self) -> None:
+        component = KnowledgeComponent()
+        original = [{"name": "dataframe_output", "method": "build_kb_info"}]
+        frontend_node: dict = {"outputs": list(original)}
+
+        result = component.update_outputs(frontend_node, "top_k", 10)
+
+        assert result["outputs"] == original
+
+
+# ---------------------------------------------------------------------------
+# Output-method mode dispatch (stale edges + legacy labels)
+# ---------------------------------------------------------------------------
+class TestOutputMethodModeDispatch:
+    """Output methods dispatch by mode so saved flows survive edge staleness.
+
+    If a user wires the ingest output, then switches to retrieve mode, the
+    saved edge still references ``build_kb_info``. Without dispatch, the
+    runtime would call the wrong method against the (now-None) ingest
+    inputs and crash with ``NoneType.to_dataframe``.
+    """
+
+    def test_is_retrieve_mode_matches_canonical_and_legacy_labels(self) -> None:
+        assert _is_retrieve_mode(MODE_RETRIEVE) is True
+        # Legacy emoji label from the original PR version of this component
+        # — saved flows may still carry it.
+        assert _is_retrieve_mode("🔍 Retrieve") is True
+        assert _is_retrieve_mode(MODE_INGEST) is False
+        assert _is_retrieve_mode("📥 Ingest") is False
+        assert _is_retrieve_mode(None) is False
+        assert _is_retrieve_mode(42) is False
+
+    async def test_build_kb_info_delegates_to_retrieve_when_mode_is_retrieve(self) -> None:
+        """Stale-edge safety net: wiring the ingest output should not crash a retrieve flow."""
+        component = KnowledgeComponent()
+        component.mode = MODE_RETRIEVE
+        sentinel = object()
+        component.retrieve_data = AsyncMock(return_value=sentinel)
+
+        result = await component.build_kb_info()
+
+        assert result is sentinel
+        component.retrieve_data.assert_awaited_once()
+
+    async def test_retrieve_data_delegates_to_ingest_when_mode_is_ingest(self) -> None:
+        """Symmetric safety net for the inverse stale-edge case."""
+        component = KnowledgeComponent()
+        component.mode = MODE_INGEST
+        sentinel = object()
+        component.build_kb_info = AsyncMock(return_value=sentinel)
+
+        result = await component.retrieve_data()
+
+        assert result is sentinel
+        component.build_kb_info.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Subclass shims — backward-compat
+# ---------------------------------------------------------------------------
+class TestLegacySubclassesPinMode:
+    def test_ingestion_subclass_pins_ingest_mode(self) -> None:
+        component = KnowledgeIngestionComponent()
+        assert component.mode == MODE_INGEST
+        assert component.name == "KnowledgeIngestion"
+        assert component.display_name == "Knowledge Ingestion"
+
+    def test_retrieval_subclass_pins_retrieve_mode(self) -> None:
+        component = KnowledgeBaseComponent()
+        assert component.mode == MODE_RETRIEVE
+        assert component.name == "KnowledgeBase"
+        assert component.display_name == "Knowledge Base"
+
+    def test_subclasses_inherit_merged_inputs(self) -> None:
+        """Saved legacy flows must keep loading against either subclass.
+
+        Both subclasses must declare the full superset of inputs so that
+        saved legacy flows (which reference field names like ``input_df`` /
+        ``top_k``) continue to load against either class.
+        """
+        ingest_input_names = {i.name for i in KnowledgeIngestionComponent.inputs}
+        retrieve_input_names = {i.name for i in KnowledgeBaseComponent.inputs}
+        for name in ("input_df", "top_k", "knowledge_base", "mode"):
+            assert name in ingest_input_names, f"KnowledgeIngestionComponent missing input: {name}"
+            assert name in retrieve_input_names, f"KnowledgeBaseComponent missing input: {name}"
+
+    def test_retrieval_module_reexports_filter_helpers(self) -> None:
+        """Back-compat re-export keeps legacy test imports working.
+
+        ``test_retrieval.py`` imports these helpers from the retrieval
+        module — the back-compat re-export must keep that working.
+        """
+        from lfx.components.files_and_knowledge.retrieval import (
+            _chunk_matches_filter,
+            _parse_metadata_filter,
+        )
+
+        assert _parse_metadata_filter(None) == {}
+        assert _chunk_matches_filter(None, {}) is True
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Base path isolation
+#
+# Path resolution now runs through the shared ``resolve_local_store_path``
+# helper, which is also the only place a local path is ever built — for local
+# Chroma and nothing else.
+# ---------------------------------------------------------------------------
+class TestKnowledgeBasePathIsolation:
+    @staticmethod
+    def _resolve(kb_root, username, kb_name, *, backend_type="chroma", backend_config=None):
+        from langflow.api.utils.kb_helpers import resolve_local_store_path
+
+        with patch(
+            "langflow.api.utils.kb_helpers.KBStorageHelper.get_root_path",
+            return_value=kb_root,
+        ):
+            return resolve_local_store_path(
+                kb_name,
+                username,
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    def test_rejects_kb_names_outside_the_current_user_directory(self, knowledge_base, tmp_path) -> None:
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            self._resolve(tmp_path, "attacker", knowledge_base)
+
+    def test_rejects_username_that_escapes_the_global_kb_root(self, tmp_path) -> None:
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            self._resolve(tmp_path, "../outside", "safe_kb")
+
+    def test_rejects_symlink_escape_from_current_user_directory(self, tmp_path) -> None:
+        user_root = tmp_path / "attacker"
+        outside_root = tmp_path.parent / "outside"
+        user_root.mkdir()
+        outside_root.mkdir(exist_ok=True)
+        (user_root / "linked").symlink_to(outside_root, target_is_directory=True)
+
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            self._resolve(tmp_path, "attacker", "linked/secret_kb")
+
+    def test_preserves_kb_names_inside_the_current_user_directory(self, tmp_path) -> None:
+        assert self._resolve(tmp_path, "current_user", "existing_kb") == (tmp_path / "current_user" / "existing_kb")
+
+    @pytest.mark.parametrize(
+        ("backend_type", "backend_config"),
+        [("opensearch", {}), ("postgres", {}), ("chroma", {"mode": "cloud"})],
+    )
+    def test_remote_backends_resolve_no_path_at_all(self, tmp_path, backend_type, backend_config) -> None:
+        """Only local Chroma gets a directory; everything else stays off-disk.
+
+        Notably a traversing name is harmless for these — there is no path to
+        traverse, because none is built.
+        """
+        assert (
+            self._resolve(
+                tmp_path,
+                "attacker",
+                "../victim/secret_kb",
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+            is None
+        )
+
+
+# ---------------------------------------------------------------------------
+# Backend resolution: the ``knowledge_base`` row is the sole authority, and an
+# unresolvable backend must raise rather than silently degrade to local storage.
+#
+# Ingestion used to read ``embedding_metadata.json`` while retrieval read the
+# database row. Across replicas those disagree — a pod without the sidecar wrote
+# a remote-backed KB into a local Chroma dir while queries followed the row to
+# the configured cluster and returned nothing, with no error raised anywhere.
+# The sidecar is gone entirely now; both paths resolve from the row.
+# ---------------------------------------------------------------------------
+class TestBackendResolution:
+    KB_NAME = "support_docs"
+    USER_ID = "3f1c9c1e-6d2a-4a53-8a4e-9c0b1d2e3f40"
+
+    @staticmethod
+    def _record(backend_type: str, backend_config: dict | None = None) -> SimpleNamespace:
+        return SimpleNamespace(backend_type=backend_type, backend_config=backend_config or {})
+
+    def _component(self) -> KnowledgeComponent:
+        # ``user_id`` is a read-only property backed by ``_user_id``; the public
+        # name is ignored by the constructor (it lands as the string "None").
+        return KnowledgeComponent(knowledge_base=self.KB_NAME, _user_id=self.USER_ID)
+
+    @staticmethod
+    def _write_sidecar(kb_path, backend_type: str, backend_config: dict | None = None) -> None:
+        kb_path.mkdir(parents=True, exist_ok=True)
+        (kb_path / "embedding_metadata.json").write_text(
+            json.dumps({"backend_type": backend_type, "backend_config": backend_config or {}})
+        )
+
+    async def test_resolves_from_the_database_row(self) -> None:
+        component = self._component()
+
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            new=AsyncMock(return_value=self._record("opensearch", {"index_name": "kb_support"})),
+        ):
+            backend_type, backend_config = await component._resolve_backend_config()
+
+        assert backend_type == "opensearch"
+        assert backend_config == {"index_name": "kb_support"}
+
+    async def test_a_stale_sidecar_cannot_override_the_row(self, tmp_path) -> None:
+        """A sidecar left on one pod is inert — nothing reads it any more."""
+        self._write_sidecar(tmp_path, "chroma")
+        component = self._component()
+
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            new=AsyncMock(return_value=self._record("opensearch", {"index_name": "kb_support"})),
+        ):
+            backend_type, _ = await component._resolve_backend_config()
+
+        assert backend_type == "opensearch"
+
+    async def test_raises_without_a_row_even_when_a_sidecar_exists(self, tmp_path) -> None:
+        """No row is unknown, not local — refuse to guess, sidecar or not.
+
+        A legacy directory is adopted explicitly via
+        ``langflow reconcile-kb-from-disk``, never by an implicit read here.
+        """
+        self._write_sidecar(tmp_path, "opensearch", {"index_name": "legacy"})
+        component = self._component()
+
+        with (
+            patch(
+                "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+                new=AsyncMock(return_value=None),
+            ),
+            pytest.raises(ValueError, match="Refusing to fall back to local storage"),
+        ):
+            await component._resolve_backend_config()
+
+    async def test_database_lookup_failure_propagates(self, tmp_path) -> None:
+        """A DB error must not be swallowed into a local-storage default."""
+        self._write_sidecar(tmp_path, "chroma")
+        component = self._component()
+
+        with (
+            patch(
+                "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+                new=AsyncMock(side_effect=RuntimeError("connection lost")),
+            ),
+            pytest.raises(RuntimeError, match="connection lost"),
+        ):
+            await component._resolve_backend_config()
+
+
+class TestKnowledgeProviderPolicyPreflight:
+    """Embedding policy is resolved from raw dialog values or stored KB metadata."""
+
+    USER_ID = "3f1c9c1e-6d2a-4a53-8a4e-9c0b1d2e3f40"
+
+    async def test_create_dialog_selection_is_denied_before_dynamic_hook_work(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(_user_id=self.USER_ID)
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+        snapshot = SimpleNamespace(require=Mock(side_effect=denial))
+        resolve_policy = AsyncMock(return_value=snapshot)
+        metadata_lookup = AsyncMock(side_effect=AssertionError("stored KB metadata read for create dialog"))
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        parameters = {
+            "knowledge_base": {
+                "01_new_kb_name": "support_docs",
+                "02_embedding_model": [{"name": "text-embedding-3-small", "provider": "OpenAI"}],
+            }
+        }
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id="policy-actor",
+                parameters=parameters,
+            )
+
+        resolve_policy.assert_awaited_once_with(
+            user_id="policy-actor",
+            providers=["openai"],
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        metadata_lookup.assert_not_awaited()
+
+    @pytest.mark.parametrize("mode", [MODE_INGEST, MODE_RETRIEVE])
+    async def test_saved_kb_provider_uses_owner_metadata_and_explicit_policy_actor(self, monkeypatch, mode) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="support_docs", mode=mode, _user_id=self.USER_ID)
+        snapshot = SimpleNamespace(require=Mock())
+        resolve_policy = AsyncMock(return_value=snapshot)
+        metadata_lookup = AsyncMock(
+            return_value={
+                "model_selection": {"name": "text-embedding-3-small", "provider": "OpenAI"},
+                "embedding_provider": "OpenAI",
+            }
+        )
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        await component.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"knowledge_base": "support_docs", "mode": mode},
+        )
+
+        metadata_lookup.assert_awaited_once_with("support_docs")
+        resolve_policy.assert_awaited_once_with(
+            user_id="policy-actor",
+            providers=["openai"],
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+        snapshot.require.assert_called_once_with("openai")
+
+    async def test_saved_kb_with_unresolvable_provider_fails_closed(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="legacy_docs", _user_id=self.USER_ID)
+        resolve_policy = AsyncMock()
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(
+            component,
+            "_get_kb_metadata",
+            AsyncMock(return_value={"model_selection": {"name": "old-model"}, "embedding_provider": "Unknown"}),
+        )
+
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id="policy-actor",
+                parameters={"knowledge_base": "legacy_docs"},
+            )
+
+        resolve_policy.assert_not_awaited()
+
+    async def test_missing_saved_kb_metadata_fails_closed_before_policy_resolution(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="missing_docs", _user_id=self.USER_ID)
+        resolve_policy = AsyncMock()
+        metadata_lookup = AsyncMock(return_value={})
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id="policy-actor",
+                parameters={"knowledge_base": "missing_docs"},
+            )
+
+        metadata_lookup.assert_awaited_once_with("missing_docs")
+        resolve_policy.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Display name / dropdown UX (matches starter projects + frontend create dialog)
+# ---------------------------------------------------------------------------
+class TestComponentSurface:
+    def test_display_name_matches_starter_projects(self) -> None:
+        """The component name on the canvas must read 'Knowledge'.
+
+        Starter project JSONs (``Knowledge Retrieval.json``,
+        ``Vector Store RAG.json``) store ``display_name='Knowledge'`` on
+        the node header. If the class-level default drifts back to
+        'Knowledge Base', fresh nodes added from the component panel
+        will disagree with starter-project nodes.
+        """
+        assert KnowledgeComponent.display_name == "Knowledge"
+
+    def test_create_kb_dialog_label_is_user_facing(self) -> None:
+        """The ``+ ...`` shortcut in the KB dropdown must read 'Create new Knowledge Base'.
+
+        The frontend renders the dialog node's ``display_name`` as the
+        dropdown's create-new affordance. The label must be the full,
+        user-facing phrase so the dropdown reads as a complete CTA.
+        """
+        knowledge_base_input = next(i for i in KnowledgeComponent.inputs if i.name == "knowledge_base")
+        dialog_node = knowledge_base_input.dialog_inputs["fields"]["data"]["node"]
+        assert dialog_node["display_name"] == "Create new Knowledge Base"
+
+
+# ---------------------------------------------------------------------------
+# source_types extraction (BUG-04)
+# ---------------------------------------------------------------------------
+class TestExtractSourceTypesFromDataFrame:
+    """Flow-driven ingestion (input_df) must stamp the KB with file extensions.
+
+    The Knowledge Bases list keys file-type icons off the ``knowledge_base``
+    row's ``source_types``. Direct upload populates this; flow-driven
+    ingestion used to leave it empty, leaving the icon blank. The extractor
+    reads common path/name columns produced by the File / S3 /
+    cloud-storage components.
+    """
+
+    def test_extracts_pdf_from_file_path_column(self) -> None:
+        import pandas as pd
+
+        df = pd.DataFrame({"file_path": ["docs/report.PDF", "docs/notes.txt"]})
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        assert extensions == {"pdf", "txt"}
+
+    def test_handles_missing_columns(self) -> None:
+        import pandas as pd
+
+        df = pd.DataFrame({"text": ["hello", "world"]})
+        assert KnowledgeComponent._extract_source_types_from_df(df) == set()
+
+    def test_ignores_non_extension_dotted_values(self) -> None:
+        """URLs with paths / version strings shouldn't pollute the extension set."""
+        import pandas as pd
+
+        df = pd.DataFrame(
+            {
+                "file_name": [
+                    "doc.pdf",
+                    "https://example.com/path",
+                    "v1.2.3",
+                    "file.this-is-not-an-ext",
+                ]
+            }
+        )
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        # Only "pdf" is a short alphanumeric extension on a real filename;
+        # "v1.2.3" yields "3" which isn't a meaningful icon key but passes
+        # the cheap shape check — we accept that as a known false positive
+        # over building a strict extension whitelist.
+        assert "pdf" in extensions
+        assert "com/path" not in extensions
+
+    def test_handles_nan_rows_safely(self) -> None:
+        import numpy as np
+        import pandas as pd
+
+        df = pd.DataFrame({"file_path": ["docs/a.docx", np.nan, None]})
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        assert extensions == {"docx"}
+
+    def test_extracts_from_mimetype_column(self) -> None:
+        """MIME types like ``application/pdf`` map to ``pdf`` for the icon palette."""
+        import pandas as pd
+
+        df = pd.DataFrame({"mimetype": ["application/pdf", "text/plain"]})
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        assert "pdf" in extensions
+        assert "plain" in extensions
+
+
+# ---------------------------------------------------------------------------
+# source_types extraction from the *raw* component input (BUG-04 follow-up)
+# ---------------------------------------------------------------------------
+class TestExtractSourceTypesFromInput:
+    """Flow-driven ingestion must read file metadata from the raw input value.
+
+    When a File component's Raw Content (Message) is wired to ``input_df``,
+    ``convert_to_dataframe`` projects the Message down to ``{"text": ...}`` —
+    file_path / filename / mimetype never reach the DataFrame. We must look
+    at the raw input to keep the KB icon consistent with direct upload.
+    """
+
+    def test_extension_from_path_string(self) -> None:
+        assert KnowledgeComponent._extension_from_value("docs/report.PDF") == "pdf"
+
+    def test_extension_from_mimetype_string(self) -> None:
+        assert KnowledgeComponent._extension_from_value("application/pdf") == "pdf"
+
+    def test_extension_returns_none_for_garbage(self) -> None:
+        assert KnowledgeComponent._extension_from_value(None) is None
+        assert KnowledgeComponent._extension_from_value("") is None
+        assert KnowledgeComponent._extension_from_value("nodotsorslashes") is None
+
+    def test_extracts_from_message_data_dict(self) -> None:
+        """Mirror the shape ``BaseFileComponent._extract_file_metadata`` stamps onto a Message."""
+        from lfx.schema.message import Message
+
+        msg = Message(text="hello", file_path="/uploads/report.pdf", filename="report.pdf", mimetype="application/pdf")
+        assert KnowledgeComponent._extract_source_types_from_input(msg) == {"pdf"}
+
+    def test_extracts_from_data_object(self) -> None:
+        from lfx.schema.data import Data
+
+        data = Data(data={"text": "...", "file_path": "/uploads/notes.txt"})
+        assert KnowledgeComponent._extract_source_types_from_input(data) == {"txt"}
+
+    def test_extracts_from_plain_dict(self) -> None:
+        payload = {"text": "...", "filename": "presentation.PPTX"}
+        assert KnowledgeComponent._extract_source_types_from_input(payload) == {"pptx"}
+
+    def test_extracts_from_list_of_messages(self) -> None:
+        from lfx.schema.message import Message
+
+        msgs = [
+            Message(text="a", file_path="a.pdf"),
+            Message(text="b", file_path="b.docx"),
+        ]
+        assert KnowledgeComponent._extract_source_types_from_input(msgs) == {"pdf", "docx"}
+
+    def test_returns_empty_for_text_only_message(self) -> None:
+        """A bare ``Message(text="...")`` carries no file hints — extractor must not invent any."""
+        from lfx.schema.message import Message
+
+        assert KnowledgeComponent._extract_source_types_from_input(Message(text="just text")) == set()
+
+    def test_returns_empty_for_none(self) -> None:
+        assert KnowledgeComponent._extract_source_types_from_input(None) == set()
+
+
+# ---------------------------------------------------------------------------
+# Output handle types (BUG-02)
+# ---------------------------------------------------------------------------
+class TestOutputHandleTypesMatchStarterEdges:
+    """Output handle types must stay single-valued to match saved starter edges.
+
+    Saved starter-project edges store ``sourceHandle.output_types`` as a
+    single-element list (``["Table"]`` / ``["JSON"]``). React Flow rebuilds
+    handle IDs from the live API's ``output.types`` and matches by string
+    equality, so any widening — e.g. method annotated ``DataFrame | Data``
+    auto-extending the handle to ``["Table", "JSON"]`` — breaks every
+    pre-saved edge into / out of the Knowledge node (BUG-02).
+    """
+
+    def test_retrieve_output_type_is_table_only(self) -> None:
+        component = KnowledgeComponent()
+        retrieve = component._outputs_map["retrieve_data"]
+        assert retrieve.types == ["Table"], (
+            "retrieve_data must advertise only ['Table'] so saved starter edges keyed on "
+            "output_types=['Table'] still resolve. Widening here re-breaks BUG-02."
+        )
+
+    def test_ingest_output_type_is_json_only(self) -> None:
+        component = KnowledgeComponent()
+        ingest = component._outputs_map["dataframe_output"]
+        assert ingest.types == ["JSON"]
+
+
+class TestUpdateFrontendNodeRestoresModeVisibility:
+    """A saved node must come back with the ``show`` flags of *its* mode.
+
+    ``update_frontend_node`` rebuilds the template from the class defaults, which
+    are ingest-shaped. Before the fix it re-synced only the outputs, so a saved
+    ``mode=Retrieve`` node returned with ``search_query`` hidden and the canvas
+    silently deleted the edge feeding it.
+    """
+
+    async def _updated_template(self, mode: str) -> dict:
+        component = KnowledgeComponent()
+        template = _build_config_from_inputs(component)
+        template["mode"]["value"] = mode
+        frontend_node = {"template": template, "outputs": []}
+        await component.update_frontend_node(frontend_node, {"template": dict(template)})
+        return frontend_node["template"]
+
+    async def test_saved_retrieve_node_keeps_retrieve_inputs_visible(self) -> None:
+        component = KnowledgeComponent()
+        template = await self._updated_template(MODE_RETRIEVE)
+
+        assert template["search_query"]["show"] is True
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert template[fname]["show"] is True, f"{fname} must stay visible in retrieve mode"
+        for fname in component.mode_config[MODE_INGEST]:
+            assert template[fname]["show"] is False, f"{fname} must be hidden in retrieve mode"
+
+    async def test_saved_ingest_node_keeps_ingest_inputs_visible(self) -> None:
+        component = KnowledgeComponent()
+        template = await self._updated_template(MODE_INGEST)
+
+        for fname in component.mode_config[MODE_INGEST]:
+            assert template[fname]["show"] is True, f"{fname} must stay visible in ingest mode"
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert template[fname]["show"] is False, f"{fname} must be hidden in ingest mode"
+
+    async def test_default_keys_stay_visible_in_both_modes(self) -> None:
+        component = KnowledgeComponent()
+        for mode in (MODE_INGEST, MODE_RETRIEVE):
+            template = await self._updated_template(mode)
+            for fname in component.default_keys:
+                assert template[fname]["show"] is True, f"{fname} must stay visible in {mode}"
+
+
+class TestKbPathsBackwardCompatibleSymbols:
+    """Frozen 1.11.x component code imports these at module scope.
+
+    A saved flow embeds the component code it was built with, so removing a name
+    from ``_kb_paths`` makes every flow holding that code fail to build with
+    ``ImportError`` — the node can no longer be opened, edited or updated.
+    """
+
+    def test_removed_symbols_are_still_importable(self) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import (
+            KBKeyDecryptError,
+            load_kb_metadata,
+        )
+
+        assert issubclass(KBKeyDecryptError, Exception)
+        assert callable(load_kb_metadata)
+
+    def test_load_kb_metadata_returns_empty_when_sidecar_is_gone(self, tmp_path) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import load_kb_metadata
+
+        assert load_kb_metadata(tmp_path, log_label="kb") == {}
+
+    def test_load_kb_metadata_never_returns_a_stored_api_key(self, tmp_path) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import load_kb_metadata
+
+        (tmp_path / "embedding_metadata.json").write_text(
+            json.dumps({"model": "text-embedding-3-small", "api_key": "encrypted"}),
+            encoding="utf-8",
+        )
+
+        metadata = load_kb_metadata(tmp_path, log_label="kb")
+
+        assert metadata["model"] == "text-embedding-3-small"
+        assert metadata["api_key"] is None

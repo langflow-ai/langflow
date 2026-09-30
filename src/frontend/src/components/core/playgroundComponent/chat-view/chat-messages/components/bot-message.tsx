@@ -1,0 +1,338 @@
+import { memo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "@/components/common/genericIconComponent";
+import MessageMetadata from "@/components/common/messageMetadataComponent";
+import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
+import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
+import { findHumanInputContent } from "@/controllers/API/agui/human-input-card";
+import { useUpdateMessage } from "@/controllers/API/queries/messages";
+import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
+import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { chatMessagePropsType } from "@/types/components";
+import { cn } from "@/utils/utils";
+import { useMessageDuration } from "../hooks/use-message-duration";
+import { useStreamingMessage } from "../hooks/use-streaming-message";
+import {
+  excludeHumanInputBlocks,
+  getContentBlockLoadingState,
+  getContentBlockState,
+  resolveContentBlockLayout,
+} from "../utils/content-blocks";
+import { convertFiles } from "../utils/convert-files";
+import { formatSeconds } from "../utils/format";
+import EditMessageField from "./edit-message-field";
+import { EditMessageButton } from "./message-options";
+
+export const BotMessage = memo(
+  ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
+    const { t } = useTranslation();
+    const setErrorData = useAlertStore((state) => state.setErrorData);
+    const [editMessage, setEditMessage] = useState(false);
+    const isBuilding = useFlowStore((state) => state.isBuilding);
+    const buildStartTime = useFlowStore((state) => state.buildStartTime);
+    const buildDuration = useFlowStore((state) => state.buildDuration);
+    const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
+
+    const isAudioMessage = chat.category === "audio";
+
+    const { chatMessage: decodedMessage, isStreaming } = useStreamingMessage({
+      chat,
+      isBuilding,
+      updateChat,
+    });
+
+    const isEmpty = decodedMessage?.trim() === "";
+    const chatMessage = chat.message ? chat.message.toString() : "";
+    // ContentBlockDisplay renders only tool_use content, so the HITL card is rendered directly below.
+    const humanInputContent = findHumanInputContent(chat.content_blocks);
+    const hasContentBlocks = (chat.content_blocks?.length ?? 0) > 0;
+    // ContentBlockDisplay only renders tool_use content; a block holding just the agent's
+    // "Input" text content displays nothing, so it must not count as renderable here.
+    const hasRenderableContent = (chat.content_blocks ?? []).some((block) =>
+      (block?.contents ?? []).some(
+        (content) => (content as { type?: string })?.type === "tool_use",
+      ),
+    );
+    // A paused agent leaves a "partial" bubble with empty/"[]" text and no tool_use content yet;
+    // hide it unless it has tool content, the HITL card, files/audio, or is the building message.
+    const isContentlessText =
+      chatMessage.trim() === "" || chatMessage.trim() === "[]";
+    const isBlankPlaceholder =
+      chat.properties?.state === "partial" &&
+      isContentlessText &&
+      !hasRenderableContent &&
+      !humanInputContent &&
+      !isAudioMessage &&
+      (chat.files?.length ?? 0) === 0 &&
+      !isStreaming &&
+      (!isBuilding || !lastMessage);
+    const showThinkingDots =
+      (chatMessage === "" || (isEmpty && !isStreaming)) &&
+      isBuilding &&
+      lastMessage;
+    const { mutate: updateMessageMutation } = useUpdateMessage();
+
+    const handleEditMessage = (message: string) => {
+      updateMessageMutation(
+        {
+          message: {
+            id: chat.id,
+            files: convertFiles(chat.files),
+            sender_name: chat.sender_name ?? "AI",
+            text: message,
+            sender: "Machine",
+            flow_id,
+            session_id: chat.session ?? "",
+          },
+          refetch: true,
+        },
+        {
+          onSuccess: () => {
+            updateChat?.(chat, message);
+            setEditMessage(false);
+          },
+          onError: () => {
+            setErrorData({
+              title: t("errors.updatingMessages"),
+            });
+          },
+        },
+      );
+    };
+
+    const handleEvaluateAnswer = (evaluation: boolean | null) => {
+      updateMessageMutation(
+        {
+          message: {
+            ...chat,
+            files: convertFiles(chat.files),
+            sender_name: chat.sender_name ?? "AI",
+            text: chat.message.toString(),
+            sender: "Machine",
+            flow_id,
+            session_id: chat.session ?? "",
+            properties: {
+              ...chat.properties,
+              state: chat.properties?.state as
+                | "complete"
+                | "partial"
+                | undefined,
+              positive_feedback: evaluation,
+            },
+          },
+        },
+        {
+          onError: () => {
+            setErrorData({
+              title: t("errors.updatingMessages"),
+            });
+          },
+        },
+      );
+    };
+
+    const editedFlag = chat.edit ? (
+      <div className="mt-2 text-xs text-muted-foreground text-right">
+        (Edited)
+      </div>
+    ) : null;
+
+    const thinkingActive = Boolean(isBuilding && lastMessage);
+
+    const { displayTime: liveDisplayTime } = useMessageDuration({
+      lastMessage,
+      isBuilding,
+      buildStartTime,
+      buildDuration,
+    });
+
+    // Prefer persisted duration (frozen value) over live timer
+    // This ensures nested agent segments show their own duration after reset
+    const persistedDuration = chat.properties?.build_duration;
+    const displayTime =
+      typeof persistedDuration === "number" && persistedDuration > 0
+        ? persistedDuration
+        : liveDisplayTime;
+
+    // A message with token usage should still surface the MessageMetadata
+    // pill even when no duration was recorded (e.g. v2 runs that didn't
+    // emit ``build_duration``, historical messages restored from DB).
+    // Without this the user would never see "X tokens" for those.
+    const totalTokens = chat.properties?.usage?.total_tokens;
+    const hasUsage = typeof totalTokens === "number" && totalTokens > 0;
+    const showMetadata = displayTime > 0 || hasUsage;
+
+    const { displayedContentBlocks, showBubbleBody } =
+      resolveContentBlockLayout(
+        // The dedicated HumanInputCard below owns the pause render; leaving the
+        // human_input block in would paint a duplicate card via ContentDisplay.
+        excludeHumanInputBlocks(chat.content_blocks ?? []),
+        chat.message?.toString(),
+        Boolean(editMessage),
+      );
+
+    if (isBlankPlaceholder) return null;
+
+    return (
+      <>
+        <div className="w-full word-break-break-word mt-2">
+          <div
+            className={cn(
+              "group relative flex w-full flex-col gap-3 rounded-md px-2 py-3",
+              editMessage ? "" : "hover:bg-muted",
+            )}
+          >
+            <div className="flex w-full items-start gap-3">
+              {(thinkingActive ||
+                displayTime > 0 ||
+                chatMessage !== "" ||
+                humanInputContent) && (
+                <div
+                  className="relative hidden h-6 w-6 mt-[-1px] flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
+                  style={
+                    chat.properties?.background_color
+                      ? { backgroundColor: chat.properties.background_color }
+                      : {}
+                  }
+                >
+                  <div className="flex h-5 w-5 items-center justify-center">
+                    <LangflowLogo
+                      className="h-4 w-4 text-black"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex w-full flex-col min-w-0">
+                <span className="text-sm font-medium text-foreground mb-1">
+                  {chat.sender_name ?? "AI"}
+                </span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {!thinkingActive && displayTime > 0 && (
+                    <ForwardedIconComponent
+                      name="Check"
+                      className="h-4 w-4 text-accent-emerald-foreground"
+                    />
+                  )}
+                  <span className="w-full flex justify-between">
+                    {thinkingActive && displayTime > 0 ? (
+                      <span>
+                        {t("chat.runningStatus")} {formatSeconds(displayTime)}
+                      </span>
+                    ) : !thinkingActive && showMetadata ? (
+                      <>
+                        {displayTime > 0 && (
+                          <span className="text-muted-foreground">
+                            {t("chat.finishedIn")}
+                          </span>
+                        )}
+                        <MessageMetadata
+                          duration={displayTime > 0 ? displayTime : undefined}
+                          usage={chat.properties?.usage ?? undefined}
+                          timestamp={chat.timestamp}
+                        />
+                      </>
+                    ) : null}
+                  </span>
+                </div>
+
+                {humanInputContent && (
+                  <div className="mt-2">
+                    <HumanInputCard content={humanInputContent} />
+                  </div>
+                )}
+
+                {(displayedContentBlocks.length > 0 ||
+                  (isBuilding && lastMessage)) && (
+                  <ContentBlockDisplay
+                    playgroundPage={playgroundPage}
+                    contentBlocks={displayedContentBlocks}
+                    isLoading={getContentBlockLoadingState(
+                      chat,
+                      isBuilding,
+                      lastMessage,
+                    )}
+                    state={getContentBlockState(chat, isBuilding, lastMessage)}
+                    chatId={chat.id}
+                    hideHeader={true}
+                  />
+                )}
+
+                {showBubbleBody && (
+                  <div className="form-modal-chat-text-position flex-grow mt-2">
+                    <div className="form-modal-chat-text">
+                      <div className="flex w-full flex-col">
+                        <div
+                          className="flex w-full flex-col dark:text-white"
+                          data-testid="div-chat-message"
+                        >
+                          <div
+                            data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                            className="flex w-full flex-col"
+                          >
+                            {humanInputContent ? null : showThinkingDots ? (
+                              <IconComponent
+                                name="MoreHorizontal"
+                                className="h-8 w-8 animate-pulse"
+                              />
+                            ) : (
+                              <div className="w-full">
+                                {editMessage ? (
+                                  <EditMessageField
+                                    key={`edit-message-${chat.id}`}
+                                    message={decodedMessage}
+                                    onEdit={handleEditMessage}
+                                    onCancel={() => setEditMessage(false)}
+                                  />
+                                ) : (
+                                  <>
+                                    <CustomMarkdownField
+                                      isAudioMessage={isAudioMessage}
+                                      chat={chat}
+                                      isEmpty={
+                                        isEmpty &&
+                                        !isStreaming &&
+                                        !hasContentBlocks
+                                      }
+                                      chatMessage={decodedMessage}
+                                      editedFlag={editedFlag}
+                                    />
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {!editMessage && (
+              <div className="pointer-events-none absolute bottom-full right-0 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                <EditMessageButton
+                  onCopy={() => navigator.clipboard.writeText(chatMessage)}
+                  onEdit={() => setEditMessage(true)}
+                  className="h-fit"
+                  isBotMessage={true}
+                  onEvaluate={handleEvaluateAnswer}
+                  evaluation={chat.properties?.positive_feedback}
+                  isAudioMessage={isAudioMessage}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+        <div id={lastMessage ? "last-chat-message" : undefined} />
+      </>
+    );
+  },
+);

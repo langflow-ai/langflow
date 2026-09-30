@@ -1,17 +1,20 @@
+import math
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
+from functools import lru_cache
 from typing import Any, cast
 from uuid import UUID
 
 import numpy as np
 import pandas as pd
 from langchain_core.documents import Document
-from loguru import logger
+from lfx.log.logger import logger
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.services.deps import get_settings_service
 
 
 # Sentinel variable to signal a failed serialization.
@@ -25,8 +28,28 @@ class _UnserializableSentinel:
 UNSERIALIZABLE_SENTINEL = _UnserializableSentinel()
 
 
+@lru_cache(maxsize=1)
+def get_max_text_length() -> int:
+    """Return the maximum allowed text length for serialization from the current settings."""
+    return get_settings_service().settings.max_text_length
+
+
+@lru_cache(maxsize=1)
+def get_max_items_length() -> int:
+    """Return the maximum allowed number of items for serialization, as defined in the current settings."""
+    return get_settings_service().settings.max_items_length
+
+
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
-    """Truncate long strings with ellipsis if max_length provided."""
+    """Truncates a string to the specified maximum length, appending an ellipsis if truncation occurs.
+
+    Parameters:
+        obj (str): The string to be truncated.
+        max_length (int | None): The maximum allowed length of the string. If None, no truncation is performed.
+
+    Returns:
+        str: The original or truncated string, with an ellipsis appended if truncated.
+    """
     if max_length is None or len(obj) <= max_length:
         return obj
     return obj[:max_length] + "..."
@@ -97,7 +120,11 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
 
 def _serialize_primitive(obj: Any, *_) -> Any:
     """Handle primitive types without conversion."""
-    if obj is None or isinstance(obj, int | float | bool | complex):
+    if obj is None or isinstance(obj, bool | int | complex):
+        return obj
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
         return obj
     return UNSERIALIZABLE_SENTINEL
 
@@ -248,6 +275,18 @@ def serialize(
     """
     if obj is None:
         return None
+
+    # Fast-path common immutable primitives when no truncation/limits requested.
+    # This avoids the relatively expensive dispatcher for the common case.
+    # Non-finite floats (NaN, Inf) are excluded so the dispatcher can sanitize them.
+    no_limits = max_length is None and max_items is None
+    is_simple_primitive = isinstance(obj, (str, int, float, bool))
+
+    if no_limits and not to_str and is_simple_primitive:
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+        return obj
+
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
@@ -265,7 +304,7 @@ def serialize(
             try:
                 return repr(obj)
             except Exception as e:  # noqa: BLE001
-                logger.debug(f"Cannot serialize object {obj}: {e!s}")
+                logger.debug(f"Cannot serialize object of type {type(obj).__name__}: {e!s}")
 
         # Fallback to common serialization patterns
         if hasattr(obj, "model_dump"):
@@ -278,7 +317,7 @@ def serialize(
             return str(obj)
 
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"Cannot serialize object {obj}: {e!s}")
+        logger.debug(f"Cannot serialize object of type {type(obj).__name__}: {e!s}")
         return "[Unserializable Object]"
     return obj
 

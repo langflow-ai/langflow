@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,39 +15,66 @@ import {
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import { track } from "@/customization/utils/analytics";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { useState } from "react";
+import type { APIClassType, InputFieldType } from "@/types/api";
+
+type DialogFieldValue = unknown;
 
 interface NodeDialogProps {
   open: boolean;
   onClose: () => void;
-  dialogInputs: any;
+  onCreated?: (value: string) => void;
+  dialogInputs: {
+    fields: { data: { node: APIClassType } };
+    functionality: string;
+  };
   nodeId: string;
   name: string;
   nodeClass: APIClassType;
 }
 
-interface ValueObject {
-  value: string;
+function isEmptyRequiredValue(
+  value: DialogFieldValue,
+  field: Partial<InputFieldType>,
+) {
+  if (field.field_type === "knowledge_backend") {
+    return value == null;
+  }
+  if (value == null) {
+    return true;
+  }
+  if (typeof value === "string") {
+    return value.trim() === "";
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  if (typeof value === "object") {
+    return Object.keys(value).length === 0;
+  }
+  return false;
 }
 
 export const NodeDialog: React.FC<NodeDialogProps> = ({
   open,
   onClose,
+  onCreated,
   dialogInputs,
   nodeId,
   name,
   nodeClass,
 }) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
-  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [fieldValues, setFieldValues] = useState<
+    Record<string, DialogFieldValue>
+  >({});
 
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
@@ -71,14 +102,41 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     setIsLoading(false);
   };
 
-  const updateFieldValue = (value: string | ValueObject, fieldKey: string) => {
-    const newValue = typeof value === "object" ? value.value : value;
+  const updateFieldValue = (
+    changes: Parameters<handleOnNewValueType>[0],
+    fieldKey: string,
+  ) => {
+    // Handle both legacy string format and new object format
+    const newValue =
+      typeof changes === "object" && changes !== null ? changes.value : changes;
+
     const targetNode = nodes.find((node) => node.id === nodeId);
     if (!targetNode || !name) return;
 
+    // Update the main field value
     targetNode.data.node.template[name].dialog_inputs.fields.data.node.template[
       fieldKey
     ].value = newValue;
+
+    // Handle additional properties like load_from_db for InputGlobalComponent
+    if (typeof changes === "object" && changes !== null) {
+      const fieldTemplate =
+        targetNode.data.node.template[name].dialog_inputs.fields.data.node
+          .template[fieldKey];
+
+      // Update load_from_db if present (for InputGlobalComponent)
+      if ("load_from_db" in changes) {
+        fieldTemplate.load_from_db = changes.load_from_db;
+      }
+
+      // Handle any other properties that might be needed
+      Object.keys(changes).forEach((key) => {
+        if (key !== "value" && key in fieldTemplate) {
+          fieldTemplate[key] = changes[key];
+        }
+      });
+    }
+
     setNode(nodeId, targetNode);
     setFieldValues((prev) => ({ ...prev, [fieldKey]: newValue }));
 
@@ -110,43 +168,34 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     onClose();
   };
 
-  const handleSubmitDialog = async () => {
-    // Validate required fields first
-    const missingRequiredFields = Object.entries(dialogTemplate)
-      .filter(
-        ([key, fieldValue]) =>
-          (fieldValue as { required: boolean })?.required === true &&
-          (!fieldValues[key] ||
-            (typeof fieldValues[key] === "string" &&
-              fieldValues[key].trim() === "")),
-      )
-      .map(
-        ([fieldKey, fieldValue]) =>
-          (fieldValue as { display_name: string })?.display_name || fieldKey,
-      );
+  const handleSuccessCallback = () => {
+    // Check if this is a knowledge base creation
+    const isKnowledgeBaseCreation =
+      dialogNodeData?.display_name === "Create Knowledge" ||
+      dialogNodeData?.name === "create_knowledge_base" ||
+      (dialogNodeData?.description &&
+        dialogNodeData.description.toLowerCase().includes("knowledge"));
 
-    if (missingRequiredFields.length > 0) {
-      handleErrorData({
-        title: "Missing required fields",
-        list: missingRequiredFields,
+    if (isKnowledgeBaseCreation) {
+      // Get the knowledge base name from field values
+      const knowledgeBaseNameValue =
+        fieldValues["01_new_kb_name"] || fieldValues["new_kb_name"];
+      const knowledgeBaseName =
+        typeof knowledgeBaseNameValue === "string" &&
+        knowledgeBaseNameValue.trim()
+          ? knowledgeBaseNameValue
+          : "Knowledge Base";
+
+      setSuccessData({
+        title: t("success.knowledgeBaseNodeCreated", {
+          name: knowledgeBaseName,
+        }),
       });
-      return;
+
+      onCreated?.(knowledgeBaseName);
     }
 
-    setIsLoading(true);
-
-    await mutateTemplate(
-      fieldValues,
-      nodeId,
-      nodeClass,
-      setNodeClass,
-      postTemplateValue,
-      handleErrorData,
-      name,
-      handleCloseDialog,
-      nodeClass.tool_mode,
-    );
-
+    // Only close dialog after success and delay for Astra database tracking
     if (nodeId.toLowerCase().includes("astra") && name === "database_name") {
       const {
         cloud_provider: cloudProvider,
@@ -159,11 +208,61 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
         databaseName,
         ...otherFields,
       });
+
+      setTimeout(() => {
+        handleCloseDialog();
+      }, 5000);
+    } else {
+      handleCloseDialog();
+    }
+  };
+
+  const handleSubmitDialog = async () => {
+    const effectiveFieldValues = Object.fromEntries(
+      Object.entries(dialogTemplate).map(([fieldKey, fieldValue]) => [
+        fieldKey,
+        Object.hasOwn(fieldValues, fieldKey)
+          ? fieldValues[fieldKey]
+          : (fieldValue as { value?: DialogFieldValue })?.value,
+      ]),
+    );
+
+    // Validate required fields first
+    const missingRequiredFields = Object.entries(dialogTemplate)
+      .filter(
+        ([key, fieldValue]) =>
+          (fieldValue as { required: boolean })?.required === true &&
+          isEmptyRequiredValue(
+            effectiveFieldValues[key],
+            fieldValue as Partial<InputFieldType>,
+          ),
+      )
+      .map(
+        ([fieldKey, fieldValue]) =>
+          (fieldValue as { display_name: string })?.display_name || fieldKey,
+      );
+
+    if (missingRequiredFields.length > 0) {
+      handleErrorData({
+        title: t("errors.missingRequiredFields"),
+        list: missingRequiredFields,
+      });
+      return;
     }
 
-    setTimeout(() => {
-      handleCloseDialog();
-    }, 5000);
+    setIsLoading(true);
+
+    await mutateTemplate(
+      effectiveFieldValues,
+      nodeId,
+      nodeClass,
+      setNodeClass,
+      postTemplateValue,
+      handleErrorData,
+      name,
+      handleSuccessCallback,
+      nodeClass.tool_mode,
+    );
   };
 
   // Render
@@ -195,22 +294,23 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                   isFlexView: false,
                   required:
                     (fieldValue as { required: boolean })?.required ?? false,
+                  requiredText: t("field.required"),
                 })}
               </div>
               <ParameterRenderComponent
-                handleOnNewValue={(value: string) =>
-                  updateFieldValue(value, fieldKey)
+                handleOnNewValue={(changes) =>
+                  updateFieldValue(changes, fieldKey)
                 }
                 name={fieldKey}
                 nodeId={nodeId}
                 templateData={fieldValue as Partial<InputFieldType>}
                 templateValue={(fieldValue as { value: string })?.value ?? ""}
                 editNode={false}
+                showParameter={true}
+                inspectionPanel={false}
                 handleNodeClass={() => {}}
                 nodeClass={dialogNodeData}
-                disabled={
-                  (fieldValue as { disabled: boolean })?.disabled ?? false
-                }
+                disabled={fieldValue?.disabled ?? false}
                 placeholder={
                   (fieldValue as { placeholder: string })?.placeholder ?? ""
                 }

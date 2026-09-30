@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
 import { Button } from "@/components/ui/button";
@@ -8,18 +11,17 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import ExportModal from "@/modals/exportModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
-import { FlowType } from "@/types/flow";
+import type { FlowType } from "@/types/flow";
 import { downloadFlow } from "@/utils/reactflowUtils";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../hooks/use-description-modal";
 import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
@@ -36,6 +38,7 @@ const ListComponent = ({
   setSelected: (selected: boolean) => void;
   shiftPressed: boolean;
 }) => {
+  const { t } = useTranslation();
   const navigate = useCustomNavigate();
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -64,16 +67,20 @@ const ListComponent = ({
     deleteFlow({ id: [flowData.id] })
       .then(() => {
         setSuccessData({
-          title: "Selected items deleted successfully",
+          title: t("flow.deletedSuccessfully"),
         });
       })
-      .catch(() => {
+      .catch((err) => {
         setErrorData({
-          title: "Error deleting items",
-          list: ["Please try again"],
+          title: t("flow.errorDeleting"),
+          list: [t("flow.errorDeletingRetry")],
         });
       });
   };
+
+  const { can } = usePermissions();
+  // Moving a flow into another folder mutates its folder_id → gate on write.
+  const canMove = can(flowData.id, "write");
 
   const { onDragStart } = useDragStart(flowData);
 
@@ -91,13 +98,17 @@ const ListComponent = ({
   const handleExport = () => {
     if (flowData.is_component) {
       downloadFlow(flowData, flowData.name, flowData.description);
-      setSuccessData({ title: `${flowData.name} exported successfully` });
+      setSuccessData({
+        title: t("success.flowExported", { name: flowData.name }),
+      });
     } else {
       setOpenExportModal(true);
     }
   };
 
   const [icon, setIcon] = useState<string>("");
+  const flowNameId = `flow-name-${flowData.id}`;
+  const openActionLabelId = `flow-open-action-${flowData.id}`;
 
   useEffect(() => {
     getIcon().then(setIcon);
@@ -107,24 +118,38 @@ const ListComponent = ({
     <>
       <Card
         key={flowData.id}
-        draggable
+        draggable={canMove}
         onDragStart={onDragStart}
-        onClick={handleClick}
-        className={`flex flex-row bg-background ${
+        className={`relative flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}
         data-testid="list-card"
       >
+        {!isComponent && (
+          <>
+            <button
+              type="button"
+              className="absolute inset-0 z-0 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={handleClick}
+              aria-labelledby={`${openActionLabelId} ${flowNameId}`}
+              data-testid="list-card-open-button"
+            />
+            <span id={openActionLabelId} className="sr-only">
+              {t("flows.openFlow")}
+            </span>
+          </>
+        )}
         <div
           className={`flex min-w-0 ${
             isComponent ? "cursor-default" : "cursor-pointer"
-          } items-center gap-4`}
+          } pointer-events-none relative z-10 items-center gap-4`}
         >
-          <div className="group/checkbox relative flex items-center">
+          <div className="group/checkbox pointer-events-auto relative flex items-center">
             <div
               className={cn(
                 "z-20 flex w-0 items-center transition-all duration-300",
                 selected && "w-10",
+                "group-focus-within/checkbox:w-10",
               )}
             >
               <Checkbox
@@ -132,10 +157,12 @@ const ListComponent = ({
                 onCheckedChange={(checked) => setSelected(checked as boolean)}
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
-                  "ml-2 transition-opacity focus-visible:ring-0",
-                  !selected && "opacity-0 group-hover/checkbox:opacity-100",
+                  "ml-2 transition-opacity",
+                  !selected &&
+                    "opacity-0 group-hover/checkbox:opacity-100 group-focus-within/checkbox:opacity-100",
                 )}
                 data-testid={`checkbox-${flowData.id}`}
+                aria-label={t("flows.selectFlow", { name: flowData.name })}
               />
             </div>
             <div
@@ -156,38 +183,39 @@ const ListComponent = ({
           </div>
 
           <div className="flex min-w-0 flex-col justify-start">
-            <div className="line-clamp-1 flex min-w-0 items-baseline truncate max-md:flex-col">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
               <div
-                className="flex truncate pr-2 text-sm font-semibold max-md:w-full"
+                className="flex min-w-0 flex-shrink truncate text-sm font-semibold"
                 data-testid={`flow-name-div`}
               >
                 <span
                   className="truncate"
-                  data-testid={`flow-name-${flowData.id}`}
+                  data-testid={flowNameId}
+                  id={flowNameId}
                 >
                   {flowData.name}
                 </span>
               </div>
-              <div className="item-baseline flex text-xs text-muted-foreground">
-                Edited {timeElapsed(flowData.updated_at)} ago
+              <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
+                <span className="truncate">
+                  {t("mainPage.editedAgo", {
+                    time: timeElapsed(flowData.updated_at, t),
+                  })}
+                </span>
               </div>
-            </div>
-            <div className="overflow-hidden text-mmd text-muted-foreground">
-              <span className="block max-w-[110ch] truncate">
-                {flowData.description}
-              </span>
             </div>
           </div>
         </div>
 
-        <div className="ml-5 flex items-center gap-2">
+        <div className="pointer-events-none relative z-10 ml-5 flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="iconMd"
                 data-testid="home-dropdown-menu"
-                className="group"
+                className="pointer-events-auto group"
+                aria-label={t("flows.moreOptions", { name: flowData.name })}
               >
                 <ForwardedIconComponent
                   name="Ellipsis"
@@ -219,7 +247,9 @@ const ListComponent = ({
           setOpen={setOpenDelete}
           onConfirm={handleDelete}
           description={descriptionModal}
-          note={!flowData.is_component ? "and its message history" : ""}
+          note={
+            !flowData.is_component ? t("deleteModal.noteMessageHistory") : ""
+          }
         />
       )}
       <ExportModal

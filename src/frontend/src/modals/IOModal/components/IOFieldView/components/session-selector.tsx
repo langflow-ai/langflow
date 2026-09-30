@@ -1,3 +1,6 @@
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
@@ -6,15 +9,12 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import React, { useEffect, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 
 export default function SessionSelector({
   deleteSession,
@@ -26,6 +26,9 @@ export default function SessionSelector({
   selectedView,
   setSelectedView,
   playgroundPage,
+  setActiveSession,
+  menuOpen,
+  onMenuOpenChange,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -36,16 +39,19 @@ export default function SessionSelector({
   selectedView?: { type: string; id: string };
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
+  setActiveSession: (session: string) => void;
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 }) {
-  const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage
-    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
-    : realFlowId;
+  const { t } = useTranslation();
+  const currentFlowId = useGetFlowId();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
+  const _setNewChatOnPlayground = useFlowStore(
+    (state) => state.setNewChatOnPlayground,
+  );
 
   useEffect(() => {
     setEditedSession(session);
@@ -68,13 +74,13 @@ export default function SessionSelector({
         {
           onSuccess: () => {
             if (isVisible) {
-              updateVisibleSession(editedSession);
+              updateVisibleSession(editedSession.trim());
             }
             if (
               selectedView?.type === "Session" &&
               selectedView?.id === session
             ) {
-              setSelectedView({ type: "Session", id: editedSession });
+              setSelectedView({ type: "Session", id: editedSession.trim() });
             }
           },
         },
@@ -136,7 +142,20 @@ export default function SessionSelector({
       )}
     >
       <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle">
-        <div className="flex w-full min-w-0 items-center">
+        <div
+          className="flex w-full min-w-0 items-center"
+          role={isEditing ? undefined : "button"}
+          tabIndex={isEditing ? undefined : 0}
+          aria-pressed={isEditing ? undefined : isVisible}
+          onKeyDown={(e) => {
+            if (isEditing || e.target !== e.currentTarget) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setNewSessionCloseVoiceAssistant(true);
+              toggleVisibility();
+            }
+          }}
+        >
           {isEditing ? (
             <div className="flex items-center">
               <Input
@@ -146,40 +165,62 @@ export default function SessionSelector({
                 onChange={handleInputChange}
                 onBlur={handleOnBlur}
                 autoFocus
+                aria-label={t("chat.renameSessionLabel")}
                 className="h-6 flex-grow px-1 py-0"
               />
               <button
                 onClick={handleCancel}
+                aria-label={t("chat.cancelRename")}
                 className="hover:text-status-red-hover ml-2 text-status-red"
               >
-                <IconComponent name="X" className="h-4 w-4" />
+                <IconComponent name="X" className="h-4 w-4" ariaHidden />
               </button>
               <button
                 onClick={handleConfirm}
                 data-confirm="true"
-                className="ml-2 text-green-500 hover:text-green-600"
+                aria-label={t("chat.confirmRename")}
+                className="ml-2 text-accent-emerald-foreground hover:text-accent-emerald-foreground/80"
               >
-                <IconComponent name="Check" className="h-4 w-4" />
+                <IconComponent name="Check" className="h-4 w-4" ariaHidden />
               </button>
             </div>
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
-              <div
-                className={cn(
-                  "w-full whitespace-nowrap group-hover:truncate-secondary-hover",
-                  isVisible
-                    ? "truncate-secondary-hover"
-                    : "truncate-muted dark:truncate-canvas",
-                )}
-              >
-                {session === currentFlowId ? "Default Session" : session}
+              <div className="relative w-full overflow-hidden">
+                <span className="w-full truncate">
+                  {session === currentFlowId ? "Default Session" : session}
+                </span>
+                <div
+                  className={cn(
+                    "pointer-events-none absolute left-0 right-0 top-0 h-full whitespace-nowrap",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-full w-full group-hover:truncate-secondary-hover",
+                      isVisible
+                        ? "truncate-secondary-hover"
+                        : "truncate-muted dark:truncate-canvas",
+                    )}
+                  ></div>
+                </div>
               </div>
             </ShadTooltip>
           )}
         </div>
-        <Select value={""} onValueChange={handleSelectChange}>
-          <ShadTooltip styleClasses="z-50" side="right" content="Options">
+        <Select
+          value={""}
+          onValueChange={handleSelectChange}
+          open={menuOpen}
+          onOpenChange={onMenuOpenChange}
+        >
+          <ShadTooltip
+            styleClasses="z-50"
+            side="right"
+            content={t("chat.options")}
+          >
             <SelectTrigger
+              variant="plain"
               onClick={(e) => {
                 e.stopPropagation();
               }}
@@ -187,16 +228,28 @@ export default function SessionSelector({
                 inputRef.current?.focus();
               }}
               data-confirm="true"
+              aria-label={t("chat.options")}
               className={cn(
                 "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
-                isVisible ? "visible" : "invisible group-hover:visible",
+                isVisible
+                  ? "opacity-100"
+                  : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
               )}
             >
-              <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+              <IconComponent
+                name="MoreHorizontal"
+                className="h-4 w-4"
+                ariaHidden
+              />
             </SelectTrigger>
           </ShadTooltip>
-          <SelectContent side="right" align="start" className="p-0">
+          <SelectContent
+            side="right"
+            align="start"
+            className="min-w-[11.5rem] p-0"
+          >
             <SelectItem
+              variant="plain"
               value="rename"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -206,6 +259,7 @@ export default function SessionSelector({
               </div>
             </SelectItem>
             <SelectItem
+              variant="plain"
               value="messageLogs"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -217,6 +271,7 @@ export default function SessionSelector({
               </div>
             </SelectItem>
             <SelectItem
+              variant="plain"
               value="delete"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >

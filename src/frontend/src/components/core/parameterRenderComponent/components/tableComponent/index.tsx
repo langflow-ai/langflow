@@ -1,25 +1,34 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  DEFAULT_TABLE_ALERT_MSG,
-  DEFAULT_TABLE_ALERT_TITLE,
-  NO_COLUMN_DEFINITION_ALERT_DESCRIPTION,
-  NO_COLUMN_DEFINITION_ALERT_TITLE,
-} from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
-import { TableOptionsTypeAPI } from "@/types/api";
-import { cn } from "@/utils/utils";
-import { ColDef } from "ag-grid-community";
+import type { CellKeyDownEvent, ColDef } from "ag-grid-community";
+import type { TableOptionsTypeAPI } from "@/types/api";
+import { suppressAutofillOnElement } from "@/utils/inputAutofill";
+import { cn, isTruthyCellValue } from "@/utils/utils";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
-import { AgGridReact, AgGridReactProps } from "ag-grid-react";
+import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
-import { ElementRef, forwardRef, useRef, useState } from "react";
+import {
+  type ElementRef,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import TableOptions from "./components/TableOptions";
+import {
+  isDisabledPagingButton,
+  useAgGridAccessibilityPatch,
+} from "./hooks/use-ag-grid-accessibility-patch";
 import resetGrid from "./utils/reset-grid-columns";
 
 export interface TableComponentProps extends AgGridReactProps {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   columnDefs: NonNullable<ColDef<any, any>[]>;
   rowData: NonNullable<AgGridReactProps["rowData"]>;
   displayEmptyAlert?: boolean;
@@ -30,6 +39,7 @@ export interface TableComponentProps extends AgGridReactProps {
     | string[]
     | {
         field: string;
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         onUpdate: (value: any) => void;
         editableCell: boolean;
       }[];
@@ -39,6 +49,7 @@ export interface TableComponentProps extends AgGridReactProps {
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
   paginationInfo?: string;
+  tableLabel?: string;
 }
 
 const TableComponent = forwardRef<
@@ -47,14 +58,70 @@ const TableComponent = forwardRef<
 >(
   (
     {
-      alertTitle = DEFAULT_TABLE_ALERT_TITLE,
-      alertDescription = DEFAULT_TABLE_ALERT_MSG,
+      alertTitle,
+      alertDescription,
       displayEmptyAlert = true,
+      tableLabel,
       ...props
     },
     ref,
   ) => {
-    let colDef = props.columnDefs
+    const { t } = useTranslation();
+    const resolvedAlertTitle = alertTitle ?? t("table.noDataTitle");
+    const resolvedAlertDescription =
+      alertDescription ?? t("table.noDataMessage");
+    const resolvedTableLabel = tableLabel ?? t("table.dataTable", "Data table");
+    const tableAccessibilityLabels = useMemo(
+      () => ({
+        startFocusBoundary: t("table.startFocusBoundary", {
+          tableLabel: resolvedTableLabel,
+        }),
+        endFocusBoundary: t("table.endFocusBoundary", {
+          tableLabel: resolvedTableLabel,
+        }),
+      }),
+      [resolvedTableLabel, t],
+    );
+    const isSingleToggleRowEditable = (
+      colField: string,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      rowData: any,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      currentRowValue: any,
+    ) => {
+      try {
+        // Vectorize flags are independent; only Identifier is single-toggle.
+        const isSingleToggleColumn =
+          colField === "Identifier" || colField === "identifier";
+
+        if (!isSingleToggleColumn) return true;
+
+        // Safeguard: ensure we have rowData array
+        if (!props.rowData || !Array.isArray(props.rowData)) {
+          return true;
+        }
+
+        // If current row is true, always allow editing (to turn it off)
+        if (isTruthyCellValue(currentRowValue)) {
+          return true;
+        }
+
+        // If current row is false, only allow editing if no other row is true
+        const hasAnyTrue = props.rowData.some(
+          (row) =>
+            !!row &&
+            typeof row === "object" &&
+            isTruthyCellValue(row[colField]),
+        );
+
+        return !hasAnyTrue;
+      } catch (_error) {
+        // Default to editable if there's an error to avoid breaking functionality
+        return true;
+      }
+    };
+
+    const colDef = props.columnDefs
       .filter((col) => !col.hide)
       .map((col, index, filteredArray) => {
         let newCol = {
@@ -70,8 +137,8 @@ const TableComponent = forwardRef<
         if (props.rowSelection && props.onSelectionChanged && index === 0) {
           newCol = {
             ...newCol,
-            checkboxSelection: true,
-            headerCheckboxSelection: true,
+            checkboxSelection: col.checkboxSelection !== false,
+            headerCheckboxSelection: col.headerCheckboxSelection !== false,
             headerCheckboxSelectionFilteredOnly: true,
           };
         }
@@ -92,10 +159,46 @@ const TableComponent = forwardRef<
             props.editable.every((field) => typeof field === "string") &&
             (props.editable as Array<string>).includes(newCol.field ?? ""))
         ) {
-          newCol = {
-            ...newCol,
-            editable: true,
-          };
+          // Special handling for single-toggle Identifier columns
+          const isSingleToggleColumn =
+            newCol.field === "Identifier" || newCol.field === "identifier";
+
+          if (isSingleToggleColumn) {
+            newCol = {
+              ...newCol,
+              editable: (params) => {
+                const currentValue = params.data[params.colDef.field!];
+                return isSingleToggleRowEditable(
+                  newCol.field!,
+                  params.data,
+                  currentValue,
+                );
+              },
+              cellRendererParams: {
+                ...newCol.cellRendererParams,
+                isSingleToggleColumn: true,
+                singleToggleField: newCol.field,
+                checkSingleToggleEditable: (params) => {
+                  try {
+                    const fieldName = newCol.field!;
+                    const currentValue = params?.data?.[fieldName];
+                    return isSingleToggleRowEditable(
+                      fieldName,
+                      params?.data,
+                      currentValue,
+                    );
+                  } catch (_error) {
+                    return false;
+                  }
+                },
+              },
+            };
+          } else {
+            newCol = {
+              ...newCol,
+              editable: true,
+            };
+          }
         }
         if (
           Array.isArray(props.editable) &&
@@ -104,16 +207,75 @@ const TableComponent = forwardRef<
           const field = (
             props.editable as Array<{
               field: string;
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               onUpdate: (value: any) => void;
               editableCell: boolean;
             }>
           ).find((field) => field.field === newCol.field);
           if (field) {
-            newCol = {
-              ...newCol,
-              editable: field.editableCell,
-              onCellValueChanged: (e) => field.onUpdate(e),
-            };
+            // Special handling for single-toggle Identifier columns
+            const isSingleToggleColumn =
+              newCol.field === "Identifier" || newCol.field === "identifier";
+
+            if (isSingleToggleColumn) {
+              newCol = {
+                ...newCol,
+                editable: (params) => {
+                  const currentValue = params.data[params.colDef.field!];
+                  return (
+                    field.editableCell &&
+                    isSingleToggleRowEditable(
+                      newCol.field!,
+                      params.data,
+                      currentValue,
+                    )
+                  );
+                },
+                cellRendererParams: {
+                  ...newCol.cellRendererParams,
+                  isSingleToggleColumn: true,
+                  singleToggleField: newCol.field,
+                  checkSingleToggleEditable: (params) => {
+                    try {
+                      const fieldName = newCol.field!;
+                      const currentValue = params?.data?.[fieldName];
+                      return (
+                        field.editableCell &&
+                        isSingleToggleRowEditable(
+                          fieldName,
+                          params?.data,
+                          currentValue,
+                        )
+                      );
+                    } catch (_error) {
+                      return false;
+                    }
+                  },
+                },
+                onCellValueChanged: (e) => {
+                  field.onUpdate(e);
+                  // Refresh grid to update editable state of other cells
+                  setTimeout(() => {
+                    if (
+                      realRef.current?.api &&
+                      !realRef.current.api.isDestroyed()
+                    ) {
+                      realRef.current.api.refreshCells({ force: true });
+                    }
+                  }, 0);
+                },
+              };
+            } else {
+              newCol = {
+                ...newCol,
+                editable: field.editableCell,
+                cellRendererParams: {
+                  ...newCol.cellRendererParams,
+                  editableCell: field.editableCell,
+                },
+                onCellValueChanged: (e) => field.onUpdate(e),
+              };
+            }
           }
         }
         return newCol;
@@ -121,9 +283,14 @@ const TableComponent = forwardRef<
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
+    const {
+      containerRef: tableContainerRef,
+      schedulePatch: scheduleGridAccessibilityPatch,
+    } = useAgGridAccessibilityPatch(tableAccessibilityLabels);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
+    const ariaLabel = props["aria-label"] as string | undefined;
     // Only use visible columns for the store reference
     const storeReference = props.columnDefs
       .filter((col) => !col.hide)
@@ -133,6 +300,8 @@ const TableComponent = forwardRef<
     const onGridReady = (params) => {
       // @ts-ignore
       realRef.current = params;
+      params.api.setGridAriaProperty("label", ariaLabel ?? resolvedTableLabel);
+      scheduleGridAccessibilityPatch();
       const updatedColumnDefs = [...colDef];
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       const customInit = localStorage.getItem(storeReference);
@@ -159,6 +328,13 @@ const TableComponent = forwardRef<
       }, 1000);
       if (props.onGridReady) props.onGridReady(params);
     };
+
+    useEffect(() => {
+      realRef.current?.api?.setGridAriaProperty(
+        "label",
+        ariaLabel ?? resolvedTableLabel,
+      );
+    }, [ariaLabel, resolvedTableLabel]);
     const onColumnMoved = (params) => {
       const updatedColumnDefs = cloneDeep(
         params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
@@ -189,6 +365,188 @@ const TableComponent = forwardRef<
         params.api.sizeColumnsToFit();
       }
     };
+    const onCellEditingStarted = (event) => {
+      // ag-grid mounts its cell editor <input>/<textarea> outside React, so the
+      // hardened Input primitive doesn't cover them. Stamp the autofill-
+      // suppression attributes on the active editor so the browser can't inject
+      // saved credentials into editable cells (which autosave persists). Defer a
+      // frame so the editor DOM exists; cover inline and popup (large-text)
+      // editors.
+      requestAnimationFrame(() => {
+        document
+          .querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+            ".ag-cell-inline-editing input, .ag-cell-inline-editing textarea, .ag-popup-editor input, .ag-popup-editor textarea",
+          )
+          .forEach(suppressAutofillOnElement);
+      });
+      props.onCellEditingStarted?.(event);
+    };
+    // Move focus to the nearest focusable element outside the grid in the given
+    // direction. Returns true when focus was moved. Used for the grid's boundary
+    // tab-out (see the keydown handler below).
+    const focusAdjacentElementOutsideGrid = useCallback(
+      (backwards: boolean) => {
+        const container = tableContainerRef.current;
+        if (!container) return false;
+        const treeGrid =
+          container.querySelector<HTMLElement>('[role="treegrid"]') ??
+          container;
+        const candidates = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            [
+              "a[href]",
+              "button:not([disabled])",
+              "input:not([disabled])",
+              "select:not([disabled])",
+              "textarea:not([disabled])",
+              '[tabindex]:not([tabindex="-1"])',
+              '[contenteditable="true"]',
+            ].join(","),
+          ),
+        ).filter((element) => {
+          if (treeGrid.contains(element) || element.tabIndex < 0) return false;
+          if (element.hasAttribute("disabled")) return false;
+          if (element.getAttribute("aria-disabled") === "true") return false;
+          if (element.closest('[inert], [aria-hidden="true"]')) return false;
+          const rect = element.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+        if (candidates.length === 0) return false;
+        const wantedPosition = backwards
+          ? Node.DOCUMENT_POSITION_PRECEDING
+          : Node.DOCUMENT_POSITION_FOLLOWING;
+        // Prefer the next control in tab direction. When the grid is the last
+        // (or first) focusable region on the page — e.g. Knowledge Bases has no
+        // controls after the table — wrap to the other end so focus never
+        // dead-stops on <body> (WCAG 2.1.2).
+        const target =
+          candidates.find((element) =>
+            Boolean(treeGrid.compareDocumentPosition(element) & wantedPosition),
+          ) ?? (backwards ? candidates[candidates.length - 1] : candidates[0]);
+        target.focus();
+        // AG Grid's focus service restores focus to the last focused cell on the
+        // next tick, so re-apply focus once the grid has settled.
+        requestAnimationFrame(() => target.focus());
+        return true;
+      },
+      [],
+    );
+    // AG Grid programmatically focuses a disabled paging button on tab-out
+    // (`allowFocusForNextGridCoreContainer`), which `tabindex="-1"` cannot
+    // prevent. Catch that focus and redirect it to the adjacent real control,
+    // inferring the tab direction from where focus came from. Scoped to the
+    // grid container — not the document — and only fires for disabled paging
+    // buttons, so it does not interfere with normal grid navigation.
+    useEffect(() => {
+      const container = tableContainerRef.current;
+      if (!container) return;
+      const handleFocusIn = (event: FocusEvent) => {
+        if (!(event.target instanceof HTMLElement)) return;
+        const pagingButton =
+          event.target.closest<HTMLElement>(".ag-paging-button");
+        if (!pagingButton || !isDisabledPagingButton(pagingButton)) return;
+        const from =
+          event.relatedTarget instanceof HTMLElement
+            ? event.relatedTarget
+            : null;
+        const backwards = from
+          ? Boolean(
+              pagingButton.compareDocumentPosition(from) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+            )
+          : false;
+        // Move focus on the next frame: focus changes made during a focusin
+        // dispatch are ignored by the browser, and AG Grid re-asserts the focus
+        // on the following tick, so we act after it has settled.
+        requestAnimationFrame(() => {
+          const active = document.activeElement;
+          const activePaging =
+            active instanceof HTMLElement
+              ? active.closest<HTMLElement>(".ag-paging-button")
+              : null;
+          if (!activePaging || !isDisabledPagingButton(activePaging)) return;
+          const moved = focusAdjacentElementOutsideGrid(backwards);
+          // Nothing focusable in that direction (every trailing control is
+          // disabled): don't strand focus on the non-operable button — blur it
+          // so the next Tab continues naturally.
+          if (!moved) activePaging.blur();
+        });
+      };
+      container.addEventListener("focusin", handleFocusIn);
+      return () => container.removeEventListener("focusin", handleFocusIn);
+    }, [focusAdjacentElementOutsideGrid]);
+    // AG Grid's official tab hook. It runs while the grid computes Tab
+    // navigation and, crucially, cooperates with the grid's focus service (the
+    // grid expects focus to leave and will not restore the cell). When there is
+    // no next cell (Tab off the grid boundary) we move focus out of the grid to
+    // the adjacent focusable element ourselves, so focus never dead-stops on
+    // <body> or on a disabled pagination button.
+    const tabToNextCell = (params) => {
+      const customResult = props.gridOptions?.tabToNextCell?.(params);
+      if (customResult !== undefined && customResult !== null) {
+        return customResult;
+      }
+      if (!params.nextCellPosition) {
+        focusAdjacentElementOutsideGrid(params.backwards);
+        return false;
+      }
+      return params.nextCellPosition;
+    };
+    const onCellKeyDown = (event: CellKeyDownEvent) => {
+      const keyboardEvent = event.event as KeyboardEvent | undefined;
+      const keyTarget =
+        keyboardEvent?.target instanceof HTMLElement
+          ? keyboardEvent.target
+          : undefined;
+      const isTextModalTriggerActivation =
+        keyTarget?.closest("[data-langflow-text-cell-trigger]") &&
+        (keyboardEvent?.key === "Enter" || keyboardEvent?.key === " ");
+
+      // When Radix restores focus after the dialog closes, focus lands on the
+      // actual trigger button. Let the button's native Enter/Space activation
+      // handle that case; clicking it again here would toggle the dialog twice.
+      if (isTextModalTriggerActivation) return;
+
+      props.onCellKeyDown?.(event);
+
+      if (
+        keyboardEvent?.defaultPrevented ||
+        (keyboardEvent?.key !== "Enter" && keyboardEvent?.key !== " ")
+      ) {
+        return;
+      }
+
+      const eventPath: EventTarget[] =
+        "eventPath" in event && Array.isArray(event.eventPath)
+          ? event.eventPath
+          : (keyboardEvent?.composedPath() ?? []);
+      const pathElements = eventPath.filter(
+        (element): element is HTMLElement => element instanceof HTMLElement,
+      );
+      const pathTrigger = pathElements.find((element) =>
+        element.hasAttribute("data-langflow-text-cell-trigger"),
+      );
+      const pathGridCell = pathElements.find(
+        (element) => element.getAttribute("role") === "gridcell",
+      );
+      const targetGridCell =
+        keyboardEvent?.target instanceof HTMLElement
+          ? keyboardEvent.target.closest<HTMLElement>('[role="gridcell"]')
+          : undefined;
+      const textModalTrigger =
+        pathTrigger ??
+        pathGridCell?.querySelector<HTMLElement>(
+          "[data-langflow-text-cell-trigger]",
+        ) ??
+        targetGridCell?.querySelector<HTMLElement>(
+          "[data-langflow-text-cell-trigger]",
+        );
+
+      if (!textModalTrigger || !keyboardEvent) return;
+
+      keyboardEvent.preventDefault();
+      textModalTrigger.click();
+    };
     if (props.rowData.length === 0 && displayEmptyAlert) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
@@ -197,33 +555,33 @@ const TableComponent = forwardRef<
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{alertTitle}</AlertTitle>
-            <AlertDescription>{alertDescription}</AlertDescription>
+            <AlertTitle>{resolvedAlertTitle}</AlertTitle>
+            <AlertDescription>{resolvedAlertDescription}</AlertDescription>
           </Alert>
         </div>
       );
     }
 
     if (colDef.length === 0) {
-      {
-        return (
-          <div className="flex h-full w-full items-center justify-center rounded-md border">
-            <Alert variant={"default"} className="w-fit">
-              <ForwardedIconComponent
-                name="AlertCircle"
-                className="h-5 w-5 text-primary"
-              />
-              <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
-              <AlertDescription>
-                {NO_COLUMN_DEFINITION_ALERT_DESCRIPTION}
-              </AlertDescription>
-            </Alert>
-          </div>
-        );
-      }
+      return (
+        <div className="flex h-full w-full items-center justify-center rounded-md border">
+          <Alert variant={"default"} className="w-fit">
+            <ForwardedIconComponent
+              name="AlertCircle"
+              className="h-5 w-5 text-primary"
+            />
+            <AlertTitle>{t("table.noColumnTitle")}</AlertTitle>
+            <AlertDescription>
+              {t("table.noColumnDescription")}
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
     }
+
     return (
       <div
+        ref={tableContainerRef}
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
@@ -232,6 +590,16 @@ const TableComponent = forwardRef<
       >
         <AgGridReact
           {...props}
+          localeText={{
+            noRowsToShow: t("table.noRowsToShow"),
+            page: t("table.page"),
+            of: t("table.of"),
+            to: t("table.to"),
+            nextPage: t("table.nextPage"),
+            lastPage: t("table.lastPage"),
+            firstPage: t("table.firstPage"),
+            previousPage: t("table.previousPage"),
+          }}
           defaultColDef={{
             minWidth: 100,
             suppressColumnsToolPanel: true, // Don't show hidden columns in tool panel
@@ -239,8 +607,10 @@ const TableComponent = forwardRef<
           animateRows={false}
           gridOptions={{
             colResizeDefault: "shift",
+            ensureDomOrder: true,
             suppressColumnVirtualisation: false, // Enable column virtualization for better performance
             ...props.gridOptions,
+            tabToNextCell,
           }}
           onColumnResized={onColumnResized}
           columnDefs={colDef}
@@ -254,7 +624,89 @@ const TableComponent = forwardRef<
             }
           }}
           onGridReady={onGridReady}
+          onFirstDataRendered={(event) => {
+            scheduleGridAccessibilityPatch();
+            props.onFirstDataRendered?.(event);
+          }}
+          onPaginationChanged={(event) => {
+            scheduleGridAccessibilityPatch();
+            props.onPaginationChanged?.(event);
+          }}
+          // Row virtualization recycles the row that owns the roving tab stop
+          // out of the DOM once the user scrolls past it, and nothing puts the
+          // tab stop back — the grid then has no tabbable row at all and cannot
+          // be entered from the keyboard (IBM `aria_child_tabbable`, WCAG
+          // 2.1.1). `viewportChanged` fires whenever the rendered row window
+          // moves, `modelUpdated` covers the re-renders that sorting, filtering
+          // and data changes trigger. The patch is rAF-debounced, so the scroll
+          // path stays cheap.
+          onViewportChanged={(event) => {
+            scheduleGridAccessibilityPatch();
+            props.onViewportChanged?.(event);
+          }}
+          onModelUpdated={(event) => {
+            scheduleGridAccessibilityPatch();
+            props.onModelUpdated?.(event);
+          }}
           onColumnMoved={onColumnMoved}
+          onCellEditingStarted={onCellEditingStarted}
+          onCellKeyDown={onCellKeyDown}
+          onCellValueChanged={
+            props.onCellValueChanged
+              ? (e) => {
+                  // Refresh grid editability after single-toggle Identifier changes
+                  const isSingleToggleField =
+                    e.colDef.field === "Identifier" ||
+                    e.colDef.field === "identifier";
+
+                  if (isSingleToggleField) {
+                    setTimeout(() => {
+                      if (
+                        realRef.current?.api &&
+                        !realRef.current.api.isDestroyed()
+                      ) {
+                        // Refresh all cells with force to update cell renderer params
+                        if (e.colDef.field) {
+                          realRef.current.api.refreshCells({
+                            force: true,
+                            columns: [e.colDef.field],
+                          });
+                        }
+                        // Also refresh all other single-toggle column cells if they exist
+                        const allSingleToggleColumns = realRef.current.api
+                          .getColumns()
+                          ?.filter((col) => {
+                            const field = col.getColDef().field;
+                            return (
+                              field === "Identifier" || field === "identifier"
+                            );
+                          });
+                        if (
+                          allSingleToggleColumns &&
+                          allSingleToggleColumns.length > 0
+                        ) {
+                          const columnFields = allSingleToggleColumns
+                            .map((col) => col.getColDef().field)
+                            .filter(
+                              (field): field is string => field !== undefined,
+                            );
+                          if (columnFields.length > 0) {
+                            realRef.current.api.refreshCells({
+                              force: true,
+                              columns: columnFields,
+                            });
+                          }
+                        }
+                      }
+                    }, 0);
+                  }
+                  // Call original onCellValueChanged if it exists
+                  if (props.onCellValueChanged) {
+                    props.onCellValueChanged(e);
+                  }
+                }
+              : undefined
+          }
           onStateUpdated={(e) => {
             if (e.sources.some((source) => source.includes("column"))) {
               localStorage.setItem(
@@ -263,6 +715,10 @@ const TableComponent = forwardRef<
               );
               setColumnStateChange(true);
             }
+          }}
+          onRowDataUpdated={(e) => {
+            scheduleGridAccessibilityPatch();
+            props.onRowDataUpdated?.(e);
           }}
         />
         {!props.tableOptions?.hide_options && props.pagination && (

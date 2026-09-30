@@ -1,17 +1,8 @@
 body {
   margin: 0;
   font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "Roboto",
-    "Oxygen",
-    "Ubuntu",
-    "Cantarell",
-    "Fira Sans",
-    "Droid Sans",
-    "Helvetica Neue",
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -74,6 +65,9 @@ select:-webkit-autofill:focus {
   text-overflow: ellipsis;
 }
 
+/* Mouse-focus look for grid cells. The outline suppression is scoped to
+   :not(:focus-visible) so keyboard focus falls through to the grid ring in
+   ag-theme-shadcn.css (WCAG 2.4.7). */
 .ag-cell-focus {
   border-radius: 0.375rem;
   border: 1px solid #94a3b8 !important;
@@ -81,20 +75,17 @@ select:-webkit-autofill:focus {
   text-align: left;
   font-size: 0.875rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.ag-cell-focus:not(:focus-visible) {
   outline: none !important;
   outline-color: transparent !important;
 }
 
-.ag-cell-focus:focus {
+.ag-cell-focus:focus:not(:focus-visible) {
   border-color: #94a3b8 !important;
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05) !important;
   background-color: transparent !important;
-  outline: none !important;
-  outline-color: transparent !important;
-}
-
-input .ag-cell-edit-input {
-  border: 1px solid transparent !important;
   outline: none !important;
   outline-color: transparent !important;
 }
@@ -119,20 +110,6 @@ textarea[class^="ag-"] {
   border: 1px solid transparent !important;
   outline: none !important;
   outline-color: transparent !important;
-  -webkit-box-shadow: none !important; /* Safari and older Chrome versions */
-  -moz-box-shadow: none !important; /* Older Firefox versions */
-  box-shadow: none !important; /* Standard syntax */
-}
-
-input[class^="ag-"][type="text"]:focus,
-input[class^="ag-"][type="number"]:focus,
-input[class^="ag-"][type="tel"]:focus,
-input[class^="ag-"][type="date"]:focus,
-input[class^="ag-"][type="datetime-local"]:focus,
-textarea[class^="ag-"]:focus {
-  border: 1px solid transparent !important;
-  outline-color: transparent !important;
-  outline: none !important;
   -webkit-box-shadow: none !important; /* Safari and older Chrome versions */
   -moz-box-shadow: none !important; /* Older Firefox versions */
   box-shadow: none !important; /* Standard syntax */
@@ -204,6 +181,30 @@ textarea[class^="ag-"]:focus {
 .react-flow__node-noteNode:not(.selected) {
   z-index: -1 !important;
 }
+
+/* A node awaiting human input paints above its neighbors (selected nodes sit at 1000),
+   so the inline decision card is never occluded by an overlapping node. */
+.react-flow__node:has([data-testid="human-input-node-badge"]) {
+  z-index: 1001 !important;
+}
+
+/* WCAG 2.4.7 — nodes and edges are tab stops, but React Flow's own stylesheet
+   clears their outline (.react-flow__node.selectable:focus-visible and
+   .react-flow__edge:focus-visible in @xyflow/react/dist/style.css), which also
+   suppresses the global :focus-visible fallback in index.css. That stylesheet is
+   imported from App.tsx and so lands after this file, hence the leading
+   .react-flow to out-specify it rather than !important.
+
+   Uses --ring, the app-wide focus token, not the --node-ring used for handle
+   halos: --node-ring is a light grey chosen to sit on a colored handle and does
+   not carry enough contrast to serve as a focus indicator on the canvas. */
+.react-flow .react-flow__node.selectable:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+  border-radius: 0.75rem;
+}
+/* The matching edge indicator lives in App.css, next to the other
+   .react-flow__edge-path stroke rules it has to override. */
 
 .card-shine-effect {
   --shine-deg: 135deg;
@@ -440,4 +441,106 @@ input[type="search"]::-webkit-search-cancel-button {
 
 .jse-button.jse-search:active {
   background-color: hsl(var(--border)) !important;
+}
+
+@keyframes version-item-drop-in {
+  0% {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.version-item-drop-in {
+  animation: version-item-drop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.version-preview-overlay {
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0);
+  box-shadow:
+    0 0 18px 2px rgba(99, 102, 241, 0.25) inset,
+    0 0 9px 1px rgba(99, 102, 241, 0.15) inset;
+}
+
+@keyframes banner-slide-up {
+  from {
+    transform: translateX(-50%) translateY(calc(100% + 2.5rem));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes banner-slide-down {
+  from {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(calc(100% + 2.5rem));
+    opacity: 0;
+  }
+}
+
+.version-preview-banner {
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
+}
+
+.version-preview-banner-enter {
+  animation: banner-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.version-preview-banner-exit {
+  animation: banner-slide-down 0.25s ease-in forwards;
+}
+
+@keyframes agent-badge-in {
+  0% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.agent-badge-enter {
+  animation: agent-badge-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes agent-badge-out {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+.agent-badge-exit {
+  animation: agent-badge-out 0.35s ease-in forwards;
+}
+
+@keyframes agent-text-swap {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agent-text-enter {
+  animation: agent-text-swap 0.25s ease-out forwards;
 }

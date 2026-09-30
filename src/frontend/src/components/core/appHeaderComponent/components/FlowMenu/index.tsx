@@ -1,5 +1,7 @@
 import { memo, useMemo, useRef, useState } from "react";
-
+import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import FlowSettingsComponent from "@/components/core/flowSettingsComponent";
@@ -10,22 +12,26 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { SAVED_HOVER } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { uiLocale } from "@/utils/format-date";
+import { getProjectDisplayName } from "@/utils/project-display-name";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
+
+const headerTriggerFocusClass =
+  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export const MenuBar = memo((): JSX.Element => {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
@@ -56,6 +62,7 @@ export const MenuBar = memo((): JSX.Element => {
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const measureRef = useRef<HTMLSpanElement>(null);
   const changesNotSaved = useUnsavedChanges();
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
 
@@ -73,8 +80,9 @@ export const MenuBar = memo((): JSX.Element => {
   );
 
   const handleSave = () => {
+    if (!onFlowPage || isReadOnly) return;
     saveFlow().then(() => {
-      setSuccessData({ title: "Saved successfully" });
+      setSuccessData({ title: t("flow.savedSuccessfully") });
     });
   };
 
@@ -86,23 +94,33 @@ export const MenuBar = memo((): JSX.Element => {
       ? parseInt(currentFlowGradient)
       : getNumberFromString(currentFlowGradient ?? currentFlowId ?? "")) %
     swatchColors.length;
+  const flowDetailsLabel = t("flow.editDetailsAndSettings", {
+    flowName: currentFlowName || t("flow.untitledFlow"),
+  });
 
   return onFlowPage ? (
-    <Popover open={openSettings} onOpenChange={setOpenSettings}>
+    <Popover
+      open={openSettings && !isReadOnly}
+      onOpenChange={(open) => setOpenSettings(open && !isReadOnly)}
+    >
       <PopoverAnchor>
         <div
           className="relative flex w-full items-center justify-center gap-2"
           data-testid="menu_bar_wrapper"
         >
           <div
-            className="header-menu-bar hidden max-w-40 justify-end truncate md:flex xl:max-w-full"
+            className="header-menu-bar hidden max-w-40 justify-end md:flex xl:max-w-full"
             data-testid="menu_flow_bar"
             id="menu_flow_bar_navigation"
           >
             {currentFolder?.name && (
-              <div className="hidden truncate md:flex">
-                <div
-                  className="cursor-pointer truncate text-sm text-muted-foreground hover:text-primary"
+              <div className="hidden min-w-0 max-w-full md:flex">
+                <Button
+                  unstyled
+                  className={cn(
+                    "flex min-w-0 max-w-full cursor-pointer items-center rounded-md px-1 py-0.5 text-sm text-muted-foreground hover:text-primary",
+                    headerTriggerFocusClass,
+                  )}
                   onClick={() => {
                     navigate(
                       currentFolder?.id
@@ -111,8 +129,10 @@ export const MenuBar = memo((): JSX.Element => {
                     );
                   }}
                 >
-                  {currentFolder?.name}
-                </div>
+                  <span className="truncate">
+                    {getProjectDisplayName(currentFolder, t)}
+                  </span>
+                </Button>
               </div>
             )}
           </div>
@@ -129,9 +149,16 @@ export const MenuBar = memo((): JSX.Element => {
             />
           </div>
           <PopoverTrigger asChild>
-            <div
-              className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
+            <Button
+              unstyled
+              aria-label={flowDetailsLabel}
+              className={cn(
+                "group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 rounded-md text-sm sm:whitespace-normal",
+                headerTriggerFocusClass,
+              )}
               data-testid="menu_bar_display"
+              title={isReadOnly ? t("version.readOnly") : flowDetailsLabel}
+              disabled={isReadOnly}
             >
               <span
                 ref={measureRef}
@@ -139,34 +166,36 @@ export const MenuBar = memo((): JSX.Element => {
                 aria-hidden="true"
                 data-testid="flow_name"
               >
-                {currentFlowName || "Untitled Flow"}
+                {currentFlowName || t("flow.untitledFlow")}
               </span>
-
               <IconComponent
                 name="pencil"
+                ariaHidden
                 className={cn(
                   "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
                   !openSettings &&
-                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
+                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100 sm:group-focus-visible:translate-x-0 sm:group-focus-visible:opacity-100",
                 )}
               />
-            </div>
+            </Button>
           </PopoverTrigger>
           <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>
             {!autoSaving && (
               <ShadTooltip
                 content={
-                  changesNotSaved
-                    ? saveLoading
-                      ? "Saving..."
-                      : "Save Changes"
-                    : SAVED_HOVER +
-                      (updatedAt
-                        ? new Date(updatedAt).toLocaleString("en-US", {
-                            hour: "numeric",
-                            minute: "numeric",
-                          })
-                        : "Never")
+                  isReadOnly
+                    ? t("version.readOnly")
+                    : changesNotSaved
+                      ? saveLoading
+                        ? t("flow.saving")
+                        : t("flow.saveChanges")
+                      : t("flow.savedHover") +
+                        (updatedAt
+                          ? new Date(updatedAt).toLocaleString(uiLocale(), {
+                              hour: "numeric",
+                              minute: "numeric",
+                            })
+                          : t("flow.never"))
                 }
                 side="bottom"
                 styleClasses="cursor-default z-10"
@@ -175,9 +204,15 @@ export const MenuBar = memo((): JSX.Element => {
                   <Button
                     variant="primary"
                     size="iconMd"
-                    disabled={!changesNotSaved || isBuilding || saveLoading}
+                    disabled={
+                      isReadOnly ||
+                      !changesNotSaved ||
+                      isBuilding ||
+                      saveLoading
+                    }
                     className={cn("h-7 w-7 border-border")}
                     onClick={handleSave}
+                    aria-label={t("flow.saveFlow")}
                     data-testid="save-flow-button"
                   >
                     <IconComponent
@@ -195,9 +230,12 @@ export const MenuBar = memo((): JSX.Element => {
         className="flex w-96 flex-col gap-4 p-4"
         align="center"
         sideOffset={15}
+        aria-label={t("flow.flowSettings")}
       >
-        <span className="text-sm font-semibold">Flow Details</span>
-        <FlowSettingsComponent close={() => setOpenSettings(false)} />
+        <FlowSettingsComponent
+          close={() => setOpenSettings(false)}
+          open={openSettings}
+        />
       </PopoverContent>
     </Popover>
   ) : (

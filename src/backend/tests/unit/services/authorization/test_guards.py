@@ -1,0 +1,1078 @@
+"""Tests for ``ensure_permission`` and the ``ensure_*_permission`` family."""
+
+from __future__ import annotations
+
+from uuid import uuid4
+
+import pytest
+from fastapi import HTTPException
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
+from langflow.services.authorization import guards as authz_guards
+from langflow.services.authorization.access_ceiling import (
+    ExternalAccessContext,
+    set_current_external_access_context,
+)
+from langflow.services.authorization.actions import (
+    DeploymentAction,
+    FileAction,
+    FlowAction,
+    KnowledgeBaseAction,
+    ProjectAction,
+    ProviderAccountAction,
+    ShareAction,
+    VariableAction,
+    VoiceAction,
+)
+
+from ._common import (
+    _StubAuthorizationService,
+    install_audit_recorder,
+    install_authz,
+    install_settings,
+)
+
+# ----------------------------------------------------------------------------- #
+# ensure_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_noop_when_disabled(monkeypatch, fake_user):
+    """Disabled enforcement allows without consulting the service but still audits."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_permission(fake_user, domain="*", obj="flow:abc", act="read")
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "allow"
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_allows_when_enforce_returns_true(monkeypatch, fake_user):
+    """A True enforce result returns None and forwards the merged context."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_permission(
+        fake_user,
+        domain="*",
+        obj="flow:abc",
+        act="read",
+        context={"extra": "value"},
+    )
+
+    assert len(service.calls) == 1
+    call = service.calls[0]
+    assert call["user_id"] == fake_user.id
+    assert call["obj"] == "flow:abc"
+    assert call["act"] == "read"
+    assert call["context"] == {"is_superuser": False, "extra": "value"}
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_caller_context_cannot_override_is_superuser(monkeypatch, fake_user):
+    """Caller-supplied context must not be able to overwrite the user-derived is_superuser flag.
+
+    Regression for PR #13153 review: previously the merge was
+    ``{**_auth_context(user), **(context or {})}`` which let a caller forge
+    ``context={"is_superuser": True}`` for a non-superuser. The merged context
+    forwarded to ``enforce`` must always reflect the user's actual privilege.
+    """
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_permission(
+        fake_user,
+        domain="*",
+        obj="flow:abc",
+        act="read",
+        context={"is_superuser": True, "extra": "value"},
+    )
+
+    assert len(service.calls) == 1
+    forwarded_context = service.calls[0]["context"]
+    assert forwarded_context["is_superuser"] is False
+    assert forwarded_context["extra"] == "value"
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_raises_403_with_non_disclosing_default(monkeypatch, fake_user):
+    """Default deny detail must NOT echo the resource UUID — see PR #13153 review item I2."""
+    install_settings(monkeypatch, authz_enabled=True)
+    install_authz(monkeypatch, _StubAuthorizationService(allow=False))
+    install_audit_recorder(monkeypatch)
+
+    flow_id = uuid4()
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_guards.ensure_permission(fake_user, domain="*", obj=f"flow:{flow_id}", act="write")
+
+    assert exc_info.value.status_code == 403
+    # The default message MUST NOT contain the resource UUID or the action verb —
+    # otherwise a caller that forgets to wrap in deny_to_404 leaks existence.
+    detail = exc_info.value.detail.lower()
+    assert str(flow_id) not in detail
+    assert "write" not in detail
+    assert "permission denied" in detail
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_accepts_explicit_detail_override(monkeypatch, fake_user):
+    """Callers that have already verified resource existence may pass a richer message."""
+    install_settings(monkeypatch, authz_enabled=True)
+    install_authz(monkeypatch, _StubAuthorizationService(allow=False))
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_guards.ensure_permission(
+            fake_user,
+            domain="*",
+            obj="flow:abc",
+            act="write",
+            detail="Cannot edit a published flow.",
+        )
+
+    assert exc_info.value.detail == "Cannot edit a published flow."
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_writes_audit_on_allow(monkeypatch, fake_user):
+    """Allow path schedules an audit row with result='allow'."""
+    install_settings(monkeypatch, authz_enabled=True)
+    install_authz(monkeypatch, _StubAuthorizationService(allow=True))
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_permission(fake_user, domain="project:1", obj="flow:abc", act="read")
+
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "allow"
+    assert audit_calls[0]["obj"] == "flow:abc"
+    assert audit_calls[0]["action"] == "flow:read"
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_writes_audit_on_deny(monkeypatch, fake_user):
+    """Deny path schedules an audit row with result='deny' before the 403 raises."""
+    install_settings(monkeypatch, authz_enabled=True)
+    install_authz(monkeypatch, _StubAuthorizationService(allow=False))
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException):
+        await authz_guards.ensure_permission(fake_user, domain="*", obj="flow:abc", act="delete")
+
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "deny"
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_forwards_auth_context(monkeypatch, fake_user):
+    """Credential metadata is available to plugins and audit without route signature churn."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    api_key_id = uuid4()
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=api_key_id,
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+
+    try:
+        await authz_guards.ensure_permission(fake_user, domain="*", obj="flow:abc", act="read")
+    finally:
+        clear_current_auth_context()
+
+    forwarded_context = service.calls[0]["context"]
+    assert forwarded_context["auth_method"] == "api_key"
+    assert forwarded_context["api_key_id"] == api_key_id
+    assert forwarded_context["api_key_source"] == "db"  # pragma: allowlist secret
+    assert audit_calls[0]["details"]["auth_method"] == "api_key"
+    assert audit_calls[0]["details"]["api_key_id"] == str(api_key_id)
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_flow_permission — enum coercion, domain, owner override
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_ensure_flow_permission_accepts_enum(monkeypatch, fake_user):
+    """A FlowAction enum is coerced to its string value before enforce."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    flow_id = uuid4()
+    await authz_guards.ensure_flow_permission(fake_user, FlowAction.READ, flow_id=flow_id)
+
+    assert service.calls[0]["act"] == "read"
+    assert service.calls[0]["obj"] == f"flow:{flow_id}"
+
+
+@pytest.mark.anyio
+async def test_ensure_flow_permission_accepts_string_for_backcompat(monkeypatch, fake_user):
+    """Bare string actions still work — gradual migration is allowed."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_flow_permission(fake_user, "write", flow_id=uuid4())
+    assert service.calls[0]["act"] == "write"
+
+
+@pytest.mark.anyio
+async def test_ensure_flow_permission_computes_workspace_domain(monkeypatch, fake_user):
+    """workspace_id is mapped to a workspace: domain string and forwarded in context."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    workspace_id = uuid4()
+    await authz_guards.ensure_flow_permission(
+        fake_user,
+        FlowAction.READ,
+        flow_id=uuid4(),
+        flow_user_id=uuid4(),
+        workspace_id=workspace_id,
+    )
+
+    assert service.calls[0]["domain"] == f"workspace:{workspace_id}"
+    assert service.calls[0]["context"]["workspace_id"] == workspace_id
+
+
+@pytest.mark.anyio
+async def test_ensure_flow_permission_falls_back_to_project_domain(monkeypatch, fake_user):
+    """Without workspace_id, folder_id maps to a project: domain string."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    folder_id = uuid4()
+    await authz_guards.ensure_flow_permission(
+        fake_user,
+        FlowAction.READ,
+        flow_id=uuid4(),
+        flow_user_id=uuid4(),
+        folder_id=folder_id,
+    )
+
+    assert service.calls[0]["domain"] == f"project:{folder_id}"
+    assert service.calls[0]["context"]["folder_id"] == folder_id
+    assert service.calls[0]["context"]["workspace_id"] is None
+
+
+@pytest.mark.anyio
+async def test_ensure_flow_permission_project_beats_workspace(monkeypatch, fake_user):
+    """Project domain wins when both workspace_id and folder_id are set."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    workspace_id = uuid4()
+    folder_id = uuid4()
+    await authz_guards.ensure_flow_permission(
+        fake_user,
+        FlowAction.READ,
+        flow_id=uuid4(),
+        flow_user_id=uuid4(),
+        workspace_id=workspace_id,
+        folder_id=folder_id,
+    )
+
+    assert service.calls[0]["domain"] == f"project:{folder_id}"
+    # workspace_id is still passed in context so the plugin can use it for ABAC matchers.
+    assert service.calls[0]["context"]["folder_id"] == folder_id
+    assert service.calls[0]["context"]["workspace_id"] == workspace_id
+
+
+@pytest.mark.anyio
+async def test_ensure_flow_permission_wildcard_domain_when_neither_set(monkeypatch, fake_user):
+    """With neither workspace_id nor folder_id, domain falls back to '*'."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_flow_permission(fake_user, FlowAction.CREATE)
+    assert service.calls[0]["domain"] == "*"
+
+
+@pytest.mark.anyio
+async def test_owner_override_skips_enforce(monkeypatch, fake_user):
+    """A flow owner short-circuits the enforce call entirely."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)  # Would deny if asked.
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_flow_permission(
+        fake_user,
+        FlowAction.DELETE,
+        flow_id=uuid4(),
+        flow_user_id=fake_user.id,
+        workspace_id=uuid4(),
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_api_key_scope_plugin_sees_owner_resource_instead_of_owner_override(monkeypatch, fake_user):
+    """API-key scopes can be narrower than the owning user when a plugin opts in."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False, supports_api_key_scopes=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=uuid4(),
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_flow_permission(
+                fake_user,
+                FlowAction.DELETE,
+                flow_id=uuid4(),
+                flow_user_id=fake_user.id,
+            )
+    finally:
+        clear_current_auth_context()
+
+    assert exc_info.value.status_code == 403
+    assert len(service.calls) == 1
+    assert service.calls[0]["context"]["flow_user_id"] == fake_user.id
+    assert service.calls[0]["context"]["auth_method"] == "api_key"
+
+
+@pytest.mark.anyio
+async def test_external_viewer_ceiling_denies_before_owner_override(monkeypatch, fake_user):
+    """A viewer claim is a deny-only ceiling even when the user owns the flow."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="viewer"))
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_flow_permission(
+                fake_user,
+                FlowAction.WRITE,
+                flow_id=uuid4(),
+                flow_user_id=fake_user.id,
+            )
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    assert "External credentials" in exc_info.value.detail
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "deny"
+    assert audit_calls[0]["details"]["external_access_level"] == "viewer"
+
+
+@pytest.mark.anyio
+async def test_external_editor_ceiling_allows_write_then_owner_override(monkeypatch, fake_user):
+    """Editor is still only a ceiling; normal owner/plugin logic continues after it passes."""
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="editor"))
+
+    try:
+        await authz_guards.ensure_flow_permission(
+            fake_user,
+            FlowAction.WRITE,
+            flow_id=uuid4(),
+            flow_user_id=fake_user.id,
+        )
+    finally:
+        set_current_external_access_context(None)
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_owner_override_audits_even_when_authz_disabled(monkeypatch, fake_user):
+    """Owner override on a disabled-authz install still writes an audit row.
+
+    Audit is now gated only on ``AUTHZ_AUDIT_ENABLED`` (the audit recorder
+    here intercepts at that level), so operators can observe traffic ahead of
+    flipping ``AUTHZ_ENABLED``. ``install_settings`` defaults the audit flag
+    to False so we explicitly enable it here.
+    """
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    install_authz(monkeypatch, _StubAuthorizationService(allow=False))
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_flow_permission(
+        fake_user,
+        FlowAction.WRITE,
+        flow_id=uuid4(),
+        flow_user_id=fake_user.id,
+    )
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_non_owner_falls_through_to_enforce(monkeypatch, fake_user):
+    """When flow_user_id differs from current user, enforce is called normally."""
+    install_settings(monkeypatch, authz_enabled=True)
+    install_authz(monkeypatch, _StubAuthorizationService(allow=False))
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException):
+        await authz_guards.ensure_flow_permission(
+            fake_user,
+            FlowAction.WRITE,
+            flow_id=uuid4(),
+            flow_user_id=uuid4(),
+        )
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_flows_permission — batched enforce
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_ensure_flows_permission_batches_flow_ids(monkeypatch, fake_user):
+    """Non-owned flow ids are authorized with one batch_enforce call."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    flow_ids = [uuid4(), uuid4(), uuid4()]
+    workspace_id = uuid4()
+
+    await authz_guards.ensure_flows_permission(
+        fake_user,
+        FlowAction.DEPLOY,
+        flow_ids=flow_ids,
+        flow_user_id=uuid4(),
+        workspace_id=workspace_id,
+    )
+
+    assert len(service.batch_calls) == 1
+    assert service.calls == []
+    assert service.batch_calls[0]["domain"] == f"workspace:{workspace_id}"
+    assert service.batch_calls[0]["requests"] == [
+        (f"flow:{flow_ids[0]}", "deploy"),
+        (f"flow:{flow_ids[1]}", "deploy"),
+        (f"flow:{flow_ids[2]}", "deploy"),
+    ]
+
+
+@pytest.mark.anyio
+async def test_ensure_flows_permission_raises_when_any_denied(monkeypatch, fake_user):
+    """A single deny in the batch fails the whole call with 403."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(batch_results=[True, False])
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_guards.ensure_flows_permission(
+            fake_user,
+            FlowAction.DEPLOY,
+            flow_ids=[uuid4(), uuid4()],
+            flow_user_id=uuid4(),
+        )
+
+    assert exc_info.value.status_code == 403
+    assert len(service.batch_calls) == 1
+
+
+@pytest.mark.anyio
+async def test_ensure_flows_permission_fails_closed_on_result_count_mismatch(monkeypatch, fake_user):
+    """A malformed batch result is audited and denied instead of escaping as ValueError."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(batch_results=[True])
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_guards.ensure_flows_permission(
+            fake_user,
+            FlowAction.DEPLOY,
+            flow_ids=[uuid4(), uuid4()],
+            flow_user_id=uuid4(),
+        )
+
+    assert exc_info.value.status_code == 403
+    assert len(service.batch_calls) == 1
+    assert audit_calls[-1]["result"] == "deny"
+    assert audit_calls[-1]["details"]["error"] == "batch_enforce result count mismatch"
+
+
+@pytest.mark.anyio
+async def test_ensure_flows_permission_applies_external_ceiling_when_authz_disabled(monkeypatch, fake_user):
+    """The external deploy ceiling remains enforceable in the default OSS RBAC mode."""
+    install_settings(monkeypatch, authz_enabled=False)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="editor"))
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_flows_permission(
+                fake_user,
+                FlowAction.DEPLOY,
+                flow_ids=[uuid4()],
+                flow_user_id=fake_user.id,
+            )
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    assert service.batch_calls == []
+    assert audit_calls[-1]["result"] == "deny"
+    assert audit_calls[-1]["details"]["external_access_level"] == "editor"
+
+
+@pytest.mark.anyio
+async def test_ensure_flows_permission_owner_override_skips_batch(monkeypatch, fake_user):
+    """Owned flow ids short-circuit without batch_enforce when owner override applies."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_flows_permission(
+        fake_user,
+        FlowAction.DEPLOY,
+        flow_ids=[uuid4(), uuid4()],
+        flow_user_id=fake_user.id,
+    )
+
+    assert service.batch_calls == []
+    assert service.calls == []
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_project_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_accepts_enum(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    project_id = uuid4()
+    await authz_guards.ensure_project_permission(fake_user, ProjectAction.READ, project_id=project_id)
+    assert service.calls[0]["act"] == "read"
+    assert service.calls[0]["obj"] == f"project:{project_id}"
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_uses_project_domain(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    project_id = uuid4()
+    workspace_id = uuid4()
+    await authz_guards.ensure_project_permission(
+        fake_user, ProjectAction.WRITE, project_id=project_id, project_user_id=uuid4(), workspace_id=workspace_id
+    )
+    assert service.calls[0]["domain"] == f"project:{project_id}"
+    assert service.calls[0]["context"]["project_id"] == project_id
+    assert service.calls[0]["context"]["workspace_id"] == workspace_id
+
+
+@pytest.mark.anyio
+async def test_project_owner_override_skips_enforce(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_project_permission(
+        fake_user,
+        ProjectAction.DELETE,
+        project_id=uuid4(),
+        project_user_id=fake_user.id,
+        workspace_id=uuid4(),
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_create_uses_wildcard_obj(monkeypatch, fake_user):
+    """ProjectAction.CREATE without a project_id targets ``project:*`` (workspace-scoped create)."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_project_permission(fake_user, ProjectAction.CREATE)
+    assert service.calls[0]["domain"] == "*"
+    assert service.calls[0]["obj"] == "project:*"
+    assert service.calls[0]["act"] == "create"
+    assert service.calls[0]["context"]["workspace_id"] is None
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_create_uses_workspace_domain(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    workspace_id = uuid4()
+    await authz_guards.ensure_project_permission(fake_user, ProjectAction.CREATE, workspace_id=workspace_id)
+
+    assert service.calls[0]["domain"] == f"workspace:{workspace_id}"
+    assert service.calls[0]["obj"] == "project:*"
+    assert service.calls[0]["context"]["project_id"] is None
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_deployment_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_ensure_deployment_permission_uses_project_domain(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    project_id = uuid4()
+    await authz_guards.ensure_deployment_permission(
+        fake_user,
+        DeploymentAction.READ,
+        deployment_id=uuid4(),
+        deployment_user_id=uuid4(),
+        project_id=project_id,
+    )
+
+    assert service.calls[0]["domain"] == f"project:{project_id}"
+    assert service.calls[0]["context"]["project_id"] == project_id
+
+
+@pytest.mark.anyio
+async def test_deployment_owner_override_skips_enforce(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_deployment_permission(
+        fake_user,
+        DeploymentAction.DELETE,
+        deployment_id=uuid4(),
+        deployment_user_id=fake_user.id,
+        project_id=uuid4(),
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
+    assert audit_calls[0]["action"] == "deployment:delete"
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_provider_account_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_provider_account_owner_and_scoped_api_key_personas(monkeypatch, fake_user):
+    """Personal owner access yields only after external and scoped-key ceilings pass."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False, supports_api_key_scopes=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    provider_account_id = uuid4()
+
+    await authz_guards.ensure_provider_account_permission(
+        fake_user,
+        ProviderAccountAction.WRITE,
+        provider_account_id=provider_account_id,
+        provider_account_user_id=fake_user.id,
+    )
+    assert service.calls == []
+    assert audit_calls[-1]["result"] == "owner_override"
+
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="viewer"))
+    try:
+        with pytest.raises(HTTPException) as external_exc:
+            await authz_guards.ensure_provider_account_permission(
+                fake_user,
+                ProviderAccountAction.CREATE,
+                provider_account_user_id=fake_user.id,
+            )
+    finally:
+        set_current_external_access_context(None)
+
+    assert external_exc.value.status_code == 403
+    assert "External credentials" in external_exc.value.detail
+    assert service.calls == []
+
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=uuid4(),
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_provider_account_permission(
+                fake_user,
+                ProviderAccountAction.DELETE,
+                provider_account_id=provider_account_id,
+                provider_account_user_id=fake_user.id,
+            )
+    finally:
+        clear_current_auth_context()
+
+    assert exc_info.value.status_code == 403
+    assert service.calls[-1]["obj"] == f"provider_account:{provider_account_id}"
+    assert service.calls[-1]["act"] == "delete"
+    assert service.calls[-1]["context"]["provider_account_user_id"] == fake_user.id
+
+
+@pytest.mark.anyio
+async def test_voice_owner_and_scoped_api_key_personas(monkeypatch, fake_user):
+    """Voice metadata follows owner override but still honors a narrower API-key scope."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False, supports_api_key_scopes=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_voice_permission(
+        fake_user,
+        VoiceAction.READ,
+        voice_user_id=fake_user.id,
+    )
+    assert service.calls == []
+
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=uuid4(),
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_voice_permission(
+                fake_user,
+                VoiceAction.READ,
+                voice_user_id=fake_user.id,
+            )
+    finally:
+        clear_current_auth_context()
+
+    assert exc_info.value.status_code == 403
+    assert service.calls[-1]["obj"] == "voice:*"
+    assert service.calls[-1]["context"]["voice_user_id"] == fake_user.id
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_knowledge_base_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_kb_permission_uses_kb_id_object_slug(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    kb_id = uuid4()
+    await authz_guards.ensure_knowledge_base_permission(
+        fake_user,
+        KnowledgeBaseAction.READ,
+        kb_id=kb_id,
+        kb_name="my-kb",
+        kb_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == f"knowledge_base:{kb_id}"
+    assert service.calls[0]["act"] == "read"
+    # ``kb_name`` is forwarded in the context for debugging.
+    assert service.calls[0]["context"]["kb_name"] == "my-kb"
+    assert service.calls[0]["context"]["kb_id"] == kb_id
+
+
+@pytest.mark.anyio
+async def test_kb_permission_owner_override(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_knowledge_base_permission(
+        fake_user,
+        KnowledgeBaseAction.DELETE,
+        kb_id=uuid4(),
+        kb_name="my-kb",
+        kb_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
+    assert audit_calls[0]["action"] == "knowledge_base:delete"
+
+
+@pytest.mark.anyio
+async def test_kb_permission_denied_raises_403(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_knowledge_base_permission(
+            fake_user,
+            KnowledgeBaseAction.DELETE,
+            kb_id=uuid4(),
+            kb_name="someone-elses",
+            kb_user_id=uuid4(),
+        )
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_kb_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """CREATE has no existing owner, so a prospective owner cannot bypass policy."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_knowledge_base_permission(
+            fake_user,
+            KnowledgeBaseAction.CREATE,
+            kb_user_id=fake_user.id,
+        )
+
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "knowledge_base:*"
+    assert service.calls[0]["act"] == "create"
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_variable_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_variable_permission_uses_variable_object_slug(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    variable_id = uuid4()
+    await authz_guards.ensure_variable_permission(
+        fake_user,
+        VariableAction.WRITE,
+        variable_id=variable_id,
+        variable_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == f"variable:{variable_id}"
+
+
+@pytest.mark.anyio
+async def test_variable_permission_owner_override(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_variable_permission(
+        fake_user,
+        VariableAction.DELETE,
+        variable_id=uuid4(),
+        variable_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_variable_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """The shared CREATE rule also closes the adjacent variable-owner bypass."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_variable_permission(
+            fake_user,
+            VariableAction.CREATE,
+            variable_user_id=fake_user.id,
+        )
+
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "variable:*"
+    assert service.calls[0]["act"] == "create"
+
+
+@pytest.mark.anyio
+async def test_create_audits_allow_when_enforcement_is_disabled(monkeypatch, fake_user):
+    """Prospective ownership must not suppress audit-only CREATE visibility."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_file_permission(
+        fake_user,
+        FileAction.CREATE,
+        file_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "allow"
+    assert audit_calls[0]["action"] == "file:create"
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_file_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_file_permission_uses_file_object_slug(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    file_id = uuid4()
+    await authz_guards.ensure_file_permission(
+        fake_user,
+        FileAction.READ,
+        file_id=file_id,
+        file_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == f"file:{file_id}"
+
+
+@pytest.mark.anyio
+async def test_file_permission_owner_override(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_file_permission(
+        fake_user,
+        FileAction.DELETE,
+        file_id=uuid4(),
+        file_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_file_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """CREATE has no existing owner, so a prospective owner cannot bypass policy."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_file_permission(
+            fake_user,
+            FileAction.CREATE,
+            file_user_id=fake_user.id,
+        )
+
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "file:*"
+    assert service.calls[0]["act"] == "create"
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_share_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_share_permission_uses_share_object_slug(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    share_id = uuid4()
+    await authz_guards.ensure_share_permission(
+        fake_user,
+        ShareAction.CREATE,
+        share_id=share_id,
+        share_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == f"share:{share_id}"
+    assert service.calls[0]["act"] == "create"
+
+
+@pytest.mark.anyio
+async def test_share_create_permission_uses_existing_resource_owner_override(monkeypatch, fake_user):
+    """Share CREATE is the exception: its owner is the existing target's owner."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_share_permission(
+        fake_user,
+        ShareAction.CREATE,
+        share_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"

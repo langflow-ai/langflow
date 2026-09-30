@@ -1,7 +1,12 @@
+import asyncio
+import base64
 from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
+from langflow import memory as memory_module
 from langflow.memory import (
     aadd_messages,
     aadd_messagetables,
@@ -15,7 +20,7 @@ from langflow.memory import (
 )
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
-from langflow.schema.message import Message
+from langflow.schema.message import MAX_ATTACHMENT_SIZE_BYTES, Message
 from langflow.schema.properties import Properties, Source
 
 # Assuming you have these imports available
@@ -49,28 +54,40 @@ async def created_messages(async_session):  # noqa: ARG001
 
 @pytest.mark.usefixtures("client")
 def test_get_messages():
+    flow_id, user_id = uuid4(), uuid4()
     add_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
-    messages = get_messages(sender="User", session_id="session_id2", limit=2)
-    assert len(messages) == 2
+    limit = 2
+    messages = get_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
+    assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
 
 
 @pytest.mark.usefixtures("client")
 async def test_aget_messages():
+    flow_id, user_id = uuid4(), uuid4()
     await aadd_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=2)
-    assert len(messages) == 2
+    limit = 2
+    messages = await aget_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
+    assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
 
@@ -92,6 +109,21 @@ async def test_aadd_messages():
 
 
 @pytest.mark.usefixtures("client")
+async def test_aadd_messages_persists_run_id():
+    run_id = uuid4()
+    message = Message(
+        text="New Test message",
+        sender="User",
+        sender_name="User",
+        session_id="new_session_id_run_id",
+        run_id=str(run_id),
+    )
+    messages = await aadd_messages(message)
+    assert len(messages) == 1
+    assert str(messages[0].run_id) == str(run_id)
+
+
+@pytest.mark.usefixtures("client")
 async def test_aadd_messagetables(async_session):
     messages = [MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")]
     added_messages = await aadd_messagetables(messages, async_session)
@@ -99,36 +131,147 @@ async def test_aadd_messagetables(async_session):
     assert added_messages[0].text == "New Test message"
 
 
+async def test_aadd_messagetables_propagates_cancelled_error_from_commit():
+    cancellation = asyncio.CancelledError("commit cancelled")
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=cancellation),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+
+
+async def test_aadd_messagetables_propagates_cancelled_error_from_refresh():
+    cancellation = asyncio.CancelledError("refresh cancelled")
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(),
+        refresh=AsyncMock(side_effect=cancellation),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.refresh.assert_awaited_once_with(message)
+    session.rollback.assert_awaited_once()
+
+
+async def test_aadd_messagetables_preserves_cancellation_when_rollback_and_logging_fail(monkeypatch):
+    cancellation = asyncio.CancelledError("commit cancelled")
+    log_exception = AsyncMock(side_effect=RuntimeError("logging failed"))
+    monkeypatch.setattr(memory_module, "logger", SimpleNamespace(aexception=log_exception))
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=cancellation),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=RuntimeError("rollback failed")),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+    log_exception.assert_awaited_once()
+
+
+async def test_aadd_messagetables_allows_cancellation_to_interrupt_rollback():
+    commit_started = asyncio.Event()
+    rollback_started = asyncio.Event()
+    rollback_cancelled = asyncio.Event()
+    wait_forever = asyncio.Event()
+
+    async def commit():
+        commit_started.set()
+        await wait_forever.wait()
+
+    async def rollback():
+        rollback_started.set()
+        try:
+            await wait_forever.wait()
+        except asyncio.CancelledError:
+            rollback_cancelled.set()
+            raise
+
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=commit),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=rollback),
+    )
+    add_task = asyncio.create_task(aadd_messagetables([message], session))
+
+    try:
+        await asyncio.wait_for(commit_started.wait(), timeout=1)
+        add_task.cancel()
+        await asyncio.wait_for(rollback_started.wait(), timeout=1)
+        add_task.cancel()
+
+        done, _ = await asyncio.wait({add_task}, timeout=1)
+        assert add_task in done
+        with pytest.raises(asyncio.CancelledError):
+            add_task.result()
+    finally:
+        wait_forever.set()
+        if not add_task.done():
+            await asyncio.gather(add_task, return_exceptions=True)
+
+    assert rollback_cancelled.is_set()
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+
+
 @pytest.mark.usefixtures("client")
 def test_delete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    add_messages([message])
-    messages = get_messages(sender="User", session_id=session_id)
+    add_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    delete_messages(session_id)
-    messages = get_messages(sender="User", session_id=session_id)
+    delete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_adelete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    await aadd_messages([message])
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await aadd_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    await adelete_messages(session_id)
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await adelete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_store_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -136,9 +279,10 @@ async def test_store_message():
 @pytest.mark.usefixtures("client")
 async def test_astore_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -165,7 +309,101 @@ def test_convert_to_langchain(method_name):
     lc_message = convert(Message(text=iterator, sender="AI", session_id="session_id2"))
     assert lc_message.content == ""
     assert lc_message.type == "ai"
-    assert len(list(iterator)) == 2
+    expected_len = 2
+    assert len(list(iterator)) == expected_len
+
+
+def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
+    events: list[str] = []
+
+    def record(event: str, **_kwargs):
+        events.append(event)
+
+    monkeypatch.setattr(
+        "lfx.schema.message.logger",
+        SimpleNamespace(debug=record, warning=record, error=lambda *_args, **_kwargs: None),
+    )
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=["nonexistent.unsupported"],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert lc_message.content == [{"type": "text", "text": "Hello"}]
+    assert any("Skipping attachment during message conversion" in event for event in events)
+
+
+def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
+    csv_path = tmp_path / "table.csv"
+    csv_path.write_text("name,role\nAda,Engineer\n", encoding="utf-8")
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(csv_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content[0] == {"type": "text", "text": "Hello"}
+    assert lc_message.content[1]["type"] == "text"
+    assert "File 'table.csv' contents:" in lc_message.content[1]["text"]
+    assert "name,role" in lc_message.content[1]["text"]
+
+
+def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
+    image_path = tmp_path / "image.png"
+    image_content = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+    )
+    image_path.write_bytes(image_content)
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(image_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content[0] == {"type": "text", "text": "Hello"}
+    assert lc_message.content[1]["type"] == "image_url"
+
+
+def test_to_lc_message_skips_oversized_file_attachments(tmp_path):
+    big_path = tmp_path / "big.txt"
+
+    big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
+    with big_path.open("wb") as handle:
+        handle.seek(big_size - 1)
+        handle.write(b"\0")
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(big_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert lc_message.content == [{"type": "text", "text": "Hello"}]
 
 
 @pytest.mark.usefixtures("client")
@@ -222,7 +460,7 @@ async def test_aupdate_mixed_messages(created_messages):
         flow_id=uuid4(),
     )
 
-    messages_to_update = created_messages[:1] + [nonexistent_message]
+    messages_to_update = [*created_messages[:1], nonexistent_message]
     created_messages[0].text = "Updated existing message"
 
     with pytest.raises(ValueError, match=f"Message with id {nonexistent_uuid} not found"):
@@ -292,24 +530,30 @@ async def test_aupdate_message_with_content_blocks(created_message):
     assert updated[0].text == "Message with content blocks"
     assert len(updated[0].content_blocks) == 1
 
-    # Verify the content block structure
+    # MessageRead renders content_blocks as the legacy v1 shape: plain dicts,
+    # a single group {title, contents, allow_markdown, media_url} whose leaves
+    # carry no id/contents. The setter-appended top-level text is carried by
+    # ``text`` (dropped from content_blocks, since the group is not "Agent Steps").
     updated_block = updated[0].content_blocks[0]
-    assert updated_block.title == "Test Block"
-    assert len(updated_block.contents) == 2
+    assert updated_block["title"] == "Test Block"
+    expected_len = 2
+    assert len(updated_block["contents"]) == expected_len
 
     # Verify text content
-    text_content = updated_block.contents[0]
-    assert text_content.type == "text"
-    assert text_content.text == "Test content"
-    assert text_content.duration == 5
-    assert text_content.header["title"] == "Test Header"
+    text_content = updated_block["contents"][0]
+    assert text_content["type"] == "text"
+    assert text_content["text"] == "Test content"
+    duration = 5
+    assert text_content["duration"] == duration
+    assert text_content["header"]["title"] == "Test Header"
 
     # Verify tool content
-    tool_content = updated_block.contents[1]
-    assert tool_content.type == "tool_use"
-    assert tool_content.name == "test_tool"
-    assert tool_content.tool_input == {"param": "value"}
-    assert tool_content.duration == 10
+    tool_content = updated_block["contents"][1]
+    assert tool_content["type"] == "tool_use"
+    assert tool_content["name"] == "test_tool"
+    assert tool_content["tool_input"] == {"param": "value"}
+    duration = 10
+    assert tool_content["duration"] == duration
 
 
 @pytest.mark.usefixtures("client")
@@ -356,3 +600,1119 @@ async def test_aupdate_message_with_nested_properties(created_message):
     assert updated[0].properties.allow_markdown is True
     assert updated[0].properties.state == "complete"
     assert updated[0].properties.targets == []
+
+
+@pytest.mark.usefixtures("client")
+async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
+    """Regression test: a Table/DataFrame leaked into a ContentBlock should not break persistence.
+
+    When a flow wires a Memory Base (or any component that emits a Table) through
+    a Parser into an Agent, the raw Table can be captured by message tracking
+    and reach the SQL UPDATE before the consumer converts it to text. The
+    persistence layer must coerce the Table — and the numpy scalars it carries
+    — to JSON-native types rather than failing the message save.
+    """
+    import json
+
+    import numpy as np
+    import pandas as pd
+
+    table = pd.DataFrame([{"chunk": "hello world", "_score": 0.9}, {"chunk": "another row", "_score": 0.8}])
+
+    tool_content = ToolContent(
+        type="tool_use",
+        name="MemoryBase",
+        tool_input={"search_query": "hello"},
+        output=table,
+        duration=12,
+    )
+    content_block = ContentBlock(title="Agent Steps", contents=[tool_content])
+
+    created_message.content_blocks = [content_block]
+    created_message.text = "Agent response after Memory Base retrieval"
+
+    updated = await aupdate_messages(created_message)
+
+    assert len(updated) == 1
+    assert updated[0].text == "Agent response after Memory Base retrieval"
+    assert len(updated[0].content_blocks) == 1
+
+    # MessageRead renders the legacy v1 shape (plain dicts). For an "Agent Steps"
+    # group the answer is folded back in as a trailing Output leaf, so the tool
+    # stays at contents[0].
+    stored_tool = updated[0].content_blocks[0]["contents"][0]
+    assert stored_tool["type"] == "tool_use"
+    assert stored_tool["name"] == "MemoryBase"
+
+    # The output must be free of pandas / numpy types and fully JSON-encodable.
+    def _assert_json_native(value):
+        if isinstance(value, dict):
+            for v in value.values():
+                _assert_json_native(v)
+        elif isinstance(value, list):
+            for v in value:
+                _assert_json_native(v)
+        else:
+            assert not isinstance(value, np.generic), f"numpy scalar leaked: {value!r}"
+            assert not isinstance(value, pd.DataFrame), "DataFrame leaked into persisted output"
+
+    _assert_json_native(stored_tool["output"])
+    # Strict JSON dump must succeed without a fallback encoder.
+    json.dumps(stored_tool["output"], allow_nan=False)
+
+
+# =============================================================================
+# Tests for MessageBase.from_message file path handling
+# =============================================================================
+
+
+class TestMessageBaseFromMessageAgentInit:
+    """Regression: in-flight agent Message must survive the no_content check.
+
+    The agent now initializes with flat ``content_blocks=[]`` (the wrapping
+    ``ContentBlock('Agent Steps', ...)`` is gone) and uses ``text=""`` as
+    the "intentionally created, content will arrive" sentinel. If either
+    side regresses, the build dies with "The message does not have the
+    required fields (text, sender, sender_name)." before any agent event
+    can populate the content_blocks list.
+    """
+
+    def test_from_message_accepts_in_flight_agent_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Mirrors what AgentComponent / LCToolsAgentComponent / altk build.
+        message = Message(
+            text="",
+            sender="Machine",
+            sender_name="Agent",
+            content_blocks=[],
+            session_id="test-session",
+            properties={"icon": "Bot", "state": "partial"},
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.sender == "Machine"
+        assert result.sender_name == "Agent"
+        assert result.text == ""
+
+    def test_from_message_rejects_truly_empty_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Explicit text=None with no stream and no content_blocks is the
+        # genuinely-empty signal that must be rejected. (A bare message with no
+        # text argument seeds data["text"]="" -- the intentional-empty ChatInput
+        # convention -- and is accepted, like an in-flight agent message.)
+        message = Message(sender="Machine", sender_name="Agent", text=None, content_blocks=[])
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
+
+
+class TestMessageBaseFromMessageFilePaths:
+    """Tests for the file path handling in MessageBase.from_message."""
+
+    def test_from_message_with_session_id_in_file_path(self):
+        """Test that file paths containing session_id are correctly processed."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "test-session-123"
+        file_path = f"/uploads/{session_id}/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        assert result.files[0] == f"{session_id}/image.png"
+
+    def test_from_message_with_session_id_not_in_file_path(self):
+        """Test that file paths NOT containing session_id are preserved as-is."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "test-session-123"
+        file_path = "/uploads/other-session/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        assert result.files[0] == file_path
+
+    def test_from_message_with_no_session_id(self):
+        """Test that file paths are preserved when session_id is empty."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        file_path = "/uploads/some-folder/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id="",
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        assert result.files[0] == file_path
+
+    def test_from_message_with_session_id_at_end_of_path(self):
+        """Test edge case where session_id is at the end of path (no parts after split)."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "test-session-123"
+        # Path ends with session_id - split will have empty second part
+        file_path = f"/uploads/{session_id}"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        # When split produces ["uploads/", ""], we get session_id + ""
+        assert result.files[0] == f"{session_id}"
+
+    def test_from_message_with_multiple_session_id_occurrences(self):
+        """Test file path with multiple occurrences of session_id.
+
+        Note: str.split() splits on ALL occurrences. With path "/uploads/abc/folder/abc/image.png"
+        and session_id "abc", split gives ["uploads/", "/folder/", "/image.png"].
+        parts[1] is "/folder/" so result is "abc/folder/".
+        """
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "abc"
+        # Path has session_id appearing twice
+        file_path = f"/uploads/{session_id}/folder/{session_id}/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        # split() divides em todas as ocorrências: parts = ["/uploads/", "/folder/", "/image.png"]
+        # parts[1] = "/folder/", então resultado = "abc/folder/"
+        assert result.files[0] == f"{session_id}/folder/"
+
+    def test_from_message_with_multiple_files_mixed_paths(self):
+        """Test multiple files with different path scenarios."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "session-xyz"
+        images = [
+            Image(path=f"/uploads/{session_id}/image1.png", url="http://example.com/1"),
+            Image(path="/uploads/other-folder/image2.png", url="http://example.com/2"),
+            Image(path=f"/data/{session_id}/docs/file.pdf", url="http://example.com/3"),
+        ]
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=images,
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 3
+        assert result.files[0] == f"{session_id}/image1.png"
+        assert result.files[1] == "/uploads/other-folder/image2.png"
+        assert result.files[2] == f"{session_id}/docs/file.pdf"
+
+    def test_from_message_with_image_empty_path(self):
+        """Test that Image with empty path is NOT added to image_paths.
+
+        When Image has empty path, the condition `file.path` is falsy,
+        so the image is not processed but the original message.files remains unchanged.
+        Since no image_paths are collected, message.files keeps the original Image objects.
+        """
+        from lfx.schema.image import Image
+
+        session_id = "test-session"
+        img = Image(path="", url="http://example.com/image.png")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        # The Image with empty path is kept in message.files (not processed into image_paths)
+        # Since image_paths is empty, message.files is not modified
+        assert len(message.files) == 1
+        assert isinstance(message.files[0], Image)
+
+    def test_from_message_with_image_none_path(self):
+        """Test that Image with None path is NOT added to image_paths.
+
+        Similar to empty path case - the Image is not processed but remains in message.files.
+        """
+        from lfx.schema.image import Image
+
+        session_id = "test-session"
+        img = Image(path=None, url="http://example.com/image.png")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        # The Image with None path is kept in message.files
+        assert len(message.files) == 1
+        assert isinstance(message.files[0], Image)
+
+    def test_from_message_with_image_no_url(self):
+        """Test that Image without url attribute still works (url defaults to None)."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "test-session"
+        file_path = f"/uploads/{session_id}/image.png"
+        # Image with path but url=None - hasattr will return True but url is None
+        img = Image(path=file_path)
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        # Image has url attribute (even if None), so it passes hasattr check
+        assert len(result.files) == 1
+        assert result.files[0] == f"{session_id}/image.png"
+
+    def test_from_message_with_empty_session_id_preserves_path(self):
+        """Test file path handling when session_id is empty string."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        file_path = "/uploads/folder/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id="",
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        assert result.files[0] == file_path
+
+    def test_from_message_with_uuid_session_id(self):
+        """Test file path handling with UUID session_id."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_uuid = uuid4()
+        session_id_str = str(session_uuid)
+        file_path = f"/uploads/{session_id_str}/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id_str,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        assert result.files[0] == f"{session_id_str}/image.png"
+
+    def test_from_message_preserves_string_files(self):
+        """Test that string file paths are preserved correctly."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id="test-session",
+            files=["path/to/file1.png", "path/to/file2.pdf"],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        # String files don't have path/url attributes, so they are not processed
+        # but the files list should still be set from message.files
+        assert result.files == ["path/to/file1.png", "path/to/file2.pdf"]
+
+    def test_from_message_mixed_string_and_image_files(self):
+        """Test message with mixed string paths and Image objects.
+
+        Note: When image_paths is populated (at least one Image with valid path is processed),
+        message.files is REPLACED by image_paths. String paths are not preserved in image_paths
+        because they don't have path/url attributes.
+        """
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "test-session"
+        file_path = f"/uploads/{session_id}/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img, "string/path/file.txt"],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        # Both the processed Image path AND the string file path should be preserved.
+        assert len(result.files) == 2
+        assert any("image.png" in f for f in result.files)
+        assert "string/path/file.txt" in result.files
+        assert result.files[0] == f"{session_id}/image.png"
+
+    def test_from_message_with_special_characters_in_session_id(self):
+        """Test message with special characters in session_id."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        special_session_id = "session:with/special@chars#123"
+        file_path = f"/uploads/{special_session_id}/image.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id=special_session_id,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        assert result.files[0] == f"{special_session_id}/image.png"
+
+    def test_from_message_with_unicode_in_file_path(self):
+        """Test message with unicode characters in file path."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "test-session"
+        file_path = f"/uploads/{session_id}/imagem_日本語.png"
+        img = Image(path=file_path, url=f"http://example.com{file_path}")
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[img],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.files) == 1
+        assert result.files[0] == f"{session_id}/imagem_日本語.png"
+
+
+# =============================================================================
+# Tests for Message.model_post_init file handling
+# =============================================================================
+
+
+class TestMessageModelPostInitFiles:
+    """Tests for Message.model_post_init file handling changes."""
+
+    def test_model_post_init_with_image_instance(self):
+        """Test that existing Image instances are preserved."""
+        from lfx.schema.image import Image
+
+        img = Image(path="/path/to/image.png")
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[img],
+        )
+
+        assert len(message.files) == 1
+        assert isinstance(message.files[0], Image)
+        assert message.files[0].path == "/path/to/image.png"
+
+    def test_model_post_init_with_string_image_path(self, tmp_path):
+        """Test string path that is an image file."""
+        from lfx.schema.image import Image
+        from PIL import Image as PILImage
+
+        img_path = tmp_path / "photo.jpg"
+        PILImage.new("RGB", (10, 10)).save(img_path)
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[str(img_path)],
+        )
+
+        assert len(message.files) == 1
+        assert isinstance(message.files[0], Image)
+        assert message.files[0].path == str(img_path)
+
+    def test_model_post_init_with_string_non_image_path(self, tmp_path):
+        """Test string path that is not an image file."""
+        txt_path = tmp_path / "readme.md"
+        txt_path.write_text("# README")
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[str(txt_path)],
+        )
+
+        assert len(message.files) == 1
+        assert message.files[0] == str(txt_path)
+
+    def test_model_post_init_with_empty_files_list(self):
+        """Test empty files list."""
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[],
+        )
+
+        assert message.files == []
+
+    def test_model_post_init_with_none_files(self):
+        """Test None files value."""
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=None,
+        )
+
+        assert message.files == []
+
+    def test_model_post_init_with_non_existent_path(self):
+        """Test handling of non-existent file paths."""
+        non_existent = "/path/that/does/not/exist/image.png"
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[non_existent],
+        )
+
+        # Non-existent paths are kept as strings (is_image_file returns False)
+        assert len(message.files) == 1
+        assert message.files[0] == non_existent
+
+    def test_model_post_init_with_multiple_images(self, tmp_path):
+        """Test multiple image files."""
+        from lfx.schema.image import Image
+        from PIL import Image as PILImage
+
+        img_path1 = tmp_path / "image1.png"
+        img_path2 = tmp_path / "image2.jpg"
+        PILImage.new("RGB", (10, 10)).save(img_path1)
+        PILImage.new("RGB", (10, 10)).save(img_path2)
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[str(img_path1), str(img_path2)],
+        )
+
+        assert len(message.files) == 2
+        assert isinstance(message.files[0], Image)
+        assert isinstance(message.files[1], Image)
+
+    def test_model_post_init_mixed_image_and_non_image(self, tmp_path):
+        """Test mixed image and non-image files."""
+        from lfx.schema.image import Image
+        from PIL import Image as PILImage
+
+        img_path = tmp_path / "image.png"
+        PILImage.new("RGB", (10, 10)).save(img_path)
+
+        txt_path = tmp_path / "doc.txt"
+        txt_path.write_text("text content")
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[str(img_path), str(txt_path)],
+        )
+
+        assert len(message.files) == 2
+        assert isinstance(message.files[0], Image)
+        assert message.files[1] == str(txt_path)
+
+    def test_model_post_init_preserves_existing_image_instances(self, tmp_path):
+        """Test that existing Image instances are not re-processed."""
+        from lfx.schema.image import Image
+        from PIL import Image as PILImage
+
+        img_path = tmp_path / "image.png"
+        PILImage.new("RGB", (10, 10)).save(img_path)
+
+        existing_image = Image(path="/existing/path.jpg", url="http://example.com/img.jpg")
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files=[existing_image, str(img_path)],
+        )
+
+        assert len(message.files) == 2
+        # First file should be the same Image instance
+        assert message.files[0] is existing_image
+        assert message.files[0].path == "/existing/path.jpg"
+        assert message.files[0].url == "http://example.com/img.jpg"
+        # Second file should be converted to Image
+        assert isinstance(message.files[1], Image)
+        assert message.files[1].path == str(img_path)
+
+
+# =============================================================================
+# Edge case and error tests
+# =============================================================================
+
+
+class TestMessageEdgeCases:
+    """Edge case tests for Message and MessageTable."""
+
+    def test_from_message_missing_required_fields(self):
+        """Test from_message raises error when required fields are missing."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Missing text
+        message = Message(
+            text=None,
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
+
+    def test_from_message_missing_sender(self):
+        """Test from_message raises error when sender is missing."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        message = Message(
+            text="Test",
+            sender=None,
+            sender_name="User",
+            session_id="session",
+        )
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
+
+    def test_from_message_missing_sender_name(self):
+        """Test from_message raises error when sender_name is missing."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name=None,
+            session_id="session",
+        )
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
+
+    def test_from_message_with_invalid_flow_id(self):
+        """Test from_message raises error with invalid flow_id string."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+
+        with pytest.raises(ValueError, match="not a valid UUID"):
+            MessageTable.from_message(message, flow_id="invalid-uuid")
+
+    def test_from_message_with_valid_uuid_string_flow_id(self):
+        """Test from_message accepts valid UUID string as flow_id."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+
+        flow_id_str = str(uuid4())
+        result = MessageTable.from_message(message, flow_id=flow_id_str)
+
+        assert str(result.flow_id) == flow_id_str
+
+    def test_from_message_uses_message_run_id_when_explicit_run_id_missing(self):
+        """Test from_message falls back to message.run_id."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        run_id = uuid4()
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            run_id=str(run_id),
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.run_id == run_id
+
+    def test_from_message_with_iterator_text(self):
+        """Test from_message handles iterator text gracefully."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        def text_generator():
+            yield "chunk1"
+            yield "chunk2"
+
+        message = Message(
+            text=text_generator(),
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        # Iterator text is converted to empty string
+        assert result.text == ""
+
+    def test_from_message_timestamp_string_format(self):
+        """Test from_message parses timestamp string correctly."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+        # Override timestamp with specific format
+        message.timestamp = "2024-06-15 10:30:00 UTC"
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.timestamp.year == 2024
+        assert result.timestamp.month == 6
+        assert result.timestamp.day == 15
+
+    def test_from_message_timestamp_iso_format(self):
+        """Test from_message parses ISO format timestamp."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+        # ISO format timestamp
+        message.timestamp = "2024-06-15T10:30:00+00:00"
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.timestamp.year == 2024
+        assert result.timestamp.month == 6
+
+    def test_files_validator_with_none(self):
+        """Test files validator handles None."""
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+        message.files = None
+
+        # Should not raise error
+        assert message.files is None or message.files == []
+
+    def test_files_validator_with_single_value(self):
+        """Test files validator converts single value to list."""
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            files="single_file.png",
+        )
+
+        # Single value should be converted to list
+        assert isinstance(message.files, list)
+
+    def test_session_id_validator_with_uuid(self):
+        """Test session_id validator handles UUID objects."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        session_uuid = uuid4()
+        message = MessageCreate(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id=session_uuid,
+        )
+
+        table = MessageTable.model_validate(message, from_attributes=True)
+        assert table.session_id == str(session_uuid)
+
+    def test_content_blocks_validation(self):
+        """Test content_blocks field validation."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.content_block import ContentBlock as LfxContentBlock
+        from lfx.schema.content_types import TextContent as LfxTextContent
+
+        content_block = LfxContentBlock(
+            title="Test Block",
+            contents=[LfxTextContent(type="text", text="Test content")],
+        )
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            content_blocks=[content_block],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert len(result.content_blocks) == 1
+
+    def test_properties_validation(self):
+        """Test properties field validation."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.properties import Properties as LfxProperties
+        from lfx.schema.properties import Source as LfxSource
+
+        props = LfxProperties(
+            text_color="blue",
+            background_color="white",
+            source=LfxSource(id="src1", display_name="Source 1", source="test"),
+        )
+
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            properties=props,
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        # Properties should be serialized
+        assert result.properties is not None
+
+
+class TestMessageResponseFromMessage:
+    """Tests for MessageResponse.from_message."""
+
+    def test_from_message_missing_required_raises_error(self):
+        """Test MessageResponse.from_message raises error for missing required fields."""
+        from lfx.schema.message import MessageResponse
+
+        message = Message(
+            text=None,
+            sender="User",
+            sender_name="User",
+            session_id="session",
+        )
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageResponse.from_message(message)
+
+
+# =============================================================================
+# Tests for MessageTable._sanitize_json (NaN / Infinity handling)
+# =============================================================================
+
+
+class TestSanitizeJson:
+    """Unit tests for MessageTable._sanitize_json and the properties/content_blocks validators."""
+
+    # ------------------------------------------------------------------
+    # Direct _sanitize_json unit tests
+    # ------------------------------------------------------------------
+
+    def test_sanitize_nan_float_returns_none(self):
+        """float('nan') must be replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(float("nan")) is None
+
+    def test_sanitize_positive_inf_returns_none(self):
+        """float('inf') must be replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(float("inf")) is None
+
+    def test_sanitize_negative_inf_returns_none(self):
+        """float('-inf') must be replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(float("-inf")) is None
+
+    def test_sanitize_normal_float_preserved(self):
+        """Normal finite floats must pass through unchanged."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(3.14) == pytest.approx(3.14)
+
+    def test_sanitize_nan_nested_in_dict(self):
+        """NaN inside a dict value is replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        result = MessageTable._sanitize_json({"score": float("nan"), "label": "ok"})
+        assert result["score"] is None
+        assert result["label"] == "ok"
+
+    def test_sanitize_inf_nested_in_list(self):
+        """Infinity inside a list is replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        result = MessageTable._sanitize_json([1.0, float("inf"), 2.0])
+        assert result == [1.0, None, 2.0]
+
+    def test_sanitize_deeply_nested_nan(self):
+        """NaN buried inside a nested dict/list is sanitized recursively."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        data = {"outer": {"inner": [float("nan"), {"deep": float("inf")}]}}
+        result = MessageTable._sanitize_json(data)
+        assert result["outer"]["inner"][0] is None
+        assert result["outer"]["inner"][1]["deep"] is None
+
+    def test_sanitize_non_float_types_unchanged(self):
+        """Strings, ints, bools, and None must not be altered."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json("hello") == "hello"
+        assert MessageTable._sanitize_json(42) == 42
+        bool_true = True
+        assert MessageTable._sanitize_json(bool_true) is True
+        assert MessageTable._sanitize_json(None) is None
+
+    def test_sanitize_decimal_nan(self):
+        """Decimal('NaN') is normalized to None via the JSON-encoder fallback.
+
+        Decimal NaN is not directly JSON-encodable and would otherwise reach
+        the jsonb column unchanged. The fallback path converts it to a float
+        NaN, which is then sanitized to None like any other non-finite float.
+        """
+        import decimal
+
+        from langflow.services.database.models.message.model import MessageTable
+
+        d = decimal.Decimal("NaN")
+        assert MessageTable._sanitize_json(d) is None
+
+    # ------------------------------------------------------------------
+    # Integration: validator strips NaN before reaching the DB layer
+    # ------------------------------------------------------------------
+
+    def test_properties_validator_strips_nan(self):
+        """NaN inside properties dict is removed by the field validator."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        msg = MessageTable(
+            sender="AI",
+            sender_name="Bot",
+            session_id="s1",
+            text="hi",
+            properties={"confidence": float("nan"), "model": "gpt-4"},
+        )
+
+        assert msg.properties["confidence"] is None
+        assert msg.properties["model"] == "gpt-4"
+
+    def test_content_blocks_validator_strips_nan(self):
+        """NaN inside content_blocks list is removed by the field validator."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        msg = MessageTable(
+            sender="AI",
+            sender_name="Bot",
+            session_id="s1",
+            text="hi",
+            content_blocks=[{"title": None, "score": float("nan"), "items": [float("inf"), 1.0]}],
+        )
+
+        block = msg.content_blocks[0]
+        assert block["score"] is None
+        assert block["items"][0] is None
+        assert block["items"][1] == pytest.approx(1.0)
+
+    def test_from_message_with_nan_in_properties(self):
+        """from_message correctly sanitizes NaN values inside message.properties."""
+        from langflow.schema.properties import Properties
+        from langflow.services.database.models.message.model import MessageTable
+
+        props = Properties()
+        # Inject a NaN via a workaround (bypass Pydantic validation)
+        raw_props = props.model_dump()
+        raw_props["_nan_test"] = float("nan")
+
+        message = Message(
+            text="Test",
+            sender="AI",
+            sender_name="Bot",
+            session_id="session",
+        )
+        # Set properties via __dict__ to bypass Pydantic validation (which would drop _nan_test)
+        # This simulates corrupt/partial data that the sanitizer must handle.
+        message.__dict__["properties"] = raw_props
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        # After from_message + validator, no NaN should survive
+
+        props_dict = result.properties if isinstance(result.properties, dict) else result.properties.model_dump()
+        assert props_dict["_nan_test"] is None
+
+    def test_from_message_with_inf_in_content_blocks(self):
+        """from_message sanitizes Infinity inside content_blocks.
+
+        TextContent.duration is typed as int | None, so Pydantic rejects
+        float('inf') at construction time. We inject Infinity via a raw dict
+        (the same pattern used by corrupt/partial data arriving from the DB or
+        an external source) to actually exercise the sanitization path.
+        """
+        import json
+        import math
+
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Build a raw content-block dict with float('inf') in duration —
+        # this bypasses Pydantic so the forbidden value reaches _sanitize_json.
+        raw_block = {
+            "title": "Block",
+            "allow_markdown": False,
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "hello",
+                    "duration": float("inf"),  # <-- the actual Infinity being tested
+                    "header": {},
+                }
+            ],
+            "media_url": [],
+        }
+
+        message = Message(
+            text="Test",
+            sender="AI",
+            sender_name="Bot",
+            session_id="session",
+        )
+
+        # Use MessageTable directly with the raw dict so the field_validator
+        # (_sanitize_json) is triggered on the Infinity value.
+        msg_table = MessageTable(
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            content_blocks=[raw_block],
+        )
+
+        # The validator must have replaced float('inf') with None
+        block = msg_table.content_blocks[0]
+        content = block["contents"][0]
+        assert content["duration"] is None, (
+            "float('inf') in duration must be sanitized to None before hitting PostgreSQL"
+        )
+
+        # Full JSON round-trip must succeed (no NaN/Inf would raise ValueError)
+        blocks_json = json.dumps(msg_table.content_blocks)
+        parsed = json.loads(blocks_json)
+
+        def _has_nan_or_inf(obj):
+            if isinstance(obj, float):
+                return not math.isfinite(obj)
+            if isinstance(obj, dict):
+                return any(_has_nan_or_inf(v) for v in obj.values())
+            if isinstance(obj, list):
+                return any(_has_nan_or_inf(item) for item in obj)
+            return False
+
+        assert not _has_nan_or_inf(parsed), "No NaN/Inf values should survive sanitization"

@@ -1,7 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { useShortcutsStore } from "@/stores/shortcuts";
-import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import {
@@ -14,6 +10,12 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
+import { Badge } from "@/components/ui/badge";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import type { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -21,12 +23,13 @@ import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeOutputFieldComponentType } from "../../../../types/components";
+import type { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
   scapeJSONParse,
 } from "../../../../utils/reactflowUtils";
+import { nodeColorsName } from "../../../../utils/styleUtils";
 import {
   cn,
   logFirstMessage,
@@ -34,72 +37,26 @@ import {
   logTypeIsError,
   logTypeIsUnknown,
 } from "../../../../utils/utils";
-import OutputComponent from "../OutputComponent";
+import { classNameFromType } from "../../../utils/class-name-from-type";
 import HandleRenderComponent from "../handleRenderComponent";
+import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
 
-// Memoize IconComponent instances
-const EyeIcon = memo(
-  ({ hidden, className }: { hidden: boolean; className: string }) => (
-    <IconComponent
-      className={className}
-      strokeWidth={ICON_STROKE_WIDTH}
-      name={hidden ? "EyeOff" : "Eye"}
-    />
-  ),
-);
-
 const SnowflakeIcon = memo(() => (
-  <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
+  <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
 
-// Memoize Button components
-const HideShowButton = memo(
-  ({
-    disabled,
-    onClick,
-    hidden,
-    isToolMode,
-    title,
-  }: {
-    disabled: boolean;
-    onClick: () => void;
-    hidden: boolean;
-    isToolMode: boolean;
-    title: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      unstyled
-      onClick={onClick}
-      data-testid={`input-inspection-${title.toLowerCase()}`}
-    >
-      <ShadTooltip
-        content={
-          disabled
-            ? "Connected outputs can't be hidden."
-            : hidden
-              ? "Show output"
-              : "Hide output"
-        }
-      >
-        <div>
-          <EyeIcon
-            hidden={hidden}
-            className={cn(
-              "icon-size",
-              disabled
-                ? "text-placeholder-foreground opacity-60"
-                : isToolMode
-                  ? "text-background hover:text-secondary-hover"
-                  : "text-placeholder-foreground hover:text-primary-hover",
-            )}
-          />
-        </div>
-      </ShadTooltip>
-    </Button>
-  ),
-);
+type InspectButtonProps = {
+  disabled: boolean | undefined;
+  displayOutputPreview: boolean;
+  unknownOutput: boolean | undefined;
+  errorOutput: boolean;
+  isToolMode: boolean;
+  title: string;
+  onClick: () => void;
+  id: string;
+  ariaLabel: string;
+};
 
 const InspectButton = memo(
   forwardRef(
@@ -113,22 +70,15 @@ const InspectButton = memo(
         title,
         onClick,
         id,
-      }: {
-        disabled: boolean | undefined;
-        displayOutputPreview: boolean;
-        unknownOutput: boolean | undefined;
-        errorOutput: boolean;
-        isToolMode: boolean;
-        title: string;
-        onClick: () => void;
-        id: string;
-      },
+        ariaLabel,
+      }: InspectButtonProps,
       ref: React.ForwardedRef<HTMLButtonElement>,
     ) => (
       <Button
         ref={ref}
         disabled={disabled}
-        data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
+        data-testid={`output-inspection-${title.toLowerCase()}-${classNameFromType(id).toLowerCase()}`}
+        aria-label={ariaLabel}
         unstyled
         onClick={onClick}
       >
@@ -153,6 +103,8 @@ const InspectButton = memo(
 );
 InspectButton.displayName = "InspectButton";
 
+export { InspectButton };
+
 const MemoizedOutputComponent = memo(OutputComponent);
 
 function NodeOutputField({
@@ -160,30 +112,34 @@ function NodeOutputField({
   data,
   title,
   id,
+  loopInputId,
   colors,
   tooltipTitle,
   showNode,
   index,
   type,
   outputName,
+  outputs,
   outputProxy,
   lastOutput,
   colorName,
   isToolMode = false,
   showHiddenOutputs,
   hidden,
+  handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Use selective store subscriptions
   const edges = useFlowStore((state) => state.edges);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
   const myData = useTypesStore((state) => state.data);
 
-  // Memoize computed values
   const { flowPoolId, internalOutputName } = useMemo(() => {
     if (data.node?.flow && outputProxy) {
       const realOutput = getGroupOutputNodeId(
@@ -210,7 +166,9 @@ function NodeOutputField({
     () => ({
       displayOutputPreview:
         !!flowPool[flowPoolId] &&
-        logHasMessage(flowPoolNode?.data, internalOutputName),
+        (logHasMessage(flowPoolNode?.data, internalOutputName) ||
+          (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) >
+            0),
       unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
       errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
     }),
@@ -218,10 +176,17 @@ function NodeOutputField({
   );
 
   const emptyOutput = useMemo(() => {
-    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
+    const hasLogs =
+      (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) > 0;
+    if (hasLogs) return false;
+    return Object.keys(flowPoolNode?.data?.outputs ?? {}).every(
       (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
     );
-  }, [flowPoolNode?.data?.outputs]);
+  }, [
+    flowPoolNode?.data?.outputs,
+    flowPoolNode?.data?.logs,
+    internalOutputName,
+  ]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
@@ -242,9 +207,10 @@ function NodeOutputField({
 
   const handleUpdateOutputHide = useCallback(
     (value?: boolean) => {
+      if (isReadOnly) return;
       setNode(data.id, (oldNode) => {
         if (oldNode.type !== "genericNode") return oldNode;
-        let newNode = cloneDeep(oldNode);
+        const newNode = cloneDeep(oldNode);
         newNode.data = {
           ...newNode.data,
           node: {
@@ -261,14 +227,29 @@ function NodeOutputField({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, index, setNode, updateNodeInternals],
+    [data.id, index, isReadOnly, setNode, updateNodeInternals],
   );
 
   useEffect(() => {
-    if (disabledOutput && hidden) {
+    const outputHasGroupOutputsFalse =
+      data.node?.outputs?.[index]?.group_outputs === false;
+
+    if (
+      !isReadOnly &&
+      disabledOutput &&
+      hidden &&
+      !outputHasGroupOutputsFalse
+    ) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, handleUpdateOutputHide, hidden]);
+  }, [
+    disabledOutput,
+    handleUpdateOutputHide,
+    hidden,
+    data.node?.outputs,
+    index,
+    isReadOnly,
+  ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -310,27 +291,50 @@ function NodeOutputField({
   const outputInspection = useShortcutsStore((state) => state.outputInspection);
   useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
+  // Create separate colors for loop input (left handle)
+  // Derive colors from loop_types dynamically instead of hardcoding
+  const loopInputColorName = useMemo(() => {
+    if (data.node?.outputs![index].allows_loop) {
+      const output = data.node?.outputs![index];
+      const loopTypeColors =
+        output.loop_types
+          ?.map((type) => nodeColorsName[type] ?? nodeColorsName.unknown)
+          .filter((color) => color) ?? [];
+
+      if (loopTypeColors.length > 0) {
+        // Combine original color with loop type colors, removing duplicates
+        const combinedColors = colorName
+          ? [...colorName, ...loopTypeColors]
+          : loopTypeColors;
+        return Array.from(new Set(combinedColors));
+      }
+    }
+    return colorName;
+  }, [colorName, data.node?.outputs, index]);
+
   const LoopHandle = useMemo(() => {
     if (data.node?.outputs![index].allows_loop) {
       return (
         <HandleRenderComponent
           left={true}
           tooltipTitle={tooltipTitle}
-          id={id}
+          id={loopInputId}
           title={title}
           nodeId={data.id}
           myData={myData}
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
-          colorName={colorName}
+          testIdComplement={`${classNameFromType(
+            data?.type ?? "",
+          ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          colorName={loopInputColorName}
         />
       );
     }
   }, [
     tooltipTitle,
-    id,
+    loopInputId,
     title,
     data.id,
     myData,
@@ -338,7 +342,7 @@ function NodeOutputField({
     setFilterEdge,
     showNode,
     data?.type,
-    colorName,
+    loopInputColorName,
   ]);
 
   const Handle = useMemo(
@@ -353,8 +357,14 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
-        colorName={colorName}
+        testIdComplement={`${classNameFromType(
+          data?.type ?? "",
+        ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+        colorName={
+          data.node?.outputs?.[index].allows_loop
+            ? loopInputColorName
+            : colorName
+        }
       />
     ),
     [
@@ -368,11 +378,16 @@ function NodeOutputField({
       showNode,
       data?.type,
       colorName,
+      data.node?.outputs?.[index].allows_loop,
+      loopInputColorName,
+      index,
     ],
   );
 
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
+
+  const memoizedType = useMemo(() => type?.split("|") ?? [], [type]);
 
   if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
@@ -394,17 +409,10 @@ function NodeOutputField({
               <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
             </Badge>
           )}
-          <HideShowButton
-            disabled={disabledOutput}
-            onClick={() => handleUpdateOutputHide()}
-            hidden={!!hidden}
-            isToolMode={isToolMode}
-            title={title}
-          />
         </div>
 
         {data.node?.frozen && (
-          <div className="pr-1">
+          <div data-testid="frozen-icon">
             <SnowflakeIcon />
           </div>
         )}
@@ -413,8 +421,9 @@ function NodeOutputField({
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
               proxy={outputProxy}
+              outputs={outputs}
               idx={index}
-              types={type?.split("|") ?? []}
+              types={memoizedType}
               selected={
                 data.node?.outputs![index].selected ??
                 data.node?.outputs![index].types[0] ??
@@ -424,6 +433,8 @@ function NodeOutputField({
               frozen={data.node?.frozen}
               name={title ?? type}
               isToolMode={isToolMode}
+              handleSelectOutput={handleSelectOutput}
+              outputName={data.node?.key as string}
             />
           </span>
 
@@ -431,9 +442,9 @@ function NodeOutputField({
             content={
               displayOutputPreview
                 ? unknownOutput || emptyOutput
-                  ? "Output can't be displayed"
-                  : "Inspect output"
-                : "Please build the component first"
+                  ? t("node.outputCantBeDisplayed")
+                  : t("node.inspectOutput")
+                : t("node.buildComponentFirst")
             }
             styleClasses="z-40"
           >
@@ -452,10 +463,15 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => {
-                    //just to trigger the memoization
-                  }}
+                  onClick={() => {}}
                   id={data?.type}
+                  ariaLabel={
+                    displayOutputPreview
+                      ? unknownOutput || emptyOutput
+                        ? t("node.outputCantBeDisplayed")
+                        : t("node.inspectOutput")
+                      : t("node.buildComponentFirst")
+                  }
                 />
               </OutputModal>
               {looping && (

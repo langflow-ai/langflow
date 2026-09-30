@@ -1,3 +1,6 @@
+import { useId } from "react";
+import { useTranslation } from "react-i18next";
+import type { To } from "react-router-dom";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { Button } from "../../ui/button";
@@ -17,14 +20,20 @@ export default function PageLayout({
   children: React.ReactNode;
   button?: React.ReactNode;
   betaIcon?: boolean;
-  backTo?: string;
+  backTo?: To;
 }) {
+  const headingId = useId();
   const navigate = useCustomNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="flex w-full flex-1 flex-col justify-between overflow-auto overflow-x-hidden bg-background">
       <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col">
-        <div className="flex flex-col gap-4 p-6 pt-0">
+        <div
+          role="region"
+          aria-labelledby={headingId}
+          className="flex flex-col gap-4 p-6 pt-0"
+        >
           <CustomBanner />
           <div className="flex w-full items-center justify-between gap-4 space-y-0.5 pb-2 pt-10">
             <div className="flex w-full flex-col">
@@ -36,6 +45,7 @@ export default function PageLayout({
                       navigate(backTo);
                     }}
                     data-testid="back_page_button"
+                    aria-label={t("navigation.goBack")}
                   >
                     <ForwardedIconComponent
                       name="ChevronLeft"
@@ -44,6 +54,7 @@ export default function PageLayout({
                   </Button>
                 )}
                 <h2
+                  id={headingId}
                   className="text-2xl font-bold tracking-tight"
                   data-testid="mainpage_title"
                 >

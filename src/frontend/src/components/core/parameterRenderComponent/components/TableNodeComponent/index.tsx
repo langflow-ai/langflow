@@ -1,13 +1,18 @@
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import TableModal from "@/modals/tableModal";
-import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
-import { DataTypeDefinition, SelectionChangedEvent } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
+import type {
+  DataTypeDefinition,
+  SelectionChangedEvent,
+} from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import TableModal from "@/modals/tableModal";
+import { isMarkdownTable } from "@/utils/markdownUtils";
+import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps, TableComponentType } from "../../types";
+import type { InputProps, TableComponentType } from "../../types";
 
 export default function TableNodeComponent({
   tableTitle,
@@ -20,10 +25,16 @@ export default function TableNodeComponent({
   disabled = false,
   table_options,
   trigger_icon = "Table",
-  trigger_text = "Open Table",
+  trigger_text,
   table_icon,
-}: InputProps<any[], TableComponentType>): JSX.Element {
+  showParameter = true,
+  ariaLabelledBy,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
+}: InputProps<any[], TableComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
+  const effectiveTriggerText = trigger_text ?? t("component.openTable");
   const dataTypeDefinitions: {
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     [cellDataType: string]: DataTypeDefinition<any>;
   } = useMemo(() => {
     return {
@@ -64,7 +75,9 @@ export default function TableNodeComponent({
       },
     };
   }, []);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
@@ -98,6 +111,7 @@ export default function TableNodeComponent({
   });
   function setAllRows() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
       setTempValue(rows);
@@ -158,11 +172,105 @@ export default function TableNodeComponent({
         columns?.find((c) => c.name === col.field)?.disable_edit !== true,
     );
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
+  function parseTSVorMarkdownTable(clipboard: string, columns: any[]) {
+    if (!clipboard.trim()) return [];
+
+    // Try TSV (Excel/Sheets)
+    if (clipboard.includes("\t")) {
+      const lines = clipboard.trim().split(/\r?\n/);
+      // More robust header detection - check if first line contains column names
+      const firstLineCells = lines[0].split("\t");
+      const hasHeader = firstLineCells.some((cell) =>
+        columns.some((col) => col.name === cell.trim()),
+      );
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+
+      return dataLines.map((line) => {
+        const cells = line.split("\t");
+        if (cells.length > columns.length) {
+          // Truncate extra cells
+          cells.length = columns.length;
+        }
+        const row = {};
+        columns.forEach((col, i) => {
+          row[col.name] = cells[i]?.trim() ?? null;
+        });
+        return row;
+      });
+    }
+
+    // Try markdown table
+    if (isMarkdownTable(clipboard)) {
+      const lines = clipboard
+        .trim()
+        .split(/\r?\n/)
+        .filter((l) => l.includes("|"));
+      if (lines.length < 2) return [];
+
+      // Validate that second line is a separator (contains dashes)
+      if (lines.length > 1 && !lines[1].includes("-")) {
+        // No separator found, treat all lines as data
+        const dataLines = lines;
+        return dataLines.map((line) => {
+          const cells = line
+            .split("|")
+            .slice(1, -1)
+            .map((c) => c.trim());
+          const row = {};
+          columns.forEach((col, i) => {
+            row[col.name] = cells[i] ?? null;
+          });
+          return row;
+        });
+      }
+
+      // Assume first line is header, second is separator
+      const dataLines = lines.slice(2);
+      return dataLines.map((line) => {
+        const cells = line
+          .split("|")
+          .slice(1, -1)
+          .map((c) => c.trim());
+        const row = {};
+        columns.forEach((col, i) => {
+          row[col.name] = cells[i] ?? null;
+        });
+        return row;
+      });
+    }
+    return [];
+  }
+
+  if (!showParameter) {
+    return null;
+  }
+
   return (
     <div
       className={
         "flex w-full items-center" + (disabled ? " cursor-not-allowed" : "")
       }
+      onPaste={(e) => {
+        if (!isModalOpen) return;
+        try {
+          const clipboard = e.clipboardData.getData("text");
+          const rows = parseTSVorMarkdownTable(clipboard, componentColumns);
+          if (rows.length > 0) {
+            setTempValue((prev) => [...prev, ...rows]);
+            e.preventDefault();
+            // Consider adding a toast notification here:
+            // toast.success(`Imported ${rows.length} rows successfully`);
+          } else {
+            // Consider adding a toast notification for failed parsing:
+            // toast.error("Could not parse clipboard data as table format");
+          }
+        } catch (error) {
+          console.error("Error parsing clipboard data:", error);
+          // Consider adding a toast notification for errors:
+          // toast.error("Error importing clipboard data");
+        }
+      }}
     >
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
@@ -205,12 +313,13 @@ export default function TableNodeComponent({
               "w-full " +
               (disabled ? "pointer-events-none cursor-not-allowed" : "")
             }
+            aria-labelledby={ariaLabelledBy}
           >
             <ForwardedIconComponent
               name={trigger_icon}
               className="mt-px h-4 w-4"
             />
-            <span className="font-normal">{trigger_text}</span>
+            <span className="font-normal">{effectiveTriggerText}</span>
           </Button>
         </TableModal>
       </div>

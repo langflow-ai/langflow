@@ -1,7 +1,8 @@
-import useAlertStore from "@/stores/alertStore";
-import { FileType } from "@/types/file_management";
 import { useQueryClient } from "@tanstack/react-query";
-import { ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import useAlertStore from "@/stores/alertStore";
+import type { FileType } from "@/types/file_management";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
 import DragFilesComponent from "./components/dragFilesComponent";
@@ -15,17 +16,22 @@ export default function FileManagerModal({
   files,
   types,
   isList,
+  allowFolderSelection = false,
+  onOpenChange,
 }: {
   children?: ReactNode;
   selectedFiles?: string[];
   open?: boolean;
   handleSubmit: (files: string[]) => void;
   setOpen?: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
   files: FileType[];
   types: string[];
   isList?: boolean;
+  allowFolderSelection?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [internalOpen, internalSetOpen] = useState(false);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -38,6 +44,10 @@ export default function FileManagerModal({
     });
   }, [internalOpen]);
 
+  useEffect(() => {
+    onOpenChange?.(internalOpen);
+  }, [internalOpen]);
+
   const [internalSelectedFiles, setInternalSelectedFiles] = useState<string[]>(
     selectedFiles || [],
   );
@@ -47,8 +57,8 @@ export default function FileManagerModal({
   }, [internalOpen]);
 
   const handleUpload = (filesPaths: string[]) => {
-    setInternalSelectedFiles(
-      isList ? [...internalSelectedFiles, ...filesPaths] : [filesPaths[0]],
+    setInternalSelectedFiles((currentSelection) =>
+      isList ? [...currentSelection, ...filesPaths] : [filesPaths[0]],
     );
   };
 
@@ -61,7 +71,7 @@ export default function FileManagerModal({
         onSubmit={() => {
           if (internalSelectedFiles.length === 0) {
             setErrorData({
-              title: "Please select at least one file",
+              title: t("fileManager.selectAtLeastOneFile"),
             });
             return;
           }
@@ -77,7 +87,7 @@ export default function FileManagerModal({
             <div className="rounded-md bg-muted p-1.5">
               <ForwardedIconComponent name="File" className="h-5 w-5" />
             </div>
-            My Files
+            {t("files.myFiles")}
           </span>
         </BaseModal.Header>
         <BaseModal.Content overflowHidden>
@@ -87,6 +97,8 @@ export default function FileManagerModal({
                 onUpload={handleUpload}
                 types={types}
                 isList={isList ?? false}
+                allowFolderSelection={allowFolderSelection}
+                existingFiles={files}
               />
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">
@@ -103,7 +115,7 @@ export default function FileManagerModal({
 
         <BaseModal.Footer
           submit={{
-            label: `Select files`,
+            label: t("fileManager.selectFiles"),
             dataTestId: "select-files-modal-button",
           }}
         ></BaseModal.Footer>

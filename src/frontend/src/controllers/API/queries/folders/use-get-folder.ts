@@ -1,16 +1,16 @@
-import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
-import { PaginatedFolderType } from "@/pages/MainPage/entities";
-import { useFolderStore } from "@/stores/foldersStore";
-import { useQueryFunctionType } from "@/types/api";
-import { processFlows } from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
 import { useRef } from "react";
+import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
+import type { PaginatedFolderType } from "@/pages/MainPage/entities";
+import { useFolderStore } from "@/stores/foldersStore";
+import type { useQueryFunctionType } from "@/types/api";
+import { processFlows } from "@/utils/reactflowUtils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IGetFolder {
-  id: string;
+  id: string | null | undefined;
   page?: number;
   size?: number;
   is_component?: boolean;
@@ -24,7 +24,7 @@ const addQueryParams = (url: string, params: IGetFolder): string => {
 
 export const useGetFolderQuery: useQueryFunctionType<
   IGetFolder,
-  PaginatedFolderType | undefined
+  PaginatedFolderType | null
 > = (params, options) => {
   const { query } = UseRequestProcessor();
 
@@ -33,17 +33,24 @@ export const useGetFolderQuery: useQueryFunctionType<
 
   const getFolderFn = async (
     params: IGetFolder,
-  ): Promise<PaginatedFolderType | undefined> => {
-    if (params.id) {
-      if (latestIdRef.current !== params.id) {
-        params.page = 1;
-      }
-      latestIdRef.current = params.id;
+  ): Promise<PaginatedFolderType | null> => {
+    // Both guards below must run before the request is built: the account can
+    // hold no project at all (the id resolves to undefined), and a project the
+    // store no longer lists has just been deleted. Either way there is nothing
+    // to read, and interpolating the missing id would send the literal
+    // "undefined" as the path segment.
+    if (!params.id) {
+      return null;
+    }
 
-      const existingFolder = folders.find((f) => f.id === params.id);
-      if (!existingFolder) {
-        return;
-      }
+    if (latestIdRef.current !== params.id) {
+      params.page = 1;
+    }
+    latestIdRef.current = params.id;
+
+    const existingFolder = folders.find((f) => f.id === params.id);
+    if (!existingFolder) {
+      return null;
     }
 
     const url = addQueryParams(`${getURL("PROJECTS")}/${params.id}`, params);

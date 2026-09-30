@@ -1,11 +1,12 @@
+import type { MutableRefObject } from "react";
 import { useStartRecording } from "@/modals/IOModal/components/chatView/chatInput/components/voice-assistant/hooks/use-start-recording";
-import { MutableRefObject } from "react";
 
 export const customUseStartRecording = (
   audioContextRef: React.MutableRefObject<AudioContext | null>,
   microphoneRef: MutableRefObject<MediaStreamAudioSourceNode | null>,
   analyserRef: React.MutableRefObject<AnalyserNode | null>,
   wsRef: React.MutableRefObject<WebSocket | null>,
+  mediaStreamRef: MutableRefObject<MediaStream | null>,
   setIsRecording: (isRecording: boolean) => void,
   playNextAudioChunk: () => void,
   isPlayingRef: React.MutableRefObject<boolean>,
@@ -19,6 +20,7 @@ export const customUseStartRecording = (
     microphoneRef,
     analyserRef,
     wsRef,
+    mediaStreamRef,
     setIsRecording,
     playNextAudioChunk,
     isPlayingRef,

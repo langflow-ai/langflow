@@ -1,15 +1,13 @@
 import { usePostUploadFlowToFolder } from "@/controllers/API/queries/folders/use-post-upload-to-folder";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
-import {
-  UPLOAD_ALERT_LIST,
-  WRONG_FILE_ERROR_ALERT,
-} from "../../../../constants/alerts_constants";
+import { useTranslation } from "react-i18next";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { addVersionToDuplicates } from "../../../../utils/reactflowUtils";
 
 const useFileDrop = (folderId: string) => {
+  const { t } = useTranslation();
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setFolderIdDragging = useFolderStore(
     (state) => state.setFolderIdDragging,
@@ -29,8 +27,8 @@ const useFileDrop = (folderId: string) => {
           uploadFormData(firstFile, folderId);
         } else {
           setErrorData({
-            title: WRONG_FILE_ERROR_ALERT,
-            list: [UPLOAD_ALERT_LIST],
+            title: t("errors.wrongFileType"),
+            list: [t("errors.uploadJsonOnly")],
           });
         }
       }

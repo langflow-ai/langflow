@@ -1,47 +1,81 @@
-import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { GradientSave } from "@/icons/GradientSparkles";
-import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
-import { lazy } from "react";
+import React, { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 
-const iconCache = new Map<string, any>();
+const iconCache = new Map<string, React.ComponentType>();
 
 export const BG_NOISE =
   "url(data:image/png;base64,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)";
 
+// Decorative gradient palette for randomized flow/avatar backgrounds.
+// Intentional Tailwind palette colors — not semantic theme tokens, so the
+// no-hardcoded-tailwind-palette plugin is suppressed per entry below.
 export const gradients = [
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-green-200 via-green-300 to-blue-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-700",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-green-200 via-green-400 to-purple-700",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-blue-100 via-blue-300 to-blue-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-purple-400 to-yellow-400",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-red-800 via-yellow-600 to-yellow-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-blue-300 via-green-200 to-yellow-300",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-blue-700 via-blue-800 to-gray-900",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-green-300 to-purple-400",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-yellow-200 via-pink-200 to-pink-400",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-green-500 to-green-700",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-sky-400 to-blue-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-green-200 via-green-400 to-green-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-red-400 via-gray-300 to-blue-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-gray-900 to-gray-600 bg-gradient-to-r",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-rose-500 via-red-400 to-red-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-fuchsia-600 to-pink-600",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-emerald-500 to-lime-600",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-rose-500 to-indigo-700",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br bg-gradient-to-tr from-violet-500 to-orange-300",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-gray-900 via-purple-900 to-violet-600",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-yellow-200 via-red-500 to-fuchsia-500",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-sky-400 to-indigo-900",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-amber-200 via-violet-600 to-sky-900",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-amber-700 via-orange-300 to-rose-800",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-gray-300 via-fuchsia-600 to-orange-600",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-fuchsia-500 via-red-600 to-orange-400",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-sky-400 via-rose-400 to-lime-400",
+  // biome-ignore lint/plugin/no-hardcoded-tailwind-palette: decorative gradient palette
   "bg-gradient-to-br from-lime-600 via-yellow-300 to-red-600",
 ];
 
@@ -111,7 +145,6 @@ export const nodeColors: { [char: string]: string } = {
   assemblyai: "#213ED7",
   helpers: "#31A3CC",
   prototypes: "#E6277A",
-  astra_assistants: "#272541",
   langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
   // custom_components: "#ab11ab",
@@ -121,7 +154,9 @@ export const nodeColors: { [char: string]: string } = {
   unknown: "#9CA3AF",
   Document: "#65a30d",
   Data: "#dc2626",
+  JSON: "#dc2626",
   Message: "#4f46e5",
+  number: "#7E22CF",
   Prompt: "#7c3aed",
   Embeddings: "#10b981",
   BaseLanguageModel: "#c026d3",
@@ -129,6 +164,8 @@ export const nodeColors: { [char: string]: string } = {
   Agent: "#903BBE",
   AgentExecutor: "#903BBE",
   Tool: "#00fbfc",
+  DataFrame: "#ec4899",
+  Table: "#ec4899",
 };
 
 export const nodeColorsName: { [char: string]: string } = {
@@ -151,6 +188,7 @@ export const nodeColorsName: { [char: string]: string } = {
   embeddings: "teal",
   documentloaders: "lime",
   vectorstores: "yellow",
+  VectorStore: "yellow",
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
@@ -161,15 +199,16 @@ export const nodeColorsName: { [char: string]: string } = {
   assemblyai: "blue",
   helpers: "cyan",
   prototypes: "rose",
-  astra_assistants: "indigo",
   langchain_utilities: "sky",
   output_parsers: "yellow",
   retrievers: "yellow",
   str: "indigo",
+  number: "purple",
   Text: "indigo",
   unknown: "gray",
   Document: "lime",
   Data: "red",
+  JSON: "red",
   Message: "indigo",
   Prompt: "violet",
   Embeddings: "emerald",
@@ -182,6 +221,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMessageHistory: "orange",
   Memory: "orange",
   DataFrame: "pink",
+  Table: "pink",
 };
 
 export const FILE_ICONS = {
@@ -201,91 +241,314 @@ export const FILE_ICONS = {
     icon: "File",
     color: "text-datatype-red dark:text-datatype-red-foreground",
   },
+  md: {
+    icon: "FileText",
+    color: "text-datatype-fuchsia dark:text-datatype-fuchsia-foreground",
+  },
+  mdx: {
+    icon: "FileText",
+    color: "text-datatype-fuchsia dark:text-datatype-fuchsia-foreground",
+  },
+  html: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  htm: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  xhtml: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  xml: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  adoc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  asciidoc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  asc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  py: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  js: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  ts: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  tsx: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  sh: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  sql: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  yaml: {
+    icon: "FileJson",
+    color: "text-datatype-violet dark:text-datatype-violet-foreground",
+  },
+  yml: {
+    icon: "FileJson",
+    color: "text-datatype-violet dark:text-datatype-violet-foreground",
+  },
 };
 
 export const SIDEBAR_CATEGORIES = [
-  { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "Inputs", name: "inputs", icon: "Download" },
-  { display_name: "Outputs", name: "outputs", icon: "Upload" },
-  { display_name: "Prompts", name: "prompts", icon: "TerminalSquare" },
-  { display_name: "Data", name: "data", icon: "Database" },
-  { display_name: "Processing", name: "processing", icon: "ListFilter" },
-  { display_name: "Models", name: "models", icon: "BrainCircuit" },
-  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
-  { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
-  { display_name: "Agents", name: "agents", icon: "Bot" },
-  { display_name: "Chains", name: "chains", icon: "Link" },
-  { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
-  { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
-  { display_name: "Memories", name: "memories", icon: "Cpu" },
-  { display_name: "Output Parsers", name: "output_parsers", icon: "Compass" },
-  { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
-  { display_name: "Retrievers", name: "retrievers", icon: "FileSearch" },
-  { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
-  { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
-  { display_name: "Tools", name: "tools", icon: "Hammer" },
-  { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
-  { display_name: "Helpers", name: "helpers", icon: "Wand2" },
+  {
+    display_name: "sidebar.category.saved",
+    name: "saved_components",
+    icon: "Save",
+  },
+  {
+    display_name: "sidebar.category.inputOutput",
+    name: "input_output",
+    icon: "Cable",
+  },
+  {
+    display_name: "sidebar.category.dataSources",
+    name: "data_source",
+    icon: "Database",
+  },
+  {
+    display_name: "sidebar.category.modelsAndAgents",
+    name: "models_and_agents",
+    icon: "Bot",
+  },
+  {
+    display_name: "sidebar.category.llmOperations",
+    name: "llm_operations",
+    icon: "BrainCircuit",
+  },
+  {
+    display_name: ENABLE_KNOWLEDGE_BASES
+      ? "sidebar.category.filesAndKnowledge"
+      : "sidebar.category.files",
+    name: "files_and_knowledge",
+    icon: "Layers",
+  },
+  {
+    display_name: "sidebar.category.processing",
+    name: "processing",
+    icon: "ListFilter",
+  },
+  {
+    display_name: "sidebar.category.flowControl",
+    name: "flow_controls",
+    icon: "ArrowRightLeft",
+  },
+  {
+    display_name: "sidebar.category.utilities",
+    name: "utilities",
+    icon: "Wand2",
+  },
+  {
+    display_name: "sidebar.category.prototypes",
+    name: "prototypes",
+    icon: "FlaskConical",
+  },
+  { display_name: "sidebar.category.tools", name: "tools", icon: "Hammer" },
+  { display_name: "sidebar.category.agents", name: "agents", icon: "Bot" },
+  { display_name: "sidebar.category.data", name: "data", icon: "Database" },
+  {
+    display_name: "sidebar.category.logic",
+    name: "logic",
+    icon: "ArrowRightLeft",
+  },
+  { display_name: "sidebar.category.helpers", name: "helpers", icon: "Wand2" },
+  { display_name: "sidebar.category.models", name: "models", icon: "BrainCog" },
+  {
+    display_name: "sidebar.category.vectorStores",
+    name: "vectorstores",
+    icon: "Layers",
+  },
+  { display_name: "sidebar.category.inputs", name: "inputs", icon: "Download" },
+  { display_name: "sidebar.category.outputs", name: "outputs", icon: "Upload" },
+  { display_name: "sidebar.category.prompts", name: "prompts", icon: "braces" },
+  { display_name: "sidebar.category.chains", name: "chains", icon: "Link" },
+  {
+    display_name: "sidebar.category.loaders",
+    name: "documentloaders",
+    icon: "Paperclip",
+  },
+  {
+    display_name: "sidebar.category.linkExtractors",
+    name: "link_extractors",
+    icon: "Link2",
+  },
+  {
+    display_name: "sidebar.category.outputParsers",
+    name: "output_parsers",
+    icon: "Compass",
+  },
+  {
+    display_name: "sidebar.category.retrievers",
+    name: "retrievers",
+    icon: "FileSearch",
+  },
+  {
+    display_name: "sidebar.category.textSplitters",
+    name: "textsplitters",
+    icon: "Scissors",
+  },
+  {
+    display_name: "sidebar.category.toolkits",
+    name: "toolkits",
+    icon: "Package2",
+  },
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "Amazon", name: "amazon", icon: "Amazon" },
-  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
-  {
-    display_name: "Googlecalendar",
-    name: "googlecalendar",
-    icon: "Googlecalendar",
-  },
-  // Add apify
-  { display_name: "Apify", name: "apify", icon: "Apify" },
-  { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
+  { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
+  { display_name: "Agentics", name: "agentics", icon: "Agentics" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
-  { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
+  { display_name: "Code Agents", name: "codeagents", icon: "Bot" },
   {
-    display_name: "DataStax",
-    name: "datastax",
-    icon: "AstraDB",
+    display_name: "File Processing",
+    name: "files_ingestion",
+    icon: "file-search",
   },
-  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
-  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
-  { display_name: "Notion", name: "Notion", icon: "Notion" },
-  { display_name: "Needle", name: "needle", icon: "Needle" },
-  { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
-  { display_name: "Vectara", name: "vectara", icon: "Vectara" },
-  { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
-  { display_name: "Google", name: "google", icon: "Google" },
-  { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
-  { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
-  { display_name: "Composio", name: "composio", icon: "Composio" },
+  { display_name: "ALTK", name: "altk", icon: "Zap" },
+  {
+    display_name: "Language Models",
+    name: "languagemodels",
+    icon: "BrainCircuit",
+  },
+  { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
+  { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Amazon", name: "amazon", icon: "Amazon" },
+  { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
+  { display_name: "Apify", name: "apify", icon: "Apify" },
+  { display_name: "arXiv", name: "arxiv", icon: "arXiv" },
+  { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
+  { display_name: "Azure", name: "azure", icon: "Azure" },
+  { display_name: "Baidu", name: "baidu", icon: "BaiduQianfan" },
+  { display_name: "Bing", name: "bing", icon: "Bing" },
+  { display_name: "Cassandra", name: "cassandra", icon: "Cassandra" },
+  { display_name: "Chroma", name: "chroma", icon: "Chroma" },
+  { display_name: "ClickHouse", name: "clickhouse", icon: "Clickhouse" },
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
+  { display_name: "Cloudflare", name: "cloudflare", icon: "Cloudflare" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },
-  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
-  { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
-  { display_name: "Git", name: "git", icon: "GitLoader" },
+  { display_name: "CometAPI", name: "cometapi", icon: "CometAPI" },
+  { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
-  { display_name: "Mem0", name: "mem0", icon: "Mem0" },
-  { display_name: "Youtube", name: "youtube", icon: "YouTube" },
-  { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
-  { display_name: "Twelve Labs", name: "twelvelabs", icon: "TwelveLabs" },
+  { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
+  { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "CUGA", name: "cuga", icon: "Bot" },
+  { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
+  { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
+  { display_name: "Docling", name: "docling", icon: "Docling" },
+  { display_name: "DuckDuckGo", name: "duckduckgo", icon: "DuckDuckGo" },
+  { display_name: "Elastic", name: "elastic", icon: "ElasticsearchStore" },
+  { display_name: "EmpirioLabs", name: "empiriolabs", icon: "EmpirioLabs" },
+  { display_name: "Exa", name: "exa", icon: "Exa" },
+  { display_name: "FAISS", name: "faiss", icon: "FAISS" },
+  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
+  { display_name: "Git", name: "git", icon: "GitLoader" },
+  { display_name: "Glean", name: "glean", icon: "Glean" },
+  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "Groq", name: "groq", icon: "Groq" },
   {
     display_name: "Home Assistant",
     name: "homeassistant",
     icon: "HomeAssistant",
   },
-  { display_name: "Search", name: "search", icon: "Search" },
+  { display_name: "Hugging Face", name: "huggingface", icon: "HuggingFace" },
+  { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
+  { display_name: "IBM Confluent", name: "confluent", icon: "Confluent" },
+  { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
+  { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
+  { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
+  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
+  { display_name: "LiteLLM", name: "litellm", icon: "LiteLLM" },
+  { display_name: "LMStudio", name: "lmstudio", icon: "LMStudio" },
+  { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
+  { display_name: "Mem0", name: "mem0", icon: "Mem0" },
+  { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Milvus", name: "milvus", icon: "Milvus" },
+  { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
+  { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },
+  { display_name: "MrScraper", name: "mrscraper", icon: "MrScraper" },
+  { display_name: "Needle", name: "needle", icon: "Needle" },
+  { display_name: "NextPlaid", name: "nextplaid", icon: "NextPlaid" },
+  { display_name: "Not Diamond", name: "notdiamond", icon: "NotDiamond" },
+  { display_name: "Notion", name: "notion", icon: "Notion" },
+  { display_name: "Novita", name: "novita", icon: "Novita" },
+  { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
+  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
+  { display_name: "Ollama", name: "ollama", icon: "Ollama" },
+  { display_name: "OpenAI", name: "openai", icon: "OpenAI" },
+  { display_name: "OpenRouter", name: "openrouter", icon: "OpenRouter" },
+  { display_name: "Oracle", name: "oracle", icon: "Oracle" },
+  { display_name: "OrcaRouter", name: "orcarouter", icon: "OrcaRouter" },
+  { display_name: "PaddleOCR", name: "paddle", icon: "FileSearch" },
+  { display_name: "Perplexity", name: "perplexity", icon: "Perplexity" },
+  { display_name: "pgvector", name: "pgvector", icon: "cpu" },
+  { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
+  { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
+  { display_name: "Redis", name: "redis", icon: "Redis" },
+  { display_name: "SambaNova", name: "sambanova", icon: "SambaNova" },
+  { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
+  { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
+  { display_name: "Serper", name: "serper", icon: "Serper" },
+  { display_name: "Spider", name: "spider", icon: "Spider" },
+  { display_name: "Supabase", name: "supabase", icon: "Supabase" },
+  { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "ToolGuard", name: "toolguard", icon: "ShieldCheck" },
+  { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
+  { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
+  { display_name: "Upstash", name: "upstash", icon: "Upstash" },
+  { display_name: "Valkey", name: "valkey", icon: "Valkey" },
+  { display_name: "VLM Run", name: "vlmrun", icon: "VLMRun" },
+  { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "vLLM", name: "vllm", icon: "vLLM" },
+  { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
+  { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
+  { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
+  {
+    display_name: "WolframAlpha",
+    name: "wolframalpha",
+    icon: "WolframAlphaAPI",
+  },
+  { display_name: "xAI", name: "xai", icon: "xAI" },
+  { display_name: "Yahoo! Finance", name: "yahoosearch", icon: "trending-up" },
+  { display_name: "YouTube", name: "youtube", icon: "YouTube" },
+  { display_name: "Zep", name: "zep", icon: "ZepMemory" },
 ];
 
 export const categoryIcons: Record<string, string> = {
-  saved_components: "GradientSave",
+  saved_components: "Save",
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
-  prompts: "TerminalSquare",
+  prompts: "Braces",
   data: "Database",
   models: "BrainCircuit",
   helpers: "Wand2",
   vectorstores: "Layers",
   embeddings: "Binary",
   agents: "Bot",
-  astra_assistants: "Sparkles",
   chains: "Link",
   documentloaders: "Paperclip",
   langchain_utilities: "PocketKnife",
@@ -303,16 +566,16 @@ export const categoryIcons: Record<string, string> = {
 
 export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
-  prompts: "TerminalSquare",
+  prompts: "Braces",
   data: "Database",
-  models: "BrainCircuit",
+  models: "BrainCog",
   helpers: "Wand2",
   vectorstores: "Layers",
   embeddings: "Binary",
   agents: "Bot",
-  astra_assistants: "Sparkles",
   chains: "Link",
   documentloaders: "Paperclip",
   langchain_utilities: "PocketKnife",
@@ -328,8 +591,16 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",
   //Integration Icons
-  AIML: "AI/ML",
+  Outlook: "Outlook",
+  Linear: "Linear",
+  Reddit: "Reddit",
+  Googlemaps: "Googlemaps",
+  Todoist: "Todoist",
+  Zoom: "Zoom",
+  AIML: "AIML",
   AgentQL: "AgentQL",
+  LanguageModels: "BrainCircuit",
+  EmbeddingModels: "Binary",
   AirbyteJSONLoader: "Airbyte",
   AmazonBedrockEmbeddings: "AWS",
   Amazon: "AWS",
@@ -352,19 +623,23 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   CohereEmbeddings: "Cohere",
   Discord: "FaDiscord",
   ElasticsearchStore: "ElasticsearchStore",
+  empiriolabs: "EmpirioLabs",
   EverNoteLoader: "Evernote",
   ExaSearch: "Exa",
   FacebookChatLoader: "FacebookMessenger",
   FAISS: "Meta",
   FaissSearch: "Meta",
   FirecrawlCrawlApi: "Firecrawl",
-  FirecrawlExtractApi: "Firecrawl",
   FirecrawlMapApi: "Firecrawl",
   FirecrawlScrapeApi: "Firecrawl",
+  FirecrawlSearchApi: "Firecrawl",
   GitbookLoader: "GitBook",
   GoogleGenerativeAI: "GoogleGenerativeAI",
+  Googlesheets: "Googlesheets",
   GoogleSearchAPI: "Google",
   GoogleSearchAPIWrapper: "Google",
+  Googlemeet: "Googlemeet",
+  GoogleTasks: "GoogleTasks",
   GoogleSearchResults: "Google",
   GoogleSearchRun: "Google",
   GoogleSerperAPI: "Google",
@@ -375,6 +650,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   IFixitLoader: "IFixIt",
   ListFlows: "Group",
   MistralAI: "Mistral",
+  MrScraper: "Mrscraper",
   MongoDBAtlasVectorSearch: "MongoDB",
   MongoDBChatMessageHistory: "MongoDB",
   notion: "Notion",
@@ -399,12 +675,13 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   WolframAlphaAPI: "Wolfram",
   WolframAlphaAPIWrapper: "Wolfram",
   WolframAlphaQueryRun: "Wolfram",
+  Agentics: "Agentics",
 
   //Node Icons
   model_specs: "FileSliders",
   advanced: "Laptop2",
   chat: "MessageCircle",
-  saved_components: "GradientSave",
+  saved_components: "Save",
   vectorsearch: "TextSearch",
   wrappers: "Gift",
   unknown: "HelpCircle",
@@ -440,7 +717,6 @@ const iconMappingsPromise = import("../icons/lazyIconImports").then(
 
 export const eagerLoadedIconsMap = {
   // Custom icons
-  GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
 
   // React icon
@@ -455,7 +731,7 @@ export const getCachedIcon = (name: string) => {
 };
 
 export const getNodeIcon = async (name: string) => {
-  const cacheAndReturn = (icon: any) => {
+  const cacheAndReturn = (icon: React.ComponentType) => {
     iconCache.set(name, icon);
     return icon;
   };
@@ -483,7 +759,7 @@ export const getNodeIcon = async (name: string) => {
   if (dynamicIconImports[lucideIconName]) {
     try {
       return cacheAndReturn(lazy(dynamicIconImports[lucideIconName]));
-    } catch (e) {
+    } catch (_e) {
       // Fall through to next option
     }
   }

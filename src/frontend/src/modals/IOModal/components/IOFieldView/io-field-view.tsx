@@ -1,29 +1,28 @@
-import CustomIOFileInput from "@/customization/components/custom-file-input";
-import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import { AllNodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
+import CustomIOFileInput from "@/customization/components/custom-file-input";
+import type { AllNodeType } from "@/types/flow";
 import ImageViewer from "../../../../components/common/ImageViewer";
 import CsvOutputComponent from "../../../../components/core/csvOutputComponent";
 import DataOutputComponent from "../../../../components/core/dataOutputComponent";
 import InputListComponent from "../../../../components/core/parameterRenderComponent/components/inputListComponent";
 import PdfViewer from "../../../../components/core/pdfViewer";
 import { Textarea } from "../../../../components/ui/textarea";
-import { PDFViewConstant } from "../../../../constants/constants";
 import {
+  InputOutput,
   IOInputTypes,
   IOOutputTypes,
-  InputOutput,
 } from "../../../../constants/enums";
 import TextOutputView from "../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../stores/flowStore";
-import { IOFieldViewProps } from "../../../../types/components";
+import type { IOFieldViewProps } from "../../../../types/components";
 import {
   convertValuesToNumbers,
   hasDuplicateKeys,
 } from "../../../../utils/reactflowUtils";
 import CsvSelect from "./components/csv-selected";
-import IOFileInput from "./components/file-input";
 import IoJsonInput from "./components/json-input";
 import IOKeyPairInput from "./components/key-pair-input";
 
@@ -33,6 +32,7 @@ export default function IOFieldView({
   fieldId,
   left,
 }: IOFieldViewProps): JSX.Element | undefined {
+  const { t } = useTranslation();
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
@@ -44,7 +44,7 @@ export default function IOFieldView({
   ];
   const handleChangeSelect = (e) => {
     if (node) {
-      let newNode = cloneDeep(node);
+      const newNode = cloneDeep(node);
       if (newNode.data.node?.template.separator) {
         newNode.data.node.template.separator.value = e;
         setNode(newNode.id, newNode);
@@ -64,10 +64,11 @@ export default function IOFieldView({
         nodeId: node.id,
         name: "input_value",
       })
-    : { handleOnNewValue: (value: any, options?: any) => {} };
+    : // biome-ignore lint/suspicious/noExplicitAny: legacy
+      { handleOnNewValue: (value: any, options?: any) => {} };
 
   function handleOutputType() {
-    if (!node) return <>"No node found!"</>;
+    if (!node) return <>{t("io.noNodeFound")}</>;
     switch (type) {
       case InputOutput.INPUT:
         switch (fieldType) {
@@ -77,12 +78,12 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("io.enterText")}
                 value={node.data.node!.template["input_value"].value}
                 onChange={(e) => {
                   e.target.value;
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value =
                       e.target.value;
                     setNode(node.id, newNode);
@@ -96,7 +97,7 @@ export default function IOFieldView({
                 field={node.data.node!.template["file_path"]["value"]}
                 updateValue={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["file_path"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -110,7 +111,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -129,7 +130,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -157,12 +158,12 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("io.enterText")}
                 value={node.data.node!.template["input_value"]}
                 onChange={(e) => {
                   e.target.value;
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value =
                       e.target.value;
                     setNode(node.id, newNode);
@@ -177,7 +178,7 @@ export default function IOFieldView({
             return <TextOutputView left={left} value={textOutputValue} />;
           case IOOutputTypes.PDF:
             return left ? (
-              <div>{PDFViewConstant}</div>
+              <div>{t("output.pdfView")}</div>
             ) : (
               <PdfViewer pdf={flowPoolNode?.params ?? ""} />
             );
@@ -196,7 +197,7 @@ export default function IOFieldView({
             );
           case IOOutputTypes.IMAGE:
             return left ? (
-              <div>Expand the view to see the image</div>
+              <div>{t("output.imgView")}</div>
             ) : (
               <ImageViewer
                 image={
@@ -213,7 +214,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -229,7 +230,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -276,7 +277,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Empty"}
+                placeholder={t("common.empty")}
                 // update to real value on flowPool
                 value={
                   (flowPool[node.id] ?? [])[

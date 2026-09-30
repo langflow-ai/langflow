@@ -1,0 +1,1813 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
+from lfx.base.models import models_dev_catalog
+from lfx.base.models.unified_models import (
+    _get_all_provider_mapped_fields,
+    apply_provider_variable_config_to_build_config,
+    get_embedding_model_options,
+    get_embeddings,
+    get_unified_models_detailed,
+    handle_model_input_update,
+    update_model_options_in_build_config,
+)
+from lfx.base.models.unified_models.build_config import _resolve_dropdown_provider_values
+from lfx.base.models.unified_models.provider_queries import get_models_detailed
+from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
+
+
+@pytest.fixture(autouse=True)
+def _clear_models_dev_snapshot():
+    """Isolate every test in this file from any active models.dev snapshot.
+
+    The backend ``client`` fixture's lifespan installs a snapshot via
+    ``set_active_snapshot`` and never resets it on teardown, so tests that
+    expect the static bundled catalog (e.g. ``test_filter_by_model_name``,
+    which relies on ``gpt-4`` not being auto-deprecated by the age-based
+    rule in ``_translate_model_entry``) would otherwise fail when run in
+    the same xdist worker as a fixture-using test.
+    """
+    prior = models_dev_catalog.get_active_snapshot()
+    try:
+        models_dev_catalog.set_active_snapshot(None)
+        get_models_detailed.cache_clear()
+        yield
+    finally:
+        models_dev_catalog.set_active_snapshot(prior)
+        get_models_detailed.cache_clear()
+
+
+def _flatten_models(result):
+    """Helper to flatten result to list of model dicts."""
+    for provider_dict in result:
+        yield from provider_dict["models"]
+
+
+def test_default_providers_present():
+    result = get_unified_models_detailed()
+    providers = {entry["provider"] for entry in result}
+    assert "OpenAI" in providers
+    assert "Anthropic" in providers
+    assert "Google Generative AI" in providers
+
+
+def test_default_excludes_not_supported():
+    result = get_unified_models_detailed()
+    for model in _flatten_models(result):
+        # By default, models flagged not_supported should be absent
+        assert model["metadata"].get("not_supported", False) is False
+
+
+def test_default_excludes_deprecated():
+    result = get_unified_models_detailed()
+    for model in _flatten_models(result):
+        # By default, models flagged deprecated should be absent
+        assert model["metadata"].get("deprecated", False) is False
+
+
+def test_include_deprecated_parameter_returns_deprecated_models():
+    # When explicitly requested, at least one deprecated model should be present.
+    result = get_unified_models_detailed(include_deprecated=True)
+    deprecated_models = [m for m in _flatten_models(result) if m["metadata"].get("deprecated", False)]
+    assert deprecated_models, "Expected at least one deprecated model when include_deprecated=True"
+
+    # Sanity check: restricting by provider that is known to have deprecated entries (e.g., Anthropic)
+    result_anthropic = get_unified_models_detailed(providers=["Anthropic"], include_deprecated=True)
+    anthropic_deprecated = [m for m in _flatten_models(result_anthropic) if m["metadata"].get("deprecated", False)]
+    assert anthropic_deprecated, "Expected deprecated Anthropic models when include_deprecated=True"
+
+
+def test_filter_by_provider():
+    result = get_unified_models_detailed(providers=["Anthropic"])
+    # Only one provider should be returned
+    assert len(result) == 1
+    assert result[0]["provider"] == "Anthropic"
+    # Ensure all models are from that provider
+    for _model in _flatten_models(result):
+        assert result[0]["provider"] == "Anthropic"
+
+
+def test_filter_by_model_name():
+    target = "gpt-4"
+    result = get_unified_models_detailed(model_name=target)
+    # Should only include OpenAI provider with the single model
+    assert len(result) == 1
+    provider_dict = result[0]
+    assert provider_dict["provider"] == "OpenAI"
+    assert len(provider_dict["models"]) == 1
+    assert provider_dict["models"][0]["model_name"] == target
+
+
+def test_filter_by_metadata():
+    # Require tool_calling support
+    result = get_unified_models_detailed(tool_calling=True)
+    assert result, "Expected at least one model supporting tool calling"
+    for model in _flatten_models(result):
+        assert model["metadata"].get("tool_calling", False) is True
+
+
+def test_filter_by_model_type_embeddings():
+    result = get_unified_models_detailed(model_type="embeddings")
+    models = list(_flatten_models(result))
+    assert models, "Expected at least one embedding model"
+    for model in models:
+        assert model["metadata"].get("model_type", "llm") == "embeddings"
+
+
+@patch("lfx.base.models.unified_models.model_catalog._fetch_enabled_providers_for_user", new_callable=AsyncMock)
+@patch("lfx.base.models.unified_models.model_catalog._get_model_status", new_callable=AsyncMock)
+def test_google_embedding_options_map_dimensions_to_output_dimensionality(mock_get_model_status, mock_fetch_providers):
+    mock_get_model_status.return_value = (set(), set())
+    mock_fetch_providers.return_value = {"Google Generative AI"}
+
+    options = get_embedding_model_options(user_id="test-user")
+
+    google_embedding = next(
+        option
+        for option in options
+        if option["provider"] == "Google Generative AI" and option["name"] == "models/gemini-embedding-001"
+    )
+    assert google_embedding["metadata"]["param_mapping"]["dimensions"] == "output_dimensionality"
+
+
+def test_update_model_options_with_custom_field_name():
+    """Test that update_model_options_in_build_config works with custom field names."""
+    # Create mock component
+    mock_component = MagicMock()
+    mock_component.cache = {}
+    mock_component.log = MagicMock()
+
+    # Create build_config with custom field name
+    build_config = {
+        "embedding_model": {
+            "options": [],
+            "value": "",
+            "input_types": ["Embeddings"],
+        }
+    }
+
+    # Mock options function
+    def mock_get_options(user_id=None):  # noqa: ARG001
+        return [
+            {"name": "text-embedding-ada-002", "provider": "OpenAI"},
+            {"name": "embed-english-v3.0", "provider": "Cohere"},
+        ]
+
+    # Call with custom field name
+    result = update_model_options_in_build_config(
+        component=mock_component,
+        build_config=build_config,
+        cache_key_prefix="test_embedding_options",
+        get_options_func=mock_get_options,
+        field_name=None,
+        field_value="",
+        model_field_name="embedding_model",
+    )
+
+    # Verify options were populated in the custom field
+    assert "embedding_model" in result
+    assert len(result["embedding_model"]["options"]) == 2
+    assert result["embedding_model"]["options"][0]["name"] == "text-embedding-ada-002"
+    assert result["embedding_model"]["options"][1]["provider"] == "Cohere"
+
+    # A bare initial load must not guess a provider for the user (LE-2168)
+    assert not result["embedding_model"]["value"]
+
+
+def test_update_model_options_static_options_with_custom_field_name():
+    """Static pre-populated options should be detected using the custom field name, not 'model'."""
+    mock_component = MagicMock()
+    mock_component.cache = {}
+    mock_component.log = MagicMock()
+
+    static_opts = [{"name": "embed-v1", "provider": "Custom"}]
+    build_config = {
+        "embedding_model": {
+            "options": static_opts,
+            "value": "",
+            "input_types": ["Embeddings"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=mock_component,
+        build_config=build_config,
+        cache_key_prefix="test_static_custom",
+        get_options_func=list,
+        model_field_name="embedding_model",
+    )
+
+    # Static options should be preserved, not overwritten by the empty get_options_func result
+    assert result["embedding_model"]["options"] == static_opts
+
+
+def test_update_model_options_default_field_name():
+    """Test that update_model_options_in_build_config uses 'model' as default field name."""
+    # Create mock component
+    mock_component = MagicMock()
+    mock_component.cache = {}
+    mock_component.log = MagicMock()
+
+    # Create build_config with default field name
+    build_config = {
+        "model": {
+            "options": [],
+            "value": "",
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    # Mock options function
+    def mock_get_options(user_id=None):  # noqa: ARG001
+        return [{"name": "gpt-4", "provider": "OpenAI"}]
+
+    # Call without specifying model_field_name (should default to "model")
+    result = update_model_options_in_build_config(
+        component=mock_component,
+        build_config=build_config,
+        cache_key_prefix="test_model_options",
+        get_options_func=mock_get_options,
+        field_name=None,
+        field_value="",
+    )
+
+    # Verify options were populated in the default "model" field
+    assert "model" in result
+    assert len(result["model"]["options"]) == 1
+    assert result["model"]["options"][0]["name"] == "gpt-4"
+
+
+def test_update_model_options_injects_saved_value_when_missing_from_options():
+    """Saved model selections missing from refreshed options should be re-injected with a marker."""
+    component = _make_mock_component()
+    component.user_id = "user-123"
+    saved_model = {
+        "name": "claude-3-5-sonnet",
+        "provider": "Anthropic",
+        "metadata": {"model_class": "ChatAnthropic", "existing_flag": True},
+    }
+    fetched_options = [{"name": "gpt-4o-mini", "provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}]
+    build_config = {
+        "model": {
+            "options": [],
+            "value": [saved_model],
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix="test_sticky_default_injection",
+        get_options_func=lambda user_id=None: fetched_options,  # noqa: ARG005
+        field_name=None,
+    )
+
+    assert result["model"]["value"] == [saved_model]
+    assert len(result["model"]["options"]) == 2
+    assert result["model"]["options"][0] == fetched_options[0]
+    assert result["model"]["options"][1] == {
+        "name": "claude-3-5-sonnet",
+        "provider": "Anthropic",
+        "metadata": {
+            "model_class": "ChatAnthropic",
+            "existing_flag": True,
+            "not_enabled_locally": True,
+        },
+    }
+
+
+def test_update_model_options_does_not_duplicate_saved_value_already_in_options():
+    """Saved model selections already present in options should not be duplicated or marked."""
+    component = _make_mock_component()
+    component.user_id = "user-123"
+    saved_model = {
+        "name": "gpt-4o-mini",
+        "provider": "OpenAI",
+        "metadata": {"model_class": "ChatOpenAI"},
+    }
+    build_config = {
+        "model": {
+            "options": [],
+            "value": [saved_model],
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix="test_sticky_default_no_duplicate",
+        get_options_func=lambda user_id=None: [saved_model],  # noqa: ARG005
+        field_name=None,
+    )
+
+    assert result["model"]["options"] == [saved_model]
+    assert result["model"]["options"].count(saved_model) == 1
+    assert "not_enabled_locally" not in result["model"]["options"][0]["metadata"]
+
+
+@pytest.mark.parametrize(
+    ("current_value", "expected_value"),
+    [
+        ([], []),
+        ("gpt-4o-mini", "gpt-4o-mini"),
+        (
+            [{"provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}],
+            [{"provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}],
+        ),
+    ],
+)
+def test_update_model_options_sticky_default_ignores_invalid_saved_value_shapes(current_value, expected_value):
+    """Sticky-default injection should ignore empty or malformed saved values."""
+    component = _make_mock_component()
+    component.user_id = "user-123"
+    fetched_options = [{"name": "gpt-4o-mini", "provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}]
+    build_config = {
+        "model": {
+            "options": [],
+            "value": current_value,
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix="test_sticky_default_edge_cases",
+        get_options_func=lambda user_id=None: fetched_options,  # noqa: ARG005
+        field_name=None,
+    )
+
+    assert result["model"]["options"] == fetched_options
+    assert all("not_enabled_locally" not in option.get("metadata", {}) for option in result["model"]["options"])
+    assert result["model"]["value"] == expected_value
+
+
+# ---------------------------------------------------------------------------
+# Helpers shared by new tests
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_component():
+    component = MagicMock()
+    component.cache = {}
+    component.log = MagicMock()
+    return component
+
+
+def _make_model_field(value="", options=None, input_types=None):
+    return {
+        "value": value,
+        "options": options or [],
+        "input_types": input_types or ["LanguageModel"],
+        "show": True,
+    }
+
+
+def _make_openai_embedding_model(name="text-embedding-3-small"):
+    return {
+        "name": name,
+        "provider": "OpenAI",
+        "metadata": {
+            "embedding_class": "OpenAIEmbeddings",
+            "param_mapping": {
+                "model": "model",
+                "api_key": "api_key",  # pragma: allowlist secret
+                "api_base": "base_url",
+                "dimensions": "dimensions",
+                "chunk_size": "chunk_size",
+                "request_timeout": "request_timeout",
+                "max_retries": "max_retries",
+                "show_progress_bar": "show_progress_bar",
+                "model_kwargs": "model_kwargs",
+            },
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# _get_all_provider_mapped_fields tests
+# ---------------------------------------------------------------------------
+
+
+def test_get_all_provider_mapped_fields_returns_set():
+    fields = _get_all_provider_mapped_fields()
+    assert isinstance(fields, set)
+    assert len(fields) > 0
+
+
+def test_get_all_provider_mapped_fields_contains_expected_fields():
+    fields = _get_all_provider_mapped_fields()
+    expected = {"base_url_ibm_watsonx", "project_id", "ollama_base_url"}
+    assert expected & fields, f"Expected at least one of {expected} to be in provider mapped fields"
+
+
+def test_get_all_provider_mapped_fields_is_cached():
+    """Calling twice returns the exact same object (lru_cache)."""
+    fields1 = _get_all_provider_mapped_fields()
+    fields2 = _get_all_provider_mapped_fields()
+    assert fields1 is fields2
+
+
+def test_api_key_optional_provider_with_only_optional_variables_is_enabled_without_values():
+    from lfx.base.models.unified_models import credentials
+
+    optional_variables = [
+        {
+            "variable_key": "AMBIENT_ENDPOINT",
+            "required": False,
+            "is_secret": False,
+        }
+    ]
+    with (
+        patch.object(credentials, "get_provider_all_variables", return_value=optional_variables),
+        patch("lfx.base.models.provider_registry.is_api_key_optional", return_value=True),
+    ):
+        enabled = credentials._validate_and_get_enabled_providers(
+            {},
+            {"AmbientAuthCo": "AMBIENT_ENDPOINT"},
+        )
+
+    assert enabled == {"AmbientAuthCo"}
+
+
+# ---------------------------------------------------------------------------
+# get_embeddings tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _skip_available_models_catalog(monkeypatch):
+    """Keep existing get_embeddings tests focused on the primary instance."""
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
+        lambda _provider, _user_id: [],
+    )
+
+
+def test_get_embeddings_passthrough_embeddings_object():
+    """An already-instantiated Embeddings object should be returned as-is."""
+    from langchain_core.embeddings import Embeddings as BaseEmbeddings
+
+    mock_emb = MagicMock(spec=BaseEmbeddings)
+    result = get_embeddings(mock_emb)
+    assert result is mock_emb
+
+
+def test_get_embeddings_empty_list_raises():
+    with pytest.raises(ValueError, match="An embedding model selection is required"):
+        get_embeddings([])
+
+
+def test_get_embeddings_none_raises():
+    with pytest.raises(ValueError, match="An embedding model selection is required"):
+        get_embeddings(None)
+
+
+def test_get_embeddings_non_list_raises():
+    with pytest.raises(ValueError, match="An embedding model selection is required"):
+        get_embeddings("gpt-4")
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+def test_get_embeddings_missing_api_key_non_ollama_raises(mock_get_api_key):
+    mock_get_api_key.return_value = None
+    with pytest.raises(ValueError, match="OpenAI API key is required"):
+        get_embeddings([_make_openai_embedding_model()])
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+def test_get_embeddings_missing_model_name_raises(mock_get_api_key):
+    mock_get_api_key.return_value = "test-key"
+    model_dict = {
+        "name": None,
+        "provider": "OpenAI",
+        "metadata": {"embedding_class": "OpenAIEmbeddings", "param_mapping": {"model": "model"}},
+    }
+    with pytest.raises(ValueError, match="Embedding model name is required"):
+        get_embeddings([model_dict])
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+def test_get_embeddings_missing_embedding_class_raises(mock_get_api_key):
+    """Unknown providers can't be looked up in EMBEDDING_PROVIDER_CLASS_MAPPING.
+
+    So missing ``embedding_class`` metadata still raises.
+    """
+    mock_get_api_key.return_value = "test-key"
+    model_dict = {
+        "name": "text-embedding-3-small",
+        "provider": "Unknown",
+        "metadata": {"param_mapping": {"model": "model"}},
+    }
+    with pytest.raises(ValueError, match="No embedding class defined in metadata"):
+        get_embeddings([model_dict])
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+def test_get_embeddings_empty_param_mapping_raises(mock_get_api_key):
+    """Unknown providers can't be looked up in EMBEDDING_PARAM_MAPPINGS.
+
+    So empty ``param_mapping`` metadata still raises.
+    """
+    mock_get_api_key.return_value = "test-key"
+    model_dict = {
+        "name": "text-embedding-3-small",
+        "provider": "Unknown",
+        "metadata": {"embedding_class": "OpenAIEmbeddings", "param_mapping": {}},
+    }
+    with pytest.raises(ValueError, match="Parameter mapping not found in metadata"):
+        get_embeddings([model_dict])
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_falls_back_when_metadata_stripped(mock_get_class, mock_get_api_key):
+    """Selections persisted via the generic ``/models`` catalog lack enriched metadata.
+
+    ``embedding_class`` and ``param_mapping`` are missing in that case.
+    Instantiation should derive both from ``EMBEDDING_PROVIDER_CLASS_MAPPING``
+    and ``EMBEDDING_PARAM_MAPPINGS`` rather than failing — otherwise KB
+    ingestion would error on every model picked through the KB upload modal.
+    """
+    mock_get_api_key.return_value = "sk-test"
+    fake_class = MagicMock(return_value="embeddings-instance")
+    mock_get_class.return_value = fake_class
+
+    model_dict = {
+        "name": "text-embedding-3-small",
+        "provider": "OpenAI",
+        "metadata": {},  # No embedding_class, no param_mapping.
+    }
+    result = get_embeddings([model_dict])
+
+    mock_get_class.assert_called_once_with("OpenAIEmbeddings")
+    fake_class.assert_called_once()
+    kwargs = fake_class.call_args.kwargs
+    assert kwargs["model"] == "text-embedding-3-small"
+    assert kwargs["api_key"] == "sk-test"
+    assert isinstance(result, EmbeddingsWithModels)
+    assert result.embeddings == "embeddings-instance"
+    assert result.available_models == {"text-embedding-3-small": "embeddings-instance"}
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_openai_basic(mock_get_class, mock_get_api_key):
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_instance = MagicMock()
+    mock_embedding_class.return_value = mock_instance
+    mock_get_class.return_value = mock_embedding_class
+
+    result = get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+
+    assert isinstance(result, EmbeddingsWithModels)
+    assert result.embeddings is mock_instance
+    assert result.available_models == {"text-embedding-3-small": mock_instance}
+    mock_get_class.assert_called_once_with("OpenAIEmbeddings")
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs["model"] == "text-embedding-3-small"
+    assert kwargs["api_key"] == "sk-test"  # pragma: allowlist secret
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_populates_available_models_from_all_configured_providers(
+    mock_get_class, mock_get_api_key, monkeypatch
+):
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_configured_embedding_providers",
+        lambda _user_id, _selected_provider: ["OpenAI", "Google Generative AI"],
+    )
+
+    def _embedding_names_for_provider(provider, _user_id):
+        if provider == "OpenAI":
+            return ["text-embedding-3-small", "text-embedding-3-large"]
+        if provider == "Google Generative AI":
+            return ["models/text-embedding-004"]
+        return []
+
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
+        _embedding_names_for_provider,
+    )
+    mock_get_api_key.return_value = "sk-test"
+    primary = MagicMock(name="primary")
+    openai_secondary = MagicMock(name="openai-secondary")
+    google_embedding = MagicMock(name="google-embedding")
+    mock_embedding_class = MagicMock(side_effect=[primary, openai_secondary, google_embedding])
+    mock_get_class.return_value = mock_embedding_class
+
+    result = get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+
+    assert isinstance(result, EmbeddingsWithModels)
+    assert result.embeddings is primary
+    assert set(result.available_models.keys()) == {
+        "text-embedding-3-small",
+        "text-embedding-3-large",
+        "models/text-embedding-004",
+    }
+    assert result.available_models["text-embedding-3-small"] is primary
+    assert result.available_models["text-embedding-3-large"] is openai_secondary
+    assert result.available_models["models/text-embedding-004"] is google_embedding
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_skips_policy_denied_secondary_provider_before_lookup(
+    mock_get_class, mock_get_api_key, monkeypatch
+):
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_configured_embedding_providers",
+        lambda _user_id, _selected_provider: ["OpenAI", "Google Generative AI"],
+    )
+    looked_up_providers = []
+
+    def _embedding_names_for_provider(provider, _user_id):
+        looked_up_providers.append(provider)
+        if provider == "Google Generative AI":
+            pytest.fail("policy-denied provider catalog must not be read")
+        return ["text-embedding-3-small"]
+
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
+        _embedding_names_for_provider,
+    )
+    mock_get_api_key.return_value = "sk-test"
+    primary = MagicMock(name="primary")
+    mock_embedding_class = MagicMock(return_value=primary)
+    mock_get_class.return_value = mock_embedding_class
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai", "google-generative-ai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    result = get_embeddings(
+        [_make_openai_embedding_model()],
+        api_key="sk-test",  # pragma: allowlist secret
+        provider_policy=policy,
+    )
+
+    assert result.available_models == {"text-embedding-3-small": primary}
+    assert looked_up_providers == ["OpenAI"]
+    assert all(call.args[1] != "Google Generative AI" for call in mock_get_api_key.call_args_list)
+
+
+@pytest.mark.parametrize(
+    ("env_values", "expected_base_url"),
+    [
+        ({"OPENAI_EMBEDDINGS_API_BASE": "http://embeddings.example/v1"}, "http://embeddings.example/v1"),
+        ({"OPENAI_API_BASE": "http://openai-compatible.example/v1"}, "http://openai-compatible.example/v1"),
+        (
+            {
+                "OPENAI_EMBEDDINGS_API_BASE": "http://embeddings.example/v1",
+                "OPENAI_API_BASE": "http://openai-compatible.example/v1",
+            },
+            "http://embeddings.example/v1",
+        ),
+    ],
+)
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url")
+def test_get_embeddings_openai_api_base_env_fallback(
+    mock_ssrf_protection,
+    mock_get_class,
+    mock_get_api_key,
+    monkeypatch,
+    env_values,
+    expected_base_url,
+):
+    mock_ssrf_protection.return_value = {}
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.delenv("OPENAI_EMBEDDINGS_API_BASE", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    for name, value in env_values.items():
+        monkeypatch.setenv(name, value)
+
+    get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs["base_url"] == expected_base_url
+    mock_ssrf_protection.assert_called_once_with(expected_base_url)
+
+
+@pytest.mark.parametrize("variable_name", ["OPENAI_EMBEDDINGS_API_BASE", "OPENAI_API_BASE"])
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_openai_api_base_env_fallback_can_be_disabled(
+    mock_get_class, mock_get_api_key, monkeypatch, variable_name
+):
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.setenv(variable_name, "http://openai-compatible.example/v1")
+    token = activate_no_env_fallback(disabled=True)
+
+    try:
+        get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+    finally:
+        reset_no_env_fallback(token)
+
+    assert "base_url" not in mock_embedding_class.call_args.kwargs
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url")
+def test_get_embeddings_openai_explicit_api_base_overrides_env(
+    mock_ssrf_protection, mock_get_class, mock_get_api_key, monkeypatch
+):
+    mock_ssrf_protection.return_value = {}
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.setenv("OPENAI_EMBEDDINGS_API_BASE", "http://embeddings.example/v1")
+    monkeypatch.setenv("OPENAI_API_BASE", "http://openai-compatible.example/v1")
+
+    get_embeddings(
+        [_make_openai_embedding_model()],
+        api_key="sk-test",  # pragma: allowlist secret
+        api_base="http://component.example/v1",
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs["base_url"] == "http://component.example/v1"
+    mock_ssrf_protection.assert_called_once_with("http://component.example/v1")
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_optional_params_only_added_when_mapped(mock_get_class, mock_get_api_key):
+    """Parameters only appear in kwargs if their key is in param_mapping."""
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    get_embeddings(
+        [_make_openai_embedding_model()],
+        api_key="sk-test",  # pragma: allowlist secret
+        chunk_size=500,
+        max_retries=5,
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs.get("chunk_size") == 500
+    assert kwargs.get("max_retries") == 5
+    # dimensions not provided - should not appear
+    assert kwargs.get("dimensions") is None
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_google_timeout_wrapped_in_dict(mock_get_class, mock_get_api_key):
+    """For Google Generative AI, request_timeout is wrapped and dimensions are passed through."""
+    mock_get_api_key.return_value = "google-key"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    google_model = {
+        "name": "models/text-embedding-004",
+        "provider": "Google Generative AI",
+        "metadata": {
+            "embedding_class": "GoogleGenerativeAIEmbeddings",
+            "param_mapping": {
+                "model": "model",
+                "api_key": "google_api_key",  # pragma: allowlist secret
+                "dimensions": "output_dimensionality",
+                "request_timeout": "request_options",
+            },
+        },
+    }
+
+    get_embeddings(
+        [google_model],
+        api_key="google-key",  # pragma: allowlist secret
+        dimensions=768,
+        request_timeout=30.0,
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs.get("output_dimensionality") == 768
+    assert kwargs.get("request_options") == {"timeout": 30.0}
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+def test_get_embeddings_ollama_defaults_to_localhost(mock_get_vars, mock_get_class, mock_get_api_key):
+    mock_get_api_key.return_value = None  # Ollama doesn't need an API key
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    ollama_model = {
+        "name": "nomic-embed-text",
+        "provider": "Ollama",
+        "metadata": {
+            "embedding_class": "OllamaEmbeddings",
+            "param_mapping": {"model": "model", "base_url": "base_url"},
+        },
+    }
+
+    get_embeddings([ollama_model])
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs.get("base_url") == "http://localhost:11434"
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_httpx_client_kwargs_for_url")
+def test_get_embeddings_ollama_custom_base_url(mock_ssrf_protection, mock_get_vars, mock_get_class, mock_get_api_key):
+    mock_ssrf_protection.return_value = ({}, {})
+    mock_get_api_key.return_value = None
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    ollama_model = {
+        "name": "nomic-embed-text",
+        "provider": "Ollama",
+        "metadata": {
+            "embedding_class": "OllamaEmbeddings",
+            "param_mapping": {"model": "model", "base_url": "base_url"},
+        },
+    }
+
+    get_embeddings([ollama_model], ollama_base_url="http://custom-host:11434")
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs.get("base_url") == "http://custom-host:11434"
+    mock_ssrf_protection.assert_called_once_with("http://custom-host:11434")
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_url_and_project_id(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
+    mock_get_api_key.return_value = "ibm-key"
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    watsonx_model = {
+        "name": "ibm/slate-125m-english-rtrvr",
+        "provider": "IBM WatsonX",
+        "metadata": {
+            "embedding_class": "WatsonxEmbeddings",
+            "param_mapping": {
+                "model_id": "model_id",
+                "api_key": "apikey",  # pragma: allowlist secret
+                "url": "url",
+                "project_id": "project_id",
+            },
+        },
+    }
+
+    get_embeddings(
+        [watsonx_model],
+        api_key="ibm-key",  # pragma: allowlist secret
+        watsonx_url="https://us-south.ml.cloud.ibm.com",
+        watsonx_project_id="proj-123",
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs.get("url") == "https://us-south.ml.cloud.ibm.com"
+    assert kwargs.get("project_id") == "proj-123"
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_truncate_and_input_text(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
+    """truncate_input_tokens and input_text should be passed as WatsonX params dict."""
+    mock_get_api_key.return_value = "ibm-key"
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    watsonx_model = {
+        "name": "ibm/slate-125m-english-rtrvr",
+        "provider": "IBM WatsonX",
+        "metadata": {
+            "embedding_class": "WatsonxEmbeddings",
+            "param_mapping": {
+                "model_id": "model_id",
+                "api_key": "apikey",  # pragma: allowlist secret
+                "url": "url",
+                "project_id": "project_id",
+            },
+        },
+    }
+
+    get_embeddings(
+        [watsonx_model],
+        api_key="ibm-key",  # pragma: allowlist secret
+        watsonx_url="https://us-south.ml.cloud.ibm.com",
+        watsonx_project_id="proj-123",
+        watsonx_truncate_input_tokens=200,
+        watsonx_input_text=True,
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert "params" in kwargs
+    params = kwargs["params"]
+    # Check truncate_input_tokens is present (key may be enum or string depending on ibm_watsonx_ai availability)
+    truncate_values = [v for v in params.values() if v == 200]
+    assert truncate_values, "Expected truncate_input_tokens=200 in params"
+    # Check return_options contains input_text
+    return_opts = [v for v in params.values() if isinstance(v, dict) and "input_text" in v]
+    assert return_opts, "Expected return_options with input_text in params"
+    assert return_opts[0]["input_text"] is True
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_no_params_when_not_provided(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
+    """When truncate_input_tokens and input_text are not provided, params should not be set."""
+    mock_get_api_key.return_value = "ibm-key"
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    watsonx_model = {
+        "name": "ibm/slate-125m-english-rtrvr",
+        "provider": "IBM WatsonX",
+        "metadata": {
+            "embedding_class": "WatsonxEmbeddings",
+            "param_mapping": {
+                "model_id": "model_id",
+                "api_key": "apikey",  # pragma: allowlist secret
+                "url": "url",
+                "project_id": "project_id",
+            },
+        },
+    }
+
+    get_embeddings(
+        [watsonx_model],
+        api_key="ibm-key",  # pragma: allowlist secret
+        watsonx_url="https://us-south.ml.cloud.ibm.com",
+        watsonx_project_id="proj-123",
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert "params" not in kwargs
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+def test_get_embeddings_watsonx_error_wraps_message(mock_get_vars, mock_get_class, mock_get_api_key):
+    """IBM WatsonX instantiation errors mentioning url/project get wrapped in a friendlier ValueError."""
+    mock_get_api_key.return_value = "ibm-key"
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_embedding_class.side_effect = RuntimeError("missing project id")
+    mock_get_class.return_value = mock_embedding_class
+
+    watsonx_model = {
+        "name": "ibm/slate-125m-english-rtrvr",
+        "provider": "IBM WatsonX",
+        "metadata": {
+            "embedding_class": "WatsonxEmbeddings",
+            "param_mapping": {"model_id": "model_id", "api_key": "apikey"},
+        },
+    }
+
+    with pytest.raises(ValueError, match="IBM WatsonX requires additional configuration"):
+        get_embeddings([watsonx_model], api_key="ibm-key")  # pragma: allowlist secret
+
+
+# ---------------------------------------------------------------------------
+# handle_model_input_update tests
+# ---------------------------------------------------------------------------
+
+
+def test_handle_model_input_update_hides_all_provider_fields_by_default():
+    """Provider-specific fields should be hidden when no model is selected."""
+    component = _make_mock_component()
+    provider_fields = _get_all_provider_mapped_fields()
+
+    build_config = {"model": _make_model_field()}
+    for f in provider_fields:
+        build_config[f] = {"show": True, "required": True}
+
+    def get_options(user_id=None):  # noqa: ARG001
+        return []
+
+    result = handle_model_input_update(
+        component, build_config, field_value="", field_name=None, get_options_func=get_options
+    )
+
+    for f in provider_fields:
+        assert result[f]["show"] is False, f"Field {f} should be hidden when no model is selected"
+        assert result[f]["required"] is False
+
+
+def test_handle_model_input_update_ollama_hides_and_clears_api_key():
+    """Selecting Ollama (which has no api_key variable) must hide AND clear api_key.
+
+    Regression test: api_key was previously forced visible for every provider,
+    leaving a stale cross-provider credential (e.g. ``OPENAI_API_KEY``) sitting
+    behind the hidden field when switching to Ollama.
+    """
+    component = _make_mock_component()
+    selected_model = [{"name": "llama3", "provider": "Ollama", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "api_key": {
+            "show": True,
+            "required": False,
+            "value": "OPENAI_API_KEY",
+            "load_from_db": True,
+            "_input_type": "SecretStrInput",
+        },
+        "ollama_base_url": {
+            "show": False,
+            "required": False,
+            "value": "",
+            "_input_type": "StrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is False, "api_key must be hidden for Ollama"
+    assert result["api_key"]["value"] == "", "stale cross-provider api_key must be cleared for Ollama"
+    assert result["api_key"]["load_from_db"] is False, "load_from_db must be reset when clearing api_key"
+    # Ollama's own variable is shown and configured.
+    assert result["ollama_base_url"]["show"] is True
+
+
+def test_handle_model_input_update_openai_keeps_api_key_visible():
+    """Providers that map a variable to api_key keep an empty field empty."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "api_key": {
+            "show": False,  # start hidden to prove apply_provider_... re-shows it
+            "required": False,
+            "value": "",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is True, "api_key must stay visible for OpenAI"
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+
+
+def test_handle_model_input_update_preserves_edited_field_when_initial_provider_is_selected():
+    """Auto-selecting the initial provider must not clear the provider field being edited."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "api_key": {
+            "show": True,
+            "required": False,
+            "value": "literal-api-key",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+        "project_id": {
+            "show": True,
+            "required": False,
+            "value": "stale-project",
+            "load_from_db": False,
+            "_input_type": "StrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="literal-api-key",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == selected_model
+    assert result["api_key"]["value"] == "literal-api-key"
+    assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
+def test_handle_model_input_update_clears_edited_field_not_used_by_initial_provider():
+    """Initial provider selection must clear an edited field that belongs to another provider."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "project_id": {
+            "show": True,
+            "required": False,
+            "value": "stale-project",
+            "load_from_db": False,
+            "_input_type": "StrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="stale-project",
+        field_name="project_id",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == selected_model
+    assert result["project_id"]["show"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
+def test_handle_model_input_update_uses_language_model_options_by_default():
+    """When no get_options_func is provided, get_language_model_options is used."""
+    component = _make_mock_component()
+    build_config = {"model": _make_model_field()}
+
+    with patch("lfx.base.models.unified_models.get_language_model_options") as mock_opts:
+        mock_opts.return_value = []
+        handle_model_input_update(component, build_config, field_value="", field_name=None)
+        mock_opts.assert_called_once()
+
+
+def test_handle_model_input_update_calls_apply_provider_config_when_model_selected():
+    """Selecting a model should call apply_provider_variable_config_to_build_config."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4", "provider": "OpenAI", "metadata": {}}]
+    build_config = {"model": _make_model_field(value=selected_model)}
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        def get_options(user_id=None):  # noqa: ARG001
+            return selected_model
+
+        handle_model_input_update(
+            component, build_config, field_value=selected_model, field_name="model", get_options_func=get_options
+        )
+
+        mock_apply.assert_called_once_with(build_config, "OpenAI")
+
+
+def test_policy_refresh_clears_hidden_provider_fields_before_applying_allowed_default():
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    component = _make_mock_component()
+    watsonx = [{"name": "watsonx-test", "provider": "IBM WatsonX", "metadata": {}}]
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=watsonx),
+        "api_key": {
+            "show": True,
+            "required": True,
+            "value": "WATSONX_APIKEY",
+            "load_from_db": True,
+        },
+        "project_id": {
+            "show": True,
+            "required": True,
+            "value": "WATSONX_PROJECT_ID",
+            "load_from_db": True,
+        },
+    }
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=component.user_id),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai", "ibm-watsonx"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    with (
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", return_value=snapshot),
+        patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply,
+    ):
+        mock_apply.side_effect = lambda config, _provider: config
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value="WATSONX_APIKEY",
+            field_name="api_key",
+            get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+        )
+
+    assert result["model"]["value"] == openai
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+    mock_apply.assert_called_once_with(build_config, "OpenAI")
+
+
+def test_initial_provider_default_preserves_directly_edited_provider_field():
+    component = _make_mock_component()
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=""),
+        "api_key": {
+            "show": True,
+            "required": True,
+            "value": "sk-new",  # pragma: allowlist secret
+            "load_from_db": False,
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="sk-new",  # pragma: allowlist secret
+        field_name="api_key",
+        get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == openai
+    assert result["api_key"]["value"] == "sk-new"  # pragma: allowlist secret
+    assert result["api_key"]["load_from_db"] is False
+
+
+def test_api_key_refresh_preserves_edit_when_default_provider_is_auto_selected():
+    component = _make_mock_component()
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "api_key": {
+            "show": True,
+            "required": True,
+            "value": "sk-direct-edit",
+            # Callers outside the MCP path may leave SecretStrInput's default
+            # database-loading state in place while assigning a literal.
+            "load_from_db": True,
+        },
+        "project_id": {
+            "show": True,
+            "required": True,
+            "value": "STALE_PROJECT_ID",
+            "load_from_db": True,
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="sk-direct-edit",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == openai
+    assert result["api_key"]["value"] == "sk-direct-edit"
+    assert result["api_key"]["load_from_db"] is True
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
+def test_default_provider_auto_selection_does_not_restore_an_unsupported_edited_field():
+    component = _make_mock_component()
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "project_id": {
+            "show": True,
+            "required": True,
+            "value": "WATSONX_PROJECT_ID",
+            "load_from_db": True,
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="WATSONX_PROJECT_ID",
+        field_name="project_id",
+        get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == openai
+    assert result["project_id"]["show"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
+def test_handle_model_input_update_watsonx_embedding_shows_special_fields():
+    """IBM WatsonX + embedding prefix should show truncate_input_tokens and input_text."""
+    component = _make_mock_component()
+    selected_model = [{"name": "ibm/slate-125m-english-rtrvr", "provider": "IBM WatsonX", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "truncate_input_tokens": {"show": False},
+        "input_text": {"show": False},
+    }
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value=selected_model,
+            field_name="model",
+            cache_key_prefix="embedding_model_options",
+            get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+        )
+
+    assert result["truncate_input_tokens"]["show"] is True
+    assert result["input_text"]["show"] is True
+
+
+def test_handle_model_input_update_non_watsonx_embedding_hides_special_fields():
+    """Non-WatsonX embedding should hide truncate_input_tokens and input_text."""
+    component = _make_mock_component()
+    selected_model = [{"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "truncate_input_tokens": {"show": True},
+        "input_text": {"show": True},
+    }
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value=selected_model,
+            field_name="model",
+            cache_key_prefix="embedding_model_options",
+            get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+        )
+
+    assert result["truncate_input_tokens"]["show"] is False
+    assert result["input_text"]["show"] is False
+
+
+def test_handle_model_input_update_language_model_prefix_skips_embedding_fields():
+    """Language model updates should not toggle truncate_input_tokens/input_text."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4", "provider": "OpenAI", "metadata": {}}]
+    original_show = False
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "truncate_input_tokens": {"show": original_show},
+        "input_text": {"show": original_show},
+    }
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value=selected_model,
+            field_name="model",
+            cache_key_prefix="language_model_options",
+            get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+        )
+
+    # The embedding-specific block should not run for language_model_options
+    assert result["truncate_input_tokens"]["show"] is original_show
+    assert result["input_text"]["show"] is original_show
+
+
+def test_handle_model_input_update_returns_dict():
+    component = _make_mock_component()
+    build_config = {"model": _make_model_field()}
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="",
+        field_name=None,
+        get_options_func=lambda user_id=None: [],  # noqa: ARG005
+    )
+    assert isinstance(result, dict)
+
+
+def test_handle_model_input_update_api_key_change_preserves_model_selection():
+    """Changing the api_key field must NOT reset the selected model value.
+
+    Regression test: previously, the default-model logic checked ``field_value``
+    (the api_key text) instead of the model field's own value.  When the api_key
+    was empty or falsy (e.g. selecting a global variable), the model was
+    incorrectly reset to the first option.
+    """
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    options = [
+        {"name": "claude-3-opus", "provider": "Anthropic", "metadata": {}},
+        {"name": "gpt-4o", "provider": "OpenAI", "metadata": {}},
+    ]
+    build_config = {
+        "model": _make_model_field(value=selected_model, options=options),
+        "api_key": {"show": True, "required": True, "value": "old-key"},
+    }
+
+    # Simulate typing a new api_key (non-empty field_value)
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="sk-new-key",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: options,  # noqa: ARG005
+    )
+    assert result["model"]["value"] == selected_model, "Model should be preserved when api_key is non-empty"
+
+    # Simulate clearing the api_key / selecting a global variable (empty field_value)
+    build_config2 = {
+        "model": _make_model_field(value=selected_model, options=options),
+        "api_key": {"show": True, "required": True, "value": ""},
+    }
+    result2 = handle_model_input_update(
+        component,
+        build_config2,
+        field_value="",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: options,  # noqa: ARG005
+    )
+    assert result2["model"]["value"] == selected_model, "Model should be preserved even when api_key is empty"
+
+
+def test_handle_model_input_update_custom_model_field_name():
+    """handle_model_input_update should support a custom model_field_name."""
+    component = _make_mock_component()
+    selected_model = [{"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "embedding_model": {
+            "value": selected_model,
+            "options": [],
+            "input_types": ["Embeddings"],
+            "show": True,
+        },
+    }
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value=selected_model,
+            field_name="embedding_model",
+            cache_key_prefix="embedding_model_options",
+            get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+            model_field_name="embedding_model",
+        )
+
+        # Should call apply_provider_variable_config with the correct provider
+        mock_apply.assert_called_once_with(result, "OpenAI")
+
+    # Should have updated the embedding_model field
+    assert "embedding_model" in result
+
+
+def test_handle_model_input_update_custom_field_name_reads_default_from_correct_field():
+    """When field_name != model_field_name, step 3 should read current value from the custom field."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "my_model": {
+            "value": selected_model,
+            "options": [],
+            "input_types": ["LanguageModel"],
+            "show": True,
+        },
+    }
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        # field_name is "temperature" (not the model field and not a provider-mapped field)
+        # — should read from build_config["my_model"]
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value=0.5,
+            field_name="temperature",
+            get_options_func=lambda user_id=None: [],  # noqa: ARG005
+            model_field_name="my_model",
+        )
+
+        mock_apply.assert_called_once_with(result, "OpenAI")
+
+
+# ---------------------------------------------------------------------------
+# DropdownInput / apply_provider_variable_config_to_build_config tests
+# ---------------------------------------------------------------------------
+
+
+def test_apply_provider_config_does_not_populate_empty_fields():
+    """Provider metadata controls visibility without assigning global variables."""
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+        "project_id": {
+            "_input_type": "StrInput",
+            "value": "",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+        "base_url_ibm_watsonx": {
+            "_input_type": "DropdownInput",
+            "value": "",
+            "options": [
+                "https://us-south.ml.cloud.ibm.com",
+                "https://eu-de.ml.cloud.ibm.com",
+            ],
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+    }
+
+    result = apply_provider_variable_config_to_build_config(build_config, "IBM WatsonX")
+
+    assert result["api_key"]["load_from_db"] is False
+    assert result["api_key"]["value"] == ""
+
+    assert result["project_id"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+
+    # DropdownInput should NOT have load_from_db set
+    assert result["base_url_ibm_watsonx"]["load_from_db"] is False
+    # Value should remain empty (not set to "WATSONX_URL")
+    assert result["base_url_ibm_watsonx"]["value"] == ""
+    # But the field should still be shown
+    assert result["base_url_ibm_watsonx"]["show"] is True
+
+
+def test_apply_provider_config_preserves_explicit_global_variable():
+    """Provider refreshes must honor an explicitly assigned global variable."""
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "ANTHROPIC_API_KEY",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": True,
+        },
+    }
+
+    result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
+
+    assert result["api_key"]["value"] == "ANTHROPIC_API_KEY"
+    assert result["api_key"]["load_from_db"] is True
+    assert result["api_key"]["show"] is True
+
+
+def test_apply_provider_config_preserves_user_typed_credential():
+    """User-typed credentials should survive provider config refreshes."""
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "sk-raw-key-123",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+    }
+
+    result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
+
+    assert result["api_key"]["value"] == "sk-raw-key-123"
+    assert result["api_key"]["load_from_db"] is False
+    assert result["api_key"]["show"] is True
+
+
+def test_apply_provider_config_keeps_current_provider_variable_on_refresh():
+    """Refreshing the same provider should not rewrite an already-correct variable key."""
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "OPENAI_API_KEY",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": True,
+        },
+    }
+
+    result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
+
+    assert result["api_key"]["value"] == "OPENAI_API_KEY"
+    assert result["api_key"]["load_from_db"] is True
+    assert result["api_key"]["show"] is True
+
+
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+def test_resolve_dropdown_provider_values_sets_resolved_url(mock_get_vars):
+    """_resolve_dropdown_provider_values should set the resolved URL on dropdown fields."""
+    mock_get_vars.return_value = {"WATSONX_URL": "https://eu-de.ml.cloud.ibm.com"}
+
+    build_config = {
+        "base_url_ibm_watsonx": {
+            "_input_type": "DropdownInput",
+            "value": "",
+            "options": [
+                "https://us-south.ml.cloud.ibm.com",
+                "https://eu-de.ml.cloud.ibm.com",
+            ],
+            "show": True,
+            "load_from_db": False,
+        },
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "WATSONX_APIKEY",
+            "show": True,
+            "load_from_db": True,
+        },
+    }
+
+    _resolve_dropdown_provider_values("user-123", build_config, "IBM WatsonX")
+
+    # Dropdown should get the resolved URL
+    assert build_config["base_url_ibm_watsonx"]["value"] == "https://eu-de.ml.cloud.ibm.com"
+    assert build_config["base_url_ibm_watsonx"]["load_from_db"] is False
+
+    # Non-dropdown fields should not be touched
+    assert build_config["api_key"]["value"] == "WATSONX_APIKEY"
+    assert build_config["api_key"]["load_from_db"] is True
+
+
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+def test_resolve_dropdown_provider_values_falls_back_to_first_option(mock_get_vars):
+    """When the variable can't be resolved, fall back to the first dropdown option."""
+    mock_get_vars.return_value = {}  # No variables configured
+
+    build_config = {
+        "base_url_ibm_watsonx": {
+            "_input_type": "DropdownInput",
+            "value": "",
+            "options": [
+                "https://us-south.ml.cloud.ibm.com",
+                "https://eu-de.ml.cloud.ibm.com",
+            ],
+            "show": True,
+            "load_from_db": False,
+        },
+    }
+
+    _resolve_dropdown_provider_values("user-123", build_config, "IBM WatsonX")
+
+    # Should fall back to first option
+    assert build_config["base_url_ibm_watsonx"]["value"] == "https://us-south.ml.cloud.ibm.com"
+    assert build_config["base_url_ibm_watsonx"]["load_from_db"] is False
+
+
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+def test_resolve_dropdown_skips_non_dropdown_fields(mock_get_vars):
+    """Non-DropdownInput fields should not be touched by _resolve_dropdown_provider_values."""
+    mock_get_vars.return_value = {"WATSONX_APIKEY": "secret-key"}  # pragma: allowlist secret
+
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "WATSONX_APIKEY",
+            "show": True,
+            "load_from_db": True,
+        },
+    }
+
+    _resolve_dropdown_provider_values("user-123", build_config, "IBM WatsonX")
+
+    # Should not modify non-dropdown fields
+    assert build_config["api_key"]["value"] == "WATSONX_APIKEY"
+    assert build_config["api_key"]["load_from_db"] is True
+
+
+def test_handle_model_input_update_resolves_watsonx_dropdown():
+    """End-to-end: selecting a WatsonX model should resolve the dropdown URL."""
+    component = _make_mock_component()
+    component.user_id = "test-user-id"
+    selected_model = [{"name": "ibm/granite-3-8b-instruct", "provider": "IBM WatsonX", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+        "project_id": {
+            "_input_type": "StrInput",
+            "value": "",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+        "base_url_ibm_watsonx": {
+            "_input_type": "DropdownInput",
+            "value": "https://us-south.ml.cloud.ibm.com",
+            "options": [
+                "https://us-south.ml.cloud.ibm.com",
+                "https://eu-de.ml.cloud.ibm.com",
+            ],
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+    }
+
+    with patch("lfx.base.models.unified_models.get_all_variables_for_provider") as mock_get_vars:
+        mock_get_vars.return_value = {"WATSONX_URL": "https://eu-de.ml.cloud.ibm.com"}
+
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value=selected_model,
+            field_name="model",
+            get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+        )
+
+    # The dropdown should be resolved to the configured URL, not "WATSONX_URL"
+    assert result["base_url_ibm_watsonx"]["value"] == "https://eu-de.ml.cloud.ibm.com"
+    assert result["base_url_ibm_watsonx"]["load_from_db"] is False
+    assert result["base_url_ibm_watsonx"]["show"] is True
+
+    # Non-dropdown fields stay empty and resolve from Model Providers at runtime.
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
+def test_get_provider_for_model_name_backwards_compat():
+    """Ensure ``get_provider_for_model_name`` stays importable from the package root.
+
+    Flows exported from 1.8.x import this helper directly from
+    ``lfx.base.models.unified_models``. The post-refactor package split broke
+    that import; this test guards against reintroducing the regression.
+    """
+    from lfx.base.models.unified_models import get_provider_for_model_name
+
+    # Known model round-trips to its provider.
+    assert get_provider_for_model_name("gpt-4o") == "OpenAI"
+
+    # Defensive inputs must not raise.
+    assert get_provider_for_model_name("") == ""
+    assert get_provider_for_model_name("__definitely_not_a_real_model__") == ""
+    assert get_provider_for_model_name(None) == ""  # type: ignore[arg-type]

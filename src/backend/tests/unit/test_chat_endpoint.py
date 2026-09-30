@@ -1,15 +1,25 @@
 import asyncio
+import contextlib
 import json
 import uuid
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
 from httpx import codes
-from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
-from loguru import logger
+from langflow.services.deps import get_settings_service
+from langflow.services.job_queue.service import JobQueueService
+from lfx.log.logger import logger
+from lfx.memory import aget_messages
 
 from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
+
+
+@pytest.fixture(autouse=True)
+def allow_custom_components_by_default(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "true")
 
 
 @pytest.mark.benchmark
@@ -32,7 +42,7 @@ async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
 
 @pytest.mark.benchmark
-async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
+async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers, active_user):
     """Test building a flow from request data."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
@@ -48,10 +58,68 @@ async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, 
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
-    await check_messages(flow_id)
+    await check_messages(flow_id, active_user.id)
 
 
-async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
+async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """When request data is provided, preflight validation should use it instead of the saved flow."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    flow_data = response.json()
+    request_data = json.loads(json.dumps(flow_data["data"]))
+    request_data["nodes"][0]["data"]["node"]["display_name"] = "Updated Request Flow"
+    saved_flow_validation_message = "saved flow should not be validated when request data is provided"
+
+    def fail_if_saved_flow_is_validated(target):
+        if target == flow_data["data"]:
+            raise ValueError(saved_flow_validation_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        fail_if_saved_flow_is_validated,
+    )
+
+    response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={"data": request_data},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == codes.OK
+    assert "job_id" in response.json()
+
+
+async def test_build_flow_enforces_current_catalog_policy_and_recovers_when_cleared(
+    client, json_memory_chatbot_no_llm, logged_in_headers
+):
+    from lfx.services.deps import get_catalog_policy_service
+
+    catalog_policy_service = get_catalog_policy_service()
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    await catalog_policy_service.replace_blocked_component_keys(["ChatInput"], actor_user_id=None)
+
+    blocked_response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers=logged_in_headers,
+    )
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    allowed_response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers=logged_in_headers,
+    )
+
+    assert blocked_response.status_code == codes.BAD_REQUEST
+    assert blocked_response.json()["detail"].endswith("ChatInput")
+    assert allowed_response.status_code == codes.OK
+    assert "job_id" in allowed_response.json()
+
+
+async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers, active_user):
     """Test building a flow with a frozen path."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
@@ -77,13 +145,13 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
-    await check_messages(flow_id)
+    await check_messages(flow_id, active_user.id)
 
 
-async def check_messages(flow_id):
+async def check_messages(flow_id, owner_id):
     if isinstance(flow_id, str):
         flow_id = UUID(flow_id)
-    messages = await aget_messages(flow_id=flow_id, order="ASC")
+    messages = await aget_messages(flow_id=flow_id, user_id=owner_id, order="ASC")
     flow_id_str = str(flow_id)
     assert len(messages) == 2
     assert messages[0].session_id == flow_id_str
@@ -432,3 +500,1505 @@ async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_
     finally:
         # Restore the original function to avoid affecting other tests
         monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+async def test_cancel_build_public_propagates_task_cancellation(monkeypatch):
+    """The public cancellation route must not translate server task cancellation into HTTP 500."""
+    from langflow.api.v1 import chat
+
+    queue_service = SimpleNamespace()
+    monkeypatch.setattr(chat, "_assert_public_job", AsyncMock())
+    monkeypatch.setattr(chat, "cancel_flow_build", AsyncMock(side_effect=asyncio.CancelledError))
+
+    with pytest.raises(asyncio.CancelledError):
+        await chat.cancel_build_public("public-job", queue_service)
+
+
+@pytest.mark.benchmark
+@pytest.mark.usefixtures("logged_in_headers")
+async def test_should_have_public_events_endpoint_accessible_without_auth(client):
+    """Test that public events endpoint exists and is accessible without authentication.
+
+    Bug: After sending a message in the Shareable Playground, the chat input resets
+    but no response is rendered. The root cause is that the events endpoint
+    (/build/{job_id}/events) requires authentication, which the unauthenticated
+    shareable playground user does not have.
+
+    This test proves:
+    1. The PUBLIC events endpoint exists and responds without auth (404 = route exists, job not found)
+    2. The AUTHENTICATED events endpoint rejects unauthenticated requests (403)
+    """
+    fake_job_id = str(uuid.uuid4())
+
+    # Assert 1 — the PUBLIC events endpoint is accessible without auth
+    # Returns 404 "Job not found" (route exists, but job doesn't) — NOT 401/403
+    events_response = await client.get(
+        f"api/v1/build_public_tmp/{fake_job_id}/events?event_delivery=polling",
+        headers={"Accept": "application/x-ndjson"},
+    )
+    assert events_response.status_code == codes.NOT_FOUND
+
+    # The key proof: the public endpoint responded with 404 (route exists, job not found)
+    # rather than 401/403 (authentication required). Before the fix, this endpoint
+    # didn't exist at all and would return 404 for the route, not the job.
+    assert "Job not found" in events_response.json()["detail"]
+
+
+@pytest.mark.benchmark
+@pytest.mark.usefixtures("logged_in_headers")
+async def test_should_have_public_cancel_endpoint_accessible_without_auth(client):
+    """Test that public cancel endpoint exists and is accessible without authentication.
+
+    Same root cause as the events bug: the cancel endpoint requires auth
+    but the shareable playground user is unauthenticated.
+    """
+    fake_job_id = str(uuid.uuid4())
+
+    # The PUBLIC cancel endpoint is accessible without auth
+    # Returns 404 "Job not found" (route exists, but job doesn't) — NOT 401/403
+    cancel_response = await client.post(
+        f"api/v1/build_public_tmp/{fake_job_id}/cancel",
+        headers={"Content-Type": "application/json"},
+    )
+    assert cancel_response.status_code == codes.NOT_FOUND
+    assert "Job not found" in cancel_response.json()["detail"]
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test that build_public_tmp endpoint silently ignores data parameter for security.
+
+    Security Test: Verifies that when a user attempts to provide custom flow data
+    to the public flow endpoint, FastAPI silently ignores the extra parameter and
+    the endpoint functions normally using the stored flow data from the database.
+    """
+    # Create a flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Make the flow public
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    # Create malicious flow data with different structure
+    malicious_data = {"nodes": [{"id": "malicious", "data": {"type": "CustomComponent"}}], "edges": []}
+
+    # Set a client_id cookie
+    client.cookies.set("client_id", "test-security-client-123")
+
+    # Attempt to build with malicious data - FastAPI will silently ignore it
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "data": malicious_data,  # This will be silently ignored by FastAPI
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    # Verify the request succeeded - the data parameter is simply ignored
+    assert response.status_code == codes.OK
+    response_data = response.json()
+    assert "job_id" in response_data
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rate_limits_each_client_and_flow(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Anonymous builds are bounded without sharing counters across public flows."""
+
+    async def create_public_flow():
+        flow_data = json.loads(json_memory_chatbot_no_llm)
+        flow_data["id"] = str(uuid.uuid4())
+        flow_id = await create_flow(client, json.dumps(flow_data), logged_in_headers)
+        response = await client.patch(
+            f"api/v1/flows/{flow_id}",
+            json={"access_type": "PUBLIC"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == codes.OK
+        return flow_id
+
+    first_flow_id = await create_public_flow()
+    second_flow_id = await create_public_flow()
+    started_source_flow_ids = []
+
+    async def fake_start_flow_build(**kwargs):
+        started_source_flow_ids.append(kwargs["source_flow_id"])
+        return str(uuid.uuid4())
+
+    monkeypatch.setattr("langflow.api.v1.chat.start_flow_build", fake_start_flow_build)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings, "public_flow_rate_limit_per_minute", 2)
+
+    client.cookies.clear()
+    client.cookies.set("client_id", "test-public-build-rate-limit-client")
+    request_kwargs = {
+        "json": {"inputs": {"session": "test_session"}},
+        "headers": {"Content-Type": "application/json"},
+    }
+
+    for _ in range(2):
+        response = await client.post(f"api/v1/build_public_tmp/{first_flow_id}/flow", **request_kwargs)
+        assert response.status_code == codes.OK
+
+    limited_response = await client.post(f"api/v1/build_public_tmp/{first_flow_id}/flow", **request_kwargs)
+    assert limited_response.status_code == codes.TOO_MANY_REQUESTS
+    assert limited_response.headers["Retry-After"] == "60"
+
+    other_flow_response = await client.post(f"api/v1/build_public_tmp/{second_flow_id}/flow", **request_kwargs)
+    assert other_flow_response.status_code == codes.OK
+    assert started_source_flow_ids == [first_flow_id, first_flow_id, second_flow_id]
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+@pytest.mark.parametrize(
+    "malicious_files",
+    [
+        ["/etc/hosts"],
+        ["/etc/passwd"],
+        ["../../etc/passwd"],
+        ["..\\..\\windows\\system32\\drivers\\etc\\hosts"],
+        ["s3://other-bucket/secret.txt"],
+        ["just_a_filename.txt"],
+        # foreign flow_id segment — looks well-formed but isn't this flow's namespace
+        ["00000000-0000-0000-0000-000000000000/file.png"],
+        # null byte smuggling
+        ["abc\x00/file.png"],
+    ],
+)
+async def test_build_public_tmp_rejects_malicious_files(
+    client, json_memory_chatbot_no_llm, logged_in_headers, malicious_files
+):
+    """Regression for GHSA-rcjh-r59h-gq37 — unauth public build must not accept arbitrary file paths."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-validation-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": malicious_files,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert "file" in response.json()["detail"].lower()
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_accepts_files_in_own_namespace(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Files namespaced under the public flow's own UUID must still be accepted."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-allowed-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": [f"{flow_id}/example_attachment.png"],
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_checks_public_access_before_validation(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Private flows should fail at the public-access gate before any policy validation runs."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    client.cookies.set("client_id", "test-private-flow-client")
+    public_access_validation_message = "validation should not run before public access checks"
+
+    def fail_if_validation_runs(_target):
+        raise ValueError(public_access_validation_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
+        fail_if_validation_runs,
+    )
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.NOT_FOUND
+    assert response.json()["detail"] == "Flow not found"
+
+
+async def test_build_public_tmp_enforces_current_catalog_policy_with_generic_error(
+    client, json_memory_chatbot_no_llm, logged_in_headers
+):
+    from lfx.services.deps import get_catalog_policy_service
+
+    catalog_policy_service = get_catalog_policy_service()
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    await catalog_policy_service.replace_blocked_component_keys(["ChatInput"], actor_user_id=None)
+    client.cookies.set("client_id", "test-catalog-policy-client")
+
+    blocked_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    allowed_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert blocked_response.status_code == codes.BAD_REQUEST
+    assert blocked_response.json()["detail"] == "This flow cannot be executed."
+    assert "ChatInput" not in blocked_response.text
+    assert allowed_response.status_code == codes.OK
+    assert "job_id" in allowed_response.json()
+
+
+async def test_build_public_tmp_sanitizes_catalog_identity_unavailable_response(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    from lfx.utils.flow_validation import (
+        PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        CatalogPolicyIdentityUnavailableError,
+    )
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    client.cookies.set("client_id", "test-catalog-identity-unavailable-client")
+    raw_message = "Catalog identities unavailable: internal generation 42"
+
+    def identities_unavailable(_target):
+        raise CatalogPolicyIdentityUnavailableError(raw_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
+        identities_unavailable,
+    )
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE
+    assert raw_message not in response.text
+
+
+@pytest.mark.security
+async def test_build_public_tmp_sanitizes_unexpected_gate_value_error(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Anonymous validation failures never disclose stored flow internals."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    client.cookies.set("client_id", "test-sanitized-value-error-client")
+    raw_message = "invalid node SecretProvider-1 with credential super-secret"
+
+    def invalid_stored_flow(_target):
+        raise ValueError(raw_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
+        invalid_stored_flow,
+    )
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+    assert raw_message not in response.text
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_code_execution_components(
+    client, json_memory_chatbot_no_llm, logged_in_headers
+):
+    """Report H1-3754930: unauthenticated public builds must reject code-execution components.
+
+    A public flow containing a Python interpreter/REPL (or the legacy Python Code
+    Structured tool) would otherwise let any anonymous visitor trigger
+    server-side code execution through /build_public_tmp.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "PythonREPLComponent-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "PythonREPLComponent-pub1",
+                "type": "PythonREPLComponent",
+                "display_name": "Python Interpreter",
+                "node": {"display_name": "Python Interpreter", "template": {}},
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-code-exec-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_mcp_stdio_server_config(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Unauthenticated public builds must reject an MCP Tools node using the stdio transport.
+
+    The OS command lives in the ``mcp_server`` field VALUE, not in ``code``, so the
+    trusted-code substitution performed for public builds does not neutralise it. Without
+    an explicit check, triggering the public flow spawns that process as the server account.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "MCPTools-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "MCPTools-pub1",
+                "type": "MCPTools",
+                "node": {
+                    "display_name": "MCP Tools",
+                    "template": {
+                        "mcp_server": {
+                            "type": "mcp",
+                            "name": "mcp_server",
+                            "value": {
+                                "name": "local",
+                                "config": {"command": "python", "args": ["-m", "some_module"]},
+                            },
+                        }
+                    },
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    # The shared client persists access-token cookies from ``logged_in_headers``; clearing
+    # them is the only way to exercise the genuinely unauthenticated public path.
+    client.cookies.clear()
+    client.cookies.set("client_id", "test-mcp-stdio-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_flow_invoking_components(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Report H1-3754930 (transitive case): public builds must reject flow-invoking components.
+
+    A public wrapper flow with no directly-blocked nodes could otherwise embed a
+    Run Flow / Sub Flow / Flow as Tool node that loads and executes another saved
+    owner flow by id/name at runtime — a private flow which may itself contain a
+    code-execution component that is never re-validated on the run path. Blocking
+    the flow-invoking node type on the public path closes that indirection.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "RunFlow-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "RunFlow-pub1",
+                "type": "RunFlow",
+                "display_name": "Run Flow",
+                "node": {
+                    "display_name": "Run Flow",
+                    "template": {"flow_id_selected": {"value": str(uuid.uuid4())}},
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-flow-invoke-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_flow_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
+    """Security (GHSA-qj98-rhf8-v93f): authenticated user cannot build another user's private flow.
+
+    Regression guard: verifies that the ownership check added to build_flow rejects
+    requests where flow.user_id != current_user.id and the flow is not PUBLIC.
+    """
+    victim_flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == 200
+    attacker_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    response = await client.post(f"api/v1/build/{victim_flow_id}/flow", json={}, headers=attacker_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_flow_unauthenticated_blocked(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Unauthenticated request to build_flow must be rejected (4xx — no valid credentials)."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    # Clear any cookies retained from previous tests to ensure a truly unauthenticated request.
+    client.cookies.clear()
+    response = await client.post(f"api/v1/build/{flow_id}/flow", json={})
+    assert response.status_code == 403
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_flow_nonexistent_flow_returns_404(client, logged_in_headers):
+    """Non-existent flow UUID must return 404."""
+    nonexistent_id = uuid.uuid4()
+    response = await client.post(f"api/v1/build/{nonexistent_id}/flow", json={}, headers=logged_in_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_events_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
+    """Security (GHSA-qj98-rhf8-v93f): user cannot poll build events owned by another user.
+
+    Even if an attacker somehow obtains a valid job_id, the events endpoint independently
+    enforces ownership via the _job_owners registry in JobQueueService.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == 200
+    attacker_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    response = await get_build_events(client, job_id, attacker_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_flow_public_flow_accessible_by_other_user(
+    client, json_memory_chatbot_no_llm, logged_in_headers, user_two
+):
+    """A PUBLIC flow can be built by any authenticated user, not only the owner.
+
+    Verifies that the ownership check correctly allows access_type == PUBLIC flows
+    and does not over-restrict the multi-tenant sharing use case.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == 200
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == 200
+    other_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    response = await client.post(f"api/v1/build/{flow_id}/flow", json={}, headers=other_headers)
+    assert response.status_code == 200
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_cancel_build_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
+    """Security: authenticated user cannot cancel a build job owned by another user.
+
+    cancel_build carries the same DoS risk as get_build_events — an attacker who
+    obtains a job_id should not be able to abort the victim's running build.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == 200
+    attacker_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    response = await client.post(f"api/v1/build/{job_id}/cancel", headers=attacker_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.security
+async def test_ownerless_queue_cannot_be_read_or_cancelled_through_v1_routes(client, user_two):
+    """A live queue with no registered owner is private even when its id is known."""
+    from langflow.services.deps import get_queue_service
+
+    queue_service = get_queue_service()
+    job_id = str(uuid.uuid4())
+    queue_service.create_queue(job_id)
+
+    async def keep_running():
+        await asyncio.sleep(3600)
+
+    queue_service.start_job(job_id, keep_running())
+    task = queue_service.get_queue_data(job_id)[2]
+    assert task is not None
+
+    try:
+        login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+        login_response = await client.post("api/v1/login", data=login_data)
+        assert login_response.status_code == codes.OK
+        headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+        events_response = await asyncio.wait_for(
+            client.get(f"api/v1/build/{job_id}/events?event_delivery=polling", headers=headers), timeout=2
+        )
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=headers)
+
+        assert events_response.status_code == codes.NOT_FOUND
+        assert cancel_response.status_code == codes.NOT_FOUND
+        assert not task.done()
+    finally:
+        if not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        await queue_service.cleanup_job(job_id)
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_without_data_parameter(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test that build_public_tmp endpoint works without data parameter.
+
+    Security Test: Verifies that when no data parameter is provided, the endpoint
+    works normally and returns a job_id. This proves the data parameter is optional
+    and the stored flow definition is always used.
+    """
+    # Create a flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Make the flow public
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    # Set a client_id cookie
+    client.cookies.set("client_id", "test-no-data-client")
+
+    # Build without providing data parameter
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    # Verify the request succeeded
+    assert response.status_code == codes.OK
+    response_data = response.json()
+    assert "job_id" in response_data
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_custom_component(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """H1-3754930 follow-up: an unrecognized custom component must be rejected on the public path.
+
+    Under the default allow_public_custom_components=False, the unauthenticated public build path
+    runs only the server's trusted code for known component types and rejects custom/unknown
+    component code, so an anonymous visitor cannot trigger arbitrary server-side code execution
+    even when allow_custom_components is True (the default).
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "EvilCustom-1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "EvilCustom-1",
+                "type": "TotallyCustomEvilComponent",
+                "node": {
+                    "display_name": "Evil Custom",
+                    "template": {"code": {"value": "import os\nos.system('id')\n"}},
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-custom-component-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_get_build_events_public_tmp_job_accessible_by_any_auth_user(
+    client, json_memory_chatbot_no_llm, logged_in_headers, user_two, monkeypatch
+):
+    """A job started via build_public_tmp has no registered owner and is accessible to any authenticated user.
+
+    Verifies that the public marker permits access when the queue has no owner.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-public-tmp-events-client")
+    start_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+    assert start_response.status_code == codes.OK
+    job_id = start_response.json()["job_id"]
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+    login_response = await client.post("api/v1/login", data=login_data)
+    assert login_response.status_code == codes.OK
+    other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    import langflow.api.v1.chat
+    from fastapi import Response
+
+    async def mock_get_flow_events_response(**_kwargs):
+        return Response(content="", media_type="application/x-ndjson")
+
+    monkeypatch.setattr(langflow.api.v1.chat, "get_flow_events_response", mock_get_flow_events_response)
+
+    events_response = await get_build_events(client, job_id, other_headers)
+    assert events_response.status_code == codes.OK
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_cancel_build_public_tmp_job_accessible_by_any_auth_user(
+    client, json_memory_chatbot_no_llm, logged_in_headers, user_two, monkeypatch
+):
+    """A job started via build_public_tmp has no registered owner and can be cancelled by any authenticated user.
+
+    Verifies that the public marker permits cancellation when the queue has no owner.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-public-tmp-cancel-client")
+    start_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+    assert start_response.status_code == codes.OK
+    job_id = start_response.json()["job_id"]
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+    login_response = await client.post("api/v1/login", data=login_data)
+    assert login_response.status_code == codes.OK
+    other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    import langflow.api.v1.chat
+
+    async def mock_cancel_flow_build(*_args, **_kwargs):
+        return True
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build)
+
+    cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=other_headers)
+    assert cancel_response.status_code == codes.OK
+    assert cancel_response.json()["success"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.security
+async def test_job_owner_cleaned_up_after_cleanup_job():
+    """JobQueueService.cleanup_job removes the _job_owners entry for the job."""
+    service = JobQueueService()
+    service.start()
+
+    try:
+        job_id = str(uuid.uuid4())
+        user_id = uuid.uuid4()
+
+        service.create_queue(job_id)
+
+        async def _noop():
+            await asyncio.sleep(0)
+
+        service.start_job(job_id, _noop())
+        await asyncio.sleep(0.05)
+        await service.register_job_owner(job_id, user_id)
+
+        assert await service.get_job_owner(job_id) == user_id
+
+        await service.cleanup_job(job_id)
+
+        assert await service.get_job_owner(job_id) is None
+    finally:
+        service._closed = True
+        if service._cleanup_task:
+            service._cleanup_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await service._cleanup_task
+
+
+# ---------------------------------------------------------------------------
+# CVE-2026-33017: session-id namespacing on build_public_tmp
+# ---------------------------------------------------------------------------
+
+
+def _stub_start_flow_build(monkeypatch, captured: dict) -> None:
+    """Capture the kwargs that would be dispatched to start_flow_build without running the build."""
+    import langflow.api.v1.chat as chat_module
+
+    async def _fake_start_flow_build(**kwargs):
+        captured.update(kwargs)
+        return "00000000-0000-0000-0000-00000000ffff"
+
+    monkeypatch.setattr(chat_module, "start_flow_build", _fake_start_flow_build)
+
+
+def _send_unauthenticated(client, client_id: str) -> None:
+    """Drop login cookies and set the public client_id cookie.
+
+    The shared AsyncClient persists access-token cookies from logged_in_headers
+    that would otherwise let get_current_user_optional resolve a user and
+    namespace under user_id -- not the unauthenticated shape the CVE targets.
+    """
+    client.cookies.clear()
+    client.cookies.set("client_id", client_id)
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_strips_persisted_owner_secrets_before_dispatch(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """The public V1 build may execute trusted code, but never a secret embedded in the owner's graph."""
+    import langflow.api.v1.chat as chat_module
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    prepared = json.loads(json_memory_chatbot_no_llm)["data"]
+    prepared["nodes"][0]["data"]["node"]["template"]["owner_api_key"] = {
+        "name": "owner_api_key",
+        "password": True,
+        "value": "sk-owner-secret",  # pragma: allowlist secret
+    }
+
+    async def _prepare(_flow_data):
+        return prepared
+
+    captured: dict = {}
+    monkeypatch.setattr(chat_module, "prepare_public_flow_build", _prepare)
+    _stub_start_flow_build(monkeypatch, captured)
+    _send_unauthenticated(client, "secret-isolation-client")
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "secret-isolation-session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+    dispatched = captured["data"]
+    assert dispatched is not None
+    assert dispatched.nodes[0]["data"]["node"]["template"]["owner_api_key"]["value"] is None
+    assert prepared["nodes"][0]["data"]["node"]["template"]["owner_api_key"]["value"] == "sk-owner-secret"
+    from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    assert captured["current_user"].id == PUBLIC_ANONYMOUS_ACTOR_ID
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_reauthorizes_reloaded_flow_after_grant_transition(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """A grant revoked between admission and reload cannot execute the later snapshot."""
+    import langflow.api.v1.chat as chat_module
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+    from langflow.services.authorization.public_access import public_execution_user
+    from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+    from langflow.services.deps import session_scope
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    client_id = "v1-reload-revocation-client"
+
+    async def _admit_first_snapshot_then_revoke(**_kwargs):
+        async with session_scope() as session:
+            flow = await session.get(Flow, flow_id)
+            assert flow is not None
+            flow.access_type = AccessTypeEnum.PRIVATE
+            session.add(flow)
+            await session.commit()
+        return public_execution_user(), compute_virtual_flow_id(client_id, flow_id, principal_type="client")
+
+    captured: dict = {}
+    monkeypatch.setattr(chat_module, "verify_public_flow_and_get_user", _admit_first_snapshot_then_revoke)
+    _stub_start_flow_build(monkeypatch, captured)
+    _send_unauthenticated(client, client_id)
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "transition"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.NOT_FOUND
+    assert response.json() == {"detail": "Flow not found"}
+    assert captured == {}
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_namespaces_caller_session(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Caller-supplied session equal to the real flow UUID is wrapped under the namespace.
+
+    The threat: /api/v1/run hands out session_id == flow_id by default, and the
+    flow UUID is visible in URLs. Without namespacing, an unauthenticated caller
+    can pass that UUID as inputs.session and a Memory component reads its history.
+    """
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client_id = "ns-test-client"
+    _send_unauthenticated(client, client_id)
+    victim_session = str(flow_id)
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": victim_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
+    sent_inputs = captured["inputs"]
+    assert sent_inputs is not None
+    assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
+    assert sent_inputs.session != victim_session
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_session_already_namespaced_unchanged(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Idempotency: a value already in-namespace is forwarded as-is, not double-wrapped."""
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client_id = "ns-passthrough-client"
+    _send_unauthenticated(client, client_id)
+    namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
+    already_scoped = f"{namespace}:thread-1"
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": already_scoped}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+    assert captured["inputs"].session == already_scoped
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_isolates_disjoint_clients(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Different client_ids submitting the same session string land in disjoint namespaces."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    shared_session = "shared-session-name"
+
+    _send_unauthenticated(client, "client-A")
+    response_a = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": shared_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response_a.status_code == codes.OK
+    session_a = captured["inputs"].session
+
+    captured.clear()
+    _send_unauthenticated(client, "client-B")
+    response_b = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": shared_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response_b.status_code == codes.OK
+    session_b = captured["inputs"].session
+
+    assert session_a != session_b
+    assert session_a.endswith(f":{shared_session}")
+    assert session_b.endswith(f":{shared_session}")
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_no_session_passthrough(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """No inputs supplied: namespacing is skipped; downstream falls back to the virtual flow ID."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    _send_unauthenticated(client, "ns-default-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": None},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+    assert captured["inputs"] is None
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_empty_session_is_namespaced(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """An empty-string session is scoped, not forwarded as-is.
+
+    Empty string is currently *coincidentally* safe (downstream `or virtual_id`
+    fallbacks save it), but a refactor of either branch would silently regress.
+    Pin the contract here: empty becomes ``f"{namespace}:"``.
+    """
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client_id = "ns-empty-client"
+    _send_unauthenticated(client, client_id)
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": ""}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
+    sent_session = captured["inputs"].session
+    assert sent_session != ""
+    assert sent_session == f"{expected_namespace}:"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_authenticated_namespace_uses_user_id(
+    client, json_memory_chatbot_no_llm, logged_in_headers, active_user, monkeypatch
+):
+    """AUTO_LOGIN=False (prod-like) + valid bearer: the namespace is derived from user.id."""
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client.cookies.set("client_id", "should-be-ignored")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "thread-A"}},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    expected_namespace = str(compute_virtual_flow_id(active_user.id, flow_id, principal_type="user"))
+    assert captured["inputs"].session == f"{expected_namespace}:thread-A"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
+    client, json_memory_chatbot_no_llm, logged_in_headers, active_user, monkeypatch
+):
+    """End-to-end proof that namespacing prevents Memory query collision.
+
+    A victim message stored under ``session_id == flow_id`` is unreachable via a
+    Memory query keyed on the namespaced session that build_public_tmp forwards.
+    This is the test that catches a regression in either the endpoint guard or
+    the helper -- the shape-only tests above would still pass if the rewrite
+    was applied but the downstream query stopped honoring it.
+    """
+    from lfx.memory import aadd_messages, aget_messages
+    from lfx.schema.message import Message
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    victim_session = str(flow_id)
+    await aadd_messages(
+        Message(text="victim-secret", sender="User", sender_name="User", session_id=victim_session),
+        flow_id=flow_id,
+        user_id=active_user.id,
+    )
+    seeded = await aget_messages(session_id=victim_session, flow_id=flow_id, user_id=active_user.id)
+    assert any(m.text == "victim-secret" for m in seeded)
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+    _send_unauthenticated(client, "leak-test-client")
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": victim_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    namespaced_session = captured["inputs"].session
+    assert namespaced_session != victim_session
+
+    leaked = await aget_messages(session_id=namespaced_session, flow_id=flow_id, user_id=active_user.id)
+    assert all(m.text != "victim-secret" for m in leaked)
+
+    still_seeded = await aget_messages(session_id=victim_session, flow_id=flow_id, user_id=active_user.id)
+    assert any(m.text == "victim-secret" for m in still_seeded)
+
+
+def test_scope_session_to_namespace_helper():
+    from langflow.api.utils import scope_session_to_namespace
+
+    ns = "namespace-A"
+    assert scope_session_to_namespace(None, ns) is None
+    assert scope_session_to_namespace("", ns) == f"{ns}:"
+    assert scope_session_to_namespace(ns, ns) == ns
+    assert scope_session_to_namespace(f"{ns}:thread-1", ns) == f"{ns}:thread-1"
+    assert scope_session_to_namespace("victim-session", ns) == f"{ns}:victim-session"
+    assert scope_session_to_namespace("victim-session", "namespace-B") == "namespace-B:victim-session"
+    # A foreign-namespace prefix is treated as out-of-namespace and gets re-wrapped.
+    assert scope_session_to_namespace("namespace-B:victim", "namespace-A") == "namespace-A:namespace-B:victim"
+
+
+# ── Public job registry unit tests ───────────────────────────────────────────
+# CVE fix: unauthenticated callers must not access private-flow job streams
+# by guessing or leaking a job_id from the authenticated build endpoint.
+
+
+async def test_job_queue_service_register_and_check_public_job():
+    """register_public_job marks a job as public; is_public_job reflects that."""
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+
+    # Why: job not registered yet — must return False before registration
+    assert svc.is_public_job(job_id) is False
+
+    await svc.register_public_job(job_id)
+
+    # Why: job registered — must return True after registration
+    assert svc.is_public_job(job_id) is True
+
+
+def test_job_queue_service_unregistered_job_not_public():
+    """A job_id that was never registered is not considered public."""
+    svc = JobQueueService()
+    assert svc.is_public_job(str(uuid.uuid4())) is False
+
+
+async def test_job_queue_service_is_public_job_async_base():
+    """is_public_job_async on base class delegates to in-memory is_public_job."""
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+
+    # Why: async variant must mirror sync variant — False before, True after
+    assert await svc.is_public_job_async(job_id) is False
+    await svc.register_public_job(job_id)
+    assert await svc.is_public_job_async(job_id) is True
+
+
+async def test_job_queue_service_cleanup_removes_public_registration():
+    """cleanup_job discards the public registration so the job_id cannot be reused.
+
+    Why: tests the actual cleanup_job contract — not the internal set.
+    If cleanup_job stops calling discard, this test must catch it.
+    """
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+    await svc.register_public_job(job_id)
+    assert svc.is_public_job(job_id) is True
+
+    # Call the real cleanup path — not svc._public_jobs.discard directly.
+    # cleanup_job early-returns when job_id is not in _queues, but the
+    # _public_jobs.discard call is unconditional (after the early-return guard),
+    # so we need to reach it. Seed a minimal queue entry first.
+    svc._queues[job_id] = (asyncio.Queue(), None, None, None)  # type: ignore[arg-type]
+    await svc.cleanup_job(job_id)
+
+    # Why: if cleanup_job ever drops the discard call, is_public_job still returns True here
+    assert svc.is_public_job(job_id) is False
+
+
+@pytest.mark.security
+@pytest.mark.parametrize(
+    ("route", "expected_detail"),
+    [
+        ("events?event_delivery=polling", "Public flow events are unavailable."),
+        ("cancel", "Public flow cancellation failed."),
+    ],
+)
+@pytest.mark.parametrize("failure_kind", ["backend", "unexpected"])
+async def test_public_marker_outage_returns_fixed_503(client, monkeypatch, route, expected_detail, failure_kind):
+    """A Redis marker failure cannot disclose backend connection details to anonymous callers."""
+    from langflow.services.deps import get_queue_service
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    queue_service = get_queue_service()
+    secret_detail = "Redis unavailable at localhost:6379 db=1"  # noqa: S105  # pragma: allowlist secret
+    failure = (
+        JobQueueBackendUnavailableError(secret_detail) if failure_kind == "backend" else RuntimeError(secret_detail)
+    )
+
+    async def fail_marker(_job_id):
+        raise failure
+
+    monkeypatch.setattr(queue_service, "is_public_job_async", fail_marker)
+    job_id = str(uuid.uuid4())
+    url = f"api/v1/build_public_tmp/{job_id}/{route}"
+    response = await (client.get(url) if route.startswith("events") else client.post(url))
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json() == {"detail": expected_detail}
+    assert secret_detail not in response.text
+
+
+@pytest.mark.security
+async def test_public_events_failure_has_fixed_wire_detail_and_logs_original(client, monkeypatch):
+    """An internal public-events failure is logged server-side but never reflected to an anonymous caller."""
+    import langflow.api.v1.chat as chat_module
+    from fastapi import HTTPException
+    from langflow.services.deps import get_queue_service
+
+    job_id = str(uuid.uuid4())
+    secret_detail = "redis backend failed with credential=owner-secret"  # noqa: S105  # pragma: allowlist secret
+    queue_service = get_queue_service()
+    await queue_service.register_public_job(job_id)
+    log_error = AsyncMock()
+
+    async def fail_events(**_kwargs):
+        raise HTTPException(status_code=500, detail=secret_detail)
+
+    monkeypatch.setattr(chat_module, "get_flow_events_response", fail_events)
+    monkeypatch.setattr(chat_module, "logger", SimpleNamespace(aerror=log_error))
+    try:
+        response = await client.get(f"api/v1/build_public_tmp/{job_id}/events?event_delivery=polling")
+    finally:
+        queue_service._public_jobs.discard(job_id)
+
+    assert response.status_code == codes.INTERNAL_SERVER_ERROR
+    assert response.json() == {"detail": "Public flow events are unavailable."}
+    assert secret_detail not in response.text
+    assert secret_detail in str(log_error.await_args)
+
+
+@pytest.mark.security
+@pytest.mark.parametrize(
+    ("failure", "expected_status", "expected_detail", "log_method"),
+    [
+        (ValueError("owner queue id leaked"), codes.NOT_FOUND, "Job not found", "awarning"),
+        (
+            RuntimeError("redis credential owner-secret"),  # pragma: allowlist secret
+            codes.INTERNAL_SERVER_ERROR,
+            "Public flow cancellation failed.",
+            "aexception",
+        ),
+    ],
+)
+async def test_public_cancel_failure_has_fixed_wire_detail_and_logs_original(
+    client,
+    monkeypatch,
+    failure,
+    expected_status,
+    expected_detail,
+    log_method,
+):
+    """Public cancellation maps internal failures to fixed details while retaining diagnostics in logs."""
+    import langflow.api.v1.chat as chat_module
+    from langflow.services.deps import get_queue_service
+
+    job_id = str(uuid.uuid4())
+    queue_service = get_queue_service()
+    await queue_service.register_public_job(job_id)
+    log = AsyncMock()
+    logger = SimpleNamespace(awarning=AsyncMock(), aexception=AsyncMock())
+    setattr(logger, log_method, log)
+
+    async def fail_cancel(**_kwargs):
+        raise failure
+
+    monkeypatch.setattr(chat_module, "cancel_flow_build", fail_cancel)
+    monkeypatch.setattr(chat_module, "logger", logger)
+    try:
+        response = await client.post(f"api/v1/build_public_tmp/{job_id}/cancel")
+    finally:
+        queue_service._public_jobs.discard(job_id)
+
+    assert response.status_code == expected_status
+    assert response.json() == {"detail": expected_detail}
+    assert str(failure) not in response.text
+    assert str(failure) in str(log.await_args)
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_private_job_id_blocked_on_public_events_endpoint(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """A job_id started via the authenticated build endpoint must be rejected by the public events endpoint.
+
+    Security proof: before the fix, any caller who knew or guessed a private job_id
+    could read the live event stream (LLM output, API keys, tracebacks) without auth.
+    After the fix, _assert_public_job returns HTTP 404 because the job was never
+    registered via register_public_job.
+
+    Why 404 not 403: returning 403 would confirm the job exists under a different
+    access tier, leaking information about private builds.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start a PRIVATE (authenticated) build — job_id never passed through build_public_tmp
+    private_start = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert private_start.status_code == codes.OK
+    private_job_id = private_start.json()["job_id"]
+
+    # Why: the shared AsyncClient persists access-token cookies from logged_in_headers.
+    # Without clearing them, get_current_user_optional could resolve a user on this
+    # "public" request, which would not exercise the unauthenticated attack path.
+    client.cookies.clear()
+
+    # Attempt to read the private job's events via the unauthenticated public endpoint
+    # Why: this is the exact attack vector — attacker has job_id, tries public endpoint
+    events_response = await client.get(
+        f"api/v1/build_public_tmp/{private_job_id}/events?event_delivery=polling",
+        headers={"Accept": "application/x-ndjson"},
+    )
+
+    # Must be 404 — gate blocks private job from public endpoint
+    assert events_response.status_code == codes.NOT_FOUND
+    assert events_response.json()["detail"] == "Job not found"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_private_job_id_blocked_on_public_cancel_endpoint(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """A job_id started via the authenticated build endpoint must be rejected by the public cancel endpoint.
+
+    Security proof: before the fix, an unauthenticated attacker could cancel any
+    in-flight private build as a denial-of-service by supplying a known job_id.
+    After the fix, _assert_public_job returns HTTP 404.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start a PRIVATE (authenticated) build
+    private_start = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert private_start.status_code == codes.OK
+    private_job_id = private_start.json()["job_id"]
+
+    # Why: the shared AsyncClient persists access-token cookies from logged_in_headers.
+    # Without clearing them, get_current_user_optional could resolve a user on this
+    # "public" request, which would not exercise the unauthenticated attack path.
+    client.cookies.clear()
+
+    # Attempt to cancel the private job via the unauthenticated public endpoint
+    cancel_response = await client.post(
+        f"api/v1/build_public_tmp/{private_job_id}/cancel",
+        headers={"Content-Type": "application/json"},
+    )
+
+    # Must be 404 — gate blocks private job from public cancel endpoint
+    assert cancel_response.status_code == codes.NOT_FOUND
+    assert cancel_response.json()["detail"] == "Job not found"

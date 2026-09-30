@@ -1,24 +1,27 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { normalizeTimeString } from "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { BorderTrail } from "@/components/core/border-trail";
 import { Button } from "@/components/ui/button";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { BuildStatus } from "@/constants/enums";
-import { normalizeTimeString } from "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { getRunningNodeLabel } from "./helpers/get-running-node-label";
 import {
   CONTAINER_VARIANTS,
   DISMISS_BUTTON_VARIANTS,
+  getTimeVariants,
   RETRY_BUTTON_VARIANTS,
   STOP_BUTTON_VARIANTS,
-  getTimeVariants,
 } from "./helpers/visual-variants";
 
 export default function FlowBuildingComponent() {
+  const { t } = useTranslation();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const flowBuildStatus = useFlowStore((state) => state.flowBuildStatus);
   const buildInfo = useFlowStore((state) => state.buildInfo);
@@ -29,6 +32,7 @@ export default function FlowBuildingComponent() {
   const [dismissed, setDismissed] = useState(false);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const prevIsBuilding = useRef(isBuilding);
+  const startTimeRef = useRef<number | null>(null);
   const pastBuildFlowParams = useFlowStore(
     (state) => state.pastBuildFlowParams,
   );
@@ -50,12 +54,17 @@ export default function FlowBuildingComponent() {
     if (isBuilding && !prevIsBuilding.current) {
       setDismissed(false);
       setDuration(0);
+      startTimeRef.current = Date.now();
     }
 
-    if (isBuilding) {
+    if (isBuilding && startTimeRef.current !== null) {
       intervalId = setInterval(() => {
-        setDuration((prev) => prev + 10);
+        setDuration(Date.now() - startTimeRef.current!);
       }, 10);
+    }
+
+    if (!isBuilding && prevIsBuilding.current) {
+      startTimeRef.current = null;
     }
 
     prevIsBuilding.current = isBuilding;
@@ -78,8 +87,10 @@ export default function FlowBuildingComponent() {
     return (
       <TextShimmer duration={1}>
         {statusBuilding.length > 0
-          ? `Running ${statusBuilding[0]?.id}`
-          : "Running flow"}
+          ? t("flowBuild.runningNode", {
+              id: getRunningNodeLabel(statusBuilding[0]?.id),
+            })
+          : t("flowBuild.runningFlow")}
       </TextShimmer>
     );
   }, [isBuilding, statusBuilding]);
@@ -113,7 +124,7 @@ export default function FlowBuildingComponent() {
   return (
     <AnimatePresence mode="wait">
       {(isBuilding || buildInfo?.error || buildInfo?.success) && !dismissed && (
-        <div className="absolute bottom-2 left-1/2 z-50 w-[530px] -translate-x-1/2">
+        <div className="absolute bottom-16 left-1/2 z-50 w-[530px] -translate-x-1/2">
           <motion.div
             initial="hidden"
             animate="visible"
@@ -149,14 +160,14 @@ export default function FlowBuildingComponent() {
                         {buildingContent ? (
                           buildingContent
                         ) : buildInfo?.success ? (
-                          "Flow built successfully"
+                          t("flowBuild.builtSuccessfully")
                         ) : (
                           <div className="flex items-center gap-2">
                             <ForwardedIconComponent
                               name="CircleAlert"
                               className="h-5 w-5"
                             />
-                            Flow build failed
+                            {t("flowBuild.buildFailed")}
                           </div>
                         )}
                       </div>
@@ -192,7 +203,7 @@ export default function FlowBuildingComponent() {
                                   transition={{ duration: 0.2 }}
                                 >
                                   <Button size="sm" onClick={handleRetry}>
-                                    Retry
+                                    {t("flowBuild.retry")}
                                   </Button>
                                 </motion.div>
                                 <motion.div
@@ -208,7 +219,7 @@ export default function FlowBuildingComponent() {
                                     className="text-primary"
                                     onClick={handleDismiss}
                                   >
-                                    Dismiss
+                                    {t("flowBuild.dismiss")}
                                   </Button>
                                 </motion.div>
                               </motion.div>
@@ -228,7 +239,7 @@ export default function FlowBuildingComponent() {
                                   size="sm"
                                   onClick={handleStop}
                                 >
-                                  Stop
+                                  {t("flowBuild.stop")}
                                 </Button>
                               </motion.div>
                             )}
@@ -240,19 +251,22 @@ export default function FlowBuildingComponent() {
                   <AnimatePresence>
                     {buildInfo?.error && (
                       <motion.div
+                        role="region"
+                        aria-label={t("flowBuild.buildFailed")}
+                        tabIndex={0}
+                        className="max-h-48 overflow-y-auto"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
                       >
                         <Markdown
-                          linkTarget="_blank"
                           remarkPlugins={[remarkGfm]}
-                          className="my-1.5 align-text-top truncate-doubleline"
+                          className="my-1.5 break-words [&>p+p]:mt-2"
                           components={{
                             a: ({ node, ...props }) => (
                               <a
-                                href={props.href}
+                                {...props}
                                 target="_blank"
                                 className="underline"
                                 rel="noopener noreferrer"
@@ -260,13 +274,6 @@ export default function FlowBuildingComponent() {
                                 {props.children}
                               </a>
                             ),
-                            p({ node, ...props }) {
-                              return (
-                                <span className="inline-block w-fit max-w-full align-text-top">
-                                  {props.children}
-                                </span>
-                              );
-                            },
                           }}
                         >
                           {buildInfo?.error?.join("\n")}

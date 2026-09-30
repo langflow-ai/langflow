@@ -1,35 +1,38 @@
-import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import {
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
+} from "../../utils/open-advanced-options";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user must interact with chat with Input/Output",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    // Open Playground
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
 
+    await page.getByTestId("input-chat-playground").click();
     await page.getByTestId("input-chat-playground").fill("Hello, how are you?");
 
     await page.waitForSelector('[data-testid="button-send"]', {
@@ -37,77 +40,76 @@ test(
     });
 
     await page.getByTestId("button-send").click();
-    let valueUser = await page.getByTestId("sender_name_user").textContent();
 
-    await page.waitForSelector('[data-testid="sender_name_ai"]', {
-      timeout: 100000,
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
     });
 
-    let valueAI = await page.getByTestId("sender_name_ai").textContent();
+    await expect(
+      page.locator('[data-testid^="chat-message-User"]').first(),
+    ).toHaveText("Hello, how are you?");
 
-    expect(valueUser).toBe("User");
-    expect(valueAI).toContain("AI");
+    await expect(
+      page.locator('[data-testid^="chat-message-AI"]').first(),
+    ).not.toBeEmpty();
 
-    await page.keyboard.press("Escape");
+    // close the playground (fullscreen covers the toolbar, use the close button)
+    await page.getByTestId("playground-close-button").click();
 
-    await page
-      .getByTestId("textarea_str_input_value")
-      .nth(0)
-      .fill(
-        "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
-      );
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("application", { name: "Chat Input node" }).click();
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "sender_name");
+    await closeParametersPanel(page);
 
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("button-send").click();
-    await page.getByText("Close", { exact: true }).click();
-    await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").click();
-    await page.getByTestId("showsender_name").click();
-    await page.getByText("Close").last().click();
-
-    await page.getByText("Chat Output", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").click();
-    await page.getByTestId("showsender_name").click();
-    await page.getByText("Close").last().click();
+    await page.getByRole("application", { name: "Chat Output node" }).click();
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "sender_name");
+    await closeParametersPanel(page);
 
     await page
       .getByTestId("popover-anchor-input-sender_name")
-      .nth(1)
+      .nth(0)
       .fill("TestSenderNameUser");
     await page
       .getByTestId("popover-anchor-input-sender_name")
-      .nth(0)
+      .nth(1)
       .fill("TestSenderNameAI");
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
     });
 
+    await page.getByTestId("input-chat-playground").click();
+    await page.getByTestId("input-chat-playground").fill("Are you doing ok?");
+
     await page.getByTestId("button-send").click();
 
-    valueUser = await page
-      .getByTestId("sender_name_testsendernameuser")
-      .textContent();
-    valueAI = await page
-      .getByTestId("sender_name_testsendernameai")
-      .textContent();
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
+    });
 
-    expect(valueUser).toContain("TestSenderNameUser");
-    expect(valueAI).toContain("TestSenderNameAI");
+    await expect(
+      page.locator('[data-testid^="chat-message-TestSenderNameUser"]').first(),
+    ).toHaveText("Are you doing ok?");
 
-    expect(
-      await page
-        .getByText(
-          "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
-          { exact: true },
-        )
-        .isVisible(),
-    );
+    await expect(
+      page.locator('[data-testid^="chat-message-TestSenderNameAI"]').first(),
+    ).not.toBeEmpty();
+
+    await page.getByTestId("playground-close-button").click();
   },
 );

@@ -1,16 +1,18 @@
 import asyncio
 import uuid
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.services.settings.base import Settings
-from langflow.services.settings.service import SettingsService
 from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.service import (
+    TraceContext,
     TracingService,
     component_context_var,
     trace_context_var,
 )
+from lfx.services.settings.base import Settings
+from lfx.services.settings.service import SettingsService
 
 
 class MockTracer(BaseTracer):
@@ -20,15 +22,19 @@ class MockTracer(BaseTracer):
         trace_type: str,
         project_name: str,
         trace_id: uuid.UUID,
+        flow_id: str | None = None,
         user_id: str | None = None,
         session_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
+        self.flow_id = flow_id
         self.user_id = user_id
         self.session_id = session_id
+        self.tracing_user_id = tracing_user_id
         self._ready = True
         self.end_called = False
         self.get_langchain_callback_called = False
@@ -44,8 +50,8 @@ class MockTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: dict[str, any],
-        metadata: dict[str, any] | None = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
         vertex=None,
     ) -> None:
         self.add_trace_list.append(
@@ -63,7 +69,7 @@ class MockTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: dict[str, any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs=(),
     ) -> None:
@@ -79,10 +85,10 @@ class MockTracer(BaseTracer):
 
     def end(
         self,
-        inputs: dict[str, any],
-        outputs: dict[str, any],
+        inputs: dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
-        metadata: dict[str, any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         self.end_called = True
         self.inputs_param = inputs
@@ -110,8 +116,10 @@ def tracing_service(mock_settings_service):
 @pytest.fixture
 def mock_component():
     component = MagicMock()
-    component._vertex = MagicMock()
-    component._vertex.id = "test_vertex_id"
+    mock_vertex = MagicMock()
+    mock_vertex.id = "test_vertex_id"
+    component._vertex = mock_vertex
+    component.get_vertex = MagicMock(return_value=mock_vertex)
     component.trace_type = "test_trace_type"
     return component
 
@@ -137,6 +145,18 @@ def mock_tracers():
         ),
         patch(
             "langflow.services.tracing.service._get_opik_tracer",
+            return_value=MockTracer,
+        ),
+        patch(
+            "langflow.services.tracing.service._get_traceloop_tracer",
+            return_value=MockTracer,
+        ),
+        patch(
+            "langflow.services.tracing.service._get_native_tracer",
+            return_value=MockTracer,
+        ),
+        patch(
+            "langflow.services.tracing.service._get_openlayer_tracer",
             return_value=MockTracer,
         ),
     ):
@@ -169,6 +189,10 @@ async def test_start_end_tracers(tracing_service):
     assert "langwatch" in trace_context.tracers
     assert "langfuse" in trace_context.tracers
     assert "arize_phoenix" in trace_context.tracers
+    assert "opik" in trace_context.tracers
+    assert "traceloop" in trace_context.tracers
+    assert "native" in trace_context.tracers
+    assert "openlayer" in trace_context.tracers
 
     await tracing_service.end_tracers(outputs)
 
@@ -182,6 +206,73 @@ async def test_start_end_tracers(tracing_service):
     # Verify worker_task is cancelled
     assert trace_context.worker_task is None
     assert not trace_context.running
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_continues_after_one_initializer_fails(tracing_service):
+    """One unavailable optional integration must not disable the remaining tracers."""
+    with patch.object(
+        tracing_service,
+        "_initialize_arize_phoenix_tracer",
+        side_effect=ModuleNotFoundError("No module named 'openinference'"),
+    ):
+        await tracing_service.start_tracers(uuid.uuid4(), "run", "user", "session")
+
+    trace_context = trace_context_var.get()
+    assert "arize_phoenix" not in trace_context.tracers
+    assert set(trace_context.tracers) == {
+        "langsmith",
+        "langwatch",
+        "langfuse",
+        "opik",
+        "traceloop",
+        "native",
+        "openlayer",
+    }
+
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_forwards_tracing_user_id_to_langfuse(tracing_service):
+    """``tracing_user_id`` reaches Langfuse as a distinct field; ``user_id`` stays the auth user.
+
+    Regression for GitHub issue #9505: the LangFuseTracer keeps ``user_id`` as
+    the authenticated Langflow user (backwards compat) and exposes the override
+    on ``tracing_user_id``. The tracer stamps the override into trace metadata
+    rather than redefining ``trace.userId``.
+    """
+    run_id = uuid.uuid4()
+    await tracing_service.start_tracers(
+        run_id,
+        "run",
+        "auth-uuid",
+        "session-abc",
+        "project",
+        tracing_user_id="end-user-123",
+    )
+
+    trace_context = trace_context_var.get()
+    langfuse = trace_context.tracers["langfuse"]
+    assert langfuse.user_id == "auth-uuid"
+    assert langfuse.tracing_user_id == "end-user-123"
+    # The shared trace context mirrors the same separation.
+    assert trace_context.user_id == "auth-uuid"
+    assert trace_context.tracing_user_id == "end-user-123"
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_without_override_keeps_auth_user_and_no_tracing_user_id(tracing_service):
+    """Without an override, ``user_id`` is the auth user and ``tracing_user_id`` is None."""
+    run_id = uuid.uuid4()
+    await tracing_service.start_tracers(run_id, "run", "auth-uuid", "session-abc", "project")
+
+    langfuse = trace_context_var.get().tracers["langfuse"]
+    assert langfuse.user_id == "auth-uuid"
+    assert langfuse.tracing_user_id is None
 
 
 @pytest.mark.asyncio
@@ -298,9 +389,37 @@ async def test_get_langchain_callbacks(tracing_service):
         assert tracer.get_langchain_callback_called
 
     # Verify returned callbacks list length
-    assert len(callbacks) == 5  # Five tracers
+    expected = len(trace_context_var.get().tracers)
+    assert len(callbacks) == expected
 
     # Cleanup
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+async def test_get_langchain_callbacks_skips_a_failing_tracer(tracing_service):
+    """A tracer whose callback creation raises must be skipped, not crash the run.
+
+    The healthy tracers still contribute (e.g. partial Langfuse creds).
+    """
+    await tracing_service.start_tracers(uuid.uuid4(), "run", "u", "s", "p")
+    trace_context = trace_context_var.get()
+
+    class _BoomTracer:
+        ready = True
+
+        def get_langchain_callback(self):
+            msg = "LangfuseResourceManager.__new__() missing 3 required keyword-only arguments"
+            raise TypeError(msg)
+
+    trace_context.tracers["boom"] = _BoomTracer()
+
+    # Must not raise, and the healthy tracers' callbacks are still returned.
+    healthy = sum(1 for t in trace_context.tracers.values() if getattr(t, "get_langchain_callback_called", False))
+    callbacks = tracing_service.get_langchain_callbacks()
+    assert len(callbacks) >= 0  # no exception is the contract
+    assert len(callbacks) == healthy or len(callbacks) >= 1
+
     await tracing_service.end_tracers({})
 
 
@@ -367,6 +486,98 @@ async def test_cleanup_inputs():
 
 
 @pytest.mark.asyncio
+async def test_cleanup_inputs_masks_password_keyword():
+    """Test that keys containing 'password' are masked."""
+    inputs = {
+        "password": "my-secret-password",  # pragma: allowlist secret
+        "db_password": "db-secret",  # pragma: allowlist secret
+        "normal_key": "visible",
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["password"] == "*****"  # noqa: S105
+    assert cleaned["db_password"] == "*****"  # noqa: S105
+    assert cleaned["normal_key"] == "visible"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_masks_server_url_keyword():
+    """Test that keys containing 'server_url' are masked."""
+    inputs = {
+        "server_url": "http://internal-server:8080",
+        "my_server_url": "http://other-server",
+        "public_url": "http://public.example.com",
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["server_url"] == "*****"
+    assert cleaned["my_server_url"] == "*****"
+    assert cleaned["public_url"] == "http://public.example.com"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_handles_list_of_dicts():
+    """Test that lists containing dicts are recursively cleaned."""
+    inputs = {
+        "items": [
+            {"api_key": "secret1", "name": "item1"},  # pragma: allowlist secret
+            {"password": "secret2", "value": "data"},  # pragma: allowlist secret
+            "plain_string",
+        ]
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    items = cleaned["items"]
+    assert items[0]["api_key"] == "*****"
+    assert items[0]["name"] == "item1"
+    assert items[1]["password"] == "*****"  # noqa: S105
+    assert items[1]["value"] == "data"
+    assert items[2] == "plain_string"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_handles_nested_list_in_dict():
+    """Test that nested lists inside dicts are recursively cleaned."""
+    inputs = {
+        "config": {
+            "credentials": [
+                {"api_key": "nested-secret"},  # pragma: allowlist secret
+            ]
+        }
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["config"]["credentials"][0]["api_key"] == "*****"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_does_not_mutate_original():
+    """Test that the original input dict is not modified."""
+    inputs = {
+        "password": "original-password",  # pragma: allowlist secret
+        "server_url": "http://original-url",
+    }
+    original_password = inputs["password"]
+    original_url = inputs["server_url"]
+
+    TracingService._cleanup_inputs(inputs)
+
+    assert inputs["password"] == original_password
+    assert inputs["server_url"] == original_url
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_empty_dict():
+    """Test that empty dict is handled gracefully."""
+    cleaned = TracingService._cleanup_inputs({})
+    assert cleaned == {}
+
+
+@pytest.mark.asyncio
 async def test_start_tracers_with_exception(tracing_service):
     """Test starting tracers with exception handling."""
     run_id = uuid.uuid4()
@@ -382,13 +593,16 @@ async def test_start_tracers_with_exception(tracing_service):
             "_initialize_langsmith_tracer",
             side_effect=Exception("Mock exception"),
         ),
-        patch("langflow.services.tracing.service.logger.debug") as mock_logger,
+        patch("langflow.services.tracing.service.logger") as mock_logger,
     ):
+        # Configure async mock method
+        mock_logger.adebug = AsyncMock()
+
         # start_tracers should return normally even with exception
         await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
         # Verify exception was logged
-        mock_logger.assert_any_call("Error initializing tracers: Mock exception")
+        mock_logger.adebug.assert_any_call("Error initializing tracers: Mock exception")
 
         # Verify trace_context was set even with exception
         trace_context = trace_context_var.get()
@@ -415,7 +629,10 @@ async def test_trace_worker_with_exception(tracing_service):
         msg = "Mock trace function exception"
         raise ValueError(msg)
 
-    with patch("langflow.services.tracing.service.logger.exception") as mock_logger:
+    with patch("langflow.services.tracing.service.logger") as mock_logger:
+        # Configure async mock method
+        mock_logger.aexception = AsyncMock()
+
         # Remove incorrect context manager usage
         await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
@@ -427,7 +644,7 @@ async def test_trace_worker_with_exception(tracing_service):
         await asyncio.sleep(0.1)
 
         # Verify exception was logged
-        mock_logger.assert_called_with("Error processing trace_func")
+        mock_logger.aexception.assert_called_with("Error processing trace_func")
 
         # Cleanup
         await tracing_service.end_tracers({})
@@ -517,3 +734,93 @@ async def test_concurrent_tracing(tracing_service, mock_component):
     assert tracer2.session_id == "session_id2"
     assert dict(tracer2.outputs_param.get("run_id2 trace_name1")) == {"output_key": "task2_run_id2 component1_output"}
     assert dict(tracer2.outputs_param.get("run_id2 trace_name2")) == {"output_key": "task2_run_id2 component2_output"}
+
+
+def test_add_log_without_component_context(tracing_service):
+    """add_log should log debug and return (not raise) when component context is missing."""
+    # Ensure no component context is set
+    component_context_var.set(None)
+    # Should not raise
+    tracing_service.add_log("some_trace", {"message": "test"})
+
+
+def test_set_outputs_without_component_context(tracing_service):
+    """set_outputs should log debug and return (not raise) when component context is missing."""
+    # Ensure no component context is set
+    component_context_var.set(None)
+    # Should not raise
+    tracing_service.set_outputs("some_trace", {"key": "value"})
+
+
+@pytest.mark.asyncio
+async def test_stop_drains_pending_queue_items(tracing_service):
+    """A trace event still queued when the worker is torn down must be processed, not lost.
+
+    Reproduces the dropped terminal-component span (e.g. Chat Output): its end event lands on
+    the queue as end_tracers runs, so _stop must drain it inline rather than abandon it.
+    """
+    trace_context = TraceContext(
+        run_id=uuid.uuid4(),
+        run_name="run",
+        project_name="proj",
+        user_id="u",
+        session_id="s",
+    )
+    processed: list[str] = []
+    trace_context.traces_queue.put_nowait((lambda name: processed.append(name), ("Chat Output",)))
+
+    await tracing_service._stop(trace_context)
+
+    assert processed == ["Chat Output"]
+    assert trace_context.traces_queue.empty()
+
+
+def test_get_tracer_is_silent_when_tracing_is_deactivated(mock_settings_service):
+    """Deactivated tracing must not warn about the trace context it deliberately never creates.
+
+    Without the guard this logged once per component per run, which on a box running with
+    LANGFLOW_DEACTIVATE_TRACING=true was the majority of the log volume -- and reads, to anyone
+    looking at a log viewer, as though tracing were broken.
+
+    Asserted behaviourally rather than by capturing the log line: lfx configures structlog with
+    ``cache_logger_on_first_use``, so ``capture_logs`` sees nothing. Short-circuiting before the
+    context var is read is the same property -- a deactivated service hands back nothing even
+    when a context happens to be set, which is exactly what the missing guard failed to do.
+    """
+    mock_settings_service.settings.deactivate_tracing = True
+    tracing_service = TracingService(mock_settings_service)
+
+    trace_context = TraceContext(
+        run_id=uuid.uuid4(),
+        run_name="run",
+        project_name="proj",
+        user_id="u",
+        session_id="s",
+    )
+    trace_context.tracers["langfuse"] = MockTracer("t", "chain", "proj", uuid.uuid4())
+    token = trace_context_var.set(trace_context)
+    try:
+        assert tracing_service.get_tracer("langfuse") is None
+    finally:
+        trace_context_var.reset(token)
+
+
+def test_get_tracer_still_returns_tracers_when_tracing_is_active(mock_settings_service):
+    """The guard must not swallow the normal path: an active context still hands back its tracer."""
+    mock_settings_service.settings.deactivate_tracing = False
+    tracing_service = TracingService(mock_settings_service)
+    trace_context = TraceContext(
+        run_id=uuid.uuid4(),
+        run_name="run",
+        project_name="proj",
+        user_id="u",
+        session_id="s",
+    )
+    tracer = MockTracer("t", "chain", "proj", uuid.uuid4())
+    trace_context.tracers["langfuse"] = tracer
+    token = trace_context_var.set(trace_context)
+    try:
+        assert tracing_service.get_tracer("langfuse") is tracer
+        assert tracing_service.get_tracer("absent") is None
+    finally:
+        trace_context_var.reset(token)

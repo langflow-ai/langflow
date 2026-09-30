@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { TableOptionsTypeAPI } from "@/types/api";
+import type { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 
 export default function TableOptions({
@@ -23,13 +25,28 @@ export default function TableOptions({
   tableOptions?: TableOptionsTypeAPI;
   paginationInfo?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
+  const [tabIndex, setTabIndex] = useState(-1);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setTabIndex(0);
+    }, 10);
+  }, []);
+
   return (
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
         {addRow && !tableOptions?.block_add && (
           <div>
-            <ShadTooltip content={"Add a new row"}>
-              <Button data-testid="add-row-button" unstyled onClick={addRow}>
+            <ShadTooltip content={t("table.addRow")}>
+              <Button
+                data-testid="add-row-button"
+                aria-label={t("table.addRow")}
+                unstyled
+                onClick={addRow}
+                tabIndex={tabIndex}
+              >
                 <IconComponent
                   name="Plus"
                   className={cn("h-5 w-5 text-primary transition-all")}
@@ -43,17 +60,19 @@ export default function TableOptions({
             <ShadTooltip
               content={
                 !hasSelection ? (
-                  <span>Select items to duplicate</span>
+                  <span>{t("table.selectToDuplicate")}</span>
                 ) : (
-                  <span>Duplicate selected items</span>
+                  <span>{t("table.duplicateSelected")}</span>
                 )
               }
             >
               <Button
                 data-testid="duplicate-row-button"
+                aria-label={t("table.duplicateSelected")}
                 unstyled
                 onClick={duplicateRow}
                 disabled={!hasSelection}
+                tabIndex={tabIndex}
               >
                 <IconComponent
                   name="Copy"
@@ -73,17 +92,19 @@ export default function TableOptions({
             <ShadTooltip
               content={
                 !hasSelection ? (
-                  <span>Select items to delete</span>
+                  <span>{t("table.selectToDelete")}</span>
                 ) : (
-                  <span>Delete selected items</span>
+                  <span>{t("table.deleteSelected")}</span>
                 )
               }
             >
               <Button
                 data-testid="delete-row-button"
+                aria-label={t("table.deleteSelected")}
                 unstyled
                 onClick={deleteRow}
                 disabled={!hasSelection}
+                tabIndex={tabIndex}
               >
                 <IconComponent
                   name="Trash2"
@@ -99,14 +120,16 @@ export default function TableOptions({
           </div>
         )}{" "}
         <div>
-          <ShadTooltip content="Reset Columns">
+          <ShadTooltip content={t("table.resetColumns")}>
             <Button
               data-testid="reset-columns-button"
+              aria-label={t("table.resetColumns")}
               unstyled
               onClick={() => {
                 resetGrid();
               }}
               disabled={!stateChange}
+              tabIndex={tabIndex}
             >
               <IconComponent
                 name="RotateCcw"
@@ -123,7 +146,7 @@ export default function TableOptions({
         </div>
         {paginationInfo && (
           <div className="ml-2 text-xs text-muted-foreground">
-            <ShadTooltip content="Pagination Info">
+            <ShadTooltip content={t("table.paginationInfo")}>
               <span>{paginationInfo}</span>
             </ShadTooltip>
           </div>

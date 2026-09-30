@@ -1,6 +1,8 @@
-import { FlowType } from "@/types/flow";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import type { FlowType } from "@/types/flow";
+import { parseContentDispositionFilename } from "@/utils/parse-content-disposition-filename";
 import { downloadFlow, processFlows } from "@/utils/reactflowUtils";
-import { useMutationFunctionType } from "../../../../types/api";
+import type { useMutationFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -37,6 +39,7 @@ export const useGetDownloadFlows: useMutationFunctionType<
           "Content-Type": "application/json",
           Accept: "application/x-zip-compressed",
         },
+        credentials: getFetchCredentials(),
       });
       if (!response.ok) {
         throw new Error(`Failed to download flows: ${response.statusText}`);
@@ -45,15 +48,10 @@ export const useGetDownloadFlows: useMutationFunctionType<
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
 
-      // Get the filename from the Content-Disposition header
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = "flows.zip";
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename=(.+)/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1].replace(/["']/g, "");
-        }
-      }
+      const filename = parseContentDispositionFilename(
+        response.headers.get("Content-Disposition"),
+        "flows.zip",
+      );
 
       const link = document.createElement("a");
       link.href = url;

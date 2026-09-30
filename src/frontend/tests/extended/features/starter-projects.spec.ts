@@ -1,9 +1,12 @@
-import { expect, Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to interact with starter projects",
-  { tag: ["@release", "@starter-projectss"] },
+  {
+    tag: ["@release", "@starter-projects"],
+  },
   async ({ page, context }) => {
     await awaitBootstrapTest(page);
 
@@ -96,7 +99,7 @@ const templateIds = [
   "template_instagram-copywriter",
   "template_saas-pricing",
   "template_travel-planning-agents",
-  "template_research-agent",
+  "template_deep-research-agent",
   "template_simple-agent",
   "template_sequential-tasks-agents",
   "template_market-research",

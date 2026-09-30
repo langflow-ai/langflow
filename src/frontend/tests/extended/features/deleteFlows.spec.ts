@@ -1,19 +1,14 @@
-import { test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
+import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 
 test(
   "should delete a flow (requires store API key)",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.STORE_API_KEY,
-      "STORE_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    skipIfMissing.storeApiKey();
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
     await page.waitForTimeout(1000);
 
@@ -25,14 +20,13 @@ test(
     });
 
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await page.getByTestId("api-key-save-button-store").click();
 
     await page.waitForTimeout(1000);
-    await page.getByText("Success! Your API Key has been saved.").isVisible();
-
+    await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
     await page.waitForSelector('[data-testid="button-store"]', {
       timeout: 30000,
     });
@@ -48,7 +42,7 @@ test(
     await waitForSuccessMessage(page);
 
     // Wait for navigation button
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       state: "visible",
       timeout: 30000,
     });
@@ -57,19 +51,18 @@ test(
 
     await page.waitForSelector("text=Website Content QA", { timeout: 30000 });
 
-    await page.getByText("Website Content QA").first().isVisible();
-
+    await expect(page.getByText("Website Content QA").first()).toBeVisible();
     await page.getByTestId("home-dropdown-menu").first().click();
     await page.waitForTimeout(500);
 
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
     await page.waitForTimeout(500);
     await page
       .getByText("Are you sure you want to delete the selected component?")
       .isVisible();
-    await page.getByText("Delete").nth(1).click();
+    await page.getByText(TEXTS.delete).nth(1).click();
     await page.waitForTimeout(1000);
-    await page.getByText("Successfully").first().isVisible();
+    await expect(page.getByText("Successfully").first()).toBeVisible();
   },
 );
 
@@ -88,7 +81,7 @@ async function waitForInstallButton(page) {
     await button.waitForElementState("stable");
     return button;
   } catch (error) {
-    console.log("Install button not found, retrying...");
+    console.error("Install button not found, retrying...");
     // Optional: Add custom retry logic here
     throw error;
   }
@@ -105,7 +98,7 @@ async function waitForSuccessMessage(page) {
     // Click the message when it's ready
     await page.getByText("Flow Installed Successfully.").first().click();
   } catch (error) {
-    console.log("Success message not found");
+    console.error("Success message not found");
     throw error;
   }
 }

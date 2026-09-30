@@ -1,5 +1,7 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
 test(
   "user should interact with tab component",
@@ -20,16 +22,15 @@ test(
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
-    await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await page.waitForSelector('[data-testid="code-button-modal"]', {
+    await expect(page.getByTestId("code-button-modal").last()).toBeVisible({
       timeout: 3000,
     });
 
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     let cleanCode = await extractAndCleanCode(page);
 
@@ -63,18 +64,12 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 3000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     // Verify that all tabs are visible
-    expect(await page.getByText("Tab 1").isVisible()).toBeTruthy();
-    expect(await page.getByText("Tab 2").isVisible()).toBeTruthy();
-    expect(await page.getByText("Tab 3").isVisible()).toBeTruthy();
+    await expect(page.getByTestId("tab_0_tab_1")).toBeVisible();
+    await expect(page.getByTestId("tab_1_tab_2")).toBeVisible();
+    await expect(page.getByTestId("tab_2_tab_3")).toBeVisible();
 
     // Verify that Tab 1 is active by default (as specified in the value)
     expect(
@@ -101,31 +96,11 @@ test(
   },
 );
 
-async function extractAndCleanCode(page: Page): Promise<string> {
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the HTML");
-  }
-
-  let codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/");
-
-  return codeContent;
-}
-
 function updateComponentCode(
   code: string,
   updates: {
     imports?: string[];
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     inputs?: Array<{ name: string; config: Record<string, any> }>;
   },
 ): string {
@@ -133,7 +108,7 @@ function updateComponentCode(
 
   // Update imports
   if (updates.imports) {
-    const importPattern = /from\s+langflow\.io\s+import\s+([^;\n]+)/;
+    const importPattern = /from\s+lfx\.io\s+import\s+([^;\n]+)/;
     const newImports = updates.imports.join(", ");
     updatedCode = updatedCode.replace(
       importPattern,

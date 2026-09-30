@@ -1,0 +1,359 @@
+"""List-endpoint filter for authorization checks (batched enforce)."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, TypeVar
+
+from lfx.services.authorization.base import ResourceVisibilityScope
+from sqlalchemy import Select, and_, false
+from sqlmodel import col, or_
+
+from langflow.services.authorization.actions import FlowAction
+from langflow.services.authorization.guards import (
+    _api_key_scopes_require_plugin_enforcement,
+    _auth_context,
+    _coerce_action,
+    should_apply_owner_override,
+)
+from langflow.services.deps import get_authorization_service, get_settings_service
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+    from uuid import UUID
+
+    from sqlalchemy.orm.attributes import InstrumentedAttribute
+    from sqlalchemy.sql.elements import ColumnElement
+
+    from langflow.services.database.models.user.model import User, UserRead
+
+
+T = TypeVar("T")
+# Bound to SQLAlchemy's ``Select`` so the helper accepts both a scalar
+# ``SelectOfScalar`` (e.g. ``select(Folder)``) and a multi-column ``Select``
+# (e.g. the deployment page query ``select(Deployment, func.coalesce(...))``),
+# preserving the concrete statement type through ``.where()`` (returns ``Self``).
+StatementT = TypeVar("StatementT", bound=Select[Any])
+
+
+def _default_resource_id_getter(item: Any) -> UUID:
+    """Default key extractor used by filter_visible_resources."""
+    return item.id
+
+
+async def filter_visible_resources(
+    user: User | UserRead,
+    *,
+    resource_type: str,
+    candidates: list[T],
+    key: Callable[[T], UUID] | None = None,
+    domain: str = "*",
+    domain_extractor: Callable[[T], str] | None = None,
+    owner_extractor: Callable[[T], UUID | None] | None = None,
+    act: FlowAction | str = FlowAction.READ,
+) -> list[T]:
+    """Return candidates the user may read (no-op when AUTHZ_ENABLED is false)."""
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED or not candidates:
+        return candidates
+
+    extractor = key if key is not None else _default_resource_id_getter
+    authz = get_authorization_service()
+    act_str = _coerce_action(act)
+    user_id = getattr(user, "id", None)
+    owner_override_enabled = not await _api_key_scopes_require_plugin_enforcement()
+
+    # Owned rows skip batch_enforce (matches direct-read owner override).
+    owned_indices: set[int] = set()
+    enforce_indices: list[int] = []
+    enforce_items: list[T] = []
+    for index, item in enumerate(candidates):
+        if (
+            owner_override_enabled
+            and owner_extractor is not None
+            and user_id is not None
+            and owner_extractor(item) == user_id
+        ):
+            owned_indices.add(index)
+        else:
+            enforce_indices.append(index)
+            enforce_items.append(item)
+
+    decisions: list[bool] = [False] * len(candidates)
+    for index in owned_indices:
+        decisions[index] = True
+
+    if enforce_items:
+        if domain_extractor is None:
+            # Single-domain batch_enforce.
+            requests = [(f"{resource_type}:{extractor(item)}", act_str) for item in enforce_items]
+            results = await authz.batch_enforce(
+                user_id=user_id,
+                domain=domain,
+                requests=requests,
+                context=_auth_context(user),
+            )
+            for original_index, allowed in zip(enforce_indices, results, strict=True):
+                decisions[original_index] = allowed
+        else:
+            # One batch_enforce per resolved domain.
+            buckets: dict[str, list[tuple[int, T]]] = {}
+            for original_index, item in zip(enforce_indices, enforce_items, strict=True):
+                buckets.setdefault(domain_extractor(item), []).append((original_index, item))
+
+            auth_context = _auth_context(user)
+            for resolved_domain, bucket in buckets.items():
+                bucket_requests = [(f"{resource_type}:{extractor(item)}", act_str) for _, item in bucket]
+                bucket_results = await authz.batch_enforce(
+                    user_id=user_id,
+                    domain=resolved_domain,
+                    requests=bucket_requests,
+                    context=auth_context,
+                )
+                for (original_index, _), allowed in zip(bucket, bucket_results, strict=True):
+                    decisions[original_index] = allowed
+
+    return [item for item, allowed in zip(candidates, decisions, strict=True) if allowed]
+
+
+async def visible_id_prefilter(
+    user: User | UserRead,
+    *,
+    resource_type: str,
+    domain: str = "*",
+    act: FlowAction | str = FlowAction.READ,
+) -> list[UUID] | None:
+    """Return the concrete resource ids the caller may ``act`` on, or ``None``.
+
+    Thin wrapper over :meth:`BaseAuthorizationService.list_visible_resource_ids`
+    that gates on ``AUTHZ_ENABLED``. A concrete list lets a list endpoint push a
+    ``WHERE id IN (...)`` prefilter into its DB query (unioned with the caller's
+    owned rows via :func:`restrict_to_owned_or_visible`) and skip the fetch-all
+    + per-row :func:`filter_visible_resources` fallback — the point of the hook
+    at large-tenant scale.
+
+    Returns ``None`` (meaning "no prefilter; use the in-memory fallback") when
+    ``AUTHZ_ENABLED`` is false or when the registered service declines to
+    prefilter — the OSS pass-through always declines (its base
+    ``list_visible_resource_ids`` returns ``None``). Callers MUST treat ``None``
+    as "preserve today's owner-scoped query plus :func:`filter_visible_resources`"
+    so OSS behavior is byte-for-byte unchanged.
+    """
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        return None
+    authz = get_authorization_service()
+    return await authz.list_visible_resource_ids(
+        user_id=getattr(user, "id", None),
+        resource_type=resource_type,
+        domain=domain,
+        act=_coerce_action(act),
+        context=_auth_context(user),
+    )
+
+
+async def visible_scope_prefilter(
+    user: User | UserRead,
+    *,
+    resource_type: str,
+    domain: str = "*",
+    act: FlowAction | str = FlowAction.READ,
+) -> ResourceVisibilityScope | None:
+    """Return a compact SQL visibility scope, or ``None`` for the OSS fallback.
+
+    Unlike :func:`visible_id_prefilter`, this hook can represent global,
+    workspace, and project wildcard grants without materializing every matching
+    resource UUID. The base service adapts legacy concrete-ID plugins.
+    """
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        return None
+    authz = get_authorization_service()
+    get_visibility = getattr(authz, "get_resource_visibility", None)
+    if get_visibility is not None:
+        return await get_visibility(
+            user_id=getattr(user, "id", None),
+            resource_type=resource_type,
+            domain=domain,
+            act=_coerce_action(act),
+            context=_auth_context(user),
+        )
+
+    # Compatibility for duck-typed services that predate the new base method.
+    visible_ids = await authz.list_visible_resource_ids(
+        user_id=getattr(user, "id", None),
+        resource_type=resource_type,
+        domain=domain,
+        act=_coerce_action(act),
+        context=_auth_context(user),
+    )
+    if visible_ids is None:
+        return None
+    return ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+
+
+def restrict_to_owned_or_visible(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visible_ids: Sequence[UUID],
+) -> StatementT:
+    """Constrain ``stmt`` to the prefilter union: owner rows ⊕ plugin-visible ids.
+
+    A row is kept when it satisfies ``owner_clause`` (the caller's own rows,
+    always visible via the owner-override invariant — so an empty ``visible_ids``
+    still returns every owned row) OR its id is in ``visible_ids`` (rows a
+    registered authorization plugin reports the caller may read).
+
+    ``stmt`` may be a scalar ``select(Model)`` or a multi-column statement (e.g.
+    the deployment page query ``select(Deployment, func.coalesce(...))``); the
+    concrete statement type is preserved on return so callers keep their row
+    shape. ``owner_clause`` must describe only rows the caller owns outright —
+    do NOT fold a ``user_id IS NULL`` term into it, or null-owner rows would be
+    blanket-included here while the in-memory fallback policy-checks them via
+    :func:`filter_visible_resources` (its ``owner_extractor`` returns ``None``,
+    which never equals a real user id, so those rows go through ``batch_enforce``).
+    Keeping null-owner rows out of ``owner_clause`` makes a null-owner row
+    visible only when the plugin lists its id, so both paths enforce alike.
+
+    Apply this BEFORE pagination so the page total counts only rows in the
+    union; an in-memory post-filter would leave the total overcounting rows it
+    then drops. ``visible_ids`` comes from :func:`visible_id_prefilter`; pass it
+    only when that returned a concrete list (``None`` keeps today's behavior).
+    """
+    return stmt.where(or_(col(id_column).in_(list(visible_ids)), owner_clause))
+
+
+async def apply_owned_or_visible_prefilter(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visible_ids: Sequence[UUID],
+) -> StatementT:
+    """Apply a concrete visible-id prefilter, respecting owner override.
+
+    When :func:`should_apply_owner_override` is true, delegates to
+    :func:`restrict_to_owned_or_visible` (owner ⊕ ``visible_ids``). When override
+    is off, constrains to ``visible_ids`` alone.
+    """
+    if await should_apply_owner_override():
+        return restrict_to_owned_or_visible(
+            stmt,
+            id_column=id_column,
+            owner_clause=owner_clause,
+            visible_ids=visible_ids,
+        )
+    return stmt.where(col(id_column).in_(list(visible_ids)))
+
+
+def restrict_to_owned_or_visible_scope(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visibility: ResourceVisibilityScope,
+    workspace_column: InstrumentedAttribute | None = None,
+    workspace_expression: ColumnElement[Any] | None = None,
+    project_column: InstrumentedAttribute | None = None,
+) -> StatementT:
+    """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
+    if visibility.all_resources:
+        if project_column is None or not visibility.excluded_global_project_ids:
+            return stmt
+        # Global role access can exclude reserved projects without enumerating
+        # every visible resource. Ownership and concrete grants remain additive,
+        # so users retain their own resources and directly shared resources in
+        # an otherwise excluded project. Folderless resources remain global.
+        global_clauses: list[ColumnElement[bool]] = [
+            owner_clause,
+            col(project_column).is_(None),
+            col(project_column).not_in(visibility.excluded_global_project_ids),
+        ]
+        if visibility.resource_ids:
+            global_clauses.append(col(id_column).in_(visibility.resource_ids))
+        return stmt.where(or_(*global_clauses))
+
+    clauses: list[ColumnElement[bool]] = [owner_clause]
+    if visibility.resource_ids:
+        clauses.append(col(id_column).in_(visibility.resource_ids))
+    resolved_workspace = workspace_expression
+    if resolved_workspace is None and workspace_column is not None:
+        resolved_workspace = col(workspace_column)
+    workspace_project_allowed: ColumnElement[bool] | None = None
+    if project_column is not None and visibility.excluded_workspace_project_ids:
+        # A workspace-only resource has no project to exclude. Keep it visible
+        # for an explicit workspace grant while excluding resources attached to
+        # reserved projects. The explicit ``IS NULL`` branch also keeps SQL's
+        # three-valued NULL semantics aligned with ``resource_visible_in_scope``.
+        workspace_project_allowed = or_(
+            col(project_column).is_(None),
+            col(project_column).not_in(visibility.excluded_workspace_project_ids),
+        )
+    if resolved_workspace is not None and visibility.workspace_ids:
+        workspace_clause = resolved_workspace.in_(visibility.workspace_ids)
+        if workspace_project_allowed is not None:
+            workspace_clause = and_(workspace_clause, workspace_project_allowed)
+        clauses.append(workspace_clause)
+    if resolved_workspace is not None and project_column is not None and visibility.include_unassigned_workspace:
+        # The logical unassigned workspace contains projects whose stored
+        # workspace is NULL; it does not contain folderless/workspace-less
+        # resources. Requiring a concrete project keeps list filtering aligned
+        # with direct authorization, which resolves this scope through the
+        # resource's project relation.
+        unassigned_project_allowed = col(project_column).is_not(None)
+        if visibility.excluded_workspace_project_ids:
+            unassigned_project_allowed = and_(
+                unassigned_project_allowed,
+                col(project_column).not_in(visibility.excluded_workspace_project_ids),
+            )
+        workspace_clause = and_(resolved_workspace.is_(None), unassigned_project_allowed)
+        clauses.append(workspace_clause)
+    if project_column is not None and visibility.project_ids:
+        clauses.append(col(project_column).in_(visibility.project_ids))
+    return stmt.where(or_(*clauses))
+
+
+async def apply_owned_or_visible_scope_prefilter(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visibility: ResourceVisibilityScope,
+    workspace_column: InstrumentedAttribute | None = None,
+    workspace_expression: ColumnElement[Any] | None = None,
+    project_column: InstrumentedAttribute | None = None,
+) -> StatementT:
+    """Apply a structured visibility prefilter, respecting owner override."""
+    effective_owner_clause = owner_clause if await should_apply_owner_override() else false()
+    return restrict_to_owned_or_visible_scope(
+        stmt,
+        id_column=id_column,
+        owner_clause=effective_owner_clause,
+        visibility=visibility,
+        workspace_column=workspace_column,
+        workspace_expression=workspace_expression,
+        project_column=project_column,
+    )
+
+
+def resource_visible_in_scope(
+    *,
+    resource_id: UUID,
+    visibility: ResourceVisibilityScope,
+    workspace_id: UUID | None = None,
+    project_id: UUID | None = None,
+) -> bool:
+    """Evaluate a compact visibility scope for an already-loaded resource."""
+    globally_visible = visibility.all_resources and (
+        project_id is None or project_id not in visibility.excluded_global_project_ids
+    )
+    workspace_project_allowed = project_id is None or project_id not in visibility.excluded_workspace_project_ids
+    unassigned_project_allowed = project_id is not None and project_id not in visibility.excluded_workspace_project_ids
+    return bool(
+        globally_visible
+        or resource_id in visibility.resource_ids
+        or (workspace_project_allowed and workspace_id is not None and workspace_id in visibility.workspace_ids)
+        or (unassigned_project_allowed and workspace_id is None and visibility.include_unassigned_workspace)
+        or (project_id is not None and project_id in visibility.project_ids)
+    )

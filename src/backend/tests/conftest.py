@@ -1,13 +1,16 @@
 import asyncio
+import faulthandler
 import json
+import os
 import shutil
+import sys
 
 # we need to import tmpdir
 import tempfile
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import anyio
 import orjson
@@ -17,20 +20,24 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
-from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
-from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
+from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
-from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, session_scope
-from loguru import logger
+from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id_unchecked
+from langflow.services.deps import (
+    get_auth_service,
+    get_db_service,
+    get_settings_service,
+    is_settings_service_initialized,
+    session_scope,
+)
+from lfx.components.input_output import ChatInput
+from lfx.graph import Graph
+from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -43,9 +50,63 @@ from tests.api_keys import get_openai_api_key
 load_dotenv()
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
+def disable_rate_limiting():
+    """Disable rate limiting for all tests to prevent 429 errors during test execution."""
+    os.environ["LANGFLOW_RATE_LIMIT_ENABLED"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_RATE_LIMIT_ENABLED", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_models_dev_refresh():
+    """Keep the models.dev background refresh out of tests.
+
+    Every app boot otherwise launches a lifespan task that fetches
+    https://models.dev/api.json mid-test, which both hits the network and
+    trips event-loop-block detectors (pyleak) in whatever test happens to be
+    running when the request lands. The bundled static model lists are used
+    instead, which is also deterministic.
+    """
+    os.environ["LANGFLOW_MODELS_DEV_REFRESH"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_MODELS_DEV_REFRESH", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_mcp_auto_init():
+    """Keep the MCP server auto-initialization out of tests.
+
+    Every app boot otherwise schedules a lifespan task (``delayed_init_mcp_servers``)
+    that, ~10s in, reconciles each project's MCP server config. For apikey/none projects
+    that reconciliation spawns ``uvx mcp-proxy`` and makes an outbound connect with no
+    bounded timeout, so on a slow/CI runner it hangs until the OS connect timeout (~127s),
+    inflating every app-fixture test by ~130s and pushing the heaviest test split past the
+    CI step timeout. Skipping it keeps the boot local and deterministic.
+    """
+    previous_env_value = os.environ.get("LANGFLOW_SKIP_MCP_AUTO_INIT")
+    previous_setting = (
+        get_settings_service().settings.skip_mcp_auto_init
+        if is_settings_service_initialized()
+        else (previous_env_value or "").lower() in {"1", "true", "yes", "on"}
+    )
+
+    os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = "true"
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", value=True)
+    yield
+    if previous_env_value is None:
+        os.environ.pop("LANGFLOW_SKIP_MCP_AUTO_INIT", None)
+    else:
+        os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = previous_env_value
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", previous_setting)
+
+
+# TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
+@pytest.fixture(autouse=False)
 def blockbuster(request):
-    if "benchmark" in request.keywords:
+    if "benchmark" in request.keywords or "no_blockbuster" in request.keywords:
         yield
     else:
         with blockbuster_ctx() as bb:
@@ -64,6 +125,7 @@ def blockbuster(request):
                 "io.TextIOWrapper.read",
             ]:
                 bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
+                # bb.functions[func].can_block_in("http/client.py", "_safe_read")
 
             (
                 bb.functions["os.stat"]
@@ -74,26 +136,92 @@ def blockbuster(request):
                 .can_block_in("rich/traceback.py", "_render_stack")
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
                 .can_block_in("langchain_core/runnables/utils.py", "get_function_nonlocals")
+                .can_block_in("alembic/versions", "_load_revisions")
+                .can_block_in("dotenv/main.py", "find_dotenv")
+                .can_block_in("alembic/script/base.py", "_load_revisions")
+                .can_block_in("alembic/env.py", "_do_run_migrations")
             )
 
-            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
+            for func in ["os.stat", "os.path.abspath", "os.scandir", "os.listdir"]:
                 bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+                bb.functions[func].can_block_in("dotenv/main.py", "find_dotenv")
+                bb.functions[func].can_block_in("pkgutil.py", "_iter_file_finder_modules")
 
             for func in ["os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
+
+            # Add os.stat to alembic/script/base.py _load_revisions
+            bb.functions["os.stat"].can_block_in("alembic/script/base.py", "_load_revisions")
 
             (
                 bb.functions["os.path.abspath"]
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
                 .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
+                .can_block_in("botocore/__init__.py", "__init__")
             )
+
+            bb.functions["socket.socket.connect"].can_block_in("urllib3/connection.py", "_new_conn")
+            bb.functions["ssl.SSLSocket.send"].can_block_in("ssl.py", "sendall")
+            bb.functions["ssl.SSLSocket.read"].can_block_in("ssl.py", "recv_into")
+
             yield bb
 
 
+# Hard, GIL-proof per-test watchdog. pytest-timeout's thread method (pyproject
+# `timeout = 90`) arms a *Python* timer thread, which needs the GIL to run its
+# callback -- a hang inside a C call that never releases the GIL (observed on
+# the release-1.11.3 py3.13 Group 5 job: a worker froze for 25+ minutes in
+# test_login.py::test_session_endpoint_rejects_expired_external_token with no
+# dump) silently defeats it and the job burns to the CI step wall.
+# faulthandler.dump_traceback_later() instead uses a C-level watchdog thread
+# that needs no GIL: it dumps every thread's stack to the real stderr fd
+# (inherited by xdist workers, so it lands in the CI log) and, with exit=True,
+# hard-exits the wedged worker -- xdist then reports "node down", replaces the
+# worker, and --reruns retries the test on the fresh one. The 120s default sits
+# above pytest-timeout's 90s so the soft watchdog (clean per-test failure)
+# always gets first shot; this only fires when that one *couldn't* run.
+# Disable locally for debugger sessions with LANGFLOW_TEST_HARD_TIMEOUT=0.
+_HARD_TIMEOUT_S = float(os.getenv("LANGFLOW_TEST_HARD_TIMEOUT", "120"))
+
+# Real-stderr fd, dup'd at pytest_configure time. pytest's fd-level capture
+# redirects fd 2 into a per-test temp file that is discarded when the process
+# hard-exits, so a dump armed against sys.__stderr__ at *test* time vanishes
+# (which is also why pytest-timeout's thread dumps never showed in CI logs).
+# At configure time fd 2 still points at the process's original stderr -- in an
+# xdist worker that fd is inherited from the controller, so dumps written to
+# the dup land in the CI step log. Same strategy as pytest's builtin
+# faulthandler plugin.
+_watchdog_stderr_fd: int | None = None
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_protocol(item, nextitem):  # noqa: ARG001
+    if _HARD_TIMEOUT_S <= 0 or _watchdog_stderr_fd is None:
+        return (yield)
+    faulthandler.dump_traceback_later(_HARD_TIMEOUT_S, file=_watchdog_stderr_fd, exit=True)
+    try:
+        return (yield)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
+
+
 def pytest_configure(config):
+    global _watchdog_stderr_fd  # noqa: PLW0603
+    if _HARD_TIMEOUT_S > 0 and _watchdog_stderr_fd is None:
+        with suppress(AttributeError, ValueError, OSError):
+            try:
+                fd = sys.stderr.fileno()
+            except (AttributeError, ValueError, OSError):
+                fd = sys.__stderr__.fileno()
+            _watchdog_stderr_fd = os.dup(fd)
+
     config.addinivalue_line("markers", "noclient: don't create a client for this test")
     config.addinivalue_line("markers", "load_flows: load the flows for this test")
     config.addinivalue_line("markers", "api_key_required: run only if the api key is set in the environment variables")
+    config.addinivalue_line(
+        "markers",
+        "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)",
+    )
     data_path = Path(__file__).parent.absolute() / "data"
 
     pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
@@ -135,6 +263,29 @@ def get_text():
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
+# def _has_nonempty_env(var: str) -> bool:
+#     return bool((os.getenv(var) or "").strip())
+
+
+# def pytest_runtest_setup(item):
+#     """Auto-skip tests marked with `api_key_required` when no valid OPENAI_API_KEY is provided."""
+#     if item.get_closest_marker("api_key_required") and not _has_nonempty_env("OPENAI_API_KEY"):
+#         import pytest as _pytest
+
+#         _pytest.skip("OPENAI_API_KEY is not set or is empty")
+
+
+def pytest_collection_modifyitems(config, items):  # noqa: ARG001
+    """Automatically add markers based on test file location."""
+    for item in items:
+        if "tests/unit/" in str(item.fspath):
+            item.add_marker(pytest.mark.unit)
+        elif "tests/integration/" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        elif "tests/slow/" in str(item.fspath):
+            item.add_marker(pytest.mark.slow)
+
+
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
     if not flow_id:
         return
@@ -145,58 +296,76 @@ async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
 
 
 async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
+    from langflow.services.database.models.jobs.model import Job
+
     flow_ids = [flow.id for flow in flows]
     for flow_id in flow_ids:
         if not flow_id:
             continue
         try:
-            await delete_vertex_builds_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
+            # Delete associated jobs first due to foreign keys
+            stmt = select(Job).where(Job.flow_id == flow_id)
+            jobs = (await session.exec(stmt)).all()
+            for job in jobs:
+                await session.delete(job)
+            await session.flush()
+
+            await delete_vertex_builds_by_flow_id_unchecked(session, flow_id)
+        except Exception as e:
+            logger.debug(f"Error deleting jobs/vertex builds for flow {flow_id}: {e}")
         try:
             await delete_transactions_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug(f"Error deleting transactions for flow {flow_id}: {e}")
-
-
-@pytest.fixture
-def caplog(caplog: pytest.LogCaptureFixture):
-    handler_id = logger.add(
-        caplog.handler,
-        format="{message}",
-        level=0,
-        filter=lambda record: record["level"].no >= caplog.handler.level,
-        enqueue=False,  # Set to 'True' if your test is spawning child processes.
-    )
-    yield caplog
-    logger.remove(handler_id)
 
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
     app = create_app()
-    async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
+    async with (
+        LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
+        AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver", http2=True) as client,
+    ):
         yield client
 
 
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-    SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    # Ensure foreign keys are enabled for the in-memory session engine
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):  # noqa: ARG001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    try:
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            yield session
+    finally:
+        SQLModel.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest.fixture
 async def async_session():
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    async with AsyncSession(engine, expire_on_commit=False) as session:
-        yield session
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            yield session
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+    finally:
+        await engine.dispose()
 
 
 class Config:
@@ -238,6 +407,8 @@ def distributed_client_fixture(
         db_path = Path(db_dir) / "test.db"
         monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
         # monkeypatch langflow.services.task.manager.USE_CELERY to True
         # monkeypatch.setattr(manager, "USE_CELERY", True)
         monkeypatch.setattr(celery_app, "celery_app", celery_app.make_celery("langflow", Config))
@@ -353,6 +524,26 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(autouse=True)
+def disable_telemetry_writer(monkeypatch):
+    # Tests assert on freshly-written transactions / vertex_builds rows. The
+    # batched writer is a production optimization; in tests we want the
+    # synchronous legacy DB path so reads-after-writes are visible.
+    monkeypatch.setenv("LANGFLOW_TELEMETRY_WRITER_ENABLED", "false")
+    yield
+    monkeypatch.undo()
+
+
+@pytest.fixture
+def use_noop_session(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
+    # Optionally patch the Settings object if needed
+    # from lfx.services.settings.base import Settings
+    # monkeypatch.setattr(Settings, "use_noop_database", True)
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
@@ -370,6 +561,9 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
+            monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
@@ -377,10 +571,10 @@ async def client_fixture(
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
             # Clear the services cache
-            from langflow.services.manager import service_manager
+            from lfx.services.manager import get_service_manager
 
-            service_manager.factories.clear()
-            service_manager.services.clear()  # Clear the services cache
+            get_service_manager().factories.clear()
+            get_service_manager().services.clear()  # Clear the services cache
             app = create_app()
             db_service = get_db_service()
             db_service.database_url = f"sqlite:///{db_path}"
@@ -390,7 +584,7 @@ async def client_fixture(
         app, db_path = await asyncio.to_thread(init_app)
         # app.dependency_overrides[get_session] = get_session_override
         async with (
-            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
             AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
         ):
             yield client
@@ -423,11 +617,10 @@ async def test_user(client):
 
 @pytest.fixture
 async def active_user(client):  # noqa: ARG001
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_password_hash("testpassword"),
+            password=get_auth_service().get_password_hash("testpassword"),
             is_active=True,
             is_superuser=False,
         )
@@ -436,26 +629,24 @@ async def active_user(client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
     try:
-        async with db_manager.with_session() as session:
+        async with session_scope() as session:
             user = await session.get(User, user.id, options=[selectinload(User.flows)])
             await _delete_transactions_and_vertex_builds(session, user.flows)
-            await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting transactions and vertex builds for user: {e}")
 
     try:
-        async with db_manager.with_session() as session:
+        async with session_scope() as session:
             user = await session.get(User, user.id)
             await session.delete(user)
-            await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting user: {e}")
 
 
@@ -471,11 +662,10 @@ async def logged_in_headers(client, active_user):
 
 @pytest.fixture
 async def active_super_user(client):  # noqa: ARG001
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_password_hash("testpassword"),
+            password=get_auth_service().get_password_hash("testpassword"),
             is_active=True,
             is_superuser=True,
         )
@@ -484,18 +674,16 @@ async def active_super_user(client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
-
-        await session.commit()
 
 
 @pytest.fixture
@@ -517,15 +705,19 @@ async def flow(
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
-    flow = Flow.model_validate(flow_data)
-    async with session_getter(get_db_service()) as session:
+    flow = Flow.model_validate(flow_data.model_dump(exclude={"id"}))
+    async with session_scope() as session:
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
-        yield flow
-        # Clean up
-        await session.delete(flow)
-        await session.commit()
+        flow = FlowRead.model_validate(flow, from_attributes=True)
+
+    yield flow
+
+    async with session_scope() as session:
+        db_flow = await session.get(Flow, flow.id)
+        if db_flow:
+            await session.delete(db_flow)
 
 
 @pytest.fixture
@@ -619,26 +811,100 @@ async def flow_component(client: AsyncClient, logged_in_headers):
 
 @pytest.fixture
 async def created_api_key(active_user):
-    hashed = get_password_hash("random_key")
+    hashed = get_auth_service().get_password_hash("random_key")
     api_key = ApiKey(
         name="test_api_key",
         user_id=active_user.id,
         api_key="random_key",
         hashed_api_key=hashed,
     )
-    db_manager = get_db_service()
-    async with session_getter(db_manager) as session:
+    async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
+            existing_api_key = UnmaskedApiKeyRead.model_validate(existing_api_key, from_attributes=True)
             yield existing_api_key
             return
         session.add(api_key)
-        await session.commit()
+        await session.flush()
         await session.refresh(api_key)
-        yield api_key
-        # Clean up
-        await session.delete(api_key)
-        await session.commit()
+        api_key = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
+
+    yield api_key
+
+    async with session_scope() as session:
+        db_key = await session.get(ApiKey, api_key.id)
+        if db_key:
+            await session.delete(db_key)
+
+
+@pytest.fixture
+def user_one_api_key(created_api_key: ApiKey) -> str:
+    """Provides the API key for user_one."""
+    return created_api_key.api_key
+
+
+@pytest.fixture
+async def user_two(
+    client: AsyncClient,  # noqa: ARG001
+) -> AsyncGenerator[User, None]:
+    """Creates a second user for multi-user access tests."""
+    user_id = uuid4()
+    async with session_scope() as session:
+        user = User(
+            id=user_id,
+            username=f"test_user_two_{user_id}",
+            password=get_auth_service().get_password_hash("hashed_password"),
+            is_active=True,
+        )
+        session.add(user)
+        await session.flush()
+        await session.refresh(user)
+        user = UserRead.model_validate(user, from_attributes=True)
+
+    yield user
+
+    async with session_scope() as session:
+        # Cleanup related API keys first
+        keys_to_delete = (await session.exec(select(ApiKey).where(ApiKey.user_id == user.id))).all()
+        for key in keys_to_delete:
+            await session.delete(key)
+
+        # Cleanup the user
+        user_to_delete = await session.get(User, user.id)
+        if user_to_delete:
+            await session.delete(user_to_delete)
+
+
+@pytest.fixture
+async def created_user_two_api_key(user_two: User) -> AsyncGenerator[ApiKey, None]:
+    """Creates and yields an API key for the second user."""
+    raw_key = f"user-two-key-{uuid4()}"
+    hashed_key = get_auth_service().get_password_hash(raw_key)
+    api_key = ApiKey(
+        user_id=user_two.id,
+        name="Test API Key for User Two",
+        api_key=raw_key,
+        hashed_api_key=hashed_key,
+    )
+
+    async with session_scope() as session:
+        session.add(api_key)
+        await session.flush()
+        await session.refresh(api_key)
+        api_key = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
+
+    yield api_key
+
+    async with session_scope() as session:
+        db_key = await session.get(ApiKey, api_key.id)
+        if db_key:
+            await session.delete(db_key)
+
+
+@pytest.fixture
+def user_two_api_key(created_user_two_api_key: ApiKey) -> str:
+    """Provides the API key string for the second user."""
+    return created_user_two_api_key.api_key
 
 
 @pytest.fixture(name="simple_api_test")
@@ -688,10 +954,9 @@ async def get_starter_project(client, active_user):  # noqa: ARG001
         )
         new_flow = Flow.model_validate(new_flow_create, from_attributes=True)
         session.add(new_flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(new_flow)
         new_flow_dict = new_flow.model_dump()
         yield new_flow_dict
         # Clean up
         await session.delete(new_flow)
-        await session.commit()

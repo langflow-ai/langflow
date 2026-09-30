@@ -1,4 +1,5 @@
-import { useMutationFunctionType } from "../../../../types/api";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import type { useMutationFunctionType } from "../../../../types/api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
@@ -23,6 +24,7 @@ export const useGetDownloadFileV2: useMutationFunctionType<
         headers: {
           Accept: "*/*",
         },
+        credentials: getFetchCredentials(),
       },
     );
     const blob = await response.blob();

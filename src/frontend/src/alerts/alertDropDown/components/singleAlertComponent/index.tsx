@@ -1,15 +1,15 @@
-import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { CustomLink } from "@/customization/components/custom-link";
 import IconComponent from "../../../../components/common/genericIconComponent";
-import { SingleAlertComponentType } from "../../../../types/alerts";
+import type { SingleAlertComponentType } from "../../../../types/alerts";
 
 export default function SingleAlert({
   dropItem,
   removeAlert,
 }: SingleAlertComponentType): JSX.Element {
-  const [show, setShow] = useState(true);
+  const [_show, setShow] = useState(true);
   const type = dropItem.type;
 
   return type === "error" ? (
@@ -30,13 +30,12 @@ export default function SingleAlert({
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
                   <Markdown
-                    linkTarget="_blank"
                     remarkPlugins={[remarkGfm]}
                     className="align-text-top"
                     components={{
                       a: ({ node, ...props }) => (
                         <a
-                          href={props.href}
+                          {...props}
                           target="_blank"
                           className="underline"
                           rel="noopener noreferrer"
@@ -89,10 +88,24 @@ export default function SingleAlert({
       <div className="flex-shrink-0 cursor-help">
         <IconComponent name="Info" className="h-5 w-5 text-status-blue" />
       </div>
-      <div className="ml-3 flex-1 md:flex md:justify-between">
+      <div className="ml-3 min-w-0 flex-1">
         <p className="text-sm font-medium text-info-foreground">
           {dropItem.title}
         </p>
+        {!!dropItem.list?.length && (
+          <div
+            role="region"
+            aria-label={dropItem.title}
+            tabIndex={0}
+            className="mt-2 max-h-48 overflow-y-auto text-sm text-info-foreground"
+          >
+            {dropItem.list.map((item, index) => (
+              <p key={index} className="whitespace-pre-wrap break-words">
+                {item}
+              </p>
+            ))}
+          </div>
+        )}
         <p className="mt-3 text-sm md:ml-6 md:mt-0">
           {dropItem.link ? (
             <CustomLink

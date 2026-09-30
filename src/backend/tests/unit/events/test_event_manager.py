@@ -5,7 +5,7 @@ import uuid
 
 import pytest
 from langflow.events.event_manager import EventManager
-from langflow.schema.log import LoggableType
+from lfx.schema.log import LoggableType
 
 
 class TestEventManager:
@@ -146,7 +146,7 @@ class TestEventManager:
 
     # Ensuring the queue receives the correct event data format
     async def test_queue_receives_correct_event_data_format(self):
-        async def mock_queue_put_nowait(data):
+        def mock_queue_put_nowait(data):
             pass
 
         async def mock_queue_get():

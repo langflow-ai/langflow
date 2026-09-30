@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
@@ -8,6 +9,7 @@ interface VoiceButtonProps {
 }
 
 const VoiceButton = ({ toggleRecording }: VoiceButtonProps) => {
+  const { t } = useTranslation();
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
@@ -16,13 +18,15 @@ const VoiceButton = ({ toggleRecording }: VoiceButtonProps) => {
     <>
       <div>
         <Button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             toggleRecording();
             setNewSessionCloseVoiceAssistant(false);
           }}
           className="btn-playground-actions group"
           unstyled
           data-testid="voice-button"
+          aria-label={t("chat.voiceInput")}
         >
           <ForwardedIconComponent
             className={

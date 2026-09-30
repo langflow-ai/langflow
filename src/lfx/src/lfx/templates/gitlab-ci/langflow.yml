@@ -1,0 +1,152 @@
+# langflow.yml  --  GitLab CI template for the Flow DevOps Toolkit
+#
+# PURPOSE
+#   Drop-in GitLab CI fragment providing three stages:
+#     validate  -- static analysis on every MR (no secrets needed)
+#     test      -- integration tests against staging on every MR
+#     deploy    -- push flows to production on merge to main
+#
+# USAGE
+#   Option A: include the whole file in your .gitlab-ci.yml:
+#
+#       include:
+#         - local: .gitlab/ci/langflow.yml
+#
+#   Option B: copy the individual job definitions you need directly
+#             into your existing .gitlab-ci.yml.
+#
+# GITLAB SETUP
+#   Settings → CI/CD → Variables:
+#
+#   Variable name               Type     Protected  Masked  Example value
+#   ──────────────────────────  ───────  ─────────  ──────  ─────────────────────────────
+#   LANGFLOW_STAGING_URL        Variable     ✓         ✗    https://staging.langflow.example.com
+#   LANGFLOW_STAGING_API_KEY    Variable     ✓         ✓    <staging api key>
+#   LANGFLOW_PROD_URL           Variable     ✓         ✗    https://langflow.example.com
+#   LANGFLOW_PROD_API_KEY       Variable     ✓         ✓    <production api key>
+#   LANGFLOW_PROJECT_NAME       Variable     ✗         ✗    Production Flows
+#
+#   Marking LANGFLOW_*_API_KEY as "Masked" prevents the value from appearing
+#   in job logs.  Marking variables as "Protected" limits them to protected
+#   branches (main / tags), which restricts production access automatically.
+
+# ── Stages ────────────────────────────────────────────────────────────────── #
+
+stages:
+  - validate
+  - test
+  - deploy
+
+# ── Shared config ─────────────────────────────────────────────────────────── #
+
+.langflow-base:
+  image: python:3.12-slim
+  before_script:
+    - pip install --quiet lfx langflow-sdk "langflow-sdk[testing]" pytest
+
+.write-staging-env: &write-staging-env
+  - >-
+    printf '[environments.staging]\nurl = "%s"\napi_key_env = "LANGFLOW_STAGING_API_KEY"\n'
+    "$LANGFLOW_STAGING_URL" > langflow-environments.toml
+
+.write-prod-env: &write-prod-env
+  - >-
+    printf '[environments.production]\nurl = "%s"\napi_key_env = "LANGFLOW_PROD_API_KEY"\n'
+    "$LANGFLOW_PROD_URL" > langflow-environments.toml
+
+# ── validate ──────────────────────────────────────────────────────────────── #
+
+langflow:validate:
+  extends: .langflow-base
+  stage: validate
+  rules:
+    # Run on every MR that touches a flow file
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - flows/**/*.json
+    # Allow manual trigger from the pipeline UI
+    - when: manual
+      allow_failure: true
+  script:
+    - lfx validate flows/ --level 4 --format text
+  # Exit code 1 = validation errors  →  job fails, MR blocked
+  # Exit code 2 = file not found     →  job fails
+  allow_failure: false
+
+# ── test ──────────────────────────────────────────────────────────────────── #
+
+langflow:test:
+  extends: .langflow-base
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - flows/**/*.json
+        - tests/**/*.py
+    - when: manual
+      allow_failure: true
+  script:
+    - *write-staging-env
+    - >-
+      pytest tests/
+      --langflow-env staging
+      -m integration
+      -v
+      --tb=short
+  variables:
+    LANGFLOW_ENVIRONMENTS_FILE: langflow-environments.toml
+  # Tests auto-skip when LANGFLOW_STAGING_URL is absent, so this job never
+  # hard-fails on feature branches that lack staging access.
+  allow_failure: false
+
+# ── deploy ────────────────────────────────────────────────────────────────── #
+
+langflow:deploy:
+  extends: .langflow-base
+  stage: deploy
+  rules:
+    # Auto-deploy when flow files change on main
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - flows/**/*.json
+    # Manual deploy from any branch / pipeline UI
+    - when: manual
+      allow_failure: true
+  script:
+    - *write-prod-env
+    # Use CI_ENVIRONMENT_NAME in the job summary
+    - echo "Deploying to production (${LANGFLOW_PROD_URL})"
+    - >-
+      lfx push
+      --dir flows/
+      --env production
+      --project "${LANGFLOW_PROJECT_NAME:-Main}"
+  variables:
+    LANGFLOW_ENVIRONMENTS_FILE: langflow-environments.toml
+  environment:
+    name: production
+    url: $LANGFLOW_PROD_URL
+  # Protect this job by restricting LANGFLOW_PROD_API_KEY to protected
+  # branches only (see setup instructions above).
+  allow_failure: false
+
+# ── optional: dry-run ─────────────────────────────────────────────────────── #
+
+langflow:deploy:dry-run:
+  extends: langflow:deploy
+  stage: deploy
+  rules:
+    - when: manual
+      allow_failure: true
+  script:
+    - *write-prod-env
+    - echo "Dry run -- no changes will be made"
+    - >-
+      lfx push
+      --dir flows/
+      --env production
+      --project "${LANGFLOW_PROJECT_NAME:-Main}"
+      --dry-run
+  environment:
+    name: production (dry run)
+    url: $LANGFLOW_PROD_URL

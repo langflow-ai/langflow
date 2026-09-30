@@ -8,30 +8,49 @@ from uuid import UUID, uuid4
 
 import emoji
 from emoji import purely_emoji
-from fastapi import HTTPException, status
-from loguru import logger
-from pydantic import (
-    BaseModel,
-    ValidationInfo,
-    field_serializer,
-    field_validator,
-)
+from lfx.log.logger import logger
+from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
+from sqlalchemy import Boolean, Text, UniqueConstraint, false, text
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.folder import Folder
-    from langflow.services.database.models.user import User
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
 
 HEX_COLOR_LENGTH = 7
+
+_ENDPOINT_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def _validate_endpoint_name_value(v: str | None) -> str | None:
+    """Validate that an endpoint name contains only safe URL characters.
+
+    Raises ``ValueError`` on invalid input — callers at the HTTP layer
+    should catch and translate to an appropriate HTTP response.
+    """
+    if v is not None:
+        if not isinstance(v, str):
+            msg = "Endpoint name must be a string"
+            raise ValueError(msg)
+        if not _ENDPOINT_NAME_RE.match(v):
+            msg = "Endpoint name must contain only letters, numbers, hyphens, and underscores"
+            raise ValueError(msg)
+    return v
 
 
 class AccessTypeEnum(str, Enum):
     PRIVATE = "PRIVATE"
     PUBLIC = "PUBLIC"
+
+
+class FlowType(str, Enum):
+    # Extensible: new kinds can be added without a breaking change. Lowercase
+    # values so the stored string matches the wire value (see values_callable).
+    WORKFLOW = "workflow"
+    AGENT = "agent"
 
 
 class FlowBase(SQLModel):
@@ -71,23 +90,34 @@ class FlowBase(SQLModel):
             server_default=text("'PRIVATE'"),
         ),
     )
+    flow_type: FlowType = Field(
+        default=FlowType.WORKFLOW,
+        sa_column=Column(
+            SQLEnum(
+                FlowType,
+                name="flow_type_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=False,
+            server_default=text("'workflow'"),
+        ),
+        description="Whether the flow is a plain workflow or an agent (publishable over A2A)",
+    )
+    a2a_enabled: bool | None = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=True, server_default=false()),
+        description="Can be exposed as an A2A agent (only meaningful when flow_type=agent)",
+    )
+    a2a_card_overrides: dict | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="User overrides for the generated A2A agent card (skill description, examples, tags)",
+    )
 
     @field_validator("endpoint_name")
     @classmethod
     def validate_endpoint_name(cls, v):
-        # Endpoint name must be a string containing only letters, numbers, hyphens, and underscores
-        if v is not None:
-            if not isinstance(v, str):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Endpoint name must be a string",
-                )
-            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Endpoint name must contain only letters, numbers, hyphens, and underscores",
-                )
-        return v
+        return _validate_endpoint_name_value(v)
 
     @field_validator("icon_bg_color")
     @classmethod
@@ -127,7 +157,7 @@ class FlowBase(SQLModel):
 
         emoji_value = emoji.emojize(v, variant="emoji_type")
         if v == emoji_value:
-            logger.warning(f"Invalid emoji. {v} is not a valid emoji.")
+            logger.warning("Invalid emoji. %s is not a valid emoji.", v)
         icon = emoji_value
 
         if purely_emoji(icon):
@@ -197,6 +227,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    workspace_id: UUID | None = Field(default=None, nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
 
@@ -208,6 +239,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
             "name": serialized.pop("name"),
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
+            "folder_id": serialized.pop("folder_id"),
         }
         return Data(data=data)
 
@@ -218,8 +250,14 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
 
 
 class FlowCreate(FlowBase):
+    # Optional stable ID.  When present on upload, the flow is upserted
+    # (created with that ID, or updated if the ID already belongs to the
+    # current user).  Flows without an id get a generated UUID — backward
+    # compatible with all existing import paths.
+    id: UUID | None = None
     user_id: UUID | None = None
     folder_id: UUID | None = None
+    workspace_id: UUID | None = None
     fs_path: str | None = None
 
 
@@ -227,7 +265,9 @@ class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+    workspace_id: UUID | None = Field(default=None)
     tags: list[str] | None = Field(None, description="The tags of the flow")
+    name_key: str | None = Field(None, description="Stable i18n key derived from the original English name")
 
 
 class FlowHeader(BaseModel):
@@ -246,6 +286,9 @@ class FlowHeader(BaseModel):
     access_type: AccessTypeEnum | None = Field(None, description="The access type of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
     mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
+    flow_type: FlowType | None = Field(None, description="Whether the flow is a plain workflow or an agent")
+    a2a_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed as an A2A agent")
+    a2a_card_overrides: dict | None = Field(None, description="User overrides for the served A2A agent card")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
 
@@ -262,27 +305,19 @@ class FlowUpdate(SQLModel):
     description: str | None = None
     data: dict | None = None
     folder_id: UUID | None = None
+    workspace_id: UUID | None = None
     endpoint_name: str | None = None
     mcp_enabled: bool | None = None
     locked: bool | None = None
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
+    flow_type: FlowType | None = None
+    a2a_enabled: bool | None = None
+    a2a_card_overrides: dict | None = None
     fs_path: str | None = None
 
     @field_validator("endpoint_name")
     @classmethod
     def validate_endpoint_name(cls, v):
-        # Endpoint name must be a string containing only letters, numbers, hyphens, and underscores
-        if v is not None:
-            if not isinstance(v, str):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Endpoint name must be a string",
-                )
-            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Endpoint name must contain only letters, numbers, hyphens, and underscores",
-                )
-        return v
+        return _validate_endpoint_name_value(v)

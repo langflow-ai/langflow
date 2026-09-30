@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgShare2 from "./Share2";
 
 export const Share2Icon = forwardRef<

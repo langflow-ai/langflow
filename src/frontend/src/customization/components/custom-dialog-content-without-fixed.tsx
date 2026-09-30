@@ -6,11 +6,19 @@ export const DialogContentWithouFixed = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideTitle?: boolean;
+    hideDescription?: boolean;
     closeButtonClassName?: string;
   }
 >(
   (
-    { className, children, hideTitle = false, closeButtonClassName, ...props },
+    {
+      className,
+      children,
+      hideTitle = false,
+      hideDescription = false,
+      closeButtonClassName,
+      ...props
+    },
     ref,
   ) => {
     return <></>;
