@@ -1,0 +1,235 @@
+"""The request state machine: requested -> approved -> erasing -> done, or refused / withdrawn."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
+from uuid import UUID
+
+from sqlmodel import col, select
+
+from langflow.services.data_subjects import audit_events
+from langflow.services.data_subjects.context import EraseContext
+from langflow.services.data_subjects.errors import (
+    DataSubjectError,
+    InvalidTransitionError,
+    SubjectNotFoundError,
+)
+from langflow.services.data_subjects.identity import end_user_keys, ensure_not_an_account
+from langflow.services.data_subjects.lifecycle import (
+    account_deletion_mutation,
+    ensure_plugin_allows_deletion,
+    lock_account,
+)
+from langflow.services.data_subjects.stop import ensure_builder_erasable, stop_builder, stop_end_user
+from langflow.services.data_subjects.storage_steps import builder_storage_plan, end_user_storage_plan
+from langflow.services.database.models.data_subject_request import (
+    OPEN_STATUSES,
+    DataSubjectRequest,
+    DataSubjectRequestSource,
+    DataSubjectRequestStatus,
+    DataSubjectType,
+)
+from langflow.services.database.models.user.model import User
+
+if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+RESPONSE_DEADLINE = timedelta(days=30)
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+async def _open_request_for(session: AsyncSession, subject_user_id: UUID) -> DataSubjectRequest | None:
+    return (
+        await session.exec(
+            select(DataSubjectRequest).where(
+                DataSubjectRequest.subject_user_id == subject_user_id,
+                col(DataSubjectRequest.status).in_([status.value for status in OPEN_STATUSES]),
+            )
+        )
+    ).first()
+
+
+async def _create(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID | None) -> DataSubjectRequest:
+    session.add(request)
+    await session.flush()
+    await audit_events.record_dsar_event(
+        session,
+        actor_id=actor_id,
+        action=audit_events.ACTION_REQUEST,
+        request_id=request.id,
+        details={"request_id": str(request.id), "subject_type": request.subject_type, "source": request.source},
+    )
+    return request
+
+
+async def create_builder_request(
+    session: AsyncSession, *, subject: User, requested_by: UUID | None, source: DataSubjectRequestSource
+) -> tuple[DataSubjectRequest, bool]:
+    """Return the open request for this builder, or a new one. The flag is True when it was created."""
+    existing = await _open_request_for(session, subject.id)
+    if existing is not None:
+        return existing, False
+    request = DataSubjectRequest(
+        subject_type=DataSubjectType.BUILDER.value,
+        subject_user_id=subject.id,
+        subject_label=subject.username,
+        source=source.value,
+        requested_by=requested_by,
+        due_at=_now() + RESPONSE_DEADLINE,
+    )
+    return await _create(session, request, requested_by), True
+
+
+async def create_end_user_request(
+    session: AsyncSession,
+    *,
+    end_user_id: str,
+    scope_flow_ids: list[UUID] | None,
+    requested_by: UUID | None,
+    source: DataSubjectRequestSource,
+) -> tuple[DataSubjectRequest, bool]:
+    keys = end_user_keys(end_user_id)
+    await ensure_not_an_account(session, keys)
+    existing = await _open_request_for(session, keys.message_owner_id)
+    if existing is not None:
+        return existing, False
+    request = DataSubjectRequest(
+        subject_type=DataSubjectType.END_USER.value,
+        subject_user_id=keys.message_owner_id,
+        subject_end_user_id=keys.raw_id,
+        subject_label=keys.raw_id,
+        scope_flow_ids=[str(flow_id) for flow_id in scope_flow_ids] if scope_flow_ids else None,
+        source=source.value,
+        requested_by=requested_by,
+        due_at=_now() + RESPONSE_DEADLINE,
+    )
+    return await _create(session, request, requested_by), True
+
+
+def _require_status(request: DataSubjectRequest, *allowed: DataSubjectRequestStatus) -> None:
+    if request.status not in {status.value for status in allowed}:
+        msg = f"A request in status '{request.status}' cannot do this"
+        raise InvalidTransitionError(msg, details={"status": request.status})
+
+
+def close_request(request: DataSubjectRequest, status: DataSubjectRequestStatus) -> None:
+    """Closed requests keep ids, counts and times as evidence, and drop what identifies the person."""
+    request.status = status.value
+    request.finished_at = _now()
+    request.subject_end_user_id = None
+    request.subject_label = None
+    request.scope_flow_ids = None
+    request.pending_paths = None
+    request.cursor = None
+
+
+async def withdraw(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID) -> DataSubjectRequest:
+    _require_status(request, DataSubjectRequestStatus.REQUESTED)
+    if request.subject_user_id != actor_id:
+        msg = "Only the person who asked can withdraw a request"
+        raise InvalidTransitionError(msg)
+    close_request(request, DataSubjectRequestStatus.WITHDRAWN)
+    session.add(request)
+    await audit_events.record_dsar_event(
+        session,
+        actor_id=actor_id,
+        action=audit_events.ACTION_WITHDRAW,
+        request_id=request.id,
+        details={"request_id": str(request.id)},
+    )
+    return request
+
+
+async def refuse(
+    session: AsyncSession, request: DataSubjectRequest, actor_id: UUID, note: str | None
+) -> DataSubjectRequest:
+    _require_status(request, DataSubjectRequestStatus.REQUESTED)
+    request.decided_by = actor_id
+    request.decided_at = _now()
+    request.refusal_note = note
+    close_request(request, DataSubjectRequestStatus.REFUSED)
+    session.add(request)
+    await audit_events.record_dsar_event(
+        session,
+        actor_id=actor_id,
+        action=audit_events.ACTION_REFUSE,
+        request_id=request.id,
+        details={"request_id": str(request.id)},
+    )
+    return request
+
+
+def erase_context(request: DataSubjectRequest, username: str | None = None) -> EraseContext:
+    scope = tuple(UUID(value) for value in request.scope_flow_ids or [])
+    keys = end_user_keys(request.subject_end_user_id) if request.subject_end_user_id else None
+    return EraseContext(
+        request_id=request.id,
+        subject_user_id=request.subject_user_id,
+        username=username or request.subject_label,
+        end_user=keys,
+        scope_flow_ids=scope,
+        cursor=dict(request.cursor or {}),
+    )
+
+
+async def _approve_builder(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID) -> dict[str, int]:
+    await lock_account(session, request.subject_user_id)
+    user = await session.get(User, request.subject_user_id)
+    if user is None:
+        msg = "The account no longer exists"
+        raise SubjectNotFoundError(msg)
+    await ensure_builder_erasable(session, user)
+    await ensure_plugin_allows_deletion(session, account_deletion_mutation(user, actor_id))
+    ctx = erase_context(request, username=user.username)
+    request.pending_paths = await builder_storage_plan(session, ctx)
+    request.subject_label = user.username
+    return await stop_builder(session, user)
+
+
+async def approve(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID) -> DataSubjectRequest:
+    """Run phase 1 and hand the request to the worker. Guard refusals are audited and re-raised."""
+    _require_status(request, DataSubjectRequestStatus.REQUESTED)
+    try:
+        if request.subject_type == DataSubjectType.BUILDER.value:
+            stopped = await _approve_builder(session, request, actor_id)
+        else:
+            ctx = erase_context(request)
+            if ctx.end_user is None:
+                msg = "The end-user id of this request is no longer available"
+                raise SubjectNotFoundError(msg)
+            request.pending_paths = end_user_storage_plan(ctx)
+            stopped = await stop_end_user(session, ctx.end_user, ctx.scope_flow_ids)
+    except DataSubjectError as exc:
+        await audit_events.record_dsar_event(
+            session,
+            actor_id=actor_id,
+            action=audit_events.ACTION_APPROVE,
+            request_id=request.id,
+            result="deny",
+            details={"request_id": str(request.id), "blocked_by": exc.code},
+        )
+        raise
+    request.status = DataSubjectRequestStatus.APPROVED.value
+    request.decided_by = actor_id
+    request.decided_at = _now()
+    request.counts = {"stopped": stopped}
+    session.add(request)
+    await audit_events.record_dsar_event(
+        session,
+        actor_id=actor_id,
+        action=audit_events.ACTION_APPROVE,
+        request_id=request.id,
+        details={"request_id": str(request.id), "subject_type": request.subject_type},
+    )
+    return request
+
+
+async def retry(session: AsyncSession, request: DataSubjectRequest) -> DataSubjectRequest:
+    _require_status(request, DataSubjectRequestStatus.APPROVED, DataSubjectRequestStatus.ERASING)
+    request.error = None
+    session.add(request)
+    return request

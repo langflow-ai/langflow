@@ -20,6 +20,7 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerEventState,
     TriggerState,
 )
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from langflow.services.triggers import dispatcher, ledger
 from langflow.services.triggers.constants import TRIGGER_EVENT_FIELD
@@ -209,6 +210,21 @@ async def test_a_paused_trigger_retires_its_queued_events(make_trigger, fake_bac
     row = await _event(event_id)
     assert row.state == TriggerEventState.FAILED.value
     assert row.error == "trigger_paused"
+
+
+async def test_a_deactivated_owner_runs_nothing(make_trigger, fake_background_service, trigger_owner) -> None:
+    trigger_id = await make_trigger()
+    event_id = await _append(trigger_id)
+    async with session_scope() as session:
+        owner = await session.get(User, trigger_owner)
+        owner.is_active = False
+        session.add(owner)
+
+    assert await dispatcher.run_once(owner="solo") == 0
+    assert fake_background_service.submits == []
+    row = await _event(event_id)
+    assert row.state == TriggerEventState.FAILED.value
+    assert row.error == "owner_inactive"
 
 
 async def test_a_pinned_trigger_runs_the_pinned_canvas(make_trigger, fake_background_service) -> None:

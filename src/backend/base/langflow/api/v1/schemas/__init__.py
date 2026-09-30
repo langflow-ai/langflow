@@ -226,6 +226,10 @@ class ComponentListRead(BaseModel):
 class UsersResponse(BaseModel):
     total_count: int
     users: list[UserRead]
+    deletion_requests: dict[str, str] = Field(
+        default_factory=dict,
+        description="Status of each listed user's open account deletion request, keyed by user id.",
+    )
 
 
 class PasswordResetRequest(BaseModel):
