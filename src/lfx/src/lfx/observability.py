@@ -1374,7 +1374,11 @@ def instrument_fastapi_app(app: FastAPI) -> None:
     # app.routes, which crashes OTel's span route extraction on partial matches (e.g. CORS
     # preflight). Patch the helper before instrumenting.
     patch_otel_fastapi_route_details()
-    FastAPIInstrumentor.instrument_app(app)
+    # Without exclude_spans the ASGI middleware opens a child span for every message it relays
+    # ("<route> http send" / "http receive"), so a streamed response exports one span per SSE
+    # frame. The server span still gets the route, status code and duration from the same
+    # wrapper, and the HTTP server metrics are unchanged, so those spans only add cost.
+    FastAPIInstrumentor.instrument_app(app, exclude_spans=["send", "receive"])
 
 
 def start_event_loop_lag_monitor(
