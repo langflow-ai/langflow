@@ -17,7 +17,7 @@ from .test_migration_execution import (  # noqa: F401
     db_url,
 )
 
-_PRIOR_REVISION = "4e7a2b9c1d05"  # pragma: allowlist secret -- migration revision identifier
+_PRIOR_REVISION = "f9d3b7a5c201"  # pragma: allowlist secret -- migration revision identifier
 _REVISION = "f194a1b2c3d4"  # pragma: allowlist secret -- migration revision identifier
 
 # Must match _lock_replacement_operation's pg_advisory_xact_lock call in api/v1/projects.py.

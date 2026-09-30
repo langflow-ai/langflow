@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import subprocess
 import sys
@@ -22,6 +23,10 @@ from bundle_release_plan import (
     BASE_DIR,
     PlanError,
     PublishResult,
+    PyPIClient,
+    _admits_lfx_series,
+    _lfx_range_is_compatible,
+    _lfx_specifiers,
     build_artifact_plan,
     build_change_plan,
     bump_version,
@@ -53,6 +58,7 @@ class FakeIndex:
     def __init__(self) -> None:
         self.releases: dict[tuple[str, str], list[dict[str, Any] | None]] = defaultdict(list)
         self.latest_versions: dict[str, str] = {}
+        self.versions: dict[str, tuple[str, ...]] = {}
         self.downloads: dict[str, bytes] = {}
         self.calls: dict[tuple[str, str], int] = defaultdict(int)
 
@@ -71,6 +77,9 @@ class FakeIndex:
 
     def get_latest_version(self, package: str) -> str | None:
         return self.latest_versions.get(package)
+
+    def get_versions(self, package: str) -> tuple[str, ...]:
+        return self.versions.get(package, ())
 
     def download(self, url: str) -> bytes:
         return self.downloads[url]
@@ -288,6 +297,38 @@ def test_multi_bundle_update_changes_versions_ranges_manifests_and_lock(tmp_path
     assert 'name = "lfx-beta"\nversion = "0.2.5"' in (repo / "uv.lock").read_text()
 
 
+@pytest.mark.parametrize(
+    ("specifier", "compatible"),
+    [
+        (">=1.12.0.dev0,<2.0.0", True),
+        (">=1.12.4,<2.0.0", True),
+        (">=1.12.4,<1.13", True),
+        (">=1.11.9,<2.0.0", False),
+        (">=1.12.5,<2.0.0", False),
+        (">=1.12.4,<1.12.4", False),
+        (">=1.12.4", False),
+    ],
+)
+def test_lfx_range_accepts_only_installable_tightenings(specifier: str, *, compatible: bool) -> None:
+    assert _lfx_range_is_compatible(specifier, "1.12.4") is compatible
+
+
+def test_bundle_update_preserves_a_tightened_lfx_floor(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
+    pyproject = repo / "src" / "bundles" / "alpha" / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8").replace("lfx>=1.11.0.dev0", "lfx>=1.11.0"),
+        encoding="utf-8",
+    )
+    source = repo / "src" / "bundles" / "alpha" / "src" / "lfx_alpha" / "component.py"
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+
+    plan = update_changed_bundles("HEAD", base_dir=repo, run_lock=lambda: _refresh_lock(repo))
+
+    assert all(not entry.errors for entry in plan)
+    assert '"lfx>=1.11.0,<2.0.0"' in pyproject.read_text(encoding="utf-8")
+
+
 def test_prerelease_versions_share_the_requested_restamp() -> None:
     assert restamp_version("0.3.0", "rc4") == "0.3.0rc4"
     assert bump_version("0.2.9", prerelease="rc0") == "0.2.10rc0"
@@ -324,11 +365,88 @@ def test_prerelease_restamp_rejects_source_version_behind_public_latest(tmp_path
 
     with pytest.raises(
         PlanError,
-        match=r"lfx-alpha 0\.1\.1: source version trails latest public version 0\.1\.2",
+        match=r"lfx-alpha 0\.1\.1: source version trails public version 0\.1\.2 \(lfx range unknown\)",
     ):
         restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
 
     assert 'version = "0.1.1"' in (repo / "src" / "bundles" / "alpha" / "pyproject.toml").read_text()
+
+
+def _release_requiring(lfx_requirement: str) -> dict[str, Any]:
+    return {"info": {"requires_dist": ["requests>=2", lfx_requirement]}, "urls": []}
+
+
+def test_prerelease_restamp_ignores_newer_release_for_another_lfx_line(tmp_path: Path) -> None:
+    # The lfx 1.12 line publishes 0.2.x; the lfx 1.11 line's 0.1.x can never resolve to it.
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.2.0"
+    index.versions["lfx-alpha"] = ("0.1.0", "0.1.1", "0.2.0rc1", "0.2.0")
+    index.queue("lfx-alpha", "0.2.0", _release_requiring("lfx<2.0.0,>=1.12.0.dev0"))
+    index.queue("lfx-alpha", "0.2.0rc1", _release_requiring("lfx (<2.0.0,>=1.12.0rc1)"))
+    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+
+    plan = restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    assert [(entry.package, entry.build_version, entry.action) for entry in plan] == [
+        ("lfx-alpha", "0.1.1", "reuse-stable"),
+    ]
+
+
+def test_prerelease_restamp_rejects_newer_release_for_the_same_lfx_line(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.2.0"
+    index.versions["lfx-alpha"] = ("0.1.1", "0.1.2", "0.2.0")
+    index.queue("lfx-alpha", "0.2.0", _release_requiring("lfx<2.0.0,>=1.12.0.dev0"))
+    index.queue("lfx-alpha", "0.1.2", _release_requiring("lfx<2.0.0,>=1.11.0.dev0"))
+
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-alpha 0\.1\.1: source version trails public version 0\.1\.2 \(lfx<2\.0\.0,>=1\.11\.0\.dev0\)",
+    ):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+
+@pytest.mark.parametrize(
+    ("specifier", "admits"),
+    [
+        ("<2.0.0,>=1.13.0.dev0", False),
+        (">=1.12.0.dev0,<2.0.0", True),
+        (">=1.12.4rc0,<2.0.0", True),
+        (">1.12.9", True),
+        (">=1.11.0,<1.12.0.dev0", False),
+        ("<=1.11.9", False),
+        (">=1.10,<2", True),
+        ("~=1.13.0", True),  # No comparable bound: admit so the guard fails closed.
+    ],
+)
+def test_lfx_series_admission(specifier: str, *, admits: bool) -> None:
+    assert _admits_lfx_series(specifier, "1.12.4") is admits
+
+
+def test_lfx_specifiers_skip_conditional_and_unrelated_requirements() -> None:
+    assert _lfx_specifiers(
+        ["requests>=2", "lfx (<2.0.0,>=1.13.0.dev0)", 'lfx>=1.0; extra == "dev"', "lfx-google>=0.2"]
+    ) == ("<2.0.0,>=1.13.0.dev0",)
+
+
+def test_pypi_versions_exclude_yanked_and_empty_releases(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = {
+        "info": {"version": "0.3.0"},
+        "releases": {
+            "0.2.4": [{"yanked": False}],
+            "0.2.5": [{"yanked": True}],
+            "0.2.6": [],
+            "0.3.0": [{"yanked": True}, {"yanked": False}],
+        },
+    }
+    monkeypatch.setattr(
+        "bundle_release_plan.urllib.request.urlopen",
+        lambda *_args, **_kwargs: io.BytesIO(json.dumps(payload).encode()),
+    )
+
+    assert PyPIClient().get_versions("lfx-google") == ("0.2.4", "0.3.0")
 
 
 def test_prerelease_restamp_updates_runtime_lfx_requirement_not_quoted_comment(tmp_path: Path) -> None:
@@ -434,9 +552,22 @@ def test_artifact_plan_rejects_version_behind_public_latest(tmp_path: Path) -> N
 
     with pytest.raises(
         PlanError,
-        match=r"lfx-alpha 0\.1\.1: source version trails latest public version 0\.1\.2",
+        match=r"lfx-alpha 0\.1\.1: source version trails public version 0\.1\.2 \(lfx range unknown\)",
     ):
         build_artifact_plan([alpha], index)
+
+
+def test_artifact_plan_ignores_newer_release_for_another_lfx_line(tmp_path: Path) -> None:
+    alpha = _make_wheel(tmp_path, "lfx-alpha", "0.1.1", "ALPHA = 1\n", lfx_requirement="lfx<2,>=1.11.0rc3")
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.2.0"
+    index.versions["lfx-alpha"] = ("0.1.1", "0.2.0")
+    index.queue("lfx-alpha", "0.2.0", _release_requiring("lfx<2.0.0,>=1.12.0.dev0"))
+    index.queue("lfx-alpha", "0.1.1", _matching_release(alpha))
+
+    plan = build_artifact_plan([alpha], index)
+
+    assert [(entry.package, entry.action) for entry in plan] == [("lfx-alpha", "reuse")]
 
 
 def test_partial_publish_only_uploads_missing_artifact(tmp_path: Path) -> None:
