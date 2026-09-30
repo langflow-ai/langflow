@@ -1,8 +1,12 @@
-from fastapi import HTTPException
+import re
+
+from fastapi import HTTPException, status
+from fastapi.responses import JSONResponse
 from lfx.log.logger import logger
 from lfx.observability import EXECUTION_CLIENT_HEADER, execution_client
 from starlette.datastructures import Headers
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.requests import Request
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from langflow.services.deps import get_settings_service
 
@@ -87,3 +91,77 @@ class ExecutionClientMiddleware:
 
         with execution_client(Headers(scope=scope).get(EXECUTION_CLIENT_HEADER)):
             await self.app(scope, receive, send)
+
+
+class MultipartBoundaryMiddleware:
+    """Reject a file upload whose multipart boundary is missing, malformed or not framing the body.
+
+    The body is read in full here and replayed to the app as one ``http.request`` message, as
+    BaseHTTPMiddleware's cached request did, so ContentSizeLimitMiddleware further in still
+    counts every byte. Other paths pass straight through without touching the body.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive)
+        if "/api/v1/files/upload" not in request.url.path:
+            await self.app(scope, receive, send)
+            return
+
+        content_type = request.headers.get("Content-Type")
+
+        if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
+            response = JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
+            )
+            await response(scope, receive, send)
+            return
+
+        boundary = content_type.split("boundary=")[-1].strip()
+
+        if not re.match(r"^[\w\-]{1,70}$", boundary):
+            response = JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                content={"detail": "Invalid boundary format"},
+            )
+            await response(scope, receive, send)
+            return
+
+        body = await request.body()
+
+        boundary_start = f"--{boundary}".encode()
+        # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
+        # implement it that way
+        boundary_end = f"--{boundary}--\r\n".encode()
+        boundary_end_no_newline = f"--{boundary}--".encode()
+
+        if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
+            response = JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                content={"detail": "Invalid multipart formatting"},
+            )
+            await response(scope, receive, send)
+            return
+
+        await self.app(scope, _replay_body(body, receive), send)
+
+
+def _replay_body(body: bytes, receive: Receive) -> Receive:
+    """Hand the already-read body to the app once, then defer to the server (for the disconnect)."""
+    body_sent = False
+
+    async def replay() -> Message:
+        nonlocal body_sent
+        if not body_sent:
+            body_sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        return await receive()
+
+    return replay

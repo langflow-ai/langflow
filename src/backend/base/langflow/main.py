@@ -1,7 +1,6 @@
 import asyncio
 import json
 import os
-import re
 import sys
 import tempfile
 import warnings
@@ -15,7 +14,7 @@ from urllib.parse import urlencode
 import anyio
 import httpx
 import sqlalchemy
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -49,7 +48,7 @@ from langflow.initial_setup.setup import (
     load_flows_from_directory,
     sync_flows_from_fs,
 )
-from langflow.middleware import ContentSizeLimitMiddleware, ExecutionClientMiddleware
+from langflow.middleware import ContentSizeLimitMiddleware, ExecutionClientMiddleware, MultipartBoundaryMiddleware
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
@@ -1008,40 +1007,7 @@ def create_app():
 
     app.add_middleware(ExecutionClientMiddleware)
 
-    @app.middleware("http")
-    async def check_boundary(request: Request, call_next):
-        if "/api/v1/files/upload" in request.url.path:
-            content_type = request.headers.get("Content-Type")
-
-            if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
-                return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
-                )
-
-            boundary = content_type.split("boundary=")[-1].strip()
-
-            if not re.match(r"^[\w\-]{1,70}$", boundary):
-                return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    content={"detail": "Invalid boundary format"},
-                )
-
-            body = await request.body()
-
-            boundary_start = f"--{boundary}".encode()
-            # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
-            # implement it that way
-            boundary_end = f"--{boundary}--\r\n".encode()
-            boundary_end_no_newline = f"--{boundary}--".encode()
-
-            if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
-                return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    content={"detail": "Invalid multipart formatting"},
-                )
-
-        return await call_next(request)
+    app.add_middleware(MultipartBoundaryMiddleware)
 
     @app.middleware("http")
     async def forwarded_prefix_middleware(request: Request, call_next):

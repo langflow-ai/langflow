@@ -7,12 +7,14 @@ see every response message as the server would.
 
 import asyncio
 import json
+from types import SimpleNamespace
 
 import pytest
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse
+from langflow import middleware as middleware_module
 from langflow.main import JavaScriptMIMETypeMiddleware
-from langflow.middleware import ExecutionClientMiddleware
+from langflow.middleware import ContentSizeLimitMiddleware, ExecutionClientMiddleware, MultipartBoundaryMiddleware
 from lfx.observability import get_execution_client
 from pydantic_core import PydanticSerializationError
 
@@ -211,3 +213,101 @@ class TestExecutionClientMiddleware:
 
         assert _body(messages) == b"data: cli\n\ndata: cli\n\n"
         assert get_execution_client() is None
+
+
+class TestMultipartBoundaryMiddleware:
+    BOUNDARY = "----langflowBoundary123"
+    UPLOAD = "/api/v1/files/upload/5f0c3a8e-0000-4000-8000-000000000000"
+
+    @classmethod
+    def _multipart(cls, content: bytes = b"hello") -> bytes:
+        return (
+            (
+                f"--{cls.BOUNDARY}\r\n"
+                'Content-Disposition: form-data; name="file"; filename="a.txt"\r\n'
+                "Content-Type: text/plain\r\n\r\n"
+            ).encode()
+            + content
+            + f"\r\n--{cls.BOUNDARY}--\r\n".encode()
+        )
+
+    @staticmethod
+    def _app(*, inner=None) -> FastAPI:
+        app = FastAPI()
+        if inner is not None:
+            app.add_middleware(inner)
+        app.add_middleware(MultipartBoundaryMiddleware)
+
+        @app.post("/api/v1/files/upload/{flow_id}")
+        async def upload(flow_id: str, request: Request):
+            form = await request.form()
+            upload = form["file"]
+            return PlainTextResponse(f"{flow_id}:{upload.filename}:{(await upload.read()).decode()}")
+
+        @app.post("/api/v1/echo")
+        async def echo(request: Request):
+            return PlainTextResponse(await request.body())
+
+        return app
+
+    async def test_a_well_formed_upload_reaches_the_route_intact(self):
+        messages = await _call(
+            self._app(),
+            _scope(
+                self.UPLOAD, method="POST", headers={"content-type": f"multipart/form-data; boundary={self.BOUNDARY}"}
+            ),
+            body=self._multipart(b"file body"),
+        )
+
+        assert messages[0]["status"] == 200
+        assert _body(messages) == b"5f0c3a8e-0000-4000-8000-000000000000:a.txt:file body"
+
+    @pytest.mark.parametrize(
+        ("content_type", "body", "detail"),
+        [
+            (None, b"", "Content-Type header must be 'multipart/form-data' with a boundary parameter."),
+            ("application/json", b"{}", "Content-Type header must be 'multipart/form-data' with a boundary parameter."),
+            (
+                "multipart/form-data",
+                b"",
+                "Content-Type header must be 'multipart/form-data' with a boundary parameter.",
+            ),
+            ("multipart/form-data; boundary=bad boundary!", b"", "Invalid boundary format"),
+            ("multipart/form-data; boundary=----langflowBoundary123", b"not multipart", "Invalid multipart formatting"),
+        ],
+    )
+    async def test_a_malformed_upload_is_rejected_with_422(self, content_type, body, detail):
+        headers = {"content-type": content_type} if content_type else {}
+
+        messages = await _call(self._app(), _scope(self.UPLOAD, method="POST", headers=headers), body=body)
+
+        assert messages[0]["status"] == 422
+        assert json.loads(_body(messages)) == {"detail": detail}
+
+    async def test_other_paths_are_not_checked(self):
+        messages = await _call(
+            self._app(),
+            _scope("/api/v1/echo", method="POST", headers={"content-type": "application/json"}),
+            body=b'{"not": "multipart"}',
+        )
+
+        assert messages[0]["status"] == 200
+        assert _body(messages) == b'{"not": "multipart"}'
+
+    async def test_the_replayed_body_still_counts_against_the_upload_size_limit(self, monkeypatch):
+        monkeypatch.setattr(
+            middleware_module,
+            "get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=1)),
+        )
+        body = self._multipart(b"x" * (1024 * 1024 + 1))
+
+        messages = await _call(
+            self._app(inner=ContentSizeLimitMiddleware),
+            _scope(
+                self.UPLOAD, method="POST", headers={"content-type": f"multipart/form-data; boundary={self.BOUNDARY}"}
+            ),
+            body=body,
+        )
+
+        assert messages[0]["status"] == 413
