@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.67f1fdf3.css">
-<script src="/assets/js/runtime~main.d946f368.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.fbd5fd00.js" defer="defer"></script>
 <script src="/assets/js/main.0172ef92.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -84,6 +84,26 @@ In the event of breaking changes or bugs, your existing installation is preserve
 <p>Highlights of this release include the following changes. For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases/latest" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="breaking-changes">Breaking changes<a href="#breaking-changes" class="hash-link" aria-label="Direct link to Breaking changes" title="Direct link to Breaking changes" translate="no">​</a></h3>
 <ul>
+<li class="">
+<p>Connector security (1.12.4)</p>
+<p>Update the server or the database URL before you upgrade if the connection matches one of these cases.</p>
+<p>If PGVector connects to <code>localhost</code> or <code>127.0.0.1</code>, add that host to <code>LANGFLOW_SSRF_ALLOWED_HOSTS</code>. For example, <code>LANGFLOW_SSRF_ALLOWED_HOSTS=localhost,127.0.0.1</code>. Do the same for a private or container hostname, such as <code>postgres</code>. A public hostname needs no entry. MongoDB and Couchbase SRV targets must be allowlisted by their own hostnames, or by a wildcard such as <code>*.cluster.internal</code>. For more information, see <a class="" href="/api-keys-and-authentication#ssrf-protection">SSRF protection</a>.</p>
+<p>If an SQL Database URL starts with <code>mysql+mysqlconnector://</code>, add <code>allow_local_infile=false</code> to the query string. If it starts with <code>mariadb+mariadbconnector://</code>, add <code>local_infile=false</code>. Use <code>?</code> when the URL has no query string, and <code>&amp;</code> when it already has one: <code>mysql+mysqlconnector://user:password@db.example.com/app?allow_local_infile=false</code>. On a trusted single-tenant server, <code>LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false</code> keeps the previous URLs working and also lets flows read local server files. For more information, see <a class="" href="/api-keys-and-authentication#multi-tenant-component-hardening">component hardening</a>.</p>
+<p>If the URL points at a TLS certificate or key on the server, copy the file into a directory only an administrator can change, set <code>LANGFLOW_DATABASE_TLS_FILES_DIR</code> to that directory, and point the URL at the new path. For example, set <code>LANGFLOW_DATABASE_TLS_FILES_DIR=/etc/langflow/db-tls</code> and use <code>postgresql://user:password@db.example.com/app?sslrootcert=/etc/langflow/db-tls/ca.pem</code>. PostgreSQL <code>sslrootcert</code>, <code>sslcert</code>, and <code>sslkey</code>, and MySQL or MariaDB <code>ssl_ca</code>, <code>ssl_cert</code>, and <code>ssl_key</code>, can use files in that directory. For more information, see <a class="" href="/api-keys-and-authentication#multi-tenant-component-hardening">component hardening</a>.</p>
+</li>
+<li class="">
+<p>Custom component input names (1.12.4)</p>
+<p>A custom component input <code>name</code> can no longer match a method name on <code>Component</code> or <code>CustomComponent</code>, or a method defined by the custom component class.</p>
+<p>Names that commonly collide include <code>index</code>, <code>start</code>, <code>stop</code>, <code>run</code>, <code>log</code>, <code>validate</code>, and <code>variables</code>. Components that previously ran without reading <code>self.&lt;name&gt;</code> will also fail to load.</p>
+<p>To fix the collision, rename the custom component&#x27;s input <code>name</code> and update any connections that target it. The display name is not affected.</p>
+<p>For more information, see <a class="" href="/components-custom-components#inputs">Inputs</a>.</p>
+</li>
+<li class="">
+<p>MCP stdio Node.js launch options (1.12.4)</p>
+<p>MCP stdio configurations can no longer place Node.js runtime options or <code>inspect</code> before a server script, even when <code>LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING</code> is <code>false</code>.</p>
+<p>For example, <code>node --no-warnings server.js</code> must be changed to <code>node server.js</code>. Options intended for the server may still follow its script, such as <code>node server.js --server-option</code>.</p>
+<p>Shell wrappers also reject sh/bash glob and brace expansion, and cmd variable, caret, or double-quote syntax. Use an approved launcher directly with separate command and arguments for those payloads.</p>
+</li>
 <li class="">
 <p><code>langflow-base</code> is now the minimal install</p>
 <p>Langflow 1.12 makes <code>langflow-base</code> a complete, version-aligned installation of the Langflow application.
