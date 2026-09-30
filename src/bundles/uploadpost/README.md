@@ -41,9 +41,12 @@ anyone who does not use them.
 - **One request, many platforms.** Each platform comes back with its own
   result: `completed` (with URL or post id), `failed` (with the platform's
   error) or `skipped` (no account for it on the profile).
-- **No double posts.** The component generates a `request_id`, sends it as the
-  `Idempotency-Key`, and never re-sends after a network error: it polls that
-  `request_id` to learn whether the upload arrived.
+- **One upload per run.** The component generates a `request_id`, sends it as
+  the `Idempotency-Key`, and never re-sends after a network error: it checks
+  that `request_id` to learn whether the upload arrived. This protects a single
+  run only. Running the component again is a new request and a new post, so if
+  a run reports an unconfirmed upload, look up its `request_id` with
+  **Upload-Post Status** first.
 - **Safe defaults.** YouTube uploads default to `private`; TikTok keeps the
   account's own privacy unless you pick one.
 - **Scheduling.** Set **Schedule At** (ISO-8601, with an optional IANA

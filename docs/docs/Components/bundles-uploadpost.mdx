@@ -20,7 +20,8 @@ Every publish component returns a [`JSON`](/data-types#json) object with the ove
 Its `text` summarizes the result in one line per platform.
 If the request can't be sent, for example because the API key is missing or invalid, the output contains an `error` field that describes the problem.
 
-The components never publish twice for one run: each upload carries its own `request_id`, sent as an `Idempotency-Key`, and a network error during the upload is followed by a status check instead of a second upload.
+Within one run, a component uploads only once: each upload carries its own `request_id`, sent as an `Idempotency-Key`, and a network error during the upload is followed by a status check instead of a second upload.
+Running the component again is a new request and a new post. If a run reports an unconfirmed upload (`status` of `submitted`, `unknown`, or `not_found` together with an `error`), check its `request_id` with **Upload-Post Status** before running it again.
 
 ## Upload-Post Publish Video
 

@@ -347,3 +347,60 @@ def test_tool_mode_exposes_specific_tool_names():
     component = UploadPostVideoComponent(upload_post_api_key="test-key", user="creator")  # pragma: allowlist secret
     tools = asyncio.run(component.to_toolkit())
     assert [tool.name for tool in tools] == ["upload_post_publish_video"]
+
+
+def test_scheduled_transport_error_checks_status_instead_of_failing():
+    """A dropped connection on a scheduled submit must not be reported as a failure if the job exists."""
+    job_id = "c" * 32
+    post = MagicMock(side_effect=httpx.ReadTimeout("timed out"))
+    get = MagicMock(return_value=_status_response({"status": "queued", "job_id": job_id, "results": []}))
+    with patch(POST_TARGET, post), patch(GET_TARGET, get):
+        result = _video(scheduled_date="2026-12-01T09:00:00Z").upload_post_publish_video()
+    assert post.call_count == 1
+    sent_id = post.call_args.kwargs["data"]["request_id"]
+    assert get.call_args.kwargs["params"] == {"request_id": sent_id}
+    assert result.data["status"] == "scheduled"
+    assert result.data["success"] is True
+    assert result.data["job_id"] == job_id
+
+
+def test_scheduled_transport_error_not_found_keeps_request_id():
+    post = MagicMock(side_effect=httpx.ConnectError("refused"))
+    not_found = _status_response({"status": "not_found"}, status_code=404)
+    with patch(POST_TARGET, post), patch(GET_TARGET, MagicMock(return_value=not_found)):
+        result = _video(scheduled_date="2026-12-01T09:00:00Z").upload_post_publish_video()
+    assert result.data["success"] is False
+    assert result.data["status"] == "not_found"
+    assert result.data["request_id"] == post.call_args.kwargs["data"]["request_id"]
+
+
+def test_status_check_failure_after_accepted_upload_keeps_request_id():
+    """submit() succeeded but wait() failed: the result must carry the request_id and a submitted state."""
+    post = MagicMock(return_value=_response(json={"success": True}))
+    get = MagicMock(side_effect=httpx.ConnectError("status down"))
+    with patch(POST_TARGET, post), patch(GET_TARGET, get):
+        result = _video().upload_post_publish_video()
+    assert result.data["request_id"] == post.call_args.kwargs["data"]["request_id"]
+    assert result.data["status"] == "submitted"
+    assert result.data["success"] is True
+    assert "status down" in result.data["error"]
+
+
+def test_status_check_failure_after_transport_error_is_unknown():
+    post = MagicMock(side_effect=httpx.ReadTimeout("timed out"))
+    get = MagicMock(side_effect=httpx.ConnectError("status down"))
+    with patch(POST_TARGET, post), patch(GET_TARGET, get):
+        result = _video().upload_post_publish_video()
+    assert result.data["status"] == "unknown"
+    assert result.data["success"] is False
+    assert result.data["request_id"] == post.call_args.kwargs["data"]["request_id"]
+
+
+def test_non_json_2xx_submit_is_an_accepted_submission():
+    """An empty or non-JSON 2xx body means the upload was accepted, not failed."""
+    post = MagicMock(return_value=_response(200, content=b""))
+    with patch(POST_TARGET, post), patch(GET_TARGET, MagicMock()):
+        result = _video(wait_for_result=False).upload_post_publish_video()
+    assert result.data["status"] == "submitted"
+    assert result.data["success"] is True
+    assert result.data["request_id"] == post.call_args.kwargs["data"]["request_id"]

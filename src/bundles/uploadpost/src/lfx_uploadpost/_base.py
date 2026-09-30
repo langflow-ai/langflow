@@ -146,8 +146,33 @@ class UploadPostBaseComponent(Component):
         """Return ``(form_fields, [(file_field, local_path), ...])``. Implemented by subclasses."""
         raise NotImplementedError
 
-    def _error(self, message: str) -> Data:
-        result = Data(text=message, data={"success": False, "error": message})
+    def _error(self, message: str, **extra: Any) -> Data:
+        result = Data(text=message, data={"success": False, "error": message, **extra})
+        self.status = result
+        return result
+
+    def _unconfirmed(self, request_id: str, reason: str, *, accepted: bool) -> Data:
+        """Report an upload whose outcome could not be confirmed, keeping its request_id.
+
+        ``accepted`` is True when the API answered the upload with a 2xx, so it is on
+        Upload-Post; False when the connection failed and it may or may not be.
+        """
+        if accepted:
+            text = (
+                f"Uploaded, but the status check failed: {reason}. "
+                f"Check request_id {request_id} with Upload-Post Status."
+            )
+            state = "submitted"
+        else:
+            text = (
+                f"The upload could not be confirmed: {reason}. Check request_id {request_id} with "
+                "Upload-Post Status before running this again; a new run is a new post."
+            )
+            state = "unknown"
+        result = Data(
+            text=text,
+            data={"success": accepted, "status": state, "request_id": request_id, "error": reason, "results": []},
+        )
         self.status = result
         return result
 
@@ -161,23 +186,37 @@ class UploadPostBaseComponent(Component):
         except (ValueError, OSError, UploadPostError) as e:
             return self._error(str(e))
 
+        transport_error = submitted.get("transport_error")
         if self._text("scheduled_date"):
+            job_id = submitted.get("job_id")
+            if transport_error:
+                # The server may have created the job before the connection dropped.
+                try:
+                    status = client.status(request_id=request_id)
+                except (httpx.HTTPError, UploadPostError) as e:
+                    return self._unconfirmed(request_id, f"{transport_error}; status check failed: {e}", accepted=False)
+                if status.get("status") == "not_found":
+                    return self._error(
+                        f"Upload-Post has no record of request_id {request_id} yet ({transport_error}). "
+                        "Check it again with Upload-Post Status in a minute before running this again.",
+                        status="not_found",
+                        request_id=request_id,
+                    )
+                job_id = status.get("job_id") or job_id
             summary = {
                 "status": "scheduled",
                 "request_id": submitted.get("request_id") or request_id,
-                "job_id": submitted.get("job_id"),
-                "success": "transport_error" not in submitted,
+                "job_id": job_id,
+                "success": True,
                 "timed_out": False,
                 "results": [],
             }
-            if "transport_error" in submitted:
-                summary["error"] = submitted["transport_error"]
             text = f"Scheduled (job {summary['job_id']}, request_id {summary['request_id']})."
-        elif self.wait_for_result or "transport_error" in submitted:
+        elif self.wait_for_result or transport_error:
             try:
                 status = client.wait(request_id, float(self.wait_timeout or 0))
             except (httpx.HTTPError, UploadPostError) as e:
-                return self._error(f"Uploaded, but the status check failed: {e}. request_id: {request_id}")
+                return self._unconfirmed(request_id, str(e), accepted=not transport_error)
             summary = summarize(status, request_id)
             text = results_text(summary)
         else:

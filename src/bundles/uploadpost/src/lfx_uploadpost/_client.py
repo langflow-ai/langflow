@@ -8,8 +8,9 @@ vendor SDK dependency. API reference: https://docs.upload-post.com.
 Publishing is asynchronous: the client submits with ``async_upload=true`` and
 its own ``request_id`` (also sent as ``Idempotency-Key``), then polls the
 status endpoint. A transport error during the submit never re-sends the
-request -- the server may already have it -- the client polls the same
-``request_id`` instead, so a flaky network cannot double-post.
+request -- the server may already have it -- the caller checks the same
+``request_id`` instead. That protects a single run; running a component
+again is a new request and a new post.
 """
 
 from __future__ import annotations
@@ -103,7 +104,11 @@ class UploadPostClient:
             return {"request_id": request_id, "transport_error": str(e)}
         if response.is_error:
             raise UploadPostError(_error_message(response))
-        payload = response.json()
+        try:
+            payload = response.json()
+        except ValueError:
+            # A 2xx means the upload was accepted even if the body is empty or not JSON.
+            return {"request_id": request_id}
         return payload if isinstance(payload, dict) else {"request_id": request_id}
 
     def status(self, *, request_id: str | None = None, job_id: str | None = None) -> dict[str, Any]:
