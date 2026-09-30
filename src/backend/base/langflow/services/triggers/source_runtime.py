@@ -5,16 +5,52 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from lfx.integrations.errors import ConnectionUnresolvedError
 from lfx.services.deps import session_scope_readonly
+from sqlmodel import update
 
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
 from langflow.services.triggers.lease_guard import LeaseLostError, run_guarded
+from langflow.services.triggers.listeners.supervisor import is_local_configuration_failure
+from langflow.services.triggers.source_errors import SourceConfigurationError
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+def source_failure_detail(exc: BaseException) -> str:
+    """Expose operator guidance only for known local reasons; keep provider details private."""
+    if isinstance(exc, SourceConfigurationError):
+        return str(exc).removesuffix(".")
+    if isinstance(exc, ConnectionUnresolvedError) and is_local_configuration_failure(exc):
+        return (
+            f"{type(exc).__name__} ({exc.reason}). The source worker must use the same LANGFLOW_SECRET_KEY and "
+            "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS as the Langflow API"
+        )
+    return type(exc).__name__
+
+
+async def _clear_source_reconciliation_error(
+    session: AsyncSession, *, trigger_id: UUID, observed_error: str | None
+) -> None:
+    """Clear the pre-I/O source failure without erasing a concurrent error."""
+    if not (observed_error or "").startswith("Source reconciliation failed:"):
+        return
+    await session.exec(
+        update(Trigger)
+        .where(
+            Trigger.id == trigger_id,
+            Trigger.state == "active",
+            Trigger.last_error == observed_error,
+        )
+        .values(last_error=None)
+        .execution_options(synchronize_session=False)
+    )
 
 
 async def sync_source(trigger_id: UUID) -> int:
@@ -112,7 +148,7 @@ async def initialize_source(trigger_id: UUID) -> None:
     async with session_scope() as session:
         if not await leases.acquire(session, name=name, owner=owner, ttl_s=ttl):
             msg = "This source is already being enabled. Check its status before retrying."
-            raise ValueError(msg)
+            raise SourceConfigurationError(msg)
         row = await session.get(Trigger, trigger_id)
         if row is None:
             await leases.forget(session, name=name, owner=owner)
@@ -130,7 +166,7 @@ async def initialize_source(trigger_id: UUID) -> None:
             row = await session.get(Trigger, trigger_id, populate_existing=True, with_for_update=True)
             if row is None or row.config != expected or row.state != "pending":
                 msg = "Source settings or state changed during activation. Enable it again."
-                raise ValueError(msg)
+                raise SourceConfigurationError(msg)
             row.state = "active"
             row.last_error = None
             session.add(row)
@@ -143,7 +179,7 @@ async def initialize_source(trigger_id: UUID) -> None:
             row = await session.get(Trigger, trigger_id)
             if owned and row is not None and row.config == expected and row.state == "pending":
                 row.state = "error"
-                row.last_error = f"Source activation failed: {type(exc).__name__}. Enable the trigger to retry."
+                row.last_error = f"Source activation failed: {source_failure_detail(exc)}. Enable the trigger to retry."
                 session.add(row)
         if isinstance(exc, ValueError):
             raise
@@ -162,12 +198,19 @@ async def reconcile_source(trigger_id: UUID, *, repair_subscription: bool = Fals
     async with session_scope() as session:
         if not await leases.acquire(session, name=name, owner=owner, ttl_s=ttl):
             msg = "Source activation or recovery is already in progress."
-            raise ValueError(msg)
+            raise SourceConfigurationError(msg)
+        row = await session.get(Trigger, trigger_id)
+        observed_error = row.last_error if row is not None else None
 
     async def reconcile():
         created = await sync_source(trigger_id)
         if repair_subscription:
             await ensure_subscription(trigger_id)
+        async with session_scope() as session:
+            if not await leases.fence(session, name=name, owner=owner):
+                msg = "Source reconciliation lost its lease."
+                raise LeaseLostError(msg)
+            await _clear_source_reconciliation_error(session, trigger_id=trigger_id, observed_error=observed_error)
         return created
 
     try:

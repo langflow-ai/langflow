@@ -24,6 +24,7 @@ from langflow.services.triggers.source_clients import (
     SourceHTTP,
     source_lease,
 )
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.subscriptions import revoke_for_trigger, upsert_subscription
 
 if TYPE_CHECKING:
@@ -37,18 +38,18 @@ def _now() -> datetime:
 async def source_ingress_url(session: AsyncSession, trigger: Trigger) -> str:
     if not trigger.connection_id or not trigger.public_id:
         msg = "A push source requires a connection and a public ingress address."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     binding = await session.get(ConnectionOAuth, trigger.connection_id)
     if binding is None:
         msg = "A push source requires an OAuth connection with a configured public callback."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     registration = get_oauth_settings().registration(binding.registration_id)
     from langflow.services.triggers.source_arming import public_ingress_origin
 
     origin = public_ingress_origin(registration.redirect_uri)
     if origin is None:
         msg = "Provider push requires a public HTTPS OAuth callback on this instance."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     return f"{origin}/api/v1/triggers/ingress/{trigger.provider}/{trigger.public_id}"
 
 
@@ -138,7 +139,7 @@ async def _google_watch(
 
         if not (trigger.provider_state or {}).get("page_token"):
             msg = "Initialize the Drive cursor before creating a watch."
-            raise ValueError(msg)
+            raise SourceConfigurationError(msg)
         path = "drive/v3/changes/watch"
         origin = GOOGLE_DRIVE_ORIGIN
         params = {"pageToken": (trigger.provider_state or {})["page_token"]}
@@ -216,10 +217,10 @@ async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSu
             state = sibling.provider_state or {}
             if state.get("kind") == "gmail" and not state.get("mailbox_key"):
                 msg = "Disable and re-enable existing Gmail triggers before adding another mailbox watch."
-                raise ValueError(msg)
+                raise SourceConfigurationError(msg)
             if state.get("mailbox_key") == mailbox_key and state.get("pubsub_topic") != config["pubsub_topic"]:
                 msg = "All Gmail triggers for one mailbox must use the same Pub/Sub topic."
-                raise ValueError(msg)
+                raise SourceConfigurationError(msg)
         async with SourceHTTP(lease, origin=GOOGLE_GMAIL_ORIGIN) as client:
             response = await client.request(
                 "POST",

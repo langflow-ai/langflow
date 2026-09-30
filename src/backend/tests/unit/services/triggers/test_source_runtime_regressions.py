@@ -31,6 +31,7 @@ from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.lease_guard import LeaseLostError, run_guarded
 from langflow.services.triggers.source_arming import public_ingress_origin
 from langflow.services.triggers.source_delivery import append_and_advance
+from lfx.integrations.errors import ConnectionUnresolvedError
 from lfx.integrations.models import ResolvedCredential
 from pydantic import SecretStr
 from sqlmodel import select, update
@@ -369,7 +370,10 @@ async def test_pending_source_events_wait_for_activation(make_trigger):
         )
 
 
-async def test_gmail_conflicting_topic_is_rejected_before_watch(make_trigger, source_connection, provider_http):
+@pytest.mark.parametrize("initialize", [False, True], ids=["provision", "activate"])
+async def test_gmail_conflicting_topic_is_rejected_before_watch(
+    make_trigger, source_connection, provider_http, initialize
+):
     key = hashlib.sha256(b"fixture@example.test").hexdigest()
     async with session_scope() as session:
         connection = await session.get(Connection, source_connection)
@@ -381,6 +385,7 @@ async def test_gmail_conflicting_topic_is_rejected_before_watch(make_trigger, so
         kind="google.gmail",
         provider="google",
         connection_id=source_connection,
+        state="pending",
         config={"pubsub_topic": "projects/customer/topics/second"},
     )
     async with session_scope() as session:
@@ -394,8 +399,14 @@ async def test_gmail_conflicting_topic_is_rejected_before_watch(make_trigger, so
                 provider_state={"mailbox_key": key, "pubsub_topic": "projects/customer/topics/first"},
             )
         )
+    activate = source_runtime.initialize_source if initialize else source_runtime.ensure_subscription
     with pytest.raises(ValueError, match="same Pub/Sub topic"):
-        await source_runtime.ensure_subscription(second)
+        await activate(second)
+    if initialize:
+        async with session_scope() as session:
+            trigger = await session.get(Trigger, second)
+            assert trigger.state == "error"
+            assert "All Gmail triggers for one mailbox must use the same Pub/Sub topic." in trigger.last_error
     assert ("POST", "/gmail/v1/users/me/watch") not in provider_http
 
 
@@ -683,4 +694,55 @@ async def test_activation_cannot_publish_state_after_another_replica_takes_its_l
         trigger = await session.get(Trigger, trigger_id)
         assert trigger.state == "pending"
         assert trigger.last_error is None
+        assert (await session.get(TriggerLease, name)).owner == "replacement"
+
+
+@pytest.mark.parametrize("reason", ["credential-undecryptable", "registration-unavailable", None])
+async def test_activation_error_preserves_safe_local_configuration_guidance(make_trigger, monkeypatch, reason):
+    trigger_id = await make_trigger(kind="microsoft.mail", provider="microsoft", state="pending")
+    failure = (
+        ConnectionUnresolvedError("connection:microsoft/fixture-secret", provider="microsoft", reason=reason)
+        if reason is not None
+        else RuntimeError("Provider rejected fixture-secret")
+    )
+
+    async def unavailable(_identifier):
+        raise failure
+
+    monkeypatch.setattr(source_runtime, "sync_source", unavailable)
+    with pytest.raises(ValueError, match="Source activation failed"):
+        await source_runtime.initialize_source(trigger_id)
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        assert trigger.state == "error"
+        assert "fixture-secret" not in trigger.last_error
+        if reason is None:
+            assert trigger.last_error == "Source activation failed: RuntimeError. Enable the trigger to retry."
+        else:
+            assert reason in trigger.last_error
+            assert "LANGFLOW_SECRET_KEY" in trigger.last_error
+            assert "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS" in trigger.last_error
+
+
+async def test_reconciliation_cannot_clear_error_after_another_replica_takes_its_lease(make_trigger, monkeypatch):
+    trigger_id = await make_trigger(kind="microsoft.mail", provider="microsoft")
+    name = f"trigger-source:{trigger_id}"
+    error = "Source reconciliation failed: HTTPStatusError"
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        trigger.last_error = error
+        session.add(trigger)
+
+    async def take_over(_identifier):
+        async with session_scope() as session:
+            await session.exec(update(TriggerLease).where(TriggerLease.name == name).values(owner="replacement"))
+        return 0
+
+    monkeypatch.setattr(source_runtime, "sync_source", take_over)
+    with pytest.raises(LeaseLostError, match="Source reconciliation lost its lease"):
+        await source_runtime.reconcile_source(trigger_id)
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        assert trigger.state == "active"
+        assert trigger.last_error == error
         assert (await session.get(TriggerLease, name)).owner == "replacement"

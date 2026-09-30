@@ -1,22 +1,182 @@
-"""Durable, credential-free remote cleanup that survives trigger deletion."""
+"""Durable, fixed-operation remote cleanup that survives owner deletion."""
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 import httpx
-from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
+from lfx.integrations.errors import AuthExpiredError
+from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease, ResolvedCredential
 from lfx.log.logger import logger
 from lfx.services.authorization.base import ExecutionPrincipal
-from sqlmodel import col, select
+from pydantic import SecretStr
+from sqlalchemy import or_
+from sqlmodel import col, select, update
 
-from langflow.services.database.models.connection.model import Connection
+from langflow.services.connection.service import (
+    ConnectionSecretError,
+    _decrypt_credential_payload,
+    _encrypt_credential_payload,
+    _parse_expiry,
+    enforce_integration_policy_for_provider,
+)
+from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerSubscription
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.lease_guard import run_guarded
 from langflow.services.triggers.ownership import is_owned_by
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from lfx.integrations.models import ConnectionStatus
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+# Cleanup never retains refresh tokens or extends the deleted owner's access.
+_CREDENTIAL_RETENTION = timedelta(hours=1)
+
+
+def _aware(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+def _credential_binding(task: TriggerCleanup) -> dict:
+    return {
+        "id": str(task.id),
+        "user_id": str(task.user_id),
+        "connection_id": str(task.connection_id),
+        "provider": task.provider,
+        "kind": task.kind,
+        "provider_subscription_id": task.provider_subscription_id,
+        "provider_state": task.provider_state,
+    }
+
+
+async def preserve_user_cleanup_credentials(session: AsyncSession, *, user_id: UUID) -> None:
+    """Seal valid access tokens for outstanding intents before owner cascades.
+
+    Read/decrypt only: resolving a credential here could refresh OAuth while a
+    deletion writer is open. Expired or revoked credentials leave cleanup to
+    provider expiration. Neither refresh tokens nor consent bindings survive.
+    """
+    await session.flush()
+    tasks = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.user_id == user_id))).all()
+    now = datetime.now(timezone.utc)
+    for task in tasks:
+        if task.encrypted_credential is not None or task.connection_id is None:
+            continue
+        connection = await session.get(Connection, task.connection_id)
+        if (
+            connection is None
+            or not is_owned_by(connection, user_id)
+            or connection.provider_key != task.provider
+            or connection.status in {"revoked", "expired"}
+        ):
+            continue
+        secret = await session.get(ConnectionSecret, connection.id)
+        if secret is None:
+            continue
+        try:
+            payload = _decrypt_credential_payload(secret.encrypted_payload)
+            token_expiry = _parse_expiry(payload.get("expires_at"))
+            deadline = min(
+                now + _CREDENTIAL_RETENTION,
+                token_expiry or now + _CREDENTIAL_RETENTION,
+                _aware(task.expires_at) if task.expires_at else now + _CREDENTIAL_RETENTION,
+            )
+            if deadline <= now:
+                continue
+            task.encrypted_credential = _encrypt_credential_payload(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "access_token": payload["access_token"],
+                        "expires_at": deadline.isoformat(),
+                        "cleanup_binding": _credential_binding(task),
+                    }
+                )
+            )
+            task.credential_expires_at = deadline
+            # Attempt while the retained access token is still usable, even if
+            # a previous failure had moved the intent into a later retry slot.
+            task.available_at = now
+            session.add(task)
+        except ConnectionSecretError:
+            await logger.awarning("Trigger cleanup %s could not retain a usable access token", task.id)
+    await session.flush()
+
+
+class _CleanupSnapshotResolver:
+    """An unrefreshable credential capability confined to one cleanup intent."""
+
+    def __init__(self, task: TriggerCleanup) -> None:
+        self._task = task
+
+    async def describe(self, ref: ConnectionRef, principal: ExecutionPrincipal) -> ConnectionStatus | None:  # noqa: ARG002
+        return None
+
+    async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
+        task = self._task
+        if (
+            request.principal.family != "trigger_cleanup"
+            or request.principal.user_id != str(task.user_id)
+            or request.ref.provider != task.provider
+            or request.rejected_token_digest is not None
+        ):
+            raise AuthExpiredError(provider=task.provider)
+        await enforce_integration_policy_for_provider(task.provider, user_id=str(task.user_id))
+        payload = _decrypt_credential_payload(task.encrypted_credential or "")
+        expiry = _parse_expiry(payload.get("expires_at"))
+        if (
+            payload.get("cleanup_binding") != _credential_binding(task)
+            or expiry is None
+            or task.credential_expires_at is None
+            or expiry != _aware(task.credential_expires_at)
+            or expiry <= datetime.now(timezone.utc)
+        ):
+            raise AuthExpiredError(provider=task.provider)
+        return ResolvedCredential(
+            access_token=SecretStr(payload["access_token"]),
+            expires_at=expiry,
+            connection_id=str(task.connection_id),
+            provider=task.provider,
+            name=request.ref.name,
+            owner_kind="user",
+        )
+
+
+async def _cleanup_lease(task: TriggerCleanup) -> CredentialLease:
+    # Created only by authenticated lifecycle operations; this worker exposes
+    # fixed revocations, never source reads or flow execution.
+    principal = ExecutionPrincipal(
+        kind="flow_owner",
+        user_id=str(task.user_id),
+        actor_id=str(task.user_id),
+        family="trigger_cleanup",
+        interactive=True,
+        allow_explicit_shares=False,
+        actor_label="trigger subscription cleanup",
+    )
+    if task.encrypted_credential is not None:
+        return CredentialLease(
+            _CleanupSnapshotResolver(task),
+            ConnectionResolutionRequest(ref=ConnectionRef(provider=task.provider, name="cleanup"), principal=principal),
+        )
+    async with session_scope() as session:
+        connection = await session.get(Connection, task.connection_id) if task.connection_id else None
+        if connection is None or not is_owned_by(connection, task.user_id) or connection.provider_key != task.provider:
+            msg = "The original subscription credential is unavailable."
+            raise ValueError(msg)
+        return CredentialLease(
+            get_connection_resolver_service(),
+            ConnectionResolutionRequest(
+                ref=ConnectionRef(provider=connection.provider_key, name=connection.name), principal=principal
+            ),
+        )
 
 
 async def enqueue_cleanup(session, subscription: TriggerSubscription) -> None:
@@ -60,31 +220,7 @@ async def _revoke_existing(task: TriggerCleanup) -> None:
     )
     from langflow.services.triggers.source_subscription import gmail_mailbox_key
 
-    async with session_scope() as session:
-        connection = await session.get(Connection, task.connection_id) if task.connection_id else None
-        if connection is None or not is_owned_by(connection, task.user_id) or connection.provider_key != task.provider:
-            msg = "The original subscription credential is unavailable."
-            raise ValueError(msg)
-        # This capability is created only by authenticated lifecycle operations
-        # and permits this worker's fixed revocation requests, never source reads
-        # or flow execution. Withdrawing background-run consent must not prevent
-        # the owner from finishing deletion of an already-created watch.
-        principal = ExecutionPrincipal(
-            kind="flow_owner",
-            user_id=str(task.user_id),
-            actor_id=str(task.user_id),
-            family="trigger_cleanup",
-            interactive=True,
-            allow_explicit_shares=False,
-            actor_label="trigger subscription cleanup",
-        )
-        lease = CredentialLease(
-            get_connection_resolver_service(),
-            ConnectionResolutionRequest(
-                ref=ConnectionRef(provider=connection.provider_key, name=connection.name),
-                principal=principal,
-            ),
-        )
+    lease = await _cleanup_lease(task)
     if task.provider == "microsoft":
         async with SourceHTTP(lease, origin=GRAPH_ORIGIN) as client:
             await client.request("DELETE", f"v1.0/subscriptions/{quote(task.provider_subscription_id, safe='')}")
@@ -144,6 +280,16 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
     """Retry cleanup without a trigger row or an open writer during provider I/O."""
     now = datetime.now(timezone.utc)
     async with session_scope() as session:
+        # Purge independently of available_at: retry backoff must never extend
+        # credential retention. The non-secret intent can await provider TTL.
+        await session.exec(
+            update(TriggerCleanup)
+            .where(
+                col(TriggerCleanup.encrypted_credential).is_not(None),
+                or_(TriggerCleanup.credential_expires_at <= now, col(TriggerCleanup.credential_expires_at).is_(None)),
+            )
+            .values(encrypted_credential=None, credential_expires_at=None)
+        )
         ids = (
             await session.exec(
                 select(TriggerCleanup.id)

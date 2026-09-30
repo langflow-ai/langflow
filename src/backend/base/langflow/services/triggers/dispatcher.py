@@ -554,7 +554,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         # A thin Graph/Google notification is a durable wakeup. Expanding it
         # through the owner's connection produces canonical ledger rows; it
         # must never submit a flow with the notification headers as its event.
-        from langflow.services.triggers.source_runtime import reconcile_source
+        from langflow.services.triggers.source_runtime import reconcile_source, source_failure_detail
 
         try:
             delivery = (event.payload or {}).get("delivery") or {}
@@ -563,7 +563,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
             )
         except Exception as exc:  # noqa: BLE001 - the hint remains retryable
             await _fence_event(session, event)
-            trigger.last_error = f"Source reconciliation failed: {type(exc).__name__}"
+            trigger.last_error = f"Source reconciliation failed: {source_failure_detail(exc)}"
             trigger.next_fire_at = _now() + timedelta(minutes=1)
             session.add(trigger)
             retry_after = getattr(exc, "retry_after", None)
@@ -660,7 +660,7 @@ async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
 async def reconcile_push_sources(*, limit: int = 5) -> int:
     """Scan due push sources even when the provider sent no notification."""
     from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
-    from langflow.services.triggers.source_runtime import reconcile_source
+    from langflow.services.triggers.source_runtime import reconcile_source, source_failure_detail
 
     now = _now()
     async with session_scope() as session:
@@ -688,16 +688,13 @@ async def reconcile_push_sources(*, limit: int = 5) -> int:
                 trigger = await session.get(Trigger, trigger_id)
                 if trigger is None or trigger.state != TriggerState.ACTIVE.value:
                     continue
-                if (trigger.last_error or "").startswith("Source reconciliation failed:"):
-                    trigger.last_error = None
-                    session.add(trigger)
                 completed += 1
         except Exception as exc:  # noqa: BLE001 - one source must not stall the others
             async with session_scope() as session:
                 trigger = await session.get(Trigger, trigger_id)
                 if trigger is not None:
                     trigger.next_fire_at = _now() + timedelta(minutes=1)
-                    trigger.last_error = f"Source reconciliation failed: {type(exc).__name__}"
+                    trigger.last_error = f"Source reconciliation failed: {source_failure_detail(exc)}"
                     session.add(trigger)
             await logger.awarning("Push source %s reconciliation failed: %s", trigger_id, type(exc).__name__)
     return completed

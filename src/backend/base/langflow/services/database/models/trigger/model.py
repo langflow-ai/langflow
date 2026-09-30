@@ -303,8 +303,9 @@ class TriggerSourceVersion(SQLModel, table=True):  # type: ignore[call-arg]
 class TriggerCleanup(SQLModel, table=True):  # type: ignore[call-arg]
     """A remote revocation intent that outlives deletion of local trigger rows.
 
-    No foreign keys or credentials: deleting a flow must not erase outstanding
-    cleanup, and the worker must resolve the original owner's connection anew.
+    No foreign keys: deleting an owner or flow must not erase outstanding
+    cleanup. User deletion may retain a bounded encrypted access-token snapshot
+    exclusively for this task; ordinary deletion resolves the owner connection.
     """
 
     __tablename__ = "trigger_cleanup"
@@ -317,6 +318,12 @@ class TriggerCleanup(SQLModel, table=True):  # type: ignore[call-arg]
     provider_subscription_id: str = Field(sa_column=Column(sa.String(255), nullable=False))
     provider_state: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JsonVariant, nullable=False))
     expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    encrypted_credential: str | None = Field(
+        default=None, exclude=True, repr=False, sa_column=Column(sa.Text(), nullable=True)
+    )
+    credential_expires_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     available_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True),
