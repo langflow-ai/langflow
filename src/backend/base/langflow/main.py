@@ -52,6 +52,7 @@ from langflow.middleware import (
     ExecutionClientMiddleware,
     FlattenQueryStringListsMiddleware,
     ForwardedPrefixMiddleware,
+    LocaleMiddleware,
     MultipartBoundaryMiddleware,
 )
 from langflow.plugin_routes import load_plugin_routes
@@ -963,8 +964,8 @@ def create_app():
         lifespan=lifespan,
         root_path=settings.root_path,
     )
-    # Registered first so it sits innermost: the BaseHTTPMiddleware layers above turn every
-    # response into a stream, and a streamed response carries no Content-Length to test.
+    # Registered first so it sits innermost: a BaseHTTPMiddleware between it and the route (a
+    # plugin may still add one) re-frames every response as a stream, which skips minimum_size.
     app.add_middleware(
         GZipMiddleware,
         minimum_size=GZIP_MINIMUM_SIZE,
@@ -1008,41 +1009,14 @@ def create_app():
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
+    # Pure ASGI, not BaseHTTPMiddleware, so a streamed response is not relayed through a memory
+    # stream and an extra task at every layer. The last one added is the outermost.
     app.add_middleware(JavaScriptMIMETypeMiddleware)
-
     app.add_middleware(ExecutionClientMiddleware)
-
     app.add_middleware(MultipartBoundaryMiddleware)
-
     app.add_middleware(ForwardedPrefixMiddleware, settings=settings)
-
     app.add_middleware(FlattenQueryStringListsMiddleware)
-
-    _supported_locales: frozenset[str] | None = None
-
-    @app.middleware("http")
-    async def set_locale(request: Request, call_next):
-        """Parse Accept-Language header and store normalised locale in request.state.
-
-        Handles quality values ("fr-FR,fr;q=0.9,en;q=0.8" → "fr") and preserves
-        zh-Hans as a full tag. All other locales are reduced to the language code.
-        Validates against the loaded locale files and falls back to "en" for unknown
-        values — prevents client-supplied headers from polluting the per-locale cache.
-        Result is available as request.state.locale in any endpoint.
-        """
-        nonlocal _supported_locales
-        if _supported_locales is None:
-            from langflow.utils.i18n import get_supported_locales
-
-            _supported_locales = frozenset(get_supported_locales())
-
-        accept_lang = request.headers.get("Accept-Language", "en")
-        primary = accept_lang.split(",")[0].strip()
-        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0]
-        if locale not in _supported_locales:
-            locale = "en"
-        request.state.locale = locale
-        return await call_next(request)
+    app.add_middleware(LocaleMiddleware)
 
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point

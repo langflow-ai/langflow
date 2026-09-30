@@ -12,18 +12,25 @@ from typing import Annotated
 
 import pytest
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.testclient import TestClient
 from langflow import middleware as middleware_module
-from langflow.main import JavaScriptMIMETypeMiddleware
+from langflow.main import JavaScriptMIMETypeMiddleware, create_app
 from langflow.middleware import (
     ContentSizeLimitMiddleware,
     ExecutionClientMiddleware,
     FlattenQueryStringListsMiddleware,
     ForwardedPrefixMiddleware,
+    LocaleMiddleware,
     MultipartBoundaryMiddleware,
 )
 from lfx.observability import get_execution_client
 from pydantic_core import PydanticSerializationError
+from starlette.background import BackgroundTask
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.websockets import WebSocket
 
 
 def _scope(path: str, *, method: str = "GET", headers: dict[str, str] | None = None, query_string: bytes = b""):
@@ -378,3 +385,125 @@ class TestFlattenQueryStringListsMiddleware:
         messages = await _call(self._app(), _scope("/flows", query_string=query_string))
 
         assert json.loads(_body(messages)) == {"flow_id": flow_ids, "query_string": rewritten}
+
+
+class TestLocaleMiddleware:
+    @staticmethod
+    def _app() -> FastAPI:
+        app = FastAPI()
+        app.add_middleware(LocaleMiddleware)
+
+        @app.get("/locale")
+        async def locale(request: Request):
+            return PlainTextResponse(request.state.locale)
+
+        return app
+
+    @pytest.mark.parametrize(
+        ("accept_language", "expected"),
+        [
+            ("fr-FR,fr;q=0.9,en;q=0.8", b"fr"),
+            ("zh-Hans-CN,zh;q=0.9", b"zh-Hans"),
+            ("ZH-HANS", b"zh-Hans"),
+            ("de", b"de"),
+            ("xx-YY", b"en"),
+            ("", b"en"),
+            (None, b"en"),
+        ],
+    )
+    async def test_the_locale_is_normalised_into_request_state(self, accept_language, expected):
+        headers = {"accept-language": accept_language} if accept_language is not None else {}
+
+        messages = await _call(self._app(), _scope("/locale", headers=headers))
+
+        assert _body(messages) == expected
+
+
+class TestLangflowMiddlewareStack:
+    """The real app: registration order, and a streamed response through every layer."""
+
+    def test_the_http_layers_keep_their_order_and_none_is_base_http_middleware(self):
+        app = create_app()
+        classes = [middleware.cls for middleware in app.user_middleware]
+
+        assert classes[:7] == [
+            LocaleMiddleware,
+            FlattenQueryStringListsMiddleware,
+            ForwardedPrefixMiddleware,
+            MultipartBoundaryMiddleware,
+            ExecutionClientMiddleware,
+            JavaScriptMIMETypeMiddleware,
+            CORSMiddleware,
+        ]
+        assert classes[-2:] == [ContentSizeLimitMiddleware, GZipMiddleware]
+        assert not any(isinstance(cls, type) and issubclass(cls, BaseHTTPMiddleware) for cls in classes)
+
+    async def test_sse_frames_pass_every_layer_unbuffered_and_in_order(self):
+        app = create_app()
+        first_frame_out = asyncio.Event()
+        background_ran = asyncio.Event()
+        order: list[str] = []
+
+        async def after_response():
+            order.append("background")
+            background_ran.set()
+
+        @app.get("/api/v2/_middleware_probe")
+        async def probe(request: Request, tag: Annotated[list[str], Query()] = []):  # noqa: B006
+            async def frames():
+                context = {"locale": request.state.locale, "client": get_execution_client(), "tag": tag}
+                yield f"data: {json.dumps(context)}\n\n"
+                # Only reachable once frame 1 has left the outermost layer.
+                await asyncio.wait_for(first_frame_out.wait(), timeout=5)
+                for index in range(2, 6):
+                    yield f"data: {index}\n\n"
+
+            return StreamingResponse(
+                frames(), media_type="text/event-stream", background=BackgroundTask(after_response)
+            )
+
+        async def on_send(message):
+            if message["type"] == "http.response.body":
+                order.append("body" if message.get("more_body") else "end")
+                if message.get("body", b"").startswith(b"data: {"):
+                    first_frame_out.set()
+
+        messages = await _call(
+            app,
+            _scope(
+                "/api/v2/_middleware_probe",
+                headers={
+                    "accept-language": "fr-FR,fr;q=0.9",
+                    "x-langflow-client": "sdk",
+                    "origin": "https://app.example.com",
+                    "accept-encoding": "gzip",
+                },
+                query_string=b"tag=a,b",
+            ),
+            on_send=on_send,
+        )
+
+        headers = _headers(messages)
+        assert messages[0]["status"] == 200
+        assert headers["content-type"].startswith("text/event-stream")
+        assert "access-control-allow-origin" in headers  # CORS still decorates a streamed response
+        assert "content-encoding" not in headers  # event streams stay uncompressed
+        bodies = [m["body"] for m in messages if m["type"] == "http.response.body"]
+        # One message per frame: nothing coalesced or re-chunked on the way out.
+        assert bodies[0] == b'data: {"locale": "fr", "client": "sdk", "tag": ["a", "b"]}\n\n'
+        assert bodies[1:] == [b"data: 2\n\n", b"data: 3\n\n", b"data: 4\n\n", b"data: 5\n\n", b""]
+        assert background_ran.is_set()
+        assert order == ["body"] * 5 + ["end", "background"]
+
+    def test_websockets_pass_through_every_layer(self):
+        app = create_app()
+
+        @app.websocket("/api/v1/_middleware_probe_ws")
+        async def echo(websocket: WebSocket):
+            await websocket.accept()
+            await websocket.send_text(await websocket.receive_text())
+            await websocket.close()
+
+        with TestClient(app).websocket_connect("/api/v1/_middleware_probe_ws?tag=a,b") as websocket:
+            websocket.send_text("ping")
+            assert websocket.receive_text() == "ping"

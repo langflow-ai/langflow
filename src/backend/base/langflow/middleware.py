@@ -143,6 +143,40 @@ class FlattenQueryStringListsMiddleware:
         await self.app(scope, receive, send)
 
 
+class LocaleMiddleware:
+    """Parse Accept-Language header and store normalised locale in request.state.
+
+    Handles quality values ("fr-FR,fr;q=0.9,en;q=0.8" → "fr") and preserves
+    zh-Hans as a full tag. All other locales are reduced to the language code.
+    Validates against the loaded locale files and falls back to "en" for unknown
+    values — prevents client-supplied headers from polluting the per-locale cache.
+    Result is available as request.state.locale in any endpoint.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self._supported_locales: frozenset[str] | None = None
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        if self._supported_locales is None:
+            from langflow.utils.i18n import get_supported_locales
+
+            self._supported_locales = frozenset(get_supported_locales())
+
+        accept_lang = Headers(scope=scope).get("Accept-Language", "en")
+        primary = accept_lang.split(",")[0].strip()
+        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0]
+        if locale not in self._supported_locales:
+            locale = "en"
+        # The dict request.state reads and writes.
+        scope.setdefault("state", {})["locale"] = locale
+        await self.app(scope, receive, send)
+
+
 class MultipartBoundaryMiddleware:
     """Reject a file upload whose multipart boundary is missing, malformed or not framing the body.
 
