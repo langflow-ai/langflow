@@ -172,6 +172,7 @@ EXPECTED_FIELDS = {
     "warm_registry_max_total_bytes",
     "dev",
     "warm_reconcile_interval",
+    "gc_freeze_after_startup",
     "event_delivery",
     "worker_timeout",
     "workflow_execution_timeout",
@@ -372,6 +373,7 @@ def test_critical_defaults_unchanged():
     assert settings.warm_registry_max_entries == 128
     assert settings.warm_registry_max_flow_bytes == 2_000_000
     assert settings.warm_registry_max_total_bytes == 32_000_000
+    assert settings.gc_freeze_after_startup is True
     assert settings.dev is False
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
