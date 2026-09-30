@@ -191,10 +191,12 @@ BOB = uuid.UUID("55555555-5555-4555-8555-555555555555")
 
 
 def _leave_orphans(url: str) -> None:
-    """Clear a flow's traces and delete a user the way Langflow does.
+    """Clear a flow's traces and delete a user the way Langflow did before 1.13.
 
     Langflow never turns on SQLite's foreign keys, so neither delete cascades:
-    the spans and bob's role assignment stay behind.
+    the spans and bob's role assignment stay behind. Deleting a user through the
+    ORM removes their role assignments since 1.13 (#15124), but databases where a
+    user was deleted earlier still hold them, so bob is deleted with plain SQL.
     """
     from langflow.services.database.models import User
     from langflow.services.database.models.auth.authz import (
@@ -219,9 +221,9 @@ def _leave_orphans(url: str) -> None:
         for alices in session.exec(select(AuthzRoleAssignment).where(AuthzRoleAssignment.user_id == ALICE)):
             alices.assigned_by = BOB
         session.commit()
-        # The flow's "Clear all" traces button and DELETE /users/{id}.
+        # The flow's "Clear all" traces button, and DELETE /users/{id} before 1.13.
         session.execute(sa.delete(TraceTable).where(TraceTable.flow_id == FLOW))
-        session.delete(session.get(User, BOB))
+        session.execute(sa.delete(User).where(User.id == BOB))
         session.commit()
     engine.dispose()
 
