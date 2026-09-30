@@ -131,6 +131,42 @@ async def test_should_show_badge_filter_and_erase_after_admin_approval(
 
 
 @pytest.mark.usefixtures("feature_on")
+async def test_should_find_a_builder_by_username_or_email(client: AsyncClient, logged_in_headers_super_user):
+    tag = uuid4().hex[:8]
+    email = f"Leaving.Person-{tag}@Example.com"
+    user_id, _ = await _new_user(client, logged_in_headers_super_user, email)
+
+    by_email = await client.post(
+        "api/v1/data-subjects/requests",
+        json={"subject_type": "builder", "username": email.lower()},
+        headers=logged_in_headers_super_user,
+    )
+    exact = await client.post(
+        "api/v1/data-subjects/find",
+        json={"subject_type": "builder", "username": email},
+        headers=logged_in_headers_super_user,
+    )
+    missing = await client.post(
+        "api/v1/data-subjects/find",
+        json={"subject_type": "builder", "username": f"nobody-{tag}@example.com"},
+        headers=logged_in_headers_super_user,
+    )
+    both = await client.post(
+        "api/v1/data-subjects/find",
+        json={"subject_type": "builder", "username": email, "user_id": user_id},
+        headers=logged_in_headers_super_user,
+    )
+
+    assert by_email.status_code == status.HTTP_201_CREATED, by_email.text
+    assert by_email.json()["subject_user_id"] == user_id
+    assert by_email.json()["subject_label"] == email
+    assert exact.status_code == status.HTTP_200_OK, exact.text
+    assert missing.status_code == status.HTTP_404_NOT_FOUND
+    assert missing.json()["detail"]["code"] == "subject_not_found"
+    assert both.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.usefixtures("feature_on")
 async def test_should_suggest_end_user_ids_by_part_of_the_id(
     client: AsyncClient, logged_in_headers_super_user, active_super_user
 ):

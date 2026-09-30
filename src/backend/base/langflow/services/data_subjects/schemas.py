@@ -15,19 +15,21 @@ MAX_SCOPE_FLOWS = 500
 
 
 class DataSubjectRef(BaseModel):
-    """Identify a subject: a builder by ``user_id`` or an end user by ``end_user_id``."""
+    """Identify a subject: a builder by ``user_id`` or ``username`` (the email under SSO), an end user by id."""
 
     subject_type: DataSubjectType
     user_id: UUID | None = None
+    username: str | None = Field(default=None, min_length=1, max_length=255)
     end_user_id: str | None = Field(default=None, max_length=255)
     flow_ids: list[UUID] | None = Field(default=None, max_length=MAX_SCOPE_FLOWS)
 
     @model_validator(mode="after")
     def _one_identifier(self) -> DataSubjectRef:
-        if self.subject_type == DataSubjectType.BUILDER and (self.user_id is None or self.end_user_id):
-            msg = "A builder is identified by user_id only"
+        builder_ids = (self.user_id is not None) + (self.username is not None)
+        if self.subject_type == DataSubjectType.BUILDER and (builder_ids != 1 or self.end_user_id):
+            msg = "A builder is identified by exactly one of user_id or username"
             raise ValueError(msg)
-        if self.subject_type == DataSubjectType.END_USER and (not self.end_user_id or self.user_id is not None):
+        if self.subject_type == DataSubjectType.END_USER and (not self.end_user_id or builder_ids):
             msg = "An end user is identified by end_user_id only"
             raise ValueError(msg)
         if self.subject_type == DataSubjectType.BUILDER and self.flow_ids:

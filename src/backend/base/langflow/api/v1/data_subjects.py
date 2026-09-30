@@ -79,6 +79,20 @@ async def _load_builder(session, user_id: UUID, actor: User) -> User:
     return subject
 
 
+async def _builder_id(session, ref: DataSubjectRef) -> UUID:
+    """Resolve a builder named by id or by username; an email address is the username under SSO.
+
+    Usernames are unique ignoring case (``ix_user_username_lower``), so a case-insensitive match is exact.
+    """
+    if ref.user_id is not None:
+        return ref.user_id
+    name = (ref.username or "").strip().lower()
+    user_id = (await session.exec(select(User.id).where(func.lower(User.username) == name))).first()
+    if user_id is None:
+        raise to_http_error(SubjectNotFoundError("User not found"))
+    return user_id
+
+
 def _caller_source() -> DataSubjectRequestSource:
     """A request made with an API key came from an integration; anything else was an admin at the console."""
     context = get_current_auth_context()
@@ -89,7 +103,7 @@ def _caller_source() -> DataSubjectRequestSource:
 
 async def _create(session, ref: DataSubjectRef, actor: User, source: DataSubjectRequestSource):
     if ref.subject_type == DataSubjectType.BUILDER:
-        subject = await _load_builder(session, ref.user_id, actor)
+        subject = await _load_builder(session, await _builder_id(session, ref), actor)
         return await request_service.create_builder_request(
             session, subject=subject, requested_by=actor.id, source=source
         )
@@ -261,7 +275,8 @@ async def find_subject(ref: DataSubjectRef, current_user: CurrentActiveUser, ses
     await _require_admin(current_user)
     try:
         if ref.subject_type == DataSubjectType.BUILDER:
-            summary = await builder_dry_run(session, await _load_builder(session, ref.user_id, current_user))
+            builder = await _load_builder(session, await _builder_id(session, ref), current_user)
+            summary = await builder_dry_run(session, builder)
         else:
             keys = end_user_keys(ref.end_user_id)
             await ensure_not_an_account(session, keys)
