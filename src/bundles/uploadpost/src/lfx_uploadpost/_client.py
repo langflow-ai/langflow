@@ -82,7 +82,9 @@ class UploadPostClient:
         """POST an upload. ``files`` is a list of ``(form_field, local_path)``.
 
         Returns the API response, or ``{"request_id": ..., "transport_error": ...}``
-        when the connection failed and the upload may or may not have arrived.
+        when the outcome is ambiguous -- the connection failed or the API answered
+        5xx -- and the upload may or may not have arrived. A 4xx is a definitive
+        rejection and raises ``UploadPostError``.
         """
         form = {**data, "request_id": request_id, "async_upload": "true"}
         headers = {**self._headers, "Idempotency-Key": request_id}
@@ -102,6 +104,10 @@ class UploadPostClient:
         except httpx.TransportError as e:
             # Do not resend: poll this request_id to learn whether it arrived.
             return {"request_id": request_id, "transport_error": str(e)}
+        if response.is_server_error:
+            # A 5xx doesn't say whether the upload was stored; treat it like a
+            # dropped connection and let the caller check the request_id.
+            return {"request_id": request_id, "transport_error": _error_message(response)}
         if response.is_error:
             raise UploadPostError(_error_message(response))
         try:

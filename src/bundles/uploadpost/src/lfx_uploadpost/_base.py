@@ -217,6 +217,13 @@ class UploadPostBaseComponent(Component):
                 status = client.wait(request_id, float(self.wait_timeout or 0))
             except (httpx.HTTPError, UploadPostError) as e:
                 return self._unconfirmed(request_id, str(e), accepted=not transport_error)
+            if transport_error and status.get("status") == "not_found":
+                return self._error(
+                    f"Upload-Post has no record of request_id {request_id} yet ({transport_error}). "
+                    "Check it again with Upload-Post Status in a minute before running this again.",
+                    status="not_found",
+                    request_id=request_id,
+                )
             summary = summarize(status, request_id)
             text = results_text(summary)
         else:
