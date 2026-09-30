@@ -2512,6 +2512,7 @@
   "connections.search": "搜索名称、句柄或账号",
   "connections.loading": "正在加载连接…",
   "connections.empty": "尚无连接。",
+  "connections.noProviders": "没有可供你使用的集成。管理员控制可以使用哪些集成提供方和操作。",
   "connections.emptyTab": "此选项卡中尚无连接。",
   "connections.emptyInstance": "尚无实例连接。",
   "connections.emptyOthers": "尚无其他用户的连接。",
