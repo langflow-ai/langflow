@@ -1280,7 +1280,9 @@ async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry
         concurrency=concurrency,
     )
     for result in results:
-        line = f"{result.status:12} {result.owner}/{result.file_name}  {result.size} bytes  -> {result.key}"
+        # A repoint rewrites a path in message.files and moves no bytes.
+        size = "" if result.status in ("repointed", "would_repoint") else f"  {result.size} bytes"
+        line = f"{result.status:12} {result.owner}/{result.file_name}{size}  -> {result.key}"
         typer.echo(f"{line}  ({result.reason})" if result.reason else line)
     counts: dict[str, int] = {}
     for result in results:

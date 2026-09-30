@@ -500,6 +500,22 @@ class TestChatAttachmentPaths:
         assert await self._files(message_id) == [absolute]
         assert [r.status for r in results if r.status == "would_repoint"] == ["would_repoint"]
 
+    async def test_the_command_prints_no_byte_count_for_a_repoint(self, active_user, storage_dir, bucket, capsys):
+        from langflow.__main__ import _relocate_files
+
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        await self._message(flow_id, [str(storage_dir / str(flow_id) / "photo.png")])
+
+        for dry_run in (True, False):
+            await _relocate_files(bucket=bucket, prefix="files", username=None, dry_run=dry_run, concurrency=1)
+        lines = capsys.readouterr().out.splitlines()
+
+        repoints = [line for line in lines if line.startswith(("would_repoint", "repointed"))]
+        assert len(repoints) == 2, lines
+        assert not [line for line in repoints if "bytes" in line], repoints
+        # A copy still says how much it moved.
+        assert [line for line in lines if line.startswith("copied") and "9 bytes" in line], lines
+
     async def test_a_path_recorded_under_another_config_dir_is_repointed_when_storage_holds_the_file(
         self, active_user, storage_dir, bucket
     ):
