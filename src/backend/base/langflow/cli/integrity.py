@@ -140,7 +140,10 @@ def script_directory():
 def _result(name: str, problems: list[str], ok_summary: str, fail_summary: str) -> CheckResult:
     if not problems:
         return CheckResult(name, "ok", ok_summary)
-    return CheckResult(name, "fail", fail_summary, problems[:_EXAMPLES])
+    shown = problems[:_EXAMPLES]
+    if len(problems) > _EXAMPLES:
+        shown.append(f"... and {len(problems) - _EXAMPLES} more")
+    return CheckResult(name, "fail", fail_summary, shown)
 
 
 # ---- credentials ---------------------------------------------------------------

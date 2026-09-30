@@ -159,6 +159,26 @@ class TestCredentials:
         assert check.status == "fail"
         assert any(p.startswith("trigger.signing_secret_encrypted row ") for p in check.problems)
 
+    async def test_rows_past_the_examples_are_counted_not_dropped(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        other = Fernet(Fernet.generate_key())
+        await _add(
+            *(
+                Variable(
+                    name=f"OTHER_{uuid.uuid4().hex[:6]}",
+                    value=other.encrypt(b"sk").decode(),
+                    type=CREDENTIAL_TYPE,
+                    user_id=active_user.id,
+                )
+                for _ in range(6)
+            )
+        )
+
+        check = _check(await check_instance(), "credentials")
+
+        assert check.summary.startswith("6 of "), check.summary
+        assert len(check.problems) == 6
+        assert check.problems[-1] == "... and 1 more"
+
 
 class TestFiles:
     async def test_a_row_without_bytes_is_reported(self, active_user, storage_dir, kb_root):  # noqa: ARG002
