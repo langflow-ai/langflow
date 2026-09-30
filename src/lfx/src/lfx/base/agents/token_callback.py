@@ -32,6 +32,11 @@ class TokenUsageCallbackHandler(BaseCallbackHandler):
     `on_llm_error` (and discards it on `on_llm_end`, since the real usage wins).
     """
 
+    # Every callback here only estimates, sums and locks briefly, so run them on the event loop.
+    # Otherwise LangChain's async manager hands every event to the thread pool, including one
+    # per streamed token for the no-op on_llm_new_token.
+    run_inline = True
+
     def __init__(self) -> None:
         super().__init__()
         self._lock = threading.Lock()

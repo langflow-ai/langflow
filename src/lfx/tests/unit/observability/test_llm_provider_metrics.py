@@ -155,3 +155,48 @@ def test_the_handler_survives_a_deep_copy_and_stays_one_instance():
     run_id = uuid.uuid4()
     handler.on_chat_model_start({}, [[HumanMessage("x")]], run_id=run_id, invocation_params={"model_name": "gpt-4o"})
     assert run_id in copy.deepcopy(handler)._runs
+
+
+async def test_callbacks_run_inline_without_a_thread_pool_hop(reader, monkeypatch):
+    """LangChain's async manager must call the handler on the loop, including once per streamed token.
+
+    A sync handler without ``run_inline`` goes through ``loop.run_in_executor`` for every event, so
+    a spy on it sees the plain control handler's events and none of this handler's.
+    """
+    import asyncio
+    import uuid
+
+    from langchain_core.callbacks import AsyncCallbackManager, BaseCallbackHandler
+    from lfx.observability_llm_metrics import LLMProviderMetricsCallbackHandler
+
+    class _Plain(BaseCallbackHandler):
+        pass
+
+    loop = asyncio.get_running_loop()
+    executor_calls = []
+    original = loop.run_in_executor
+
+    def _spy(executor, func, *args):
+        executor_calls.append(getattr(func, "args", (func,))[0])
+        return original(executor, func, *args)
+
+    monkeypatch.setattr(loop, "run_in_executor", _spy)
+
+    handler = LLMProviderMetricsCallbackHandler()
+    assert handler.run_inline is True
+    manager = AsyncCallbackManager(handlers=[handler, _Plain()])
+    rid = uuid.uuid4()
+    [run] = await manager.on_chat_model_start(
+        {}, [[HumanMessage("x")]], run_id=rid, invocation_params={"model_name": "inline-probe-model"}
+    )
+    assert rid in handler._runs
+    for token in ("a", "b", "c"):
+        await run.on_llm_new_token(token)
+    await run.on_llm_end(LLMResult(generations=[[Generation(text="abc")]]))
+
+    # The plain control handler went through the executor for every event, one hop per token.
+    assert [fn.__name__ for fn in executor_calls].count("on_llm_new_token") == 3
+    assert all(fn.__self__ is not handler for fn in executor_calls)
+    assert rid not in handler._runs
+    durations = _all_data_points(reader).get("gen_ai.client.operation.duration", [])
+    assert any(dict(dp.attributes).get("gen_ai.request.model") == "inline-probe-model" for dp in durations)
