@@ -164,5 +164,11 @@ async def test_startup_enqueue_failure_releases_queued_lease(active_user, monkey
         assert job.status == JobStatus.QUEUED
         assert "owner" not in (job.job_metadata or {})
         assert "heartbeat_at" not in (job.job_metadata or {})
+        # The released row is immediately claimable again instead of waiting for the lease TTL.
+        assert await job_service.claim_queued_lease(
+            job_id,
+            owner="next-boot",
+            lease_ttl_s=get_settings_service().settings.background_lease_ttl_s,
+        )
     finally:
         await svc.stop()
