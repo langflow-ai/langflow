@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 import pytest
 from langflow.utils.flow_secrets import (
     HiddenFieldMetadataError,
@@ -655,3 +657,292 @@ def test_default_scrub_still_nulls_table_reference_columns() -> None:
     assert rows[0]["api_key"] is None
     assert rows[0]["value"] is None
     assert rows[0]["note"] == "kept"
+
+
+def test_scrub_does_not_null_empty_or_missing_secret_values() -> None:
+    """An already-empty or absent value must not gain a spurious ``value: None``."""
+    flow_data = _flow_data(
+        {
+            "empty_password": {"name": "api_key", "password": True, "value": ""},
+            "missing_value": {"name": "client_secret", "password": True},
+        }
+    )
+    original = deepcopy(flow_data)
+
+    strip_secret_field_values_in_place(flow_data)
+
+    assert _template(flow_data)["empty_password"]["value"] == ""
+    assert "value" not in _template(flow_data)["missing_value"]
+    assert flow_data == original
+
+
+def test_scrub_ignores_url_shaped_credentials_in_component_code_comments() -> None:
+    """A ``#`` comment mentioning "password" must not be read as a URL fragment."""
+    code = (
+        "# Enable global variable mode: single-line with password masking\n"
+        "# for the API key input, so users never see the raw secret.\n"
+        "class TextInput(Component):\n"
+        "    display_name = 'Text Input'\n"
+    )
+    flow_data = _flow_data({"code": {"name": "code", "type": "code", "value": code}})
+
+    strip_secret_field_values_in_place(flow_data)
+
+    assert _template(flow_data)["code"]["value"] == code
+
+
+def test_scrub_ignores_url_shaped_credentials_in_template_pattern_fields() -> None:
+    pattern = "# Company Profile\n\n- **Login:** {loginUrl}#password=reset\n"
+    flow_data = _flow_data({"pattern": {"name": "pattern", "value": pattern}})
+
+    strip_secret_field_values_in_place(flow_data)
+
+    assert _template(flow_data)["pattern"]["value"] == pattern
+
+
+def test_scrub_still_detects_credentials_in_real_urls() -> None:
+    """The narrower check must still catch userinfo and secret-named query params.
+
+    Includes relative and protocol-relative shapes (no scheme, or no scheme and
+    no host) alongside absolute URLs: ``urlsplit`` still parses a query string
+    or userinfo out of those, and the default (public/anonymous) scrub path
+    must null them exactly like it nulls an absolute URL - see LE-1676.
+    """
+    flow_data = _flow_data(
+        {
+            "dsn": {"name": "dsn", "value": "postgres://user:{}@db.internal/prod".format("testpw")},
+            "webhook": {"name": "webhook", "value": "https://example.com/hook?api_key=live-secret"},
+            "padded": {"name": "padded", "value": " https://u:{}@host/db\n".format("testpw")},
+            "schemeless": {"name": "schemeless", "value": "api.example.com/v1?access_token=live-secret"},
+            "relative": {"name": "relative", "value": "/api/models?api_key=relative-secret"},
+            "network": {"name": "network", "value": "//owner:{}@example.com/x".format("network-secret")},
+        }
+    )
+
+    strip_secret_field_values_in_place(flow_data)
+
+    assert _template(flow_data)["dsn"]["value"] is None
+    assert _template(flow_data)["webhook"]["value"] is None
+    assert _template(flow_data)["padded"]["value"] is None
+    assert _template(flow_data)["schemeless"]["value"] is None
+    assert _template(flow_data)["relative"]["value"] is None
+    assert _template(flow_data)["network"]["value"] is None
+
+
+def test_scrub_reduces_mcp_config_to_name_only_by_default_for_export() -> None:
+    """Every caller gets name-only unless it opts into ``keep_mcp_config``.
+
+    This includes export/publish callers that pass ``variable_references``: file
+    export and store publish must never see the config, even a clean one - see
+    ``strip_flow_secrets`` callers in projects_files.py and store/service.py.
+    """
+    flow_data = _flow_data(
+        {
+            "mcp_server": {
+                "name": "mcp_server",
+                "type": "mcp",
+                "value": {
+                    "name": "billing-mcp",
+                    "config": {
+                        "url": "https://mcp.example.com",
+                        "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+                    },
+                },
+            }
+        }
+    )
+
+    strip_secret_field_values_in_place(flow_data, variable_references=set())
+
+    assert _template(flow_data)["mcp_server"]["value"] == {"name": "billing-mcp"}
+
+
+def test_scrub_reduces_mcp_config_to_name_only_with_empty_variable_references() -> None:
+    """Passing an empty ``variable_references`` set must not by itself unlock the config."""
+    flow_data = _flow_data({"mcp_server": {"name": "mcp_server", "type": "mcp", "value": {"config": {"url": "x"}}}})
+
+    strip_secret_field_values_in_place(flow_data, variable_references=set())
+
+    assert _template(flow_data)["mcp_server"]["value"] is None
+
+
+def test_scrub_keeps_cleaned_mcp_config_with_keep_mcp_config() -> None:
+    """The single opt-in caller keeps a provably clean config, verbatim."""
+    flow_data = _flow_data(
+        {
+            "mcp_server": {
+                "name": "mcp_server",
+                "type": "mcp",
+                "value": {
+                    "name": "billing-mcp",
+                    "config": {
+                        "url": "https://mcp.example.com",
+                        "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+                    },
+                },
+            }
+        }
+    )
+
+    strip_secret_field_values_in_place(flow_data, variable_references=set(), keep_mcp_config=True)
+
+    value = _template(flow_data)["mcp_server"]["value"]
+    assert value["name"] == "billing-mcp"
+    assert value["config"] == {
+        "url": "https://mcp.example.com",
+        "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+    }
+
+
+def test_scrub_keeps_mcp_config_even_without_a_name_with_keep_mcp_config() -> None:
+    """The config is safe on its own; the caller decides whether a nameless entry is usable."""
+    flow_data = _flow_data({"mcp_server": {"name": "mcp_server", "type": "mcp", "value": {"config": {"url": "x"}}}})
+
+    strip_secret_field_values_in_place(flow_data, variable_references=set(), keep_mcp_config=True)
+
+    assert _template(flow_data)["mcp_server"]["value"] == {"config": {"url": "x"}}
+
+
+def test_scrub_nulls_mcp_value_that_is_not_a_dict() -> None:
+    flow_data = _flow_data({"mcp_server": {"name": "mcp_server", "type": "mcp", "value": "not-a-dict"}})
+
+    strip_secret_field_values_in_place(flow_data)
+
+    assert _template(flow_data)["mcp_server"]["value"] is None
+
+
+def test_scrub_nulls_empty_mcp_value() -> None:
+    flow_data = _flow_data({"mcp_server": {"name": "mcp_server", "type": "mcp", "value": {}}})
+
+    strip_secret_field_values_in_place(flow_data)
+
+    assert _template(flow_data)["mcp_server"]["value"] is None
+
+
+def _legacy_mcp_flow_data() -> dict:
+    return _flow_data(
+        {
+            "mcp_server": {
+                "name": "mcp_server",
+                "type": "mcp",
+                "value": {
+                    "name": "srv",
+                    "config": {
+                        "url": "https://user:pw@mcp.example.com",
+                        "headers": {"Authorization": "Bearer sk-live-123"},
+                        "env": {"OPENAI_API_KEY": "sk-abc"},
+                    },
+                },
+            }
+        }
+    )
+
+
+def test_scrub_reduces_mcp_value_to_name_without_variable_references() -> None:
+    """Public and anonymous reads never receive an MCP config, cleaned or not."""
+    flow_data = _legacy_mcp_flow_data()
+
+    strip_secret_field_values_in_place(flow_data)
+
+    assert _template(flow_data)["mcp_server"]["value"] == {"name": "srv"}
+
+
+def test_scrub_reduces_legacy_mcp_secrets_to_name_only_for_export() -> None:
+    """A flow saved before save-time MCP stripping must not export its literals."""
+    flow_data = _legacy_mcp_flow_data()
+
+    strip_secret_field_values_in_place(flow_data, variable_references=set())
+
+    assert _template(flow_data)["mcp_server"]["value"] == {"name": "srv"}
+
+
+def test_scrub_nulls_legacy_mcp_secrets_with_keep_mcp_config() -> None:
+    """A flow saved before save-time MCP stripping must fail closed, not export its literals."""
+    flow_data = _legacy_mcp_flow_data()
+
+    strip_secret_field_values_in_place(flow_data, variable_references=set(), keep_mcp_config=True)
+
+    value = _template(flow_data)["mcp_server"]["value"]
+    assert value["name"] == "srv"
+    assert value["config"] is None
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        pytest.param(
+            {"url": "https://x.example.com", "headers": {"Authorization": "Bearer sk-live-123"}}, id="literal-header"
+        ),
+        pytest.param({"command": "uvx", "args": ["run", "--token", "sk-secret"]}, id="args-token-flag"),
+        pytest.param({"command": "uvx", "args": ["run", "--api-key=sk-secret"]}, id="args-api-key-flag"),
+        pytest.param({"command": "uvx", "args": ["run", "https://user:pw@mcp.example.com"]}, id="args-credential-url"),
+        pytest.param({"command": "uvx", "token": "sk-secret"}, id="top-level-token"),  # pragma: allowlist secret
+        pytest.param({"command": "uvx", "auth": {"client_secret": "sk-secret"}}, id="nested-client-secret"),
+        pytest.param({"url": "https://user:pw@mcp.example.com"}, id="url-userinfo"),
+    ],
+)
+def test_scrub_nulls_unclean_mcp_config_with_keep_mcp_config(config: dict) -> None:
+    """``keep_mcp_config`` must never hand back a config it cannot prove is clean."""
+    flow_data = _flow_data(
+        {"mcp_server": {"name": "mcp_server", "type": "mcp", "value": {"name": "srv", "config": config}}}
+    )
+
+    strip_secret_field_values_in_place(flow_data, variable_references=set(), keep_mcp_config=True)
+
+    value = _template(flow_data)["mcp_server"]["value"]
+    assert value == {"name": "srv", "config": None}
+
+
+def _mcp_flow_data_referencing(reference: str) -> dict:
+    return _flow_data(
+        {
+            "mcp_server": {
+                "name": "mcp_server",
+                "type": "mcp",
+                "value": {
+                    "name": "srv",
+                    "config": {
+                        "url": "https://mcp.example.com",
+                        "headers": {"Authorization": reference},
+                    },
+                },
+            }
+        }
+    )
+
+
+def test_scrub_nulls_mcp_config_referencing_unknown_variable_with_known_variable_names() -> None:
+    """An ``MCP_*``-shaped value that names no real global variable must fail closed.
+
+    ``_mcp_config_is_clean`` used to accept any value shaped like a reference -
+    a bare ``MCP_*`` name or a ``{{NAME}}`` placeholder - without checking it
+    names one of the owner's actual variables, letting a literal secret that
+    merely looks like one of these generated names escape a strict snapshot.
+    """
+    flow_data = _mcp_flow_data_referencing("MCP_RAW_LITERAL_SECRET")
+
+    strip_secret_field_values_in_place(
+        flow_data, variable_references=set(), keep_mcp_config=True, known_variable_names=set()
+    )
+
+    value = _template(flow_data)["mcp_server"]["value"]
+    assert value["name"] == "srv"
+    assert value["config"] is None
+
+
+def test_scrub_keeps_mcp_config_referencing_known_variable_with_known_variable_names() -> None:
+    """The same reference is kept once it actually names one of the owner's variables."""
+    flow_data = _mcp_flow_data_referencing("MCP_RAW_LITERAL_SECRET")
+
+    strip_secret_field_values_in_place(
+        flow_data,
+        variable_references=set(),
+        keep_mcp_config=True,
+        known_variable_names={"MCP_RAW_LITERAL_SECRET"},
+    )
+
+    value = _template(flow_data)["mcp_server"]["value"]
+    assert value["config"] == {
+        "url": "https://mcp.example.com",
+        "headers": {"Authorization": "MCP_RAW_LITERAL_SECRET"},
+    }

@@ -359,7 +359,11 @@ async def create_flow(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from e
 
 
-@router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
+@router.get(
+    "/",
+    response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader] | Page[FlowHeader],
+    status_code=200,
+)
 async def read_flows(
     *,
     current_user: CurrentActiveUser,
@@ -495,8 +499,24 @@ async def read_flows(
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
-        page.items = [_flow_read_for_caller(flow, current_user.id) for flow in page.items]
-        return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
+        if header_flows:
+            # Same page of rows, header shape: one data-less listing that still
+            # carries ``total`` (the flow count) and each row's change hint.
+            flow_headers = []
+            for flow in page.items:
+                header = FlowHeader.model_validate(flow, from_attributes=True)
+                if flow.user_id != current_user.id:
+                    header.data = strip_secret_field_values(header.data)
+                flow_headers.append(header)
+            return Page[FlowHeader].create(flow_headers, params, total=page.total)
+
+        # An explicit Page[FlowRead] keeps the response-model union from
+        # serializing these rows under the Page[FlowHeader] shape.
+        return Page[FlowRead].create(
+            [_flow_read_for_caller(flow, current_user.id) for flow in page.items],
+            params,
+            total=page.total,
+        )
 
     except Exception as e:
         import logging as _logging
