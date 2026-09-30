@@ -132,8 +132,9 @@ class JobService(Service):
         dedupe_key: str | None = None,
         end_user_id: str | None = None,
         initial_metadata: dict | None = None,
+        status: JobStatus = JobStatus.QUEUED,
     ) -> Job:
-        """Create a new job record with QUEUED status.
+        """Create a new job record, QUEUED unless ``status`` says otherwise.
 
         Args:
             job_id: The job ID
@@ -153,6 +154,11 @@ class JobService(Service):
                 row. The background workflow facade uses this for its replay request and
                 encrypted override envelope so a worker can never claim a partially
                 initialized job.
+            status: Initial status. A caller that starts the run right away, in the same
+                request, passes IN_PROGRESS and calls ``execute_with_status`` with
+                ``mark_in_progress=False``, which saves the QUEUED -> IN_PROGRESS UPDATE.
+                Leave it QUEUED for anything a worker or the startup sweep may pick up:
+                the sweep re-enqueues QUEUED workflow rows.
 
         Returns:
             Created Job object
@@ -196,7 +202,7 @@ class JobService(Service):
             job = Job(
                 job_id=job_id,
                 flow_id=flow_id,
-                status=JobStatus.QUEUED,
+                status=status,
                 type=job_type,
                 asset_id=asset_id,
                 asset_type=asset_type,
@@ -1089,11 +1095,12 @@ class JobService(Service):
             await session.flush()
             return [job.job_id for job in jobs]
 
-    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
+    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, mark_in_progress: bool = True, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
 
         This function:
-        1. Updates status to IN_PROGRESS before execution
+        1. Updates status to IN_PROGRESS before execution (unless ``mark_in_progress`` is
+           False: the caller created the row IN_PROGRESS already)
         2. Executes the wrapped function
         3. Updates status to COMPLETED on success or FAILED on error
         4. Sets finished_timestamp when done
@@ -1102,6 +1109,8 @@ class JobService(Service):
             job_id: The job ID
             run_coro_func: The coroutine function to wrap
             *args: Positional arguments to pass to run_coro_func
+            mark_in_progress: Write IN_PROGRESS before running. Keyword-only, and not
+                passed on to run_coro_func.
             **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
@@ -1115,9 +1124,9 @@ class JobService(Service):
         await logger.ainfo(f"Starting job execution: job_id={job_id}")
 
         try:
-            # Update to IN_PROGRESS
-            await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
-            await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+            if mark_in_progress:
+                await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
+                await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
             # Execute the wrapped function
             await logger.ainfo(f"Executing job function for job_id={job_id}")

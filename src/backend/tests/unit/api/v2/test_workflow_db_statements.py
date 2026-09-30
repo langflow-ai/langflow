@@ -148,8 +148,8 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 # Statements and pool checkouts for one sync run, per flow. Update these on
 # purpose: a new round trip on this path costs every workflow run.
 _SYNC_ROUND_TRIPS = {
-    "memory_chatbot": (10, 9),
-    "simple_chat": (11, 9),
+    "memory_chatbot": (9, 8),
+    "simple_chat": (10, 8),
 }
 
 
@@ -167,5 +167,7 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
     assert not _follows(statements, "UPDATE job", "SELECT job"), statements
 
     if mode == "sync":
+        # The sync job row is created IN_PROGRESS and written once more when it ends.
+        assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
         flow_name = request.node.callspec.params["chat_flow"]
         assert (len(statements), recorder.checkouts) == _SYNC_ROUND_TRIPS[flow_name], statements
