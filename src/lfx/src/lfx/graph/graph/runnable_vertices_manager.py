@@ -16,6 +16,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "cycle_vertices": self.cycle_vertices,
             "ran_at_least_once": self.ran_at_least_once,
         }
 
@@ -26,6 +27,10 @@ class RunnableVerticesManager:
         instance.run_predecessors = data["run_predecessors"]
         instance.vertices_to_run = data["vertices_to_run"]
         instance.vertices_being_run = data["vertices_being_run"]
+        # Payloads written before ``cycle_vertices`` was serialized have no such
+        # key; restoring an empty set matches the previous behaviour and keeps
+        # the checkpoint/cached payloads of those installs readable.
+        instance.cycle_vertices = data.get("cycle_vertices", set())
         instance.ran_at_least_once = data.get("ran_at_least_once", set())
         return instance
 
@@ -35,6 +40,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "cycle_vertices": self.cycle_vertices,
             "ran_at_least_once": self.ran_at_least_once,
         }
 
@@ -43,6 +49,10 @@ class RunnableVerticesManager:
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
         self.vertices_being_run = state["vertices_being_run"]
+        # Without this the restored manager has no ``cycle_vertices`` attribute
+        # at all, so ``are_all_predecessors_fulfilled`` raises AttributeError on
+        # the first scheduling decision after a cache round-trip.
+        self.cycle_vertices = state.get("cycle_vertices", set())
         self.ran_at_least_once = state["ran_at_least_once"]
 
     def all_predecessors_are_fulfilled(self) -> bool:

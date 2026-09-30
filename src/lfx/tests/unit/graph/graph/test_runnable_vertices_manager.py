@@ -74,6 +74,47 @@ def test_pickle(data):
     assert result.vertices_being_run == manager.vertices_being_run
 
 
+def test_cycle_vertices_survive_pickle(data):
+    """A cached graph must keep its cycle membership, or its loop vertex never runs again."""
+    manager = RunnableVerticesManager.from_dict(data)
+    manager.add_to_cycle_vertices("Loop")
+
+    result = pickle.loads(pickle.dumps(manager))  # noqa: S301
+
+    assert result.cycle_vertices == {"Loop"}
+
+
+def test_cycle_vertices_survive_to_dict_round_trip(data):
+    """The dict form Graph.__getstate__ stores must carry cycle_vertices."""
+    manager = RunnableVerticesManager.from_dict(data)
+    manager.add_to_cycle_vertices("Loop")
+
+    assert RunnableVerticesManager.from_dict(manager.to_dict()).cycle_vertices == {"Loop"}
+
+
+def test_from_dict_without_cycle_vertices__legacy_payload(data):
+    """Payloads written before cycle_vertices was serialized stay readable."""
+    data.pop("cycle_vertices", None)
+
+    assert RunnableVerticesManager.from_dict(data).cycle_vertices == set()
+
+
+def test_pickled_cycle_vertex_stays_runnable(data):
+    """Regression: the loop's first run is allowed only while its predecessors are cycle vertices."""
+    manager = RunnableVerticesManager.from_dict(data)
+    manager.add_to_cycle_vertices("Loop")
+    manager.ran_at_least_once.clear()
+    manager.vertices_to_run = {"Loop"}
+    manager.vertices_being_run = set()
+    manager.run_predecessors = {"Loop": ["Loop"]}
+    manager.run_map = {"Loop": ["Loop"]}
+    assert manager.is_vertex_runnable("Loop", is_active=True, is_loop=True) is True
+
+    result = pickle.loads(pickle.dumps(manager))  # noqa: S301
+
+    assert result.is_vertex_runnable("Loop", is_active=True, is_loop=True) is True
+
+
 def test_update_run_state(data):
     manager = RunnableVerticesManager.from_dict(data)
     run_predecessors = {"E": {"D"}}

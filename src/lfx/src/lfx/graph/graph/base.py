@@ -1668,6 +1668,12 @@ class Graph:
             "has_session_id_vertices": self.has_session_id_vertices,
             "_sorted_vertices_layers": self._sorted_vertices_layers,
             "_instantiate_components_on_initialize": self._instantiate_components_on_initialize,
+            # Both back the ``cycle_vertices`` / ``is_cyclic`` properties, which
+            # ``sort_vertices`` and ``mark_branch`` read. Omitting them leaves a
+            # restored graph without the attributes entirely, so the next
+            # scheduling pass raises AttributeError instead of recomputing them.
+            "_cycle_vertices": self._cycle_vertices,
+            "_is_cyclic": self._is_cyclic,
         }
 
     def _copy_graph(
@@ -1797,6 +1803,11 @@ class Graph:
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
         state.setdefault("_headless_filesystem_user_id", None)
         state.setdefault("branch_inactivation_sources", {})
+        # Cache/checkpoint payloads written before the cycle caches were
+        # serialized. ``None`` makes both properties recompute from ``_edges``,
+        # which is the same answer the live graph had.
+        state.setdefault("_cycle_vertices", None)
+        state.setdefault("_is_cyclic", None)
         # __getstate__ omits end_user_id, so graphs restored from cache/checkpoint
         # payloads need the default for _vertex_result_cache_key to read it safely.
         state.setdefault("end_user_id", None)

@@ -355,6 +355,31 @@ def test_graph_source_flow_provenance_survives_pickle_and_legacy_state():
     assert legacy_graph.source_flow_id is None
 
 
+def test_graph_cycle_caches_survive_pickle_and_legacy_state():
+    """A Redis-cached graph keeps the cycle caches sort_vertices and mark_branch read."""
+    graph = Graph(flow_id="cached-flow-id")
+    graph.run_manager.add_to_cycle_vertices("Loop")
+
+    restored = pickle.loads(pickle.dumps(graph))  # noqa: S301 - round-tripping trusted in-memory test data
+    assert restored.run_manager.cycle_vertices == {"Loop"}
+    assert restored.cycle_vertices == graph.cycle_vertices
+    assert restored.is_cyclic is graph.is_cyclic
+
+
+def test_graph_cycle_caches_recompute_for_legacy_state():
+    """Cache entries written before these fields existed load instead of raising."""
+    graph = Graph(flow_id="cached-flow-id")
+    legacy_state = graph.__getstate__()
+    legacy_state.pop("_cycle_vertices")
+    legacy_state.pop("_is_cyclic")
+
+    legacy_graph = object.__new__(Graph)
+    legacy_graph.__setstate__(legacy_state)
+
+    assert legacy_graph.cycle_vertices == set()
+    assert legacy_graph.is_cyclic is False
+
+
 def test_graph_deepcopy_sets_source_flow_provenance_before_rebuild(monkeypatch):
     """Deep-copy reconstruction exposes the trusted source scope before rebuilding FileInputs."""
     graph = Graph(flow_id="visitor-virtual-flow-id")
