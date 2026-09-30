@@ -1275,6 +1275,10 @@ def relocate_kb(
     username: str = typer.Option("", help="Only relocate this user's knowledge bases."),
     dry_run: bool = typer.Option(default=False, help="Report what would be moved without writing."),  # noqa: FBT001
     batch_size: int = typer.Option(500, help="Chunks read and written per batch."),
+    allow_metric_change: bool = typer.Option(  # noqa: FBT001
+        default=False,
+        help="Move knowledge bases whose search rankings would change because the target ranks by another metric.",
+    ),
     log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ) -> None:
     """Move knowledge base vectors to another backend without re-embedding.
@@ -1285,6 +1289,10 @@ def relocate_kb(
 
     Stop ingestion and memory capture before running this: chunks written while a
     knowledge base moves would stay behind on the old store.
+
+    A knowledge base whose vectors are not unit length is not moved to a backend
+    that ranks by another metric, since its search results would change, unless
+    --allow-metric-change is passed.
 
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
@@ -1313,6 +1321,7 @@ def relocate_kb(
             username=username or None,
             dry_run=dry_run,
             batch_size=batch_size,
+            allow_metric_change=allow_metric_change,
         )
     )
     if failed:
@@ -1409,6 +1418,7 @@ async def _relocate_kb(
     username: str | None,
     dry_run: bool,
     batch_size: int,
+    allow_metric_change: bool = False,
 ) -> int:
     from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
     from langflow.services.utils import register_all_service_factories
@@ -1426,6 +1436,7 @@ async def _relocate_kb(
         username=username,
         dry_run=dry_run,
         batch_size=batch_size,
+        allow_metric_change=allow_metric_change,
     )
     for result in results:
         typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
