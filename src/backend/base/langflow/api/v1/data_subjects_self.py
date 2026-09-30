@@ -18,6 +18,7 @@ from langflow.services.data_subjects import requests as request_service
 from langflow.services.data_subjects.errors import DataSubjectError
 from langflow.services.data_subjects.export import export_builder
 from langflow.services.data_subjects.schemas import OwnDeletionRequestStatus
+from langflow.services.data_subjects.stop import ensure_not_last_administrator
 from langflow.services.database.models.data_subject_request import (
     OPEN_STATUSES,
     DataSubjectRequest,
@@ -91,6 +92,10 @@ async def request_own_deletion(
         limit_per_hour=REQUESTS_PER_HOUR,
         key=get_user_limiter_key(current_user.id),
     )
+    try:
+        await ensure_not_last_administrator(session, current_user)
+    except DataSubjectError as exc:
+        raise to_http_error(exc) from exc
     request, created = await request_service.create_builder_request(
         session, subject=current_user, requested_by=current_user.id, source=DataSubjectRequestSource.SELF
     )

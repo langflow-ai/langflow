@@ -10,9 +10,10 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
+from sqlmodel import col, select
 
 from tests.unit.erase_helpers import wait_for_erase
-from tests.unit.services.data_subjects._seed import end_user_message
+from tests.unit.services.data_subjects._seed import create_user, end_user_message
 
 
 @pytest.fixture
@@ -89,6 +90,45 @@ async def test_should_keep_who_asked_when_a_request_is_refused(client: AsyncClie
     assert refused.status_code == status.HTTP_200_OK, refused.text
     assert refused.json()["status"] == "refused"
     assert refused.json()["subject_label"] == end_user_id
+
+
+@pytest.mark.usefixtures("feature_on")
+async def test_should_refuse_the_only_superuser_asking_to_be_deleted(
+    client: AsyncClient, logged_in_headers_super_user, active_super_user
+):
+    async with session_scope() as session:
+        others = (
+            await session.exec(select(User).where(col(User.is_superuser).is_(True), User.id != active_super_user.id))
+        ).all()
+        for other in others:
+            other.is_active = False
+            session.add(other)
+
+    response = await client.post("api/v1/users/me/deletion-request", headers=logged_in_headers_super_user)
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    assert response.json()["detail"]["code"] == "last_administrator"
+
+
+@pytest.mark.usefixtures("feature_on")
+async def test_should_let_another_administrator_approve_an_administrator_leaving(
+    client: AsyncClient, logged_in_headers_super_user
+):
+    username = f"admin-{uuid4().hex[:8]}"
+    await create_user(username, superuser=True)
+    login = await client.post("api/v1/login", data={"username": username, "password": "test-password-123"})
+    leaving = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    asked = await client.post("api/v1/users/me/deletion-request", headers=leaving)
+    own_approval = await client.post(f"api/v1/data-subjects/requests/{asked.json()['id']}/approve", headers=leaving)
+    other_approval = await client.post(
+        f"api/v1/data-subjects/requests/{asked.json()['id']}/approve", headers=logged_in_headers_super_user
+    )
+
+    assert asked.status_code == status.HTTP_201_CREATED, asked.text
+    assert own_approval.status_code == status.HTTP_403_FORBIDDEN
+    assert own_approval.json()["detail"]["code"] == "self_approval"
+    assert other_approval.status_code == status.HTTP_202_ACCEPTED, other_approval.text
 
 
 @pytest.mark.usefixtures("feature_on")

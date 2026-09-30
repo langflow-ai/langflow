@@ -27,6 +27,11 @@ class SubjectNotFoundError(DataSubjectError):
     status_code = HTTPStatus.NOT_FOUND
 
 
+class SelfApprovalError(DataSubjectError):
+    code = "self_approval"
+    status_code = HTTPStatus.FORBIDDEN
+
+
 class RequestNotFoundError(DataSubjectError):
     code = "request_not_found"
     status_code = HTTPStatus.NOT_FOUND

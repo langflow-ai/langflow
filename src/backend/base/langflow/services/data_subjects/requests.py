@@ -13,6 +13,7 @@ from langflow.services.data_subjects.context import EraseContext
 from langflow.services.data_subjects.errors import (
     DataSubjectError,
     InvalidTransitionError,
+    SelfApprovalError,
     SubjectNotFoundError,
 )
 from langflow.services.data_subjects.identity import end_user_keys, ensure_not_an_account
@@ -195,6 +196,9 @@ async def _approve_builder(session: AsyncSession, request: DataSubjectRequest, a
 async def approve(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID) -> DataSubjectRequest:
     """Run phase 1 and hand the request to the worker. Guard refusals are audited and re-raised."""
     _require_status(request, DataSubjectRequestStatus.REQUESTED)
+    if request.subject_user_id is not None and request.subject_user_id == actor_id:
+        msg = "Another administrator must approve the deletion of your own account"
+        raise SelfApprovalError(msg)
     try:
         if request.subject_type == DataSubjectType.BUILDER.value:
             stopped = await _approve_builder(session, request, actor_id)

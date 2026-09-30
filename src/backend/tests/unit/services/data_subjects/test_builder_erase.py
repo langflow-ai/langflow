@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 from langflow.services.data_subjects.engine import run_request
 from langflow.services.data_subjects.errors import InvalidTransitionError, LastAdministratorError
@@ -153,7 +155,7 @@ async def test_should_refuse_to_erase_the_last_active_superuser():
             session, subject=user, requested_by=lone_admin, source=DataSubjectRequestSource.SELF
         )
         with pytest.raises(LastAdministratorError):
-            await approve(session, request, lone_admin)
+            await approve(session, request, uuid4())
 
 
 @pytest.mark.usefixtures("client")

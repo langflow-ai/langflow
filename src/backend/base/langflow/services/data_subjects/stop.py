@@ -72,6 +72,10 @@ async def ensure_builder_erasable(session: AsyncSession, user: User) -> None:
     if blocking:
         msg = "Undeploy these resources before erasing the account"
         raise DeployedResourcesError(msg, details={"deployments": blocking})
+    await ensure_not_last_administrator(session, user)
+
+
+async def ensure_not_last_administrator(session: AsyncSession, user: User) -> None:
     if user.is_superuser:
         others = (
             await session.exec(
