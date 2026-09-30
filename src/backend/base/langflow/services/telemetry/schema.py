@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AwareDatetime, BaseModel, EmailStr, Field
 
 # Maximum URL length for telemetry GET requests (Scarf pixel tracking)
 # Scarf supports up to 2KB (2048 bytes) for query parameters
@@ -17,6 +17,8 @@ class RunPayload(BasePayload):
     run_success: bool = Field(serialization_alias="runSuccess")
     run_error_message: str = Field("", serialization_alias="runErrorMessage")
     run_id: str | None = Field(None, serialization_alias="runId")
+    # Set at the run-event boundary for local consumers; never exported as telemetry.
+    run_completed_at: AwareDatetime | None = Field(default=None, exclude=True)
 
 
 class DeploymentPayload(BasePayload):

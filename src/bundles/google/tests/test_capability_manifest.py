@@ -60,7 +60,11 @@ def test_loader_exposes_the_google_provider() -> None:
 
 def test_manifest_actions_match_the_capability_matrix() -> None:
     expected = _included_matrix_actions()
-    capabilities = {capability["id"]: capability for capability in _manifest()["capabilities"]}
+    capabilities = {
+        capability["id"]: capability
+        for capability in _manifest()["capabilities"]
+        if not capability["id"].startswith("google.trigger.")
+    }
 
     assert set(capabilities) == set(expected), "manifest and matrix disagree on the included action set"
     for action_id, action in expected.items():
@@ -71,6 +75,9 @@ def test_manifest_actions_match_the_capability_matrix() -> None:
         assert capability["component_ref"] == action["component_class"], action_id
         assert capability["substrate"] == action["substrate"], action_id
         assert capability["identity"] == action["identity"], action_id
+    assert {
+        capability["id"] for capability in _manifest()["capabilities"] if capability["id"].startswith("google.trigger.")
+    } == {"google.trigger.calendar", "google.trigger.drive", "google.trigger.gmail"}
 
 
 # ``risk`` is served to the UI (api/v1/integrations.py) but the capability matrix
@@ -84,6 +91,9 @@ EXPECTED_RISK = {
     "google.drive.fetch": "read",
     "google.calendar.list": "read",
     "google.calendar.create": "write",
+    "google.trigger.calendar": "read",
+    "google.trigger.drive": "read",
+    "google.trigger.gmail": "read",
 }
 
 
@@ -105,9 +115,19 @@ def test_gmail_search_is_not_shipped() -> None:
 def test_no_capability_requests_a_restricted_scope() -> None:
     matrix = json.loads(MATRIX_PATH.read_text(encoding="utf-8"))
     avoided = {entry["scope"] for entry in matrix["restricted_scope_decisions"] if entry["decision"] == "avoid"}
-    declared = {scope for capability in _manifest()["capabilities"] for scope in capability["required_scopes"]}
+    declared = {
+        scope
+        for capability in _manifest()["capabilities"]
+        if not capability["id"].startswith("google.trigger.")
+        for scope in capability["required_scopes"]
+    }
 
     assert declared.isdisjoint(avoided)
+    gmail_trigger = next(
+        capability for capability in _manifest()["capabilities"] if capability["id"] == "google.trigger.gmail"
+    )
+    assert gmail_trigger["required_scopes"] == ["https://www.googleapis.com/auth/gmail.readonly"]
+    assert gmail_trigger["deployment_contexts"] == ["self_managed"]
 
 
 def test_policy_keys_are_namespaced_per_capability() -> None:
@@ -135,7 +155,7 @@ def test_component_connection_scopes_match_the_manifest() -> None:
         assert connection.auth_profile_id == capability["auth_profile_id"]
         assert connection.required_scopes == list(capability["required_scopes"]), capability["id"]
         assert connection.capabilities == [capability["id"]]
-        assert connection.required is True
+        assert connection.required is (not capability["id"].startswith("google.trigger."))
 
 
 def test_scopes_are_declared_as_full_google_urls() -> None:
@@ -186,4 +206,4 @@ def test_manifest_is_readable_from_an_installed_wheel(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    assert completed.stdout.strip() == "5"
+    assert completed.stdout.strip() == "8"
