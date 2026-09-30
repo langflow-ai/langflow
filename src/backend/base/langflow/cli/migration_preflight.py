@@ -195,6 +195,7 @@ async def check_embedding_models(session: AsyncSession) -> CheckResult:
     assume anything about: embedding resolution silently falls back to a default
     model, which may never have produced these vectors.
     """
+    from langflow.api.utils.knowledge_base_service import get_embedding_model
     from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
     from langflow.services.database.models.user.model import User
 
@@ -205,7 +206,12 @@ async def check_embedding_models(session: AsyncSession) -> CheckResult:
             )
         )
     ).all()
-    unknown = [f"{owner}/{kb}: no embedding model recorded" for kb, selection, owner in rows if not selection]
+    # A selection can name a provider and no model, which resolves to the same default.
+    unknown = [
+        f"{owner}/{kb}: no embedding model recorded"
+        for kb, selection, owner in rows
+        if not get_embedding_model(selection)
+    ]
     copyable = len(rows) - len(unknown)
     plural = "" if copyable == 1 else "s"
     if not unknown:
