@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { SessionLoadMore } from "@/components/core/playgroundComponent/chat-view/chat-header/components/session-load-more";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -17,6 +18,7 @@ export const SidebarOpenView = ({
   selectedViewField,
   playgroundPage,
   setActiveSession,
+  ...pagination
 }: SidebarOpenViewProps) => {
   const { t } = useTranslation();
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
@@ -100,6 +102,7 @@ export const SidebarOpenView = ({
               }}
             />
           ))}
+          <SessionLoadMore {...pagination} />
         </div>
       </div>
     </>

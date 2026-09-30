@@ -1,4 +1,6 @@
-export type SidebarOpenViewProps = {
+import type { SessionPaginationProps } from "@/components/core/playgroundComponent/chat-view/chat-header/components/session-load-more";
+
+export type SidebarOpenViewProps = SessionPaginationProps & {
   sessions: string[];
   setSelectedViewField: (
     field: { type: string; id: string } | undefined,

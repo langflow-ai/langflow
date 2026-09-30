@@ -121,8 +121,8 @@ describe("useSessionManagerStore", () => {
     });
 
     expect(useSessionManagerStore.getState().sessions).toEqual([
-      { id: "promoted-session", isLocal: false },
       { id: "local-only-session", isLocal: true },
+      { id: "promoted-session", isLocal: false },
       { id: "new-server-session", isLocal: false },
     ]);
     expect(window.sessionStorage.getItem(STORAGE_KEY)).toBe(
@@ -146,6 +146,28 @@ describe("useSessionManagerStore", () => {
       FLOW_ID,
       "session-1",
       "session-2",
+    ]);
+  });
+
+  it("keeps loaded pages in server recency order after a refresh", () => {
+    const store = useSessionManagerStore.getState();
+    act(() => {
+      store.initialize(FLOW_ID);
+      store.syncFromServer(["recent", "older"]);
+      store.syncFromServer(["recent", "older", "oldest"]);
+    });
+    expect(store.getOrderedSessionIds()).toEqual([
+      FLOW_ID,
+      "recent",
+      "older",
+      "oldest",
+    ]);
+    act(() => store.syncFromServer(["older", "recent", "oldest"]));
+    expect(store.getOrderedSessionIds()).toEqual([
+      FLOW_ID,
+      "older",
+      "recent",
+      "oldest",
     ]);
   });
 });
