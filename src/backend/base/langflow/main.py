@@ -32,8 +32,10 @@ from lfx.observability import (
 )
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
+from starlette.datastructures import URL, MutableHeaders
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
@@ -149,26 +151,44 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
         return await handler_task
 
 
-class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+class JavaScriptMIMETypeMiddleware:
+    """Serve ``.js`` paths as ``text/javascript`` and turn a response serialization error into a 500.
+
+    Pure ASGI rather than ``BaseHTTPMiddleware``: that base relays every response message
+    through a memory stream and a second task, a cost paid again for each SSE frame.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        response_started = False
+
+        async def send_with_mime_type(message: Message) -> None:
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+                path = URL(scope=scope).path
+                if "files/" not in path and path.endswith(".js") and message["status"] == HTTPStatus.OK:
+                    MutableHeaders(scope=message)["Content-Type"] = "text/javascript"
+            await send(message)
+
         try:
-            response = await call_next(request)
-        except Exception as exc:
-            if isinstance(exc, PydanticSerializationError):
-                message = (
-                    "Something went wrong while serializing the response. "
-                    "Please share this error on our GitHub repository."
-                )
-                error_messages = json.dumps([message, str(exc)])
-                raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
-            raise
-        if (
-            "files/" not in request.url.path
-            and request.url.path.endswith(".js")
-            and response.status_code == HTTPStatus.OK
-        ):
-            response.headers["Content-Type"] = "text/javascript"
-        return response
+            await self.app(scope, receive, send_with_mime_type)
+        except PydanticSerializationError as exc:
+            # As with BaseHTTPMiddleware's call_next, only an error raised before the
+            # response started is mapped; after that the status line is already sent.
+            if response_started:
+                raise
+            message = (
+                "Something went wrong while serializing the response. Please share this error on our GitHub repository."
+            )
+            error_messages = json.dumps([message, str(exc)])
+            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
 
 
 async def load_bundles_with_error_handling():
