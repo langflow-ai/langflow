@@ -14,6 +14,7 @@ import json
 import re
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -147,9 +148,13 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 # Statements and pool checkouts for one sync run, per flow. Update these on
 # purpose: a new round trip on this path costs every workflow run.
 _SYNC_ROUND_TRIPS = {
-    "memory_chatbot": (14, 11),
-    "simple_chat": (14, 10),
+    "memory_chatbot": (12, 11),
+    "simple_chat": (12, 10),
 }
+
+
+def _follows(statements: list[str], first: str, then: str) -> bool:
+    return any(a == first and b == then for a, b in pairwise(statements))
 
 
 @pytest.mark.parametrize("mode", ["sync", "stream"])
@@ -157,6 +162,9 @@ _SYNC_ROUND_TRIPS = {
 async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flow, mode, request):
     recorder = await _measure(client, created_api_key.api_key, chat_flow, mode)
     statements = recorder.statements
+
+    # A job status change returns the row it wrote instead of reading it back.
+    assert not _follows(statements, "UPDATE job", "SELECT job"), statements
 
     if mode == "sync":
         flow_name = request.node.callspec.params["chat_flow"]
