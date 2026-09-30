@@ -238,3 +238,34 @@ class TestParameterHandlerDictField:
         params = {}
         result = self.handler._handle_dict_field("data", val, params)
         assert result["data"] == {"a": 1, "b": 2}
+
+
+class TestFileInputNamesFromCode:
+    """The FileInput scan is cached per exact source text."""
+
+    SOURCE = """\
+from lfx.io import FileInput as Upload
+
+class Uploader:
+    inputs = [Upload(name="document"), FileInput(name="attachment")]
+"""
+
+    def setup_method(self):
+        ParameterHandler._file_input_names_from_code.cache_clear()
+
+    def test_names_are_extracted_and_cached(self):
+        first = ParameterHandler._file_input_names_from_code(self.SOURCE)
+        second = ParameterHandler._file_input_names_from_code(self.SOURCE)
+
+        assert first == frozenset({"document", "attachment"})
+        assert second is first
+        assert ParameterHandler._file_input_names_from_code.cache_info().hits == 1
+
+    def test_modified_source_is_scanned_again(self):
+        ParameterHandler._file_input_names_from_code(self.SOURCE)
+        modified = self.SOURCE.replace('FileInput(name="attachment")', 'FileInput(name="other")')
+
+        assert ParameterHandler._file_input_names_from_code(modified) == frozenset({"document", "other"})
+
+    def test_invalid_source_has_no_names(self):
+        assert ParameterHandler._file_input_names_from_code("def broken(:\n") == frozenset()
