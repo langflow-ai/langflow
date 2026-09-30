@@ -7,7 +7,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
 from langflow.services.telemetry.opentelemetry import APPLICATION_INSTRUMENTATION_SCOPES
 from lfx.observability import APPLICATION_TRACER_NAME
 
@@ -360,12 +359,11 @@ def test_async_start_emits_the_run_phase_spans():
     assert span["attrs"]["run_id"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="async_start's vertex spans start with no parent: the graph span is not current across the "
-    "generator's yields, so each component becomes its own trace root",
-)
 def test_async_start_vertices_nest_under_the_run():
+    """The graph span is not current across async_start's yields, but it is for each step.
+
+    Without that, every component was its own trace root on the path streaming uses.
+    """
     assert_run_tree(run_probe(ASYNC_START_PROBE), {"ChatInput", "ChatOutput"})
 
 

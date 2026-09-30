@@ -232,3 +232,121 @@ def test_a_real_async_query_carries_its_phase_table_and_verb():
     assert by_verb["UPDATE"]["langflow.phase"] == "job.finish"
     # CREATE is not a listed verb, and it ran outside any phase: nothing is invented for it.
     assert "langflow.phase" not in by_verb[None]
+
+
+# The same, through a whole graph run on the async_start path, which streaming uses. The run's
+# span is not current across the generator's yields, so this proves the phase still reaches the
+# DB spans on both sides of a vertex boundary: inside a component, and in the graph around it.
+GRAPH_PROBE = """
+import asyncio, json
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+from lfx.observability import ApplicationOnlySpanProcessor, instrument_database
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from lfx.components.input_output import ChatInput
+from lfx.custom.custom_component.component import Component
+from lfx.graph.graph.base import Graph
+from lfx.io import MessageTextInput, Output
+from lfx.schema.message import Message
+
+ENGINE = create_async_engine("sqlite+aiosqlite://")
+instrument_database(ENGINE)
+
+
+class Store(Component):
+    display_name = "Store"
+    inputs = [MessageTextInput(name="input_value", display_name="Input")]
+    outputs = [Output(name="message", display_name="Message", method="store")]
+
+    async def store(self) -> Message:
+        async with ENGINE.connect() as conn:
+            await conn.execute(sa.text("INSERT INTO job (id) VALUES (1)"))
+        return Message(text=self.input_value)
+
+
+# Stands in for the graph's own bookkeeping between components.
+_initialize_run = Graph.initialize_run
+
+
+async def initialize_run(self):
+    await _initialize_run(self)
+    async with ENGINE.connect() as conn:
+        await conn.execute(sa.text("SELECT id FROM job"))
+
+
+Graph.initialize_run = initialize_run
+
+
+async def main():
+    async with ENGINE.connect() as conn:
+        await conn.execute(sa.text("CREATE TABLE job (id INTEGER)"))
+    chat_input = ChatInput(_id="chat-input")
+    chat_input.set(input_value="hello")
+    store = Store(_id="store")
+    store.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, store, flow_id="11111111-1111-1111-1111-111111111111")
+    async for _ in graph.async_start():
+        pass
+    await ENGINE.dispose()
+
+
+asyncio.run(main())
+provider.force_flush()
+spans = [
+    {
+        "name": s.name,
+        "span_id": s.context.span_id,
+        "parent": s.parent.span_id if s.parent else None,
+        "attributes": {k: str(v) for k, v in (s.attributes or {}).items()},
+    }
+    for s in exporter.get_finished_spans()
+]
+print("PROBE_RESULT " + json.dumps(spans))
+"""
+
+
+def test_db_work_on_the_async_start_path_carries_the_vertex_and_graph_phase():
+    pytest.importorskip("aiosqlite")
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    with tempfile.TemporaryDirectory() as tmp:
+        # A file rather than -c: Component.__init__ reads its own class source with inspect.
+        probe = Path(tmp) / "probe.py"
+        probe.write_text(GRAPH_PROBE, encoding="utf-8")
+        completed = subprocess.run(  # noqa: S603
+            [sys.executable, str(probe)], env=env, capture_output=True, text=True, timeout=300, check=False
+        )
+    assert completed.returncode == 0, completed.stderr
+    lines = [ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT ")]
+    assert lines, f"probe printed no result.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+    spans = json.loads(lines[0].removeprefix("PROBE_RESULT "))
+    (graph,) = [s for s in spans if s["name"] == "langflow.graph.execute"]
+    (store,) = [
+        s
+        for s in spans
+        if s["name"] == "langflow.vertex.execute" and s["attributes"]["langflow.vertex.kind"] != "InterfaceVertex"
+    ]
+    (insert,) = [s for s in spans if s["name"] == "INSERT job"]
+    (select,) = [s for s in spans if s["name"] == "SELECT job"]
+
+    assert store["parent"] == graph["span_id"]
+    # Inside a component: the vertex's phase and component type, under the vertex span.
+    assert insert["parent"] == store["span_id"]
+    assert insert["attributes"]["langflow.phase"] == "vertex.execute"
+    # Not a bundled component, so it collapses to the bounded token, as on the vertex span.
+    assert insert["attributes"]["langflow.component.type"] == store["attributes"]["langflow.component.type"]
+    assert insert["attributes"]["langflow.component.type"] == "custom_or_unknown"
+    # Around the components: the graph's phase, under the graph span.
+    assert select["parent"] == graph["span_id"]
+    assert select["attributes"]["langflow.phase"] == "graph.execute"
+    assert "langflow.component.type" not in select["attributes"]

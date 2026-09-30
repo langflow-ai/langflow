@@ -321,20 +321,55 @@ def observe_queued_job(
 
 
 class GraphExecutionObservation:
-    """Marks failures swallowed by a graph driver without exposing span objects."""
+    """Handle a graph driver holds for its run, without exposing span objects.
 
-    __slots__ = ("error_type",)
+    Marks failures the driver swallowed, and lets a generator driver make the run current
+    for one stretch of work at a time.
+    """
 
-    def __init__(self) -> None:
+    __slots__ = ("_resume", "error_type")
+
+    def __init__(self, resume: Callable[[], contextlib.AbstractContextManager[object]] | None = None) -> None:
         self.error_type: str | None = None
+        self._resume = resume
 
     def record_error(self, error_type: str) -> None:
         self.error_type = error_type
+
+    def resumed(self) -> contextlib.AbstractContextManager[object]:
+        """Make the run current for a block that contains no ``yield``.
+
+        A span opened with ``make_current=False`` is not current, so nothing the run starts
+        would nest under it. A generator driver wraps each stretch between its yields in this
+        instead: the context is attached and detached inside one resumption, in the context
+        of whichever task resumed it, so it can neither leak into the consumer at a
+        suspension point nor be reset from a different context. The components the stretch
+        builds then nest under the graph span, and the DB work it does outside them is
+        attributed to ``graph.execute``.
+
+        A no-op when the run is already current, has no span (a subgraph, or no OpenTelemetry),
+        or belongs to a caller that opened the span itself.
+        """
+        if self._resume is None:
+            return contextlib.nullcontext()
+        return self._resume()
 
 
 def application_span_missing_current() -> bool:
     """Whether installed tracing lacks the current span a delegated run promised."""
     return trace is not None and not trace.get_current_span().is_recording()
+
+
+def _graph_span_current(graph_span: Span) -> contextlib.ExitStack:
+    """Make *graph_span* current, with its phase lent to the DB spans started under it."""
+    stack = contextlib.ExitStack()
+    stack.enter_context(
+        trace.use_span(graph_span, end_on_exit=False, record_exception=False, set_status_on_exception=False)
+    )
+    # Only while current: the phase follows the span, and a detached one is detached
+    # precisely because this context may not outlive a generator suspension.
+    stack.enter_context(_otel.db_attribution({"langflow.phase": "graph.execute"}))
+    return stack
 
 
 def _start_graph_spans(*, make_current: bool) -> tuple[Span, Span, contextlib.ExitStack]:
@@ -355,17 +390,7 @@ def _start_graph_spans(*, make_current: bool) -> tuple[Span, Span, contextlib.Ex
     graph_span = tracer.start_span(GRAPH_EXECUTION_SPAN, context=trace.set_span_in_context(flow_span))
     flow_span.set_attribute("langflow.phase", "flow.execute")
     graph_span.set_attribute("langflow.phase", "graph.execute")
-    stack = contextlib.ExitStack()
-    if make_current:
-        stack.enter_context(
-            trace.use_span(flow_span, end_on_exit=False, record_exception=False, set_status_on_exception=False)
-        )
-        stack.enter_context(
-            trace.use_span(graph_span, end_on_exit=False, record_exception=False, set_status_on_exception=False)
-        )
-        # Only when current: the phase follows the span, and a detached one is detached
-        # precisely because this context may not outlive a generator suspension.
-        stack.enter_context(_otel.db_attribution({"langflow.phase": "graph.execute"}))
+    stack = _graph_span_current(graph_span) if make_current else contextlib.ExitStack()
     return flow_span, graph_span, stack
 
 
@@ -384,11 +409,14 @@ def observe_graph_execution(
     paused_exception: type[BaseException],
 ) -> Iterator[GraphExecutionObservation]:
     """Own the legacy flow span and its graph child outside graph business logic."""
-    observation = GraphExecutionObservation()
     if trace is None or is_subgraph:
-        yield observation
+        yield GraphExecutionObservation()
         return
     flow_span, graph_span, stack = _start_graph_spans(make_current=make_current)
+    # Already current for the whole scope when make_current; otherwise a generator driver
+    # makes it current one resumption at a time.
+    resume = None if make_current else functools.partial(_graph_span_current, graph_span)
+    observation = GraphExecutionObservation(resume)
     status = "ok"
     try:
         with stack:

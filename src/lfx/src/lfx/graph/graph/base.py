@@ -470,13 +470,18 @@ class Graph:
     def _flow_span_scope(self, *, open_flow_span: bool):
         """Open the flow span for a run, or defer to the caller that already opened one.
 
+        Yields a factory for the scope each stretch of the generator between two yields runs in.
+        A span opened here is not current (see async_start), so that scope makes it current for
+        the stretch only. A caller that opened the span already made it current around the whole
+        stream, so its scope is a no-op.
+
         The guard is here because deferring and then not opening one is the failure this flag
         makes possible, and it is silent: the run simply produces no flow span. Warn rather than
         raise, because telemetry must never take a run down.
         """
         if open_flow_span:
-            with self.flow_execution_span(make_current=False):
-                yield
+            with self.flow_execution_span(make_current=False) as observation:
+                yield observation.resumed
             return
         if application_span_missing_current():
             logger.warning(
@@ -484,7 +489,7 @@ class Graph:
                 "so this run will not be recorded. The caller should open "
                 "graph.flow_execution_span() around its consumption of the stream."
             )
-        yield
+        yield contextlib.nullcontext
 
     async def async_start(
         self,
@@ -500,35 +505,41 @@ class Graph:
         """Run the graph, yielding each step.
 
         open_flow_span=False says the caller already opened the flow span and this run belongs
-        to it. Prefer that: a span opened here cannot be made current, because this is an async
-        generator and the context token would be attached and detached across its suspension
-        points, so nothing that runs inside the graph nests under the flow span. A caller that
-        is a coroutine has no such problem, so the span it opens is a real parent.
+        to it. Prefer that: a span opened here cannot be made current for the whole run, because
+        this is an async generator and the context token would be attached and detached across
+        its suspension points, leaking into whatever task resumed it. It is made current only for
+        each stretch of work between two yields instead (``resumed`` below), which is enough for
+        the components to nest under it, but not for anything the consumer does between steps.
+        A caller that is a coroutine has no such problem, so the span it opens is a parent for
+        the whole stream, consumer included.
 
         Left defaulting to True so a caller that has not been converted still gets a span rather
-        than silently none. Those runs keep the flat shape.
+        than silently none.
         """
-        with self._flow_span_scope(open_flow_span=open_flow_span):
-            # Preserve start_component_id from constructor if available
-            start_component_id = self._start.get_id() if self._start else None
-            self.prepare(start_component_id=start_component_id)
-            if reset_output_values:
-                self._reset_all_output_values()
+        with self._flow_span_scope(open_flow_span=open_flow_span) as resumed:
+            # Never put a yield inside a resumed() block: it would hold the context across it.
+            with resumed():
+                # Preserve start_component_id from constructor if available
+                start_component_id = self._start.get_id() if self._start else None
+                self.prepare(start_component_id=start_component_id)
+                if reset_output_values:
+                    self._reset_all_output_values()
 
-            await self.initialize_run()
+                await self.initialize_run()
 
-            # The idea is for this to return a generator that yields the result of
-            # each step call and raise StopIteration when the graph is done
-            if config is not None:
-                self.__apply_config(config)
+                # The idea is for this to return a generator that yields the result of
+                # each step call and raise StopIteration when the graph is done
+                if config is not None:
+                    self.__apply_config(config)
             # I want to keep a counter of how many tyimes result.vertex.id
             # has been yielded
             yielded_counts: dict[str, int] = defaultdict(int)
 
             while should_continue(yielded_counts, max_iterations):
-                result = await self.astep(
-                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
-                )
+                with resumed():
+                    result = await self.astep(
+                        event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                    )
                 yield result
                 if isinstance(result, Finish):
                     return
@@ -965,7 +976,8 @@ class Graph:
         (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
         of it. It must stay False when the scope wraps an async generator: the context token would be
         attached and detached across the generator's suspension points, which leaks it into whatever
-        task resumes the generator.
+        task resumes the generator. Such a generator wraps each stretch of work between two yields
+        in ``observation.resumed()`` instead, so what it runs still nests under the run.
 
         The status attribute exists because OTel's StatusCode has three values and a paused run is
         none of them: it did not fail, and calling it OK would tell an operator the work finished

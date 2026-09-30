@@ -1,12 +1,13 @@
 """Who opens the flow span for a run driven through ``async_start``.
 
-``async_start`` is an async generator, so a span it opens cannot be made current: the context
-token would be attached and detached across the generator's suspension points and leak into
-whatever task resumed it. A span that is not current cannot parent anything, so every span the
-run produces (MCP tool calls, database queries) sits beside the flow span rather than under it.
+``async_start`` is an async generator, so a span it opens cannot be made current for the whole
+run: the context token would be attached and detached across the generator's suspension points
+and leak into whatever task resumed it. It is made current for each step between two yields
+instead, so the components nest under it while the consumer, between steps, sees none of it.
 
-The fix is for the caller to open the span, because the callers are coroutines and thread entry
-points, which have no such problem. ``open_flow_span=False`` says that has happened.
+A caller can still open the span itself, because the callers are coroutines and thread entry
+points, which have no such problem, and then it parents the consumer's work too.
+``open_flow_span=False`` says that has happened.
 
 Runs in a subprocess because the tracer provider is process-global.
 """
@@ -214,19 +215,23 @@ def test_a_caller_opened_span_parents_what_the_run_does():
 
 
 def test_async_start_still_opens_its_own_span_when_the_caller_does_not():
-    """An unconverted caller keeps today's behaviour rather than silently losing telemetry.
+    """An unconverted caller still gets the whole run tree rather than silently losing telemetry.
 
-    The span exists, and it still cannot parent the run, which is the limitation the flag exists
-    to let callers opt out of.
+    The components nest under the graph span because it is current for each step, and only for
+    each step: what the consumer does between yields sees no span at all, which is what keeps the
+    context from leaking out of the generator. That is the part a caller-opened span adds.
     """
     result = run_probe("async_start_opens")
 
     flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
     graph_spans = [s for s in result["spans"] if s["name"] == "langflow.graph.execute"]
+    vertex_spans = [s for s in result["spans"] if s["name"] == "langflow.vertex.execute"]
     assert len(flow_spans) == 1
     assert len(graph_spans) == 1
     assert graph_spans[0]["parent"] == flow_spans[0]["span_id"]
-    assert result["inner_parent"] != flow_spans[0]["span_id"]
+    assert vertex_spans
+    assert all(span["parent"] == graph_spans[0]["span_id"] for span in vertex_spans)
+    assert result["inner_parent"] is None, "the run's span leaked into the consumer between yields"
 
 
 def test_deferring_without_opening_one_emits_no_flow_span():
