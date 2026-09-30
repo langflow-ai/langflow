@@ -20,6 +20,7 @@ if __name__ == "__main__":
         _os.execv(_sys.executable, [_sys.executable, "-m", "langflow.__main__", *_sys.argv[1:]])  # noqa: S606
 
 import asyncio
+import dataclasses
 import inspect
 import json
 import os
@@ -1482,9 +1483,13 @@ async def _relocate_kb(
     return by_status.get("failed", 0)
 
 
+_JSON_HELP = "Print one JSON object per line: each check as it finishes, then the report. Logs go to stderr."
+
+
 @app.command(name="check-integrity")
 def check_integrity(
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),  # noqa: FBT001, FBT003
 ) -> None:
     """Report where this instance's database disagrees with what lives outside it.
 
@@ -1497,21 +1502,33 @@ def check_integrity(
     Read-only: it reports and never repairs, so it is safe to run on production.
     Exits non-zero if any check fails.
     """
-    configure(log_level=log_level)
-    if not asyncio.run(_check_integrity()):
+    configure(log_level=log_level, output_file=sys.stderr if as_json else None)
+    if not asyncio.run(_check_integrity(as_json=as_json)):
         raise typer.Exit(1)
 
 
-async def _check_integrity() -> bool:
+async def _check_integrity(*, as_json: bool = False) -> bool:
     from langflow.cli.integrity import check_instance, open_instance
 
     open_instance()
-    report = await check_instance()
-    for check in report.checks:
-        typer.echo(f"{check.status:5} {check.name:16} {check.summary}")
-        for problem in check.problems:
-            typer.echo(f"        - {problem}")
+    report = await check_instance(on_check=partial(_echo_check, width=16, as_json=as_json))
+    if as_json:
+        _echo_json_report(report)
     return report.ok
+
+
+def _echo_check(check, *, width: int, as_json: bool) -> None:
+    if as_json:
+        typer.echo(json.dumps({"event": "check", "check": dataclasses.asdict(check)}))
+        return
+    typer.echo(f"{check.status:5} {check.name:{width}} {check.summary}")
+    for problem in check.problems:
+        typer.echo(f"        - {problem}")
+
+
+def _echo_json_report(report) -> None:
+    checks = [dataclasses.asdict(check) for check in report.checks]
+    typer.echo(json.dumps({"event": "report", "ok": report.ok, "checks": checks}))
 
 
 @app.command(name="migration-preflight")
@@ -1527,6 +1544,7 @@ def migration_preflight(
         exists=True,
         dir_okay=False,
     ),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),  # noqa: FBT001, FBT003
 ) -> None:
     """Refuse a migration from this instance that cannot succeed, before anything moves.
 
@@ -1537,23 +1555,27 @@ def migration_preflight(
 
     Read-only. Exits non-zero if any check fails.
     """
-    configure(log_level=log_level)
+    configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
     key = target_secret_key_file.read_text() if target_secret_key_file else None
-    if not asyncio.run(_migration_preflight(target_revision or None, key)):
+    if not asyncio.run(_migration_preflight(target_revision or None, key, as_json=as_json)):
         raise typer.Exit(1)
 
 
-async def _migration_preflight(target_revision: str | None, target_secret_key: str | None) -> bool:
+async def _migration_preflight(
+    target_revision: str | None, target_secret_key: str | None, *, as_json: bool = False
+) -> bool:
     from langflow.cli.integrity import open_instance
     from langflow.cli.migration_preflight import run_preflight
 
     open_instance()
-    report = await run_preflight(target_revision=target_revision, target_secret_key=target_secret_key)
-    for check in report.checks:
-        typer.echo(f"{check.status:5} {check.name:24} {check.summary}")
-        for problem in check.problems:
-            typer.echo(f"        - {problem}")
+    report = await run_preflight(
+        target_revision=target_revision,
+        target_secret_key=target_secret_key,
+        on_check=partial(_echo_check, width=24, as_json=as_json),
+    )
+    if as_json:
+        _echo_json_report(report)
     return report.ok
 
 

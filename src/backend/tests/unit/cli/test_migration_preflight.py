@@ -7,6 +7,7 @@ leave the database as it found it.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from typing import TYPE_CHECKING
@@ -489,3 +490,26 @@ class TestReadOnly:
         assert after == parent
         assert [(c.name, c.status) for c in report.checks] == [("version", "ok"), ("source: schema", "fail")]
         assert parent in report.checks[1].summary
+
+
+class TestOutput:
+    """An admin UI runs the command as a child process and reads each result as it arrives."""
+
+    async def test_each_check_is_handed_over_as_it_finishes(self, safe_superuser):  # noqa: ARG002
+        seen = []
+
+        report = await run_preflight(target_revision=HEAD, on_check=seen.append)
+
+        assert seen == report.checks
+        assert seen[-1].name == "source: authorization"
+
+    async def test_json_is_one_line_per_check_then_the_report(self, safe_superuser, capsys):  # noqa: ARG002
+        from langflow.__main__ import _migration_preflight
+
+        ok = await _migration_preflight(None, None, as_json=True)
+
+        *checks, report = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+        assert {line["event"] for line in checks} == {"check"}
+        assert checks[0]["check"]["name"] == "version"
+        assert checks[0]["check"]["status"] == "warn"
+        assert report == {"event": "report", "ok": ok, "checks": [line["check"] for line in checks]}
