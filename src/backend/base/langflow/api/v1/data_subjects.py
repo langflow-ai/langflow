@@ -21,6 +21,7 @@ from langflow.services.authorization.admin import administration_denied, is_admi
 from langflow.services.data_subjects import audit_events
 from langflow.services.data_subjects import requests as request_service
 from langflow.services.data_subjects.dry_run import builder_dry_run, end_user_dry_run
+from langflow.services.data_subjects.end_user_search import search_end_users
 from langflow.services.data_subjects.errors import (
     DataSubjectError,
     InvalidTransitionError,
@@ -34,6 +35,7 @@ from langflow.services.data_subjects.schemas import (
     DataSubjectRequestPage,
     DataSubjectRequestRead,
     DryRunSummary,
+    EndUserMatch,
     RefuseRequest,
 )
 from langflow.services.data_subjects.worker import data_subject_erase_worker
@@ -53,6 +55,7 @@ router = APIRouter(
     dependencies=[Depends(require_data_subject_feature)],
 )
 MAX_PAGE_SIZE = 200
+MAX_END_USER_MATCHES = 50
 
 
 async def _require_admin(user: User) -> None:
@@ -230,6 +233,26 @@ async def export_request(request_id: UUID, current_user: CurrentActiveUser, sess
     )
     await session.commit()
     return zip_response(archive, f"data-subject-{request.id}.zip")
+
+
+@router.get("/end-users", response_model=list[EndUserMatch])
+async def find_end_users(
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    search: Annotated[str, Query(min_length=2, max_length=255)],
+    limit: Annotated[int, Query(ge=1, le=MAX_END_USER_MATCHES)] = 20,
+) -> list[EndUserMatch]:
+    """End-user ids that contain ``search``, so an admin can pick the exact id the app sent."""
+    await _require_admin(current_user)
+    matches = await search_end_users(session, search, limit)
+    await audit_events.record_dsar_event(
+        session,
+        actor_id=current_user.id,
+        action=audit_events.ACTION_FIND,
+        request_id=None,
+        details={"subject_type": DataSubjectType.END_USER.value},
+    )
+    return matches
 
 
 @router.post("/find", response_model=DryRunSummary)

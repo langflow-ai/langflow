@@ -117,11 +117,13 @@ def _require_status(request: DataSubjectRequest, *allowed: DataSubjectRequestSta
 
 
 def close_request(request: DataSubjectRequest, status: DataSubjectRequestStatus) -> None:
-    """Closed requests keep ids, counts and times as evidence, and drop what identifies the person."""
+    """Closed requests keep the label, ids, counts and times as the accountability record (Art. 5(2)).
+
+    The raw end-user id is dropped; the label is the only identity a closed request keeps.
+    """
     request.status = status.value
     request.finished_at = _now()
     request.subject_end_user_id = None
-    request.subject_label = None
     request.scope_flow_ids = None
     request.pending_paths = None
     request.cursor = None

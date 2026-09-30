@@ -588,6 +588,7 @@
         "POST|/requests/{request_id}/refuse|refuse_request|write|authenticated",
         "POST|/requests/{request_id}/retry|retry_request|write|authenticated",
         "GET|/requests/{request_id}/export|export_request|read|authenticated",
+        "GET|/end-users|find_end_users|read|authenticated",
         "POST|/find|find_subject|read|authenticated",
         "POST|/erase|erase_subject|write|authenticated"
       ]

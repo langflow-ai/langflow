@@ -107,7 +107,7 @@ async def test_should_erase_only_that_end_user_when_others_share_the_flow():
         assert await session.get(Flow, other_flow_id) is not None
         request = await session.get(DataSubjectRequest, request_id)
         assert request.subject_end_user_id is None
-        assert request.subject_label is None
+        assert request.subject_label == "alice"
 
 
 @pytest.mark.usefixtures("client")

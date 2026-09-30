@@ -99,7 +99,7 @@ async def test_should_redact_audit_rows_and_record_dsar_events_when_builder_is_e
         )
         assert {"dsar:request", "dsar:approve", "dsar:erase"} <= actions
         request = await session.get(DataSubjectRequest, request_id)
-        assert request.subject_label is None
+        assert request.subject_label is not None
         assert request.pending_paths is None
         assert request.counts["flows"] >= 1
 
@@ -186,6 +186,6 @@ async def test_should_only_let_the_requester_withdraw_a_pending_request():
         await withdraw(session, request, uid)
 
         assert request.status == DataSubjectRequestStatus.WITHDRAWN.value
-        assert request.subject_label is None
+        assert request.subject_label is not None
         with pytest.raises(InvalidTransitionError):
             await refuse(session, request, other, "too late")

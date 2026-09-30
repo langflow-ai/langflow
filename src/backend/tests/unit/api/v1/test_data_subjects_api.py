@@ -66,6 +66,29 @@ async def test_should_let_a_builder_request_repeat_and_withdraw(client: AsyncCli
     assert again.json()["id"] == first.json()["id"]
     assert current.json()["status"] == "requested"
     assert withdrawn.json()["status"] == "withdrawn"
+    request_url = f"api/v1/data-subjects/requests/{first.json()['id']}"
+    queued = await client.get(request_url, headers=logged_in_headers_super_user)
+    assert queued.json()["subject_label"] is not None
+
+
+@pytest.mark.usefixtures("feature_on")
+async def test_should_keep_who_asked_when_a_request_is_refused(client: AsyncClient, logged_in_headers_super_user):
+    end_user_id = f"held-{uuid4().hex[:8]}"
+    created = await client.post(
+        "api/v1/data-subjects/requests",
+        json={"subject_type": "end_user", "end_user_id": end_user_id},
+        headers=logged_in_headers_super_user,
+    )
+
+    refused = await client.post(
+        f"api/v1/data-subjects/requests/{created.json()['id']}/refuse",
+        json={"note": "Legal hold"},
+        headers=logged_in_headers_super_user,
+    )
+
+    assert refused.status_code == status.HTTP_200_OK, refused.text
+    assert refused.json()["status"] == "refused"
+    assert refused.json()["subject_label"] == end_user_id
 
 
 @pytest.mark.usefixtures("feature_on")
@@ -105,6 +128,44 @@ async def test_should_show_badge_filter_and_erase_after_admin_approval(
     assert approved.status_code == status.HTTP_202_ACCEPTED
     async with session_scope() as session:
         assert await session.get(User, UUID(user_id)) is None
+
+
+@pytest.mark.usefixtures("feature_on")
+async def test_should_suggest_end_user_ids_by_part_of_the_id(
+    client: AsyncClient, logged_in_headers_super_user, active_super_user
+):
+    tag = uuid4().hex[:6]
+    async with session_scope() as session:
+        flow = Flow(name=f"search-{tag}", user_id=active_super_user.id)
+        session.add(flow)
+        await session.flush()
+        session.add_all(
+            [
+                end_user_message(flow.id, f"Julia-{tag}", "hi"),
+                end_user_message(flow.id, f"Julia-{tag}", "again"),
+                end_user_message(flow.id, f"julio-{tag}", "hello"),
+                end_user_message(flow.id, f"marcos-{tag}", f"julia-{tag} is my friend"),
+            ]
+        )
+
+    found = await client.get(
+        "api/v1/data-subjects/end-users", params={"search": "JUL"}, headers=logged_in_headers_super_user
+    )
+    narrowed = await client.get(
+        "api/v1/data-subjects/end-users", params={"search": f"ia-{tag}"}, headers=logged_in_headers_super_user
+    )
+    too_short = await client.get(
+        "api/v1/data-subjects/end-users", params={"search": "j"}, headers=logged_in_headers_super_user
+    )
+
+    assert found.status_code == status.HTTP_200_OK, found.text
+    ours = [match for match in found.json() if match["end_user_id"].endswith(tag)]
+    assert ours == [
+        {"end_user_id": f"Julia-{tag}", "messages": 2},
+        {"end_user_id": f"julio-{tag}", "messages": 1},
+    ]
+    assert narrowed.json() == [{"end_user_id": f"Julia-{tag}", "messages": 2}]
+    assert too_short.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 @pytest.mark.usefixtures("feature_on")

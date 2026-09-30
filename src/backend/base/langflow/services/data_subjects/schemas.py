@@ -85,3 +85,10 @@ class OwnDeletionRequestStatus(BaseModel):
 class ErasureAccepted(BaseModel):
     detail: str
     request_id: UUID
+
+
+class EndUserMatch(BaseModel):
+    """An end-user id Langflow has sessions for, to pick from when recording a request."""
+
+    end_user_id: str
+    messages: int
