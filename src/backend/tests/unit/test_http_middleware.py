@@ -12,6 +12,8 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from langflow.main import JavaScriptMIMETypeMiddleware
+from langflow.middleware import ExecutionClientMiddleware
+from lfx.observability import get_execution_client
 from pydantic_core import PydanticSerializationError
 
 
@@ -167,3 +169,45 @@ class TestJavaScriptMIMETypeMiddleware:
         await middleware({"type": "lifespan"}, None, None)
 
         assert seen == ["websocket", "lifespan"]
+
+
+class TestExecutionClientMiddleware:
+    @staticmethod
+    def _app() -> FastAPI:
+        app = FastAPI()
+        app.add_middleware(ExecutionClientMiddleware)
+
+        @app.get("/client")
+        async def client():
+            return PlainTextResponse(str(get_execution_client()))
+
+        @app.get("/stream")
+        async def stream():
+            async def frames():
+                yield f"data: {get_execution_client()}\n\n"
+                await asyncio.sleep(0)
+                yield f"data: {get_execution_client()}\n\n"
+
+            return StreamingResponse(frames(), media_type="text/event-stream")
+
+        return app
+
+    @pytest.mark.parametrize(
+        ("headers", "expected"),
+        [
+            ({"x-langflow-client": "playground"}, b"playground"),
+            ({"X-Langflow-Client": "sdk"}, b"sdk"),
+            ({"x-langflow-client": "not-a-real-client"}, b"None"),
+            ({}, b"None"),
+        ],
+    )
+    async def test_the_declared_client_is_bound_for_the_handler(self, headers, expected):
+        messages = await _call(self._app(), _scope("/client", headers=headers))
+
+        assert _body(messages) == expected
+
+    async def test_the_binding_covers_the_streamed_body_and_is_reset_afterwards(self):
+        messages = await _call(self._app(), _scope("/stream", headers={"x-langflow-client": "cli"}))
+
+        assert _body(messages) == b"data: cli\n\ndata: cli\n\n"
+        assert get_execution_client() is None

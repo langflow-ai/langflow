@@ -24,8 +24,6 @@ from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from lfx.observability import (
-    EXECUTION_CLIENT_HEADER,
-    execution_client,
     instrument_fastapi_app,
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
@@ -51,7 +49,7 @@ from langflow.initial_setup.setup import (
     load_flows_from_directory,
     sync_flows_from_fs,
 )
-from langflow.middleware import ContentSizeLimitMiddleware
+from langflow.middleware import ContentSizeLimitMiddleware, ExecutionClientMiddleware
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
@@ -1008,20 +1006,7 @@ def create_app():
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
-    @app.middleware("http")
-    async def bind_execution_client(request: Request, call_next):
-        """Bind the caller's self-declared client for the life of the request.
-
-        Middleware rather than per-route wiring because every surface wants it and a route that
-        forgot would silently report nothing. The value is read from a header rather than the
-        request body: the v2 run model rejects extra fields, so a body field would be a public
-        schema change, and this is advisory metadata rather than part of the contract.
-
-        Self-reported, so it is spoofable, and execution_client drops anything outside the known
-        vocabulary. Never use it for authorization.
-        """
-        with execution_client(request.headers.get(EXECUTION_CLIENT_HEADER)):
-            return await call_next(request)
+    app.add_middleware(ExecutionClientMiddleware)
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):

@@ -1,5 +1,8 @@
 from fastapi import HTTPException
 from lfx.log.logger import logger
+from lfx.observability import EXECUTION_CLIENT_HEADER, execution_client
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from langflow.services.deps import get_settings_service
 
@@ -57,3 +60,30 @@ class ContentSizeLimitMiddleware:
 
         wrapper = self.receive_wrapper(receive)
         await self.app(scope, wrapper, send)
+
+
+class ExecutionClientMiddleware:
+    """Bind the caller's self-declared client for the life of the request.
+
+    Middleware rather than per-route wiring because every surface wants it and a route that
+    forgot would silently report nothing. The value is read from a header rather than the
+    request body: the v2 run model rejects extra fields, so a body field would be a public
+    schema change, and this is advisory metadata rather than part of the contract.
+
+    Self-reported, so it is spoofable, and execution_client drops anything outside the known
+    vocabulary. Never use it for authorization.
+
+    Pure ASGI, like the rest of this module: the binding covers the whole response, streamed
+    body included, without relaying each message through BaseHTTPMiddleware's memory stream.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        with execution_client(Headers(scope=scope).get(EXECUTION_CLIENT_HEADER)):
+            await self.app(scope, receive, send)
