@@ -8,9 +8,13 @@ the S3 backend with untrusted identifiers.
 Regression for GHSA-rcjh-r59h-gq37 (defense in depth at the S3 backend).
 """
 
+import asyncio
+import os
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from aiohttp import web
+from botocore.endpoint import MAX_POOL_CONNECTIONS
 from langflow.services.storage.s3 import S3StorageService
 
 
@@ -39,7 +43,7 @@ def s3_service_offline(mock_session_service, mock_settings_service, monkeypatch)
     """
     service = S3StorageService(mock_session_service, mock_settings_service)
 
-    def _no_aws_calls():
+    def _no_aws_calls(**_kwargs):
         msg = "validation should have rejected this input before reaching S3"
         raise AssertionError(msg)
 
@@ -64,6 +68,67 @@ async def test_get_client_builds_one_aiobotocore_client_per_loop(mock_session_se
     session.create_client.return_value.__aexit__.assert_not_called()
     await service.teardown()
     session.create_client.return_value.__aexit__.assert_called_once()
+
+
+async def test_open_downloads_leave_the_shared_client_free(mock_session_service, mock_settings_service, monkeypatch):
+    # A download holds its connection until the HTTP client reading it is done, as long as
+    # that takes. This local S3 sends half of each object and waits.
+    release = asyncio.Event()
+
+    async def s3(request):
+        if request.method == "HEAD":
+            return web.Response(headers={"Content-Length": "5"})
+        response = web.StreamResponse(headers={"Content-Length": "16384"})
+        await response.prepare(request)
+        await response.write(b"x" * 8192)
+        await release.wait()
+        return response
+
+    app = web.Application()
+    app.router.add_route("*", "/{key:.*}", s3)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", 0).start()
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    monkeypatch.setenv("AWS_CONFIG_FILE", os.devnull)
+    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", os.devnull)
+    monkeypatch.setenv("AWS_ENDPOINT_URL", f"http://127.0.0.1:{runner.addresses[0][1]}")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "test")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "test")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    service = S3StorageService(mock_session_service, mock_settings_service)
+
+    downloads = [service.get_file_stream("flow", f"download-{i}.bin") for i in range(MAX_POOL_CONNECTIONS)]
+    try:
+        for download in downloads:
+            await anext(download)
+        # The size check a new download runs first, on the same loop as the open ones.
+        assert await asyncio.wait_for(service.get_file_size("flow", "small.txt"), timeout=5) == 5
+    finally:
+        for download in downloads:
+            await download.aclose()
+        release.set()
+        await service.teardown()
+        await runner.cleanup()
+
+
+async def test_a_closed_loop_another_thread_drops_first_is_skipped(mock_session_service, mock_settings_service):
+    # Every thread drops the closed loops it finds, so another one can drop a loop while
+    # this one is still going through them.
+    service = S3StorageService(mock_session_service, mock_settings_service)
+
+    class ClosedLoop:
+        def is_closed(self):
+            service._clients.pop(self, None)
+            return True
+
+    loop = asyncio.get_running_loop()
+    client = object()
+    service._clients = {ClosedLoop(): None, ClosedLoop(): None, loop: (None, client)}
+
+    async with service._get_client() as got:
+        assert got is client
+    assert list(service._clients) == [loop]
 
 
 _MALICIOUS_FLOW_IDS = [

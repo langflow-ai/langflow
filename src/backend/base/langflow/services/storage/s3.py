@@ -182,18 +182,26 @@ class S3StorageService(StorageService):
             yield client
 
     @contextlib.asynccontextmanager
-    async def _get_client(self) -> AsyncIterator[Any]:
+    async def _get_client(self, *, shared: bool = True) -> AsyncIterator[Any]:
         """Yield this event loop's S3 client, building it on first use.
 
         Building a client per call costs a client and a TLS handshake for every
         operation. The client stays open until ``teardown`` or until its loop shuts
         down, so leaving the block does not close it.
+
+        ``shared=False`` yields a client of its own, closed when the block exits.
         """
+        if not shared:
+            async with self.session.create_client("s3") as client:
+                yield client
+            return
+
         loop = asyncio.get_running_loop()
         # Its loop already closed what it could; only the reference is left to drop.
         # A loop closed without shutdown_asyncgens never closed its client; the GC has to.
-        for closed in [other for other in self._clients if other.is_closed()]:
-            del self._clients[closed]
+        # Other threads prune and add entries too, so iterate a copy and tolerate a miss.
+        for closed in [other for other in list(self._clients) if other.is_closed()]:
+            self._clients.pop(closed, None)
         if (held := self._clients.get(loop)) is not None:
             yield held[1]
             return
@@ -383,7 +391,10 @@ class S3StorageService(StorageService):
         key = self.build_full_path(flow_id, file_name)
 
         try:
-            async with self._get_client() as s3_client:
+            # A stream holds its connection until the caller has read it all, which a slow
+            # download can make as long as it likes. The shared client's 10 connections serve
+            # every operation on this loop, so a stream gets a client of its own.
+            async with self._get_client(shared=False) as s3_client:
                 response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
                 body = response["Body"]
 
