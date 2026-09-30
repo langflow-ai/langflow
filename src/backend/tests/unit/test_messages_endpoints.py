@@ -999,3 +999,67 @@ async def test_get_shared_messages_defaults_to_bounded_recent_window(
     assert messages[0]["text"] == "Shared message 150"
     assert messages[-1]["text"] == "Shared message 249"
     # The test validates the error response only
+
+
+@pytest.fixture
+async def many_sessions_messages(active_user):
+    """Create 250 messages across 250 distinct sessions to exercise session-list bounding (issue #15052)."""
+    async with session_scope() as session:
+        flow = Flow(name="test_flow_for_session_pagination", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Session message {index}",
+                sender="User",
+                sender_name="User",
+                session_id=f"session-{index:03d}",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(250)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = flow.id
+        return await aadd_messagetables(messagetables, session)
+
+
+@pytest.mark.usefixtures("many_sessions_messages")
+async def test_get_message_sessions_defaults_to_bounded_recent_sessions(
+    client: AsyncClient, logged_in_headers, many_sessions_messages
+):
+    """Without a limit the session list is capped to the newest default-limit sessions (issue #15052)."""
+    flow_id = str(many_sessions_messages[0].flow_id)
+    response = await client.get(
+        "api/v1/monitor/messages/sessions",
+        headers=logged_in_headers,
+        params={"flow_id": flow_id},
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert len(sessions) == monitor_api._MESSAGES_DEFAULT_LIMIT
+    # Most recent sessions first.
+    assert sessions[0] == "session-249"
+    assert sessions[-1] == "session-150"
+
+
+@pytest.mark.usefixtures("many_sessions_messages")
+async def test_get_message_sessions_clamps_limit_to_server_side_maximum(
+    client: AsyncClient, logged_in_headers, many_sessions_messages
+):
+    """A client-requested limit above the server maximum is clamped (issue #15052)."""
+    flow_id = str(many_sessions_messages[0].flow_id)
+    response = await client.get(
+        "api/v1/monitor/messages/sessions",
+        headers=logged_in_headers,
+        params={"flow_id": flow_id, "limit": 100000},
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert len(sessions) == monitor_api._MESSAGES_MAX_LIMIT
+    assert sessions[0] == "session-249"
+    assert sessions[-1] == "session-050"
