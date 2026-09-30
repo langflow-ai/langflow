@@ -1,5 +1,6 @@
 import importlib.util
 import io
+import os
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -14,6 +15,7 @@ from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output,
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.request_utils import get_user_agent
 from lfx.utils.ssrf_protection import SSRFProtectionError, is_ssrf_protection_enabled, validate_and_resolve_url
 from lfx.utils.ssrf_transport import create_ssrf_protected_client, pin_host_for_url
@@ -36,8 +38,10 @@ DEFAULT_SCHEME_PORTS = {"http": 80, "https": 443}
 # Memory bounds for untrusted responses. Bodies are streamed and abandoned once the
 # per-response cap or the budget shared by every page of one fetch (all URLs and crawled
 # links) is exceeded, so a hostile server cannot exhaust memory with a huge or endless body.
-MAX_RESPONSE_BYTES = 10 * 1024 * 1024
-MAX_TOTAL_BYTES = 100 * 1024 * 1024
+# Configurable via LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES / LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES
+# (see RuntimeSettings); these are only the fallback used when the settings service isn't available.
+FALLBACK_MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+FALLBACK_MAX_TOTAL_BYTES = 100 * 1024 * 1024
 
 # Only codings whose expansion per network chunk is bounded (~1000:1). Brotli and zstd can
 # expand a few hundred bytes into gigabytes inside a single decode call, before any size
@@ -78,7 +82,11 @@ class URLComponent(Component):
     icon = "layout-template"
     name = "URLComponent"
     # Body bytes the current fetch may still read; reset by ``fetch_url_contents``.
-    _bytes_remaining = MAX_TOTAL_BYTES
+    _bytes_remaining = FALLBACK_MAX_TOTAL_BYTES
+    # Per-response and total byte caps for the current fetch; resolved from settings by
+    # ``fetch_url_contents``. Kept as fallbacks here so the class works if that never runs.
+    _max_response_bytes = FALLBACK_MAX_RESPONSE_BYTES
+    _max_total_bytes = FALLBACK_MAX_TOTAL_BYTES
 
     inputs = [
         MessageTextInput(
@@ -356,6 +364,50 @@ class URLComponent(Component):
         sensitive = {"authorization", "proxy-authorization", "cookie"}
         return {k: v for k, v in headers.items() if k.lower() not in sensitive}
 
+    @staticmethod
+    def _resolve_byte_limit(env_var: str, setting_name: str, fallback: int) -> int:
+        """Resolve one byte cap from settings, or the environment when no service is available.
+
+        The settings service applies Langflow's normal configuration precedence. Reading the
+        process environment directly is only a fallback for standalone ``lfx`` execution.
+        """
+        try:
+            settings_service = get_settings_service()
+        except Exception:  # noqa: BLE001 - service registry may not be ready
+            settings_service = None
+        if settings_service is not None:
+            return getattr(settings_service.settings, setting_name, fallback)
+
+        env_value = os.getenv(env_var)
+        if env_value is not None:
+            try:
+                value = int(env_value)
+            except ValueError:
+                logger.warning(f"Ignoring invalid {env_var}={env_value!r}; using {fallback}")
+                return fallback
+            if value > 0:
+                return value
+            logger.warning(f"Ignoring non-positive {env_var}={env_value!r}; using {fallback}")
+            return fallback
+
+        return fallback
+
+    @classmethod
+    def _resolve_byte_limits(cls) -> tuple[int, int]:
+        """Read the configurable per-response and total byte caps for the current fetch."""
+        return (
+            cls._resolve_byte_limit(
+                "LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES",
+                "url_component_max_response_bytes",
+                FALLBACK_MAX_RESPONSE_BYTES,
+            ),
+            cls._resolve_byte_limit(
+                "LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES",
+                "url_component_max_total_bytes",
+                FALLBACK_MAX_TOTAL_BYTES,
+            ),
+        )
+
     async def _read_bounded_text(self, response: httpx.Response) -> str:
         """Read a streamed response body without exceeding the per-response or total byte budget.
 
@@ -372,7 +424,7 @@ class URLComponent(Component):
             msg = f"Unsupported content encoding from {response.url}: {', '.join(codings)}"
             raise httpx.HTTPError(msg)
 
-        limit = min(MAX_RESPONSE_BYTES, self._bytes_remaining)
+        limit = min(self._max_response_bytes, self._bytes_remaining)
         too_large = f"Response from {response.url} exceeds the {limit} byte limit"
         declared = response.headers.get("content-length", "")
         if declared.isdigit() and int(declared) > limit:
@@ -563,7 +615,7 @@ class URLComponent(Component):
         if depth >= self.max_depth or start_url in visited:
             return []
         if self._bytes_remaining <= 0:
-            logger.warning(f"Skipping {start_url}: reached the {MAX_TOTAL_BYTES} byte limit for this fetch")
+            logger.warning(f"Skipping {start_url}: reached the {self._max_total_bytes} byte limit for this fetch")
             return []
 
         visited.add(start_url)
@@ -656,7 +708,8 @@ class URLComponent(Component):
         Raises:
             ValueError: If no valid URLs are provided or if there's an error loading documents
         """
-        self._bytes_remaining = MAX_TOTAL_BYTES
+        self._max_response_bytes, self._max_total_bytes = self._resolve_byte_limits()
+        self._bytes_remaining = self._max_total_bytes
         try:
             # Validate all URLs and get their validated IPs for DNS pinning
             validated_urls = []

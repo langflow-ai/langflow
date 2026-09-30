@@ -11,12 +11,14 @@ streams, so the real httpx streaming and decoding code runs.
 
 import gzip
 import socket
+from types import SimpleNamespace
 
 import httpcore
 import pytest
 from lfx.components.data_source import url as url_module
 from lfx.components.data_source.url import URLComponent
 from lfx.schema import DataFrame
+from lfx.services.settings.base import Settings
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -306,7 +308,11 @@ class TestURLComponentResponseLimits:
 
     @pytest.fixture(autouse=True)
     def small_limits(self, monkeypatch):
-        monkeypatch.setattr(url_module, "MAX_RESPONSE_BYTES", self.LIMIT)
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES", str(self.LIMIT))
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES", str(url_module.FALLBACK_MAX_TOTAL_BYTES))
+        monkeypatch.setattr(
+            url_module, "get_settings_service", lambda: SimpleNamespace(settings=Settings(_env_file=None))
+        )
         monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
         monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
         monkeypatch.setattr(
@@ -428,7 +434,7 @@ class TestURLComponentResponseLimits:
     async def test_total_budget_stops_crawl_and_resets_per_fetch(self, serve, monkeypatch):
         root = b"<html><body>" + b"".join(b'<a href="/p%d">p</a>' % i for i in range(5)) + b"</body></html>"
         page = b"<html><body>" + b"x" * 400 + b"</body></html>"
-        monkeypatch.setattr(url_module, "MAX_TOTAL_BYTES", len(root) + 2 * len(page))
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES", str(len(root) + 2 * len(page)))
 
         def pages() -> list[list[bytes]]:
             return [_http("200 OK", {"Content-Length": str(len(body))}, body) for body in [root, *[page] * 5]]
@@ -439,3 +445,53 @@ class TestURLComponentResponseLimits:
             result = await component.fetch_url_contents()
             assert [doc["url"] for doc in result] == ["http://site.test/", "http://site.test/p0", "http://site.test/p1"]
             assert len(streams) == 3, "no page may be requested once the budget is spent"
+
+
+class TestURLComponentByteLimitEnvVars:
+    """Check the resolver's defaults and handling of invalid environment values."""
+
+    def test_defaults_when_unset(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES", raising=False)
+        monkeypatch.delenv("LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES", raising=False)
+        monkeypatch.setattr(url_module, "get_settings_service", lambda: None)
+        response_limit, total_limit = URLComponent._resolve_byte_limits()
+        assert response_limit == url_module.FALLBACK_MAX_RESPONSE_BYTES
+        assert total_limit == url_module.FALLBACK_MAX_TOTAL_BYTES
+
+    def test_env_vars_override_the_defaults(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES", "2048")
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES", "4096")
+        monkeypatch.setattr(
+            url_module, "get_settings_service", lambda: SimpleNamespace(settings=Settings(_env_file=None))
+        )
+        response_limit, total_limit = URLComponent._resolve_byte_limits()
+        assert response_limit == 2048
+        assert total_limit == 4096
+
+    def test_settings_service_precedence_over_process_environment(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES", "2048")
+        settings = Settings(_env_file=None)
+        settings.url_component_max_response_bytes = 4096
+        monkeypatch.setattr(
+            url_module,
+            "get_settings_service",
+            lambda: SimpleNamespace(settings=settings),
+        )
+        response_limit, _ = URLComponent._resolve_byte_limits()
+        assert response_limit == 4096
+
+    def test_non_integer_env_var_falls_back_to_default(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES", "not-a-number")
+        monkeypatch.setattr(url_module, "get_settings_service", lambda: None)
+        response_limit, _ = URLComponent._resolve_byte_limits()
+        assert response_limit == url_module.FALLBACK_MAX_RESPONSE_BYTES
+
+    @pytest.mark.parametrize("value", ["0", "-1"])
+    def test_non_positive_env_vars_fall_back_to_defaults(self, monkeypatch, value):
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES", value)
+        monkeypatch.setenv("LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES", value)
+        monkeypatch.setattr(url_module, "get_settings_service", lambda: None)
+        assert URLComponent._resolve_byte_limits() == (
+            url_module.FALLBACK_MAX_RESPONSE_BYTES,
+            url_module.FALLBACK_MAX_TOTAL_BYTES,
+        )
