@@ -148,8 +148,8 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 # Statements and pool checkouts for one sync run, per flow. Update these on
 # purpose: a new round trip on this path costs every workflow run.
 _SYNC_ROUND_TRIPS = {
-    "memory_chatbot": (12, 11),
-    "simple_chat": (12, 10),
+    "memory_chatbot": (10, 9),
+    "simple_chat": (11, 9),
 }
 
 
