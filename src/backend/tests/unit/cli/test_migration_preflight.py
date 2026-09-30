@@ -26,6 +26,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.utils.version import get_version_info
 from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from sqlmodel import select
 
@@ -39,6 +40,7 @@ PARENT = "9d7e2a6c4b81"  # pragma: allowlist secret
 LANGFLOW_1_12_0 = "a3f8b1c9d7e2"  # pragma: allowlist secret
 # The revision that c3e1d5a7f902, which adds user.retired_at, revises: the last one that deletes the default superuser.
 BEFORE_RETIRED_AT = "f9d3b7a5c201"  # pragma: allowlist secret
+SOURCE_VERSION = get_version_info()["version"]
 
 
 @pytest.fixture
@@ -204,6 +206,66 @@ class TestSourceThatCannotBeRead:
         assert "could not be reached" in report.checks[1].summary
 
 
+class TestTargetVersion:
+    """Admins know the Langflow version their target image runs, not its schema revision."""
+
+    async def test_a_target_on_this_version_passes(self, safe_superuser):  # noqa: ARG002
+        check = _check(await run_preflight(target_version=SOURCE_VERSION), "version")
+
+        assert check.status == "ok"
+
+    async def test_a_newer_target_passes(self, safe_superuser):  # noqa: ARG002
+        check = _check(await run_preflight(target_version="99.0.0"), "version")
+
+        assert check.status == "ok"
+        assert "newer" in check.summary
+
+    async def test_an_older_target_is_refused(self, safe_superuser):  # noqa: ARG002
+        check = _check(await run_preflight(target_version="1.12.0"), "version")
+
+        assert check.status == "fail"
+        assert "older" in check.summary
+
+    async def test_a_dev_build_of_this_version_is_older(self, safe_superuser):  # noqa: ARG002
+        # A dev build comes before its release, so it may lack the release's last migrations.
+        check = _check(await run_preflight(target_version=f"{SOURCE_VERSION}.dev1"), "version")
+
+        assert check.status == "fail"
+
+    async def test_something_that_is_not_a_version_is_a_warning(self, safe_superuser):  # noqa: ARG002
+        check = _check(await run_preflight(target_version="latest"), "version")
+
+        assert check.status == "warn"
+
+    async def test_a_revision_is_exact_so_it_wins_over_a_version(self, safe_superuser):  # noqa: ARG002
+        check = _check(await run_preflight(target_revision=PARENT, target_version="99.0.0"), "version")
+
+        assert check.status == "fail"
+
+    def test_the_command_takes_the_version(self, tmp_path):
+        import os
+        import subprocess
+        import sys
+
+        env = {
+            **os.environ,
+            "LANGFLOW_CONFIG_DIR": str(tmp_path),
+            "LANGFLOW_DATABASE_URL": f"sqlite:///{tmp_path / 'empty.db'}",
+        }
+        result = subprocess.run(  # noqa: S603 - the command as an admin runs it
+            [sys.executable, "-m", "langflow", "migration-preflight", "--json", "--target-version", "0.0.1"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+
+        version = json.loads(result.stdout.splitlines()[0])["check"]
+        assert (version["name"], version["status"]) == ("version", "fail")
+        assert "Langflow 0.0.1" in version["summary"]
+
+
 class TestDefaultSuperuser:
     async def test_a_never_signed_in_default_superuser_that_owns_work_is_refused(
         self,
@@ -256,6 +318,18 @@ class TestDefaultSuperuser:
 
         assert check.status == "fail"
         assert "last_login_at = now()" in check.problems[-1]
+
+    async def test_a_target_version_at_least_this_one_keeps_the_account(self, owning_default_superuser):  # noqa: ARG002
+        # A target at this version or newer holds this Langflow's migrations, the one that keeps the account included.
+        check = _check(await run_preflight(target_version=SOURCE_VERSION), "default superuser")
+
+        assert check.status == "ok"
+        assert "the target keeps the account" in check.summary
+
+    async def test_an_older_target_version_is_not_known_to_keep_the_account(self, owning_default_superuser):  # noqa: ARG002
+        check = _check(await run_preflight(target_version="1.12.0"), "default superuser")
+
+        assert check.status == "fail"
 
     async def test_a_default_superuser_that_signed_in_passes(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "default superuser").status == "ok"
