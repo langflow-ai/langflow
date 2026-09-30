@@ -1,10 +1,11 @@
-"""LE-1439 guards: the kept background-execution slice is standalone.
+"""The scaled backend ships with the slice and its selection is explicit.
 
-The scaled-backend seam (``_build_scaled_backend`` / ``select_background_backend``)
-ships upstream since release-1.11.0, but its modules (worker / redis_backend) do
-not exist on this branch — so the functional contract is: requesting
-``LANGFLOW_JOB_QUEUE_TYPE=redis`` must degrade to the in-process executor
-instead of crashing on a missing import.
+Successor to the LE-1439 standalone guards: the scaled-backend modules
+(``db_backend`` / ``worker``) now ship — the durable job table is the queue, so
+there is no broker dependency to hold back. What must stay true instead:
+``job_queue_type=redis`` (the v1 build-event queue) does NOT drag the
+background backend into scaled mode — selection is the explicit
+``background_backend`` setting.
 """
 
 from __future__ import annotations
@@ -14,24 +15,24 @@ import importlib.util
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.deps import get_settings_service
 
-_HELD_MODULES = ("redis_backend", "worker", "metrics", "metrics_collector", "worker_registry")
+_SHIPPED_MODULES = ("db_backend", "worker")
 
 
-def test_scaled_and_observability_modules_absent_on_this_branch():
-    for name in _HELD_MODULES:
+def test_scaled_modules_ship_with_the_slice():
+    for name in _SHIPPED_MODULES:
         full = f"langflow.services.background_execution.{name}"
-        assert importlib.util.find_spec(full) is None, f"{full} must not ship on the single-node branch"
+        assert importlib.util.find_spec(full) is not None, f"{full} must ship with the scaled backend"
 
 
-def test_redis_request_degrades_to_in_process_without_scaled_modules(monkeypatch):
-    """Constructing the facade with job_queue_type=redis must not raise.
+def test_redis_job_queue_does_not_select_the_scaled_backend(monkeypatch):
+    """job_queue_type=redis is the v1 event queue, not background-backend selection.
 
-    The scaled modules are absent, so the backend stays None and the in-process
-    executor owns runs.
+    The facade must stay on the in-process executor unless
+    ``background_backend=scaled`` is set explicitly.
     """
     settings_service = get_settings_service()
     monkeypatch.setattr(settings_service.settings, "job_queue_type", "redis")
-    assert settings_service.settings.background_backend_is_scaled is True
+    assert settings_service.settings.background_backend_is_scaled is False
 
     service = BackgroundExecutionService(settings_service)
 

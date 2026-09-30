@@ -143,34 +143,32 @@ async def test_sweep_orphans_fails_in_progress(real_services_job_service):
     assert job.error.get("type") == "worker_lost"
 
 
-async def test_redis_fallback_watchdog_reconciles_orphans_without_restart(real_services_job_service):
-    """A steady Redis-configured fleet must reap a dead owner's stale job."""
+async def test_scaled_watchdog_reconciles_orphans_without_restart(real_services_job_service):
+    """A steady scaled worker fleet must reap a dead owner's stale job.
+
+    Successor to the redis-fallback watchdog test: on the DB-backed backend the
+    periodic ``_watchdog_loop`` each ``langflow worker`` runs is what reaps a
+    dead worker's stale IN_PROGRESS row WITHOUT any process restarting.
+    """
     import asyncio
     from datetime import datetime, timedelta, timezone
-    from types import SimpleNamespace
 
-    from langflow.services.background_execution.service import BackgroundExecutionService
-    from langflow.services.deps import get_settings_service
+    from langflow.services.background_execution.db_backend import DBBackgroundQueue
+    from langflow.services.background_execution.worker import _watchdog_loop
 
-    settings = get_settings_service().settings.model_copy(
-        update={
-            "job_queue_type": "redis",
-            "background_lease_ttl_s": 0.02,
-            "background_watchdog_interval_s": 0.01,
-        }
+    job_id = uuid4()
+    await real_services_job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await real_services_job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    stale_heartbeat = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
+    await real_services_job_service.update_job_metadata(
+        job_id,
+        {"owner": "dead-replica", "heartbeat_at": stale_heartbeat},
     )
-    service = BackgroundExecutionService(settings_service=SimpleNamespace(settings=settings))
-    await service.start()
-    try:
-        job_id = uuid4()
-        await real_services_job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
-        await real_services_job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
-        stale_heartbeat = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
-        await real_services_job_service.update_job_metadata(
-            job_id,
-            {"owner": "dead-replica", "heartbeat_at": stale_heartbeat},
-        )
 
+    backend = DBBackgroundQueue(job_service=real_services_job_service, owner="worker:live")
+    stop_event = asyncio.Event()
+    watchdog = asyncio.create_task(_watchdog_loop(backend, stop_event=stop_event, lease_ttl_s=0.02, interval_s=0.01))
+    try:
         job = None
         for _ in range(100):
             job = await real_services_job_service.get_job_by_job_id(job_id)
@@ -183,7 +181,8 @@ async def test_redis_fallback_watchdog_reconciles_orphans_without_restart(real_s
         assert job.error == {"type": "worker_lost"}
         assert job.finished_timestamp is not None
     finally:
-        await service.stop()
+        stop_event.set()
+        await asyncio.wait_for(watchdog, timeout=5)
 
 
 def _echo_input_factory(*, request, **_kwargs):
