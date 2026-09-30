@@ -31,7 +31,7 @@ mcp = FastMCP("ledger-server")
 async def create_record(value: str) -> str:
     with LEDGER.open("a", encoding="utf-8") as ledger:
         ledger.write(value + "\\n")
-    await asyncio.sleep(float(os.environ["RESPONSE_DELAY"]))
+    await asyncio.Event().wait()
     return "recorded"
 
 
@@ -46,12 +46,14 @@ async def test_should_leave_one_side_effect_when_tool_call_times_out(tmp_path: P
     server.write_text(SERVER, encoding="utf-8")
     ledger = tmp_path / "ledger.txt"
     manager = MCPSessionManager()
-    client = MCPStdioClient(tool_execution_timeout=2.0)
+    # Generous: the record must be written before the timeout even on a
+    # loaded runner. The tool never answers, so the call always times out.
+    client = MCPStdioClient(tool_execution_timeout=5.0)
     client._get_session_manager = lambda: manager  # type: ignore[method-assign]
     client._connection_params = StdioServerParameters(
         command=sys.executable,
         args=[str(server)],
-        env={"LEDGER_PATH": str(ledger), "RESPONSE_DELAY": "4"},
+        env={"LEDGER_PATH": str(ledger)},
     )
     client._connected = True
     client.set_session_context("ledger-ctx")

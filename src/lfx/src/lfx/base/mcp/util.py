@@ -13,7 +13,7 @@ from pathlib import Path
 from types import UnionType
 from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 from anyio import ClosedResourceError
@@ -1239,8 +1239,10 @@ class MCPSessionManager:
         # Structure: server_key -> {"sessions": {session_id: session_info}, "last_cleanup": timestamp}
         self.sessions_by_server = {}
         self._background_tasks: set[asyncio.Task[Any]] = set()  # Keep references to background tasks
-        # Backwards-compatibility maps: which context_id uses which (server_key, session_id)
-        self._context_to_session: dict[str, tuple[str, str]] = {}
+        # context_id -> {server_key: session_id}. A context holds one reference per
+        # server: concurrent runs of one chat session share a context, and their
+        # headers can resolve to different servers at the same time.
+        self._context_to_session: dict[str, dict[str, str]] = {}
         # Reference count for each active (server_key, session_id)
         self._session_refcount: dict[tuple[str, str], int] = {}
         # Cache which transport works for each server to avoid retrying failed transports
@@ -1440,8 +1442,9 @@ class MCPSessionManager:
         for k in list(self._session_refcount):
             if k[0] == server_key:
                 self._session_refcount.pop(k, None)
-        for ctx, pair in list(self._context_to_session.items()):
-            if pair[0] == server_key:
+        for ctx, owned in list(self._context_to_session.items()):
+            owned.pop(server_key, None)
+            if not owned:
                 self._context_to_session.pop(ctx, None)
 
     async def _validate_session_connectivity(self, session) -> bool:
@@ -1514,7 +1517,7 @@ class MCPSessionManager:
                     # Background task is still alive — treat the session as healthy.
                     session_info["last_used"] = asyncio.get_event_loop().time()
                     await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                    self._bind_context(context_id, (server_key, session_id))
+                    await self._bind_context(context_id, (server_key, session_id))
                     return session
                 # Background task finished — session is dead, clean it up.
                 await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
@@ -1561,50 +1564,46 @@ class MCPSessionManager:
                 "last_used": asyncio.get_event_loop().time(),
             }
 
-            self._bind_context(context_id, (server_key, session_id))
+            await self._bind_context(context_id, (server_key, session_id))
 
             return session
 
-    def _bind_context(self, context_id: str, pair: tuple[str, str]) -> None:
-        """Make *pair* the one session *context_id* holds a reference to.
+    async def _bind_context(self, context_id: str, pair: tuple[str, str]) -> None:
+        """Record that *context_id* uses *pair*, holding one reference per server.
 
         Clients reach `get_session()` before every tool call, while `disconnect()`
         releases the context once, so a repeat acquisition must not add a
-        reference. A context that moves to another session gives up the old one;
-        tearing that down needs the old server's lock, which may be held by a
-        caller waiting on ours, so it runs as a separate task.
+        reference. Sessions of other servers stay untouched: a call may still be
+        running on them. Must be called with *pair*'s server lock held.
         """
-        previous = self._context_to_session.get(context_id)
-        if previous == pair:
-            return
-
-        self._context_to_session[context_id] = pair
-        self._session_refcount[pair] = self._session_refcount.get(pair, 0) + 1
-        if previous is None or previous not in self._session_refcount:
-            return
-
-        remaining = self._session_refcount[previous] - 1
-        if remaining > 0:
-            self._session_refcount[previous] = remaining
-            return
-
-        self._session_refcount.pop(previous, None)
-        release = asyncio.create_task(self._release_if_unreferenced(previous))
-        self._background_tasks.add(release)
-        release.add_done_callback(self._background_tasks.discard)
-
-    async def _release_if_unreferenced(self, pair: tuple[str, str]) -> None:
-        """Tear down a session a context let go of, unless another context took it meanwhile."""
         server_key, session_id = pair
-        async with self._server_lock(server_key):
-            if self._session_refcount.get(pair, 0) <= 0:
-                await self._cleanup_session_by_id(server_key, session_id)
+        owned = self._context_to_session.setdefault(context_id, {})
+        previous_id = owned.get(server_key)
+        if previous_id == session_id:
+            return
+
+        owned[server_key] = session_id
+        self._session_refcount[pair] = self._session_refcount.get(pair, 0) + 1
+        if previous_id is not None:
+            await self._release_reference((server_key, previous_id))
+
+    async def _release_reference(self, pair: tuple[str, str]) -> None:
+        """Drop one reference to *pair*; tear it down after the last. Needs its server lock."""
+        remaining = self._session_refcount.get(pair, 1) - 1
+        if remaining > 0:
+            self._session_refcount[pair] = remaining
+            return
+        self._session_refcount.pop(pair, None)
+        await self._cleanup_session_by_id(*pair)
 
     def _forget_session_references(self, pair: tuple[str, str]) -> None:
         """Drop every context reference to a session that no longer exists."""
+        server_key, session_id = pair
         self._session_refcount.pop(pair, None)
-        for context_id, mapped in list(self._context_to_session.items()):
-            if mapped == pair:
+        for context_id, owned in list(self._context_to_session.items()):
+            if owned.get(server_key) == session_id:
+                owned.pop(server_key)
+            if not owned:
                 self._context_to_session.pop(context_id, None)
 
     def _abort_session_task(self, task: asyncio.Task[Any]) -> None:
@@ -1967,60 +1966,71 @@ class MCPSessionManager:
         await asyncio.sleep(0.5)
 
     async def _cleanup_session(self, context_id: str):
-        """Backward-compat cleanup by context_id.
+        """Release every session *context_id* holds, one server at a time.
 
-        Decrements the ref-count for the session used by *context_id* and only
-        tears the session down when the last context that references it goes
-        away.
-
-        Acquires the per-server lock so concurrent `get_session()` calls don't
-        observe a half-torn-down session (e.g. returning a ClientSession whose
-        background task was just cancelled out from under them).
-
-        Uses a compare-and-swap on `_context_to_session[context_id]` before
-        popping it: if a concurrent `get_session()` has re-pointed the same
-        context at a *different* server (e.g. a component reconnecting to a
-        new MCP URL while the old disconnect is in flight), we must not wipe
-        out the fresh mapping — otherwise the new session leaks. The per-
-        server lock doesn't cover this case because the new and old sessions
-        live under different server_keys, so the two operations run in
-        parallel.
+        Each release runs under that server's lock so a concurrent
+        `get_session()` never gets a session that is being torn down. Before
+        releasing, the context must still hold that session: a concurrent call
+        may have replaced it or already released it, and releasing again would
+        take a reference that belongs to another context. Locks are taken one
+        after another, never nested, so two contexts cannot deadlock.
         """
-        mapping = self._context_to_session.get(context_id)
-        if not mapping:
+        owned = self._context_to_session.get(context_id)
+        if not owned:
             await logger.adebug(f"No session mapping found for context_id {context_id}")
             return
 
-        server_key, session_id = mapping
-        async with self._server_lock(server_key):
-            # While we waited for the lock the context may have moved to another
-            # session, which already released this one; releasing it again
-            # would take a reference that belongs to another context.
-            if self._context_to_session.get(context_id) != mapping:
-                return
-            ref_key = (server_key, session_id)
-            remaining = self._session_refcount.get(ref_key, 1) - 1
-
-            if remaining <= 0:
-                await self._cleanup_session_by_id(server_key, session_id)
-                self._session_refcount.pop(ref_key, None)
-            else:
-                self._session_refcount[ref_key] = remaining
-
-            # CAS: only drop the context->session mapping if it still points
-            # at the session we just cleaned up. The get() and pop() below run
-            # synchronously with no `await` between them, so no other coroutine
-            # can interleave and re-point the mapping after our check.
-            if self._context_to_session.get(context_id) == (server_key, session_id):
-                self._context_to_session.pop(context_id, None)
+        for server_key, session_id in list(owned.items()):
+            async with self._server_lock(server_key):
+                current = self._context_to_session.get(context_id, {})
+                if current.get(server_key) != session_id:
+                    continue
+                current.pop(server_key)
+                if not current:
+                    self._context_to_session.pop(context_id, None)
+                await self._release_reference((server_key, session_id))
 
 
-class MCPStdioClient:
+class _SessionContextOwner:
+    """Session-context handling shared by the stdio and Streamable HTTP clients.
+
+    A client that has no context yet (connecting before the component sets the
+    run's one) makes up a private ``default_*`` context. Once a real context is
+    set, nothing can reach the made-up one again, so the client releases its
+    reference itself. Named contexts are left alone: concurrent runs of one
+    chat session share them, and releasing one would take another run's
+    reference.
+    """
+
+    _session_context: str | None
+    _generated_context: str | None
+    _replaced_contexts: list[str]
+
+    def _use_generated_context(self, prefix: str) -> None:
+        if not self._session_context:
+            self._session_context = f"{prefix}_{uuid4().hex[:8]}"
+            self._generated_context = self._session_context
+
+    def set_session_context(self, context_id: str):
+        """Set the session context (e.g., flow_id + user_id + session_id)."""
+        if self._generated_context and self._generated_context != context_id:
+            self._replaced_contexts.append(self._generated_context)
+            self._generated_context = None
+        self._session_context = context_id
+
+    async def _release_replaced_contexts(self, session_manager: "MCPSessionManager") -> None:
+        while self._replaced_contexts:
+            await session_manager._cleanup_session(self._replaced_contexts.pop())
+
+
+class MCPStdioClient(_SessionContextOwner):
     def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
+        self._generated_context: str | None = None
+        self._replaced_contexts: list[str] = []
         self._component_cache = component_cache
         self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
@@ -2095,13 +2105,7 @@ class MCPStdioClient:
         # Store connection parameters for later use in run_tool
         self._connection_params = server_params
 
-        # If no session context is set, create a default one
-        if not self._session_context:
-            # Generate a fallback context based on connection parameters
-            import uuid
-
-            param_hash = uuid.uuid4().hex[:8]
-            self._session_context = f"default_{param_hash}"
+        self._use_generated_context("default")
 
         # Get or create a persistent session
         session = await self._get_or_create_session()
@@ -2122,10 +2126,6 @@ class MCPStdioClient:
             self._connect_to_server(command_str, env, current_user_id=current_user_id, headers=headers),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
-
-    def set_session_context(self, context_id: str):
-        """Set the session context (e.g., flow_id + user_id + session_id)."""
-        self._session_context = context_id
 
     def _get_session_manager(self) -> MCPSessionManager:
         """Get or create session manager from component cache."""
@@ -2151,7 +2151,9 @@ class MCPStdioClient:
 
         # Use cached session manager to get/create persistent session
         session_manager = self._get_session_manager()
-        return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
+        session = await session_manager.get_session(self._session_context, self._connection_params, "stdio")
+        await self._release_replaced_contexts(session_manager)
+        return session
 
     def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
         """Identifiers for the span: which tool, on which server, over which transport.
@@ -2204,13 +2206,7 @@ class MCPStdioClient:
             msg = "Session not initialized or disconnected. Call connect_to_server first."
             raise ValueError(msg)
 
-        # If no session context is set, create a default one
-        if not self._session_context:
-            # Generate a fallback context based on connection parameters
-            import uuid
-
-            param_hash = uuid.uuid4().hex[:8]
-            self._session_context = f"default_{param_hash}"
+        self._use_generated_context("default")
 
         # Use provided timeout or fall back to client's configured timeout
         effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
@@ -2279,9 +2275,9 @@ class MCPStdioClient:
                     await logger.aerror(msg)
                     raise ValueError(msg) from e
 
-                # For other errors or no retries left, handle as before
+                # Connection failures that ran out of retries mark the client disconnected.
                 if (
-                    isinstance(e, ConnectionError | TimeoutError | OSError | ValueError)
+                    isinstance(e, ConnectionError | OSError | ValueError)
                     or is_closed_resource_error
                     or is_mcp_connection_error
                 ):
@@ -2310,8 +2306,9 @@ class MCPStdioClient:
         # The session cleanup happens when the background task is cancelled
 
         # Clean up local session using the session manager
+        session_manager = self._get_session_manager()
+        await self._release_replaced_contexts(session_manager)
         if self._session_context:
-            session_manager = self._get_session_manager()
             await session_manager._cleanup_session(self._session_context)
 
         # Reset local state
@@ -2319,6 +2316,7 @@ class MCPStdioClient:
         self._connection_params = None
         self._connected = False
         self._session_context = None
+        self._generated_context = None
 
     async def __aenter__(self):
         return self
@@ -2327,12 +2325,14 @@ class MCPStdioClient:
         await self.disconnect()
 
 
-class MCPStreamableHttpClient:
+class MCPStreamableHttpClient(_SessionContextOwner):
     def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
+        self._generated_context: str | None = None
+        self._replaced_contexts: list[str] = []
         self._component_cache = component_cache
         self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
@@ -2403,13 +2403,7 @@ class MCPStreamableHttpClient:
             self._connection_params["headers"] = validated_headers
         self._connection_params["preferred_transport"] = preferred_transport
 
-        # If no session context is set, create a default one
-        if not self._session_context:
-            # Generate a fallback context based on connection parameters
-            import uuid
-
-            param_hash = uuid.uuid4().hex[:8]
-            self._session_context = f"default_http_{param_hash}"
+        self._use_generated_context("default_http")
 
         # Get or create a persistent session (will try Streamable HTTP, then selective SSE fallback)
         session = await self._get_or_create_session()
@@ -2446,10 +2440,6 @@ class MCPStreamableHttpClient:
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
 
-    def set_session_context(self, context_id: str):
-        """Set the session context (e.g., flow_id + user_id + session_id)."""
-        self._session_context = context_id
-
     async def _get_or_create_session(self) -> ClientSession:
         """Get or create a persistent session for the current context."""
         if not self._session_context or not self._connection_params:
@@ -2462,6 +2452,7 @@ class MCPStreamableHttpClient:
         self.session = await session_manager.get_session(
             self._session_context, self._connection_params, "streamable_http"
         )
+        await self._release_replaced_contexts(session_manager)
         return self.session
 
     async def _terminate_remote_session(self) -> None:
@@ -2542,13 +2533,7 @@ class MCPStreamableHttpClient:
             msg = "Session not initialized or disconnected. Call connect_to_server first."
             raise ValueError(msg)
 
-        # If no session context is set, create a default one
-        if not self._session_context:
-            # Generate a fallback context based on connection parameters
-            import uuid
-
-            param_hash = uuid.uuid4().hex[:8]
-            self._session_context = f"default_http_{param_hash}"
+        self._use_generated_context("default_http")
 
         # Use provided timeout or fall back to client's configured timeout
         effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
@@ -2609,8 +2594,8 @@ class MCPStreamableHttpClient:
                     await logger.aerror(msg)
                     raise ValueError(msg) from e
 
-                # For other errors or no retries left, handle as before
-                if isinstance(e, ConnectionError | TimeoutError | OSError | ValueError) or bust_session:
+                # Connection failures that ran out of retries mark the client disconnected.
+                if isinstance(e, ConnectionError | OSError | ValueError) or bust_session:
                     msg = describe_mcp_tool_failure(tool_name, (self._connection_params or {}).get("url"), e)
                     await logger.aerror(msg)
                     # Clean up failed session from cache
@@ -2636,8 +2621,9 @@ class MCPStreamableHttpClient:
         await self._terminate_remote_session()
 
         # Clean up local session using the session manager
+        session_manager = self._get_session_manager()
+        await self._release_replaced_contexts(session_manager)
         if self._session_context:
-            session_manager = self._get_session_manager()
             await session_manager._cleanup_session(self._session_context)
 
         # Reset local state
@@ -2645,6 +2631,7 @@ class MCPStreamableHttpClient:
         self._connection_params = None
         self._connected = False
         self._session_context = None
+        self._generated_context = None
 
     async def __aenter__(self):
         return self

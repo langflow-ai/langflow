@@ -1,8 +1,9 @@
-"""A context owns at most one reference to a pooled MCP session.
+"""A context owns at most one reference to each server's pooled MCP session.
 
 MCP clients call ``get_session`` before every tool call, while ``disconnect``
-releases the context once. Each case below leaked a session (stdio subprocess
-or HTTP connection) that only the idle sweep would ever reclaim.
+releases the context once. Each leak below kept a session (stdio subprocess or
+HTTP connection) alive until the idle sweep; each early release tore one down
+while another run could still be using it.
 """
 
 import asyncio
@@ -44,11 +45,9 @@ def _params(command: str) -> SimpleNamespace:
     return SimpleNamespace(command=command, args=[], env={})
 
 
-async def _settle(manager: MCPSessionManager) -> None:
-    pending = [task for task in manager._background_tasks if not task.done() and task is not manager._cleanup_task]
-    if pending:
-        await asyncio.gather(*pending, return_exceptions=True)
-    await asyncio.sleep(0)
+def _pair(manager: MCPSessionManager, context_id: str, command: str) -> tuple[str, str]:
+    server_key = manager._get_server_key(_params(command), "stdio")
+    return server_key, manager._context_to_session[context_id][server_key]
 
 
 def _live_sessions(manager: MCPSessionManager) -> int:
@@ -60,15 +59,14 @@ async def test_should_keep_one_reference_when_same_context_reacquires_its_sessio
     second = await manager.get_session("ctx", _params("server-a"), "stdio")
     third = await manager.get_session("ctx", _params("server-a"), "stdio")
 
-    pair = manager._context_to_session["ctx"]
     assert first is second is third
-    assert manager._session_refcount[pair] == 1
+    assert manager._session_refcount[_pair(manager, "ctx", "server-a")] == 1
 
 
 async def test_should_release_session_when_context_disconnects_after_repeated_acquisition(manager, transport):
     for _ in range(3):
         await manager.get_session("ctx", _params("server-a"), "stdio")
-    pair = manager._context_to_session["ctx"]
+    pair = _pair(manager, "ctx", "server-a")
     _, task = transport.created[0]
 
     await manager._cleanup_session("ctx")
@@ -83,7 +81,7 @@ async def test_should_keep_shared_session_until_last_context_disconnects(manager
     await manager.get_session("ctx-1", _params("server-a"), "stdio")
     await manager.get_session("ctx-1", _params("server-a"), "stdio")
     await manager.get_session("ctx-2", _params("server-a"), "stdio")
-    pair = manager._context_to_session["ctx-1"]
+    pair = _pair(manager, "ctx-1", "server-a")
     assert manager._session_refcount[pair] == 2
 
     await manager._cleanup_session("ctx-1")
@@ -95,45 +93,34 @@ async def test_should_keep_shared_session_until_last_context_disconnects(manager
     assert _live_sessions(manager) == 0
 
 
-async def test_should_release_previous_session_when_context_switches_server(manager):
+async def test_should_keep_each_server_session_when_context_uses_several_servers(manager, transport):
     await manager.get_session("ctx", _params("server-a"), "stdio")
     await manager.get_session("ctx", _params("server-b"), "stdio")
     await manager.get_session("ctx", _params("server-a"), "stdio")
-    await _settle(manager)
 
-    assert list(manager._session_refcount.values()) == [1]
-    assert _live_sessions(manager) == 1
+    # A call may still be running on server A's session while the context
+    # also uses server B, so neither is torn down.
+    assert len(transport.created) == 2
+    assert not any(task.done() for _, task in transport.created)
+    assert sorted(manager._session_refcount.values()) == [1, 1]
 
     await manager._cleanup_session("ctx")
-    await _settle(manager)
 
     assert manager._context_to_session == {}
     assert manager._session_refcount == {}
     assert _live_sessions(manager) == 0
-
-
-async def test_should_keep_previous_session_when_another_context_still_uses_it(manager):
-    await manager.get_session("ctx-1", _params("server-a"), "stdio")
-    await manager.get_session("ctx-2", _params("server-a"), "stdio")
-    pair_a = manager._context_to_session["ctx-1"]
-
-    await manager.get_session("ctx-1", _params("server-b"), "stdio")
-    await _settle(manager)
-
-    assert manager._session_refcount[pair_a] == 1
-    assert pair_a[1] in manager._sessions_for(pair_a[0])
+    assert all(task.cancelled() for _, task in transport.created)
 
 
 async def test_should_not_count_dead_session_when_context_gets_a_replacement(manager, transport):
     await manager.get_session("ctx", _params("server-a"), "stdio")
-    dead_pair = manager._context_to_session["ctx"]
+    dead_pair = _pair(manager, "ctx", "server-a")
     _, dead_task = transport.created[0]
     dead_task.cancel()
     await asyncio.sleep(0)
 
     await manager.get_session("ctx", _params("server-a"), "stdio")
-    await _settle(manager)
-    live_pair = manager._context_to_session["ctx"]
+    live_pair = _pair(manager, "ctx", "server-a")
 
     assert live_pair != dead_pair
     assert manager._session_refcount == {live_pair: 1}
@@ -153,20 +140,30 @@ async def test_should_drop_stale_references_when_idle_sweep_removes_session(mana
     assert manager._session_refcount == {}
 
 
-async def test_should_not_release_twice_when_disconnect_races_a_server_switch(manager):
+async def test_should_release_once_when_the_same_context_disconnects_twice_concurrently(manager):
     await manager.get_session("ctx-1", _params("server-a"), "stdio")
     await manager.get_session("ctx-2", _params("server-a"), "stdio")
-    pair_a = manager._context_to_session["ctx-1"]
+    pair = _pair(manager, "ctx-1", "server-a")
 
-    # The disconnect waits on server A's lock while ctx-1 moves to server B,
-    # which already releases ctx-1's reference to A.
-    async with manager._server_lock(pair_a[0]):
-        disconnect = asyncio.create_task(manager._cleanup_session("ctx-1"))
+    await asyncio.gather(manager._cleanup_session("ctx-1"), manager._cleanup_session("ctx-1"))
+
+    assert manager._session_refcount[pair] == 1
+    assert _live_sessions(manager) == 1
+
+
+async def test_should_keep_new_server_when_it_is_bound_during_a_disconnect(manager):
+    await manager.get_session("ctx", _params("server-a"), "stdio")
+    server_a, _ = _pair(manager, "ctx", "server-a")
+
+    # The disconnect waits on server A's lock while the context starts using
+    # server B; that later use is not part of the disconnect.
+    async with manager._server_lock(server_a):
+        disconnect = asyncio.create_task(manager._cleanup_session("ctx"))
         await asyncio.sleep(0)
-        await manager.get_session("ctx-1", _params("server-b"), "stdio")
+        await manager.get_session("ctx", _params("server-b"), "stdio")
     await disconnect
-    await _settle(manager)
 
-    assert manager._session_refcount[pair_a] == 1
-    assert pair_a[1] in manager._sessions_for(pair_a[0])
-    assert manager._context_to_session["ctx-1"][0] != pair_a[0]
+    server_b, session_b = _pair(manager, "ctx", "server-b")
+    assert manager._context_to_session == {"ctx": {server_b: session_b}}
+    assert manager._session_refcount == {(server_b, session_b): 1}
+    assert _live_sessions(manager) == 1

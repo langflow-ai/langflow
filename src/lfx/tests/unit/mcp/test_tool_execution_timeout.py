@@ -174,7 +174,8 @@ async def test_should_run_tool_once_when_response_times_out(client_class, connec
 
     assert session.calls == 1
     assert "not retried" in str(exc_info.value)
-    assert isinstance(exc_info.value.__cause__, TimeoutError)
+    # Python 3.10's wait_for raises asyncio.TimeoutError, not yet the builtin.
+    assert isinstance(exc_info.value.__cause__, asyncio.TimeoutError | TimeoutError)
 
 
 @CLIENTS
@@ -187,9 +188,13 @@ async def test_should_still_retry_when_session_closed_before_the_call(client_cla
     result = SimpleNamespace(content=[], isError=False)
     session = AsyncMock()
     session.call_tool.side_effect = [ClosedResourceError(), result]
+    # A real manager would start its cleanup loop, which spins forever on the
+    # patched sleep below.
+    manager = MagicMock(_cleanup_session=AsyncMock(), invalidate_server_key=AsyncMock())
 
     with (
         patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        patch.object(client, "_get_session_manager", return_value=manager),
         patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
     ):
         assert await client._run_tool("create_record", {}) is result
