@@ -8,15 +8,17 @@ see every response message as the server would.
 import asyncio
 import json
 from types import SimpleNamespace
+from typing import Annotated
 
 import pytest
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from langflow import middleware as middleware_module
 from langflow.main import JavaScriptMIMETypeMiddleware
 from langflow.middleware import (
     ContentSizeLimitMiddleware,
     ExecutionClientMiddleware,
+    FlattenQueryStringListsMiddleware,
     ForwardedPrefixMiddleware,
     MultipartBoundaryMiddleware,
 )
@@ -348,3 +350,31 @@ class TestForwardedPrefixMiddleware:
         assert await self._downstream_root_path(settings, headers) == ""
         settings.root_path = "/configured"
         assert await self._downstream_root_path(settings, headers) == "/attacker-prefix"
+
+
+class TestFlattenQueryStringListsMiddleware:
+    @staticmethod
+    def _app() -> FastAPI:
+        app = FastAPI()
+        app.add_middleware(FlattenQueryStringListsMiddleware)
+
+        @app.get("/flows")
+        async def flows(request: Request, flow_id: Annotated[list[str], Query()] = []):  # noqa: B006
+            return {"flow_id": flow_id, "query_string": request.scope["query_string"].decode()}
+
+        return app
+
+    @pytest.mark.parametrize(
+        ("query_string", "flow_ids", "rewritten"),
+        [
+            (b"flow_id=a,b&flow_id=c", ["a", "b", "c"], "flow_id=a&flow_id=b&flow_id=c"),
+            (b"flow_id=a%2Cb", ["a", "b"], "flow_id=a&flow_id=b"),
+            (b"flow_id=a&other=x+y", ["a"], "flow_id=a&other=x+y"),
+            (b"flow_id=", [""], "flow_id="),
+            (b"", [], ""),
+        ],
+    )
+    async def test_comma_separated_values_become_repeated_parameters(self, query_string, flow_ids, rewritten):
+        messages = await _call(self._app(), _scope("/flows", query_string=query_string))
+
+        assert json.loads(_body(messages)) == {"flow_id": flow_ids, "query_string": rewritten}

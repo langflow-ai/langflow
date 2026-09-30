@@ -1,10 +1,11 @@
 import re
+from urllib.parse import urlencode
 
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from lfx.log.logger import logger
 from lfx.observability import EXECUTION_CLIENT_HEADER, execution_client
-from starlette.datastructures import Headers
+from starlette.datastructures import Headers, QueryParams
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -119,6 +120,26 @@ class ForwardedPrefixMiddleware:
         prefix = Headers(scope=scope).get("X-Forwarded-Prefix", "").rstrip("/")
         if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
             scope["root_path"] = prefix
+        await self.app(scope, receive, send)
+
+
+class FlattenQueryStringListsMiddleware:
+    """Split comma-separated query values into repeated parameters (``?a=1,2`` becomes ``?a=1&a=2``)."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        flattened: list[tuple[str, str]] = []
+        for key, value in QueryParams(scope["query_string"]).multi_items():
+            flattened.extend((key, entry) for entry in value.split(","))
+
+        scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
+
         await self.app(scope, receive, send)
 
 

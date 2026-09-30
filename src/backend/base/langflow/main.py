@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
-from urllib.parse import urlencode
 
 import anyio
 import httpx
@@ -51,6 +50,7 @@ from langflow.initial_setup.setup import (
 from langflow.middleware import (
     ContentSizeLimitMiddleware,
     ExecutionClientMiddleware,
+    FlattenQueryStringListsMiddleware,
     ForwardedPrefixMiddleware,
     MultipartBoundaryMiddleware,
 )
@@ -1016,15 +1016,7 @@ def create_app():
 
     app.add_middleware(ForwardedPrefixMiddleware, settings=settings)
 
-    @app.middleware("http")
-    async def flatten_query_string_lists(request: Request, call_next):
-        flattened: list[tuple[str, str]] = []
-        for key, value in request.query_params.multi_items():
-            flattened.extend((key, entry) for entry in value.split(","))
-
-        request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
-
-        return await call_next(request)
+    app.add_middleware(FlattenQueryStringListsMiddleware)
 
     _supported_locales: frozenset[str] | None = None
 
