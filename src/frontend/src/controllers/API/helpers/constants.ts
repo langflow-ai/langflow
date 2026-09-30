@@ -48,6 +48,7 @@ export const URLs = {
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
   AGENTIC_FILES: `agentic/files`,
   POLICY_BUNDLE: `policy-bundle`,
+  MIGRATION: `migration`,
   CONNECTIONS: `connections`,
   INTEGRATIONS: `integrations`,
   EXTENSIONS: `extensions`,
