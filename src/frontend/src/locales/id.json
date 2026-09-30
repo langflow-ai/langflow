@@ -1052,6 +1052,7 @@
   "files.errorUploadingDetail": "Terjadi error saat mengunggah file",
   "files.errorDeleting": "Gagal menghapus file",
   "files.errorDeletingDetail": "Terjadi error saat menghapus file",
+  "files.errorRenaming": "Gagal mengganti nama file",
   "files.dropToUpload": "Letakkan file untuk diunggah",
   "files.columnName": "Nama",
   "files.columnType": "Jenis",
