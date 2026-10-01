@@ -62,12 +62,17 @@ async def login(client, username: str) -> dict[str, str]:
 
 
 async def authz_rows_for(user_id: UUID) -> int:
-    """Count the authorization decisions stored for *user_id*, once the writer is idle."""
-    for _ in range(50):
-        if get_audit_producer_health().get("queue_depth", 0) == 0:
+    """Count the authorization decisions stored for *user_id*, once the writer is idle.
+
+    An empty queue is not enough: the writer may hold a batch it has not
+    committed yet, so wait until every submitted row is persisted or failed.
+    """
+    for _ in range(250):
+        health = get_audit_producer_health()
+        settled = int(health.get("persisted_count") or 0) + int(health.get("failed_count") or 0)
+        if health.get("queue_depth", 0) == 0 and settled >= int(health.get("submitted_count") or 0):
             break
         await asyncio.sleep(0.02)
-    await asyncio.sleep(0.1)
     async with session_scope() as session:
         rows = (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.user_id == user_id))).all()
         return len(rows)
