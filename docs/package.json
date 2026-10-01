@@ -56,6 +56,7 @@
   "overrides": {
     "axios": "^1.20.0",
     "basic-ftp": "^6.2.1",
+    "source-map-js": "^1.2.2",
     "shell-quote": "^1.9.0",
     "websocket-driver": "^0.7.5",
     "brace-expansion": "^5.0.12",
