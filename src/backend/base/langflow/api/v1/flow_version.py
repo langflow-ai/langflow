@@ -17,7 +17,10 @@ from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import audited_permission, audited_route, stage_flow_succeeded
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_version.crud import (
@@ -249,6 +252,12 @@ async def create_snapshot(
 
 
 @router.post("/{version_id}/activate")
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_WRITE,
+    audit_vocab.AuditOperation.PATCH,
+    resource_id_param="flow_id",
+)
 async def activate_version(
     flow_id: UUID,
     version_id: UUID,
@@ -260,87 +269,101 @@ async def activate_version(
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
     await ensure_version_precondition(session, flow, parse_if_match(if_match))
-    await ensure_flow_permission(
-        current_user,
-        FlowAction.WRITE,
-        flow_id=flow.id,
-        flow_user_id=flow.user_id,
-        workspace_id=flow.workspace_id,
-        folder_id=flow.folder_id,
-    )
+    # The write below shares this transaction; a decision the audit writer commits
+    # first would invalidate its SQLite snapshot, so decisions wait for the write.
+    async with audit_guard_in_transaction(session):
+        await audited_permission(
+            ensure_flow_permission(
+                current_user,
+                FlowAction.WRITE,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+            ),
+            resource_name=flow.name,
+        )
 
-    # Verify version entry belongs to this flow
-    try:
-        target_entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
-    except FlowVersionNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Version entry not found") from exc
+        # Verify version entry belongs to this flow
+        try:
+            target_entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
+        except FlowVersionNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Version entry not found") from exc
 
-    # Guard against activating a version with no data (check before auto-snapshot)
-    if target_entry.data is None:
-        raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
+        # Guard against activating a version with no data (check before auto-snapshot)
+        if target_entry.data is None:
+            raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
 
-    # Capture copies of both data dicts before the savepoint to avoid stale
-    # reads if pruning inside create_flow_version_entry deletes old entries.
-    try:
-        # Two copies with different jobs: one is archived as a version only when
-        # asked, the other describes the change and is needed either way.
-        replaced_data = copy.deepcopy(flow.data)
-        current_data = replaced_data if save_draft else None
-        target_data = copy.deepcopy(target_entry.data)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=422,
-            detail="Flow data could not be copied. The data may be corrupted.",
-        ) from exc
-
-    _validate_catalog_policy_for_write(
-        target_data,
-        snapshot=get_catalog_policy_service().snapshot,
-    )
-
-    # Wrap auto-snapshot + flow overwrite in a single savepoint for atomicity.
-    # If the flow update fails, the auto-snapshot is also rolled back.
-    try:
-        async with session.begin_nested():
-            if save_draft and current_data is not None:
-                await create_flow_version_entry(
-                    session,
-                    flow_id=flow.id,
-                    user_id=current_user.id,
-                    data=current_data,
-                    description=f"Auto-saved before activating v{target_entry.version_number}",
-                )
-
-            flow.data = target_data
-            flow.updated_at = datetime.now(timezone.utc)
-            # Not routed through _patch_flow, so it rotates the token itself: otherwise a
-            # restore leaves open editors holding a token that still looks current.
-            flow.version_token = uuid4()
-            flow.last_modified_by = current_user.id
-
-            session.add(flow)
-            await session.flush()
-    except FlowVersionError as exc:
-        raise _translate_version_error(exc) from exc
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail="Could not activate version — the flow was modified concurrently. Please try again.",
-        ) from exc
-    except SQLAlchemyError as exc:
-        # A restore that lands at the same moment as an autosave contends for the
-        # write lock, and reporting that as an internal error told the person their
-        # data was broken when the honest answer is "busy, ask again".
-        if is_database_lock_error(exc):
+        # Capture copies of both data dicts before the savepoint to avoid stale
+        # reads if pruning inside create_flow_version_entry deletes old entries.
+        try:
+            # Two copies with different jobs: one is archived as a version only when
+            # asked, the other describes the change and is needed either way.
+            replaced_data = copy.deepcopy(flow.data)
+            current_data = replaced_data if save_draft else None
+            target_data = copy.deepcopy(target_entry.data)
+        except Exception as exc:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="The database is busy. Please retry the request.",
-                headers={"Retry-After": "1"},
+                status_code=422,
+                detail="Flow data could not be copied. The data may be corrupted.",
             ) from exc
-        raise HTTPException(
-            status_code=500,
-            detail="Database error while activating version. Please try again.",
-        ) from exc
+
+        _validate_catalog_policy_for_write(
+            target_data,
+            snapshot=get_catalog_policy_service().snapshot,
+        )
+
+        # Wrap auto-snapshot + flow overwrite in a single savepoint for atomicity.
+        # If the flow update fails, the auto-snapshot is also rolled back.
+        try:
+            async with session.begin_nested():
+                if save_draft and current_data is not None:
+                    await create_flow_version_entry(
+                        session,
+                        flow_id=flow.id,
+                        user_id=current_user.id,
+                        data=current_data,
+                        description=f"Auto-saved before activating v{target_entry.version_number}",
+                    )
+
+                flow.data = target_data
+                flow.updated_at = datetime.now(timezone.utc)
+                # Not routed through _patch_flow, so it rotates the token itself: otherwise a
+                # restore leaves open editors holding a token that still looks current.
+                flow.version_token = uuid4()
+                flow.last_modified_by = current_user.id
+
+                session.add(flow)
+                await session.flush()
+                await stage_flow_succeeded(
+                    session,
+                    action=audit_vocab.FLOW_WRITE,
+                    operation=audit_vocab.AuditOperation.PATCH,
+                    flow_id=flow.id,
+                    flow_name=flow.name,
+                    written_fields=["data"],
+                )
+        except FlowVersionError as exc:
+            raise _translate_version_error(exc) from exc
+        except IntegrityError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail="Could not activate version — the flow was modified concurrently. Please try again.",
+            ) from exc
+        except SQLAlchemyError as exc:
+            # A restore that lands at the same moment as an autosave contends for the
+            # write lock, and reporting that as an internal error told the person their
+            # data was broken when the honest answer is "busy, ask again".
+            if is_database_lock_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="The database is busy. Please retry the request.",
+                    headers={"Retry-After": "1"},
+                ) from exc
+            raise HTTPException(
+                status_code=500,
+                detail="Database error while activating version. Please try again.",
+            ) from exc
 
     await logger.adebug("Activated version %s (%s) for flow %s", version_id, f"v{target_entry.version_number}", flow_id)
 

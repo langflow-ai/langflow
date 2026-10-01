@@ -3,8 +3,8 @@
 Two entry points, because the contract gives the two outcomes opposite
 durability rules. A committed mutation stages its event in the mutation's own
 transaction, so the event cannot exist without the change and the change cannot
-commit without the event. A failure or denial is written only after the
-mutation's transaction is gone, in a transaction of its own.
+commit without the event. A failure is written only after the mutation's
+transaction is gone, in a transaction of its own.
 
 There is no update and no delete here: rows are append-only, and the only
 deletion is the retention sweep.
@@ -137,17 +137,20 @@ def _slots() -> asyncio.Semaphore:
     return _write_slots
 
 
-async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
-    """Write a failure or denial in its own transaction; the caller's is gone.
+class AuditWriteQueueTimeoutError(Exception):
+    """No write slot came free in time, so nothing was attempted."""
 
-    Bounded to a few concurrent connections so a burst of refusals cannot drain
-    the pool its own requests need. The caller is already failing or denied, so
-    a storage outage is surfaced as an error log rather than a second exception.
-    An excluded action, denials included, is dropped before a connection is taken.
+
+async def persist_audit_event_independently(
+    event: AuditEvent, *, timeout: float = INDEPENDENT_WRITE_TIMEOUT_SECONDS
+) -> bool:
+    """Insert an already built event in its own transaction, or raise.
+
+    Returns ``False`` when the action is excluded or there is no database, as
+    under ``lfx serve``.
     """
-    if not is_audit_enabled() or not is_action_audited(draft.action):
+    if not is_action_audited(event.action):
         return False
-    event = build_audit_event(draft)
 
     async def _write() -> bool:
         async with session_scope() as session:
@@ -156,7 +159,39 @@ async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
             session.add(event)
         return True
 
-    async def _log(outcome: str, error: str) -> bool:
+    # The queue and the write are timed apart: waiting in line does not spend
+    # another event's write budget, and the line itself cannot grow without end.
+    # wait_for rather than asyncio.timeout, which does not exist on Python 3.10.
+    slots = _slots()
+    try:
+        await asyncio.wait_for(slots.acquire(), timeout=INDEPENDENT_WRITE_QUEUE_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError as exc:
+        # Distinct from a write that timed out: this one never reached a database.
+        raise AuditWriteQueueTimeoutError from exc
+    try:
+        return await asyncio.wait_for(_write(), timeout=timeout)
+    finally:
+        slots.release()
+
+
+async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
+    """Write a failure in its own transaction; the caller's is gone.
+
+    Bounded to a few concurrent connections so a burst of failures cannot drain
+    the pool its own requests need. The caller is already failing, so a storage
+    outage is surfaced as an error log rather than a second exception. An
+    excluded action is dropped before a connection is taken.
+    """
+    if not is_audit_enabled() or not is_action_audited(draft.action):
+        return False
+    event = build_audit_event(draft)
+    try:
+        return await persist_audit_event_independently(event)
+    except Exception as exc:  # noqa: BLE001
+        # A queue timeout wrote nothing; a write timeout may have committed, so
+        # the row may exist and the outcome is unknown rather than a certain loss.
+        timed_out_writing = isinstance(exc, asyncio.TimeoutError) and not isinstance(exc, AuditWriteQueueTimeoutError)
+        outcome = "unknown" if timed_out_writing else "not_persisted"
         await logger.aerror(
             "op=record_audit_event_after_rollback outcome=%s request_id=%s "
             "resource_type=%s operation=%s result=%s error=%s",
@@ -165,25 +200,6 @@ async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
             event.resource_type,
             event.operation,
             event.result,
-            error,
+            type(exc).__name__,
         )
         return False
-
-    # The queue and the write are timed apart: waiting in line does not spend
-    # another event's write budget, and the line itself cannot grow without end.
-    # wait_for rather than asyncio.timeout, which does not exist on Python 3.10.
-    slots = _slots()
-    try:
-        await asyncio.wait_for(slots.acquire(), timeout=INDEPENDENT_WRITE_QUEUE_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError:
-        # Nothing was attempted, so nothing can have landed.
-        return await _log("not_persisted", "QueueTimeout")
-    try:
-        return await asyncio.wait_for(_write(), timeout=INDEPENDENT_WRITE_TIMEOUT_SECONDS)
-    except Exception as exc:  # noqa: BLE001
-        # A timeout can fire after the COMMIT reached the database, so the row
-        # may exist: report it as unknown rather than as certain data loss.
-        outcome = "unknown" if isinstance(exc, asyncio.TimeoutError) else "not_persisted"
-        return await _log(outcome, type(exc).__name__)
-    finally:
-        slots.release()
