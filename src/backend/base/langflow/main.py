@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import json
 import os
 import re
@@ -30,6 +31,7 @@ from lfx.observability import (
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
 )
+from lfx.preload import freeze_heap
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -112,6 +114,25 @@ async def _run_enterprise_lifespan_hooks(phase: str) -> None:
         except Exception as e:  # noqa: BLE001
             hook_name = getattr(hook, "__name__", getattr(hook, "__qualname__", type(hook).__name__))
             await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
+
+
+def freeze_long_lived_heap() -> None:
+    """Move every object alive now into the GC's permanent generation.
+
+    Startup leaves over a million long-lived objects (modules, the component type
+    cache, preloaded warm templates) that every full collection would otherwise
+    re-traverse while serving requests. Frozen objects are still freed by
+    reference counting; only reference cycles among them (for example a preloaded
+    template that reconcile later replaces) are kept until the worker restarts.
+    """
+    if not get_settings_service().settings.gc_freeze_after_startup:
+        return
+    try:
+        freeze_heap()
+    except Exception as exc:  # noqa: BLE001 - an optimization must never break startup
+        logger.warning(f"gc freeze after startup failed: {exc}")
+        return
+    logger.debug(f"Froze {gc.get_freeze_count()} long-lived objects out of the cyclic GC")
 
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
@@ -233,6 +254,9 @@ def get_lifespan(*, fix_migration=False, version=None):
         # even when startup fails before it is created.
         lag_monitor = None
         warm_registry_task = None
+        # Set right before the lifespan yields; the warm registry task waits on it
+        # so the heap is frozen once, after both startup and its preload.
+        startup_complete = asyncio.Event()
         # Started per worker below when trigger_dispatcher_enabled; the loops it
         # owns are DB-leased singletons, so every replica may run one.
         trigger_dispatcher = None
@@ -552,7 +576,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 from langflow.services.warm_registry.reconcile import reconcile_loop, warm_all
 
                 async def run_warm_registry() -> None:
-                    """Preload off readiness, then keep cached entries reconciled."""
+                    """Preload off readiness, freeze the heap, then keep cached entries reconciled."""
                     try:
                         # Best effort and intentionally off the readiness path: one
                         # large or malformed stored flow must not hold the worker's
@@ -562,6 +586,8 @@ def get_lifespan(*, fix_migration=False, version=None):
                         raise
                     except Exception as exc:  # noqa: BLE001 — the loop self-heals
                         await logger.aerror(f"warm flow registry: initial warm failed: {exc}")
+                    await startup_complete.wait()
+                    freeze_long_lived_heap()
                     await reconcile_loop()
 
                 # One supervised handle keeps shutdown cancellation simple.
@@ -709,6 +735,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Enterprise startup hooks run last: every service they may touch
             # is initialized by this point.
             await _run_enterprise_lifespan_hooks("startup")
+
+            # Take the startup heap out of the cyclic GC's scan set. With the warm
+            # registry on, its task does this after the preload instead.
+            startup_complete.set()
+            if warm_registry_task is None:
+                freeze_long_lived_heap()
 
             yield
         except asyncio.CancelledError:

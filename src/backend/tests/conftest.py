@@ -103,6 +103,21 @@ def disable_mcp_auto_init():
         get_settings_service().set("skip_mcp_auto_init", previous_setting)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def disable_gc_freeze_after_startup():
+    """Keep app boots from freezing the pytest process's heap.
+
+    Every lifespan would otherwise run a full ``gc.collect()`` and ``gc.freeze()``,
+    so each app fixture pays a collection and objects from earlier tests are never
+    collected. Tests that cover the freeze enable it explicitly.
+    """
+    os.environ["LANGFLOW_GC_FREEZE_AFTER_STARTUP"] = "false"
+    if is_settings_service_initialized():
+        get_settings_service().set("gc_freeze_after_startup", value=False)
+    yield
+    os.environ.pop("LANGFLOW_GC_FREEZE_AFTER_STARTUP", None)
+
+
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
 @pytest.fixture(autouse=False)
 def blockbuster(request):

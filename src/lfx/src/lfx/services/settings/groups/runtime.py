@@ -46,6 +46,17 @@ class RuntimeSettings(BaseModel):
     cost of more manifest queries. Only used when ``warm_registry_enabled`` is true.
     Must be > 0."""
 
+    gc_freeze_after_startup: bool = True
+    """Freeze the startup heap out of the cyclic GC once each worker has started
+    (LANGFLOW_GC_FREEZE_AFTER_STARTUP).
+
+    Runs ``gc.collect()`` then ``gc.freeze()`` after startup, or after the warm
+    registry's preload when it is enabled, so full collections stop re-scanning
+    the modules, component type cache and preloaded templates on every run.
+    Frozen objects are still freed by reference counting; only cycles among them
+    (for example a preloaded template later replaced by reconcile) stay until
+    restart."""
+
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
