@@ -19,6 +19,7 @@ from asgi_lifespan import LifespanManager
 from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
+from filelock import FileLock
 from httpx import ASGITransport, AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
@@ -615,6 +616,16 @@ async def client_fixture(
 
         async with AsyncExitStack() as stack:
             with monkeypatch.context() as startup_patch:
+                # Each fixture has its own database, so another worker's
+                # starter-project lock must not make this app skip its seeds.
+                # Keep real locking, scoped to this database's directory.
+                main_module = sys.modules["langflow.main"]
+                if main_module.FileLock is FileLock:
+                    startup_patch.setattr(
+                        main_module,
+                        "FileLock",
+                        lambda path, **kwargs: FileLock(db_path.parent / Path(path).name, **kwargs),
+                    )
                 if template:
                     startup_patch.setattr(service_utils, "initialize_database", initialize_test_database)
                 manager = await stack.enter_async_context(LifespanManager(app, startup_timeout=60, shutdown_timeout=60))

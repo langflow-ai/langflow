@@ -14,7 +14,7 @@ on:
       shards:
         description: Number of independent runners
         type: number
-        default: 5
+        default: 10
       workers:
         description: Pytest workers per runner
         type: number
@@ -31,7 +31,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: durations-${{ github.ref }}-${{ inputs.target-ref }}-${{ inputs.workers || 2 }}-${{ inputs.shards || 5 }}-${{ inputs.distribution || 'load' }}
+  group: durations-${{ github.ref }}-${{ inputs.target-ref }}-${{ inputs.workers || 2 }}-${{ inputs.shards || 10 }}-${{ inputs.distribution || 'load' }}
   cancel-in-progress: false
 
 jobs:
@@ -68,7 +68,7 @@ jobs:
     with:
       ref: ${{ matrix.ref }}
       python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
-      shards: ${{ fromJSON(format('{0}', inputs.shards || 5)) }}
+      shards: ${{ fromJSON(format('{0}', inputs.shards || 10)) }}
       workers: ${{ fromJSON(format('{0}', inputs.workers || 2)) }}
       distribution: ${{ inputs.distribution || 'load' }}
       publish-coverage: false
