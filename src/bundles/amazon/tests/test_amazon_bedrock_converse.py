@@ -101,3 +101,19 @@ def test_additional_model_fields_still_reach_unsupported_providers():
     ).build_model()
 
     assert model.additional_model_request_fields == {"max_gen_len": 512}
+
+
+def test_default_disable_streaming_does_not_mask_stream_false():
+    component = _component(stream=False)
+    assert component.build_model().disable_streaming is True
+
+
+def test_explicit_false_overrides_stream_false():
+    component = _component(stream=False)
+    component.set(disable_streaming=False)
+    assert component.build_model().disable_streaming is False
+
+
+def test_default_preserves_model_streaming_detection():
+    component = _component(model_id="ai21.jamba-instruct-v1:0")
+    assert component.build_model().disable_streaming is True

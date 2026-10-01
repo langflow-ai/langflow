@@ -177,8 +177,9 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         if hasattr(self, "top_p") and self.top_p is not None:
             init_params["top_p"] = self.top_p
 
-        # Handle streaming - disable if explicitly requested via disable_streaming or stream=False
-        if hasattr(self, "disable_streaming") and self.disable_streaming is not None:
+        # Leave the default unset so LangChain can detect model streaming support.
+        # Explicit False remains an override; the default False must not mask stream=False.
+        if self.disable_streaming or "disable_streaming" in self._parameters:
             init_params["disable_streaming"] = self.disable_streaming
         elif hasattr(self, "stream") and not self.stream:
             init_params["disable_streaming"] = True
