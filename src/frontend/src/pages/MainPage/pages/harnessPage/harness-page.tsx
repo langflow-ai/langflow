@@ -12,8 +12,6 @@ import { getCustomParameterTitle } from "@/customization/components/custom-param
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import type {
-  CompactionBinding,
-  ContextBinding,
   LocalToolBinding,
   ProjectConfig,
   ProjectFlowBindings,
@@ -38,7 +36,7 @@ import { SkillDefinitionsEditor } from "./components/skill-definitions-editor";
 import { HarnessReturn, ToolPackPicker } from "./components/tool-pack-picker";
 import { editorDraft } from "./editor-draft";
 import { isProjectFieldVisible } from "./field-visibility";
-import { validCompactionThreshold, validFlowTimeout } from "./flow-binding";
+import { validProjectBindings } from "./flow-binding";
 import {
   type SkillDefinition,
   type SkillPackReference,
@@ -132,23 +130,7 @@ const HarnessPage = ({
   const [lastSave, setLastSave] = useState<ProjectSaveResult | null>(null);
   const values = { ...savedValues, ...edits };
   const bindings = (values.flow_bindings ?? {}) as ProjectFlowBindings;
-  const bindingsValid = Object.entries(bindings).every(([field, binding]) =>
-    Array.isArray(binding)
-      ? binding.every((hook) => validFlowTimeout(hook.timeout_seconds ?? 10))
-      : field === "compaction" && binding
-        ? validFlowTimeout(
-            (binding as CompactionBinding).timeout_seconds ?? 60,
-          ) &&
-          validCompactionThreshold(
-            (binding as CompactionBinding).trigger_tokens ?? 8000,
-          )
-        : (field !== "context_strategy" && field !== "tool_policy") ||
-          !binding ||
-          validFlowTimeout(
-            (binding as ContextBinding).timeout_seconds ??
-              (field === "tool_policy" ? 10 : 30),
-          ),
-  );
+  const bindingsValid = validProjectBindings(bindings, type?.template);
   const updateBinding = (
     fieldName: string,
     binding: ProjectFlowBindings[string],
@@ -516,6 +498,7 @@ const HarnessPage = ({
                           key={`${projectId}:${selectedAgentId}:${fieldName}`}
                           projectId={projectId}
                           fieldName={fieldName}
+                          contract={field.flow_contract}
                           agentId={selectedAgentId}
                           value={
                             Array.isArray(bindings[fieldName])
@@ -579,6 +562,7 @@ const HarnessPage = ({
                       key={`${projectId}:${selectedAgentId}`}
                       projectId={projectId}
                       fieldName={fieldName}
+                      contract={field.flow_contract}
                       agentId={selectedAgentId}
                       value={
                         Array.isArray(bindings[fieldName])
@@ -659,27 +643,19 @@ const HarnessPage = ({
                           key={`${projectId}:${selectedAgentId}:${fieldName}`}
                           projectId={projectId}
                           fieldName={fieldName}
+                          contract={field.flow_contract}
                           agentId={selectedAgentId}
                           value={
                             Array.isArray(bindings[fieldName])
                               ? undefined
                               : bindings[fieldName]
                           }
-                          initialConfig={
-                            fieldName === "compaction"
-                              ? {
-                                  compaction_trigger_tokens:
-                                    values.compaction_trigger_tokens,
-                                  compaction_keep_messages:
-                                    values.compaction_keep_messages,
-                                }
-                              : fieldName === "tool_policy"
-                                ? { tool_policy: values.tool_policy }
-                                : {
-                                    context_strategy: values.context_strategy,
-                                    context_turns: values.context_turns,
-                                  }
-                          }
+                          initialConfig={Object.fromEntries(
+                            (
+                              field.flow_contract?.binding
+                                ?.initial_config_fields ?? []
+                            ).map((name) => [name, values[name]]),
+                          )}
                           disabled={isPending}
                           onChange={(binding) =>
                             updateBinding(fieldName, binding)

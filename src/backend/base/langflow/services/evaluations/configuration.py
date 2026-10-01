@@ -2,8 +2,9 @@
 
 from fastapi import HTTPException
 from lfx.projects.bindings import flow_revision
+from lfx.projects.builtin_slots import SCORER
 from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
-from lfx.projects.evaluations import EvalSuiteConfig, scorer_outputs, validate_scorer
+from lfx.projects.evaluations import EvalSuiteConfig
 
 from langflow.services.authorization import FlowAction
 from langflow.services.database.models.folder.flow_bindings import (
@@ -25,7 +26,7 @@ async def scorer_choices(session, user, flow):
             "revision": flow_revision(flow.data),
             "dependencies": [item.model_dump(mode="json") for item in dependencies],
         }
-        for choice in scorer_outputs(flow.data or {})
+        for choice in SCORER.binding_outputs(flow.data or {})
     ]
 
 
@@ -40,7 +41,7 @@ async def save_eval_config(session, user, config, previous):
                 await resolve_binding_snapshot(session, user, binding, "scorer", require_current=False)
             else:
                 root = await _authorize(session, user, binding.flow_id, FlowAction.EXECUTE)
-                validate_scorer(root.data or {}, binding)
+                SCORER.validate_binding(root.data or {}, binding)
                 sources = await resolve_binding_flows(session, user, root, action=FlowAction.EXECUTE)
                 validate_binding_dependencies(binding, flow_definitions(sources.values()))
                 # Never accept caller-supplied version IDs as proof of review.

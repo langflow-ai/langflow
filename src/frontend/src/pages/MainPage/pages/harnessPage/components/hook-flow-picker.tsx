@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useCreateProjectFlow } from "@/controllers/API/queries/folders/use-create-instructions-flow";
 import { useGetProjectFlowOutputsQuery } from "@/controllers/API/queries/folders/use-get-project-flow-outputs";
 import type {
+  FlowContract,
   FlowOutputChoice,
   HookBinding,
   HookEvent,
@@ -26,6 +27,7 @@ import { ProjectChoiceField } from "./project-choice-field";
 export function HookFlowPicker({
   projectId,
   fieldName,
+  contract,
   agentId,
   value,
   disabled,
@@ -34,6 +36,7 @@ export function HookFlowPicker({
 }: {
   projectId: string;
   fieldName: string;
+  contract?: FlowContract;
   agentId?: string;
   value: HookBinding[];
   disabled: boolean;
@@ -41,6 +44,7 @@ export function HookFlowPicker({
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
+  const defaultTimeout = contract?.binding?.defaults.timeout_seconds;
   const { data, isLoading, isError, refetch } = useGetProjectFlowOutputsQuery({
     projectId,
     fieldName,
@@ -74,7 +78,7 @@ export function HookFlowPicker({
         on_event: "before_tool_call",
         mode: "observe",
         on_failure: "continue",
-        timeout_seconds: 10,
+        timeout_seconds: defaultTimeout,
         priority: Math.min(
           10000,
           Math.max(0, ...value.map((hook) => hook.priority ?? 0)) + 1,
@@ -100,7 +104,7 @@ export function HookFlowPicker({
               (item) => outputKey(item) === outputKey(hook),
             );
             const control = hook.mode === "control";
-            const timeout = hook.timeout_seconds ?? 10;
+            const timeout = hook.timeout_seconds ?? defaultTimeout ?? NaN;
             const stale = choice && !sameBindingDefinition(choice, hook);
             return (
               <li

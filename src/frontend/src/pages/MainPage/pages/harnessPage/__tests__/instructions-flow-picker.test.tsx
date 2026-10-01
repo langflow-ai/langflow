@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import type { FlowBinding, FlowOutputChoice } from "@/pages/MainPage/entities";
 import { InstructionsFlowPicker } from "../components/instructions-flow-picker";
+import slotContracts from "./slot-contracts";
 
 let choices: FlowOutputChoice[];
 let isError = false;
@@ -103,6 +104,11 @@ const setup = (
     <InstructionsFlowPicker
       projectId="project"
       fieldName="system_prompt"
+      contract={
+        slotContracts[
+          (props.fieldName as keyof typeof slotContracts) ?? "system_prompt"
+        ]
+      }
       agentId="agent"
       disabled={false}
       onChange={onChange}
@@ -123,6 +129,26 @@ beforeEach(() => {
   isError = false;
   isLoading = false;
   jest.clearAllMocks();
+});
+
+it("uses the declared contract for a plugin field with a different name", () => {
+  const contract = {
+    ...slotContracts.context_strategy,
+    name: "SupportContext",
+    binding: {
+      ...slotContracts.context_strategy.binding!,
+      defaults: { timeout_seconds: 45 },
+    },
+  };
+  const onChange = setup({ fieldName: "support_context", contract });
+  fireEvent.click(screen.getByRole("button", { name: /Use A Flow Instead/i }));
+  fireEvent.change(screen.getByRole("combobox"), {
+    target: { value: key(choices[0]) },
+  });
+  expect(onChange).toHaveBeenCalledWith(
+    expect.objectContaining({ timeout_seconds: 45 }),
+  );
+  expect(screen.getByTestId("context-flow-picker")).toBeInTheDocument();
 });
 
 it("requires review when only a nested definition changes and preserves the draft when opening it", () => {
@@ -353,6 +379,7 @@ it("ignores a creation that completes after leaving the picker", async () => {
     <InstructionsFlowPicker
       projectId="project"
       fieldName="system_prompt"
+      contract={slotContracts.system_prompt}
       agentId="agent"
       value={binding}
       disabled={false}
@@ -381,6 +408,7 @@ it("releases creation controls and ignores the old response when the Agent chang
   const props = {
     projectId: "project",
     fieldName: "system_prompt",
+    contract: slotContracts.system_prompt,
     value: binding,
     disabled: false,
     onChange,

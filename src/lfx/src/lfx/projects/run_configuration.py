@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretBytes, SecretStr, model
 
 from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
-from lfx.projects.flow_slots import ProjectFlowBindings
+from lfx.projects.flow_slots import ProjectFlowBindings, runtime_binding_fields
 from lfx.projects.local_tools import LocalToolBinding
 from lfx.projects.skills import HarnessSkills, parse_harness_skills
 from lfx.projects.tool_packs import ToolPackToolBinding
@@ -133,12 +133,7 @@ def capture_agent_configuration(component, model, policy: HarnessRuntimeConfig) 
     node_data = getattr(vertex, "data", {}) or {}
     code = node_data.get("node", {}).get("template", {}).get("code", {}).get("value")
     bindings = {}
-    for field, input_name, empty in (
-        ("hooks", "hook_bindings", []),
-        ("context_strategy", "context_binding", None),
-        ("compaction", "compaction_binding", None),
-        ("tool_policy", "permission_binding", None),
-    ):
+    for field, (input_name, _, _, empty) in runtime_binding_fields().items():
         raw = getattr(component, input_name, "") or ""
         value = json.loads(raw) if raw.strip() else empty
         bindings[field] = None if value == {} else value

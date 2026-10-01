@@ -5,35 +5,27 @@ import json
 from pydantic import BaseModel, ConfigDict, Field
 
 from lfx.base.agents.hooks import HookBinding
-from lfx.projects.bindings import FlowBinding, flow_revision, instruction_outputs, validate_instruction_binding
-from lfx.projects.compaction import (
-    COMPACTION_ORIGIN,
-    CompactionBinding,
-    compaction_outputs,
-    validate_compaction_binding,
-)
-from lfx.projects.context import CONTEXT_ORIGIN, ContextBinding, context_outputs, validate_context_binding
-from lfx.projects.hooks import HOOK_ORIGIN, hook_outputs, validate_hook_binding
-from lfx.projects.permissions import (
-    PERMISSION_ORIGIN,
-    PermissionBinding,
-    permission_outputs,
-    validate_permission_binding,
-)
+from lfx.projects.bindings import FlowBinding, flow_revision
+from lfx.projects.builtin_slots import BINDING_SLOTS, HARNESS_BINDING_SLOTS
+from lfx.projects.compaction import CompactionBinding
+from lfx.projects.context import ContextBinding
+from lfx.projects.permissions import PermissionBinding
+from lfx.projects.schema import Cardinality, ProjectTypeDefinition, SlotDefinition
 
-BINDING_LABELS = {
-    "system_prompt": "Instructions",
-    "hooks": "Hooks",
-    "context_strategy": "Context",
-    "compaction": "Compaction",
-    "tool_policy": "Permissions",
-}
-_RUNTIME_FIELDS = {
-    "hooks": ("hook_bindings", HOOK_ORIGIN, "bindings", []),
-    "context_strategy": ("context_binding", CONTEXT_ORIGIN, "binding", None),
-    "compaction": ("compaction_binding", COMPACTION_ORIGIN, "binding", None),
-    "tool_policy": ("permission_binding", PERMISSION_ORIGIN, "binding", None),
-}
+BINDING_LABELS = {name: slot.binding_label for name, slot in HARNESS_BINDING_SLOTS.items()}
+
+
+def runtime_binding_fields():
+    return {
+        name: (
+            slot.agent_input_name,
+            slot.origin_key,
+            slot.origin_binding_key,
+            [] if slot.cardinality == Cardinality.MULTI else None,
+        )
+        for name, slot in HARNESS_BINDING_SLOTS.items()
+        if slot.origin_key
+    }
 
 
 class ProjectFlowBindings(BaseModel):
@@ -55,45 +47,36 @@ class ProjectFlowBindings(BaseModel):
         )
 
 
-def binding_outputs(field_name: str, data: dict) -> list[dict]:
-    if field_name == "system_prompt":
-        return instruction_outputs(data)
-    if field_name == "hooks":
-        return hook_outputs(data)
-    if field_name == "context_strategy":
-        return context_outputs(data)
-    if field_name == "compaction":
-        return compaction_outputs(data)
-    if field_name == "tool_policy":
-        return permission_outputs(data)
-    msg = "This field does not yet support flow bindings."
-    raise ValueError(msg)
+def binding_slot(field_name: str, project_type: ProjectTypeDefinition | None = None) -> SlotDefinition:
+    if project_type is None:
+        slot = BINDING_SLOTS.get(field_name)
+    else:
+        slot = next(
+            (
+                field.slot_definition
+                for field in project_type.fields
+                if field.name == field_name and field.supports_flow_binding
+            ),
+            None,
+        )
+    if slot is None:
+        msg = "This field does not yet support flow bindings."
+        raise ValueError(msg)
+    return slot
+
+
+def binding_outputs(field_name: str, data: dict, *, project_type: ProjectTypeDefinition | None = None) -> list[dict]:
+    return binding_slot(field_name, project_type).binding_outputs(data)
 
 
 def validate_project_binding(field_name: str, data: dict, binding: FlowBinding) -> None:
-    if field_name == "scorer":
-        from lfx.projects.evaluations import validate_scorer
-
-        validate_scorer(data, binding)
-    elif field_name == "system_prompt":
-        validate_instruction_binding(data, binding)
-    elif field_name == "hooks" and isinstance(binding, HookBinding):
-        validate_hook_binding(data, binding)
-    elif field_name == "context_strategy" and isinstance(binding, ContextBinding):
-        validate_context_binding(data, binding)
-    elif field_name == "compaction" and isinstance(binding, CompactionBinding):
-        validate_compaction_binding(data, binding)
-    elif field_name == "tool_policy" and isinstance(binding, PermissionBinding):
-        validate_permission_binding(data, binding)
-    else:
-        msg = "This field does not yet support flow bindings."
-        raise ValueError(msg)
+    binding_slot(field_name).validate_binding(data, binding)
 
 
 def _runtime_values(node_data: dict) -> dict:
     template = node_data.get("node", {}).get("template", {})
     values = {}
-    for field_name, (input_name, _, _, empty) in _RUNTIME_FIELDS.items():
+    for field_name, (input_name, _, _, empty) in runtime_binding_fields().items():
         raw = template.get(input_name, {}).get("value")
         if raw is None or raw == "":
             raw = json.dumps(empty)
@@ -209,7 +192,7 @@ def remap_runtime_bindings(
             if node_data.get("type") != "Agent":
                 continue
             values = _runtime_values(node_data)
-            for field_name, (input_name, origin_name, origin_key, _) in _RUNTIME_FIELDS.items():
+            for field_name, (input_name, origin_name, origin_key, _) in runtime_binding_fields().items():
                 if values[field_name]:
                     node_data["node"]["template"][input_name]["value"] = json.dumps(
                         remap(field_name, values[field_name])

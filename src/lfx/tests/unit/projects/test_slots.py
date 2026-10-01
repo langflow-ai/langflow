@@ -99,6 +99,7 @@ def test_all_contracts_are_available_in_stable_order():
         "Hook",
         "Instructions",
         "PermissionGate",
+        "Scorer",
         "Tool",
     )
     assert tuple(definition.name for definition in all_slots()) == registered_slots()
@@ -184,3 +185,45 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "compaction_keep_messages",
         "max_iterations",
     }
+
+
+@pytest.mark.parametrize(
+    ("slot_name", "timeout"),
+    [("Instructions", None), ("Hook", 10), ("ContextManager", 30), ("Compactor", 60), ("PermissionGate", 10)],
+)
+def test_slot_owns_discovery_validation_and_binding_defaults(slot_name, timeout):
+    from lfx.projects.bindings import FlowBinding, flow_revision
+
+    slot = get_slot(slot_name)
+    data = slot.build_baseline("Answer with sources.")["data"]
+    selected = slot.binding_outputs(data)[0]
+    model, _, _ = slot.binding_contract()
+    values = {
+        "flow_id": "reviewed-flow",
+        "revision": flow_revision(data),
+        "node_id": selected["node_id"],
+        "output_name": selected["output_name"],
+    }
+    binding = model(**values, **({"on_event": "before_llm_call"} if slot_name == "Hook" else {}))
+    slot.validate_binding(data, binding)
+    assert slot.to_dict()["binding"]["defaults"].get("timeout_seconds") == timeout
+    with pytest.raises(ValueError, match=r"selected .* output"):
+        slot.validate_binding(data, binding.model_copy(update={"output_name": "not-the-reviewed-output"}))
+    with pytest.raises(ValueError, match=r"flow (has )?changed"):
+        slot.validate_binding(data, binding.model_copy(update={"revision": "stale"}))
+    if model is not FlowBinding:
+        with pytest.raises(ValueError, match="support flow bindings"):
+            slot.validate_binding(data, FlowBinding(**values))
+
+
+def test_project_field_resolves_its_slot_without_a_builtin_field_name():
+    from lfx.projects.flow_slots import binding_outputs, binding_slot
+
+    contract = get_slot("Instructions")
+    project = project_using(contract, name="support", field_name="briefing")
+    project.fields = (replace(project.fields[0], supports_flow_binding=True),)
+    data = contract.build_baseline("Answer the support request.")["data"]
+    assert binding_slot("briefing", project()) is contract
+    assert binding_outputs("briefing", data, project_type=project()) == contract.binding_outputs(data)
+    with pytest.raises(ValueError, match="support flow bindings"):
+        binding_outputs("briefing", data)

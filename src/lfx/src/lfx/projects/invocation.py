@@ -12,6 +12,7 @@ async def reviewed_flow_source(component, binding, *, field_name, validate):
     from lfx.components.flow_controls.run_flow import RunFlowComponent
     from lfx.helpers import get_harness_flow
     from lfx.projects.dependencies import flow_references, validate_binding_dependencies
+    from lfx.projects.flow_slots import binding_slot
     from lfx.utils.langflow_utils import has_langflow_memory
 
     parent = component.graph
@@ -23,7 +24,7 @@ async def reviewed_flow_source(component, binding, *, field_name, validate):
         source = await resolver.get_flow(flow_id_selected=binding.flow_id)
         candidate = getattr(parent, "runtime_candidate", None)
         executable_binding = candidate.execution_binding(binding) if candidate else binding
-        validate(source.data if field_name == "tools" else source.data.get("data", {}), executable_binding)
+        validate(binding_slot(field_name).validation_source(source.data), executable_binding)
         if frozen is None:
             definitions = {
                 binding.flow_id: {
@@ -59,7 +60,7 @@ async def reviewed_flow_source(component, binding, *, field_name, validate):
     source = await get_harness_flow(
         user_id=component.user_id, binding=binding, field_name=field_name, require_current=recorded.get(key) != value
     )
-    validate(source.data if field_name == "tools" else source.data["data"], binding)
+    validate(binding_slot(field_name).validation_source(source.data), binding)
     if parent is not None:
         parent.reviewed_harness_flows[key] = value
     return deepcopy(source.data)
@@ -68,10 +69,11 @@ async def reviewed_flow_source(component, binding, *, field_name, validate):
 class ReviewedFlowRunner:
     """Cache reviewed definitions for one compiled Agent; build a fresh graph per invocation."""
 
-    def __init__(self, component, *, validate, label: str):
+    def __init__(self, component, *, validate, label: str, field_name: str):
         self.component = component
         self.validate = validate
         self.label = label
+        self.field_name = field_name
         self.definitions = {}
 
     async def __call__(self, binding, context: dict):
@@ -92,14 +94,8 @@ class ReviewedFlowRunner:
 
         key = binding.model_dump_json()
         if key not in self.definitions:
-            field_name = {
-                "Hook": "hooks",
-                "context": "context_strategy",
-                "compaction": "compaction",
-                "permission": "tool_policy",
-            }[self.label]
             self.definitions[key] = await reviewed_flow_source(
-                self.component, binding, field_name=field_name, validate=self.validate
+                self.component, binding, field_name=self.field_name, validate=self.validate
             )
         source = self.definitions[key]
         data = source["data"]

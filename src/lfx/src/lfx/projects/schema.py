@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
+    from lfx.projects.bindings import FlowBinding
 
 
 class Cardinality(str, Enum):
@@ -55,15 +56,60 @@ class SlotDefinition:
     fire_timing: FireTiming
     cardinality: Cardinality = Cardinality.SINGLE
     default_flow_ref: str | None = None
+    binding_label: str = ""
+    binding_kind: str = ""
+    validation_hint: str = ""
+    baseline_error_hint: str = ""
+    initial_config_fields: tuple[str, ...] = ()
+    agent_input_name: str = ""
+    origin_key: str = ""
+    origin_binding_key: str = "binding"
+
+    def binding_contract(self):
+        """Return the binding model, output discovery and validator. Load code only on use."""
+        msg = "This field does not yet support flow bindings."
+        raise ValueError(msg)
+
+    def binding_outputs(self, data: dict) -> list[dict]:
+        _, discover, _ = self.binding_contract()
+        return discover(data)
+
+    def validate_binding(self, data: dict, binding: FlowBinding) -> None:
+        model, _, validate = self.binding_contract()
+        if not isinstance(binding, model):
+            msg = "This field does not yet support flow bindings."
+            raise ValueError(msg)  # noqa: TRY004 -- preserve the existing binding validation error contract
+        validate(data, binding)
+
+    def validation_source(self, source: dict) -> dict:
+        return source.get("data", {})
+
+    def build_baseline(self, initial_value: str | None = None, *, initial_config: dict | None = None) -> dict:  # noqa: ARG002
+        msg = "This contract does not yet provide a working baseline."
+        raise ValueError(msg)
 
     def to_dict(self) -> dict:
-        return {
+        result: dict = {
             "name": self.name,
             "terminal_output_type": self.terminal_output_type,
             "fire_timing": self.fire_timing.value,
             "cardinality": self.cardinality.value,
             "default_flow_ref": self.default_flow_ref,
         }
+        if self.binding_kind:
+            model, _, _ = self.binding_contract()
+            result["binding"] = {
+                "kind": self.binding_kind,
+                "label": self.binding_label,
+                "validation_hint": self.validation_hint,
+                "initial_config_fields": list(self.initial_config_fields),
+                "defaults": {
+                    name: model.model_fields[name].default
+                    for name in ("timeout_seconds", "trigger_tokens")
+                    if name in model.model_fields
+                },
+            }
+        return result
 
 
 @dataclass(frozen=True)

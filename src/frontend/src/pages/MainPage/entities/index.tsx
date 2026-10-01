@@ -73,6 +73,13 @@ export type FlowContract = {
   fire_timing: string;
   cardinality: "single" | "multi";
   default_flow_ref: string | null;
+  binding?: {
+    kind: string;
+    label: string;
+    validation_hint: string;
+    initial_config_fields: string[];
+    defaults: { timeout_seconds?: number; trigger_tokens?: number };
+  };
 };
 
 export type FlowBinding = {

@@ -7,10 +7,9 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
-from lfx.projects import all_project_types
-from lfx.projects.baselines import build_slot_baseline
+from lfx.projects import SlotDefinition, all_project_types, get_project_type
 from lfx.projects.bindings import flow_revision
-from lfx.projects.flow_slots import BINDING_LABELS, binding_outputs
+from lfx.projects.flow_slots import binding_slot
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
 from pydantic import BaseModel, ConfigDict
@@ -412,7 +411,7 @@ async def read_project_types(
     ]
 
 
-async def _harness_project(session: DbSession, current_user: User, project_id: UUID) -> Folder:
+async def _owned_project(session: DbSession, current_user: User, project_id: UUID) -> Folder:
     project = (
         await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
     ).first()
@@ -425,17 +424,27 @@ async def _harness_project(session: DbSession, current_user: User, project_id: U
         project_user_id=project.user_id,
         workspace_id=project.workspace_id,
     )
+    return project
+
+
+async def _harness_project(session: DbSession, current_user: User, project_id: UUID) -> Folder:
+    project = await _owned_project(session, current_user, project_id)
     if project.project_type != "agent-harness":
         raise HTTPException(422, "Choose an Agent Harness project.")
     return project
 
 
-async def _binding_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
-    """Keep baseline and draft validation scoped like the field's output picker."""
-    project = await _harness_project(session, current_user, project_id)
-    if field_name not in BINDING_LABELS:
-        raise HTTPException(422, "Choose a supported harness field for this flow binding.")
-    return project
+async def _binding_project(
+    session: DbSession, current_user: User, project_id: UUID, field_name: str
+) -> tuple[Folder, SlotDefinition]:
+    """Authorize first, then resolve the contract declared on this project's field."""
+    project = await _owned_project(session, current_user, project_id)
+    try:
+        slot = binding_slot(field_name, get_project_type(project.project_type))
+        slot.binding_contract()
+    except ValueError as exc:
+        raise HTTPException(422, "Choose a supported project field for this flow binding.") from exc
+    return project, slot
 
 
 @router.get("/{project_id}/tool-definitions")
@@ -483,20 +492,16 @@ async def prepare_project_flow_baseline(
     field_name: str = "system_prompt",
 ):
     """Prepare a working template. Persist it through the normal authorized flow creation API."""
-    project = await _binding_project(session, current_user, project_id, field_name)
-    project_type = next(candidate for candidate in all_project_types() if candidate.name == project.project_type)
-    field = next(field for field in project_type.fields if field.name == field_name)
-    reference = field.slot_definition.default_flow_ref if field.slot_definition else None
-    if not reference:
+    project, slot = await _binding_project(session, current_user, project_id, field_name)
+    if not slot.default_flow_ref:
         raise HTTPException(422, "This field does not yet provide a working baseline.")
     try:
-        baseline = build_slot_baseline(reference, request.initial_value, initial_config=request.initial_config)
+        baseline = slot.build_baseline(request.initial_value, initial_config=request.initial_config)
     except ValueError as exc:
-        hint = {
-            "compaction": "Check the compaction threshold and recent-message count before creating its flow.",
-            "tool_policy": "Check the tool permission policy before creating its flow.",
-        }.get(field_name, "Check the context strategy and recent-turn count before creating its flow.")
-        raise HTTPException(422, hint) from exc
+        raise HTTPException(
+            422, slot.baseline_error_hint or "Check this field's settings before creating its flow."
+        ) from exc
+    baseline["data"]["harness_contract"] = {"slot": slot.name, "field_name": field_name}
     return {**baseline, "folder_id": str(project.id)}
 
 
@@ -510,16 +515,10 @@ async def validate_project_flow_outputs(
     field_name: str = "system_prompt",
 ):
     """Inspect an unsaved graph's contract, without running or persisting its code."""
-    await _binding_project(session, current_user, project_id, field_name)
-    hint = {
-        "hooks": "Connect one Hook Event to a terminal Hook decision and configure required inputs.",
-        "context_strategy": "Connect one Agent Context to a terminal message Table and configure required inputs.",
-        "compaction": "Connect one Compaction Input to a terminal CompactionResult and configure required inputs.",
-        "tool_policy": "Connect one Permission Request to a terminal Permission output and configure required inputs.",
-        "system_prompt": "Configure required inputs and connect a terminal text output.",
-    }[field_name]
+    _, slot = await _binding_project(session, current_user, project_id, field_name)
+    hint = slot.validation_hint or "Configure required inputs and connect a compatible terminal output."
     try:
-        outputs = binding_outputs(field_name, request.data)
+        outputs = slot.binding_outputs(request.data)
     except (ValueError, TypeError, KeyError, AttributeError):
         # Saved code and arbitrary payload content must never leak through parser exceptions.
         return {
@@ -530,13 +529,7 @@ async def validate_project_flow_outputs(
     return {
         "outputs": outputs,
         "valid": bool(outputs),
-        "reason": None
-        if outputs
-        else (
-            "Add a System Prompt Builder with an unconnected Instructions output."
-            if field_name == "system_prompt"
-            else hint
-        ),
+        "reason": None if outputs else hint,
     }
 
 
@@ -549,7 +542,7 @@ async def read_project_flow_outputs(
     field_name: str = "system_prompt",
 ):
     """List compatible local outputs without executing any saved component code."""
-    project = await _binding_project(session, current_user, project_id, field_name)
+    project, slot = await _binding_project(session, current_user, project_id, field_name)
     flows = (
         await session.exec(
             select(Flow).where(
@@ -572,7 +565,7 @@ async def read_project_flow_outputs(
 
     for flow in flows:
         try:
-            outputs = binding_outputs(field_name, flow.data or {})
+            outputs = slot.binding_outputs(flow.data or {})
             if not outputs:
                 continue
             revision = flow_revision(flow.data or {})

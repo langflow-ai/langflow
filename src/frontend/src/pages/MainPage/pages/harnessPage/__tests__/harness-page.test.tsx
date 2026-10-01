@@ -4,6 +4,7 @@ import type { HookBinding, ProjectTypeType } from "@/pages/MainPage/entities";
 import type { FlowType } from "@/types/flow";
 import { editorDraft } from "../editor-draft";
 import HarnessPage from "../harness-page";
+import slotContracts from "./slot-contracts";
 
 const mockPatch = jest.fn();
 jest.mock("../components/local-tool-review", () => ({
@@ -323,6 +324,7 @@ const HARNESS: ProjectTypeType = {
   template: {
     system_prompt: {
       name: "system_prompt",
+      flow_contract: slotContracts.system_prompt,
       display_name: "Instructions",
       type: "str",
       multiline: true,
@@ -363,6 +365,7 @@ it("keeps unpublished contract controls out of the form and summary", () => {
         ...HARNESS.template,
         hooks: {
           name: "hooks",
+          flow_contract: slotContracts.hooks,
           display_name: "Hooks",
           type: "str",
           section: "Runtime",
@@ -507,6 +510,7 @@ describe("HarnessPage", () => {
           ...HARNESS.template,
           compaction: {
             name: "compaction",
+            flow_contract: slotContracts.compaction,
             display_name: "Compaction",
             type: "str",
             section: "Runtime",
@@ -908,6 +912,7 @@ const enableHookFields = () => {
         },
         hooks: {
           name: "hooks",
+          flow_contract: slotContracts.hooks,
           display_name: "Hooks",
           section: "Hooks",
           renders: "hook_flows",
@@ -985,6 +990,7 @@ const enableContextFields = () => {
         ...type.template,
         context_strategy: {
           name: "context_strategy",
+          flow_contract: slotContracts.context_strategy,
           display_name: "Context preparation",
           section: "Runtime",
           value: "recent_turns",
@@ -1022,6 +1028,7 @@ const enableCompactionFields = () => {
         ...type.template,
         compaction: {
           name: "compaction",
+          flow_contract: slotContracts.compaction,
           display_name: "Compaction",
           section: "Runtime",
           value: "summarize",
@@ -1064,6 +1071,7 @@ const enablePermissionFields = () => {
         ...type.template,
         tool_policy: {
           name: "tool_policy",
+          flow_contract: slotContracts.tool_policy,
           display_name: "Permissions",
           section: "Runtime",
           value: "deny",
@@ -1310,7 +1318,12 @@ it("reveals mode settings and preserves them when a mode is turned off", () => {
       ...HARNESS,
       template: {
         ...HARNESS.template,
-        compaction: { name: "compaction", value: "off", section: "Runtime" },
+        compaction: {
+          name: "compaction",
+          flow_contract: slotContracts.compaction,
+          value: "off",
+          section: "Runtime",
+        },
         compaction_trigger_tokens: {
           name: "compaction_trigger_tokens",
           display_name: "Summarize at estimated tokens",
