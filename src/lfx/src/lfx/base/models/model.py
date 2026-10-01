@@ -391,8 +391,15 @@ class LCModelComponent(Component):
             # If either is missing, fall back to a non-streaming ainvoke.
             event_manager = getattr(self, "_event_manager", None)
             if session_id and event_manager:
+
+                async def _normalize_stream(stream):
+                    async for chunk in stream:
+                        if hasattr(chunk, "content"):
+                            chunk.content = _normalize_message_content(chunk.content)
+                        yield chunk
+
                 model_message = Message(
-                    text=runnable.astream(inputs),
+                    text=_normalize_stream(runnable.astream(inputs)),
                     sender=MESSAGE_SENDER_AI,
                     sender_name="AI",
                     properties={"icon": self.icon, "state": "partial"},
