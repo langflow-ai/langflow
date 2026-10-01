@@ -132,10 +132,31 @@ async def audited_permission(check: Awaitable[None], **identity: Any) -> None:
         operation.authorized = True
 
 
+_UNIQUE_COLUMN = "__langflow_audit_unique_column__"
+
+
+def mark_unique_conflict(exc: HTTPException, column: str) -> HTTPException:
+    """Name the unique column a conflict hit, so its code never depends on the wording."""
+    setattr(exc, _UNIQUE_COLUMN, column)
+    return exc
+
+
+def _unique_conflict_code(exc: BaseException, *, is_flow: bool) -> AuditErrorCode | None:
+    column = getattr(exc, _UNIQUE_COLUMN, None)
+    if column is None:
+        return None
+    if column == "id":
+        return AuditErrorCode.FLOW_ID_CONFLICT if is_flow else AuditErrorCode.CONSTRAINT_VIOLATION
+    return AuditErrorCode.FLOW_NAME_CONFLICT if is_flow else AuditErrorCode.PROJECT_NAME_CONFLICT
+
+
 def classify_failure(exc: BaseException, resource_type: AuditResourceType) -> AuditErrorCode:
     """A safe, bounded code for a failure; the exception text is never stored."""
     detail = str(getattr(exc, "detail", "")).lower()
     is_flow = resource_type is AuditResourceType.FLOW
+    conflict = _unique_conflict_code(exc, is_flow=is_flow)
+    if conflict is not None:
+        return conflict
     if "folder not found" in detail or "project not found" in detail:
         return AuditErrorCode.PROJECT_NOT_FOUND
     if is_flow and "already exist" in detail and "id" in detail:
