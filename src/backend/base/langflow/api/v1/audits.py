@@ -197,8 +197,8 @@ class AuditFeedResponse(BaseModel):
     total: int | None
 
 
-def _timestamp_text(value: datetime) -> str:
-    return as_utc(value).isoformat(timespec="microseconds").replace("+00:00", "Z")
+def _timestamp_text(value: datetime, *, timespec: str = "microseconds") -> str:
+    return as_utc(value).isoformat(timespec=timespec).replace("+00:00", "Z")
 
 
 def _request_id(feed_row: AuditFeedRow) -> UUID | None:
@@ -292,7 +292,7 @@ def _csv_values(feed_row: AuditFeedRow) -> list[object]:
     row = feed_row.row
     is_resource = feed_row.source is AuditSource.RESOURCE
     return [
-        _timestamp_text(row.timestamp),
+        _timestamp_text(row.timestamp, timespec="seconds"),
         row.user_id,
         row.actor_type,
         row.actor_id,

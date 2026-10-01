@@ -311,7 +311,8 @@ deletes during the walk is not. CSV starts with the columns the Admin
 Console export already used (`timestamp`, `user_id`, `actor_type`, `actor_id`,
 `action`, `resource_type`, `resource_id`, `result`, `details`), followed by
 `source`, `kind`, `resource_name`, `operation`, `error_code` and `request_id`;
-`details` is JSON with sorted keys, and a cell starting with `=`, `+`, `-` or
+its `timestamp` is UTC to the second (`2026-01-01T12:00:00Z`), while NDJSON keeps
+the microseconds the feed returns; `details` is JSON with sorted keys, and a cell starting with `=`, `+`, `-` or
 `@` is prefixed with `'`.
 
 **Access.** Superuser, like `GET /api/v1/authz/audit`: both stores are read.
