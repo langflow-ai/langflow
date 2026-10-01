@@ -701,7 +701,6 @@
             "metadata": {
               "code_hash": "399ba51acecb",
               "dependencies": {
-                "total_dependencies": 4,
                 "dependencies": [
                   {
                     "name": "pandas",
@@ -717,9 +716,10 @@
                   },
                   {
                     "name": "numpy",
-                    "version": "2.5.1"
+                    "version": "2.4.6"
                   }
-                ]
+                ],
+                "total_dependencies": 4
               },
               "module": "lfx.components.files_and_knowledge.knowledge.KnowledgeComponent"
             },
