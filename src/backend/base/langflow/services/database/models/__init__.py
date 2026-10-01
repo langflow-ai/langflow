@@ -39,9 +39,18 @@ from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, M
 from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
+from .project_replacement_operation import ProjectReplacementOperation
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
-from .trigger import Trigger, TriggerEvent, TriggerLease, TriggerListenerLease, TriggerSubscription
+from .trigger import (
+    Trigger,
+    TriggerCleanup,
+    TriggerEvent,
+    TriggerLease,
+    TriggerListenerLease,
+    TriggerSourceVersion,
+    TriggerSubscription,
+)
 from .user import User
 from .variable import Variable
 
@@ -89,6 +98,7 @@ __all__ = [
     "ModelProviderPolicy",
     "PolicyBundleActive",
     "PolicyBundleRevision",
+    "ProjectReplacementOperation",
     "SSOConfig",
     "SSOConfigCreate",
     "SSOConfigRead",
@@ -101,9 +111,11 @@ __all__ = [
     "TraceTable",
     "TransactionTable",
     "Trigger",
+    "TriggerCleanup",
     "TriggerEvent",
     "TriggerLease",
     "TriggerListenerLease",
+    "TriggerSourceVersion",
     "TriggerSubscription",
     "User",
     "Variable",

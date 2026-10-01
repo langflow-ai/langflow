@@ -28,6 +28,12 @@ import {
   MIN_ZOOM,
 } from "@/components/core/canvasControlsComponent/fit-view-options";
 import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
+import {
+  ConflictBanner,
+  ConflictCanvasFrame,
+} from "@/components/core/flowConflict/ConflictBanner";
+import DuplicateFlowModal from "@/components/core/flowConflict/DuplicateFlowModal";
+import RestoreDraftBanner from "@/components/core/flowConflict/RestoreDraftBanner";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   NOTE_NODE_MIN_HEIGHT,
@@ -430,6 +436,13 @@ export default function Page({
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
+    return () => {
+      // Once unmounted, its save never settles (no mutation observer). Leave
+      // an autosave the version sidebar or a newer editor registered.
+      if (useFlowStore.getState().autoSaveFlow === autoSaveFlow) {
+        useFlowStore.setState({ autoSaveFlow: undefined });
+      }
+    };
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
@@ -803,7 +816,7 @@ export default function Page({
         });
       }
     },
-    [takeSnapshot, addComponent],
+    [effectiveLocked, takeSnapshot, addComponent],
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -1146,6 +1159,13 @@ export default function Page({
                 ``flowBuilderWelcomeStore`` which is primed by the
                 "New Flow" button on the home page. */}
             {!effectiveLocked && <FlowBuilderWelcomeMount />}
+            {currentFlowId && (
+              <>
+                <ConflictCanvasFrame flowId={currentFlowId} />
+                <ConflictBanner flowId={currentFlowId} />
+                <RestoreDraftBanner flowId={currentFlowId} />
+              </>
+            )}
           </div>
         </>
       ) : (
@@ -1154,6 +1174,7 @@ export default function Page({
         </div>
       )}
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
+      <DuplicateFlowModal />
     </div>
   );
 }

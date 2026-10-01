@@ -2879,7 +2879,13 @@ class TestMemoriesAPIHandlers:
 
         svc = MagicMock()
         svc.get = AsyncMock(return_value=mb)
-        with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            patch(
+                "langflow.api.v1.memories.knowledge_base_service.get_backends_for_names",
+                AsyncMock(return_value={mb.kb_name: ("chroma", {})}),
+            ),
+        ):
             result = await get_memory_base(memory_base_id=mb.id, current_user=mock_user)
 
         assert result.id == mb.id
@@ -3465,6 +3471,10 @@ class TestPreprocessingApiKeyValidation:
 
         with (
             patch("langflow.services.memory_base.service.session_scope", fake_scope),
+            patch(
+                "langflow.services.memory_base.service.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", mb.embedding_model)),
+            ),
             patch(
                 "langflow.services.memory_base.service.infer_llm_provider",
                 return_value="OpenAI",
