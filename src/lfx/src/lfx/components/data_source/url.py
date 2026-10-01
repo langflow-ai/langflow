@@ -2,6 +2,7 @@ import importlib.util
 import io
 import os
 import re
+import zlib
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -43,11 +44,11 @@ DEFAULT_SCHEME_PORTS = {"http": 80, "https": 443}
 FALLBACK_MAX_RESPONSE_BYTES = 10 * 1024 * 1024
 FALLBACK_MAX_TOTAL_BYTES = 100 * 1024 * 1024
 
-# Only codings whose expansion per network chunk is bounded (~1000:1). Brotli and zstd can
-# expand a few hundred bytes into gigabytes inside a single decode call, before any size
-# check runs, so they are neither advertised nor accepted.
+# Only advertise codings we can decode with a strict output limit. Raw response bytes
+# are also capped before decoding, including compressed headers and trailing data.
 ACCEPT_ENCODING = "gzip, deflate"
 ALLOWED_CONTENT_ENCODINGS = frozenset({"gzip", "deflate"})
+ZLIB_HEADER_BYTES = 2
 
 
 URL_REGEX = re.compile(
@@ -411,8 +412,10 @@ class URLComponent(Component):
     async def _read_bounded_text(self, response: httpx.Response) -> str:
         """Read a streamed response body without exceeding the per-response or total byte budget.
 
-        Bytes read count against the total budget even when the body is rejected, so a server
-        that keeps answering with oversized bodies cannot make a crawl download without bound.
+        Encoded and decoded bytes are each bounded. The larger count is charged against the
+        total budget even when the body is rejected, so a server that keeps answering with
+        oversized bodies cannot make a crawl download without bound. Decoder errors charge
+        the reserved output bound because zlib may discard output before raising.
 
         Raises:
             httpx.HTTPError: If the body is (or declares to be) larger than the remaining budget,
@@ -431,14 +434,68 @@ class URLComponent(Component):
             raise httpx.HTTPError(too_large)
 
         body = bytearray()
+        raw_bytes = decoded_bytes = 0
+        coding = codings[0] if codings else None
+        decompressor = (
+            zlib.decompressobj(zlib.MAX_WBITS | 16 if coding == "gzip" else zlib.MAX_WBITS) if coding else None
+        )
+        first_decode = True
+        deflate_prefix = b""
         try:
-            async for chunk in response.aiter_bytes():
-                body.extend(chunk)
-                if len(body) > limit:
+            # HTTPX's automatic decoder can allocate unbounded output or retain an
+            # endless tail in zlib.unused_data without yielding any decoded bytes.
+            async for raw_chunk in response.aiter_raw():
+                raw_bytes += len(raw_chunk)
+                if raw_bytes > limit:
                     raise httpx.HTTPError(too_large)
+                chunk = raw_chunk
+                if decompressor is not None:
+                    if decompressor.eof:
+                        msg = f"Trailing data after compressed response from {response.url}"
+                        raise httpx.DecodingError(msg)
+                    if coding == "deflate" and first_decode:
+                        # HTTP deflate may omit the zlib wrapper. Wait for enough
+                        # header bytes before trying the same fallback as HTTPX.
+                        chunk = deflate_prefix + chunk
+                        if len(chunk) < ZLIB_HEADER_BYTES:
+                            deflate_prefix = chunk
+                            continue
+                    max_output = limit - decoded_bytes + 1
+                    try:
+                        try:
+                            decoded = decompressor.decompress(chunk, max_output)
+                        except zlib.error:
+                            if coding != "deflate" or not first_decode:
+                                raise
+                            decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
+                            decoded = decompressor.decompress(chunk, max_output)
+                    except zlib.error as exc:
+                        # zlib can produce output before detecting a bad checksum,
+                        # then raise without returning it. Charge the reserved bound.
+                        decoded_bytes = limit + 1
+                        msg = f"Invalid compressed response from {response.url}"
+                        raise httpx.DecodingError(msg) from exc
+                    first_decode = False
+                    decoded_bytes += len(decoded)
+                    if decoded_bytes > limit:
+                        raise httpx.HTTPError(too_large)
+                    if decompressor.unused_data:
+                        msg = f"Trailing data after compressed response from {response.url}"
+                        raise httpx.DecodingError(msg)
+                    chunk = decoded
+                else:
+                    decoded_bytes += len(chunk)
+                # Check decoded output before retaining it in the response body.
+                body.extend(chunk)
+            if decompressor is not None and not decompressor.eof:
+                msg = f"Incomplete compressed response from {response.url}"
+                raise httpx.DecodingError(msg)
         finally:
-            self._bytes_remaining -= len(body)
-        # Same decoding as ``response.text``.
+            # Charge encoded overhead as well as expanded output, including rejected
+            # responses. Neither representation may bypass the shared fetch budget.
+            self._bytes_remaining -= max(raw_bytes, decoded_bytes)
+        # Same character decoding as ``response.text``. A complete zlib stream has
+        # already emitted all its output, so no unbounded decoder flush is needed.
         return body.decode(response.encoding or "utf-8", errors="replace")
 
     async def _process_response(self, response: httpx.Response) -> tuple[str, dict]:
