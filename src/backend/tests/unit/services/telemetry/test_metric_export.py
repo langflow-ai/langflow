@@ -13,10 +13,10 @@ from opentelemetry.proto.collector.metrics.v1.metrics_service_pb2 import ExportM
 
 READERS_PROBE = """
 import json
-from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from lfx.observability import bootstrap_application_telemetry
 
-otel = OpenTelemetry(prometheus_enabled=True)
-readers = otel._meter_provider._metric_readers
+otel = bootstrap_application_telemetry(prometheus_enabled=True)
+readers = otel.meter_provider._metric_readers
 
 def exporter_module(reader):
     # The push exporter is wrapped in ApplicationOnlyMetricExporter; report the one underneath,
