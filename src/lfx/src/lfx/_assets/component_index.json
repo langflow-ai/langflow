@@ -20520,7 +20520,7 @@
                 },
                 {
                   "name": "a2a",
-                  "version": "1.1.2"
+                  "version": "1.2.1"
                 },
                 {
                   "name": "langchain_core",
@@ -32365,6 +32365,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "5844290babbc75fd46c80050db4c11997e9e3a9875872aa338dcde82ee7a30df",
+  "sha256": "8cd3f04bee3cee2dbd9bc0ecac431b4130bd4060d66ca1596632f20a2c9cc8bd",
   "version": "1.13.0"
 }
