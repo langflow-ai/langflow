@@ -29,9 +29,9 @@ def test_flow_action_subclasses_str():
 
 
 def test_flow_action_is_iterable_and_complete():
-    """The enum exposes exactly the six canonical actions."""
+    """The enum exposes exactly the canonical actions, including reading a Flow's audit history."""
     values = {member.value for member in FlowAction}
-    assert values == {"read", "write", "create", "delete", "execute", "deploy"}
+    assert values == {"read", "write", "create", "delete", "execute", "deploy", "audit_read"}
 
 
 def test_deployment_action_values_match_policy_strings():
