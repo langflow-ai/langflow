@@ -2512,6 +2512,7 @@
   "connections.search": "Cari nama, handle, atau akun",
   "connections.loading": "Memuat koneksi…",
   "connections.empty": "Belum ada koneksi.",
+  "connections.noProviders": "Tidak ada integrasi yang tersedia untuk Anda. Administrator mengatur penyedia integrasi dan tindakan yang dapat digunakan.",
   "connections.emptyTab": "Belum ada koneksi di tab ini.",
   "connections.emptyInstance": "Belum ada koneksi instance.",
   "connections.emptyOthers": "Belum ada koneksi dari pengguna lain.",
