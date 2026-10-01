@@ -32,6 +32,7 @@ from langflow.services.database.models.flow.guards import LockedFlowError, ensur
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.folder.references import validate_project_references
 from langflow.services.database.models.folder.skill_packs import resolve_skill_pack
 from langflow.services.database.models.folder.tool_packs import resolve_tool_pack
 
@@ -196,6 +197,7 @@ async def write_project_config_to_flows(
         ).all()
     )
     config = deepcopy(project.project_config or {})
+    await validate_project_references(session, current_user, project_type, config)
     if project_type.name == "eval-suite":
         from langflow.services.evaluations.configuration import save_eval_config
 

@@ -130,6 +130,9 @@ export type ProjectFlowBindings = Record<
 
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */
 export type ProjectTypeType = {
+  allows_empty_project?: boolean;
+  exportable?: boolean;
+  panels?: string[];
   starters?: { name: string; display_name: string; description: string }[];
   name: string;
   display_name: string;
@@ -140,6 +143,7 @@ export type ProjectTypeType = {
     string,
     Partial<InputFieldType> & {
       renders?: string;
+      references?: string;
       section?: string;
       flow_contract?: FlowContract;
       supports_flow_binding?: boolean;

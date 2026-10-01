@@ -356,6 +356,9 @@ class ProjectTypeRead(BaseModel):
     display_name: str
     icon: str
     description: str
+    allows_empty_project: bool = False
+    exportable: bool = True
+    panels: tuple[str, ...] = ()
     #: The form, keyed by field name, in the same shape as a component's template. The frontend
     #: renders it with the field renderer it already uses on the canvas.
     template: dict[str, dict]
@@ -400,6 +403,9 @@ async def read_project_types(
             display_name=project_type.display_name,
             icon=project_type.icon,
             description=project_type.description,
+            allows_empty_project=project_type.allows_empty_project,
+            exportable=project_type.exportable,
+            panels=project_type.panels,
             template=project_type.to_template(),
             starters=tuple(
                 ProjectStarterRead(**starter)

@@ -352,7 +352,15 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                   setSearch={onSearch}
                   isEmptyFolder={isEmptyFolder === true}
                   selectedFlows={selectedFlows}
-                  projectType={data.project_type}
+                  hasProjectForm={
+                    projectTypes
+                      ? Boolean(
+                          openProjectType &&
+                            (Object.keys(openProjectType.template).length ||
+                              openProjectType.panels?.length),
+                        )
+                      : undefined
+                  }
                   projectTypeLabel={openProjectType?.display_name}
                 />
                 {isEmptyFolder === true ? (

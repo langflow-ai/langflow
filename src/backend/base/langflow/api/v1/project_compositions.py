@@ -4,6 +4,7 @@ from copy import deepcopy
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from fastapi import HTTPException
+from lfx.projects import get_project_type
 from lfx.projects.archives import (
     MAX_COMPOSITION_FLOWS,
     MAX_COMPOSITION_PROJECTS,
@@ -56,6 +57,9 @@ async def export_composition(
         project_id = str(project.id)
         if project_id in projects:
             continue
+        definition = get_project_type(project.project_type)
+        if not definition.exportable:
+            raise HTTPException(422, f"{definition.display_name} export is not supported.")
         projects[project_id] = ArchivedProject(
             id=project.id,
             name=project.name,
@@ -259,10 +263,12 @@ async def import_composition(session: AsyncSession, user: User, composition: Pro
     """Create every project/flow/version in the request transaction, returning root flows."""
     graph = CompositionGraph(composition)
     graph.validate(allow_missing_secrets=True)
-    if (
-        not graph.projects[str(composition.root_project_id)].flows
-        and graph.projects[str(composition.root_project_id)].project_type != "skill-pack"
-    ):
+    root = graph.projects[str(composition.root_project_id)]
+    for project in graph.projects.values():
+        if not get_project_type(project.project_type).exportable:
+            msg = "An archived project type does not support import."
+            raise ValueError(msg)
+    if not root.flows and not get_project_type(root.project_type).allows_empty_project:
         msg = "The root project must contain at least one flow."
         raise ValueError(msg)
     project_ids = {key: str(uuid4()) for key in graph.projects}

@@ -34,6 +34,7 @@ class AgentHarnessType(ProjectTypeDefinition):
     name = "agent-harness"
     display_name = "Agent Harness"
     icon = "Bot"
+    panels = ("agent", "reports", "local-tool-review")
     description = (
         "An agent built from the flows in this project. One flow is the agent; the others are the tools it can call."
     )
@@ -93,6 +94,7 @@ class AgentHarnessType(ProjectTypeDefinition):
             name="tool_packs",
             section="Tools",
             renders="project_refs",
+            references="tool-pack",
             input=StrInput(
                 name="tool_packs",
                 display_name="Tool packs",
@@ -117,6 +119,7 @@ class AgentHarnessType(ProjectTypeDefinition):
             name="skill_packs",
             section="Skills",
             renders="skill_pack_refs",
+            references="skill-pack",
             input=StrInput(
                 name="skill_packs",
                 display_name="Skills",
@@ -179,6 +182,7 @@ class ToolPackType(ProjectTypeDefinition):
     name = "tool-pack"
     display_name = "Tool Pack"
     icon = "Package"
+    panels = ("harness-return",)
     description = "Reusable tools supplied by the flows you select in this project."
     fields = (
         ProjectTypeField(
@@ -205,6 +209,8 @@ class SkillPackType(ProjectTypeDefinition):
     name = "skill-pack"
     display_name = "Skill Pack"
     icon = "BookOpen"
+    allows_empty_project = True
+    panels = ("harness-return",)
     description = "Reusable task instructions and tools that an Agent Harness can activate when needed."
     fields = (
         ProjectTypeField(
@@ -224,6 +230,8 @@ class EvalSuiteType(ProjectTypeDefinition):
     name = "eval-suite"
     display_name = "Eval Suite"
     icon = "ClipboardCheck"
+    exportable = False
+    panels = ("evaluation",)
     description = "Cases and reviewed scorer flows that assess an exact Agent Harness candidate."
     fields = (
         ProjectTypeField(

@@ -17,8 +17,12 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import type { CapabilityReference, SkillPackManifest } from "../skills";
 import { ProjectChoiceField } from "./project-choice-field";
 
+export function capabilityKind(value: string | undefined) {
+  return value === "skill-pack" || value === "tool-pack" ? value : undefined;
+}
+
 type Props = {
-  kind: "skill-pack" | "tool-pack";
+  kind?: "skill-pack" | "tool-pack";
   value: CapabilityReference[];
   disabled?: boolean;
   projectId: string;
@@ -40,6 +44,7 @@ export function CapabilityPackPicker({
   const [selected, setSelected] = useState("");
   const choices = (folders.data ?? []).filter(
     (folder) =>
+      kind !== undefined &&
       folder.project_type === kind &&
       !value.some((ref) => ref.project_id === folder.id),
   );
@@ -71,7 +76,7 @@ export function CapabilityPackPicker({
             <Button
               size="sm"
               variant="outline"
-              disabled={disabled}
+              disabled={disabled || !kind}
               onClick={() => setReviewing(reference.project_id)}
             >
               {t("skills.review")}
@@ -113,7 +118,7 @@ export function CapabilityPackPicker({
             value={
               choices.some((folder) => folder.id === selected) ? selected : ""
             }
-            disabled={disabled || folders.isLoading}
+            disabled={disabled || folders.isLoading || !kind}
             onChange={setSelected}
             placeholder={t(
               kind === "skill-pack"
@@ -157,7 +162,7 @@ export function CapabilityPackPicker({
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogTitle>{t("skills.reviewTitle")}</DialogTitle>
           <DialogDescription>{t("skills.reviewHelp")}</DialogDescription>
-          {reviewing && (
+          {reviewing && kind && (
             <Review
               key={reviewing}
               id={reviewing}

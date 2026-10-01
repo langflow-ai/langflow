@@ -330,7 +330,7 @@ describe("HeaderComponent - project type tab", () => {
   });
 
   it("shows no extra tab for a plain flows project", () => {
-    render(<HeaderComponent {...defaultProps} projectType="flows" />);
+    render(<HeaderComponent {...defaultProps} hasProjectForm={false} />);
 
     expect(screen.queryByTestId("harness-btn")).not.toBeInTheDocument();
   });
@@ -342,7 +342,7 @@ describe("HeaderComponent - project type tab", () => {
   });
 
   it("shows the harness tab for a typed project", () => {
-    render(<HeaderComponent {...defaultProps} projectType="agent-harness" />);
+    render(<HeaderComponent {...defaultProps} hasProjectForm={true} />);
 
     expect(screen.getByTestId("harness-btn")).toBeInTheDocument();
   });
@@ -352,7 +352,7 @@ describe("HeaderComponent - project type tab", () => {
       <HeaderComponent
         {...defaultProps}
         isEmptyFolder={true}
-        projectType="agent-harness"
+        hasProjectForm={true}
       />,
     );
 
@@ -364,7 +364,7 @@ describe("HeaderComponent - project type tab", () => {
       <HeaderComponent
         {...defaultProps}
         isEmptyFolder={true}
-        projectType="flows"
+        hasProjectForm={false}
       />,
     );
 
@@ -379,7 +379,7 @@ describe("HeaderComponent - project type tab", () => {
         {...defaultProps}
         flowType={"harness" as never}
         setFlowType={setFlowType}
-        projectType="flows"
+        hasProjectForm={false}
       />,
     );
 
@@ -394,10 +394,23 @@ describe("HeaderComponent - project type tab", () => {
         {...defaultProps}
         flowType={"harness" as never}
         setFlowType={setFlowType}
-        projectType="agent-harness"
+        hasProjectForm={true}
       />,
     );
 
+    expect(setFlowType).not.toHaveBeenCalled();
+  });
+
+  it("does not discard a requested form tab while its declaration loads", () => {
+    const setFlowType = jest.fn();
+    render(
+      <HeaderComponent
+        {...defaultProps}
+        flowType={"harness" as never}
+        setFlowType={setFlowType}
+        hasProjectForm={undefined}
+      />,
+    );
     expect(setFlowType).not.toHaveBeenCalled();
   });
 
@@ -406,7 +419,7 @@ describe("HeaderComponent - project type tab", () => {
       <HeaderComponent
         {...defaultProps}
         flowType={"harness" as never}
-        projectType="agent-harness"
+        hasProjectForm={true}
       />,
     );
 

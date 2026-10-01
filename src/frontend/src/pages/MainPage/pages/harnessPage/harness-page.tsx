@@ -23,7 +23,10 @@ import {
   agentCandidates,
   defaultAgent,
 } from "./components/agent-flow-picker";
-import { CapabilityPackPicker } from "./components/capability-pack-picker";
+import {
+  CapabilityPackPicker,
+  capabilityKind,
+} from "./components/capability-pack-picker";
 import { HarnessReports } from "./components/harness-reports";
 import { HarnessSummary } from "./components/harness-summary";
 import { HookFlowPicker } from "./components/hook-flow-picker";
@@ -90,6 +93,7 @@ const HarnessPage = ({
     () => projectTypes?.find((candidate) => candidate.name === projectType),
     [projectTypes, projectType],
   );
+  const hasAgentPanel = type?.panels?.includes("agent") ?? false;
 
   // What the form starts from: the saved config where there is one, the type's own defaults
   // everywhere else. A project saved before a field existed still renders that field.
@@ -103,15 +107,18 @@ const HarnessPage = ({
           : field?.value,
       ]),
     );
-    if (projectType === "agent-harness" && projectConfig?.agent_flow_id) {
+    if (hasAgentPanel && projectConfig?.agent_flow_id) {
       defaults.agent_flow_id = projectConfig.agent_flow_id;
     }
     if (projectConfig?.flow_bindings)
       defaults.flow_bindings = projectConfig.flow_bindings;
-    if (projectType === "agent-harness" && projectConfig?.tool_bindings)
+    if (
+      type?.panels?.includes("local-tool-review") &&
+      projectConfig?.tool_bindings
+    )
       defaults.tool_bindings = projectConfig.tool_bindings;
     return defaults;
-  }, [type, projectConfig, projectType]);
+  }, [type, projectConfig, hasAgentPanel]);
 
   const [edits, setEdits] = useState<ProjectConfig>(() =>
     editorDraft.get(projectId),
@@ -198,16 +205,15 @@ const HarnessPage = ({
   );
 
   const flows = projectFlows ?? [];
-  const selectedAgentId =
-    projectType !== "agent-harness"
-      ? undefined
-      : typeof values.agent_flow_id === "string"
-        ? values.agent_flow_id
-        : defaultAgent(flows)?.id;
+  const selectedAgentId = !hasAgentPanel
+    ? undefined
+    : typeof values.agent_flow_id === "string"
+      ? values.agent_flow_id
+      : defaultAgent(flows)?.id;
   const candidates = agentCandidates(flows);
   const selectedAgent = candidates.find((flow) => flow.id === selectedAgentId);
   const agentSelectionRequired =
-    projectType === "agent-harness" &&
+    hasAgentPanel &&
     !selectedAgent &&
     (!!selectedAgentId || candidates.length > 1);
   const pickedToolIds = toolsFieldName
@@ -274,7 +280,7 @@ const HarnessPage = ({
         data: {
           project_config: {
             ...values,
-            ...(projectType === "agent-harness" && selectedAgentId
+            ...(hasAgentPanel && selectedAgentId
               ? { agent_flow_id: selectedAgentId }
               : {}),
           },
@@ -331,7 +337,7 @@ const HarnessPage = ({
     );
   }
 
-  if (Object.keys(type.template).length === 0) {
+  if (Object.keys(type.template).length === 0 && !type.panels?.length) {
     return (
       <div className="pt-24 text-center text-sm text-secondary-foreground">
         {t("harness.noFields")}
@@ -368,21 +374,19 @@ const HarnessPage = ({
           <div className="flex min-w-0 flex-col">
             <h1 className="text-lg font-semibold">{type.display_name}</h1>
             <p className="text-sm text-muted-foreground">
-              {projectType === "agent-harness"
-                ? t("harness.configureAgent")
-                : type.description}
+              {hasAgentPanel ? t("harness.configureAgent") : type.description}
             </p>
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          {(projectType === "tool-pack" || projectType === "skill-pack") &&
+          {type.panels?.includes("harness-return") &&
             new URLSearchParams(window.location.search).has("fromHarness") && (
               <HarnessReturn
                 onOpen={() => editorDraft.keep(projectId, edits)}
               />
             )}
-          {projectType === "agent-harness" && (
+          {type.panels?.includes("reports") && (
             <HarnessReports
               projectId={projectId}
               onOpenFlow={() => editorDraft.keep(projectId, edits)}
@@ -405,8 +409,11 @@ const HarnessPage = ({
               isPending ||
               isLoadingFlows ||
               agentSelectionRequired ||
-              (projectType === "skill-pack" &&
-                !validSkills((values.skills ?? []) as SkillDefinition[])) ||
+              Object.entries(type.template).some(
+                ([name, field]) =>
+                  field.renders === "skill_definitions" &&
+                  !validSkills((values[name] ?? []) as SkillDefinition[]),
+              ) ||
               !bindingsValid
             }
             loading={isPending}
@@ -422,7 +429,7 @@ const HarnessPage = ({
           inert={isPending}
           className="flex min-w-0 flex-col gap-8 border-0 p-0"
         >
-          {projectType === "agent-harness" && (
+          {hasAgentPanel && (
             <AgentFlowPicker
               flows={flows}
               value={selectedAgentId}
@@ -529,10 +536,10 @@ const HarnessPage = ({
                     />
                   ) : field.renders === "skill_pack_refs" ? (
                     <CapabilityPackPicker
-                      kind="skill-pack"
+                      kind={capabilityKind(field.references)}
                       projectId={projectId}
                       value={(values[fieldName] ?? []) as SkillPackReference[]}
-                      disabled={isPending || !selectedAgent}
+                      disabled={isPending || (hasAgentPanel && !selectedAgent)}
                       onOpen={() => editorDraft.keep(projectId, edits)}
                       onChange={(next) =>
                         setEdits((current) => ({
@@ -544,6 +551,7 @@ const HarnessPage = ({
                   ) : field.renders === "project_refs" ? (
                     <ToolPackPicker
                       projectId={projectId}
+                      references={field.references}
                       agent={selectedAgent}
                       value={selectedToolPacks(values[fieldName])}
                       saved={selectedToolPacks(savedValues[fieldName])}
@@ -577,16 +585,13 @@ const HarnessPage = ({
                     PROJECT_FLOWS_WIDGET ? (
                     <>
                       <ProjectFlowPicker
-                        helpText={
-                          projectType === "tool-pack" ? field.info : undefined
-                        }
+                        helpText={!hasAgentPanel ? field.info : undefined}
                         flows={flows.filter(
                           (flow) => flow.id !== selectedAgentId,
                         )}
                         isLoading={isLoadingFlows}
                         disabled={
-                          isPending ||
-                          (projectType === "agent-harness" && !selectedAgent)
+                          isPending || (hasAgentPanel && !selectedAgent)
                         }
                         value={asStringList(values[fieldName])}
                         onChange={(picked) =>
@@ -596,7 +601,7 @@ const HarnessPage = ({
                           }))
                         }
                       />
-                      {projectType === "agent-harness" && (
+                      {type.panels?.includes("local-tool-review") && (
                         <LocalToolReview
                           projectId={projectId}
                           selected={asStringList(values[fieldName])}
@@ -717,7 +722,7 @@ const HarnessPage = ({
             showModel={Boolean(modelFieldName)}
             showTools={Boolean(toolsFieldName || type.template?.tool_packs)}
           />
-          {projectType === "agent-harness" && (
+          {hasAgentPanel && (
             <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
               {t("harness.canvasEditsKept")}
             </div>
@@ -759,7 +764,11 @@ const HarnessPage = ({
 const EvalSuitePage = lazy(() => import("./eval-suite-page"));
 
 export default function ProjectForm(props: HarnessPageProps) {
-  return props.projectType === "eval-suite" ? (
+  const { data: projectTypes } = useGetProjectTypesQuery();
+  const type = projectTypes?.find(
+    (candidate) => candidate.name === props.projectType,
+  );
+  return type?.panels?.includes("evaluation") ? (
     <EvalSuitePage key={props.projectId} projectId={props.projectId} />
   ) : (
     <HarnessPage {...props} />

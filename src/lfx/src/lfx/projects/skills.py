@@ -10,6 +10,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from lfx.projects.bindings import compose_single_binding
+from lfx.projects.references import ProjectReference
 from lfx.projects.tool_packs import ToolPackReference
 
 SKILLS_ORIGIN = "_harness_skills"
@@ -53,12 +54,8 @@ def skill_definitions(value: object) -> tuple[SkillDefinition, ...]:
     return skills
 
 
-class SkillPackReference(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    project_id: UUID
+class SkillPackReference(ProjectReference):
     expected_type: Literal["skill-pack"] = "skill-pack"
-    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class SkillPackManifest(BaseModel):

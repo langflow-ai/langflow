@@ -60,6 +60,9 @@ def test_installed_package_exposes_form_and_writes_through(isolated_project_regi
     project_type = get_project_type("support-desk")
 
     assert type(project_type).__module__ == "sample_project_types"
+    assert project_type.allows_empty_project is True
+    assert project_type.exportable is True
+    assert project_type.panels == ("reports",)
     assert project_type.sections() == ("Instructions",)
     field = project_type.to_template()["instructions"]
     assert field["value"] == "Help the customer."

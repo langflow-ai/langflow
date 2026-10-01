@@ -41,6 +41,21 @@ async def upload(client, headers, contents):
     )
 
 
+async def test_nonexportable_dependency_blocks_composition_export_and_import(
+    client, logged_in_headers, pack_harness, monkeypatch
+):
+    from lfx.projects import get_project_type
+
+    project, *_ = pack_harness
+    contents = await download(client, logged_in_headers, project)
+    monkeypatch.setattr(type(get_project_type("tool-pack")), "exportable", False)
+    exported = await client.get(f"api/v1/projects/download/{project}", headers=logged_in_headers)
+    assert exported.status_code == 422, exported.text
+    assert "Tool Pack export" in exported.text
+    imported = await upload(client, logged_in_headers, contents)
+    assert imported.status_code == 422, imported.text
+
+
 async def test_composition_import_preserves_pack_local_tools_and_canvas_edits(
     client,
     logged_in_headers,

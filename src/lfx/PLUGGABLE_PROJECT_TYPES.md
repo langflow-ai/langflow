@@ -4,7 +4,8 @@ Project types declare the form used to configure a project. The five built-in ty
 installed plugins inherit `ProjectTypeDefinition`. The project API serves their forms and
 accepts their registered names without a database migration.
 
-This delivery supports declarations, discovery, slot contracts, and the existing field write-through.
+This delivery supports declarations, discovery, slot contracts, capabilities, project references,
+and the existing field write-through.
 Type-specific save, composition, archive and starter hooks are separate follow-up work.
 Custom React pages and widgets are not part of the Python plugin contract.
 
@@ -91,6 +92,60 @@ from their slots, with the same saved keys. Saving and executing a new project's
 still requires the lifecycle hooks in the next slices. Do not treat successful output discovery
 as proof that a custom project can execute those bindings yet.
 
+## Capabilities and project references
+
+Types declare archive policy and the existing UI panels they need:
+
+```python
+class LibraryType(ProjectTypeDefinition):
+    name = "document-library"
+    display_name = "Document library"
+    icon = "BookOpen"
+    allows_empty_project = True
+    exportable = True
+    panels = ("reports",)
+    fields = ()
+```
+
+`allows_empty_project` defaults to `False`. It permits exporting a project without flows and
+importing its empty project ZIP, including the composition root. Creation of an empty project
+remains allowed for all types. `exportable` defaults to `True`; setting it to `False` blocks
+project archive export and import, including dependencies in a composition. Eval Suite declares
+`False` until its retained candidates and scorers can be archived. Archive policy is checked on
+the server. It does not replace authorization.
+
+The current panel keys are `agent`, `reports`, `local-tool-review`, `harness-return`, and
+`evaluation`. They reuse the existing controls and layout. `evaluation` selects the dedicated
+Eval Suite page; the others select sections of the standard form. A form tab is available when
+the declaration supplies fields or panels. Selecting a panel does not install its backend
+behavior: the Agent and evaluation panels still need the corresponding save/runtime support.
+Custom save hooks remain a later slice. Plugins cannot add arbitrary React panels.
+
+Set `ProjectTypeField.references` to the target project type. Registration validates the
+declaration without resolving that target during plugin import:
+
+```python
+libraries = ProjectTypeField(
+    name="libraries",
+    input=StrInput(name="libraries", display_name="Libraries", list=True, value=[]),
+    references="document-library",
+)
+```
+
+A saved reference has `project_id`, `expected_type`, and a 64-character revision digest. An
+omitted `expected_type` takes the field's declared target. List inputs accept lists of unique
+project references; other inputs accept one reference. The save path validates the shape,
+authorizes project read access, and compares the actual stored type with the declaration.
+A forged `expected_type` cannot make a different type compatible. Inaccessible project IDs
+remain 404s. A rejected save leaves the previous configuration intact.
+
+The generic check validates reference identity, type and access. It does not establish that a
+plugin's revision is current or authorize executing its flows. Built-in Tool Pack and Skill Pack
+validators retain their revision, dependency and execution checks. Custom revision handling,
+composition and reference remapping still need the lifecycle hooks. The existing reference
+pickers read the target from the field; their review UI currently supports Tool Packs and Skill
+Packs. Other targets can use the configuration API, with no custom reviewer implied.
+
 ## Discovery and precedence
 
 The project registry reuses `AdapterRegistry` discovery and configuration parsing. It adds
@@ -127,9 +182,9 @@ or accept Python package names from a project's saved configuration.
 ## Missing plugins
 
 An unavailable type raises an explicit lookup error. It never resolves to a different type.
-Existing database project reads retain the stored type and config. That read guarantee does
-not yet define missing-plugin archive import, execution or editing behavior; those remain
-part of the later lifecycle work.
+Existing database project reads retain the stored type and config. Export refuses an unavailable
+type because its archive policy cannot be checked. Missing-plugin archive import, execution and
+editing still need the later lifecycle work; the legacy import fallback is not changed here.
 
 ## Verification
 
@@ -143,3 +198,7 @@ discovery and draft validation. Slot tests use real built-in baseline graphs to 
 selection, stale-revision rejection and model defaults. Frontend tests cover the same declared
 defaults and a field whose name is not built in. The five built-in form payloads remain unchanged
 by the class conversion; slot behavior adds binding metadata to their existing flow contracts.
+Capability tests cover installed-plugin metadata, custom reference targets, empty-project ZIP
+round trips, blocked archive import/export, blocked composition dependencies, foreign project
+privacy and rollback on a reference mismatch. UI tests cover panel selection for a renamed type
+and retaining the selected form tab while metadata loads.
