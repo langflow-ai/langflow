@@ -19,6 +19,7 @@ from lfx.log.logger import logger
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+
 # Env vars named like the header they become. ``lfx-mcp`` is a stdio server, so a
 # client config can only reach it through ``env`` -- there is no ``headers`` field for
 # a subprocess -- and this is the only channel for per-request global variables.
@@ -30,6 +31,7 @@ def _global_var_headers() -> dict[str, str]:
     return {
         name: value for name, value in os.environ.items() if name.upper().startswith(GLOBAL_VAR_ENV_PREFIX) and value
     }
+
 
 class LangflowClient:
     """Async HTTP client for Langflow's REST API.
