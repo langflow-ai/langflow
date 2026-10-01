@@ -37,6 +37,26 @@ from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, Duplic
 # couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
 
+# Micro-batching window for append_event: calls made within this many seconds of each
+# other (across any jobs) share DB round trips instead of each opening its own
+# session_scope() (pool checkout). Durable agent runs stream one event per step/token,
+# so a fresh checkout per event is the dominant source of connection churn for chatty
+# runs. The caller's contract is unchanged -- append_event still awaits and returns the
+# real, gap-free seq -- only the number of connection checkouts changes.
+_APPEND_EVENT_BATCH_WINDOW_S = 0.01
+
+
+class _PendingAppend:
+    """One queued append_event call, waiting on its assigned seq."""
+
+    __slots__ = ("event_type", "future", "job_id", "payload")
+
+    def __init__(self, job_id: UUID, event_type: str, payload: dict, future: asyncio.Future) -> None:
+        self.job_id = job_id
+        self.event_type = event_type
+        self.payload = payload
+        self.future = future
+
 # Statuses that mean the run is over and the row is retention-eligible. Every
 # other status (QUEUED, IN_PROGRESS, SUSPENDED) is live work: a SUSPENDED run
 # is waiting on a human who may answer weeks later, so age never makes it
@@ -70,6 +90,8 @@ class JobService(Service):
     def __init__(self):
         """Initialize the job service."""
         self.set_ready()
+        self._append_queue: list[_PendingAppend] = []
+        self._append_flushing = False
 
     async def get_jobs_by_flow_id(
         self, flow_id: UUID | str, user_id: UUID, page: int = 1, page_size: int = 10
@@ -399,37 +421,87 @@ class JobService(Service):
     async def append_event(self, job_id: UUID, event_type: str, payload: dict) -> int:
         """Append a durable event for a job and return its per-job seq.
 
-        seq is assigned as max(existing seq for job) + 1. UNIQUE(job_id, seq)
-        guards against concurrent double-assignment: a colliding writer hits
-        IntegrityError, and we retry with a freshly re-read max so every event
-        lands gap-free even when a worker and the orphan sweep (or, in the
-        scaled backend, multiple processes) append to the same job at once.
+        Queues the request; if no flush is currently in flight, this call becomes the
+        flusher for the batch window (see the inline flush below), otherwise it just
+        waits on its future alongside whichever call IS the current flusher. The flush
+        is deliberately inline on a real caller's own await chain rather than a detached
+        ``asyncio.create_task`` -- a detached task can outlive the caller that spawned it
+        (e.g. across a test's fixture teardown swapping the database service mid-flight),
+        so tying it to a live caller means it can never run after every caller is gone.
+        The caller's contract is unchanged -- this still awaits and returns the real,
+        gap-free seq -- only the number of DB connection checkouts changes.
+        """
+        future: asyncio.Future = asyncio.get_running_loop().create_future()
+        self._append_queue.append(_PendingAppend(job_id, event_type, payload, future))
+        if not self._append_flushing:
+            self._append_flushing = True
+            try:
+                await asyncio.sleep(_APPEND_EVENT_BATCH_WINDOW_S)
+                batch, self._append_queue = self._append_queue, []
+            finally:
+                # Reset before the (slow) flush below so a caller appending while this
+                # batch is being written becomes the flusher for the next window
+                # immediately, instead of queuing behind a flush that already stopped
+                # watching self._append_queue. Reset is unconditional (finally) so a
+                # cancelled flusher never leaves every future caller waiting forever.
+                self._append_flushing = False
+            if batch:
+                by_job: dict[UUID, list[_PendingAppend]] = {}
+                for item in batch:
+                    by_job.setdefault(item.job_id, []).append(item)
+                await asyncio.gather(*(self._flush_job_batch(job_id, items) for job_id, items in by_job.items()))
+        return await future
+
+    async def _flush_job_batch(self, job_id: UUID, items: list[_PendingAppend]) -> None:
+        """Insert one job's batched events in a single session, retrying on seq collision.
+
+        seq is assigned as max(existing seq for job) + 1 for the whole batch in one read.
+        UNIQUE(job_id, seq) guards against concurrent double-assignment: a colliding flush
+        hits IntegrityError, and the whole batch retries with a freshly re-read max so every
+        event lands gap-free even when a worker and the orphan sweep (or, in the scaled
+        backend, multiple processes) append to the same job at once. Every pending future is
+        guaranteed to resolve, successfully or with the failure, so no caller hangs.
         """
         last_exc: Exception | None = None
-        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
-            try:
-                async with session_scope() as session:
-                    stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id)
-                    result = await session.exec(stmt)
-                    current_max = result.one()
-                    next_seq = (current_max or 0) + 1
-                    event = JobEvent(job_id=job_id, seq=next_seq, event_type=event_type, payload=payload)
-                    session.add(event)
-                    await session.flush()
-                    return next_seq
-            except IntegrityError as exc:
-                # Lost the (job_id, seq) race — re-read max and try again.
-                last_exc = exc
-            except OperationalError as exc:
-                # SQLite "database is locked"/busy under concurrent writers is transient.
-                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
-                    raise
-                last_exc = exc
-            # Yield + brief backoff so the contending writer can commit before we retry.
-            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
-        # Exhausted retries under sustained contention — surface the last collision.
-        msg = f"append_event exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (seq contention)"
-        raise RuntimeError(msg) from last_exc
+        try:
+            for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+                try:
+                    async with session_scope() as session:
+                        stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id)
+                        result = await session.exec(stmt)
+                        current_max = result.one() or 0
+                        events = [
+                            JobEvent(
+                                job_id=job_id,
+                                seq=current_max + offset,
+                                event_type=item.event_type,
+                                payload=item.payload,
+                            )
+                            for offset, item in enumerate(items, start=1)
+                        ]
+                        session.add_all(events)
+                        await session.flush()
+                        for item, event in zip(items, events, strict=True):
+                            if not item.future.done():
+                                item.future.set_result(event.seq)
+                        return
+                except IntegrityError as exc:
+                    # Lost the (job_id, seq) race for this batch — re-read max and retry.
+                    last_exc = exc
+                except OperationalError as exc:
+                    # SQLite "database is locked"/busy under concurrent writers is transient.
+                    if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                        raise
+                    last_exc = exc
+                # Yield + brief backoff so the contending writer can commit before we retry.
+                await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+            # Exhausted retries under sustained contention — surface the last collision.
+            msg = f"append_event exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (seq contention)"
+            raise RuntimeError(msg) from last_exc
+        except Exception as exc:  # noqa: BLE001 — every pending future must resolve, success or failure
+            for item in items:
+                if not item.future.done():
+                    item.future.set_exception(exc)
 
     async def read_events(self, job_id: UUID, after_seq: int = 0) -> list[JobEvent]:
         """Return durable events for a job with seq > after_seq, ordered by seq.

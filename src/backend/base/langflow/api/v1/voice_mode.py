@@ -32,7 +32,7 @@ from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from websockets.asyncio.client import ClientConnection
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, release_db_transaction
 from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.flows_helpers import _read_flow
 from langflow.memory import aadd_messagetables
@@ -820,6 +820,11 @@ async def flow_as_tool_websocket(
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
+        # No more DB work follows on this session for the rest of the connection's
+        # lifetime, which spans a long-lived realtime audio stream (minutes, not a
+        # request/response round trip). Release the connection back to the pool now
+        # instead of pinning it "idle in transaction" for the whole call.
+        await release_db_transaction(session)
 
         # Resolve voice config only after authentication and flow authorization,
         # scoped to this user.
@@ -1293,6 +1298,11 @@ async def flow_tts_websocket(
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
+        # No more DB work follows on this session for the rest of the connection's
+        # lifetime, which spans a long-lived realtime audio stream (minutes, not a
+        # request/response round trip). Release the connection back to the pool now
+        # instead of pinning it "idle in transaction" for the whole call.
+        await release_db_transaction(session)
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
