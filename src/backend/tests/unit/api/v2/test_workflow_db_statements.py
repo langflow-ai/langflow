@@ -21,9 +21,9 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_queue_service, get_task_service
 from lfx.services.deps import session_scope
-from sqlalchemy import event
+from sqlalchemy import event, text
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -67,14 +67,26 @@ def _record_db_round_trips():
         event.remove(sync_engine.pool, "checkout", on_checkout)
 
 
-async def _settle(recorder: _Recorder) -> None:
-    """Wait for fire-and-forget work (the memory-base hook) to finish its statements."""
-    seen = -1
-    for _ in range(50):
-        if len(recorder.statements) == seen:
-            return
-        seen = len(recorder.statements)
-        await asyncio.sleep(0.05)
+def _local_tasks() -> set[asyncio.Task]:
+    """Snapshot the real local task handles, including completed output hooks."""
+    assert not get_task_service().use_celery, "Round-trip tests require the local task backend"
+    # The queue exposes lookup by job ID, but no public task enumeration API.
+    return {row[2] for row in get_queue_service()._queues.values() if row[2] is not None}
+
+
+async def _await_run_tasks(before: set[asyncio.Task]) -> None:
+    """Join this run's hook tasks and their children before ending SQL recording."""
+    joined: set[asyncio.Task] = set()
+
+    async def drain() -> None:
+        while tasks := _local_tasks() - before - joined:
+            # Awaiting the handles propagates task failures as well as waiting
+            # through idle periods before the hook issues its first statement.
+            await asyncio.gather(*tasks)
+            joined.update(tasks)
+
+    await asyncio.wait_for(drain(), timeout=10)
+    assert joined, "Expected a tracked memory-base output hook"
 
 
 @pytest.fixture
@@ -124,32 +136,46 @@ async def chat_flow(request, created_api_key, json_memory_chatbot_no_llm):
 
 
 async def _run(client: AsyncClient, api_key: str, flow_id, mode: str, session_id: str) -> None:
+    before = _local_tasks()
     body = {"flow_id": str(flow_id), "input_value": "hello", "mode": mode, "session_id": session_id}
     response = await client.post("api/v2/workflows", json=body, headers={"x-api-key": api_key})
     assert response.status_code == 200, response.text
     if mode == "sync":
         assert response.json()["status"] == "completed", response.text
+    else:
+        assert response.headers["content-type"].startswith("text/event-stream"), response.text
+        events = [
+            json.loads(line.removeprefix("data:").strip())
+            for line in response.text.splitlines()
+            if line.startswith("data:")
+        ]
+        assert events, "Stream had no JSON event payloads"
+        assert not any(item.get("event") == "error" for item in events), events
+        assert events[-1].get("event") == "end", events
+        outputs = [item["data"] for item in events if item.get("event") == "output"]
+        assert outputs, "Stream ended without a terminal component output"
+        assert all(output["status"] == "completed" and output["type"] != "error" for output in outputs), outputs
+        assert all(isinstance(output.get("content"), str) and output["content"].strip() for output in outputs), outputs
+    await _await_run_tasks(before)
 
 
 async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Recorder:
     session_id = f"db-round-trips-{mode}"
     # Warm up once so one-off work (first flow load, lazy setup) is not counted.
     await _run(client, api_key, flow_id, mode, session_id)
-    await asyncio.sleep(0.2)
     with _record_db_round_trips() as recorder:
         await _run(client, api_key, flow_id, mode, session_id)
-        await _settle(recorder)
     print(f"\n{mode}: {len(recorder.statements)} statements, {recorder.checkouts} checkouts")  # noqa: T201
     for statement in recorder.statements:
         print(f"  {statement}")  # noqa: T201
     return recorder
 
 
-# Statements and pool checkouts for one sync run, per flow. Update these on
-# purpose: a new round trip on this path costs every workflow run.
-_SYNC_ROUND_TRIPS = {
-    "memory_chatbot": (9, 8),
-    "simple_chat": (10, 8),
+# Statements and pool checkouts for one run, per flow and mode. Update these
+# on purpose: a new round trip on this path costs every workflow run.
+_ROUND_TRIPS = {
+    "memory_chatbot": {"sync": (9, 8), "stream": (12, 11)},
+    "simple_chat": {"sync": (10, 8), "stream": (13, 11)},
 }
 
 
@@ -169,5 +195,53 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
     if mode == "sync":
         # The sync job row is created IN_PROGRESS and written once more when it ends.
         assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
-        flow_name = request.node.callspec.params["chat_flow"]
-        assert (len(statements), recorder.checkouts) == _SYNC_ROUND_TRIPS[flow_name], statements
+    flow_name = request.node.callspec.params["chat_flow"]
+    assert (len(statements), recorder.checkouts) == _ROUND_TRIPS[flow_name][mode], statements
+
+
+@pytest.mark.usefixtures("client")
+async def test_run_task_wait_includes_delayed_child_sql():
+    """Keep recording until a gated hook and the task it spawns both finish."""
+    hook_started = asyncio.Event()
+    release_hook = asyncio.Event()
+    child_started = asyncio.Event()
+    release_child = asyncio.Event()
+
+    async def child() -> None:
+        child_started.set()
+        await release_child.wait()
+        async with session_scope() as session:
+            await session.execute(text("SELECT 2"))
+
+    async def hook() -> None:
+        hook_started.set()
+        await release_hook.wait()
+        async with session_scope() as session:
+            await session.execute(text("SELECT 1"))
+        await get_task_service().fire_and_forget_task(child)
+
+    async def record_hook() -> _Recorder:
+        before = _local_tasks()
+        with _record_db_round_trips() as recorder:
+            await get_task_service().fire_and_forget_task(hook)
+            await _await_run_tasks(before)
+        return recorder
+
+    measurement = asyncio.create_task(record_hook())
+    try:
+        await asyncio.wait_for(hook_started.wait(), timeout=10)
+        assert not measurement.done(), "Recording ended while the hook was blocked"
+        release_hook.set()
+        await asyncio.wait_for(child_started.wait(), timeout=10)
+        assert not measurement.done(), "Recording ended while the child was blocked"
+        release_child.set()
+        recorder = await asyncio.wait_for(measurement, timeout=10)
+    finally:
+        release_hook.set()
+        release_child.set()
+        if not measurement.done():
+            measurement.cancel()
+        await asyncio.gather(measurement, return_exceptions=True)
+
+    assert recorder.statements == ["SELECT", "SELECT"]
+    assert recorder.checkouts == 2
