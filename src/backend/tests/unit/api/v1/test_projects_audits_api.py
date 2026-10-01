@@ -11,7 +11,7 @@ from langflow.services.database.models.auth import AuthzRole
 from langflow.services.deps import get_settings_service, session_scope
 from sqlmodel import select
 
-from .audit_helpers import enabled_audit, events_by_user, login, make_user
+from .audit_helpers import authz_rows_for, enabled_audit, events_by_user, login, make_user
 
 pytestmark = pytest.mark.usefixtures("audit_on")
 
@@ -281,6 +281,17 @@ async def test_reading_records_nothing(client, logged_in_headers, active_user):
     await client.get("api/v1/projects/audits?bogus=1", headers=logged_in_headers)
 
     assert len(await events_by_user(active_user.id)) == before
+
+
+async def test_reading_records_no_authorization_decision_either(client, logged_in_headers, active_user, monkeypatch):
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    await _project(client, logged_in_headers)
+    before = await authz_rows_for(active_user.id)
+    assert before > 0, "the authorization audit must be recording for this check to mean anything"
+
+    await _audits(client, logged_in_headers)
+
+    assert await authz_rows_for(active_user.id) == before
 
 
 async def test_invalid_input_is_a_400_never_a_422(client, logged_in_headers):
