@@ -12,6 +12,7 @@ import json
 import math
 import os
 import platform
+import re
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -60,9 +61,10 @@ def pytest_collection_modifyitems(config, items):
         marker = item.get_closest_marker("flaky")
         reason = marker.kwargs.get("reason", "") if marker else ""
         if marker and (
-            marker.kwargs.get("reruns") != 1
+            type(marker.kwargs.get("reruns")) is not int
+            or marker.kwargs["reruns"] != 1
             or not isinstance(reason, str)
-            or not reason.startswith("https://github.com/")
+            or not re.fullmatch(r"https://github\.com/[^/?#\s]+/[^/?#\s]+/issues/[1-9][0-9]*(?:#[^\s]*)?", reason)
         ):
             msg = "CI flaky markers require reruns=1 and a GitHub issue URL in reason"
             raise pytest.UsageError(msg)
