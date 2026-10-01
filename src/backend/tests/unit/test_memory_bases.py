@@ -3909,6 +3909,7 @@ class TestMemoryBaseDBDriven:
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)),
             patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch("langflow.services.memory_base.service.cancel_active_jobs", AsyncMock()),
+            patch("langflow.services.memory_base.service.delete_kb_remote_collection", AsyncMock()),
             patch("langflow.services.memory_base.service.delete_kb", AsyncMock()),
             patch("langflow.api.utils.knowledge_base_service.delete_by_user_and_name", delete_row),
         ):

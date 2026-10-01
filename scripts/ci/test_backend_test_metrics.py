@@ -132,6 +132,36 @@ def test_worker_crash_keeps_reports_but_cannot_publish_timings(tmp_path):
     assert not (reports / "durations.json").exists()
 
 
+def test_worker_timeout_preserves_blocked_stack(tmp_path):
+    result, reports, summary = run_suite(
+        tmp_path,
+        "import time\ndef test_blocked(): time.sleep(30)\n",
+        "-p",
+        "xdist.plugin",
+        "-p",
+        "pytest_timeout",
+        "-n",
+        "1",
+        "--timeout=2",
+        "--timeout-method=thread",
+        "--max-worker-restart=0",
+    )
+    assert result.returncode != 0
+    assert summary["complete"] is False
+    assert summary["worker_crashes"] == 1
+    stacks = (reports / "stacks-gw0.txt").read_text()
+    assert "Approaching test timeout:" in stacks
+    assert "test_blocked" in stacks
+    assert "test_sample.py" in stacks
+
+
+def test_success_cancels_timeout_diagnostic(tmp_path):
+    result, reports, summary = run_suite(tmp_path, "def test_ok(): pass\n", "-p", "pytest_timeout", "--timeout=1")
+    assert result.returncode == 0
+    assert summary["complete"] is True
+    assert (reports / "stacks-master.txt").read_text() == ""
+
+
 @pytest.mark.parametrize(
     "marker",
     [
