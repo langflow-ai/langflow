@@ -127,6 +127,7 @@ EXPECTED_FIELDS = {
     # ObservabilitySettings
     "prometheus_enabled",
     "prometheus_port",
+    "background_metrics_interval",
     "max_transactions_to_keep",
     "max_vertex_builds_to_keep",
     "max_vertex_builds_per_vertex",
@@ -637,3 +638,23 @@ def test_serving_end_user_env_vars_bind_to_fields(monkeypatch):
     assert settings.serving_end_user_header == "X-End-User-Id"
     assert settings.serving_trust_proxy_headers is True
     assert settings.serving_end_user_required is True
+
+
+def test_background_metrics_interval_default(monkeypatch):
+    """A default collector tick is fifteen seconds."""
+    monkeypatch.delenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", raising=False)
+    assert Settings().background_metrics_interval == 15
+
+
+def test_background_metrics_interval_from_environment(monkeypatch):
+    """The documented environment variable controls the positive tick interval."""
+    monkeypatch.setenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", "27")
+    assert Settings().background_metrics_interval == 27
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_background_metrics_interval_rejects_nonpositive_environment(monkeypatch, value):
+    """Invalid intervals cannot turn the collector into a database busy loop."""
+    monkeypatch.setenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", value)
+    with pytest.raises(ValidationError, match="background_metrics_interval"):
+        Settings()

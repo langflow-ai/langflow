@@ -21,6 +21,7 @@ from langflow.services.database.models.jobs.crud import (
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
+from langflow.services.database.models.jobs.metrics import archive_retention_metrics, prepare_retention_metrics
 from langflow.services.database.models.jobs.model import (
     ExecutionSignal,
     Job,
@@ -780,7 +781,9 @@ class JobService(Service):
         sweep skips rows the first has locked and takes a disjoint batch instead
         of queueing behind it (or deadlocking on the child deletes), and a
         selected row cannot change status before it is deleted. SQLite renders
-        no lock clause and serializes writers on its own.
+        no lock clause, so a metrics-archive insert reserves its writer before
+        selecting the batch. Background outcome totals are archived in this
+        same transaction, independently of whether Prometheus is enabled.
 
         On SQLite, each DELETE uses at most 500 job IDs to stay below older
         builds' 999-variable limit; the selected batch remains one transaction.
@@ -822,6 +825,7 @@ class JobService(Service):
         )
         preserves_memory_state = exists().where(col(MemoryBaseWorkflowRun.ingestion_job_id) == col(Job.job_id))
         async with session_scope() as session:
+            await prepare_retention_metrics(session)
             result = await session.exec(
                 select(Job.job_id)
                 .where(
@@ -839,6 +843,7 @@ class JobService(Service):
             delete_batch_size = 500 if session.get_bind().dialect.name == "sqlite" else len(job_ids)
             for start in range(0, len(job_ids), delete_batch_size):
                 batch_ids = job_ids[start : start + delete_batch_size]
+                await archive_retention_metrics(session, batch_ids)
                 for child in (JobEvent, ExecutionSignal, JobCheckpoint):
                     await session.exec(delete(child).where(col(child.job_id).in_(batch_ids)))  # type: ignore[call-overload]
                 await session.exec(delete(Job).where(col(Job.job_id).in_(batch_ids)))  # type: ignore[call-overload]
