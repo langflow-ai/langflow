@@ -148,6 +148,83 @@ request transaction (`owns_transaction=False`). Project delete still commits MCP
 cleanup first; that does not affect the audit, because the Project removal and
 its event share the later transaction.
 
+## Read API: `GET /api/v1/projects/audits`
+
+A read-only, Project-specific view over `audit_events`. It never returns
+Project or Flow content, and reading records no event.
+
+**Query parameters** — `project_id`, `operation`* (`create`, `replace`, `patch`,
+`delete`), `event_type`* (`action`), `result`* (`succeeded`, `failed`),
+`user_id`, `actor_type`*, `actor_id`, `acting_subject`, `acting_issuer`
+(requires `acting_subject`), `request_id`, `since` (inclusive RFC 3339),
+`until` (exclusive, later than `since`), `cursor`, `limit` (1–200, default 50).
+Parameters marked * are repeatable and ORed; different parameters are ANDed.
+
+**400** for an unknown parameter, an empty value, a malformed UUID or timestamp
+(an offset is required), an unsupported value, a repeated non-repeatable
+parameter, an out-of-range limit, or a cursor used with different filters.
+
+**Response**
+
+```json
+{
+  "items": [
+    {
+      "id": "…", "timestamp": "2026-09-11T16:42:18.284123Z",
+      "project_id": "…", "project_name": "support-automation",
+      "action": "project:write", "operation": "patch",
+      "event_type": "action", "result": "succeeded", "error_code": null,
+      "request_id": "…",
+      "actor": {"type": "user", "id": "…", "user_id": "…", "acting_issuer": null, "acting_subject": null},
+      "details": {"schema_version": 1, "description": "…"}
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+Nullable and always present: `project_name`, `error_code`, `actor.id`,
+`actor.user_id`, `actor.acting_issuer`, `actor.acting_subject`, `next_cursor`.
+No total and no page number. Ordered by `(timestamp DESC, id DESC)`; the
+timestamp keeps microseconds so a client re-sorting a page agrees with the server.
+
+**Access.** Requires the `project:audit_read` permission (`ProjectAction.AUDIT_READ`),
+which a role can grant like any other `project:*` action. Resource ownership does
+not implicitly grant this permission when an authorization plugin is active.
+
+| Caller | Without `project_id` | With `project_id` |
+|---|---|---|
+| Plugin with cross-user fetch | global `project:audit_read` | `project:audit_read` on that Project |
+| No plugin, superuser | every Project event | that Project's events |
+| No plugin, other users | events on Projects they own, in the Project's current life, and events they made | the same, narrowed to that Project |
+
+**Ownership is of the id, and an id can be reused.** `PUT /projects/{id}` and
+`PUT /flows/{id}` create at an id the caller chooses, and deleting frees that id,
+so owning it today cannot grant everything that ever happened to it: otherwise
+re-creating a deleted resource would hand its previous owner's trail to whoever
+asked. Without a plugin, the owner floor is therefore scoped to the resource's
+**current life**, read from the events themselves, per id *and* resource type:
+
+* the newest `create` is where the current life began, and belongs to it;
+* a newer `delete` means that create ended a life that is over — the current one
+  began after it with a create nobody recorded (auditing off, or `create`
+  excluded) — so the window opens *after* the delete;
+* with neither recorded, the id was never freed and the whole stored history
+  belongs to the resource that is there now.
+
+That last case is ordinary rather than exotic: retention deletes by age, so a
+long-lived resource loses its `create` first, and default and starter projects
+never record one. Reuse always needs a delete, and retention sweeps everything
+older than a delete along with it, so opening fully when no boundary survives
+cannot expose a previous life. A caller's own events are readable either way.
+
+A deleted resource's events stay readable by whoever acted on them. With a
+plugin, the resource's scope is gone once the row is deleted, so the check runs
+unscoped: only a global `project:audit_read` (or `flow:audit_read`) reads a
+deleted resource's history, not a grant scoped to its former Project or
+workspace. Retaining event-time scope would mean storing it on every event; that
+is a schema change, not part of this delivery.
+
 ## Invariants
 
 1. A succeeded event and its mutation commit or roll back together.
