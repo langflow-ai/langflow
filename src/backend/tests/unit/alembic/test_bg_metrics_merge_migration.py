@@ -29,6 +29,8 @@ def test_job_metrics_and_release_have_single_head():
         "f9d3b7a5c201",  # pragma: allowlist secret
         "c3e1d5a7f902",  # pragma: allowlist secret
         "f194a1b2c3d4",  # pragma: allowlist secret
+        "a6d8e0f2b4c7",  # pragma: allowlist secret
+        "b5d8e2a4c617",  # pragma: allowlist secret
     ],
 )
 def test_job_metrics_and_release_upgrade_to_single_head(db_url, prior_revision):  # noqa: F811
