@@ -80,7 +80,7 @@ def test_litellm_dependent_extras_are_available_on_python_314() -> None:
     optional = _load_base_pyproject()["project"]["optional-dependencies"]
 
     litellm = next(Requirement(spec) for spec in optional["litellm"] if Requirement(spec).name == "litellm")
-    assert any(spec.operator == ">=" and spec.version == "1.93.0" for spec in litellm.specifier)
+    assert any(spec.operator == ">=" and spec.version == "1.96.2" for spec in litellm.specifier)
     assert litellm.marker is None
 
     opik = next(Requirement(spec) for spec in optional["opik"] if Requirement(spec).name == "opik")
@@ -93,7 +93,7 @@ def test_litellm_dependent_extras_are_available_on_python_314() -> None:
 
 def test_litellm_override_preserves_opik_python310_compatibility() -> None:
     python_310 = _active_litellm_override("3.10").specifier
-    assert Version("1.96.0") in python_310
+    assert Version("1.96.2") in python_310
     assert Version("1.97.0") not in python_310
 
     python_314 = _active_litellm_override("3.14").specifier
