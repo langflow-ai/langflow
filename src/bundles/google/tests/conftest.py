@@ -18,6 +18,7 @@ import pytest
 from googleapiclient.http import HttpMockSequence
 from lfx.integrations.models import ResolvedCredential
 from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.utils import file_path_security
 from pydantic import SecretStr
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "google_workspace"
@@ -116,3 +117,18 @@ def wire(component, responses: list[tuple[dict[str, str], bytes]], *, connection
     http = RecordedHttp(list(responses))
     component._workspace_http = http  # documented test seam, see _workspace_client._build_service
     return http
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_local_file_access(monkeypatch):
+    """The suite's baseline: an attachment is read from an ordinary local path.
+
+    ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` defaults to true, so containment is
+    the behaviour its own tests turn on around themselves; every other test here
+    reads the files it just wrote under ``tmp_path``.
+    """
+    monkeypatch.setattr(
+        file_path_security,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
