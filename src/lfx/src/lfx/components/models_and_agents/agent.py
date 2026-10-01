@@ -546,8 +546,11 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             prompt = prompt.replace(placeholder, value)
         return prompt
 
-    def create_agent_runnable(self, *, allow_interrupts: bool = True):
+    def create_agent_runnable(self, *, allow_interrupts: bool = True, llm: Any | None = None):
         """Build the LangGraph `CompiledStateGraph` via `langchain.agents.create_agent`.
+
+        Callers may supply the model already resolved for this execution attempt.
+        Direct calls without a model resolve one as before.
 
         Replaces the legacy `AgentExecutor` runnable inherited from
         `ToolCallingAgentComponent`. Other agent components (tool_calling, csv, json,
@@ -568,7 +571,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
           catches Pydantic ValidationErrors from bad args and feeds the error back
           to the LLM as a retry signal, so the agent recovers gracefully.
         """
-        llm = self._get_llm()
+        if llm is None:
+            llm = self._get_llm()
         tools = self.tools or []
 
         # Eager bind_tools validation. `create_agent(...)` is lazy — without this,
@@ -921,7 +925,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 input_value=self.input_value,
                 system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),
             )
-            agent = self.create_agent_runnable()
+            agent = self.create_agent_runnable(llm=llm_model)
             return await self.run_agent(agent)
 
         result = await self._run_agent_with_model_remediation(_run_once)
@@ -967,7 +971,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     system_prompt=augmented_prompt,
                 )
                 # Structured output cannot suspend mid-parse: disable tool-approval interrupts.
-                agent_runnable = self.create_agent_runnable(allow_interrupts=False)
+                agent_runnable = self.create_agent_runnable(allow_interrupts=False, llm=llm_model)
                 return await self.run_agent(agent_runnable)
 
             with _suppress_send_message(self):
