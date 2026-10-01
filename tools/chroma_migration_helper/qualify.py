@@ -7,7 +7,8 @@ launcher always requires its signed release digest.
 
 # This standalone qualification process serially drives its own synthetic test
 # containers. It is not an application event loop or an untrusted command API.
-# ruff: noqa: ASYNC221, S603
+# Private helpers are deliberately exercised as production qualification targets.
+# ruff: noqa: ASYNC221, S603, SLF001
 
 from __future__ import annotations
 
@@ -30,11 +31,22 @@ from lfx.base.knowledge_bases.migration.importer import import_qualified_export
 from lfx.base.knowledge_bases.migration.protocol import qualify_export
 
 
-async def qualify(image: str) -> None:
+async def qualify(image: str, *, signed: bool = False) -> dict:
     docker = shutil.which("docker")
     if not docker:
         msg = "Docker is required for actual helper containment qualification"
         raise RuntimeError(msg)
+    source_image = image
+    if signed:
+        if os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_IMAGE") != image:
+            msg = "Signed qualification requires the exact configured release image"
+            raise ValueError(msg)
+        cosign = shutil.which("cosign")
+        if not cosign or not os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_BUNDLE"):
+            msg = "Signed qualification requires offline production verification material"
+            raise ValueError(msg)
+        # The fixture generator also selects only the verified immutable content.
+        source_image = await helper._stage_verified_helper(docker, cosign, image)
     scratch_parent = os.environ.get("LANGFLOW_HELPER_TEST_TMPDIR")
     with tempfile.TemporaryDirectory(prefix="langflow-helper-qualification-", dir=scratch_parent) as scratch:
         root = Path(scratch).resolve()
@@ -47,6 +59,7 @@ async def qualify(image: str) -> None:
                 docker,
                 "run",
                 "--rm",
+                "--pull=never",
                 "--network=none",
                 "--user",
                 str(uid or 10001),
@@ -55,7 +68,7 @@ async def qualify(image: str) -> None:
                 "--entrypoint",
                 "python",
                 "--interactive",
-                image,
+                source_image,
                 "-",
             ],
             input=fixture,
@@ -84,9 +97,9 @@ except OSError:
 else:
     raise AssertionError("Helper has external network access")
 """
-        isolated = isolated_command(docker, image, root / "source", f"lf-helper-boundary-{uuid4().hex}")
+        isolated = isolated_command(docker, source_image, root / "source", f"lf-helper-boundary-{uuid4().hex}")
         subprocess.run(
-            [*isolated[:-1], "--entrypoint", "python", image, "-c", containment],
+            [*isolated[:-1], "--entrypoint", "python", source_image, "-c", containment],
             check=True,
             timeout=30,
             capture_output=True,
@@ -107,23 +120,27 @@ else:
             # Qualify the exact production create/start/stream/cleanup path.
             # Signing is a separate release gate. Only artifact staging is
             # replaced here, since this synthetic image has not been published.
-            which = shutil.which
-            with (
-                patch.dict(
-                    os.environ,
-                    {
-                        "LANGFLOW_KB_MIGRATION_HELPER_IMAGE": "ghcr.io/langflow-ai/langflow-chroma-migration@sha256:"
-                        + "0" * 64
-                    },
-                ),
-                patch.object(helper, "_stage_verified_helper", AsyncMock(return_value=image)),
-                patch.object(
-                    helper.shutil,
-                    "which",
-                    side_effect=lambda tool, resolve=which: docker if tool == "cosign" else resolve(tool),
-                ),
-            ):
+            if signed:
                 header = await helper.export_snapshot(root / "source", output, **request)
+            else:
+                which = shutil.which
+                with (
+                    patch.dict(
+                        os.environ,
+                        {
+                            "LANGFLOW_KB_MIGRATION_HELPER_IMAGE": (
+                                "ghcr.io/langflow-ai/langflow-chroma-migration@sha256:" + "0" * 64
+                            )
+                        },
+                    ),
+                    patch.object(helper, "_stage_verified_helper", AsyncMock(return_value=image)),
+                    patch.object(
+                        helper.shutil,
+                        "which",
+                        side_effect=lambda tool, resolve=which: docker if tool == "cosign" else resolve(tool),
+                    ),
+                ):
+                    header = await helper.export_snapshot(root / "source", output, **request)
             backend = SQLiteBackend(
                 kb_name=f"fixture-{metric}",
                 backend_config={"metric": header.metric},
@@ -155,7 +172,7 @@ else:
         for path in corrupted.glob("*/index_metadata.pickle"):
             path.write_bytes(b"not a pickle or a supported native index")
         failed = subprocess.run(
-            isolated_command(docker, image, corrupted, f"lf-helper-corrupt-{uuid4().hex}"),
+            isolated_command(docker, source_image, corrupted, f"lf-helper-corrupt-{uuid4().hex}"),
             input=json.dumps({**request, "collection_name": "fixture-l2"}).encode(),
             capture_output=True,
             timeout=120,
@@ -167,11 +184,15 @@ else:
         print(  # noqa: T201 -- standalone qualification evidence for CI
             f"Qualified {total} records across L2/cosine/inner-product and a known-dimension empty store. "
             f"Persisted indexes: {len(persisted)}. Production reader creation, streaming and cleanup passed. "
+            "Stored trust_remote_code embedding configuration remained inert. "
             "Network, source-write and credential isolation passed; malformed native input rejected."
         )
+        return {"records": total, "persisted_indexes": len(persisted), "hostile_embedding_configuration": True}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True)
-    asyncio.run(qualify(parser.parse_args().image))
+    parser.add_argument("--signed", action="store_true", help="Use the unmodified offline production verification path")
+    args = parser.parse_args()
+    asyncio.run(qualify(args.image, signed=args.signed))

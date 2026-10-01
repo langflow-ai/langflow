@@ -4,14 +4,20 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from lfx.log.logger import logger
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import and_
 from sqlmodel import col, select
 
 from langflow.api.utils import DbSession
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
+from langflow.services.knowledge_base_storage.cleanup import retry_pending_cleanup
 from langflow.services.knowledge_base_storage.coordinator import inventory_status, schedule_upgrade
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 
 router = APIRouter(prefix="/knowledge-base-storage", tags=["Knowledge Base Upgrade"])
 
@@ -23,6 +29,12 @@ _GUIDANCE = {
     "interrupted": "The upgrade was interrupted. Retry resumes the unpublished generation safely.",
     "migration_failed": "Verify helper availability, source compatibility and free disk space, then retry.",
 }
+
+
+class CleanupRetryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_generation: int = Field(gt=0, strict=True)
 
 
 @router.get("/inventory")
@@ -39,14 +51,56 @@ async def pending_cleanup(session: DbSession, _admin: Annotated[User, Depends(ge
             .limit(500)
         )
     ).all()
+    memory_ids: dict[UUID, list[UUID]] = {}
+    if rows:
+        references = (
+            await session.exec(
+                select(KnowledgeBaseRecord.id, MemoryBase.id)
+                .join(
+                    MemoryBase,
+                    and_(
+                        col(MemoryBase.user_id) == KnowledgeBaseRecord.user_id,
+                        col(MemoryBase.kb_name) == KnowledgeBaseRecord.name,
+                    ),
+                )
+                .where(col(KnowledgeBaseRecord.id).in_([row.id for row in rows]))
+            )
+        ).all()
+        for kb_id, memory_id in references:
+            memory_ids.setdefault(kb_id, []).append(memory_id)
     return [
         {
             "kb_id": row.id,
+            "storage_generation": row.storage_generation,
             "state": row.storage_state,
-            "guidance": "Retry the explicit knowledge-base deletion to finish cleanup.",
+            "memory_base_ids": sorted(memory_ids.get(row.id, []), key=str),
+            "guidance": (
+                "Retry deletion of the linked Memory Base to finish its storage and history cleanup."
+                if row.id in memory_ids
+                else "Retry this pending cleanup with its KB UUID and expected storage generation."
+            ),
         }
         for row in rows
     ]
+
+
+@router.post("/pending-cleanup/{kb_id}/retry")
+async def retry_cleanup(
+    kb_id: UUID,
+    request: CleanupRetryRequest,
+    _admin: Annotated[User, Depends(get_current_active_superuser)],
+):
+    try:
+        removed = await retry_pending_cleanup(kb_id, expected_generation=request.expected_generation)
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        await logger.awarning("Pending knowledge base cleanup failed for %s", kb_id)
+        raise HTTPException(
+            status_code=503,
+            detail="Storage cleanup could not finish. Resolve storage access or provider availability, then retry.",
+        ) from exc
+    return {"kb_id": kb_id, "status": "deleted" if removed else "already_absent"}
 
 
 @router.get("/migrations")
@@ -67,7 +121,7 @@ async def list_migrations(session: DbSession, _admin: Annotated[User, Depends(ge
             "target_generation": row.target_generation,
             "attempts": row.attempts,
             "error_code": row.error_code,
-            "guidance": _GUIDANCE.get(row.error_code),
+            "guidance": _GUIDANCE.get(row.error_code or ""),
             "count": row.validation.get("count"),
             "updated_at": row.updated_at,
         }

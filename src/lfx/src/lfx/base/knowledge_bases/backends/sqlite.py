@@ -452,7 +452,9 @@ class SQLiteBackend(BaseVectorStoreBackend):
                     self._header(connection)
                     connection.execute("COMMIT")
                 except BaseException:
-                    connection.execute("ROLLBACK")
+                    # FULL/IOERR can make SQLite roll back the transaction itself.
+                    if not connection.get_autocommit():
+                        connection.execute("ROLLBACK")
                     raise
             else:
                 self._header(connection, allow_deleted=allow_deleted)
@@ -565,7 +567,9 @@ class SQLiteBackend(BaseVectorStoreBackend):
                     )
                 connection.execute("COMMIT")
             except BaseException:
-                connection.execute("ROLLBACK")
+                # FULL/IOERR can make SQLite roll back the transaction itself.
+                if not connection.get_autocommit():
+                    connection.execute("ROLLBACK")
                 raise
 
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
@@ -768,7 +772,9 @@ class SQLiteBackend(BaseVectorStoreBackend):
                 )
                 connection.execute("COMMIT")
             except BaseException:
-                connection.execute("ROLLBACK")
+                # FULL/IOERR can make SQLite roll back the transaction itself.
+                if not connection.get_autocommit():
+                    connection.execute("ROLLBACK")
                 raise
 
     async def delete_by(self, where: dict[str, Any]) -> None:
@@ -788,7 +794,9 @@ class SQLiteBackend(BaseVectorStoreBackend):
                         connection.execute("UPDATE store_header SET lifecycle='deleted' WHERE singleton=1")
                     connection.execute("COMMIT")
                 except BaseException:
-                    connection.execute("ROLLBACK")
+                    # FULL/IOERR can make SQLite roll back the transaction itself.
+                    if not connection.get_autocommit():
+                        connection.execute("ROLLBACK")
                     raise
 
         await self._run(tombstone)
@@ -866,7 +874,9 @@ class SQLiteBackend(BaseVectorStoreBackend):
                         connection.execute("UPDATE store_header SET dimension=? WHERE singleton=1", (dimension,))
                     connection.execute("COMMIT")
                 except BaseException:
-                    connection.execute("ROLLBACK")
+                    # FULL/IOERR can make SQLite roll back the transaction itself.
+                    if not connection.get_autocommit():
+                        connection.execute("ROLLBACK")
                     raise
 
         await self._run(set_dimension)

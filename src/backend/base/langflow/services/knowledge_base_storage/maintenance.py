@@ -109,7 +109,12 @@ def _process_matches(identity: dict) -> bool:
         msg = "Invalid previous-worker identity"
         raise MaintenanceRequiredError(msg)
     try:
-        return abs(psutil.Process(identity["pid"]).create_time() - identity["created"]) < _PROCESS_TIME_TOLERANCE
+        process = psutil.Process(identity["pid"])
+        # A retained zombie/dead process cannot write. Some container init
+        # implementations defer reaping orphaned workers after their exit.
+        return process.status() not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD) and (
+            abs(process.create_time() - identity["created"]) < _PROCESS_TIME_TOLERANCE
+        )
     except psutil.NoSuchProcess:
         return False
 

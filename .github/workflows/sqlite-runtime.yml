@@ -5,6 +5,10 @@ on:
   pull_request:
     paths:
       - .github/workflows/sqlite-runtime.yml
+      - .github/workflows/release.yml
+      - scripts/ci/check_migration_helper_release.py
+      - scripts/ci/test_migration_helper_release.py
+      - scripts/ci/test_release_inventory.py
       - scripts/ci/check_sqlite_runtime.py
       - scripts/ci/check_chroma_removal.py
       - '**/pyproject.toml'
@@ -107,15 +111,24 @@ jobs:
         run: |
           uv run --no-sync pytest -q \
             src/backend/tests/unit/base/knowledge_bases/test_sqlite_backend.py \
+            src/backend/tests/unit/base/knowledge_bases/test_sqlite_failure_recovery.py \
             src/backend/tests/unit/base/knowledge_bases/test_sqlite_registry.py \
             src/backend/tests/unit/base/knowledge_bases/test_sqlite_migration.py \
             src/backend/tests/unit/base/knowledge_bases/test_storage_runtime_locks.py \
             src/backend/tests/unit/base/knowledge_bases/test_remote_storage_lifecycle.py \
             src/backend/tests/unit/base/knowledge_bases/test_opensearch_backend.py \
             src/backend/tests/unit/base/knowledge_bases/test_storage_upgrade.py \
+            src/backend/tests/unit/base/knowledge_bases/test_upgrade_controller.py \
+            src/backend/tests/unit/base/knowledge_bases/test_pending_cleanup.py \
             src/backend/tests/unit/base/knowledge_bases/test_sqlite_helper.py \
+            src/backend/tests/unit/base/knowledge_bases/test_signed_helper_kit.py \
             src/backend/tests/unit/base/knowledge_bases/test_sqlite_application.py \
             src/backend/tests/unit/test_kb_storage_deletion.py
+      - name: Test signed helper release gates and application inventory
+        run: |
+          uv run --no-sync pytest -q \
+            scripts/ci/test_migration_helper_release.py \
+            scripts/ci/test_release_inventory.py
       - name: Test saved component source and exported dependency compatibility
         run: |
           uv run --no-sync pytest -q \

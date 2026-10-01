@@ -4,6 +4,9 @@ The local default is SQLite with sqlite-vec. Explicit pgVector configuration
 continues to take precedence. Existing pgVector and OpenSearch stores retain
 their routing. This change targets 1.13.0 only, with no 1.12.5 backport.
 
+See the [qualification evidence](sqlite-kb-qualification.md) for measured tests,
+workloads, the temporary helper disposition and remaining release gates.
+
 The application workspace, universal lock and all-packages/all-extras/all-groups
 export no longer require `chromadb`, `langchain-chroma` or
 `agent-lifecycle-toolkit`. `langflow-base` installs `lfx[sqlite]`, including APSW
@@ -67,14 +70,19 @@ durable migration ledger. It fences existing Chroma rows without reading vector
 data. Ingestion status is independent and cannot clear this fence.
 
 Startup inventories legacy sources and schedules migration automatically. The
-implemented maintenance verifier accepts a **managed single-host installation
-with a SQLite application metadata database**. Its service manager must stop the
-previous supervised API/background/Memory process family before the new version
-starts. This is a maintenance upgrade. An old worker cannot honor the new fence,
+managed controller accepts a **non-root POSIX single-host installation with a
+SQLite application metadata database**, local disk and a dedicated foreground
+supervisor session. See [the controller guide](sqlite-kb-controller.md) for its
+command, prerequisites and resumable states. It stages the verified helper before
+downtime, records and stops the exact API/background/Memory process family,
+creates the backup and receipt, launches the new version, and verifies readiness
+on a listener owned by that new process family. External automatic restarters
+must be disabled before invoking it. This is a maintenance upgrade. An old worker cannot honor the new fence,
 and neither a lease expiry nor an ingestion cancellation request proves it stopped.
 
 The controller records each previous worker's PID and creation time before
-shutdown. After the service manager has stopped them, it invokes the verifier:
+shutdown. It invokes the verifier automatically. Other qualified deployment
+managers can invoke the same verifier after stopping their recorded workers:
 
 ```sh
 python -m langflow.services.knowledge_base_storage.maintenance \
@@ -136,6 +144,14 @@ Authenticated superuser endpoints expose status and exceptional recovery:
 - `GET /api/v1/knowledge-base-storage/migrations`
 - `POST /api/v1/knowledge-base-storage/migrations/{id}/retry`
 - `GET /api/v1/knowledge-base-storage/pending-cleanup`
+- `POST /api/v1/knowledge-base-storage/pending-cleanup/{kb_id}/retry` with
+  `{"expected_generation": <storage_generation from the inventory>}`
+
+Cleanup retry holds the immutable KB identity and generation guard until its
+storage and exact metadata row are removed. Repeated requests are idempotent.
+An active Memory reference returns 409 and its UUID in the admin inventory
+directs the operator to the normal Memory deletion endpoint. This prevents KB
+recovery from silently removing Memory history. Source backups remain retained.
 
 Liveness stays available for administration. Readiness remains false while
 required migrations or inventory problems remain unresolved. Errors are safe
@@ -186,6 +202,16 @@ Its security disposition must address the actual helper findings. A successful
 build or a report generated with findings is not security clearance. Final
 application images and native libraries still require the release scan, and the
 original ticket's scanner IDs must be reconciled before security closure.
+
+The helper workflow additionally reloads each signed platform archive and runs
+the real production verification/export path in an isolated network namespace.
+Only successful qualification of both platforms produces the signed
+`helper-qualification.json` and a versioned offline kit. The main 1.13 release
+workflow requires the kit's release tag through `migration_helper_release` before
+publication. It verifies both signatures, platform/image/archive bindings, source
+ancestry, unchanged helper code and unchanged third-party dependency resolution.
+Workspace version stamps may change. Missing evidence blocks publication.
+Dry runs may build without a kit but explicitly remain unqualified for release.
 
 ## Compatibility and retired providers
 

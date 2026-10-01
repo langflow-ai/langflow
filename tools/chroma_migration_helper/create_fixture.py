@@ -1,6 +1,7 @@
 """Trusted synthetic fixture generator, used only by helper qualification CI."""
 
 import json
+import sqlite3
 from pathlib import Path
 
 import chromadb
@@ -50,3 +51,27 @@ empty = client.create_collection("fixture-empty", embedding_function=None)
 empty.add(ids=["dimension-probe"], embeddings=[[1.0, 2.0, 3.0, 4.0]], documents=["Deleted dimension probe"])
 empty.delete(ids=["dimension-probe"])
 (root / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
+
+# Persist a dangerous Python embedding-function configuration without ever
+# instantiating it. The fixed native reader must export these existing vectors
+# successfully while Python Chroma imports and networking are unavailable.
+client._system.stop()  # noqa: SLF001 -- release the synthetic native store before editing stored configuration
+with sqlite3.connect(root / "source" / "chroma.sqlite3") as connection:
+    config_text = connection.execute(
+        "SELECT config_json_str FROM collections WHERE name = ?", ("fixture-l2",)
+    ).fetchone()[0]
+    config = json.loads(config_text)
+    config["embedding_function"] = {
+        "type": "known",
+        "name": "sentence_transformer",
+        "config": {
+            "model_name": "https://invalid.example/never-load-this-model",
+            "device": "cpu",
+            "normalize_embeddings": False,
+            "kwargs": {"trust_remote_code": True},
+        },
+    }
+    connection.execute(
+        "UPDATE collections SET config_json_str = ?, schema_str = NULL WHERE name = ?",
+        (json.dumps(config), "fixture-l2"),
+    )

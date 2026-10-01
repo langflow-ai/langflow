@@ -106,6 +106,14 @@ The signed release manifest is also verified with networking disabled before
 publication. Only the separately protected release job may sign project
 artifacts. Synthetic qualification never signs or publishes a release.
 
+Before dispatching a release, a repository administrator must configure the
+`chroma-migration-helper-release` environment with at least one required user or
+team reviewer. The workflow checks the environment through GitHub's read-only
+API with `actions: read` before building a publication candidate and rechecks
+before signing and durable publication. An absent or inaccessible environment,
+an API error, or missing required reviewers blocks publication. The workflow
+does not create or configure the environment. A wait timer alone is insufficient.
+
 See [application upgrade and recovery](../../docs/development/sqlite-kb-upgrade.md)
 for the stopped-worker receipt, metadata backup, automatic coordinator and
 release qualification boundaries.
