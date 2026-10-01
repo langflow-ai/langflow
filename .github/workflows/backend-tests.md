@@ -39,6 +39,9 @@ service manager and connection pool. SQLite's backup API includes committed WAL
 pages. User creation and the remainder of the real application lifespan still
 run for each test.
 
+Starter-project file locks use that test database's directory, so another
+worker cannot cause startup to skip seeding an independent database.
+
 Tests under `alembic` and `initial_setup` always use a fresh schema. Add
 `@pytest.mark.full_database_init` to other tests that need schema creation or
 migrations during client startup. Tests that create their own apps or call the
@@ -78,6 +81,13 @@ Compare elapsed time, summed phase time, total runner minutes, memory pressure,
 failure counts and collection size. Run both cold-cache and warm-cache comparisons.
 More workers or shards are adopted only after those measurements show a benefit.
 Local worker benchmarks should run sequentially to avoid competing for CPU.
+
+The default is ten shards with two workers each. The initial Linux/Python 3.10
+comparison on the same commit reduced the longest test job from approximately
+23 minutes (five shards, two workers) to 13 minutes (ten shards, two workers).
+Five shards with four workers took approximately 17 minutes and exposed a
+background-job deadline failure. These first runs also exposed test isolation
+bugs, so they are performance measurements, not successful validation runs.
 
 Scheduled timing refreshes retain their failure notification. Manual benchmarks
 report their results in Actions and do not send that notification. The workflow does not publish benchmark

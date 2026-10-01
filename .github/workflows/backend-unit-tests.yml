@@ -13,7 +13,7 @@ on:
         default: ubuntu-latest
       shards:
         type: number
-        default: 5
+        default: 10
       workers:
         type: number
         default: 2
