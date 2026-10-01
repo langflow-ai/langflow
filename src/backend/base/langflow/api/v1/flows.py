@@ -77,6 +77,7 @@ from langflow.services.audit.operations import (
     describe_flow_body,
     describe_loaded_resource,
     mark_committed,
+    mark_unique_conflict,
     stage_flow_succeeded,
 )
 from langflow.services.auth.utils import get_current_active_user, get_optional_user
@@ -177,17 +178,17 @@ FLOW_PERSIST_FAILED = "Could not persist the flow."
 # ("UNIQUE constraint failed: flow.user_id, flow.name") while PostgreSQL names the constraint
 # ('... violates unique constraint "unique_flow_name"'). Match whichever marker is present so both
 # backends produce the same client-facing detail. Every constraint below is named in the models.
-_UNIQUE_VIOLATION_DETAILS: tuple[tuple[str, str], ...] = (
-    ("unique_flow_endpoint_name", "Endpoint name must be unique"),
-    ("flow.endpoint_name", "Endpoint name must be unique"),
-    ("unique_flow_name", "Name must be unique"),
-    ("flow.name", "Name must be unique"),
-    ("unique_folder_name", "Project name must be unique"),
-    ("folder.name", "Project name must be unique"),
-    ("flow_pkey", "A flow with this ID already exists"),
-    ("flow.id", "A flow with this ID already exists"),
-    ("folder_pkey", "A project with this ID already exists"),
-    ("folder.id", "A project with this ID already exists"),
+_UNIQUE_VIOLATION_DETAILS: tuple[tuple[str, str, str], ...] = (
+    ("unique_flow_endpoint_name", "Endpoint name must be unique", "endpoint_name"),
+    ("flow.endpoint_name", "Endpoint name must be unique", "endpoint_name"),
+    ("unique_flow_name", "Name must be unique", "name"),
+    ("flow.name", "Name must be unique", "name"),
+    ("unique_folder_name", "Project name must be unique", "name"),
+    ("folder.name", "Project name must be unique", "name"),
+    ("flow_pkey", "A flow with this ID already exists", "id"),
+    ("flow.id", "A flow with this ID already exists", "id"),
+    ("folder_pkey", "A project with this ID already exists", "id"),
+    ("folder.id", "A project with this ID already exists", "id"),
 )
 _UNIQUE_VIOLATION_TEXT = ("UNIQUE constraint failed", "duplicate key value violates unique constraint")
 _UNIQUE_VIOLATION_SQLSTATE = "23505"
@@ -214,6 +215,11 @@ def _is_unique_violation(exc: Exception, msg: str) -> bool:
     return any(marker in msg for marker in _UNIQUE_VIOLATION_TEXT)
 
 
+def _column_conflict(column: str, *, status_code: int) -> HTTPException:
+    detail = f"{column.capitalize().replace('_', ' ')} must be unique"
+    return mark_unique_conflict(HTTPException(status_code=status_code, detail=detail), column)
+
+
 def _sqlite_unique_detail(msg: str, *, status_code: int) -> HTTPException:
     """Map a SQLite ``UNIQUE constraint failed: <cols>`` message to a client-facing detail.
 
@@ -236,11 +242,11 @@ def _sqlite_unique_detail(msg: str, *, status_code: int) -> HTTPException:
         column = _SQLITE_FLOW_UNIQUE_COLUMNS.get(tuple(columns))
         if column is None:
             return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
-        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+        return _column_conflict(column, status_code=status_code)
 
-    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+    for marker, detail, column in _UNIQUE_VIOLATION_DETAILS:
         if marker in constraint:
-            return HTTPException(status_code=status_code, detail=detail)
+            return mark_unique_conflict(HTTPException(status_code=status_code, detail=detail), column)
     return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 
@@ -263,14 +269,14 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
 
     column = _postgres_unique_column(getattr(exc, "orig", None) or exc)
     if column is not None:
-        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+        return _column_conflict(column, status_code=status_code)
 
     if _SQLITE_UNIQUE_MARKER in msg:
         return _sqlite_unique_detail(msg, status_code=status_code)
 
-    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+    for marker, detail, marked_column in _UNIQUE_VIOLATION_DETAILS:
         if marker in msg:
-            return HTTPException(status_code=status_code, detail=detail)
+            return mark_unique_conflict(HTTPException(status_code=status_code, detail=detail), marked_column)
     return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 

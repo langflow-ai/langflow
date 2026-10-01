@@ -17,6 +17,7 @@ from langflow.services.audit.operations import (
     classify_failure,
     describe_flow_body,
     describe_project_body,
+    mark_unique_conflict,
 )
 from langflow.services.audit.vocabulary import (
     FLOW_WRITE,
@@ -161,3 +162,19 @@ async def test_a_real_failure_after_authorization_is_still_recorded(audit_enable
     assert [(draft.result, draft.error_code) for draft in written] == [
         (AuditResult.FAILED, AuditErrorCode.FLOW_NAME_CONFLICT)
     ]
+
+
+@pytest.mark.parametrize(
+    ("column", "resource_type", "expected"),
+    [
+        ("id", FLOW, AuditErrorCode.FLOW_ID_CONFLICT),
+        ("name", FLOW, AuditErrorCode.FLOW_NAME_CONFLICT),
+        ("endpoint_name", FLOW, AuditErrorCode.FLOW_NAME_CONFLICT),
+        ("name", PROJECT, AuditErrorCode.PROJECT_NAME_CONFLICT),
+        ("id", PROJECT, AuditErrorCode.CONSTRAINT_VIOLATION),
+    ],
+)
+def test_a_marked_unique_conflict_is_classified_by_its_column_not_its_wording(column, resource_type, expected):
+    exc = mark_unique_conflict(HTTPException(400, "Name must be unique"), column)
+
+    assert classify_failure(exc, resource_type) is expected

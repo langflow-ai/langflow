@@ -159,6 +159,22 @@ async def test_restoring_a_version_records_a_data_patch(client, logged_in_header
     )
 
 
+async def test_a_create_at_a_taken_id_is_an_id_conflict_not_a_name_conflict(client, logged_in_headers):
+    existing = await _create_flow(client, logged_in_headers)
+    attempted_name = f"reused-id-{uuid4().hex[:8]}"
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"id": existing["id"], "name": attempted_name, "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
+    owner_id = UUID(existing["user_id"])
+    failed = [event for event in await events_by_user(owner_id) if event.result == "failed"]
+    assert [(event.action, event.error_code) for event in failed] == [("flow:create", "FLOW_ID_CONFLICT")]
+
+
 async def test_a_refused_write_records_one_failure_and_no_change(client, logged_in_headers):
     first = await _create_flow(client, logged_in_headers, endpoint_name=f"ep-{uuid4().hex[:8]}")
     second = await _create_flow(client, logged_in_headers)
