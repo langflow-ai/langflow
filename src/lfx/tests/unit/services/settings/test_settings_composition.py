@@ -182,6 +182,8 @@ EXPECTED_FIELDS = {
     "fs_flows_polling_interval",
     "health_check_max_retries",
     "max_file_size_upload",
+    "url_component_max_response_bytes",
+    "url_component_max_total_bytes",
     "celery_enabled",
     # VariablesSettings
     "variable_store",
