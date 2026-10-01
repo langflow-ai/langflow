@@ -132,16 +132,38 @@ def test_worker_crash_keeps_reports_but_cannot_publish_timings(tmp_path):
     assert not (reports / "durations.json").exists()
 
 
-def test_ci_rejects_untracked_blanket_flake_markers(tmp_path):
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "reruns=5",
+        "reruns=1, reason='https://github.com/langflow-ai/langflow'",
+        "reruns=1, reason='https://github.com/langflow-ai/langflow/pull/123'",
+        "reruns=True, reason='https://github.com/langflow-ai/langflow/issues/123'",
+    ],
+)
+def test_ci_rejects_untracked_blanket_flake_markers(tmp_path, marker):
     result, _, summary = run_suite(
         tmp_path,
-        "import pytest\n@pytest.mark.flaky(reruns=5)\ndef test_bad_policy(): pass\n",
+        f"import pytest\n@pytest.mark.flaky({marker})\ndef test_bad_policy(): pass\n",
         "-p",
         "rerunfailures",
     )
     assert result.returncode != 0
     assert "CI flaky markers require" in result.stderr + result.stdout
     assert summary["complete"] is False
+
+
+def test_ci_accepts_one_retry_with_a_tracked_issue(tmp_path):
+    result, _, summary = run_suite(
+        tmp_path,
+        "import pytest\n"
+        "@pytest.mark.flaky(reruns=1, reason='https://github.com/langflow-ai/langflow/issues/123')\n"
+        "def test_tracked(): pass\n",
+        "-p",
+        "rerunfailures",
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert summary["complete"] is True
 
 
 @pytest.mark.parametrize("duration", [-1, float("inf"), float("nan"), "slow", True])
