@@ -634,21 +634,25 @@ async def ensure_flow_audit_read_permission(
     workspace_id: UUID | None = None,
     folder_id: UUID | None = None,
 ) -> None:
-    """Require ``flow:audit_read`` without the ordinary resource-owner override."""
-    await _ensure_typed(
-        user,
-        spec_key="flow",
-        act_str=FlowAction.AUDIT_READ.value,
-        kwargs={
-            "flow_id": flow_id,
-            "flow_user_id": flow_user_id,
-            "workspace_id": workspace_id,
-            "folder_id": folder_id,
-            "folder_user_id": None,
-        },
-        domain_override=None,
-        allow_owner_override=False,
-    )
+    """Require ``flow:audit_read`` without the ordinary resource-owner override.
+
+    Reading a trail must not add to it, so the decision is enforced but never recorded.
+    """
+    with capability_probe():
+        await _ensure_typed(
+            user,
+            spec_key="flow",
+            act_str=FlowAction.AUDIT_READ.value,
+            kwargs={
+                "flow_id": flow_id,
+                "flow_user_id": flow_user_id,
+                "workspace_id": workspace_id,
+                "folder_id": folder_id,
+                "folder_user_id": None,
+            },
+            domain_override=None,
+            allow_owner_override=False,
+        )
 
 
 async def _audit_flow_decision_batch(
