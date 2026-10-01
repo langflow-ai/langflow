@@ -3175,69 +3175,31 @@ class TestMemoriesAPIHandlers:
     # ---------------------------------------------------------------- #
 
     @pytest.mark.asyncio
-    async def test_list_memory_base_messages_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_not_found_raises_404(self, active_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
 
-        mock_db = AsyncMock()
-        result_mock = MagicMock()
-        result_mock.first = MagicMock(return_value=None)
-        mock_db.exec = AsyncMock(return_value=result_mock)
-
-        class FakeCtx:
-            async def __aenter__(self):
-                return mock_db
-
-            async def __aexit__(self, *a):
-                pass
-
-        with (
-            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
-            patch(
-                "langflow.api.v1.memories.get_memory_base_service",
-                return_value=MagicMock(get=AsyncMock(return_value=None)),
-            ),
-            pytest.raises(HTTPException) as exc_info,
-        ):
+        with pytest.raises(HTTPException) as exc_info:
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
                 session_id="s1",
-                current_user=mock_user,
+                current_user=active_user,
                 params=Params(),
             )
 
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, active_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
 
-        mock_db = AsyncMock()
-        result_mock = MagicMock()
-        result_mock.first = MagicMock(return_value=None)
-        mock_db.exec = AsyncMock(return_value=result_mock)
-
-        class FakeCtx:
-            async def __aenter__(self):
-                return mock_db
-
-            async def __aexit__(self, *a):
-                pass
-
-        with (
-            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
-            patch(
-                "langflow.api.v1.memories.get_memory_base_service",
-                return_value=MagicMock(get=AsyncMock(return_value=None)),
-            ),
-            pytest.raises(HTTPException) as exc_info,
-        ):
+        with pytest.raises(HTTPException) as exc_info:
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
-                current_user=mock_user,
+                current_user=active_user,
                 params=Params(),
             )
 

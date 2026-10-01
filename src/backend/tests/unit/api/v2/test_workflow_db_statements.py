@@ -13,6 +13,7 @@ import asyncio
 import json
 import re
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from itertools import pairwise
 from pathlib import Path
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
 _TABLE_RE = re.compile(
     r'^\s*(?:(UPDATE)|(SELECT|INSERT|DELETE)\b.*?\b(?:FROM|INTO))\s+"?(\w+)"?', re.IGNORECASE | re.DOTALL
 )
+_MEASURING_RUN = ContextVar("measuring_workflow_round_trips", default=False)
 
 
 def _classify(statement: str) -> str:
@@ -53,16 +55,22 @@ def _record_db_round_trips():
     recorder = _Recorder()
 
     def on_execute(conn, cursor, statement, parameters, context, executemany):  # noqa: ARG001
-        recorder.statements.append(_classify(statement))
+        if _MEASURING_RUN.get():
+            recorder.statements.append(_classify(statement))
 
     def on_checkout(dbapi_connection, connection_record, connection_proxy):  # noqa: ARG001
-        recorder.checkouts += 1
+        if _MEASURING_RUN.get():
+            recorder.checkouts += 1
 
     event.listen(sync_engine, "before_cursor_execute", on_execute)
     event.listen(sync_engine.pool, "checkout", on_checkout)
+    # Request tasks and their output hooks inherit this context. Independent
+    # lifespan pollers use the same engine but are not part of a workflow run.
+    token = _MEASURING_RUN.set(True)
     try:
         yield recorder
     finally:
+        _MEASURING_RUN.reset(token)
         event.remove(sync_engine, "before_cursor_execute", on_execute)
         event.remove(sync_engine.pool, "checkout", on_checkout)
 
@@ -197,6 +205,29 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
         assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
     flow_name = request.node.callspec.params["chat_flow"]
     assert (len(statements), recorder.checkouts) == _ROUND_TRIPS[flow_name][mode], statements
+
+
+@pytest.mark.usefixtures("client")
+async def test_round_trip_recording_excludes_background_polling():
+    poll = asyncio.Event()
+
+    async def background_poll():
+        await poll.wait()
+        async with session_scope() as session:
+            await session.execute(text("SELECT 2"))
+
+    task = asyncio.create_task(background_poll())
+    try:
+        with _record_db_round_trips() as recorder:
+            poll.set()
+            await task
+            async with session_scope() as session:
+                await session.execute(text("SELECT 1"))
+        assert recorder.statements == ["SELECT"]
+        assert recorder.checkouts == 1
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 @pytest.mark.usefixtures("client")
