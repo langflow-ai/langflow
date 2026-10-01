@@ -20,7 +20,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import Text, cast, func, or_
+from sqlalchemy import func, or_
 from sqlmodel import col, select
 
 from langflow.services.audit.query import (
@@ -31,6 +31,7 @@ from langflow.services.audit.query import (
     keyset_after,
     to_utc,
 )
+from langflow.services.audit.search_sql import case_insensitive_like, json_text
 from langflow.services.database.models.audit_event.model import AuditDatabaseClock, AuditEvent, as_utc
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.user.model import User
@@ -135,13 +136,13 @@ def _search_clause(model: Any, search: str) -> ColumnElement[bool]:
     pattern = _like_pattern(search)
 
     def matches(column: Any) -> ColumnElement[bool]:
-        return col(column).ilike(pattern, escape=_LIKE_ESCAPE)
+        return case_insensitive_like(col(column), pattern, escape=_LIKE_ESCAPE)
 
     actors = select(User.id).where(matches(User.username))
     candidates = [
         matches(model.action),
         matches(model.resource_type),
-        cast(col(model.details), Text).ilike(pattern, escape=_LIKE_ESCAPE),
+        case_insensitive_like(json_text(col(model.details)), pattern, escape=_LIKE_ESCAPE),
         col(model.user_id).in_(actors),
     ]
     if model is AuditEvent:

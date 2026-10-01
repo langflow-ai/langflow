@@ -418,6 +418,19 @@ async def test_the_search_matches_names_actions_details_and_actors(client, logge
     assert by_actor in await ids(client, logged_in_headers_super_user, f"q={me['username']}")
 
 
+async def test_the_search_ignores_case_beyond_ascii(client, logged_in_headers_super_user):
+    by_name, by_details, _other = await seed(
+        resource_event(1, resource_name="ÄÖÜ-test"),
+        authz_event(2, action="role:update", details={"role_name": "Équipe Été"}),
+        resource_event(3, resource_name="Unrelated"),
+    )
+
+    assert await ids(client, logged_in_headers_super_user, "q=äöü") == [by_name]
+    assert await ids(client, logged_in_headers_super_user, "q=ÄÖÜ") == [by_name]
+    assert await ids(client, logged_in_headers_super_user, "q=équipe%20été") == [by_details]
+    assert await ids(client, logged_in_headers_super_user, "q=ÉQUIPE") == [by_details]
+
+
 async def test_the_search_narrows_every_other_filter_and_the_total(client, logged_in_headers_super_user):
     kept, _failed, _role = await seed(
         resource_event(1, resource_name="Ticket Router"),
