@@ -305,6 +305,11 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
+def _expires_on_commit(session) -> bool:
+    """Whether committing drops the loaded attributes (sessions without the flag: assume it does)."""
+    return bool(getattr(getattr(session, "sync_session", session), "expire_on_commit", True))
+
+
 async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
     """Add messages to the database.
 
@@ -318,8 +323,13 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
             if asyncio.iscoroutine(result):
                 await result
         await session.commit()
-        for message in messages:
-            await session.refresh(message)
+        # Every column is set in Python before the INSERT (the id and timestamp
+        # included; the table has no server-side defaults), so reading the rows
+        # back would only cost a SELECT per message. A session that expires on
+        # commit has dropped those values, so it still needs the refresh.
+        if _expires_on_commit(session):
+            for message in messages:
+                await session.refresh(message)
     except asyncio.CancelledError:
         try:
             await session.rollback()
@@ -336,9 +346,14 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
 
     new_messages = []
     for msg in messages:
-        msg.properties = json.loads(msg.properties) if isinstance(msg.properties, str) else msg.properties  # type: ignore[arg-type]
-        msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
-        msg.category = msg.category or ""
+        # Assign only what needs converting: each assignment marks the row dirty,
+        # and the caller's commit then checks out a connection to flush a no-op.
+        if isinstance(msg.properties, str):
+            msg.properties = json.loads(msg.properties)
+        if any(isinstance(j, str) for j in msg.content_blocks):
+            msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
+        if msg.category is None:
+            msg.category = ""
         new_messages.append(msg)
 
     return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
