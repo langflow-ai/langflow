@@ -135,3 +135,40 @@ class TestChatOutputTokenUsageAccumulation:
             assert result.properties.usage == usage
             mock_update.assert_called_once()
             mock_send_event.assert_called_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("existing", "total", "changed"),
+    [
+        (
+            Usage(input_tokens=10, output_tokens=20, total_tokens=30),
+            Usage(input_tokens=10, output_tokens=20, total_tokens=30),
+            False,
+        ),
+        (
+            Usage(input_tokens=10, output_tokens=20, total_tokens=30),
+            Usage(input_tokens=30, output_tokens=40, total_tokens=70),
+            True,
+        ),
+        (None, Usage(input_tokens=10, output_tokens=20, total_tokens=30), True),
+    ],
+)
+async def test_persist_usage_only_when_stored_totals_differ(existing, total, changed):
+    vertex = _make_vertex(accumulate_return=total)
+    component = _make_chat_output(should_store_message=True, vertex=vertex)
+    component.session_id = "test-session"
+    stored = Message(text="hello", id="stored-id", properties={"usage": existing})
+    with (
+        patch.object(component, "convert_to_string", return_value="hello"),
+        patch.object(component, "get_properties_from_source_component", return_value=(None, None, None, None)),
+        patch.object(component, "is_connected_to_chat_input", return_value=False),
+        patch.object(component, "_build_source", return_value=MagicMock()),
+        patch.object(component, "send_message", new_callable=AsyncMock, return_value=stored),
+        patch.object(component, "_update_stored_message", new_callable=AsyncMock, return_value=stored) as update,
+        patch.object(component, "_send_message_event", new_callable=AsyncMock) as event,
+    ):
+        result = await component.message_response()
+        assert result.properties.usage == total
+        assert update.await_count == int(changed)
+        assert event.await_count == int(changed)
