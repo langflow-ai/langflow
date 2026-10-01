@@ -10,8 +10,10 @@ from langchain_core.messages import AIMessageChunk
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 
 GetPendingInterrupt = Callable[[], Awaitable[dict[str, Any] | None]]
+GetFinalUsage = Callable[[], Usage | None]
 
 
 class ExceptionWithMessageError(Exception):
@@ -514,6 +516,7 @@ async def process_agent_events(
     send_message_callback: SendMessageFunctionType,
     send_token_callback: OnTokenFunctionType | None = None,
     get_pending_interrupt: GetPendingInterrupt | None = None,
+    get_final_usage: GetFinalUsage | None = None,
 ) -> Message:
     """Process agent events and return the final output."""
     if isinstance(agent_message.properties, dict):
@@ -577,6 +580,10 @@ async def process_agent_events(
                 raise AgentPausedError(pending, agent_message)
 
         agent_message.properties.state = "complete"
+        if get_final_usage is not None:
+            usage = get_final_usage()
+            if usage is not None:
+                agent_message.properties.usage = usage
         # Final DB update with the complete message (skip_db_update=False by default)
         agent_message = await send_message_callback(message=agent_message)
     except AgentPausedError:

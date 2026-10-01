@@ -299,6 +299,7 @@ class LCAgentComponent(Component):
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
                 on_token_callback,
+                get_final_usage=token_usage_handler.get_usage,
             )
         except ExceptionWithMessageError as e:
             # Only delete message from database if it has an ID (was stored)
@@ -321,11 +322,6 @@ class LCAgentComponent(Component):
         if usage_data:
             self._token_usage = usage_data
             result.properties.usage = usage_data
-            # Only update DB and send event if the message was stored (has an ID)
-            if result.get_id():
-                stored_result = await self._update_stored_message(result)
-                await self._send_message_event(stored_result)
-                result = stored_result
 
         self.status = result
         return result
