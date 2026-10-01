@@ -68,8 +68,8 @@ jobs:
     with:
       ref: ${{ matrix.ref }}
       python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
-      shards: ${{ inputs.shards || 5 }}
-      workers: ${{ inputs.workers || 2 }}
+      shards: ${{ fromJSON(format('{0}', inputs.shards || 5)) }}
+      workers: ${{ fromJSON(format('{0}', inputs.workers || 2)) }}
       distribution: ${{ inputs.distribution || 'load' }}
       publish-coverage: false
     secrets:
