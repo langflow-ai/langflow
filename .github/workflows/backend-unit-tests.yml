@@ -101,7 +101,6 @@ jobs:
         group: ${{ fromJSON(needs.plan.outputs.groups) }}
     env:
       UV_MANAGED_PYTHON: 'true'
-      DO_NOT_TRACK: 'true'
     steps:
       - uses: actions/checkout@v7
         with:
