@@ -157,7 +157,7 @@ class JSON(CrossModuleModel):
             # If the key exists in both data and both values support the addition operation
             if key in combined_data:
                 try:
-                    combined_data[key] += value
+                    combined_data[key] = combined_data[key] + value
                 except TypeError:
                     # Fallback: Use the value from 'other' if addition is not supported
                     combined_data[key] = value
