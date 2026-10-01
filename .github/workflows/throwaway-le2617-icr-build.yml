@@ -10,6 +10,12 @@ name: "[Throwaway] LE-2617 ICR test build"
 #   gh secret set ICR_API_KEY --repo <owner>/<repo>
 # (paste the key value at the prompt -- never commit it to this file).
 
+# workflow_dispatch alone won't fire from a feature branch: GitHub only lets you
+# dispatch a workflow that already exists on the repo's default branch, even with
+# --ref pointing elsewhere. Trigger on push to this exact branch instead, which
+# fires from the branch's own copy of the workflow with no default-branch step
+# needed. Keeping workflow_dispatch too in case this ever lands on the default
+# branch, but push is what actually fires it here.
 on:
   workflow_dispatch:
     inputs:
@@ -17,6 +23,9 @@ on:
         description: "Tag to push under us.icr.io/watson-orchestrate/development/ibm-langflow"
         required: true
         default: "le-2617-connpool-test"
+  push:
+    branches:
+      - test/le-2617-amd64-build
 
 jobs:
   build-and-push:
@@ -41,6 +50,6 @@ jobs:
           context: .
           push: true
           file: ./docker/build_and_push.Dockerfile
-          tags: us.icr.io/watson-orchestrate/development/ibm-langflow:${{ inputs.image_tag }}
+          tags: us.icr.io/watson-orchestrate/development/ibm-langflow:${{ inputs.image_tag || 'le-2617-connpool-test' }}
           platforms: linux/amd64
           provenance: false
