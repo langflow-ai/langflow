@@ -789,3 +789,209 @@ async def test_status_corrections_do_not_lower_exported_counters(monkeypatch):
         await collector.collect_once(session)
     assert _counter_value("langflow_bg_jobs_failed_total", {**labels, "reason": "worker_lost"}) == 1
     assert _counter_value("langflow_bg_jobs_failed_total", {**labels, "reason": "cancelled"}) == 1
+
+
+_TERMINAL_OUTCOMES = (
+    ("completed", JobStatus.COMPLETED, None),
+    ("failed_error", JobStatus.FAILED, "error"),
+    ("failed_worker_lost", JobStatus.FAILED, "worker_lost"),
+    ("failed_input_timeout", JobStatus.FAILED, "input_timed_out"),
+    ("timed_out", JobStatus.TIMED_OUT, None),
+    ("cancelled", JobStatus.CANCELLED, None),
+)
+
+
+async def _age_terminal_jobs(job_ids):
+    """Put seeded terminal rows outside the retention window without waiting."""
+    stamp = datetime.now(timezone.utc) - timedelta(days=40)
+    async with session_scope() as session:
+        for job_id in job_ids:
+            job = await session.get(Job, job_id)
+            job.created_timestamp = stamp - timedelta(seconds=10)
+            job.finished_timestamp = stamp
+            session.add(job)
+
+
+def _exported_terminal_counts() -> dict[str, float]:
+    labels = {"backend": current_backend()}
+    return {
+        "started": _counter_value("langflow_bg_jobs_started_total", labels),
+        "completed": _counter_value("langflow_bg_jobs_completed_total", labels),
+        **{
+            key: _counter_value("langflow_bg_jobs_failed_total", {**labels, "reason": reason})
+            for key, reason in (
+                ("failed_error", "error"),
+                ("failed_worker_lost", "worker_lost"),
+                ("failed_input_timeout", "input_timeout"),
+                ("timed_out", "timeout"),
+                ("cancelled", "cancelled"),
+            )
+        },
+    }
+
+
+@pytest.fixture
+def fresh_background_counters(monkeypatch, client):  # noqa: ARG001
+    """Install real empty wrappers so a process-local high-water mark cannot hide a reset."""
+    from langflow.services.telemetry.opentelemetry import ObservableCounterWrapper
+    from opentelemetry.metrics import NoOpMeterProvider
+
+    meter = NoOpMeterProvider().get_meter("background-retention-test")
+
+    def reset():
+        for name in (
+            "langflow_bg_jobs_started_total",
+            "langflow_bg_jobs_completed_total",
+            "langflow_bg_jobs_failed_total",
+        ):
+            monkeypatch.setitem(
+                get_telemetry_service().ot._metrics,
+                name,
+                ObservableCounterWrapper(name=name, description="", unit="", meter=meter),
+            )
+
+    reset()
+    return reset
+
+
+@pytest.mark.parametrize("collect_before_purge", [True, False])
+async def test_retention_preserves_counters_and_counts_new_jobs_after_restart(
+    monkeypatch, fresh_background_counters, collect_before_purge
+):
+    """Purged history remains cumulative even if no collector ever observed the rows."""
+    import langflow.services.background_execution.metrics_collector as mc
+
+    clock = [0.0]
+    monkeypatch.setattr(mc, "monotonic", lambda: clock[0])
+    service = JobService()
+    old_jobs = []
+    for _ in range(2):
+        for _, status, error_type in _TERMINAL_OUTCOMES:
+            job_id = await _seed_terminal(service, status)
+            if error_type is not None:
+                await service.set_error(job_id, {"type": error_type})
+            old_jobs.append(job_id)
+    await _age_terminal_jobs(old_jobs)
+    expected = {"started": len(old_jobs), **{key: 2 for key, _, _ in _TERMINAL_OUTCOMES}}
+    collector = BackgroundMetricsCollector(interval=15)
+    if collect_before_purge:
+        async with session_scope() as session:
+            await collector.collect_once(session)
+        assert _exported_terminal_counts() == expected
+
+    assert await service.purge_terminal_jobs(older_than_days=30) == len(old_jobs)
+    assert all([await service.get_job_by_job_id(job_id) is None for job_id in old_jobs])
+    clock[0] = 300
+    async with session_scope() as session:
+        assert await terminal_counts(session) == expected
+        await collector.collect_once(session)
+    assert _exported_terminal_counts() == expected
+
+    # Each live outcome count is now only one, below its pre-purge value of two.
+    # A max(previous, live_count) clamp would conceal all these new executions.
+    for key, status, error_type in _TERMINAL_OUTCOMES:
+        job_id = await _seed_terminal(service, status)
+        if error_type is not None:
+            await service.set_error(job_id, {"type": error_type})
+        expected[key] += 1
+        expected["started"] += 1
+    clock[0] = 600
+    async with session_scope() as session:
+        assert await terminal_counts(session) == expected
+        await collector.collect_once(session)
+    assert _exported_terminal_counts() == expected
+
+    # Discard both layers of process-local state, as a replacement API worker does.
+    fresh_background_counters()
+    restarted_collector = BackgroundMetricsCollector(interval=15)
+    async with session_scope() as session:
+        await restarted_collector.collect_once(session)
+    assert _exported_terminal_counts() == expected
+    assert await service.purge_terminal_jobs(older_than_days=30) == 0
+    async with session_scope() as session:
+        assert await terminal_counts(session) == expected
+
+
+async def test_retention_excludes_sync_unmarked_and_ingestion_jobs():
+    """Archiving must use the same background predicate as the live aggregate."""
+    service = JobService()
+    background = await _seed_terminal(service, JobStatus.COMPLETED)
+    job_ids = [background]
+    for job_type, metadata in (
+        (JobType.WORKFLOW, None),
+        (JobType.WORKFLOW, {"request": None}),
+        (JobType.WORKFLOW, {"request": {"mode": "sync"}}),
+        (JobType.INGESTION, {"request": {}}),
+    ):
+        job_id = uuid4()
+        await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=job_type, initial_metadata=metadata)
+        # Cleanup and stored sync rows can have events. Events alone do not mark a submission.
+        await service.append_event(job_id, "run_started", {})
+        await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+        job_ids.append(job_id)
+    await _age_terminal_jobs(job_ids)
+    async with session_scope() as session:
+        expected = await terminal_counts(session)
+    assert expected["started"] == expected["completed"] == 1
+    assert await service.purge_terminal_jobs(older_than_days=30) == len(job_ids)
+    async with session_scope() as session:
+        assert await terminal_counts(session) == expected
+
+
+async def test_retention_batches_preserve_totals_without_double_counting():
+    """Each committed batch transfers exactly its rows, and an empty retry adds nothing."""
+    service = JobService()
+    job_ids = [await _seed_terminal(service, JobStatus.COMPLETED) for _ in range(5)]
+    await _age_terminal_jobs(job_ids)
+    async with session_scope() as session:
+        expected = await terminal_counts(session)
+    for deleted in (2, 2, 1, 0):
+        assert await service.purge_terminal_jobs(older_than_days=30, limit=2) == deleted
+        async with session_scope() as session:
+            assert await terminal_counts(session) == expected
+
+
+async def test_retention_rolls_back_totals_when_delete_fails():
+    """An aborted purge preserves the source rows and cannot count their history twice."""
+    from sqlalchemy import event
+
+    service = JobService()
+    job_id = await _seed_terminal(service, JobStatus.COMPLETED)
+    await _age_terminal_jobs([job_id])
+    async with session_scope() as session:
+        expected = await terminal_counts(session)
+        engine = session.get_bind()
+
+    def fail_job_delete(_conn, _cursor, statement, _parameters, _context, _executemany):
+        if statement.startswith("DELETE FROM job "):
+            msg = "injected job deletion failure"
+            raise RuntimeError(msg)
+
+    event.listen(engine, "before_cursor_execute", fail_job_delete)
+    try:
+        with pytest.raises(RuntimeError, match="injected job deletion failure"):
+            await service.purge_terminal_jobs(older_than_days=30)
+    finally:
+        event.remove(engine, "before_cursor_execute", fail_job_delete)
+
+    assert await service.get_job_by_job_id(job_id) is not None
+    assert len(await service.read_events(job_id)) == 1
+    async with session_scope() as session:
+        assert await terminal_counts(session) == expected
+    assert await service.purge_terminal_jobs(older_than_days=30) == 1
+    async with session_scope() as session:
+        assert await terminal_counts(session) == expected
+
+
+async def test_concurrent_retention_sweeps_preserve_totals_once():
+    """API workers purging concurrently must not archive the same job twice."""
+    service = JobService()
+    job_ids = [await _seed_terminal(service, JobStatus.COMPLETED) for _ in range(6)]
+    await _age_terminal_jobs(job_ids)
+    async with session_scope() as session:
+        expected = await terminal_counts(session)
+    deleted = await asyncio.gather(*(JobService().purge_terminal_jobs(older_than_days=30, limit=2) for _ in range(3)))
+    assert sum(deleted) == len(job_ids)
+    assert await service.purge_terminal_jobs(older_than_days=30) == 0
+    async with session_scope() as session:
+        assert await terminal_counts(session) == expected

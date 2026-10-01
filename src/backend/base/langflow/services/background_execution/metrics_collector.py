@@ -1,8 +1,9 @@
 """Collect cached background-job metrics from read-only database aggregates.
 
 Gauges refresh every tick; all-time outcome counters refresh every five minutes
-because their aggregate still scans job history. Prometheus callbacks read only
-the cached values. Background submissions are identified by the persisted request
+because their aggregate still scans retained job history. Purged outcomes are
+archived transactionally and included in the same database snapshot. Prometheus
+callbacks read only the cached values. Background submissions are identified by the persisted request
 marker, excluding stored sync results and events that orphan reconciliation can
 also append to other jobs.
 
@@ -21,11 +22,11 @@ from time import monotonic
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from sqlalchemy import case
 from sqlmodel import col, func, select
 
 from langflow.services.background_execution.metrics import current_backend
-from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus, JobType
+from langflow.services.database.models.jobs.metrics import is_background_job, terminal_counts
+from langflow.services.database.models.jobs.model import Job, JobStatus
 from langflow.services.deps import get_telemetry_service, session_scope
 
 if TYPE_CHECKING:
@@ -39,29 +40,6 @@ NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPE
 TERMINAL_COUNTS_INTERVAL_SECONDS = 300.0
 
 
-def _is_background_job():
-    """Match the workflow request marker written atomically by ``submit``.
-
-    Sync runs and ingestion jobs can acquire events during orphan cleanup, so
-    events alone cannot identify submissions. ``as_string`` emits a JSON text
-    extraction on both SQLite and Postgres, excluding missing and JSON-null
-    requests while accepting an empty request object. Stored sync results also
-    carry a request marker, so exclude their explicit ``mode="sync"``. Coalescing
-    the mode preserves background requests with a missing or JSON-null mode.
-    """
-    request = col(Job.job_metadata)["request"]
-    return (
-        (Job.type == JobType.WORKFLOW)
-        & request.as_string().is_not(None)
-        & (func.coalesce(request["mode"].as_string(), "") != "sync")
-    )
-
-
-def _has_job_events():
-    """Remember a submission that has run even if it was requeued for retry."""
-    return select(JobEvent.id).where(col(JobEvent.job_id) == Job.job_id).exists()
-
-
 async def count_nonterminal_jobs(session) -> dict[str, int]:
     """Count queued, running, and suspended background submissions by status.
 
@@ -71,7 +49,7 @@ async def count_nonterminal_jobs(session) -> dict[str, int]:
     stmt = (
         select(Job.status, func.count())
         .where(col(Job.status).in_(NONTERMINAL_STATUSES))
-        .where(_is_background_job())
+        .where(is_background_job())
         .group_by(Job.status)
     )
     rows = (await session.exec(stmt)).all()
@@ -84,7 +62,7 @@ async def oldest_queued_seconds(session, now: datetime) -> float:
     Returns ``0.0`` when nothing is queued. ``now`` is injected (aware UTC) for
     determinism.
     """
-    stmt = select(func.min(Job.created_timestamp)).where(Job.status == JobStatus.QUEUED).where(_is_background_job())
+    stmt = select(func.min(Job.created_timestamp)).where(Job.status == JobStatus.QUEUED).where(is_background_job())
     result = await session.exec(stmt)
     oldest = result.first()
     if oldest is None:
@@ -96,74 +74,6 @@ async def oldest_queued_seconds(session, now: datetime) -> float:
     age = (now - oldest).total_seconds()
     # A clock skew where now precedes the row should never report a negative age.
     return max(age, 0.0)
-
-
-def _error_type_expr(session):
-    """Dialect-aware SQL expression for ``error->>'type'`` as text.
-
-    Postgres uses the raw ``->>`` operator (``error ->> 'type'``) via
-    ``col(Job.error).op("->>")("type")`` — robust regardless of whether the
-    column maps as JSON or JSONB, unlike ``.astext`` which raises on this
-    column's type mapping. SQLite uses ``json_extract(error, '$.type')``. Both
-    return the string value of the ``type`` key (or NULL when ``error`` is NULL
-    or has no ``type``), so the FAILED worker_lost split is computed in SQL
-    rather than reading every FAILED row into Python (unbounded over all time).
-
-    The test DB is sqlite (json_extract branch); the postgres ``->>`` branch is
-    verified live against a real Postgres instance.
-    """
-    dialect = session.get_bind().dialect.name
-    if dialect == "postgresql":
-        return col(Job.error).op("->>")("type")
-    # sqlite (and other JSON-text dialects): json_extract walks the path.
-    return func.json_extract(col(Job.error), "$.type")
-
-
-async def terminal_counts(session) -> dict[str, int]:
-    """Read all-time outcome counts for background submissions.
-
-    Started jobs include non-queued submissions and event-bearing retries that
-    have returned to QUEUED. FAILED rows are split into worker loss, human-input
-    deadline expiry, and other errors. Missing error types count as other errors.
-
-    This aggregate still scans historical rows, so the collector runs it less
-    often than the indexed gauges. Status reclassification can lower its raw
-    counts; the observable counter wrapper preserves each series' high-water mark.
-    """
-    error_type = _error_type_expr(session)
-    worker_lost_flag = case((error_type == "worker_lost", 1), else_=0)
-    input_timeout_flag = case((error_type == "input_timed_out", 1), else_=0)
-    stmt = (
-        select(
-            Job.status,
-            func.count(),
-            func.coalesce(func.sum(worker_lost_flag), 0),
-            func.coalesce(func.sum(input_timeout_flag), 0),
-        )
-        .where(_is_background_job())
-        .where((Job.status != JobStatus.QUEUED) | _has_job_events())
-        .group_by(Job.status)
-    )
-    rows = (await session.exec(stmt)).all()
-
-    by_status: dict[str, int] = {}
-    failed_worker_lost = failed_input_timeout = 0
-    for status, count, worker_lost, input_timeout in rows:
-        key = status.value if hasattr(status, "value") else str(status)
-        by_status[key] = int(count)
-        if key == JobStatus.FAILED.value:
-            failed_worker_lost = int(worker_lost or 0)
-            failed_input_timeout = int(input_timeout or 0)
-
-    return {
-        "started": sum(by_status.values()),
-        "completed": by_status.get(JobStatus.COMPLETED.value, 0),
-        "failed_error": by_status.get(JobStatus.FAILED.value, 0) - failed_worker_lost - failed_input_timeout,
-        "failed_worker_lost": failed_worker_lost,
-        "failed_input_timeout": failed_input_timeout,
-        "timed_out": by_status.get(JobStatus.TIMED_OUT.value, 0),
-        "cancelled": by_status.get(JobStatus.CANCELLED.value, 0),
-    }
 
 
 async def duration_percentiles(session, now: datetime, window_seconds: float) -> tuple[float, float]:
@@ -196,7 +106,7 @@ async def duration_percentiles(session, now: datetime, window_seconds: float) ->
         select(Job.created_timestamp, Job.finished_timestamp)
         .where(col(Job.finished_timestamp).is_not(None))
         .where(col(Job.finished_timestamp) >= sql_cutoff)
-        .where(_is_background_job())
+        .where(is_background_job())
     )
     result = await session.exec(stmt)
     durations: list[float] = []
