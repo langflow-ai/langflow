@@ -18,6 +18,7 @@ import pytest
 from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError, relocate_files
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
 if TYPE_CHECKING:
@@ -424,3 +425,116 @@ class TestMissingObjects:
                 await target.get_file_md5(flow_id=str(active_user.id), file_name="nothing-here.txt")
         finally:
             await target.teardown()
+
+
+class TestChatAttachmentPaths:
+    """Chat history records each attachment's path, and on local storage that path is absolute.
+
+    After the switch the S3 backend resolves a message's attachment from the path
+    recorded in ``message.files``, so the move has to leave paths S3 can resolve.
+    """
+
+    async def _flow_with_attachment(self, storage_dir: Path, owner: uuid.UUID, name: str, data: bytes) -> uuid.UUID:
+        async with session_scope() as session:
+            flow = Flow(name=f"flow-{uuid.uuid4().hex[:6]}", user_id=owner, data={"nodes": []})
+            session.add(flow)
+            await session.commit()
+            await session.refresh(flow)
+            flow_id = flow.id
+        (storage_dir / str(flow_id)).mkdir(parents=True)
+        (storage_dir / str(flow_id) / name).write_bytes(data)
+        return flow_id
+
+    async def _message(self, flow_id: uuid.UUID, files: list[str]) -> uuid.UUID:
+        async with session_scope() as session:
+            message = MessageTable(
+                sender="User",
+                sender_name="User",
+                session_id=str(flow_id),
+                text="see attached",
+                flow_id=flow_id,
+                files=files,
+            )
+            session.add(message)
+            await session.commit()
+            await session.refresh(message)
+            return message.id
+
+    async def _files(self, message_id: uuid.UUID) -> list[str]:
+        async with session_scope() as session:
+            return list((await session.get(MessageTable, message_id)).files)
+
+    async def _read_on_target(self, bucket: str, entry: str) -> bytes:
+        from langflow.api.utils.file_relocation import _target_storage
+
+        target = _target_storage(bucket, "files", None)
+        try:
+            namespace, name = target.parse_file_path(entry)
+            return await target.get_file(flow_id=namespace, file_name=name)
+        finally:
+            await target.teardown()
+
+    async def test_an_absolute_attachment_path_is_repointed_so_the_target_resolves_it(
+        self, active_user, storage_dir, bucket
+    ):
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        message_id = await self._message(flow_id, [str(storage_dir / str(flow_id) / "photo.png")])
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert await self._files(message_id) == [f"{flow_id}/photo.png"]
+        assert await self._read_on_target(bucket, (await self._files(message_id))[0]) == b"png-bytes"
+        assert [r.status for r in results if r.status == "repointed"] == ["repointed"]
+
+        # A second run finds nothing left to repoint.
+        again = await relocate_files(target_bucket=bucket, target_prefix="files")
+        assert not [r for r in again if r.status == "repointed"]
+
+    async def test_a_dry_run_reports_the_repoint_without_changing_the_message(self, active_user, storage_dir, bucket):
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        absolute = str(storage_dir / str(flow_id) / "photo.png")
+        message_id = await self._message(flow_id, [absolute])
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files", dry_run=True)
+
+        assert await self._files(message_id) == [absolute]
+        assert [r.status for r in results if r.status == "would_repoint"] == ["would_repoint"]
+
+    async def test_the_command_prints_no_byte_count_for_a_repoint(self, active_user, storage_dir, bucket, capsys):
+        from langflow.__main__ import _relocate_files
+
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        await self._message(flow_id, [str(storage_dir / str(flow_id) / "photo.png")])
+
+        for dry_run in (True, False):
+            await _relocate_files(bucket=bucket, prefix="files", username=None, dry_run=dry_run, concurrency=1)
+        lines = capsys.readouterr().out.splitlines()
+
+        repoints = [line for line in lines if line.startswith(("would_repoint", "repointed"))]
+        assert len(repoints) == 2, lines
+        assert not [line for line in repoints if "bytes" in line], repoints
+        # A copy still says how much it moved.
+        assert [line for line in lines if line.startswith("copied") and "9 bytes" in line], lines
+
+    async def test_a_path_recorded_under_another_config_dir_is_repointed_when_storage_holds_the_file(
+        self, active_user, storage_dir, bucket
+    ):
+        # The instance ran from another directory before the backup was restored here.
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "notes.txt", b"notes")
+        message_id = await self._message(flow_id, [f"/var/lib/langflow/{flow_id}/notes.txt"])
+
+        await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert await self._files(message_id) == [f"{flow_id}/notes.txt"]
+
+    async def test_a_path_storage_cannot_account_for_is_reported_and_left_alone(self, active_user, storage_dir, bucket):
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        elsewhere = f"/srv/old-host/{uuid.uuid4().hex}/gone.png"
+        message_id = await self._message(flow_id, [elsewhere])
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert await self._files(message_id) == [elsewhere]
+        failed = [r for r in results if r.status == "failed" and r.file_name == "gone.png"]
+        assert len(failed) == 1
+        assert str(message_id) in failed[0].reason

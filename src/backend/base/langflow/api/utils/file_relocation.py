@@ -5,7 +5,9 @@ does not bring them. Storage addresses a file as ``<namespace>/<name>``, where t
 namespace is the owning user for an upload and the flow for a file attached to one.
 Both backends keep that pair and only the root differs, a local directory on one
 side and a bucket and prefix on the other, so each file is copied under the key it
-already has and nothing in the database changes.
+already has. The one database change is in chat history: ``message.files`` records
+attachments by absolute local path, which the S3 backend cannot resolve, so those
+entries are rewritten to the ``<namespace>/<name>`` form both backends read.
 
 What is copied is whatever the source holds, not whatever the ``file`` table lists.
 Ephemeral chat attachments and v1 flow uploads have no row at all, and a row's
@@ -25,6 +27,7 @@ caller that has to show what would happen before anything moves.
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Literal
@@ -35,6 +38,7 @@ from sqlmodel import select
 
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session_service, get_settings_service, get_storage_service, session_scope
 from langflow.services.settings.service import SettingsService
@@ -45,7 +49,7 @@ if TYPE_CHECKING:
 
     from langflow.services.storage.service import StorageService
 
-RelocationStatus = Literal["copied", "would_copy", "skipped", "failed"]
+RelocationStatus = Literal["copied", "would_copy", "skipped", "failed", "repointed", "would_repoint"]
 
 # Read size for streaming a file across. The target buffers up to one multipart part.
 _COPY_CHUNK = 1024 * 1024
@@ -106,6 +110,7 @@ async def relocate_files(
             for index, (namespace, file_name) in enumerate(work):
                 group.start_soon(relocate, index, namespace, file_name)
         results += await _rows_without_bytes(set(work), username)
+        results += await _repoint_message_attachments(source, set(work), namespaces, dry_run=dry_run)
     finally:
         await target.teardown()
     return results
@@ -174,6 +179,90 @@ async def _rows_without_bytes(copied: set[tuple[str, str]], username: str | None
                 )
             )
     return missing
+
+
+_WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:[/\\]")
+
+
+def _portable_attachment_path(entry: str, data_dir: str, stored: set[tuple[str, str]]) -> str | None:
+    """The ``<namespace>/<name>`` form of an absolute attachment path, or None if it has none.
+
+    Local storage records chat attachments by absolute path, which only the local
+    backend can read. The logical form is what the S3 backend resolves, and local
+    storage reads it too. A path maps only when local storage holds its bytes,
+    including a path under another directory from before a restore.
+    """
+    path = entry.replace("\\", "/")
+    root = data_dir.replace("\\", "/").rstrip("/") + "/"
+    if path.startswith(root):
+        namespace, _, name = path[len(root) :].partition("/")
+        return f"{namespace}/{name}" if (namespace, name) in stored else None
+    head, _, name = path.rpartition("/")
+    namespace = head.rpartition("/")[2]
+    return f"{namespace}/{name}" if (namespace, name) in stored else None
+
+
+async def _repoint_message_attachments(
+    source: StorageService, stored: set[tuple[str, str]], namespaces: list[str], *, dry_run: bool
+) -> list[FileRelocationResult]:
+    """Rewrite absolute chat attachment paths in ``message.files`` to the logical form.
+
+    Chat history keeps each attachment's path as it was when the message was sent,
+    and on local storage that is an absolute path on this disk. After the switch the
+    S3 backend rejects it, so the message's attachment is lost even though the bytes
+    were copied. Paths already in the logical form are left alone, so a run can be
+    repeated. A path that cannot be mapped is reported and left as it was.
+    """
+    in_scope = set(namespaces)
+    data_dir = str(source.data_dir)
+    results: list[FileRelocationResult] = []
+    async with session_scope() as session:
+        # Only the columns the decision needs: chat history can be large, and its text is not one of them.
+        rows = (
+            await session.exec(select(MessageTable.id, MessageTable.flow_id, MessageTable.user_id, MessageTable.files))
+        ).all()
+        for message_id, flow_id, user_id, recorded in rows:
+            if not recorded or (str(flow_id) not in in_scope and str(user_id) not in in_scope):
+                continue
+            files = list(recorded)
+            changed = False
+            for index, entry in enumerate(files):
+                if not isinstance(entry, str) or not (entry.startswith(("/", "\\")) or _WINDOWS_DRIVE.match(entry)):
+                    continue
+                name = PurePosixPath(entry.replace("\\", "/")).name
+                portable = _portable_attachment_path(entry, data_dir, stored)
+                if portable is None:
+                    results.append(
+                        FileRelocationResult(
+                            owner=str(flow_id or user_id),
+                            file_name=name,
+                            key="",
+                            status="failed",
+                            reason=(
+                                f"chat attachment in message {message_id} has no matching file "
+                                f"in source storage; left as {entry}"
+                            ),
+                        )
+                    )
+                    continue
+                files[index] = portable
+                changed = True
+                results.append(
+                    FileRelocationResult(
+                        owner=portable.split("/")[0],
+                        file_name=name,
+                        key=portable,
+                        status="would_repoint" if dry_run else "repointed",
+                        reason=f"chat attachment in message {message_id}",
+                    )
+                )
+            if changed and not dry_run:
+                message = await session.get(MessageTable, message_id)
+                message.files = files
+                session.add(message)
+        if not dry_run:
+            await session.commit()
+    return results
 
 
 async def _stored_names(source: StorageService, namespace: str) -> list[str]:
