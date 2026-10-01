@@ -292,6 +292,19 @@ async def test_the_csv_export_streams_the_filtered_snapshot(client, logged_in_he
     assert len(list(csv.reader(io.StringIO(filtered.text)))) == 2
 
 
+async def test_the_csv_timestamp_is_to_the_second_while_ndjson_keeps_its_precision(
+    client, logged_in_headers_super_user
+):
+    await seed(resource_event(1.0042))
+
+    as_csv = await client.get(f"api/v1/audits/export?{WINDOW}", headers=logged_in_headers_super_user)
+    as_ndjson = await client.get(f"api/v1/audits/export?{WINDOW}&format=ndjson", headers=logged_in_headers_super_user)
+
+    [header, row] = list(csv.reader(io.StringIO(as_csv.text)))
+    assert dict(zip(header, row, strict=True))["timestamp"] == "2021-03-04T11:58:59Z"
+    assert json.loads(as_ndjson.text.splitlines()[0])["timestamp"] == "2021-03-04T11:58:59.748000Z"
+
+
 async def test_a_leading_formula_character_is_neutralized(client, logged_in_headers_super_user):
     await seed(resource_event(1, resource_name="=cmd|'/c calc'!A1"))
 
