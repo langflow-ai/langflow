@@ -89,6 +89,7 @@ from langflow.services.authorization import (
     visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.authorization.public_access import (
     PublicResourceAction,
     authorize_public_flow_access,
@@ -780,11 +781,14 @@ async def update_flow(
                 )
             return await operation()
 
-        flow_read = await run_with_lock_retry(
-            update_attempt,
-            session=session,
-            description=f"update_flow {flow_id}",
-        )
+        # Each attempt rechecks permission; on SQLite a decision committed by the
+        # audit writer mid-attempt would invalidate the snapshot and fail every retry.
+        async with audit_guard_in_transaction(session):
+            flow_read = await run_with_lock_retry(
+                update_attempt,
+                session=session,
+                description=f"update_flow {flow_id}",
+            )
         return _flow_read_for_caller(flow_read, actor.id)
     except HTTPException:
         raise

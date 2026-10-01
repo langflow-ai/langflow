@@ -50,6 +50,57 @@ async def test_creating_a_flow_records_one_succeeded_create(client, logged_in_he
     assert "never stored" not in json.dumps(event.details)
 
 
+@pytest.fixture
+def racing_authz_audit_writer(client, monkeypatch):  # noqa: ARG001
+    """Turn on the authorization audit and let its writer reach the database mid-request.
+
+    The writer commits each decision on its own connection. Yielding after every
+    submission lets it take the SQLite write lock while the request still holds
+    its read snapshot, which is the interleaving production hits under load.
+    """
+    import asyncio
+
+    from langflow.services.authorization import audit as authz_audit
+
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    submit = authz_audit.audit_decision
+
+    async def submit_then_yield(**decision):
+        await submit(**decision)
+        await asyncio.sleep(0.05)
+
+    monkeypatch.setattr(authz_audit, "audit_decision", submit_then_yield)
+
+
+@pytest.mark.usefixtures("racing_authz_audit_writer")
+async def test_moving_a_flow_succeeds_while_the_authorization_audit_writes(client, logged_in_headers):
+    source = await _create_project(client, logged_in_headers)
+    target = await _create_project(client, logged_in_headers)
+    flow = await _create_flow(client, logged_in_headers, folder_id=source["id"])
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}", json={"folder_id": target["id"]}, headers=logged_in_headers
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["folder_id"] == target["id"]
+    move = (await events_for(flow["id"]))[-1]
+    assert move.details["project"] == {"before_id": source["id"], "after_id": target["id"]}
+
+
+@pytest.mark.usefixtures("racing_authz_audit_writer")
+async def test_activating_a_version_succeeds_while_the_authorization_audit_writes(client, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers)
+    version = await client.post(f"api/v1/flows/{flow['id']}/versions/", json={}, headers=logged_in_headers)
+    assert version.status_code == status.HTTP_201_CREATED, version.text
+
+    response = await client.post(
+        f"api/v1/flows/{flow['id']}/versions/{version.json()['id']}/activate", headers=logged_in_headers
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+
 async def test_a_rename_records_the_field_name_and_never_the_value(client, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
 
