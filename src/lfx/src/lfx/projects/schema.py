@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
@@ -124,15 +124,19 @@ class ProjectTypeField:
         return rendered
 
 
-@dataclass(frozen=True)
-class ProjectType:
-    """A folder type: a name, how to present it, and the form it renders."""
+class ProjectTypeDefinition:
+    """Stateless project type declaration, shared by built-ins and installed plugins.
 
-    name: str
-    display_name: str
-    icon: str
-    description: str = ""
-    fields: tuple[ProjectTypeField, ...] = field(default_factory=tuple)
+    Subclasses declare class attributes and require no constructor arguments. Register the
+    class, not an instance. Instances contain no project, user, or database state. Config
+    validation and composition hooks will be added with their execution context separately.
+    """
+
+    name: ClassVar[str]
+    display_name: ClassVar[str]
+    icon: ClassVar[str]
+    description: ClassVar[str] = ""
+    fields: ClassVar[tuple[ProjectTypeField, ...]] = ()
 
     def field_names(self) -> tuple[str, ...]:
         return tuple(f.name for f in self.fields)

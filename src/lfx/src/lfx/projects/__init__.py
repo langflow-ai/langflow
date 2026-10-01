@@ -16,7 +16,14 @@ from lfx.projects.registry import (
     registered_project_types,
     registered_slots,
 )
-from lfx.projects.schema import Cardinality, FieldTarget, FireTiming, ProjectType, ProjectTypeField, SlotDefinition
+from lfx.projects.schema import (
+    Cardinality,
+    FieldTarget,
+    FireTiming,
+    ProjectTypeDefinition,
+    ProjectTypeField,
+    SlotDefinition,
+)
 from lfx.projects.writer import ConfigWrite, apply_project_config
 
 DEFAULT_PROJECT_TYPE = builtins.DEFAULT_PROJECT_TYPE
@@ -40,7 +47,7 @@ __all__ = [
     "ConfigWrite",
     "FieldTarget",
     "FireTiming",
-    "ProjectType",
+    "ProjectTypeDefinition",
     "ProjectTypeField",
     "SlotDefinition",
     "all_project_types",

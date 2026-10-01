@@ -13,6 +13,7 @@ class AdapterType(str, Enum):
     """
 
     DEPLOYMENT = "deployment"
+    PROJECT_TYPE = "project_type"
     # Knowledge Base ingestion sources (file upload, folder, S3,
     # Google Drive, OneDrive, SharePoint, plus any third-party source
     # published as an ``lfx.ingestion_source.adapters`` entry point or

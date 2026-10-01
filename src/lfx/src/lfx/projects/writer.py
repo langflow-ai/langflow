@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from lfx.projects.schema import ProjectType
+    from lfx.projects.schema import ProjectTypeDefinition
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,7 @@ def _template_of(node: dict) -> dict[str, Any] | None:
 
 def apply_project_config(
     flow_data: dict | None,
-    project_type: ProjectType,
+    project_type: ProjectTypeDefinition,
     config: dict | None,
     *,
     previous_values: dict[str, dict[str, Any]] | None = None,
