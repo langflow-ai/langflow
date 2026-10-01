@@ -1,7 +1,8 @@
 """Database-backed dedupe tests, optionally also run on PostgreSQL.
 
-Set LANGFLOW_TEST_POSTGRES_URL to a postgresql+psycopg URL for a test database
-whose user can create schemas. Each PostgreSQL case owns a temporary schema.
+Set LANGFLOW_TEST_POSTGRES_URL (or LANGFLOW_TEST_DATABASE_URI, as CI does) to a
+PostgreSQL URL for a test database whose user can create schemas. Each
+PostgreSQL case owns a temporary schema.
 """
 
 from __future__ import annotations
@@ -21,6 +22,13 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+def _postgres_url() -> str | None:
+    url = os.environ.get("LANGFLOW_TEST_POSTGRES_URL") or os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+    if not url or "+psycopg" in url:
+        return url
+    return url.replace("postgresql://", "postgresql+psycopg://", 1).replace("postgres://", "postgresql+psycopg://", 1)
+
+
 @pytest.fixture(params=["sqlite", "postgresql", "postgresql-repeatable-read"])
 async def job_database(request, tmp_path, monkeypatch):
     admin = None
@@ -28,9 +36,9 @@ async def job_database(request, tmp_path, monkeypatch):
     if request.param == "sqlite":
         engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'jobs.db'}")
     else:
-        url = os.environ.get("LANGFLOW_TEST_POSTGRES_URL")
+        url = _postgres_url()
         if not url:
-            pytest.skip("LANGFLOW_TEST_POSTGRES_URL is not set")
+            pytest.skip("LANGFLOW_TEST_POSTGRES_URL or LANGFLOW_TEST_DATABASE_URI is not set")
         admin = create_async_engine(url)
         async with admin.begin() as connection:
             await connection.execute(CreateSchema(schema))
