@@ -64,6 +64,7 @@ class BackendType(str, Enum):
     """
 
     CHROMA = "chroma"
+    SQLITE = "sqlite"
     MONGODB = "mongodb"
     ASTRA = "astra"
     POSTGRES = "postgres"
@@ -156,10 +157,9 @@ class BaseVectorStoreBackend(ABC):
         embedding_function: Embeddings | None = None,
         user_id: UUID | str | None = None,
     ) -> None:
-        # ``kb_path`` is meaningful only to local Chroma, the one backend that
-        # persists to this box's filesystem. Every other backend ignores it, so
-        # callers that resolved a non-local backend pass ``None`` rather than
-        # inventing a throwaway directory just to satisfy the signature.
+        # Legacy local Chroma uses kb_path. SQLite derives its own path from
+        # trusted immutable storage context. Remote backends ignore it, so
+        # their callers pass None rather than inventing a directory.
         self.kb_name = kb_name
         self.kb_path = kb_path
         self.backend_config = backend_config or {}

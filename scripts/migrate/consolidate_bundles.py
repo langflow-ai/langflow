@@ -147,9 +147,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    "altk": [
-        "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    ],
+    "altk": [],  # Retired in 1.13.0. Keep saved-node and extra compatibility.
     "codeagents": [
         # OpenDsStar is a manual opt-in: its DiskCache dependency has no released fix.
         # Keep the component code, but never add it to managed extras or aggregates.

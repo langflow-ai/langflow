@@ -1,15 +1,10 @@
-"""ALTK Agent Component that combines pre-tool validation and post-tool processing capabilities."""
+"""Compatibility component for ALTK nodes saved before Langflow 1.13.0."""
 
 from lfx.base.agents.altk_base_agent import ALTKBaseAgentComponent
-from lfx.base.agents.altk_tool_wrappers import (
-    PostToolProcessingWrapper,
-    PreToolValidationWrapper,
-)
 from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT, MODELS_METADATA
 from lfx.components.models_and_agents.memory import MemoryComponent
 from lfx.inputs.inputs import BoolInput
 from lfx.io import DropdownInput, IntInput, Output
-from lfx.log.logger import logger
 
 
 def set_advanced_true(component_input):
@@ -31,14 +26,7 @@ VERBOSE_INPUT_INFO = (
 
 
 def get_parent_agent_inputs():
-    """Inherit parent inputs, but restore the legacy AgentExecutor semantics.
-
-    ALTK Agent still runs on `AgentExecutor` (see `ALTKBaseAgentComponent.run_agent`),
-    so it needs the legacy `verbose` input and the original `handle_parsing_errors` /
-    `max_iterations` info text. The parent `AgentComponent` dropped `verbose` and
-    re-worded those two info strings to describe `create_agent` middleware, which
-    would be misleading here.
-    """
+    """Retain the historical configuration fields so saved nodes remain inspectable."""
     overrides = {
         "handle_parsing_errors": BoolInput(
             name="handle_parsing_errors",
@@ -60,9 +48,7 @@ def get_parent_agent_inputs():
         for input_field in ALTKBaseAgentComponent.inputs
         if input_field.name not in INPUT_NAMES_TO_BE_OVERRIDDEN
     ]
-    # `verbose` was removed from `AgentComponent.inputs`. ALTK still runs through
-    # AgentExecutor, but stdout markers now follow LANGCHAIN_VERBOSE via
-    # resolve_agent_verbose(); keep the legacy input with explanatory UI text.
+    # Keep the historical verbose field even though the parent no longer has it.
     rebuilt: list = []
     for input_field in parent_inputs:
         rebuilt.append(input_field)
@@ -83,19 +69,16 @@ def get_parent_agent_inputs():
 
 
 class ALTKAgentComponent(ALTKBaseAgentComponent):
-    """ALTK Agent with both pre-tool validation and post-tool processing capabilities.
-
-    This agent combines the functionality of both ALTKAgent and AgentReflection components,
-    implementing a modular pipeline for tool processing that can be extended with
-    additional capabilities in the future.
-    """
+    """Retired node retained for saved-flow compatibility and migration guidance."""
 
     display_name: str = "ALTK Agent"
-    description: str = "Advanced agent with both pre-tool validation and post-tool processing capabilities."
+    description: str = "ALTK was retired in Langflow 1.13.0. Replace this node with the Agent component."
     documentation: str = "https://docs.langflow.org/bundles-altk"
     icon = "zap"
     beta = True
     name = "ALTK Agent"
+    legacy = True
+    replacement = ["models_and_agents.Agent"]
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
@@ -145,97 +128,3 @@ class ALTKAgentComponent(ALTKBaseAgentComponent):
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
     ]
-
-    def configure_tool_pipeline(self) -> None:
-        """Configure the tool pipeline with wrappers based on enabled features."""
-        wrappers = []
-
-        # Add post-tool processing first (innermost wrapper)
-        if self.enable_post_tool_reflection:
-            logger.info("Enabling Post-Tool Processing Wrapper!")
-            post_processor = PostToolProcessingWrapper(
-                response_processing_size_threshold=self.response_processing_size_threshold
-            )
-            wrappers.append(post_processor)
-
-        # Add pre-tool validation last (outermost wrapper)
-        if self.enable_tool_validation:
-            logger.info("Enabling Pre-Tool Validation Wrapper!")
-            pre_validator = PreToolValidationWrapper()
-            wrappers.append(pre_validator)
-
-        self.pipeline_manager.configure_wrappers(wrappers)
-
-    def update_runnable_instance(self, agent, runnable, tools):
-        """Override to add tool specs update for validation wrappers."""
-        # Get context info (copied from parent)
-        user_query = self.get_user_query()
-        conversation_context = self.build_conversation_context()
-
-        # Initialize pipeline (this ensures configure_tool_pipeline is called)
-        self._initialize_tool_pipeline()
-
-        # Update tool specs for validation wrappers BEFORE processing
-        for wrapper in self.pipeline_manager.wrappers:
-            if isinstance(wrapper, PreToolValidationWrapper) and tools:
-                wrapper.tool_specs = wrapper.convert_langchain_tools_to_sparc_tool_specs_format(tools)
-
-        # Process tools with updated specs
-        processed_tools = self.pipeline_manager.process_tools(
-            list(tools or []),
-            agent=agent,
-            user_query=user_query,
-            conversation_context=conversation_context,
-        )
-
-        runnable.tools = processed_tools
-        return runnable
-
-    def __init__(self, **kwargs):
-        """Initialize ALTK agent with input normalization for Data.to_lc_message() inconsistencies."""
-        super().__init__(**kwargs)
-
-        # If input_value uses Data.to_lc_message(), wrap it to provide consistent content
-        if hasattr(self.input_value, "to_lc_message") and callable(self.input_value.to_lc_message):
-            self.input_value = self._create_normalized_input_proxy(self.input_value)
-
-    def _create_normalized_input_proxy(self, original_input):
-        """Create a proxy that normalizes to_lc_message() content format."""
-
-        class NormalizedInputProxy:
-            def __init__(self, original):
-                self._original = original
-
-            def __getattr__(self, name):
-                if name == "to_lc_message":
-                    return self._normalized_to_lc_message
-                return getattr(self._original, name)
-
-            def _normalized_to_lc_message(self):
-                """Return a message with normalized string content."""
-                original_msg = self._original.to_lc_message()
-
-                # If content is in list format, normalize it to string
-                if hasattr(original_msg, "content") and isinstance(original_msg.content, list):
-                    from langchain_core.messages import AIMessage, HumanMessage
-                    from lfx.base.agents.altk_base_agent import (
-                        normalize_message_content,
-                    )
-
-                    normalized_content = normalize_message_content(original_msg)
-
-                    # Create new message with string content
-                    if isinstance(original_msg, HumanMessage):
-                        return HumanMessage(content=normalized_content)
-                    return AIMessage(content=normalized_content)
-
-                # Return original if already string format
-                return original_msg
-
-            def __str__(self):
-                return str(self._original)
-
-            def __repr__(self):
-                return f"NormalizedInputProxy({self._original!r})"
-
-        return NormalizedInputProxy(original_input)

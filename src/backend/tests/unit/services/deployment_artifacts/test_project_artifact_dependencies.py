@@ -91,6 +91,17 @@ def test_scrub_backend_config_drops_unknown_nested_values():
     assert _RAW_SECRET not in json.dumps(scrubbed)
 
 
+@pytest.mark.parametrize("backend", ["sqlite", "chroma"])
+def test_local_backend_cannot_be_packaged_for_remote_deployment(backend):
+    with pytest.raises(ProjectArtifactError, match="cannot be provisioned"):
+        _validated_backend_config(backend, {}, resource_kind="Knowledge Base")
+
+
+def test_unknown_backend_cannot_be_packaged_as_remote():
+    with pytest.raises(ProjectArtifactError, match="unknown vector-store backend"):
+        _validated_backend_config("unknown", {}, resource_kind="Knowledge Base")
+
+
 def test_strict_backend_config_refuses_values_ordinary_scrubbing_would_drop():
     with pytest.raises(ProjectArtifactError, match="unsupported or unsafe backend configuration"):
         _validated_backend_config(

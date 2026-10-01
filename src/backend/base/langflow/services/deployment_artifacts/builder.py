@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.helpers.base_model import coalesce_bool
 from lfx.integrations.models import ConnectionRef
 from sqlmodel import col, select
@@ -724,8 +725,14 @@ def _validated_backend_config(
         raise ProjectArtifactError(msg)
     config = backend_config if isinstance(backend_config, dict) else {}
     resolved_backend_type = backend_type.strip()
-    if resolved_backend_type.lower() == "chroma" and str(config.get("mode", "local")).lower() != "cloud":
-        msg = f"referenced {resource_kind} uses local Chroma, which cannot be provisioned on the deployment target"
+    try:
+        local = is_local_backend(resolved_backend_type.lower(), config)
+    except ValueError as exc:
+        msg = f"referenced {resource_kind} uses an unknown vector-store backend"
+        raise ProjectArtifactError(msg) from exc
+    if local:
+        label = "Chroma" if resolved_backend_type.lower() == "chroma" else "SQLite"
+        msg = f"referenced {resource_kind} uses local {label}, which cannot be provisioned on the deployment target"
         raise ProjectArtifactError(msg)
     scrubbed = _scrub_backend_config(config)
     if strict:

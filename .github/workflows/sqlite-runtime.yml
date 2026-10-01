@@ -1,0 +1,36 @@
+name: SQLite native runtime
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/sqlite-runtime.yml
+      - scripts/ci/check_sqlite_runtime.py
+      - src/lfx/pyproject.toml
+      - src/lfx/src/lfx/base/knowledge_bases/backends/sqlite*.py
+
+permissions:
+  contents: read
+
+jobs:
+  native-wheels:
+    name: Native SQLite - ${{ matrix.runner }} Python ${{ matrix.python }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
+        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          python-version: ${{ matrix.python }}
+      - name: Install only the pinned native wheels
+        run: |
+          uv venv .sqlite-runtime
+          uv pip install --python .sqlite-runtime --only-binary :all: apsw==3.53.4.0 sqlite-vec==0.1.9
+      - name: Qualify extension, WAL and reopen
+        run: uv run --no-project --python .sqlite-runtime scripts/ci/check_sqlite_runtime.py

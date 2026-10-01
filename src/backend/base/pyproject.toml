@@ -362,11 +362,8 @@ scrapegraph = ["scrapegraph-py>=1.12.0"]
 apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
 
-# ALTK (Agent Lifecycle Toolkit)
-# Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
-# Upper bound prevents breaking changes in future major versions
-# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+# Retired in 1.13.0. Keep the empty extra for installation compatibility.
+altk = []
 
 # Toolguard Integration
 toolguard = ["lfx[toolguard]~=1.13.0"]  # toolguard relocated to lfx

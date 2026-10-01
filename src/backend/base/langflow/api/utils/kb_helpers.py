@@ -18,7 +18,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_backend, is_local_chroma
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_CHUNK_INDEX,
     METADATA_KEY_FILE_NAME,
@@ -171,12 +171,13 @@ def local_chroma_rejection_reason(
     *,
     resource: str = "knowledge base",
 ) -> str | None:
-    """Explain why local Chroma is unavailable here, or ``None`` when it is fine.
+    """Explain why a host-local backend is unavailable in production.
 
-    Local Chroma writes vectors to the serving box's own filesystem: they do not
+    Local backends write vectors to the serving box's own filesystem: they do not
     survive a replica restart, cannot be shared between replicas, and scale with
     the machine rather than the cluster. The production profile therefore refuses
-    it and expects pgVector, OpenSearch, or Chroma Cloud instead.
+    them and expects a shared remote backend instead. The historical function
+    name remains for existing callers during the storage transition.
 
     This create-time check is the only enforcement needed. Prod boot already
     requires a reachable pgVector (``preflight.probe_pgvector`` is a *required*
@@ -187,12 +188,13 @@ def local_chroma_rejection_reason(
     Returns the message rather than raising so HTTP routes and service-layer
     callers can wrap it in their own error type without duplicating the rule.
     """
-    if not is_local_chroma(backend_type, backend_config):
+    if not is_local_backend(backend_type, backend_config):
         return None
     if get_settings_service().settings.deployment_profile != "prod":
         return None
+    label = "SQLite" if backend_type == BackendType.SQLITE else "Chroma"
     return (
-        f"Local Chroma is not available in the production deployment profile, so this {resource} "
+        f"Local {label} is not available in the production deployment profile, so this {resource} "
         "cannot be created with it. Choose a shared vector store (pgVector, OpenSearch, or Chroma "
         "Cloud), or run with LANGFLOW_DEPLOYMENT_PROFILE=dev for local-only storage."
     )
