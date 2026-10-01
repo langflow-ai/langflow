@@ -11,6 +11,8 @@ from lfx.services.base import Service
 from lfx.services.storage.service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     import anyio
     from langflow.services.session.service import SessionService
 
@@ -217,6 +219,18 @@ class LocalStorageService(StorageService, Service):
 
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
+
+    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+        """Retrieve a file a chunk at a time, never holding the whole file."""
+        file_path = await self._validated_path(flow_id, file_name)
+        if not await file_path.exists():
+            await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
+            msg = f"File {file_name} not found in flow {flow_id}"
+            raise FileNotFoundError(msg)
+
+        async with aiofiles.open(str(file_path), "rb") as f:
+            while chunk := await f.read(chunk_size):
+                yield chunk
 
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a specific flow directory.
