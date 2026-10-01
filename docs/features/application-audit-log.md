@@ -265,8 +265,8 @@ page and gets one page, whatever mix of stores and resource types it spans.
 **Query parameters**: `source`* (`resource`, `authz`), `kind`* (`action`,
 `check`), `resource_type`*, `resource_id`, `action`*, `exclude_action`*,
 `operation`*, `result`*, `actor_type`*, `user_id`, `actor_id`, `request_id`,
-`since`, `until`, `q`, `cursor`, `limit` (1–200, default 50), `include_total`
-(`true`/`false`, default `false`). Parsing is as strict as the resource views.
+`since`, `until`, `q`, `cursor`, `offset` (0–1,000,000), `limit` (1–200,
+default 50), `include_total` (`true`/`false`, default `false`). Parsing is as strict as the resource views.
 
 **Search.** `q` (1–200 characters) keeps rows whose action, resource type,
 actor username or details contain it, ignoring case; on `audit_events` it also
@@ -291,6 +291,13 @@ row that belongs on a page is always within its own store's first `limit + 1`
 rows, so a page is exact across stores and timestamp ties. A cursor is bound to
 the filters that issued it. `total` is `null` unless `include_total=true`, which
 costs one `COUNT` per store.
+
+**Jumping to a page.** `offset` positions a page instead of a cursor, so the
+console can open page N or the last page. The database finds the row just before
+that position across both stores (one `UNION ALL` ordered by `(timestamp, id)`),
+and the page is then read from that key exactly as a cursor would; its
+`next_cursor` continues the walk. Only the jump pays for its depth. `offset` and
+`cursor` cannot be combined, and an offset past the end returns an empty page.
 
 **Response items** carry `id`, `timestamp`, `source`, `kind`, `action`,
 `resource_type`, `resource_id`, `resource_name`, `result`, `user_id`,
