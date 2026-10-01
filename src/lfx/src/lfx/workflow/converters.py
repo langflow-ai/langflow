@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Protocol
 
+from lfx.application_observability import observe_response_serialization
 from lfx.schema.workflow import (
     ComponentOutput,
     ErrorDetail,
@@ -640,6 +641,7 @@ def workflow_response_from_output_events(
     )
 
 
+@observe_response_serialization
 def run_response_to_workflow_response(
     run_response: RunResponseLike,
     flow_id: str,

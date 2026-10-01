@@ -7,6 +7,7 @@ DB. The frame source is injected (scripted) to stand in for a live graph build.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -15,6 +16,8 @@ import pytest
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_settings_service
+
+from lfx import application_observability as app_observability
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -59,6 +62,57 @@ async def test_submit_creates_job_and_runs_to_completion(active_user):
         # Durable result is surfaced on the status payload.
         assert st.get("result") is not None
     finally:
+        await svc.stop()
+
+
+async def test_real_submit_emits_one_producer_only_when_a_job_is_enqueued(active_user, monkeypatch):
+    calls = []
+
+    class Scope:
+        def set_attribute(self, _key, _value):
+            return None
+
+        def record_error(self, _error_type):
+            return None
+
+    @contextlib.contextmanager
+    def record_span(name, attributes=None, **kwargs):
+        calls.append({"name": name, "attributes": dict(attributes or {}), **kwargs})
+        yield Scope()
+
+    monkeypatch.setattr(app_observability._otel, "application_span", record_span)
+    gate = asyncio.Event()
+
+    async def blocking_source(**_kwargs):
+        yield _frame("build_start", {})
+        await gate.wait()
+        yield _frame("end", {})
+
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=lambda **_kw: blocking_source,
+    )
+    await svc.start()
+    try:
+        flow_id = uuid4()
+        request = {"stream_protocol": "langflow", "idempotency_key": f"trace-{uuid4()}"}
+        first = await svc.submit(flow_id=flow_id, request=request, user=active_user)
+        duplicate = await svc.submit(flow_id=flow_id, request=request, user=active_user)
+        assert duplicate == first
+
+        producers = [call for call in calls if call["name"] == app_observability.JOB_ENQUEUE_SPAN]
+        assert len(producers) == 1
+        assert producers[0]["attributes"] == {
+            "messaging.system": "langflow",
+            "messaging.destination.name": "workflow.jobs",
+            "messaging.operation.type": "send",
+            "langflow.phase": "job.enqueue",
+            "langflow.job.id": str(first),
+            "langflow.job.type": "workflow",
+            "langflow.job.backend": "in_process",
+        }
+    finally:
+        gate.set()
         await svc.stop()
 
 

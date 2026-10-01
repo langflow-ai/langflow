@@ -33,6 +33,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import EventSourceResponse, StreamingResponse
+from lfx.application_observability import observe_db_phase, observe_stream_send
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.log.logger import logger
 from lfx.memory.flow_context import derive_message_owner_uuid
@@ -153,6 +154,7 @@ def _flow_not_found_http_exception(flow_id: str) -> HTTPException:
     )
 
 
+@observe_db_phase("flow.fetch")
 async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
     """Share-aware fetch with the langflow error-to-HTTP mapping.
 
@@ -1322,6 +1324,11 @@ async def reattach_workflow_events(
         raise _not_found()
 
     return EventSourceResponse(
-        service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),
+        observe_stream_send(
+            service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),
+            protocol="v2.background",
+            stream_protocol=service.job_protocol(job),
+            kind="reattach",
+        ),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
