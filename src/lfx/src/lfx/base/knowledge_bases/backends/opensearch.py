@@ -577,8 +577,11 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if LANGCHAIN_DEFAULT_VECTOR_FIELD not in embedding_fields:
             embedding_fields.append(LANGCHAIN_DEFAULT_VECTOR_FIELD)
         # Skip the embedding column(s) in ``_source`` when the caller doesn't
-        # need them — large embedding vectors dominate scroll payloads.
-        source_excludes = None if include_embeddings else list(embedding_fields)
+        # need them — large embedding vectors dominate scroll payloads. When the
+        # caller does, ask for ``_source`` explicitly: OpenSearch 3.8+ can strip
+        # knn_vector fields from every response (the knn_default_excludes
+        # processor) unless the request sets ``_source`` itself.
+        source_params = {"_source": True} if include_embeddings else {"_source_excludes": list(embedding_fields)}
         # Keys that are never chunk metadata when we have to reconstruct it from
         # a flat ``_source`` (the non-LangChain layout fallback below).
         non_metadata_keys = {text_field, "metadata", *embedding_fields}
@@ -603,8 +606,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     client,
                     index=index,
                     size=batch_size,
-                    _source_excludes=source_excludes,
                     preserve_order=False,
+                    **source_params,
                 )
                 buf: list[IngestedDocument] = []
                 for hit in scanner:
