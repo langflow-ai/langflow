@@ -2879,7 +2879,13 @@ class TestMemoriesAPIHandlers:
 
         svc = MagicMock()
         svc.get = AsyncMock(return_value=mb)
-        with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            patch(
+                "langflow.api.v1.memories.knowledge_base_service.get_backends_for_names",
+                AsyncMock(return_value={mb.kb_name: ("chroma", {})}),
+            ),
+        ):
             result = await get_memory_base(memory_base_id=mb.id, current_user=mock_user)
 
         assert result.id == mb.id
