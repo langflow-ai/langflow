@@ -85,6 +85,16 @@ def ungroup_node(group_node_data, base_flow):
     return nodes
 
 
+def is_group_node(node) -> bool:
+    """Return whether ``process_flow`` expands this node's inlined flow."""
+    return bool(node.get("data") and node["data"].get("node") and node["data"]["node"].get("flow"))
+
+
+def has_group_nodes(nodes) -> bool:
+    """Return whether any top-level node is a group that ``process_flow`` would expand."""
+    return any(is_group_node(node) for node in nodes)
+
+
 def process_flow(flow_object):
     cloned_flow = copy.deepcopy(flow_object)
     processed_nodes = set()  # To keep track of processed nodes
@@ -96,7 +106,7 @@ def process_flow(flow_object):
         if node_id in processed_nodes:
             return
 
-        if node.get("data") and node["data"].get("node") and node["data"]["node"].get("flow"):
+        if is_group_node(node):
             process_flow(node["data"]["node"]["flow"]["data"])
             new_nodes = ungroup_node(node["data"], cloned_flow)
             # Add new nodes to the queue for future processing
