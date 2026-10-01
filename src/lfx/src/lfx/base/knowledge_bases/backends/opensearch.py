@@ -93,6 +93,21 @@ if TYPE_CHECKING:
     from langchain_core.vectorstores import VectorStore
 
 
+async def _drained_worker(function, *args, **kwargs):
+    """Keep the storage fence until a synchronous SDK request has returned."""
+    task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+    cancelled = False
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            cancelled = True
+    result = task.result()
+    if cancelled:
+        raise asyncio.CancelledError
+    return result
+
+
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"
 DEFAULT_USERNAME_VARIABLE = "OPENSEARCH_USERNAME"
 DEFAULT_PASSWORD_VARIABLE = "OPENSEARCH_PASSWORD"  # noqa: S105 — variable name, not a secret  # pragma: allowlist secret
@@ -354,7 +369,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
         for start in range(0, len(docs), bulk_size):
             chunk = docs[start : start + bulk_size]
-            await asyncio.to_thread(
+            await _drained_worker(
                 self.vector_store.add_embeddings,  # type: ignore[attr-defined]
                 [(doc.content, doc.embedding) for doc in chunk],
                 metadatas=[doc.metadata for doc in chunk],
@@ -750,17 +765,23 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return
         body = {"query": self._translate_where(where)}
         try:
-            await asyncio.to_thread(
+            result = await _drained_worker(
                 client.delete_by_query,
                 index=self._os_index,
                 body=body,
                 refresh=True,
             )
-        except Exception as exc:  # noqa: BLE001
-            # ``delete_by`` is the rollback path; a silent debug log
-            # would let stale chunks linger after a failed ingestion
-            # without the operator ever knowing.
+            if (
+                not isinstance(result, dict)
+                or result.get("timed_out")
+                or result.get("failures")
+                or result.get("version_conflicts")
+            ):
+                msg = "OpenSearch did not complete the requested document deletion"
+                raise RuntimeError(msg)
+        except Exception as exc:
             logger.warning("OpenSearch delete_by_query failed for %s: %s", self.kb_name, exc)
+            raise
 
     async def storage_size_bytes(self) -> int:
         await self.ensure_ready()
@@ -781,7 +802,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         client = getattr(self, "_os_client", None)
         if client is not None and hasattr(client, "close"):
             try:
-                await asyncio.to_thread(client.close)
+                await _drained_worker(client.close)
             except Exception as exc:  # noqa: BLE001
                 # ``teardown`` runs in ``finally`` blocks; a leaked
                 # connection during shutdown is worth a default-level
@@ -806,7 +827,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             wrapper_client = getattr(vector_store, "client", None)
             if wrapper_client is not None and hasattr(wrapper_client, "close"):
                 try:
-                    await asyncio.to_thread(wrapper_client.close)
+                    await _drained_worker(wrapper_client.close)
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("OpenSearch wrapper client.close failed: %s", exc)
         self._os_client = None
@@ -814,11 +835,16 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
     async def delete_collection(self) -> None:
         """Drop the configured index. Used by KB deletion."""
+        await self.ensure_ready()
         client = getattr(self, "_os_client", None)
         if client is None:
             _ = self.vector_store
             client = self._os_client
         try:
-            await asyncio.to_thread(client.indices.delete, index=self._os_index, ignore_unavailable=True)
-        except Exception as exc:  # noqa: BLE001
+            result = await _drained_worker(client.indices.delete, index=self._os_index, ignore_unavailable=True)
+            if not isinstance(result, dict) or result.get("acknowledged") is not True:
+                msg = "OpenSearch did not acknowledge index deletion"
+                raise RuntimeError(msg)
+        except Exception as exc:
             logger.warning("OpenSearch indices.delete failed for %s: %s", self.kb_name, exc)
+            raise

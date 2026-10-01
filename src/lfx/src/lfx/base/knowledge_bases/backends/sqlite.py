@@ -397,7 +397,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         return db_path
 
     @contextlib.contextmanager
-    def _connect(self, *, initialize: bool = False) -> Iterator[Any]:
+    def _connect(self, *, initialize: bool = False, allow_deleted: bool = False) -> Iterator[Any]:
         # Lazy native imports keep unrelated backends and component discovery lightweight.
         import apsw
         import sqlite_vec
@@ -455,7 +455,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
                     connection.execute("ROLLBACK")
                     raise
             else:
-                self._header(connection)
+                self._header(connection, allow_deleted=allow_deleted)
             yield connection
         finally:
             connection.close()
@@ -777,15 +777,15 @@ class SQLiteBackend(BaseVectorStoreBackend):
 
     async def delete_collection(self) -> None:
         """Tombstone before removing rows. File removal belongs to guarded lifecycle cleanup."""
-        await self.ensure_ready()
 
         def tombstone() -> None:
-            with self._connect() as connection:
+            with self._connect(allow_deleted=True) as connection:
                 connection.execute("BEGIN IMMEDIATE")
                 try:
-                    self._header(connection)
-                    connection.execute("DELETE FROM chunks")
-                    connection.execute("UPDATE store_header SET lifecycle='deleted' WHERE singleton=1")
+                    header = self._header(connection, allow_deleted=True)
+                    if header["lifecycle"] != "deleted":
+                        connection.execute("DELETE FROM chunks")
+                        connection.execute("UPDATE store_header SET lifecycle='deleted' WHERE singleton=1")
                     connection.execute("COMMIT")
                 except BaseException:
                     connection.execute("ROLLBACK")

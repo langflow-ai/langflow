@@ -1,0 +1,430 @@
+"""Owner-aware backend construction and whole-operation, cross-process fences.
+
+The file lock is held until a complete async method or iterator drains. Local
+storage is supported on a single host with a local filesystem, never NFS. A
+context inherited by a child task does not confer ownership of its parent's lock.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import inspect
+import os
+from contextlib import aclosing, asynccontextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+from uuid import UUID
+
+from filelock import FileLock, Timeout
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import select
+
+from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
+
+_held_locks: dict[tuple[int, object, UUID], _OperationLease] = {}
+_pg_transactions: dict[tuple[int, object, str], _PostgresTransaction] = {}
+_coordination_engines: dict[tuple[int, str, object], Any] = {}
+
+
+@dataclass
+class _OperationLease:
+    """Live ownership survives finalization in a different task/context."""
+
+    owner: tuple[int, object, UUID]
+    release: Any
+    users: int = 0
+    active: bool = True
+
+
+@dataclass
+class _PostgresTransaction:
+    owner: tuple[int, object, str]
+    manager: Any
+    connection: Any
+    users: int = 0
+    active: bool = True
+
+
+def _owner(kb_id: UUID) -> tuple[int, object, UUID]:
+    return os.getpid(), asyncio.current_task(), kb_id
+
+
+@asynccontextmanager
+async def _use_lease(lease: _OperationLease):
+    lease.users += 1
+    try:
+        yield
+    finally:
+        lease.users -= 1
+        if not lease.users:
+            lease.active = False
+            if _held_locks.get(lease.owner) is lease:
+                del _held_locks[lease.owner]
+            # Ownership cannot remain stale even if releasing the actual lock
+            # fails. In that case subsequent callers must acquire it afresh.
+            await lease.release()
+
+
+async def _drain_cleanup(awaitable):
+    task = asyncio.ensure_future(awaitable)
+    cancelled = False
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            cancelled = True
+    result = task.result()
+    if cancelled:
+        raise asyncio.CancelledError
+    return result
+
+
+async def _release_transaction(transaction: _PostgresTransaction) -> None:
+    transaction.users -= 1
+    if not transaction.users:
+        transaction.active = False
+        if _pg_transactions.get(transaction.owner) is transaction:
+            del _pg_transactions[transaction.owner]
+        await _drain_cleanup(transaction.manager.__aexit__(None, None, None))
+
+
+@asynccontextmanager
+async def _file_operation_lock(kb_id: UUID, path: Path):
+    owner = _owner(kb_id)
+    existing = _held_locks.get(owner)
+    if existing is not None and existing.active:
+        async with _use_lease(existing):
+            yield
+        return
+    if path.is_symlink():
+        msg = "Invalid storage lock path"
+        raise StorageUnavailableError(msg)
+    lock = FileLock(path, thread_local=False)
+    while True:
+        try:
+            lock.acquire(timeout=0)
+            break
+        except Timeout:
+            await asyncio.sleep(0.05)
+
+    async def release():
+        lock.release()
+
+    lease = _OperationLease(owner, release)
+    _held_locks[owner] = lease
+    async with _use_lease(lease):
+        yield
+
+
+class StorageUnavailableError(ValueError):
+    """A missing, fenced or superseded KB cannot be accessed as an empty store."""
+
+    status_code = 409
+
+
+def storage_root() -> Path:
+    configured = get_settings_service().settings.knowledge_bases_dir
+    if not configured:
+        msg = "Knowledge base storage directory is not configured"
+        raise StorageUnavailableError(msg)
+    path = Path(configured).expanduser().absolute()
+    return path.parent.resolve() / path.name
+
+
+def private_directory(path: Path) -> Path:
+    """Create trusted internal directories without accepting child symlinks."""
+    root = storage_root()
+    if not path.is_relative_to(root):
+        msg = "Storage path escapes its configured root"
+        raise StorageUnavailableError(msg)
+    for candidate in (root, *reversed(list(path.parents)[: len(path.relative_to(root).parts) - 1]), path):
+        if candidate.is_symlink():
+            msg = "Knowledge base storage cannot use symbolic links"
+            raise StorageUnavailableError(msg)
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return path
+
+
+@asynccontextmanager
+async def exclusive_lock(kb_id: UUID):
+    """Serialize all processes and tasks, including migration and deletion."""
+    directory = private_directory(storage_root() / ".locks")
+    path = directory / f"{UUID(str(kb_id))}.lock"
+    async with _file_operation_lock(kb_id, path):
+        yield
+
+
+async def resolve_record(user_id: UUID, name: str) -> KnowledgeBaseRecord:
+    async with session_scope() as session:
+        row = (
+            await session.exec(
+                select(KnowledgeBaseRecord).where(
+                    KnowledgeBaseRecord.user_id == user_id, KnowledgeBaseRecord.name == name
+                )
+            )
+        ).first()
+    if row is None:
+        msg = "Knowledge base no longer exists"
+        raise StorageUnavailableError(msg)
+    return row
+
+
+@asynccontextmanager
+async def operation(record_or_id, *, allowed_states=("ready",)):
+    kb_id = record_or_id.id if isinstance(record_or_id, KnowledgeBaseRecord) else UUID(str(record_or_id))
+    async with session_scope() as session:
+        initial = await session.get(KnowledgeBaseRecord, kb_id)
+    if initial is None:
+        msg = "Knowledge base no longer exists"
+        raise StorageUnavailableError(msg)
+    local = initial.backend_type == "sqlite" or (
+        initial.backend_type == "chroma" and initial.backend_config.get("mode", "local") == "local"
+    )
+    async with exclusive_lock(kb_id) if local else _remote_lock(kb_id):
+        async with session_scope() as session:
+            current = await session.get(KnowledgeBaseRecord, kb_id)
+        if current is None:
+            msg = "Knowledge base no longer exists"
+            raise StorageUnavailableError(msg)
+        if current.storage_state not in allowed_states:
+            msg = f"Knowledge base storage is {current.storage_state}. Check upgrade status."
+            raise StorageUnavailableError(msg)
+        if isinstance(record_or_id, KnowledgeBaseRecord) and (
+            current.storage_generation != record_or_id.storage_generation
+            or current.backend_type != record_or_id.backend_type
+            or current.user_id != record_or_id.user_id
+            or current.backend_config != record_or_id.backend_config
+        ):
+            msg = "Knowledge base storage changed. Retry with its current routing."
+            raise StorageUnavailableError(msg)
+        yield current
+
+
+@asynccontextmanager
+async def _remote_lock(kb_id: UUID):
+    """Postgres advisory transaction locks coordinate remote-store replicas."""
+    owner = _owner(kb_id)
+    existing = _held_locks.get(owner)
+    if existing is not None and existing.active:
+        async with _use_lease(existing):
+            yield
+        return
+    database = get_db_service()
+    if database.database_url.startswith(("postgres", "postgresql")):
+        key = int.from_bytes(hashlib.sha256(kb_id.bytes).digest()[:8], "big", signed=True)
+        # Advisory locks must not consume the app pool while their holder
+        # needs that same pool to read routing or resolve credentials. Keep a
+        # separate bounded pool, recreated after fork and per event loop.
+        engine_key = (os.getpid(), database.database_url, asyncio.get_running_loop())
+        engine = _coordination_engines.get(engine_key)
+        if engine is None:
+            engine = create_async_engine(
+                database.database_url,
+                pool_size=4,
+                max_overflow=0,
+                pool_timeout=30,
+                connect_args=database._get_connect_args(),  # noqa: SLF001 -- preserve configured driver TLS options
+            )
+            _coordination_engines[engine_key] = engine
+        transaction_owner = (os.getpid(), asyncio.current_task(), database.database_url)
+        transaction = _pg_transactions.get(transaction_owner)
+        if transaction is not None and not transaction.active:
+            transaction = None
+        if transaction is None:
+            # The first KB releases the connection between unsuccessful tries.
+            # Nested distinct KBs reuse this task's transaction, so any number
+            # of sorted locks requires only one bounded-pool connection.
+            while True:
+                manager = engine.begin()
+                connection = await manager.__aenter__()
+                try:
+                    acquired = (
+                        await connection.execute(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key})
+                    ).scalar_one()
+                except BaseException:
+                    await _drain_cleanup(manager.__aexit__(None, None, None))
+                    raise
+                if acquired:
+                    transaction = _PostgresTransaction(transaction_owner, manager, connection, users=1)
+                    _pg_transactions[transaction_owner] = transaction
+                    break
+                await _drain_cleanup(manager.__aexit__(None, None, None))
+                await asyncio.sleep(0.05)
+        else:
+            # Reserve ownership while acquisition awaits. Closing an outer
+            # generator in another task cannot release this transaction early.
+            transaction.users += 1
+            try:
+                while not (  # noqa: ASYNC110 -- cross-process advisory locks have no local event to await
+                    await transaction.connection.execute(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key})
+                ).scalar_one():
+                    await asyncio.sleep(0.05)
+            except BaseException:
+                await _release_transaction(transaction)
+                raise
+
+        async def release():
+            await _release_transaction(transaction)
+
+        lease = _OperationLease(owner, release)
+        _held_locks[owner] = lease
+        async with _use_lease(lease):
+            yield
+    else:
+        # A SQLite application DB is itself single-host. Its directory is
+        # configured even when this deployment has no local vector root.
+        from langflow.services.database.service import get_sqlite_database_file_path
+
+        database_path = get_sqlite_database_file_path(database.database_url)
+        if database_path is None:
+            msg = "Unsupported application database for storage coordination"
+            raise StorageUnavailableError(msg)
+        directory = database_path.parent / ".kb-storage-locks"
+        if directory.is_symlink():
+            msg = "Invalid storage lock directory"
+            raise StorageUnavailableError(msg)
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path = directory / f"{kb_id}.lock"
+        async with _file_operation_lock(kb_id, path):
+            yield
+
+
+def _raw_backend(record, *, embedding_function=None, create=False, credential_user_id=None):
+    if record.backend_type == "chroma":
+        msg = "This knowledge base requires the automatic SQLite upgrade before use"
+        raise StorageUnavailableError(msg)
+    kwargs: dict[str, Any] = {}
+    if record.backend_type == "sqlite":
+        kwargs = {
+            "storage_context": SQLiteStorageContext(
+                root=storage_root(), owner_id=record.user_id, kb_id=record.id, generation=record.storage_generation
+            ),
+            "create": create,
+        }
+    return create_backend(
+        backend_type=BackendType(record.backend_type),
+        kb_name=record.name,
+        kb_path=None,
+        backend_config=record.backend_config,
+        embedding_function=embedding_function,
+        user_id=credential_user_id or record.user_id,
+        **kwargs,
+    )
+
+
+class _GuardedMethods:
+    def __init__(self, target, record):
+        self._target = target
+        self._record = record
+
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+        value = getattr(self._target, name)
+        if name == "vector_store":
+            return _GuardedMethods(value, self._record)
+        if inspect.isasyncgenfunction(value):
+
+            async def iterate(*args, **kwargs):
+                async with operation(self._record), aclosing(value(*args, **kwargs)) as iterator:
+                    async for batch in iterator:
+                        yield batch
+
+            return iterate
+        if inspect.iscoroutinefunction(value):
+
+            async def call(*args, **kwargs):
+                # Teardown releases handles even after a migration fence appeared.
+                if name == "teardown":
+                    return await value(*args, **kwargs)
+                async with operation(self._record):
+                    return await value(*args, **kwargs)
+
+            return call
+        if callable(value) and name not in ("normalize_score",):
+
+            def unsupported(*_args, **_kwargs):
+                msg = "Use asynchronous knowledge base operations so storage fences are honored"
+                raise StorageUnavailableError(msg)
+
+            return unsupported
+        return value
+
+
+async def backend_for_record(record, *, embedding_function=None, create=False, credential_user_id=None):
+    async with operation(record) as current:
+        backend = _raw_backend(
+            current, embedding_function=embedding_function, create=create, credential_user_id=credential_user_id
+        )
+    return _GuardedMethods(backend, current)
+
+
+async def backend_for_name(user_id, name, **kwargs):
+    return await backend_for_record(await resolve_record(user_id, name), **kwargs)
+
+
+async def delete_storage_for_record(record) -> None:
+    """Drain old operations, persist the deletion fence, then tombstone the store.
+
+    The caller may remove the metadata row afterwards. Failures remain deleting
+    and retryable. The SQLite tombstone is retained, so missing-file recreation
+    and stale workers cannot resurrect the deleted generation.
+    """
+    async with operation(record, allowed_states=("ready", "deleting", "deleted")) as current:
+        if current.storage_state == "deleted":
+            return
+        async with session_scope() as session:
+            row = await session.get(KnowledgeBaseRecord, current.id)
+            row.storage_state = "deleting"
+            await session.commit()
+        backend = _raw_backend(current)
+        try:
+            # Remote providers resolve credentials and clients before deletion.
+            # SQLite opens tombstoned generations only through delete_collection
+            # so a retry must not call its ordinary ready-state check first.
+            if current.backend_type != "sqlite":
+                await backend.ensure_ready()
+            await backend.delete_collection()
+        except FileNotFoundError:
+            # Explicit deletion may retire an already absent local generation.
+            # Reads and writes still fail closed on the same missing file.
+            if current.backend_type != "sqlite":
+                raise
+        finally:
+            await backend.teardown()
+        async with session_scope() as session:
+            row = await session.get(KnowledgeBaseRecord, current.id)
+            row.storage_state = "deleted"
+            await session.commit()
+
+
+async def delete_orphaned_storage(record) -> None:
+    """Tombstone a trusted local generation captured before owner-row cascading deletion."""
+    if record.backend_type != "sqlite":
+        msg = "Orphan cleanup requires a local SQLite generation"
+        raise StorageUnavailableError(msg)
+    async with exclusive_lock(record.id):
+        async with session_scope() as session:
+            if await session.get(KnowledgeBaseRecord, record.id) is not None:
+                msg = "Knowledge base still exists. Use its guarded deletion operation"
+                raise StorageUnavailableError(msg)
+        backend = _raw_backend(record)
+        try:
+            await backend.delete_collection()
+        except FileNotFoundError:
+            pass  # The orphaned local generation is already absent.
+        finally:
+            await backend.teardown()
+
+
+async def close_coordination_pools() -> None:
+    for key, engine in tuple(_coordination_engines.items()):
+        if key[0] == os.getpid() and key[2] is asyncio.get_running_loop():
+            await engine.dispose()
+            del _coordination_engines[key]

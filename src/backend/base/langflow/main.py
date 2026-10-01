@@ -287,6 +287,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
             await initialize_environment_variables()
+            from langflow.services.knowledge_base_storage.coordinator import fence_legacy_records, schedule_upgrade
+
+            await fence_legacy_records()
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             # Surface the custom-component execution posture. Component code is exec()'d on
@@ -398,6 +401,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug(f"Memory Base row reconciliation inserted {mb_inserted} rows")
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Memory Base row reconciliation skipped after startup error: %s", exc)
+
+            # Include reconstructed Memory backing rows in the same automatic
+            # upgrade. No ingestion-status update can remove their storage fence.
+            await fence_legacy_records()
+            schedule_upgrade()
 
             prometheus_started = False
             if get_settings_service().settings.prometheus_enabled:
@@ -771,6 +779,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             # failed before the hooks ran — enterprise stop() paths must (and
             # do) tolerate never having started.
             await _run_enterprise_lifespan_hooks("shutdown")
+            from langflow.services.knowledge_base_storage.coordinator import stop_upgrade
+
+            await stop_upgrade()
+            from langflow.services.knowledge_base_storage.runtime import close_coordination_pools
+
+            await close_coordination_pools()
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give

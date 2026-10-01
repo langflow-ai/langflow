@@ -1,136 +1,248 @@
 # SQLite Knowledge Base transition for 1.13.0
 
-## Current implementation boundary
+The local default is SQLite with sqlite-vec. Explicit pgVector configuration
+continues to take precedence. Existing pgVector and OpenSearch stores retain
+their routing. This change targets 1.13.0 only, with no 1.12.5 backport.
 
-This change provides the SQLite storage adapter, strict migration interchange
-and import verification, native-runtime qualification workflow, and ALTK
-retirement. **It does not yet switch the application default or automatically
-migrate an installation. Chroma remains in the application dependency graph.**
+The application workspace, universal lock and all-packages/all-extras/all-groups
+export no longer require `chromadb`, `langchain-chroma` or
+`agent-lifecycle-toolkit`. `langflow-base` installs `lfx[sqlite]`, including APSW
+3.53.4.0 and sqlite-vec 0.1.9. The Chroma-bearing upgrade reader is a **separate
+artifact**, described below. Its scan and security disposition remain separate
+from those of the application.
 
-The transition targets 1.13.0 only. There is no 1.12.5 backport. Existing stores
-must never be opened as empty SQLite stores merely because a legacy backend is
-unavailable. Keep the default switch behind the remaining upgrade gates below.
+## Runtime and storage
 
-## Storage contract
+Each store is located at
+`<knowledge_bases_root>/sqlite/<owner UUID>/<KB UUID>/<generation>/vectors.sqlite3`.
+The factory obtains identities from the authoritative application record, not
+request paths, display names or the accessing user's identity. Configuration
+cannot override the database or extension path. Shared resources use the owner.
+Normal reads open an existing generation and fail if its database is missing.
+Only explicit new-store creation or unpublished migration creates files.
 
-`SQLiteStorageContext` receives trusted application records: configured root,
-owner UUID, KB UUID and positive storage generation. The backend derives
-`sqlite/<owner>/<kb>/<generation>/vectors.sqlite3` beneath that root. Request
-configuration cannot override paths or identities. Shared resources must use
-the owner's context. Trusted OS ancestor aliases are canonicalized, while a
-symlinked configured root or generated child is rejected.
+The backend uses a private APSW runtime, WAL, full synchronous durability,
+foreign keys, bounded busy waits and short transactions. It loads only the
+installed sqlite-vec extension and disables further extension loading. Connections
+are scoped to bounded worker operations. Cancellation drains active workers
+before releasing their lifecycle guard. Pools are recreated after fork.
 
-`create_backend("sqlite", ..., storage_context=context)` opens an existing
-generation. Creating a new KB or an unpublished migration destination requires
-explicit `create=True`. Reads fail on missing or tombstoned storage. Deletion
-tombstones the generation before removing records. Physical directory cleanup
-belongs to the application's exclusive lifecycle guard.
+Canonical tables retain native IDs, original JSON metadata, text and float32
+vectors. Native IDs are distinct from user metadata `_id`. Exact filtered search
+supports squared L2, cosine and inner product. Extreme finite vectors use stable
+double-precision distance calculation before ranking. Equal distances use native
+ID ordering. Exact search can differ from Chroma's approximate search.
 
-The `lfx[sqlite]` extra pins APSW 3.53.4.0 and sqlite-vec 0.1.9. APSW supplies a
-private SQLite 3.53.4 runtime without modifying the application SQL driver.
-Connections load only the installed sqlite-vec extension, then disable loading.
-Connections are scoped to worker operations. WAL, full synchronous durability,
-foreign keys, transaction-time generation checks and a bounded busy timeout
-apply. Cancellation waits for the active worker to finish before returning.
-The worker pool is re-created after fork.
+The public local score remains negative distance. User source filters are applied
+before top-k selection, with AND across keys, OR across values and the historical
+Python string-conversion behavior. Internal job/session equality filters remain
+separate. Cosine zero vectors are rejected explicitly, including during migration,
+rather than silently removed or assigned a different metric.
 
-Canonical rows retain native IDs, text, original JSON metadata and float32
-vectors. Physical IDs remain distinct from metadata `_id`. Batch validation
-precedes mutation. Exact search supports squared L2, cosine and inner product,
-with deterministic ID tie-breaking. Extreme finite vectors use a stable
-double-precision fallback before ranking, while ordinary vectors use native
-sqlite-vec distances. Source metadata filtering happens before
-top-k selection and retains existing Python string-conversion behavior.
-Internal job/session filters remain separate. Cosine zero vectors are rejected
-explicitly because their distance is undefined. A migration encountering them
-must remain unpublished and request a supported source disposition.
+Application factories wrap complete backend methods and iterators in a
+cross-process guard. A fresh routing/state check follows lock acquisition.
+Generation and identity checks also occur inside SQLite transactions. Local
+stores require one host and local disk. Remote stores use application-database
+coordination without requiring a local vector directory. PostgreSQL advisory
+locks use a separate bounded pool, avoiding exhaustion of the application pool.
+Nested operations spanning several remote KBs share one coordination transaction.
+Memory capture holds the guard from reading messages and cursors through vector
+writes and ingestion-history updates. Session purges and regeneration acquire the
+same guards before changing messages, cursors or history.
 
-The normal iterator uses bounded keyset pages. It propagates failures rather
-than reporting an empty store. A consistent multi-page export requires the
-caller to hold an exclusive KB guard. The adapter is not itself the application's
-authorization or upgrade-coordination layer.
+Deletion persists a fence, drains active operations and tombstones the generation
+before removing application records. Failures retain the identity needed for a
+retry. A new KB with the same display name receives a new UUID and cannot reuse
+a tombstoned generation. Storage and metadata cleanup retain the original UUID,
+so a delayed request cannot delete its replacement. Remote destructive requests
+propagate transport and partial-completion errors. OpenSearch worker requests
+drain before cancellation releases their guard.
+Cleanup never manually unlinks active WAL/SHM files or
+truncates live databases.
 
-## Migration foundation
+## Automatic upgrade
 
-See [the migration protocol](../../src/lfx/src/lfx/base/knowledge_bases/migration/README.md).
-An entire export must match trusted snapshot inventory and its terminal
-manifest before it becomes importable. Qualification uses a private disk ledger
-with record, byte, depth, ID and vector limits. A failed source read cannot
-produce a successful empty migration.
+Alembic adds storage state, generation and active migration identity, plus a
+durable migration ledger. It fences existing Chroma rows without reading vector
+data. Ingestion status is independent and cannot clear this fence.
 
-Import reuses the existing precomputed-vector bridge and makes no embedding
-calls. It preserves IDs, vectors, metadata types and order, model identity,
-metric, and known dimensions even for empty stores. Retry requires the exact
-same migration identity and source fingerprint. Destination rows are compared
-against the source ledger, then integrity-checked and durably finalized.
+Startup inventories legacy sources and schedules migration automatically. The
+implemented maintenance verifier accepts a **managed single-host installation
+with a SQLite application metadata database**. Its service manager must stop the
+previous supervised API/background/Memory process family before the new version
+starts. This is a maintenance upgrade. An old worker cannot honor the new fence,
+and neither a lease expiry nor an ingestion cancellation request proves it stopped.
 
-A receipt establishes a completed copy only. It does not activate routing,
-release a fence, delete source snapshots or authorize a caller. Application DB
-cutover and filesystem commits cannot share one transaction, so activation must
-use a durable completed generation and compare-and-swap routing transaction.
-
-## ALTK retirement
-
-The optional ALTK integration is retired in 1.13.0 because its published SDK
-unconditionally depends on langchain-chroma. Its existing component class,
-module paths, fields and outputs remain loadable. Execution raises a retirement
-error before model or tool calls, with guidance to replace the node with Agent.
-The replacement does not reproduce ALTK's validation/reflection features.
-
-The old `altk` extras remain empty for installation compatibility. Neither
-those extras nor the dependency generator require the SDK, and the regenerated
-lockfile no longer contains agent-lifecycle-toolkit. The current core component
-index contains no ALTK node, so no unrelated index entries were regenerated.
-
-## Validation and native platforms
-
-The runtime workflow performs binary-only installation and actual extension,
-WAL, second-connection, dimension-error and reopen checks across Python
-3.10–3.14 on Linux x64/ARM64, macOS Intel/ARM64 and Windows x64.
-Adding the workflow is not evidence that those jobs have run. Unsupported
-native targets, including musl Linux and Windows ARM64, need a qualified build
-or a declared support decision before the SQLite default ships.
-
-`scripts/benchmark/sqlite_kb.py` builds a deterministic temporary corpus,
-imports precomputed vectors and measures exact search with and without a 1%
-filter. Example after installing the development environment and native extra:
+The controller records each previous worker's PID and creation time before
+shutdown. After the service manager has stopped them, it invokes the verifier:
 
 ```sh
-uv run --no-sync python scripts/benchmark/sqlite_kb.py --rows 100000 --dimensions 384 1536 3072
+python -m langflow.services.knowledge_base_storage.maintenance \
+  --root /absolute/knowledge-bases \
+  --database /absolute/langflow.db \
+  --receipt /private/upgrade-1.13/receipt.json \
+  --previous-workers /private/upgrade-1.13/previous-workers.json
 ```
 
-The first-query measurement is not a cold OS-cache measurement. These timings
-exclude model calls and do not establish an SLO or supported maximum corpus.
-Cold-cache, peak-memory, concurrent read/write, crash/disk-full and large-store
-upgrade rehearsals remain necessary.
+`previous-workers.json` is the controller's JSON array of
+`{"pid": 123, "created": 1234567890.0}` identities. The verifier does not terminate
+processes. It rejects still-running registered workers and other matching
+Langflow workers, creates and verifies a consistent application-database backup,
+and fingerprints the complete legacy source trees. The receipt is private to
+the application account and bound to the host, database and storage root.
+The service manager must keep the old supervisor stopped throughout upgrade.
+Do not manufacture a receipt or substitute an empty process list.
 
-## Remaining gates before default switch and full removal
+The new process receives:
 
-1. Add authoritative app-DB migration state and storage generation, with
-   migrations, durable coordinator recovery and routing compare-and-swap.
-2. Integrate a whole-KB operation guard across API ingestion, direct Knowledge
-   writes, Memory capture/regeneration, metadata edits, cleanup and deletion.
-   The initial upgrade must stop all old workers, which cannot honor new fences.
-3. Build, sign, scan and isolate the one-time helper independently of the
-   application workspace. Qualify source formats and malicious input. A local
-   Chroma 1.5.9 raw-Rust-reader experiment demonstrates feasibility for persisted
-   index data and purged logs, not a supported upgrade tool.
-4. Wire automatic preflight, pristine source and app-metadata backups, helper
-   staging/offline kits, progress/recovery, readiness and post-copy verification.
-   Prove crash recovery at each phase. Keep source backups by default.
-5. Connect owner-aware SQLite routing to KB/Memory creation and retrieval,
-   scores, UI defaults and settings. Preserve existing identities/history.
-6. Retire standalone Chroma/LocalDB and Cloud implementations with saved-flow
-   compatibility and validated migration bindings. Remote stores require their
-   credentials and an external-writer stop, not implicit local conversion.
-7. Remove both Chroma packages from manifests, extras, generators, universal
-   lock/export, profiles, built wheels/images and managed installed environments.
-   Run strict application startup/discovery and KB/Memory round trips with both
-   packages unavailable. Keep the scanner's existing full scope.
-8. Rehearse real old-install upgrades and fresh installs on supported platforms.
-   Reconcile every scanner finding to its exact ID and final artifact. Track the
-   helper's security disposition separately from the Chroma-free application.
+```text
+LANGFLOW_KB_UPGRADE_RECEIPT=/private/upgrade-1.13/receipt.json
+LANGFLOW_KB_MIGRATION_HELPER_IMAGE=ghcr.io/langflow-ai/langflow-chroma-migration@sha256:<release digest>
+```
 
-Before new writes, rollback requires the preserved source, consistent app DB
-backup and a compatible old application environment. After new writes, use
-forward repair. Never automatically switch back to a stale source snapshot.
+Migration then requires no per-KB command or confirmation. For each eligible KB,
+including Memory backing stores, the coordinator:
+
+1. Acquires the whole-KB guard and persists its migration identity.
+2. Validates the stopped-worker receipt, metadata backup and source fingerprint.
+3. Preserves a full pristine source snapshot, including native indexes and logs.
+4. Exports from a disposable clone inside the isolated helper.
+5. Qualifies the complete inert JSONL stream and terminal count/checksums.
+6. Imports existing vectors into an unpublished generation, preserving IDs,
+   metadata, dimensions and model identity without embedding calls.
+7. Compares every imported record and checks integrity before finalizing the
+   durable destination manifest.
+8. Changes routing with an application-DB compare-and-swap transaction, health
+   checks the target and opens writes only after successful completion.
+9. Removes disposable interchange/container data and attempts helper-image
+   cleanup, while retaining source and metadata backups.
+
+Source bindings prevent retained originals from being adopted again after a
+normal restart, explicit disk reconciliation or deletion of their migrated KB.
+A failed copy remains
+fenced and unpublished. Retry uses the same migration identity and source
+fingerprint. A crash after routing changes resumes target health checks, never
+falls back to an old source. Storage files and the application database do not
+share a transaction, so the completed generation and routing pointer are explicit
+recovery boundaries.
+
+Unregistered legacy directories are adopted only when ownership and stored model
+metadata are unambiguous and their receipt inventory is valid. Unknown ownership,
+corrupt data or a deletion marker cannot become a new empty KB.
+
+Authenticated superuser endpoints expose status and exceptional recovery:
+
+- `GET /api/v1/knowledge-base-storage/inventory`
+- `GET /api/v1/knowledge-base-storage/migrations`
+- `POST /api/v1/knowledge-base-storage/migrations/{id}/retry`
+- `GET /api/v1/knowledge-base-storage/pending-cleanup`
+
+Liveness stays available for administration. Readiness remains false while
+required migrations or inventory problems remain unresolved. Errors are safe
+codes with guidance and do not expose document contents, credentials or native
+parser tracebacks.
+
+## Isolated helper and release prerequisites
+
+See [the helper](../../tools/chroma_migration_helper/README.md) and
+[the interchange protocol](../../src/lfx/src/lfx/base/knowledge_bases/migration/README.md).
+The separate helper has hash-locked dependencies and its own OCI build, SBOM,
+vulnerability report and signing workflow. The application checks the immutable
+image digest and the expected release-workflow identity with cosign. A missing
+or unverified helper leaves old data fenced. There is no runtime package install
+or fallback to an unrestricted reader.
+
+The reader directly uses the pinned Rust binding and rejects Python Chroma SDK
+imports and Python pickle decoding. Stored embedding-function configuration is
+never instantiated. Native file parsing runs with networking disabled, a
+read-only snapshot mount, a read-only root filesystem, no capabilities, no
+privilege escalation, a non-root UID and fixed memory/CPU/process/time/output
+bounds. Writable native replay occurs only in disposable tmpfs.
+
+The initial qualification matrix covers Chroma 1.5.9 local Rust/HNSW stores on
+Linux amd64/arm64 containers, including purged operation logs, persisted indexes,
+pending records, updates, deleted IDs and known-dimension empty stores. Docker on
+macOS or Windows must provide a Linux engine and source-volume access. Source
+stores above 8 GiB, SPANN, unknown historical formats, distributed old writers,
+and a PostgreSQL application metadata database require additional controller or
+reader qualification. They fail explicitly rather than bypassing the boundary.
+
+For air-gapped upgrades, load the signed OCI image from the release's offline
+kit after verifying its manifest and archive checksum. Configure absolute paths
+in `LANGFLOW_KB_MIGRATION_HELPER_BUNDLE`,
+`LANGFLOW_KB_MIGRATION_HELPER_MANIFEST` and
+`LANGFLOW_KB_MIGRATION_HELPER_TRUSTED_ROOT`. The trust root must be provisioned
+independently through Sigstore's authenticated TUF initialization before entering
+the air gap. The helper README contains the exact verification commands.
+The application verifies private copies of this material and selects the signed
+image content ID, which survives Docker save/load. No pull occurs in this path.
+Docker and the qualified cosign v3.1.3 binary are controller prerequisites.
+A root-running controller must stage a readable
+snapshot for the non-root helper UID, without making private data public.
+
+The release must publish the signed helper and protect the
+`chroma-migration-helper-release` environment with the required approval policy.
+Its security disposition must address the actual helper findings. A successful
+build or a report generated with findings is not security clearance. Final
+application images and native libraries still require the release scan, and the
+original ticket's scanner IDs must be reconciled before security closure.
+
+## Compatibility and retired providers
+
+Chroma and Chroma Cloud are removed from new provider choices. Their backend
+identity remains recognizable for inventory and migration errors. Local KB and
+Memory routing changes automatically only after validation. Remote Chroma stores
+require an operator-coordinated export and a configured target such as pgVector
+or OpenSearch. They are never silently converted to machine-local data.
+
+Saved standalone Chroma/LocalDB nodes retain their class identities, fields,
+outputs and legacy imports. They raise a migration-required error before any
+provider call. Arbitrary paths, external endpoints, MMR/image configurations and
+unregistered standalone stores are not silently reinterpreted as SQLite. Replace
+those nodes with a validated Knowledge binding after migrating their data.
+Core Knowledge starter flows use the updated component. An optional starter
+that required standalone Chroma was retired.
+
+Saved flows also retain component Python source. Before evaluating it, Langflow
+recognizes an inventory of shipped Knowledge, Memory, Chroma, LocalDB and ALTK
+sources by their complete semantic AST fingerprint and resolves those to the
+current component classes. Matching preserves literal values and extra
+statements, so a class name alone cannot authorize replacement. Custom edits
+remain on the normal evaluation path. The persisted source stays unchanged for
+recovery. Dependency extraction uses the same recognized replacement, preventing
+old shipped imports from reinstalling retired SDKs in deployment exports.
+
+ALTK is retired because its SDK requires langchain-chroma. Existing ALTK nodes
+remain loadable and fail before model/tool execution with guidance to replace
+them with Agent. The replacement does not reproduce ALTK validation/reflection.
+Compatibility classes live in LFX and do not require optional provider bundles.
+The legacy `chroma` and `altk` extras remain empty for installation compatibility.
+
+## Verification and rollback
+
+`scripts/ci/check_chroma_removal.py` checks the complete universal application
+export without reducing the security scanner's scope. Clean-environment tests
+exercise application construction and actual SQLite KB/Memory operations with
+both Chroma packages absent. Helper qualification independently generates real
+source stores and compares all records after import, including negative tests
+for malformed native input and isolation.
+The existing release-tier inventory gate also checks every installed distribution
+for the retired SDKs, including transitive packages outside Langflow's own tiers.
+
+The native runtime workflow covers Python 3.10–3.14 on Linux x64/ARM64, macOS
+Intel/ARM64 and Windows x64. This wheel matrix does not qualify the separate
+upgrade controller on every platform. musl Linux and Windows ARM64 require a
+qualified native runtime build before support can be claimed.
+
+`scripts/benchmark/sqlite_kb.py` measures deterministic exact search at declared
+corpus sizes. Its first-query timing is not a cold OS-cache result or an SLO.
+Large-store, disk-full/crash and deployment-specific upgrade rehearsals remain
+release qualifications, separate from unit-test success.
+
+Before new writes, rollback requires the pristine source, consistent pre-upgrade
+application DB backup and a compatible old application environment. After new
+writes, use forward repair. Never automatically switch to a stale Chroma backup.
+Managed upgrades should recreate their private application environment. For
+user-managed shared Python environments, install 1.13 into a clean environment
+and point it at the existing data paths. Removing a requirement does not uninstall
+unrelated orphan packages from a shared environment.

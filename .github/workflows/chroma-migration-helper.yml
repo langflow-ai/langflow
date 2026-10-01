@@ -1,0 +1,273 @@
+name: Isolated Chroma migration helper
+
+on:
+  pull_request:
+    paths:
+      - tools/chroma_migration_helper/**
+      - src/backend/base/langflow/services/knowledge_base_storage/helper.py
+      - src/lfx/src/lfx/base/knowledge_bases/migration/**
+      - .github/workflows/chroma-migration-helper.yml
+  workflow_dispatch:
+    inputs:
+      security_disposition:
+        description: Approved security disposition reference for the separate Chroma-bearing helper
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    name: Native reader and isolation (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: '3.13'
+          version: latest-known
+      - name: Install the qualified cosign binary by version and checksum
+        run: |
+          case "$RUNNER_ARCH" in
+            X64) binary=cosign-linux-amd64; checksum=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71 ;;
+            ARM64) binary=cosign-linux-arm64; checksum=c5d324e091826b0d7a78eb16fef316450b4eb9aaec045611c08ba06f5e73220a ;;
+            *) exit 1 ;;
+          esac
+          mkdir -p "$RUNNER_TEMP/cosign-bin"
+          curl --fail --location --retry 3 "https://github.com/sigstore/cosign/releases/download/v3.1.3/$binary" --output "$RUNNER_TEMP/cosign-bin/cosign"
+          printf '%s  %s\n' "$checksum" "$RUNNER_TEMP/cosign-bin/cosign" | sha256sum --check
+          chmod 700 "$RUNNER_TEMP/cosign-bin/cosign"
+          echo "$RUNNER_TEMP/cosign-bin" >> "$GITHUB_PATH"
+          curl --fail --location --retry 3 "https://github.com/sigstore/cosign/releases/download/v3.1.3/$binary.sigstore.json" --output "$RUNNER_TEMP/cosign-bundle.json"
+      - name: Prove bundle verification works without network and rejects changed content
+        env:
+          TUF_ROOT: ${{ runner.temp }}/cosign-tuf
+        run: |
+          cosign initialize
+          trust="$TUF_ROOT/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json"
+          args=(--bundle "$RUNNER_TEMP/cosign-bundle.json" --trusted-root "$trust" --certificate-identity keyless@projectsigstore.iam.gserviceaccount.com --certificate-oidc-issuer https://accounts.google.com)
+          sudo unshare --net "$RUNNER_TEMP/cosign-bin/cosign" verify-blob "${args[@]}" "$RUNNER_TEMP/cosign-bin/cosign"
+          printf 'modified artifact\n' > "$RUNNER_TEMP/modified-artifact"
+          if sudo unshare --net "$RUNNER_TEMP/cosign-bin/cosign" verify-blob "${args[@]}" "$RUNNER_TEMP/modified-artifact"; then
+            exit 1
+          fi
+      - name: Build separate hash-locked helper
+        run: docker build -f tools/chroma_migration_helper/Dockerfile -t langflow-chroma-migration:qualification .
+      - name: Install Chroma-free application test runtime
+        run: uv sync --frozen --package langflow-base --group dev
+      - name: Export and import real persisted indexes without model calls
+        run: uv run --no-sync python tools/chroma_migration_helper/qualify.py --image langflow-chroma-migration:qualification
+      - name: Generate separate helper vulnerability report
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: langflow-chroma-migration:qualification
+          format: json
+          output: helper-vulnerabilities.json
+          # The approved isolated artifact intentionally contains Chroma.
+          # Do not call this report clean or exclude its findings. Publication
+          # requires a separate reviewed security disposition below.
+          exit-code: '0'
+      - name: Generate helper SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: langflow-chroma-migration:qualification
+          format: spdx-json
+          output-file: helper-sbom.spdx.json
+          upload-artifact: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helper-security-${{ matrix.runner }}
+          path: |
+            helper-vulnerabilities.json
+            helper-sbom.spdx.json
+
+  build-candidate:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/release-1.13.0'
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish separately from application images
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/chroma_migration_helper/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/langflow-ai/langflow-chroma-migration:1.13-${{ github.sha }}
+          provenance: mode=max
+          sbom: true
+  qualify-candidate:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build-candidate
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    env:
+      HELPER_IMAGE: ghcr.io/langflow-ai/langflow-chroma-migration@${{ needs.build-candidate.outputs.digest }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: '3.13'
+          version: latest-known
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull the exact candidate platform image
+        run: docker pull "$HELPER_IMAGE"
+      - run: uv sync --frozen --package langflow-base --group dev
+      - name: Qualify the immutable candidate, without rebuilding
+        run: uv run --no-sync python tools/chroma_migration_helper/qualify.py --image "$HELPER_IMAGE"
+      - name: Scan the exact candidate that can be signed
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ env.HELPER_IMAGE }}
+          format: json
+          output: helper-final-vulnerabilities.json
+          exit-code: '0'
+      - uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.HELPER_IMAGE }}
+          format: spdx-json
+          output-file: helper-final-sbom.spdx.json
+          upload-artifact: false
+      - name: Bind the qualified image content and archive to this platform
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          image = os.environ["HELPER_IMAGE"]
+          inspected = json.loads(subprocess.check_output(["docker", "image", "inspect", image]))[0]
+          platform = inspected["Os"] + "/" + inspected["Architecture"]
+          assert platform in {"linux/amd64", "linux/arm64"}
+          archive = Path("helper-image-" + platform.replace("/", "-") + ".tar")
+          subprocess.run(["docker", "image", "save", "--output", str(archive), image], check=True)
+          digest = hashlib.sha256()
+          with archive.open("rb") as stream:
+              for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                  digest.update(chunk)
+          Path("helper-platform.json").write_text(json.dumps({
+              "image": image,
+              "platform": platform,
+              "image_id": inspected["Id"],
+              "archive": archive.name,
+              "archive_sha256": digest.hexdigest(),
+          }, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helper-final-manifest-${{ matrix.runner }}
+          path: helper-platform.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helper-final-${{ matrix.runner }}
+          compression-level: 6
+          path: |
+            helper-final-vulnerabilities.json
+            helper-final-sbom.spdx.json
+            helper-image-*.tar
+
+  publish:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [build-candidate, qualify-candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Approvers review the final digest's reports above. No rebuild follows.
+    environment: chroma-migration-helper-release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install the qualified cosign release
+        run: |
+          mkdir -p "$RUNNER_TEMP/cosign-bin"
+          curl --fail --location --retry 3 https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign-linux-amd64 --output "$RUNNER_TEMP/cosign-bin/cosign"
+          printf '%s  %s\n' 4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71 "$RUNNER_TEMP/cosign-bin/cosign" | sha256sum --check
+          chmod 700 "$RUNNER_TEMP/cosign-bin/cosign"
+          echo "$RUNNER_TEMP/cosign-bin" >> "$GITHUB_PATH"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: helper-final-manifest-*
+          path: platform-manifests
+      - name: Sign the immutable helper image and offline content manifest
+        env:
+          HELPER_IMAGE: ghcr.io/langflow-ai/langflow-chroma-migration@${{ needs.build-candidate.outputs.digest }}
+          SECURITY_DISPOSITION: ${{ inputs.security_disposition }}
+          TUF_ROOT: ${{ runner.temp }}/cosign-tuf
+        run: |
+          test -n "$SECURITY_DISPOSITION"
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          platforms = {}
+          for path in Path("platform-manifests").glob("*/helper-platform.json"):
+              entry = json.loads(path.read_text())
+              assert entry.pop("image") == os.environ["HELPER_IMAGE"]
+              platform = entry.pop("platform")
+              assert platform in {"linux/amd64", "linux/arm64"} and platform not in platforms
+              assert set(entry) == {"image_id", "archive", "archive_sha256"}
+              assert re.fullmatch(r"sha256:[a-f0-9]{64}", entry["image_id"])
+              assert re.fullmatch(r"[a-f0-9]{64}", entry["archive_sha256"])
+              assert entry["archive"] == "helper-image-" + platform.replace("/", "-") + ".tar"
+              platforms[platform] = entry
+          assert set(platforms) == {"linux/amd64", "linux/arm64"}
+          Path("helper-release.json").write_text(json.dumps({
+              "protocol_version": 1,
+              "image": os.environ["HELPER_IMAGE"],
+              "reader": "chroma-rust-1.5.9",
+              "security_disposition": os.environ["SECURITY_DISPOSITION"],
+              "commit": os.environ["GITHUB_SHA"],
+              "platforms": platforms,
+          }, indent=2))
+          PY
+          cosign sign --yes "$HELPER_IMAGE"
+          cosign sign-blob --yes --bundle helper-verification.sigstore.json helper-release.json
+          cosign initialize
+          sudo unshare --net "$RUNNER_TEMP/cosign-bin/cosign" verify-blob \
+            --bundle helper-verification.sigstore.json \
+            --trusted-root "$TUF_ROOT/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json" \
+            --certificate-identity https://github.com/langflow-ai/langflow/.github/workflows/chroma-migration-helper.yml@refs/heads/release-1.13.0 \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            helper-release.json
+      - name: Publish verification material for online and offline upgrade controllers
+        uses: actions/upload-artifact@v4
+        with:
+          name: chroma-migration-helper-release
+          path: |
+            helper-release.json
+            helper-verification.sigstore.json

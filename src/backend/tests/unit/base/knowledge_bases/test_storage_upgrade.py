@@ -1,0 +1,536 @@
+"""Application routing, operation fences and recoverable automatic upgrade."""
+
+from __future__ import annotations
+
+import asyncio
+import importlib
+import json
+import os
+import sqlite3
+import threading
+from contextlib import asynccontextmanager
+from types import SimpleNamespace
+from uuid import uuid4
+
+import psutil
+import pytest
+import sqlalchemy as sa
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
+from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from langflow.services.database.models.user.model import User
+from langflow.services.knowledge_base_storage import coordinator, maintenance, runtime
+from lfx.base.knowledge_bases.backends.base import IngestedDocument
+from lfx.base.knowledge_bases.migration import ExportHeader, write_export
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.fixture
+async def database(tmp_path, monkeypatch):
+    root = tmp_path / "vectors"
+    root.mkdir()
+    path = tmp_path / "metadata.sqlite3"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{path}")
+    tables = [User.__table__, KnowledgeBaseRecord.__table__, KnowledgeBaseStorageMigration.__table__]
+    async with engine.begin() as connection:
+        await connection.run_sync(lambda sync: SQLModel.metadata.create_all(sync, tables=tables))
+
+    @asynccontextmanager
+    async def sessions():
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            yield session
+
+    settings = SimpleNamespace(settings=SimpleNamespace(knowledge_bases_dir=str(root)))
+    service = SimpleNamespace(database_url=f"sqlite+aiosqlite:///{path}", engine=engine)
+    monkeypatch.setattr(runtime, "session_scope", sessions)
+    monkeypatch.setattr(coordinator, "session_scope", sessions)
+    monkeypatch.setattr(runtime, "get_settings_service", lambda: settings)
+    monkeypatch.setattr(runtime, "get_db_service", lambda: service)
+    monkeypatch.setattr(coordinator, "get_db_service", lambda: service)
+    monkeypatch.setattr(coordinator, "get_settings_service", lambda: settings)
+    monkeypatch.setattr(coordinator, "_inventory_complete", True)
+    monkeypatch.setattr(coordinator, "_inventory_issue_count", 0)
+    monkeypatch.delenv("LANGFLOW_KB_UPGRADE_RECEIPT", raising=False)
+    user = User(username="owner", password=uuid4().hex, is_active=True)
+    async with sessions() as session:
+        session.add(user)
+        await session.commit()
+    yield SimpleNamespace(root=root, path=path, sessions=sessions, user=user, settings=settings)
+    await engine.dispose()
+
+
+async def make_kb(database, *, backend="chroma", config=None):
+    row = KnowledgeBaseRecord(
+        user_id=database.user.id,
+        name="knowledge",
+        backend_type=backend,
+        backend_config=config or {},
+        model_selection={"provider": "test", "name": "fixed"},
+    )
+    async with database.sessions() as session:
+        session.add(row)
+        await session.commit()
+    return row
+
+
+async def read_kb(database, kb_id):
+    async with database.sessions() as session:
+        return await session.get(KnowledgeBaseRecord, kb_id)
+
+
+async def test_pending_batch_skips_disappeared_identity_and_continues(database, monkeypatch):
+    first = await make_kb(database, config={"mode": "cloud"})
+    second = KnowledgeBaseRecord(
+        user_id=database.user.id,
+        name="another-knowledge-base",
+        backend_type="chroma",
+        backend_config={"mode": "cloud"},
+    )
+    async with database.sessions() as session:
+        session.add(second)
+        await session.commit()
+    await coordinator.fence_legacy_records()
+    original_migrate = coordinator.migrate_one
+    attempts = []
+
+    async def remove_first_queued_identity(kb_id):
+        attempts.append(kb_id)
+        if len(attempts) == 1:
+            # The inventory already captured this row. This is also the state
+            # left by an owner deletion cascading away that queued KB.
+            async with database.sessions() as session:
+                await session.delete(await session.get(KnowledgeBaseRecord, kb_id))
+                await session.commit()
+        await original_migrate(kb_id)
+
+    monkeypatch.setattr(coordinator, "migrate_one", remove_first_queued_identity)
+    await coordinator.run_pending()
+    assert set(attempts) == {first.id, second.id}
+    assert await read_kb(database, attempts[0]) is None
+    survivor = await read_kb(database, attempts[1])
+    assert survivor.storage_state == "needs_attention"
+    async with database.sessions() as session:
+        run = await session.get(KnowledgeBaseStorageMigration, survivor.active_migration_id)
+    assert run.error_code == "remote_source_requires_migration"
+
+
+async def test_pending_batch_keeps_existing_identity_lock_failure_visible(database, monkeypatch):
+    row = await make_kb(database)
+    await coordinator.fence_legacy_records()
+
+    @asynccontextmanager
+    async def broken_lock(*_args, **_kwargs):
+        msg = "Invalid storage lock path"
+        raise runtime.StorageUnavailableError(msg)
+        yield  # pragma: no cover -- async context manager with a failing entry
+
+    monkeypatch.setattr(coordinator, "operation", broken_lock)
+    with pytest.raises(runtime.StorageUnavailableError, match="Invalid storage lock path"):
+        await coordinator.run_pending()
+    assert (await read_kb(database, row.id)).storage_state == "migrating"
+    assert not await coordinator.readiness()
+
+
+@pytest.fixture
+def export_helper(monkeypatch):
+    calls = []
+
+    async def export(snapshot, output, **kwargs):
+        assert (snapshot / "index.bin").read_bytes() == b"native-index"
+        calls.append(kwargs)
+        header = ExportHeader(
+            source_id=kwargs["source_id"],
+            source_fingerprint=kwargs["source_fingerprint"],
+            source_version="chroma-rust-1.5.9",
+            count=2,
+            dimensions=2,
+            metric="l2",
+            model_fingerprint=kwargs["model_fingerprint"],
+        )
+        documents = [
+            IngestedDocument(
+                id="a", content="first", metadata={"_id": "different", "session_id": "s"}, embedding=[1.0, 2.0]
+            ),
+            IngestedDocument(
+                id="b", content="second", metadata={"nested": {"keep": [True, None]}}, embedding=[3.0, 4.0]
+            ),
+        ]
+        with output.open("wb") as stream:
+            write_export(stream, header=header, documents=documents)
+        return header
+
+    monkeypatch.setattr(coordinator.helper, "export_snapshot", export)
+    return calls
+
+
+def frozen_source(database, monkeypatch):
+    source = database.root / database.user.username / "knowledge"
+    source.mkdir(parents=True)
+    (source / "chroma.sqlite3").write_bytes(b"frozen-database")
+    (source / "index.bin").write_bytes(b"native-index")
+    fingerprint = maintenance.tree_fingerprint(source)
+    monkeypatch.setenv("LANGFLOW_KB_UPGRADE_RECEIPT", str(database.root.parent / "receipt.json"))
+    monkeypatch.setattr(
+        coordinator, "validate_receipt", lambda **_kwargs: {"sources": {"owner/knowledge": fingerprint}}
+    )
+    return source, fingerprint
+
+
+async def test_automatic_migration_preserves_identity_vectors_and_retries(database, monkeypatch, export_helper):
+    row = await make_kb(database)
+    source, fingerprint = frozen_source(database, monkeypatch)
+    await coordinator.fence_legacy_records()
+    assert not await coordinator.readiness()
+    await coordinator.run_pending()
+    current = await read_kb(database, row.id)
+    assert (current.id, current.user_id, current.name) == (row.id, row.user_id, row.name)
+    assert (current.backend_type, current.storage_generation, current.storage_state, current.chunks) == (
+        "sqlite",
+        2,
+        "ready",
+        2,
+    )
+    assert maintenance.tree_fingerprint(source) == fingerprint
+    assert await coordinator.readiness()
+    backend = await runtime.backend_for_record(current)
+    documents = [doc async for batch in backend.iter_documents(include_embeddings=True) for doc in batch]
+    assert [(doc.id, doc.embedding) for doc in documents] == [("a", [1.0, 2.0]), ("b", [3.0, 4.0])]
+    assert documents[0].metadata["_id"] == "different"
+    await coordinator.migrate_one(row.id)
+    assert len(export_helper) == 1
+    with pytest.raises(runtime.StorageUnavailableError):
+        await runtime.backend_for_record(row)
+
+
+async def test_restart_without_receipt_ignores_retained_migrated_source(database, monkeypatch, export_helper):
+    row = await make_kb(database)
+    source, _ = frozen_source(database, monkeypatch)
+    await coordinator.migrate_one(row.id)
+    assert source.exists()
+    monkeypatch.delenv("LANGFLOW_KB_UPGRADE_RECEIPT")
+    await coordinator.run_pending()
+    assert await coordinator.readiness()
+    assert len(export_helper) == 1
+    # Deleting the KB row must not make its retained source adoptable again.
+    current = await read_kb(database, row.id)
+    await runtime.delete_storage_for_record(current)
+    async with database.sessions() as session:
+        await session.delete(await session.get(KnowledgeBaseRecord, row.id))
+        await session.commit()
+    await coordinator.run_pending()
+    assert await coordinator.readiness()
+    assert await read_kb(database, row.id) is None
+
+
+async def test_retry_after_complete_export_reuses_generation(database, monkeypatch, export_helper):
+    row = await make_kb(database)
+    frozen_source(database, monkeypatch)
+    original = coordinator.import_qualified_export
+
+    async def crash(*_args, **_kwargs):
+        raise OSError
+
+    monkeypatch.setattr(coordinator, "import_qualified_export", crash)
+    await coordinator.migrate_one(row.id)
+    before = await read_kb(database, row.id)
+    assert before.storage_state == "needs_attention"
+    monkeypatch.setattr(coordinator, "import_qualified_export", original)
+    await coordinator.migrate_one(row.id)
+    after = await read_kb(database, row.id)
+    assert after.storage_state == "ready"
+    assert after.active_migration_id == before.active_migration_id
+    assert len(export_helper) == 2
+
+
+async def test_corrupt_retired_binding_keeps_inventory_unready(database, monkeypatch):
+    frozen_source(database, monkeypatch)
+    monkeypatch.delenv("LANGFLOW_KB_UPGRADE_RECEIPT")
+    binding = coordinator._binding_path("owner/knowledge")
+    binding.parent.mkdir(parents=True)
+    binding.write_text("corrupt")
+    await coordinator.run_pending()
+    assert not await coordinator.readiness()
+    assert not coordinator.inventory_status()["complete"]
+
+
+async def test_automatic_adoption_requires_controller_inventory_and_known_owner(database, monkeypatch, export_helper):
+    source, _ = frozen_source(database, monkeypatch)
+    identity = uuid4()
+    (source / "embedding_metadata.json").write_text(
+        json.dumps({"id": str(identity), "name": "knowledge", "embedding_provider": "test", "embedding_model": "fixed"})
+    )
+    fingerprint = maintenance.tree_fingerprint(source)
+    monkeypatch.setattr(
+        coordinator, "validate_receipt", lambda **_kwargs: {"sources": {"owner/knowledge": fingerprint}}
+    )
+    await coordinator.run_pending()
+    row = await read_kb(database, identity)
+    assert row is not None
+    assert (row.user_id, row.backend_type, row.storage_state) == (database.user.id, "sqlite", "ready")
+    assert len(export_helper) == 1
+
+
+async def test_cancelled_snapshot_drains_worker_before_releasing_operation(database, monkeypatch, export_helper):
+    row = await make_kb(database)
+    frozen_source(database, monkeypatch)
+    started = threading.Event()
+    release = threading.Event()
+    original = coordinator.snapshot_source
+
+    def blocked(*args):
+        started.set()
+        release.wait(timeout=10)
+        return original(*args)
+
+    monkeypatch.setattr(coordinator, "snapshot_source", blocked)
+    task = asyncio.create_task(coordinator.migrate_one(row.id))
+    assert await asyncio.to_thread(started.wait, 5)
+    task.cancel()
+    await asyncio.sleep(0.05)
+    assert not task.done()
+    release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert (await read_kb(database, row.id)).storage_state == "needs_attention"
+    assert not export_helper
+
+
+async def test_deletion_retry_after_tombstone_and_missing_file(database):
+    row = await make_kb(database, backend="sqlite")
+    backend = await runtime.backend_for_record(row, create=True)
+    await backend.ensure_ready()
+    await backend.delete_collection()
+    # Simulate loss of the final metadata update after the native tombstone.
+    async with database.sessions() as session:
+        current = await session.get(KnowledgeBaseRecord, row.id)
+        current.storage_state = "deleting"
+        await session.commit()
+    await runtime.delete_storage_for_record(row)
+    assert (await read_kb(database, row.id)).storage_state == "deleted"
+    async with database.sessions() as session:
+        await session.delete(await session.get(KnowledgeBaseRecord, row.id))
+        await session.commit()
+    await runtime.delete_orphaned_storage(row)
+
+    absent = await make_kb(database, backend="sqlite")
+    await runtime.delete_storage_for_record(absent)
+    assert (await read_kb(database, absent.id)).storage_state == "deleted"
+
+
+async def test_missing_barrier_persists_fence_without_calling_helper(database, export_helper):
+    row = await make_kb(database)
+    await coordinator.fence_legacy_records()
+    await coordinator.run_pending()
+    current = await read_kb(database, row.id)
+    assert (current.backend_type, current.storage_state) == ("chroma", "needs_attention")
+    async with database.sessions() as session:
+        run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)
+    assert run.error_code == "maintenance_required"
+    assert not export_helper
+    with pytest.raises(runtime.StorageUnavailableError):
+        await runtime.backend_for_record(current)
+
+
+async def test_crash_after_routing_cas_recovers_target_without_reexport(database, monkeypatch, export_helper):
+    row = await make_kb(database)
+    frozen_source(database, monkeypatch)
+    original = coordinator._complete
+
+    async def crash(*_args):
+        msg = "simulated process failure"
+        raise OSError(msg)
+
+    monkeypatch.setattr(coordinator, "_complete", crash)
+    await coordinator.migrate_one(row.id)
+    current = await read_kb(database, row.id)
+    assert (current.backend_type, current.storage_state) == ("sqlite", "needs_attention")
+    monkeypatch.setattr(coordinator, "_complete", original)
+    await coordinator.migrate_one(row.id)
+    current = await read_kb(database, row.id)
+    assert (current.backend_type, current.storage_state) == ("sqlite", "ready")
+    assert len(export_helper) == 1
+
+
+async def test_failed_export_does_not_activate_or_delete_source(database, monkeypatch):
+    row = await make_kb(database)
+    source, fingerprint = frozen_source(database, monkeypatch)
+
+    async def failed(*_args, **_kwargs):
+        msg = "corrupt native store"
+        raise ValueError(msg)
+
+    monkeypatch.setattr(coordinator.helper, "export_snapshot", failed)
+    await coordinator.migrate_one(row.id)
+    current = await read_kb(database, row.id)
+    assert (current.backend_type, current.storage_generation, current.storage_state) == ("chroma", 1, "needs_attention")
+    assert maintenance.tree_fingerprint(source) == fingerprint
+
+
+async def test_remote_chroma_blocked_without_local_root(database):
+    row = await make_kb(database, config={"mode": "cloud"})
+    database.settings.settings.knowledge_bases_dir = None
+    await coordinator.migrate_one(row.id)
+    current = await read_kb(database, row.id)
+    async with database.sessions() as session:
+        run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)
+    assert run.error_code == "remote_source_requires_migration"
+
+
+async def test_lock_reentrant_but_child_task_waits_and_stale_backend_is_fenced(database):
+    row = await make_kb(database, backend="sqlite")
+    backend = await runtime.backend_for_record(row, create=True)
+    await backend.ensure_ready()
+    started = asyncio.Event()
+
+    async def child():
+        async with runtime.operation(row):
+            started.set()
+
+    async with runtime.operation(row):
+        assert await backend.count() == 0
+        task = asyncio.create_task(child())
+        await asyncio.sleep(0.1)
+        assert not started.is_set()
+    await task
+    await runtime.delete_storage_for_record(row)
+    with pytest.raises(runtime.StorageUnavailableError):
+        await backend.count()
+    assert (await read_kb(database, row.id)).storage_state == "deleted"
+
+
+async def test_remote_guard_does_not_require_local_vector_root(database):
+    row = await make_kb(database, backend="postgres")
+    database.settings.settings.knowledge_bases_dir = None
+    async with runtime.operation(row), runtime.operation(row):
+        pass
+
+
+def test_snapshot_rejects_changes_and_symlinks(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "index").write_bytes(b"before")
+    digest = maintenance.tree_fingerprint(source)
+    destination = tmp_path / "snapshot"
+    maintenance.snapshot_source(source, destination, digest)
+    assert maintenance.tree_fingerprint(destination) == digest
+    (source / "index").write_bytes(b"after")
+    with pytest.raises(maintenance.MaintenanceRequiredError, match="changed"):
+        maintenance.snapshot_source(source, destination, digest)
+    (source / "link").symlink_to(tmp_path)
+    with pytest.raises(maintenance.MaintenanceRequiredError, match="symbolic"):
+        maintenance.tree_fingerprint(source)
+
+
+def test_receipt_rejects_live_workers_and_backup_corruption(tmp_path, monkeypatch):
+    root = tmp_path / "vectors"
+    root.mkdir()
+    database = tmp_path / "metadata.sqlite3"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE identity (id TEXT)")
+    receipt = tmp_path / "upgrade.json"
+    process = psutil.Process()
+    with pytest.raises(maintenance.MaintenanceRequiredError, match="stop"):
+        maintenance.create_receipt(
+            root=root,
+            database=database,
+            receipt=receipt,
+            previous_workers=[{"pid": os.getpid(), "created": process.create_time()}],
+        )
+    monkeypatch.setattr(maintenance.psutil, "process_iter", list)
+    maintenance.create_receipt(
+        root=root, database=database, receipt=receipt, previous_workers=[{"pid": 999999999, "created": 1.0}]
+    )
+    payload = maintenance.validate_receipt(root=root, database=database, receipt=receipt)
+    assert payload["scope"] == "managed-single-host"
+    from pathlib import Path
+
+    Path(payload["backup"]).write_bytes(b"corrupt")
+    with pytest.raises(maintenance.MaintenanceRequiredError, match="backup"):
+        maintenance.validate_receipt(root=root, database=database, receipt=receipt)
+
+
+def test_application_migration_fences_legacy_rows_and_preserves_remote_routing(monkeypatch):
+    migration = importlib.import_module("langflow.alembic.versions.c91d2e3f4a50_knowledge_base_storage_upgrade")
+    create_table = migration.op.create_table
+    ledger_columns = {}
+
+    def capture_create_table(name, *columns, **kwargs):
+        if name == "knowledge_base_storage_migration":
+            ledger_columns.update({column.name: column for column in columns})
+        return create_table(name, *columns, **kwargs)
+
+    monkeypatch.setattr(migration.op, "create_table", capture_create_table)
+    engine = sa.create_engine("sqlite://")
+    with engine.begin() as connection:
+        connection.execute(
+            sa.text("CREATE TABLE knowledge_base (id CHAR(32) PRIMARY KEY, backend_type VARCHAR NOT NULL)")
+        )
+        connection.execute(sa.text("INSERT INTO knowledge_base VALUES ('local', 'chroma'), ('remote', 'postgres')"))
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+            migration.upgrade()
+        rows = connection.execute(
+            sa.text("SELECT id, storage_state, storage_generation FROM knowledge_base ORDER BY id")
+        )
+        assert list(rows) == [("local", "migrating", 1), ("remote", "ready", 1)]
+        assert "knowledge_base_storage_migration" in sa.inspect(connection).get_table_names()
+        # SQLite reflection discards timezone information. Check the emitted
+        # PostgreSQL types as well: a naive migrated column silently shifts
+        # aware ORM values when the PostgreSQL session is not configured to UTC.
+        from sqlalchemy.dialects import postgresql
+
+        for name in ("created_at", "updated_at"):
+            expected = KnowledgeBaseStorageMigration.__table__.c[name].type.compile(dialect=postgresql.dialect())
+            assert ledger_columns[name].type.compile(dialect=postgresql.dialect()) == expected
+            assert expected == "TIMESTAMP WITH TIME ZONE"
+    engine.dispose()
+
+
+async def test_deleted_migrated_source_cannot_be_reimported_by_disk_backfill(database, monkeypatch, export_helper):
+    from langflow.api.utils import knowledge_base_service
+
+    monkeypatch.setattr(knowledge_base_service, "session_scope", database.sessions)
+    row = await make_kb(database)
+    source, _ = frozen_source(database, monkeypatch)
+    (source / "embedding_metadata.json").write_text(
+        json.dumps(
+            {
+                "id": str(row.id),
+                "name": row.name,
+                "embedding_provider": "test",
+                "embedding_model": "fixed",
+            }
+        )
+    )
+    fingerprint = maintenance.tree_fingerprint(source)
+    monkeypatch.setattr(
+        coordinator, "validate_receipt", lambda **_kwargs: {"sources": {"owner/knowledge": fingerprint}}
+    )
+    await coordinator.migrate_one(row.id)
+    assert (await read_kb(database, row.id)).backend_type == "sqlite"
+    await knowledge_base_service.delete_record(row.id)
+    assert await read_kb(database, row.id) is None
+    assert (source / "embedding_metadata.json").is_file()
+    for dry_run in (True, False):
+        assert (
+            await knowledge_base_service.backfill_from_disk(
+                user_id=database.user.id,
+                kb_user_root=source.parent,
+                dry_run=dry_run,
+            )
+            == 0
+        )
+        assert (
+            await knowledge_base_service.backfill_all_users_from_disk(
+                kb_root=database.root,
+                dry_run=dry_run,
+            )
+            == 0
+        )
+    assert await read_kb(database, row.id) is None
+    assert len(export_helper) == 1

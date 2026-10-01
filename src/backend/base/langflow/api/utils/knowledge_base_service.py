@@ -20,6 +20,7 @@ Phase 2's new endpoints will add their own query methods alongside.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -96,7 +97,7 @@ async def create_record(
     chunk_overlap: int = 200,
     separator: str | None = None,
     column_config: list[dict[str, Any]] | None = None,
-    backend_type: str = "chroma",
+    backend_type: str = "sqlite",
     backend_config: dict[str, Any] | None = None,
     chunks: int = 0,
     words: int = 0,
@@ -137,6 +138,25 @@ async def create_record(
         session.add(record)
         await session.commit()
         await session.refresh(record)
+    if backend_type == "sqlite":
+        from langflow.services.knowledge_base_storage.runtime import backend_for_record
+
+        backend = None
+        try:
+            backend = await backend_for_record(record, create=True)
+            await backend.ensure_ready()
+        except BaseException:
+            # A failed initialization must not leave a ready, apparently empty
+            # KB. The UUID directory is never adopted by another create.
+            async with session_scope() as session:
+                failed_record = await session.get(KnowledgeBaseRecord, record.id)
+                if failed_record is not None:
+                    await session.delete(failed_record)
+                    await session.commit()
+            raise
+        finally:
+            if backend is not None:
+                await backend.teardown()
     return record
 
 
@@ -366,7 +386,11 @@ async def update_stats(
     deleted between the ingestion start and the finalize call; we
     don't want that to fail the run.
     """
-    async with session_scope() as session:
+    from langflow.services.knowledge_base_storage.runtime import operation
+
+    if await get_by_id(record_id) is None:
+        return
+    async with operation(record_id), session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
         if row is None:
             await logger.awarning("knowledge_base row %s missing on update_stats; skipping", record_id)
@@ -398,7 +422,11 @@ async def update_status(
     status: KnowledgeBaseStatus,
     failure_reason: str | None = None,
 ) -> None:
-    async with session_scope() as session:
+    from langflow.services.knowledge_base_storage.runtime import operation
+
+    if await get_by_id(record_id) is None:
+        return
+    async with operation(record_id), session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
         if row is None:
             return
@@ -413,7 +441,11 @@ async def update_column_config(
     record_id: UUID,
     column_config: list[dict[str, Any]],
 ) -> None:
-    async with session_scope() as session:
+    from langflow.services.knowledge_base_storage.runtime import operation
+
+    if await get_by_id(record_id) is None:
+        return
+    async with operation(record_id), session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
         if row is None:
             return
@@ -424,13 +456,18 @@ async def update_column_config(
 
 
 async def delete_record(record_id: UUID) -> None:
-    """Remove the KB row. Caller is responsible for filesystem cleanup."""
-    async with session_scope() as session:
+    """Drain writers and tombstone storage before removing authoritative routing."""
+    from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record, operation
+
+    record = await get_by_id(record_id)
+    if record is None:
+        return
+    await delete_storage_for_record(record)
+    async with operation(record_id, allowed_states=("deleted",)), session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
-        if row is None:
-            return
-        await session.delete(row)
-        await session.commit()
+        if row is not None:
+            await session.delete(row)
+            await session.commit()
 
 
 async def delete_by_user_and_name(user_id: UUID, name: str) -> None:
@@ -485,6 +522,9 @@ def record_to_metadata_dict(record: KnowledgeBaseRecord) -> dict[str, Any]:
         "column_config": record.column_config,
         "backend_type": record.backend_type,
         "backend_config": record.backend_config,
+        "storage_state": record.storage_state,
+        "storage_generation": record.storage_generation,
+        "active_migration_id": str(record.active_migration_id) if record.active_migration_id else None,
         "chunks": record.chunks,
         "words": record.words,
         "characters": record.characters,
@@ -536,6 +576,7 @@ async def backfill_from_disk(
         return 0
 
     from langflow.api.utils.kb_helpers import KBStorageHelper
+    from langflow.services.knowledge_base_storage.coordinator import _is_retired_source
 
     inserted = 0
     for kb_dir in kb_user_root.iterdir():
@@ -552,6 +593,17 @@ async def backfill_from_disk(
         name = kb_dir.name
         existing = await get_by_user_and_name(user_id, name)
         if existing is not None:
+            continue
+
+        # A successful upgrade retains the original source and sidecar for
+        # rollback. Its durable binding outlives routing-row deletion, so every
+        # recovery entrypoint must consult it before adopting that source again.
+        try:
+            relative = (Path(kb_user_root.name) / kb_dir.name).as_posix()
+            if await asyncio.to_thread(_is_retired_source, relative, root=kb_user_root.parent):
+                continue
+        except Exception as exc:  # noqa: BLE001 - uncertain retirement must never resurrect storage
+            await logger.aerror("backfill: cannot verify retirement for %s: %s", kb_dir, exc)
             continue
 
         metadata = load_metadata_from_disk(kb_dir)

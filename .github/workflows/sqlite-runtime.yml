@@ -6,13 +6,133 @@ on:
     paths:
       - .github/workflows/sqlite-runtime.yml
       - scripts/ci/check_sqlite_runtime.py
+      - scripts/ci/check_chroma_removal.py
+      - '**/pyproject.toml'
+      - uv.lock
       - src/lfx/pyproject.toml
       - src/lfx/src/lfx/base/knowledge_bases/backends/sqlite*.py
+      - src/lfx/src/lfx/base/knowledge_bases/**
+      - src/lfx/src/lfx/base/agents/altk*.py
+      - src/lfx/src/lfx/components/files_and_knowledge/**
+      - src/lfx/src/lfx/components/chroma/**
+      - src/lfx/src/lfx/components/vectorstores/**
+      - src/lfx/src/lfx/components/altk/**
+      - src/lfx/src/lfx/custom/**
+      - src/lfx/src/lfx/utils/flow_requirements.py
+      - src/lfx/src/lfx/_assets/legacy_storage_sources.json
+      - src/lfx/tests/unit/custom/component/test_legacy_storage_source.py
+      - src/lfx/tests/unit/custom/component/legacy_storage_source_fixtures.json
+      - src/lfx/tests/unit/test_flow_requirements.py
+      - src/backend/base/langflow/main.py
+      - src/backend/base/langflow/api/health_check_router.py
+      - src/backend/base/langflow/api/router.py
+      - src/backend/base/langflow/api/v1/knowledge_base*.py
+      - src/backend/base/langflow/api/v1/memor*.py
+      - src/backend/base/langflow/api/v1/monitor.py
+      - src/backend/base/langflow/api/utils/kb_helpers.py
+      - src/backend/base/langflow/api/utils/knowledge_base_service.py
+      - src/backend/base/langflow/schema/knowledge_base.py
+      - src/backend/base/langflow/services/knowledge_base_storage/**
+      - src/backend/base/langflow/services/memory_base/**
+      - src/backend/base/langflow/services/database/models/knowledge_base*/**
+      - src/backend/base/langflow/services/database/models/knowledge_base*.py
+      - src/backend/base/langflow/services/database/models/__init__.py
+      - src/backend/base/langflow/services/database/models/memory_base/**
+      - src/backend/base/langflow/alembic/**
+      - src/backend/tests/unit/base/knowledge_bases/**
+      - src/backend/tests/unit/components/files_and_knowledge/**
+      - src/backend/tests/unit/test_knowledge_bases_api.py
+      - src/backend/tests/unit/test_memory_*.py
+      - src/backend/tests/unit/test_kb_storage_deletion.py
 
 permissions:
   contents: read
 
 jobs:
+  application-integration:
+    name: Chroma-free SQLite application and upgrade integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LFX_TEST_ALLOW_LANGFLOW: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure isolated application test paths
+        run: |
+          {
+            echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/sqlite-application-runtime"
+            echo "LANGFLOW_CONFIG_DIR=$RUNNER_TEMP/sqlite-application-config"
+            echo "LANGFLOW_KNOWLEDGE_BASES_DIR=$RUNNER_TEMP/sqlite-application-knowledge"
+          } >> "$GITHUB_ENV"
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          python-version: '3.12'
+      - name: Install a clean application environment and test plugins
+        run: |
+          uv sync --frozen --package langflow-base --group dev
+          uv run --no-sync python - <<'PY' > "$RUNNER_TEMP/sqlite-test-plugins.txt"
+          import pathlib
+          import tomllib
+
+          required = {"blockbuster", "pyleak"}
+          packages = tomllib.loads(pathlib.Path("uv.lock").read_text())["package"]
+          selected = {package["name"]: package["version"] for package in packages if package["name"] in required}
+          assert selected.keys() == required
+          for name, version in sorted(selected.items()):
+              print(f"{name}=={version}")
+          PY
+          uv pip install --python "$UV_PROJECT_ENVIRONMENT" -r "$RUNNER_TEMP/sqlite-test-plugins.txt"
+      - name: Assert retired SDKs are absent and construct the application
+        run: |
+          uv run --no-sync python - <<'PY'
+          import importlib.metadata
+          import importlib.util
+          import re
+
+          forbidden = {"chromadb", "langchain-chroma", "agent-lifecycle-toolkit"}
+          installed = {
+              re.sub(r"[-_.]+", "-", distribution.metadata["Name"].lower())
+              for distribution in importlib.metadata.distributions()
+          }
+          assert not forbidden & installed, sorted(forbidden & installed)
+          for module in ("chromadb", "langchain_chroma", "altk"):
+              assert importlib.util.find_spec(module) is None, module
+
+          from langflow.main import create_app
+          application = create_app()
+          assert application.routes
+          PY
+      - name: Test storage, lifecycle, automatic upgrade and application integration
+        run: |
+          uv run --no-sync pytest -q \
+            src/backend/tests/unit/base/knowledge_bases/test_sqlite_backend.py \
+            src/backend/tests/unit/base/knowledge_bases/test_sqlite_registry.py \
+            src/backend/tests/unit/base/knowledge_bases/test_sqlite_migration.py \
+            src/backend/tests/unit/base/knowledge_bases/test_storage_runtime_locks.py \
+            src/backend/tests/unit/base/knowledge_bases/test_remote_storage_lifecycle.py \
+            src/backend/tests/unit/base/knowledge_bases/test_opensearch_backend.py \
+            src/backend/tests/unit/base/knowledge_bases/test_storage_upgrade.py \
+            src/backend/tests/unit/base/knowledge_bases/test_sqlite_helper.py \
+            src/backend/tests/unit/base/knowledge_bases/test_sqlite_application.py \
+            src/backend/tests/unit/test_kb_storage_deletion.py
+      - name: Test saved component source and exported dependency compatibility
+        run: |
+          uv run --no-sync pytest -q \
+            src/lfx/tests/unit/custom/component/test_legacy_storage_source.py \
+            src/lfx/tests/unit/test_flow_requirements.py
+  dependency-removal:
+    name: Chroma-free application dependency inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          python-version: '3.12'
+      - name: Check the complete application dependency graph
+        run: uv run --no-project scripts/ci/check_chroma_removal.py
   native-wheels:
     name: Native SQLite - ${{ matrix.runner }} Python ${{ matrix.python }}
     runs-on: ${{ matrix.runner }}

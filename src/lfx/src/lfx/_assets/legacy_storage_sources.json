@@ -1,0 +1,663 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "sha256": "164ac9bbd4486b85aa21e944c834ae712776c7c24139fb197ffe67028a0755cf",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "77b9f4f14ed8ebfcd2f8ec8ea8b98f769663d86d8f823dd3a85566c5467c05ed",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "82c8d7a0c40cf4796c764fa1f747e70a798f9403e7b17575e2edb4814b39fc8f",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "f474cb4e388aae27f85baceec3c1d267ece5dc348893ef01ad25e673ec1b37e5",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "17d043329a64e906315698e492f0197f31d5f53dd49bca6f8824a2b61cf6d565",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "5c68e0da7855cf4392c84e988cd5ccd98e71a62966993f606a8ea64acd9d7e94",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "aa6d8903b66e891519ebee2fefbf931c2093aad6207d801d7760854632fa5faa",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "c9a83e7aac549e03be49ff8a4ff3fb991561ab98c29ddc5919d46036fbbec12a",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "2b2731d9d2b8f3a0415def9cd7c8dfcc5743437d7e4f9936b510beeb86ed18c9",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "92be01f65a09329ca23e2380a21b034a26851ccfd9d9497152cc033ac76c2053",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "0e2a7b48dd8e9b19b40102036f542c274805078cfe58a99d86abba284e5275b1",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "17a70babb7277f817fe509b0a1f09f12feec9a576aa7633f6349c7e26fcbc617",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "21781f4006f0aa80002f23c65fa385e626338bfcd732042f7f987ac0c22f7309",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "27e7e65fd0fdbe9cbfbd042a34396803363417f6896353ca224b29da94486b07",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "6f49fbf711e475afe9ddff847a2617e08cbd0e78210e6c59198a9ded7cf44533",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "78fde8c79dbebf888b27a7c5bd8686bfed3910b8b6368a878295cb1cfbf0fa88",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "c627d8eb56154cb68427537e88b27996bc7471e0869d4dfe89d8af799891357f",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "e0c8cf8e6af04c4b924ab1bb507a23675ff7e4adbbb0ff5d06655ef02a9bfbac",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "137c0cfebe9b9f3372b4b7268b77b7dfa09de06458dd68f184ca52c8a4c3043c",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "93bde52d349e83a8e6a6532a39c16fb0416664138c761de5754402023725e71e",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "74e09979e78e173d21a280f619b0ef71f0ce61a3d322bc492a7a9f0c74cdfa72",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "c243a8db39d36a3e0e7246269e02f3ff1e6bc44ff750d8809d9612990eb4dc71",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "4ac770ed7dceba82939fcc421ef145a7736bcd012c13075b41716295a160495a",
+      "module": "lfx.components.files_and_knowledge.memory_retrieval",
+      "class_name": "MemoryBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "714c4d8bcb6d2b094c985fc90b1a1699ec75c6fd5cb28dcd894e16ee09bb2cad",
+      "module": "lfx.components.files_and_knowledge.memory_retrieval",
+      "class_name": "MemoryBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        }
+      ]
+    }
+  ]
+}

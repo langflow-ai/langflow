@@ -73,7 +73,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "yahoosearch": ["yfinance==0.2.50"],
     "wolframalpha": ["wolframalpha==5.1.3", _LC_COMMUNITY],
     # --- tranche 2: vector stores ---
-    "chroma": ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6"],
+    "chroma": [],  # Retired SDK, retained component compatibility alias.
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],

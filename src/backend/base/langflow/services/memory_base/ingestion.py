@@ -7,16 +7,16 @@ The MemoryBaseService delegates to these functions for all ingestion-related wor
 from __future__ import annotations
 
 import uuid
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING
 
-from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
 from langflow.api.utils.kb_helpers import (
+    backend_for_name,
     resolve_backend_selection,
     resolve_embedding_selection,
-    resolve_local_store_path,
 )
 from langflow.services.database.models.jobs.crud import update_job_status as crud_update_job_status
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
@@ -30,7 +30,6 @@ from langflow.services.jobs import DuplicateJobError
 from langflow.services.memory_base.kb_path_helpers import (
     hash_session_id,
     resolve_kb_username,
-    resolve_kb_username_by_user_id,
 )
 from langflow.services.memory_base.provider_scope import (
     preflight_memory_provider_use,
@@ -278,34 +277,19 @@ async def check_mismatch(
     if total_processed == 0:
         return False
 
-    kb_username = await resolve_kb_username_by_user_id(user_id)
-
     # Ask the vector store, not the filesystem. For a remote-backed Memory Base
     # the local directory says nothing about whether the vectors are actually
     # there, and on a replica that never ran an ingestion it may not exist at
     # all — which the old check read as "empty" and would answer by regenerating
     # a Memory Base that was perfectly intact.
     try:
-        backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=mb.kb_name)
+        await resolve_backend_selection(user_id=user_id, kb_name=mb.kb_name)
     except ValueError:
         # No ``knowledge_base`` row: nothing was ever provisioned, so the
         # processed-rows count genuinely has no vectors behind it.
         return True
 
-    kb_path = resolve_local_store_path(
-        mb.kb_name,
-        kb_username,
-        backend_type=backend_type,
-        backend_config=backend_config,
-    )
-    backend = create_backend(
-        backend_type,
-        kb_name=mb.kb_name,
-        kb_path=kb_path,
-        backend_config=backend_config,
-        embedding_function=None,
-        user_id=user_id,
-    )
+    backend = await backend_for_name(user_id, mb.kb_name, embedding_function=None)
     try:
         await backend.ensure_ready()
         return await backend.count() == 0
@@ -348,44 +332,48 @@ async def regenerate(
 
     async with session_scope() as db:
         mb = await get_mb_or_raise(db, memory_base_id, owner_user_id)
-        provider_scope = await resolve_memory_provider_scope(
-            db,
-            memory_base_id=memory_base_id,
-            owner_user_id=owner_user_id,
-            actor_user_id=actor_user_id,
-            memory_base=mb,
-        )
-        embedding_provider, _embedding_model = await resolve_embedding_selection(
-            user_id=owner_user_id,
-            kb_name=mb.kb_name,
-        )
-        await preflight_memory_provider_use(
-            provider_scope,
-            embedding_provider=embedding_provider,
-            preprocessing=mb.preprocessing,
-            preproc_model=mb.preproc_model,
-        )
+        from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
 
-        stmt = select(MemoryBaseSession).where(MemoryBaseSession.memory_base_id == memory_base_id)
-        result = await db.exec(stmt)
-        sessions = list(result.all())
-
-        for s in sessions:
-            s.cursor_id = None
-            db.add(s)
-
-        # Delete existing ingestion records so re-ingestion inserts fresh rows
-        await db.exec(  # type: ignore[call-overload]
-            sa_delete(MessageIngestionRecord).where(MessageIngestionRecord.memory_base_id == memory_base_id)
-        )
-        # Same for preprocessing outputs — without this, a stale "processed" row would
-        # cause Phase A on the very next job to skip the LLM and retry with the old text.
-        await db.exec(  # type: ignore[call-overload]
-            sa_delete(MemoryBasePreprocessingOutput).where(
-                MemoryBasePreprocessingOutput.memory_base_id == memory_base_id
+        record = await resolve_record(owner_user_id, mb.kb_name)
+        async with operation(record):
+            provider_scope = await resolve_memory_provider_scope(
+                db,
+                memory_base_id=memory_base_id,
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+                memory_base=mb,
             )
-        )
-        await db.commit()
+            embedding_provider, _embedding_model = await resolve_embedding_selection(
+                user_id=owner_user_id,
+                kb_name=mb.kb_name,
+            )
+            await preflight_memory_provider_use(
+                provider_scope,
+                embedding_provider=embedding_provider,
+                preprocessing=mb.preprocessing,
+                preproc_model=mb.preproc_model,
+            )
+
+            stmt = select(MemoryBaseSession).where(MemoryBaseSession.memory_base_id == memory_base_id)
+            result = await db.exec(stmt)
+            sessions = list(result.all())
+
+            for s in sessions:
+                s.cursor_id = None
+                db.add(s)
+
+            # Delete existing ingestion records so re-ingestion inserts fresh rows
+            await db.exec(  # type: ignore[call-overload]
+                sa_delete(MessageIngestionRecord).where(MessageIngestionRecord.memory_base_id == memory_base_id)
+            )
+            # Same for preprocessing outputs — without this, a stale "processed" row would
+            # cause Phase A on the very next job to skip the LLM and retry with the old text.
+            await db.exec(  # type: ignore[call-overload]
+                sa_delete(MemoryBasePreprocessingOutput).where(
+                    MemoryBasePreprocessingOutput.memory_base_id == memory_base_id
+                )
+            )
+            await db.commit()
 
     job_ids: list[str] = []
     for s in sessions:
@@ -410,101 +398,95 @@ async def regenerate(
     return job_ids
 
 
+@asynccontextmanager
+async def session_storage_operation(*, user_id: uuid.UUID, session_ids: list[str]):
+    """Fence the owner's affected stores before mutating messages or Memory history."""
+    from sqlalchemy import and_, or_
+
+    from langflow.services.database.models.message.model import MessageTable
+    from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
+
+    async with session_scope() as db:
+        stmt = (
+            select(MemoryBase, MemoryBaseSession)
+            .outerjoin(
+                MemoryBaseSession,
+                and_(
+                    MemoryBaseSession.memory_base_id == MemoryBase.id,
+                    col(MemoryBaseSession.session_id).in_(session_ids),
+                ),
+            )
+            .where(MemoryBase.user_id == user_id)
+            .where(
+                or_(
+                    col(MemoryBaseSession.id).isnot(None),
+                    col(MemoryBase.flow_id).in_(
+                        select(MessageTable.flow_id).where(col(MessageTable.session_id).in_(session_ids))
+                    ),
+                )
+            )
+        )
+        result = await db.exec(stmt)
+        pairs = list(result.all())
+    records = {}
+    for mb, _mbs in pairs:
+        record = await resolve_record(user_id, mb.kb_name)
+        records[record.id] = record
+    async with AsyncExitStack() as stack:
+        # Stable ordering avoids deadlocks when concurrent requests overlap.
+        for record_id in sorted(records, key=str):
+            await stack.enter_async_context(operation(records[record_id]))
+        yield [(mb, mbs) for mb, mbs in pairs if mbs is not None]
+
+
 async def purge_session_data(
     *,
     user_id: uuid.UUID,
     session_ids: list[str],
 ) -> int:
-    """Purge Chroma chunks and tracking rows for the given sessions across the user's MBs.
+    """Delete session vectors and history while holding all affected KB fences.
 
-    Called from the message-session deletion endpoint so that wiping a session from
-    the UI also clears its embeddings from every Memory Base that ingested from it.
-    Without this, chunks tagged with the deleted session_id remain in Chroma and
-    leak into newly-created sessions whose retrieval doesn't restrict by session_id.
-
-    Returns the number of (memory_base, session) pairs that were processed.
-    Best-effort: chunk deletion failures are logged but do not abort DB cleanup
-    (we'd rather drop the bookkeeping rows than leave them dangling, since the
-    user's intent — "delete this session" — is unambiguous).
+    A fenced or unavailable store leaves tracking/history intact for retry.
+    The caller must propagate failure instead of reporting a successful purge.
     """
     from sqlalchemy import delete as sa_delete
 
-    from langflow.services.database.models.memory_base.model import MessageIngestionRecord
+    from langflow.services.database.models.memory_base.model import (
+        MemoryBasePreprocessingOutput,
+        MessageIngestionRecord,
+    )
 
     if not session_ids:
         return 0
-
-    async with session_scope() as db:
-        stmt = (
-            select(MemoryBase, MemoryBaseSession)
-            .join(MemoryBaseSession, MemoryBaseSession.memory_base_id == MemoryBase.id)
-            .where(MemoryBase.user_id == user_id)
-            .where(col(MemoryBaseSession.session_id).in_(session_ids))
-        )
-        result = await db.exec(stmt)
-        pairs: list[tuple[MemoryBase, MemoryBaseSession]] = list(result.all())
-
+    async with session_storage_operation(user_id=user_id, session_ids=session_ids) as pairs:
         if not pairs:
             return 0
-
-        kb_username = await resolve_kb_username(db, user_id)
-
-    # ---- 1. Delete vector-store chunks (best-effort, outside the DB session) ----
-    for mb, mbs in pairs:
-        try:
+        for mb, mbs in pairs:
             await _delete_chunks_for_session(
-                kb_username=kb_username,
-                kb_name=mb.kb_name,
-                user_id=user_id,
-                session_id=mbs.session_id,
-            )
-        # Broad on purpose: the purge runs against whichever backend the KB is
-        # on, so the failure modes include remote transport errors, not just the
-        # local Chroma/OS set. One session's failure must not abort the purge for
-        # the rest.
-        except Exception:  # noqa: BLE001
-            await logger.aerror(
-                "Failed to purge chunks for memory_base=%s session=%s",
-                mb.id,
-                hash_session_id(mbs.session_id),
-                exc_info=True,
+                kb_username="", kb_name=mb.kb_name, user_id=user_id, session_id=mbs.session_id
             )
 
-    # ---- 2. Delete tracking rows in a single transaction ----
-    pair_keys = [(mb.id, mbs.session_id) for mb, mbs in pairs]
-    affected_mb_ids = {mb_id for mb_id, _ in pair_keys}
-    affected_session_ids = {sid for _, sid in pair_keys}
-
-    async with session_scope() as db:
-        # Scheduler state, not audit: count_pending_messages keys on (memory_base_id, session_id)
-        # string, so leaving these rows would carry pending counts into a future session that
-        # reuses the same session_id and trigger a phantom ingestion. Audit lives on Job.
-        await db.exec(  # type: ignore[call-overload]
-            sa_delete(MemoryBaseWorkflowRun)
-            .where(col(MemoryBaseWorkflowRun.memory_base_id).in_(affected_mb_ids))
-            .where(col(MemoryBaseWorkflowRun.session_id).in_(affected_session_ids))
-        )
-        # Defensive: callers normally delete the underlying messages first (which cascades
-        # MessageIngestionRecord via message.id FK), but if a caller invokes purge_session_data
-        # without that, the records would leak and block re-ingestion via the unique constraint.
-        await db.exec(  # type: ignore[call-overload]
-            sa_delete(MessageIngestionRecord)
-            .where(col(MessageIngestionRecord.memory_base_id).in_(affected_mb_ids))
-            .where(col(MessageIngestionRecord.session_id).in_(affected_session_ids))
-        )
-        await db.exec(  # type: ignore[call-overload]
-            sa_delete(MemoryBaseSession)
-            .where(col(MemoryBaseSession.memory_base_id).in_(affected_mb_ids))
-            .where(col(MemoryBaseSession.session_id).in_(affected_session_ids))
-        )
-        await db.commit()
-
+        affected_mb_ids = {mb.id for mb, _mbs in pairs}
+        affected_session_ids = {mbs.session_id for _mb, mbs in pairs}
+        async with session_scope() as db:
+            for model in (
+                MemoryBaseWorkflowRun,
+                MessageIngestionRecord,
+                MemoryBasePreprocessingOutput,
+                MemoryBaseSession,
+            ):
+                await db.exec(
+                    sa_delete(model)
+                    .where(col(model.memory_base_id).in_(affected_mb_ids))
+                    .where(col(model.session_id).in_(affected_session_ids))
+                )
+            await db.commit()
     return len(pairs)
 
 
 async def _delete_chunks_for_session(
     *,
-    kb_username: str,
+    kb_username: str,  # noqa: ARG001 - compatibility signature
     kb_name: str,
     user_id: uuid.UUID,
     session_id: str,
@@ -517,21 +499,7 @@ async def _delete_chunks_for_session(
     Passing Chroma's explicit ``{"$eq": ...}`` operator form here would silently
     match nothing on a remote backend.
     """
-    backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name)
-    kb_path = resolve_local_store_path(
-        kb_name,
-        kb_username,
-        backend_type=backend_type,
-        backend_config=backend_config,
-    )
-    backend = create_backend(
-        backend_type,
-        kb_name=kb_name,
-        kb_path=kb_path,
-        backend_config=backend_config,
-        embedding_function=None,
-        user_id=user_id,
-    )
+    backend = await backend_for_name(user_id, kb_name, embedding_function=None)
     try:
         await backend.ensure_ready()
         await backend.delete_by({"session_id": session_id})

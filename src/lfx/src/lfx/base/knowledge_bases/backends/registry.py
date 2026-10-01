@@ -27,7 +27,6 @@ _BACKEND_REGISTRY: dict[BackendType, type[BaseVectorStoreBackend]] = {}
 # Resolve provider classes only when selected. In particular, importing the
 # SQLite backend or inspecting capabilities must not import Chroma's SDK.
 _BUILTIN_BACKENDS = {
-    BackendType.CHROMA: ("chroma", "ChromaLocalBackend"),
     BackendType.SQLITE: ("sqlite", "SQLiteBackend"),
     BackendType.OPENSEARCH: ("opensearch", "OpenSearchBackend"),
     BackendType.POSTGRES: ("postgres", "PostgresBackend"),
@@ -40,6 +39,10 @@ def register_backend(backend_type: BackendType, backend_class: type[BaseVectorSt
     Idempotent: re-registering the same class is a no-op; re-registering a
     different class raises ``ValueError`` to catch accidental collisions.
     """
+    if backend_type == BackendType.CHROMA:
+        from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
+
+        raise ChromaMigrationRequiredError
     existing = _BACKEND_REGISTRY.get(backend_type)
     if existing is None and backend_type in _BUILTIN_BACKENDS:
         existing = get_backend_class(backend_type)
@@ -59,6 +62,10 @@ def get_backend_class(backend_type: BackendType | str) -> type[BaseVectorStoreBa
     config-parsing boundaries.
     """
     resolved = _resolve_backend_type(backend_type)
+    if resolved == BackendType.CHROMA:
+        from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
+
+        raise ChromaMigrationRequiredError
     if resolved not in _BACKEND_REGISTRY and resolved in _BUILTIN_BACKENDS:
         module_name, class_name = _BUILTIN_BACKENDS[resolved]
         module = import_module(f"lfx.base.knowledge_bases.backends.{module_name}")
@@ -134,20 +141,21 @@ def create_backend(
     path never creates a missing database. Only new-store creation or an
     unpublished migration generation may explicitly pass ``create=True``.
 
-    ``kb_path`` is required only by local Chroma. SQLite derives its path from
-    immutable storage context. Remote backends pass ``None``.
+    SQLite derives its path from immutable storage context. Remote backends
+    pass ``None`` for ``kb_path``. Legacy Chroma routing requires migration.
 
     ``user_id`` is forwarded so backends can resolve credential *variables*
     through Langflow's ``variable_service`` (same pattern as the connector
     ingestion sources). Legacy call sites that pass ``None`` still work —
     the backends fall back to ``os.environ`` in that case.
 
-    For ``BackendType.CHROMA`` the factory dispatches to ``ChromaLocalBackend``
-    or ``ChromaCloudBackend`` based on ``backend_config["mode"]`` so callers
-    never need to know which class to use.
+    Retired Chroma routing always raises a migration-required error.
     """
-    cfg = backend_config or {}
     resolved = _resolve_backend_type(backend_type)
+    if resolved == BackendType.CHROMA:
+        from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
+
+        raise ChromaMigrationRequiredError
 
     if resolved == BackendType.SQLITE:
         from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend
@@ -168,16 +176,7 @@ def create_backend(
         msg = "Explicit local storage context and creation are supported only by SQLite."
         raise ValueError(msg)
 
-    if resolved == BackendType.CHROMA:
-        from lfx.base.knowledge_bases.backends.chroma import (
-            ChromaCloudBackend,
-            ChromaLocalBackend,
-        )
-
-        mode = str(cfg.get("mode", "local")).lower()
-        backend_class: type[BaseVectorStoreBackend] = ChromaCloudBackend if mode == "cloud" else ChromaLocalBackend
-    else:
-        backend_class = get_backend_class(resolved)
+    backend_class = get_backend_class(resolved)
 
     return backend_class(
         kb_name=kb_name,

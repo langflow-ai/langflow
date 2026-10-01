@@ -219,7 +219,7 @@ def postgres_env_configured() -> bool:
 
 def resolve_default_kb_backend() -> str:
     """Return the backend for a new KB when the client omits a selection."""
-    return BackendType.POSTGRES.value if postgres_env_configured() else BackendType.CHROMA.value
+    return BackendType.POSTGRES.value if postgres_env_configured() else BackendType.SQLITE.value
 
 
 def _coerce_embedding(raw: Any) -> list[float] | None:

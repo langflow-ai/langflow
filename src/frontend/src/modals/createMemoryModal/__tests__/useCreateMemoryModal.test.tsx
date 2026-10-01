@@ -409,7 +409,7 @@ describe("useCreateMemoryModal", () => {
       useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
     );
 
-    expect(result.current.backendType).toBe("chroma");
+    expect(result.current.backendType).toBe("sqlite");
     expect(result.current.backendConfigured).toBe(true);
 
     act(() => {

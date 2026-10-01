@@ -46,6 +46,7 @@ from langflow.services.database.models.memory_base.model import (
 )
 from langflow.services.deps import get_authorization_service, get_memory_base_service, session_scope
 from langflow.services.jobs import DuplicateJobError
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError
 from langflow.services.memory_base.provider_scope import MemoryBaseFlowNotFoundError
 from langflow.services.memory_base.service import EmbeddingProviderValidationError, PreprocessingValidationError
@@ -119,6 +120,15 @@ async def _get_memory_base_for_action(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Memory base not found") from exc
+    if action == KnowledgeBaseAction.INGEST:
+        from langflow.api.utils import knowledge_base_service
+
+        record = await knowledge_base_service.get_by_user_and_name(mb.user_id, mb.kb_name)
+        if record is not None and (record.storage_state != "ready" or record.backend_type == "chroma"):
+            raise HTTPException(
+                status_code=409,
+                detail="Memory base storage is unavailable while its upgrade or recovery is pending.",
+            )
     return mb
 
 
@@ -516,6 +526,8 @@ async def regenerate_memory_base(
             owner_user_id=mb.user_id,
             actor_user_id=current_user.id,
         )
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return RegenerateResponse(job_ids=job_ids)

@@ -93,6 +93,17 @@ async def healthz(
 ) -> HealthResponse:
     response = await _probe_services(session)
 
+    from langflow.services.knowledge_base_storage.coordinator import readiness
+
+    # This gate is mandatory, unlike optional enterprise health integrations.
+    # A failed query also fails closed. Liveness and admin recovery stay usable.
+    try:
+        storage_ready = await readiness()
+    except Exception:  # noqa: BLE001
+        storage_ready = False
+    if not storage_ready:
+        raise HTTPException(status_code=503, detail="Knowledge base storage upgrade requires attention")
+
     check_timeout: float = get_settings_service().settings.worker_timeout
     for check in _enterprise_readiness_checks:
         check_name = getattr(check, "__qualname__", type(check).__name__)

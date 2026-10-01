@@ -61,6 +61,9 @@ class MemoryBaseCreate(MemoryBaseBase):
 
     @model_validator(mode="after")
     def preprocessing_defaults(self) -> "MemoryBaseCreate":
+        if self.backend_type not in (None, "sqlite", "postgres", "opensearch"):
+            msg = "Memory bases support SQLite Local, pgVector and OpenSearch"
+            raise ValueError(msg)
         if self.preprocessing and not self.preproc_model:
             msg = "preproc_model is required when preprocessing is enabled"
             raise ValueError(msg)
@@ -91,7 +94,7 @@ class MemoryBaseRead(MemoryBaseBase):
     # ``backend_type="chroma"``, discriminated by ``backend_config["mode"]``); it
     # carries only variable names / routing flags, never secrets. Defaults suit a
     # Memory Base with no resolvable KB row.
-    backend_type: str = "chroma"
+    backend_type: str = "sqlite"
     backend_config: dict = Field(default_factory=dict)
 
 
