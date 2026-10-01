@@ -148,6 +148,11 @@ def capability_probe() -> Iterator[None]:
         _capability_probe.reset(token)
 
 
+def is_decision_audit_suppressed() -> bool:
+    """True while a check runs that must leave no decision row, for plugins that write their own."""
+    return _capability_probe.get()
+
+
 async def _audit_suppressed() -> None:
     """Awaitable no-op standing in for a suppressed decision row."""
     return
@@ -911,19 +916,23 @@ async def ensure_project_audit_read_permission(
     project_user_id: UUID | None = None,
     workspace_id: UUID | None = None,
 ) -> None:
-    """Require ``project:audit_read`` without the ordinary resource-owner override."""
-    await _ensure_typed(
-        user,
-        spec_key="project",
-        act_str=ProjectAction.AUDIT_READ.value,
-        kwargs={
-            "project_id": project_id,
-            "project_user_id": project_user_id,
-            "workspace_id": workspace_id,
-        },
-        domain_override=None,
-        allow_owner_override=False,
-    )
+    """Require ``project:audit_read`` without the ordinary resource-owner override.
+
+    Reading a trail must not add to it, so the decision is enforced but never recorded.
+    """
+    with capability_probe():
+        await _ensure_typed(
+            user,
+            spec_key="project",
+            act_str=ProjectAction.AUDIT_READ.value,
+            kwargs={
+                "project_id": project_id,
+                "project_user_id": project_user_id,
+                "workspace_id": workspace_id,
+            },
+            domain_override=None,
+            allow_owner_override=False,
+        )
 
 
 async def ensure_knowledge_base_permission(

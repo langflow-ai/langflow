@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from langflow.services.authorization.audit import get_audit_producer_health
 from langflow.services.database.models.audit_event.model import AuditEvent
+from langflow.services.database.models.auth.authz import AuthzAuditLog
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, get_settings_service, session_scope
 from sqlmodel import col, select
@@ -56,3 +59,15 @@ async def login(client, username: str) -> dict[str, str]:
     response = await client.post("api/v1/login", data={"username": username, "password": PASSWORD})
     assert response.status_code == 200, response.text
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+async def authz_rows_for(user_id: UUID) -> int:
+    """Count the authorization decisions stored for *user_id*, once the writer is idle."""
+    for _ in range(50):
+        if get_audit_producer_health().get("queue_depth", 0) == 0:
+            break
+        await asyncio.sleep(0.02)
+    await asyncio.sleep(0.1)
+    async with session_scope() as session:
+        rows = (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.user_id == user_id))).all()
+        return len(rows)

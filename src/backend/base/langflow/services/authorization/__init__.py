@@ -35,6 +35,7 @@ from langflow.services.authorization.guards import (
     ensure_share_permission,
     ensure_variable_permission,
     ensure_voice_permission,
+    is_decision_audit_suppressed,
     should_apply_owner_override,
 )
 from langflow.services.authorization.listing import (
@@ -84,6 +85,7 @@ __all__ = [
     "ensure_voice_permission",
     "filter_visible_resources",
     "get_audit_producer_health",
+    "is_decision_audit_suppressed",
     "requires_flow_permission",
     "requires_resource_permission",
     "resource_visible_in_scope",
