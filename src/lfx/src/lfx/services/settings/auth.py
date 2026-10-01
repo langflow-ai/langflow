@@ -319,14 +319,6 @@ class AuthSettings(BaseSettings):
             "enable it before using authz_audit_log as a compliance or external-delivery source."
         ),
     )
-    AUTHZ_AUDIT_DSAR_ALWAYS: bool = Field(
-        default=True,
-        description=(
-            "Record data subject request events (dsar:*) in authz_audit_log even when "
-            "AUTHZ_AUDIT_ENABLED is False, so every erasure leaves evidence. When AUTHZ_AUDIT_ENABLED "
-            "is True the events follow the normal audit pipeline regardless of this setting."
-        ),
-    )
     AUTHZ_AUDIT_RETENTION_DAYS: int = Field(
         default=90,
         ge=0,

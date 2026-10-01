@@ -42,8 +42,6 @@ async def record_dsar_event(
         if not staged:
             await audit_decision(user_id=actor_id, action=action, obj=obj, result=result, details=details)
         return
-    if not getattr(auth_settings, "AUTHZ_AUDIT_DSAR_ALWAYS", True):
-        return
     session.add(
         AuthzAuditLog(
             user_id=actor_id,

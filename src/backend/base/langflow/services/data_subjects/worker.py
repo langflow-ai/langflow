@@ -15,7 +15,7 @@ from sqlmodel import col, select
 
 from langflow.services.data_subjects.engine import RUNNABLE, is_retry_due, run_request
 from langflow.services.database.models.data_subject_request import DataSubjectRequest
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import session_scope
 from langflow.services.triggers import leases
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ class DataSubjectEraseWorker:
         self._wake.set()
 
     async def start(self) -> None:
-        if self._task is not None or not get_settings_service().settings.data_subject_worker_enabled:
+        if self._task is not None:
             return
         # Events bind to the loop that first awaits them; an app restarted in the same process runs a new loop.
         self._stop = asyncio.Event()

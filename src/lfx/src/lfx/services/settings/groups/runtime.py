@@ -158,10 +158,6 @@ class RuntimeSettings(BaseModel):
     ``trigger_lease`` row, so N replicas still produce one tick per schedule and
     one run per event. Turn it off on replicas that must never execute triggers
     (and when TRG-3's dedicated listener process hosts the loops instead)."""
-    data_subject_worker_enabled: bool = True
-    """Run the data subject erase worker inside this process. It is a singleton
-    held by a ``trigger_lease`` row, so every replica may enable it. Turn it off
-    on replicas that must never erase data."""
     trigger_dispatcher_poll_interval_s: float = Field(default=5.0, gt=0)
     """How often the dispatcher scans the ledger for claimable events. The lower
     bound on scheduling latency for an event that arrives just after a scan."""
