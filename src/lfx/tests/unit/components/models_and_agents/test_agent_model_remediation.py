@@ -335,8 +335,8 @@ async def test_json_response_remediates_a_connected_model_prompt_fallback():
         assert tool_effects == ["executed"]
         assert mocked_run_agent.await_count == 2
         assert mocked_create_agent.call_args_list == [
-            call(allow_interrupts=False),
-            call(allow_interrupts=False),
+            call(allow_interrupts=False, llm=connected_model),
+            call(allow_interrupts=False, llm=connected_model),
         ]
         remember.assert_not_called()
         assert model_remediation.cached_overrides("OpenAI", "gpt-5.6-luna") == {}

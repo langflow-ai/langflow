@@ -765,7 +765,7 @@ async def test_should_return_final_ai_text_when_message_response_runs_end_to_end
     component.set_attributes({"input_value": "what's 2+2?", "chat_history": []})
 
     with (
-        patch.object(type(component), "_get_llm", return_value=fake_llm),
+        patch.object(type(component), "_get_llm", side_effect=AssertionError("model was already resolved")),
         patch.object(type(component), "get_agent_requirements", new=AsyncMock(return_value=(fake_llm, [], []))),
         # We don't store / send messages in this isolated unit test.
         patch.object(type(component), "send_message", new=AsyncMock(side_effect=lambda message, **_kw: message)),
@@ -1982,3 +1982,17 @@ async def test_legacy_agent_provider_options_are_filtered_by_active_scope(monkey
 
     assert build_config["agent_llm"]["options"] == ["OpenAI"]
     assert build_config["agent_llm"]["options_metadata"] == [{"icon": "OpenAI"}]
+
+
+@pytest.mark.asyncio
+async def test_explicit_agent_model_is_used_without_resolving_again() -> None:
+    """Each caller passes its own resolved model; a retry can supply a fresh one."""
+    component = _build_component()
+    models = [MagicMock(name="first_model"), MagicMock(name="retry_model")]
+    with (
+        patch.object(type(component), "_get_llm", side_effect=AssertionError("model was already resolved")),
+        patch("lfx.components.models_and_agents.agent.create_agent") as build,
+    ):
+        for model in models:
+            component.create_agent_runnable(llm=model)
+            assert build.call_args.kwargs["model"] is model
