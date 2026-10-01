@@ -474,3 +474,43 @@ async def test_the_export_applies_the_search(client, logged_in_headers_super_use
 
     assert response.status_code == status.HTTP_200_OK
     assert [json.loads(line)["id"] for line in response.text.splitlines()] == [kept]
+
+
+async def test_an_offset_lands_on_the_page_a_cursor_walk_reaches(client, logged_in_headers_super_user):
+    newest_first = list(
+        reversed(
+            await seed(
+                resource_event(7),
+                authz_event(6),
+                resource_event(5),
+                authz_event(4),
+                resource_event(3),
+                authz_event(2),
+                resource_event(1),
+            )
+        )
+    )
+
+    third = await feed(client, logged_in_headers_super_user, "limit=2&offset=4")
+
+    assert [item["id"] for item in third["items"]] == newest_first[4:6]
+    following = await feed(client, logged_in_headers_super_user, f"limit=2&cursor={third['next_cursor']}")
+    assert [item["id"] for item in following["items"]] == newest_first[6:]
+    assert following["next_cursor"] is None
+
+
+async def test_an_offset_past_the_end_is_an_empty_last_page(client, logged_in_headers_super_user):
+    await seed(resource_event(1), authz_event(2))
+
+    page = await feed(client, logged_in_headers_super_user, "limit=2&offset=2&include_total=true")
+
+    assert (page["items"], page["next_cursor"], page["total"]) == ([], None, 2)
+
+
+async def test_an_offset_is_a_whole_number_and_never_rides_a_cursor(client, logged_in_headers_super_user):
+    await seed(resource_event(1), authz_event(2), resource_event(3))
+    cursor = (await feed(client, logged_in_headers_super_user, "limit=1"))["next_cursor"]
+
+    for query in ("offset=-1", "offset=1.5", "offset=abc", "offset=", "offset=1&offset=2", f"offset=1&cursor={cursor}"):
+        response = await client.get(f"api/v1/audits?{WINDOW}&{query}", headers=logged_in_headers_super_user)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, (query, response.text)

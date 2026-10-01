@@ -67,7 +67,8 @@ _ENUM_LISTS: dict[str, frozenset[str]] = {
 _REPEATABLE = frozenset({*_SLUG_LISTS, *_ACTION_LISTS, *_ENUM_LISTS})
 _UUIDS = ("resource_id", "user_id", "actor_id", "request_id")
 _FILTER_PARAMS = frozenset({*_REPEATABLE, *_UUIDS, "since", "until", "q"})
-_PAGE_PARAMS = frozenset({"cursor", "limit", "include_total"})
+_PAGE_PARAMS = frozenset({"cursor", "limit", "offset", "include_total"})
+MAX_FEED_OFFSET = 1_000_000
 _EXPORT_FORMATS = {"csv": "text/csv; charset=utf-8", "ndjson": "application/x-ndjson"}
 _EXPORT_BATCH = 500
 
@@ -145,6 +146,18 @@ def _filters(grouped: dict[str, list[str]]) -> AuditFeedFilters:
 
 def _grouped(request: Request, extra: frozenset[str]) -> dict[str, list[str]]:
     return group_query_params(request, set(_FILTER_PARAMS | extra), repeatable=_REPEATABLE)
+
+
+def _offset(value: str | None) -> int:
+    if value is None:
+        return 0
+    msg = f"offset must be an integer from 0 through {MAX_FEED_OFFSET}"
+    if not (value.isascii() and value.isdigit()) or len(value) > len(str(MAX_FEED_OFFSET)):
+        raise bad_request(msg)
+    parsed = int(value)
+    if parsed > MAX_FEED_OFFSET:
+        raise bad_request(msg)
+    return parsed
 
 
 def _flag(name: str, value: str | None) -> bool:
@@ -256,17 +269,23 @@ async def read_audits(
     ``resource_id``, ``user_id``, ``actor_id``, ``request_id``, ``since`` and
     ``until`` narrow further. ``q`` keeps rows whose action, operation, resource
     type or name, actor username or details contain it, ignoring case.
-    ``include_total=true`` adds a count of every match.
+    ``include_total=true`` adds a count of every match. ``offset`` jumps to a
+    page by position instead of a cursor; ``next_cursor`` then continues from it.
     """
     grouped = _grouped(request, _PAGE_PARAMS)
     filters = _filters(grouped)
     single = {key: values[0] for key, values in grouped.items()}
+    offset = _offset(single.get("offset"))
+    if offset and "cursor" in single:
+        msg = "offset and cursor cannot be combined"
+        raise bad_request(msg)
     try:
         page = await list_feed(
             session,
             filters,
             limit=parse_limit(single.get("limit")),
             cursor=single.get("cursor"),
+            offset=offset,
             include_total=_flag("include_total", single.get("include_total")),
         )
     except AuditCursorError as exc:

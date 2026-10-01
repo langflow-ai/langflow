@@ -20,7 +20,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, union_all
 from sqlmodel import col, select
 
 from langflow.services.audit.query import (
@@ -310,14 +310,28 @@ async def list_feed(
     *,
     limit: int,
     cursor: str | None = None,
+    offset: int = 0,
     include_total: bool = False,
 ) -> AuditFeedPage:
-    """One newest-first page across both stores; the total costs a COUNT and is opt-in."""
+    """One newest-first page across both stores; the total costs a COUNT and is opt-in.
+
+    ``offset`` jumps to a page by position: the database finds the row just before
+    it, and the page is then read from that key like any cursor, so only the jump
+    pays for its depth and the pages after it stay keyset-cheap.
+    """
     if not 1 <= limit <= MAX_FEED_PAGE_SIZE:
         msg = f"limit must be between 1 and {MAX_FEED_PAGE_SIZE}"
         raise ValueError(msg)
+    if offset < 0 or (offset and cursor is not None):
+        msg = "offset must be zero or more and cannot be combined with a cursor"
+        raise ValueError(msg)
     state = decode_feed_cursor(cursor, filters) if cursor is not None else None
     cutoff = state.cutoff if state is not None else await _database_cutoff(session)
+    if offset:
+        state = await _offset_state(session, filters, cutoff, offset)
+        if state is None:
+            total = await count_feed(session, filters, cutoff=cutoff) if include_total else None
+            return AuditFeedPage(items=[], next_cursor=None, total=total)
     rows = await _merged_window(session, filters, state, cutoff, limit + 1)
     items = rows[:limit]
     next_cursor = None
@@ -333,6 +347,36 @@ async def list_feed(
         )
     total = await count_feed(session, filters, cutoff=cutoff) if include_total else None
     return AuditFeedPage(items=items, next_cursor=next_cursor, total=total)
+
+
+async def _offset_state(
+    session: AsyncSession, filters: AuditFeedFilters, cutoff: datetime, offset: int
+) -> CursorState | None:
+    keys = [
+        select(col(model.timestamp).label("timestamp"), col(model.id).label("id")).where(
+            *clauses, col(model.timestamp) <= cutoff
+        )
+        for _, model, clauses in _store_plans(filters)
+    ]
+    if not keys:
+        return None
+    merged = union_all(*keys).subquery()
+    statement = (
+        select(merged.c.timestamp, merged.c.id)
+        .order_by(merged.c.timestamp.desc(), merged.c.id.desc())
+        .offset(offset - 1)
+        .limit(1)
+    )
+    boundary = (await session.exec(statement)).first()
+    if boundary is None:
+        return None
+    timestamp, event_id = boundary
+    return CursorState(
+        fingerprint=filters.fingerprint(),
+        cutoff=cutoff,
+        timestamp=as_utc(timestamp),
+        event_id=event_id if isinstance(event_id, UUID) else UUID(str(event_id)),
+    )
 
 
 async def _merged_window(
