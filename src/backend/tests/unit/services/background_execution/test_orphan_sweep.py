@@ -138,3 +138,37 @@ async def test_queued_claimed_then_crashed_is_rerun_not_failed(active_user):
         assert (job.error or {}).get("type") != "worker_lost"
     finally:
         await svc.stop()
+
+
+async def test_startup_enqueue_failure_releases_queued_lease(active_user, monkeypatch):
+    """A failed enqueue must not leave a QUEUED row owned by work that was never scheduled."""
+    job_service = get_job_service()
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
+
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=lambda **_kw: _scripted,
+    )
+
+    async def fail_enqueue(**_kwargs):
+        msg = "executor unavailable"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(svc, "_enqueue", fail_enqueue)
+
+    await svc.start()
+    try:
+        await svc.sweep_orphans_on_startup()
+        job = await job_service.get_job_by_job_id(job_id)
+        assert job.status == JobStatus.QUEUED
+        assert "owner" not in (job.job_metadata or {})
+        assert "heartbeat_at" not in (job.job_metadata or {})
+        # The released row is immediately claimable again instead of waiting for the lease TTL.
+        assert await job_service.claim_queued_lease(
+            job_id,
+            owner="next-boot",
+            lease_ttl_s=get_settings_service().settings.background_lease_ttl_s,
+        )
+    finally:
+        await svc.stop()
