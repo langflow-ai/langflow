@@ -303,6 +303,7 @@ log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = [
+    "full_database_init: Run the API client fixture with a fresh schema and real migrations",
     "async_test",
     "api_key_required",
     "no_blockbuster",
