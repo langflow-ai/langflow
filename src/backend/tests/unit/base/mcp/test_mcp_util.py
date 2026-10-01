@@ -413,8 +413,7 @@ class TestMCPSessionManager:
             "last_cleanup": 0,
         }
 
-        # Set up mapping for backwards compatibility
-        session_manager._context_to_session[context_id] = (server_key, session_id)
+        session_manager._context_to_session[context_id] = {server_key: session_id}
 
         await session_manager._cleanup_session(context_id)
 
@@ -739,7 +738,7 @@ class TestMCPSessionManager:
                 await cleanup_task
 
         # The fresh B mapping survives.
-        assert session_manager._context_to_session.get("ctx_move") == (server_key_b, f"{server_key_b}_0")
+        assert session_manager._context_to_session.get("ctx_move") == {server_key_b: f"{server_key_b}_0"}
         # A's session is gone; B's session is live with refcount 1.
         assert f"{server_key_a}_0" not in session_manager.sessions_by_server.get(server_key_a, {}).get("sessions", {})
         assert f"{server_key_b}_0" in session_manager.sessions_by_server[server_key_b]["sessions"]

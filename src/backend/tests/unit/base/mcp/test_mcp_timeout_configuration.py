@@ -211,29 +211,26 @@ class TestMCPTimeoutBehavior:
     """Test timeout behavior and error handling."""
 
     @pytest.mark.asyncio
-    async def test_timeout_error_is_caught_and_retried(self):
-        """Test that timeout errors trigger retry logic."""
+    async def test_timeout_error_is_surfaced_without_retry(self):
+        """A timed-out call may have run on the server, so it is reported instead of sent again."""
         client = MCPStdioClient(tool_execution_timeout=1)
         client._connected = True
         client._connection_params = {"command": "test"}
         client._session_context = "test_context"
 
         mock_session = AsyncMock()
-        # First call times out, second succeeds
         mock_session.call_tool = AsyncMock(side_effect=[asyncio.TimeoutError(), {"result": "success"}])
 
         with (
             patch.object(client, "_get_or_create_session", return_value=mock_session),
             patch("asyncio.wait_for") as mock_wait_for,
         ):
-            # First call times out, second succeeds
             mock_wait_for.side_effect = [asyncio.TimeoutError(), {"result": "success"}]
 
-            result = await client.run_tool("test_tool", {"arg": "value"})
+            with pytest.raises(ValueError, match="not retried"):
+                await client.run_tool("test_tool", {"arg": "value"})
 
-            # Verify retry happened
-            assert mock_wait_for.call_count == 2
-            assert result == {"result": "success"}
+            assert mock_wait_for.call_count == 1
 
     @pytest.mark.asyncio
     async def test_zero_timeout_uses_global_default(self):
