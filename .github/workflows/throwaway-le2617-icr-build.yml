@@ -1,0 +1,46 @@
+name: "[Throwaway] LE-2617 ICR test build"
+
+# One-off manual build to push an amd64 test image of the LE-2617 connection-pooling
+# branch to the internal development ICR registry, for load testing against the Fyre
+# perf cluster. Not meant to be permanent -- delete this file and the branch once the
+# test image has served its purpose.
+#
+# Requires a repo secret ICR_API_KEY: an IBM Cloud IAM API key with push access to
+# us.icr.io/watson-orchestrate/development. Add it via:
+#   gh secret set ICR_API_KEY --repo <owner>/<repo>
+# (paste the key value at the prompt -- never commit it to this file).
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag to push under us.icr.io/watson-orchestrate/development/ibm-langflow"
+        required: true
+        default: "le-2617-connpool-test"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to ICR
+        uses: docker/login-action@v4
+        with:
+          registry: us.icr.io
+          username: iamapikey
+          password: ${{ secrets.ICR_API_KEY }}
+
+      - name: Build and push amd64 image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push.Dockerfile
+          tags: us.icr.io/watson-orchestrate/development/ibm-langflow:${{ inputs.image_tag }}
+          platforms: linux/amd64
+          provenance: false
