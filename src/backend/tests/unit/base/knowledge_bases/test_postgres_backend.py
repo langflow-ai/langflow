@@ -224,3 +224,61 @@ class TestPostgresBackendLive:
                 with contextlib.suppress(Exception):
                     await backend.delete_collection()
                 await backend.teardown()
+
+
+@pytest.mark.api_key_required
+class TestPostgresEmbeddedDocumentsLive:
+    """Write chunks with precomputed vectors, the path a KB migration uses."""
+
+    def _backend(self, tmp_path: Path, *, embedding_function=None):
+        return create_backend(
+            "postgres",
+            kb_name=f"kb_emb_{uuid.uuid4().hex[:8]}",
+            kb_path=tmp_path,
+            backend_config={},
+            embedding_function=embedding_function,
+            user_id=uuid.uuid4(),
+        )
+
+    async def _read_all(self, backend):
+        out = []
+        async for batch in backend.iter_documents(batch_size=2, include_embeddings=True):
+            out.extend(batch)
+        return out
+
+    async def test_copy_preserves_ids_and_vectors_without_an_embedder(self, tmp_path: Path, fake_embeddings) -> None:
+        _require_live_pgvector()
+        from langchain_core.documents import Document
+
+        source = self._backend(tmp_path, embedding_function=fake_embeddings)
+        # No embedding function on the target: nothing on this path may call a model.
+        target = self._backend(tmp_path)
+        try:
+            await source.ensure_ready()
+            tc = await source.test_connection()
+            if not tc.ok:
+                pytest.skip(f"pgvector not reachable: {tc.message}")
+            await source.add_documents(
+                [
+                    Document(id="chunk-a", page_content="alpha", metadata={"n": 1}),
+                    Document(id="chunk-b", page_content="beta", metadata={"n": 2}),
+                    Document(id="chunk-c", page_content="gamma", metadata={"n": 3}),
+                ]
+            )
+            original = await self._read_all(source)
+            assert sorted(d.id for d in original) == ["chunk-a", "chunk-b", "chunk-c"]
+
+            await target.add_embedded_documents(original)
+            await target.add_embedded_documents(original)  # a re-run must upsert
+            assert await target.count() == 3
+
+            copied = {d.id: d for d in await self._read_all(target)}
+            for doc in original:
+                assert copied[doc.id].content == doc.content
+                assert copied[doc.id].metadata == doc.metadata
+                assert copied[doc.id].embedding == pytest.approx(doc.embedding)
+        finally:
+            for backend in (source, target):
+                with contextlib.suppress(Exception):
+                    await backend.delete_collection()
+                await backend.teardown()
