@@ -12,6 +12,9 @@ JUnit XML, and uploads the evidence even after test failure. The journal is
 line-buffered so completed reports survive a later test or worker crash.
 `summary.json` includes elapsed time, phase totals, missing duration entries,
 retries, crashes and the slowest phases. Aggregate summaries show shard imbalance.
+Per-worker `stacks-*.txt` files capture all thread stacks at 80% of each test's
+configured timeout, before pytest-timeout can discard worker-local output by
+exiting. These diagnostic timers leave the timeout and test result unchanged.
 
 Before any shard starts, CI restores one timing baseline and distributes that
 same file to every shard. Cache keys distinguish the target branch, runner,

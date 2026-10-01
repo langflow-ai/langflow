@@ -8,11 +8,13 @@ Only a successful complete collection can produce a reusable timing baseline.
 from __future__ import annotations
 
 import argparse
+import faulthandler
 import json
 import math
 import os
 import platform
 import re
+import threading
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -50,8 +52,52 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     directory = config.getoption("ci_report_dir")
-    if directory and not hasattr(config, "workerinput"):
-        config.pluginmanager.register(Metrics(config, Path(directory)), "backend-ci-metrics")
+    if directory:
+        config.pluginmanager.register(TimeoutDiagnostics(config, Path(directory)), "backend-ci-timeouts")
+        if not hasattr(config, "workerinput"):
+            config.pluginmanager.register(Metrics(config, Path(directory)), "backend-ci-metrics")
+
+
+class TimeoutDiagnostics:
+    """Persist stacks before pytest-timeout can terminate an xdist worker.
+
+    The ordinary timeout output can disappear with worker-local capture buffers.
+    This diagnostic timer does not change the timeout or terminate the process.
+    """
+
+    def __init__(self, config, directory: Path):
+        directory.mkdir(parents=True, exist_ok=True)
+        worker = getattr(config, "workerinput", {}).get("workerid", "master")
+        self.output = (directory / f"stacks-{worker}.txt").open("w", encoding="utf-8", buffering=1)
+        self.timer: threading.Timer | None = None
+
+    def dump(self, nodeid):
+        self.output.write(f"Approaching test timeout: {nodeid}\n")
+        faulthandler.dump_traceback(file=self.output, all_threads=True)
+
+    @pytest.hookimpl(wrapper=True, optionalhook=True)
+    def pytest_timeout_set_timer(self, item, settings):
+        result = yield
+        if settings.timeout > 0:
+            self.timer = threading.Timer(settings.timeout * 0.8, self.dump, args=(item.nodeid,))
+            self.timer.daemon = True
+            self.timer.start()
+        return result
+
+    def cancel(self):
+        if self.timer is not None:
+            self.timer.cancel()
+            self.timer.join()
+            self.timer = None
+
+    @pytest.hookimpl(wrapper=True, optionalhook=True)
+    def pytest_timeout_cancel_timer(self, item):  # noqa: ARG002
+        self.cancel()
+        return (yield)
+
+    def pytest_unconfigure(self, config):  # noqa: ARG002
+        self.cancel()
+        self.output.close()
 
 
 def pytest_collection_modifyitems(config, items):

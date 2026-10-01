@@ -50,7 +50,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install orjson packaging pytest pytest-xdist pytest-rerunfailures pyyaml requests
+        run: pip install orjson packaging pytest pytest-xdist pytest-rerunfailures pytest-timeout pyyaml requests
 
       - name: Run CI script tests
         run: python -m pytest scripts/ci/ -v
