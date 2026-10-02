@@ -47,6 +47,10 @@ async def test_existing_only_does_not_create_missing_store(context):
     assert not context.database_path.exists()
 
 
+def test_store_location_is_the_generation_database(context):
+    assert backend(context, create=False).store_location == (context.database_path,)
+
+
 @pytest.mark.asyncio
 async def test_trusted_root_ancestor_alias_is_canonicalized(tmp_path):
     actual = tmp_path / "actual"

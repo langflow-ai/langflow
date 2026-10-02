@@ -348,6 +348,11 @@ class SQLiteBackend(BaseVectorStoreBackend):
         self._create = create
         self._ready = False
 
+    @property
+    def store_location(self) -> tuple[Any, ...]:
+        """The database file, which holds only this generation of this KB."""
+        return (self.storage_context.database_path,)
+
     async def _run(self, operation: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
         """Bound native work and do not release callers' guards while a cancelled write runs."""
         loop = asyncio.get_running_loop()
