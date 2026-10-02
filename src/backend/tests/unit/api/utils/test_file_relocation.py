@@ -9,9 +9,10 @@ instead of AWS.
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import anyio
 import pytest
@@ -111,6 +112,7 @@ class TestRelocateFiles:
 
         assert [r.status for r in results] == ["failed"]
         assert "no bytes" in (results[0].reason or "")
+        assert results[0].code == "no_source_bytes"
         assert await _stored_keys(bucket) == []
 
     async def test_dry_run_writes_nothing(self, active_user, storage_dir, bucket):
@@ -133,6 +135,7 @@ class TestRelocateFiles:
 
         assert [r.status for r in results] == ["failed"]
         assert "different size" in (results[0].reason or "")
+        assert results[0].code == "file_conflict"
 
 
 class TestFlowScopedUploads:
@@ -185,6 +188,7 @@ class TestOneBadNameDoesNotStopTheRest:
         assert sorted(r.status for r in results) == ["copied", "copied", "failed"]
         failed = next(r for r in results if r.status == "failed")
         assert failed.file_name == "legacy..name.txt"
+        assert failed.code == "bad_name"
         assert len(await _stored_keys(bucket)) == 2
 
 
@@ -290,6 +294,7 @@ class TestIdentityOnRerun:
 
         assert [r.status for r in results] == ["failed"]
         assert "same size" in (results[0].reason or "")
+        assert results[0].code == "file_conflict"
 
     async def test_a_refusal_names_the_source_size(self, active_user, storage_dir, bucket):
         """A large file failing looks like any other failure unless the report says how large."""
@@ -538,3 +543,397 @@ class TestChatAttachmentPaths:
         failed = [r for r in results if r.status == "failed" and r.file_name == "gone.png"]
         assert len(failed) == 1
         assert str(message_id) in failed[0].reason
+        assert failed[0].code == "attachment_unmatched"
+
+
+class TestFailureCodes:
+    """A reason is written for a person. The code beside it is what a caller branches on."""
+
+    async def test_a_failure_from_the_bucket_itself(self, active_user, storage_dir):
+        from langflow.api.utils.file_relocation import _relocate_one, _target_storage
+
+        name = await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        target = _target_storage(f"lf-relocate-missing-{uuid.uuid4().hex[:10]}", "files", None)
+        try:
+            result = await _relocate_one(get_storage_service(), target, str(active_user.id), name, dry_run=False)
+        finally:
+            await target.teardown()
+
+        assert (result.status, result.code) == ("failed", "bucket_error")
+
+    async def test_any_other_failure(self, active_user, storage_dir, bucket):
+        name = await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        (storage_dir / str(active_user.id) / name).chmod(0)
+
+        results = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert [(r.status, r.code) for r in results] == [("failed", "copy_failed")]
+
+    async def test_a_result_that_did_not_fail_has_no_code(self, active_user, storage_dir, bucket):
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+
+        planned = await relocate_files(target_bucket=bucket, target_prefix="files", dry_run=True)
+        copied = await relocate_files(target_bucket=bucket, target_prefix="files")
+        skipped = await relocate_files(target_bucket=bucket, target_prefix="files")
+
+        assert [(r.status, r.code) for r in [*planned, *copied, *skipped]] == [
+            ("would_copy", None),
+            ("copied", None),
+            ("skipped", None),
+        ]
+
+
+class TestResultsAsTheyAreProduced:
+    async def test_a_result_is_handed_over_while_the_other_files_are_still_to_copy(
+        self, active_user, storage_dir, bucket
+    ):
+        for name in ("first.txt", "second.txt"):
+            await _seed_user_file(storage_dir, active_user.id, name=name, data=b"bytes")
+        seen = []
+
+        def remove_the_other_file(result):
+            seen.append(result)
+            for path in (storage_dir / str(active_user.id)).iterdir():
+                if path.name != result.file_name:
+                    path.unlink()
+
+        results = await relocate_files(
+            target_bucket=bucket, target_prefix="files", concurrency=1, on_result=remove_the_other_file
+        )
+
+        # Handed over only at the end, the second file would still have been on disk to copy.
+        assert [(r.status, r.code) for r in seen] == [("copied", None), ("failed", "no_source_bytes")]
+        assert seen == results
+        assert len(await _stored_keys(bucket)) == 1
+
+    async def test_progress_counts_every_file_and_the_bytes_copied(self, active_user, storage_dir, bucket):
+        await _seed_user_file(storage_dir, active_user.id, name="there.txt", data=b"already there")
+        await relocate_files(target_bucket=bucket, target_prefix="files")
+        await _seed_user_file(storage_dir, active_user.id, name="new.txt", data=b"new")
+        await _seed_user_file(storage_dir, active_user.id, name="legacy..name.txt", data=b"refused")
+        progress = []
+
+        await relocate_files(
+            target_bucket=bucket, target_prefix="files", on_progress=lambda *counts: progress.append(counts)
+        )
+
+        # The total is known before a file finishes. Copied, skipped and failed files all count
+        # as done, and only the copied one moved bytes.
+        assert [(done, total) for done, total, _ in progress] == [(0, 3), (1, 3), (2, 3), (3, 3)]
+        assert progress[-1] == (3, 3, len(b"new"))
+
+
+class TestJsonEvents:
+    """An admin UI runs the command as a child process and reads its stdout a line at a time."""
+
+    _flow_with_attachment = TestChatAttachmentPaths._flow_with_attachment
+    _message = TestChatAttachmentPaths._message
+    # The first line of every run: it is alive, and does not know yet how many files there are.
+    _checking: ClassVar = {
+        "event": "progress",
+        "phase": "checking",
+        "done": 0,
+        "total": None,
+        "bytes": 0,
+        "unit": "files",
+    }
+
+    async def _run(self, capsys, bucket: str, **options) -> tuple[int, list[dict]]:
+        from langflow.__main__ import _relocate_files
+
+        options = {"username": None, "dry_run": False, "concurrency": 2, **options}
+        failed = await _relocate_files(bucket=bucket, prefix="files", as_json=True, **options)
+        return failed, self._events(capsys)
+
+    def _events(self, capsys) -> list[dict]:
+        # The test process logs to stdout through a handler the command does not have, so only the
+        # events are read here. test_the_command_writes_only_json_to_stdout reads the real stream.
+        return [json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")]
+
+    async def test_a_run_is_items_and_progress_then_the_report(self, active_user, storage_dir, bucket, capsys):
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        await _seed_user_file(storage_dir, active_user.id, name="notes.txt", data=b"notes")
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        await self._message(flow_id, [str(storage_dir / str(flow_id) / "photo.png")])
+
+        failed, events = await self._run(capsys, bucket)
+
+        *stream, report = events
+        items = [event["item"] for event in stream if event["event"] == "item"]
+        progress = [event for event in stream if event["event"] == "progress"]
+        assert failed == 0
+        assert {event["event"] for event in stream} == {"item", "progress"}
+        assert sorted((item["status"], item["file_name"], item["code"]) for item in items) == [
+            ("copied", "notes.txt", None),
+            ("copied", "photo.png", None),
+            ("copied", "report.pdf", None),
+            ("repointed", "photo.png", None),
+        ]
+        assert events[:2] == [
+            self._checking,
+            {"event": "progress", "phase": "copying", "done": 0, "total": 3, "bytes": 0, "unit": "files"},
+        ]
+        assert [(event["phase"], event["done"], event["total"]) for event in progress[2:]] == [
+            ("copying", 1, 3),
+            ("copying", 2, 3),
+            ("copying", 3, 3),
+        ]
+        assert progress[-1]["bytes"] == 23
+        assert report == {
+            "event": "report",
+            "ok": True,
+            "dry_run": False,
+            "scope": "all users",
+            "counts": {"copied": 3, "repointed": 1},
+            "bytes": 23,
+            "attention": [],
+        }
+
+    async def test_an_instance_with_no_files_still_gets_both_phases(self, active_user, storage_dir, bucket, capsys):  # noqa: ARG002
+        failed, events = await self._run(capsys, bucket)
+
+        assert failed == 0
+        assert events == [
+            self._checking,
+            {"event": "progress", "phase": "copying", "done": 0, "total": 0, "bytes": 0, "unit": "files"},
+            {
+                "event": "report",
+                "ok": True,
+                "dry_run": False,
+                "scope": "all users",
+                "counts": {},
+                "bytes": 0,
+                "attention": [],
+            },
+        ]
+
+    async def test_a_conflict_is_an_item_with_a_code_and_the_report_repeats_only_it(
+        self, active_user, storage_dir, bucket, capsys
+    ):
+        from aiobotocore.session import get_session
+
+        user_id = active_user.id
+        await _seed_user_file(storage_dir, user_id, name="notes.txt", data=b"notes")
+        await _seed_user_file(storage_dir, user_id, name="report.pdf", data=b"pdf-bytes")
+        async with get_session().create_client("s3") as s3:
+            await s3.put_object(Bucket=bucket, Key=f"files/{user_id}/report.pdf", Body=b"something else entirely")
+
+        failed, events = await self._run(capsys, bucket)
+
+        conflict = {
+            "owner": str(user_id),
+            "file_name": "report.pdf",
+            "key": f"files/{user_id}/report.pdf",
+            "status": "failed",
+            "size": 9,
+            "reason": "target already holds 23 bytes under this key, a different size from the source's 9 bytes",
+            "code": "file_conflict",
+        }
+        assert failed == 1
+        assert {"event": "item", "item": conflict} in events
+        assert events[-1] == {
+            "event": "report",
+            "ok": False,
+            "dry_run": False,
+            "scope": "all users",
+            "counts": {"copied": 1, "failed": 1},
+            "bytes": 5,
+            "attention": [conflict],
+        }
+
+    async def test_a_dry_run_says_so_and_copies_no_bytes(self, active_user, storage_dir, bucket, capsys):
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+
+        _, events = await self._run(capsys, bucket, dry_run=True, username=active_user.username)
+
+        assert events[-2] == {
+            "event": "progress",
+            "phase": "copying",
+            "done": 1,
+            "total": 1,
+            "bytes": 0,
+            "unit": "files",
+        }
+        assert events[-1] == {
+            "event": "report",
+            "ok": True,
+            "dry_run": True,
+            "scope": f"user '{active_user.username}'",
+            "counts": {"would_copy": 1},
+            "bytes": 0,
+            "attention": [],
+        }
+
+    async def test_a_database_at_another_revision_is_a_single_error(self, active_user, storage_dir, bucket, capsys):
+        import typer
+        from sqlalchemy import text
+
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        async with session_scope() as session:
+            await session.exec(text("UPDATE alembic_version SET version_num = 'not_this_version'"))
+
+        with pytest.raises(typer.Exit) as refused:
+            await self._run(capsys, bucket)
+
+        events = self._events(capsys)
+        assert refused.value.exit_code == 2
+        assert events[0] == self._checking
+        assert [(event["event"], event["code"]) for event in events[1:]] == [("error", "schema_mismatch")]
+        assert "not_this_version" in events[1]["message"]
+        assert await _stored_keys(bucket) == []
+
+    async def test_a_username_nobody_has_is_a_single_error(self, active_user, storage_dir, bucket, capsys):  # noqa: ARG002
+        import typer
+
+        with pytest.raises(typer.Exit) as refused:
+            await self._run(capsys, bucket, username="nobody")
+
+        events = self._events(capsys)
+        assert refused.value.exit_code == 2
+        assert events == [
+            self._checking,
+            {"event": "error", "code": "no_such_user", "message": "no user named 'nobody'"},
+        ]
+
+    async def test_an_s3_source_is_a_single_error(self, active_user, storage_dir, bucket, capsys, monkeypatch):  # noqa: ARG002
+        import typer
+
+        monkeypatch.setattr(get_settings_service().settings, "storage_type", "s3")
+
+        with pytest.raises(typer.Exit) as refused:
+            await self._run(capsys, bucket)
+
+        events = self._events(capsys)
+        assert refused.value.exit_code == 2
+        assert events[0] == self._checking
+        assert [(event["event"], event["code"]) for event in events[1:]] == [("error", "source_not_local")]
+
+    async def test_a_bucket_that_does_not_exist_is_a_single_error(self, active_user, storage_dir, capsys):
+        import typer
+
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        missing = f"lf-relocate-missing-{uuid.uuid4().hex[:10]}"
+
+        with pytest.raises(typer.Exit) as refused:
+            await self._run(capsys, missing, dry_run=True)
+
+        assert refused.value.exit_code == 2
+        assert self._events(capsys) == [
+            self._checking,
+            {"event": "error", "code": "bucket_error", "message": f"bucket '{missing}' does not exist"},
+        ]
+
+    async def test_the_command_writes_only_json_to_stdout(self, active_user, storage_dir, bucket):
+        import asyncio
+        import sys
+
+        from aiobotocore.session import get_session
+
+        user_id = active_user.id
+        await _seed_user_file(storage_dir, user_id, name="notes.txt", data=b"notes")
+        await _seed_user_file(storage_dir, user_id, name="report.pdf", data=b"pdf-bytes")
+        async with get_session().create_client("s3") as s3:
+            await s3.put_object(Bucket=bucket, Key=f"files/{user_id}/report.pdf", Body=b"something else entirely")
+        flow_id = await self._flow_with_attachment(storage_dir, user_id, "photo.png", b"png-bytes")
+        await self._message(flow_id, [str(storage_dir / str(flow_id) / "photo.png")])
+
+        # The command as an admin UI would start it, on this test's database and files.
+        command = [sys.executable, "-m", "langflow", "relocate-files", "--json", "--bucket", bucket]
+        env = {**os.environ, "LANGFLOW_CONFIG_DIR": str(storage_dir), "LANGFLOW_LOG_LEVEL": "debug"}
+        process = await asyncio.create_subprocess_exec(
+            *command, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
+
+        events = [json.loads(line) for line in stdout.decode().splitlines()]
+        assert process.returncode == 1
+        assert events[:2] == [
+            self._checking,
+            {"event": "progress", "phase": "copying", "done": 0, "total": 3, "bytes": 0, "unit": "files"},
+        ]
+        assert sorted((event["event"], event.get("item", {}).get("status")) for event in events[2:-1]) == [
+            ("item", "copied"),
+            ("item", "copied"),
+            ("item", "failed"),
+            ("item", "repointed"),
+            ("progress", None),
+            ("progress", None),
+            ("progress", None),
+        ]
+        assert events[-1]["event"] == "report"
+        assert [item["code"] for item in events[-1]["attention"]] == ["file_conflict"]
+        assert b"S3 storage initialized" in stderr
+
+    async def test_without_json_the_lines_are_what_they_were(self, active_user, storage_dir, bucket, capsys):
+        from langflow.__main__ import _relocate_files
+
+        user_id = active_user.id
+        await _seed_user_file(storage_dir, user_id, name="report.pdf", data=b"pdf-bytes")
+        flow_id = await self._flow_with_attachment(storage_dir, user_id, "photo.png", b"png-bytes")
+        message_id = await self._message(flow_id, [str(storage_dir / str(flow_id) / "photo.png")])
+
+        await _relocate_files(bucket=bucket, prefix="files", username=None, dry_run=False, concurrency=1)
+
+        # The report is the last thing printed. Anything above it is logging.
+        assert capsys.readouterr().out.splitlines()[-4:] == [
+            f"copied       {user_id}/report.pdf  9 bytes  -> files/{user_id}/report.pdf",
+            f"copied       {flow_id}/photo.png  9 bytes  -> files/{flow_id}/photo.png",
+            f"repointed    {flow_id}/photo.png  -> {flow_id}/photo.png  (chat attachment in message {message_id})",
+            "File relocation complete for all users: 2 copied, 1 repointed.",
+        ]
+
+
+class TestTheBucketIsCheckedFirst:
+    """A bucket that cannot be used is one refusal up front, where it was a failure per file.
+
+    A dry run was worse: a file not found in a bucket that is not there read as a file still to copy.
+    """
+
+    _flow_with_attachment = TestChatAttachmentPaths._flow_with_attachment
+    _message = TestChatAttachmentPaths._message
+    _files = TestChatAttachmentPaths._files
+
+    @pytest.mark.parametrize("dry_run", [True, False])
+    async def test_a_bucket_that_does_not_exist_is_refused_before_anything_is_read_or_written(
+        self, active_user, storage_dir, monkeypatch, dry_run
+    ):
+        from aiobotocore.session import get_session
+        from botocore.exceptions import ClientError
+        from langflow.api.utils.file_relocation import TargetBucketError
+
+        missing = f"lf-relocate-missing-{uuid.uuid4().hex[:10]}"
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        absolute = str(storage_dir / str(flow_id) / "photo.png")
+        message_id = await self._message(flow_id, [absolute])
+        listed = []
+        original = type(get_storage_service()).list_files
+
+        async def counted(self, *args, **kwargs):
+            listed.append(kwargs.get("flow_id"))
+            return await original(self, *args, **kwargs)
+
+        monkeypatch.setattr(type(get_storage_service()), "list_files", counted)
+
+        with pytest.raises(TargetBucketError, match=f"bucket '{missing}' does not exist"):
+            await relocate_files(target_bucket=missing, target_prefix="files", dry_run=dry_run)
+
+        assert listed == []
+        assert await self._files(message_id) == [absolute]
+        async with get_session().create_client("s3") as s3:
+            with pytest.raises(ClientError, match="404"):
+                await s3.head_bucket(Bucket=missing)
+
+    async def test_the_command_says_so_on_stderr_and_exits_2(self, active_user, storage_dir, capsys):
+        import typer
+        from langflow.__main__ import _relocate_files
+
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        missing = f"lf-relocate-missing-{uuid.uuid4().hex[:10]}"
+
+        with pytest.raises(typer.Exit) as refused:
+            await _relocate_files(bucket=missing, prefix="files", username=None, dry_run=False, concurrency=1)
+
+        captured = capsys.readouterr()
+        assert refused.value.exit_code == 2
+        assert f"Cannot copy files: bucket '{missing}' does not exist" in captured.err.splitlines()
+        assert "File relocation complete" not in captured.out
