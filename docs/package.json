@@ -94,6 +94,7 @@
     "minimatch@^9": "^9.0.7",
     "postcss-selector-parser@^6": "^6.1.3",
     "qs": "^6.16.0",
-    "webpack": "^5.104.1"
+    "webpack": "^5.104.1",
+    "webpack-dev-server": "^5.2.6"
   }
 }
