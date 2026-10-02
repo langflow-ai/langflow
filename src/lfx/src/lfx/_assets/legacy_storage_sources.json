@@ -1974,6 +1974,196 @@
       ]
     },
     {
+      "sha256": "356f8575b028b64a9c52b27024a94b05076a08cb57ad23910cf927e09b31760f",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "521068a422147326cd02af5b5d334dffd4fe43da3a8eee16de79db4ac0780b1a",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "59ca136d2ae65cda2d4b3dd3df8b61259b22e79b46f99b884bf6876d90831483",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.3"
+        }
+      ]
+    },
+    {
+      "sha256": "7bf4e86e1d9e3801a398636f543bbe39d798a4718d1c8cce7ae2890efee75278",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.7.3"
+        }
+      ]
+    },
+    {
       "sha256": "92be01f65a09329ca23e2380a21b034a26851ccfd9d9497152cc033ac76c2053",
       "module": "lfx.components.files_and_knowledge.retrieval",
       "class_name": "KnowledgeBaseComponent",
@@ -2108,6 +2298,19 @@
           "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
           "kind": "module",
           "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "a1542d61a19460b63121df68b8ae25b1b3d1fb4e7d044c5d58e469e771922632",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.7.0"
         }
       ]
     },
@@ -2330,6 +2533,86 @@
       ]
     },
     {
+      "sha256": "c962bb02fa4e547aa4de175f850d3462f2ed60a0fc71f8e084d41b986ee2b278",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.7.3"
+        }
+      ]
+    },
+    {
+      "sha256": "cdd9b807d37b8636a39857bd5bc8ec888289d822fc8f1f8997d1caf86f86207c",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.3"
+        }
+      ]
+    },
+    {
       "sha256": "e91e3daddf738c1f061fe5c11f87e757d4bba348e066a5693e0db6475b283871",
       "module": "lfx.components.files_and_knowledge.retrieval",
       "class_name": "KnowledgeBaseComponent",
@@ -2369,6 +2652,19 @@
           "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
           "kind": "class",
           "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "ed1ab586fdbd408832b79a350ec56e90df838e45c02d5b2f91bd7e787747026a",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.7.0"
         }
       ]
     },

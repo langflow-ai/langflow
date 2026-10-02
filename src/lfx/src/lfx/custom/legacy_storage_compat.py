@@ -60,6 +60,7 @@ def resolve_shipped_storage_component(code: str):
             "KnowledgeComponent",
             "KnowledgeIngestionComponent",
             "KnowledgeBaseComponent",
+            "KnowledgeRetrievalComponent",
             "MemoryRetrievalComponent",
             "MemoryBaseComponent",
             "ChromaVectorStoreComponent",

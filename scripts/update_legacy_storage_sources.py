@@ -24,11 +24,16 @@ MODULES = {
     "KnowledgeComponent": "lfx.components.files_and_knowledge.knowledge",
     "KnowledgeIngestionComponent": "lfx.components.files_and_knowledge.ingestion",
     "KnowledgeBaseComponent": "lfx.components.files_and_knowledge.retrieval",
+    "KnowledgeRetrievalComponent": "lfx.components.files_and_knowledge.retrieval",
     "MemoryRetrievalComponent": "lfx.components.files_and_knowledge.memory_retrieval",
     "MemoryBaseComponent": "lfx.components.files_and_knowledge.memory_retrieval",
     "ChromaVectorStoreComponent": "lfx.components.chroma.chroma",
     "LocalDBComponent": "lfx.components.chroma.local_db",
     "ALTKAgentComponent": "lfx.components.altk.altk_agent",
+}
+TARGET_CLASSES = {
+    "MemoryRetrievalComponent": "MemoryBaseComponent",
+    "KnowledgeRetrievalComponent": "KnowledgeBaseComponent",
 }
 
 
@@ -63,7 +68,7 @@ def main() -> None:
                 if not isinstance(node, ast.ClassDef) or node.name not in MODULES:
                     continue
                 module = MODULES[node.name]
-                target_class = "MemoryBaseComponent" if node.name == "MemoryRetrievalComponent" else node.name
+                target_class = TARGET_CLASSES.get(node.name, node.name)
                 for kind, code in (("module", source), ("class", ast.get_source_segment(source, node))):
                     if kind == "module" and validate.extract_class_name(source) != node.name:
                         continue

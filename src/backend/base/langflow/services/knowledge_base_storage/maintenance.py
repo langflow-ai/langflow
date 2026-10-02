@@ -17,6 +17,7 @@ import socket
 import sqlite3
 import stat
 import sys
+import time
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -163,6 +164,12 @@ def _legacy_process(process: psutil.Process) -> bool:
             if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
                 return False
             if process.username() == psutil.Process().username():
+                # macOS can deny cmdline() briefly while a same-user process
+                # exits. Confirm the identity remains live before failing closed.
+                for _attempt in range(3):
+                    time.sleep(0.01)
+                    if not process.is_running() or process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+                        return False
                 msg = "Cannot inspect a process belonging to the application account"
                 raise MaintenanceRequiredError(msg) from exc
         except psutil.NoSuchProcess:

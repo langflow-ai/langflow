@@ -440,7 +440,11 @@ class _GuardedMethods:
                 # Teardown releases handles even after a migration fence appeared.
                 if name == "teardown":
                     return await value(*args, **kwargs)
-                if name == "add_documents" and isinstance(self._target, BaseVectorStoreBackend):
+                if (
+                    name == "add_documents"
+                    and isinstance(self._target, BaseVectorStoreBackend)
+                    and type(self._target)._write_embedded is not BaseVectorStoreBackend._write_embedded  # noqa: SLF001 -- detect the optional extension hook without invoking it
+                ):
                     documents = args[0] if args else kwargs["docs"]
                     if not documents:
                         return None

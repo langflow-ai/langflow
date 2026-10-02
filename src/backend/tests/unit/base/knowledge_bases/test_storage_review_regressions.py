@@ -13,7 +13,7 @@ from langflow.services.database.models.knowledge_base_storage_migration import K
 from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
 from langflow.services.knowledge_base_storage import cleanup, coordinator, maintenance, runtime
 from langflow.services.memory_base import ingestion
-from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, IngestedDocument
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, BaseVectorStoreBackend, IngestedDocument
 from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend, SQLiteStorageContext
 from sqlmodel import SQLModel
 
@@ -214,6 +214,67 @@ async def test_embeddings_do_not_hold_storage_lease_and_stale_routing_refuses_wr
     with pytest.raises(runtime.StorageUnavailableError, match="detached"):
         await writing
     assert not native.storage_context.database_path.exists()
+
+
+async def test_extension_ingestion_without_preembedded_write_keeps_guard_and_source_callback(database):
+    row = await make_kb(database, backend="sqlite")
+    started, release = asyncio.Event(), asyncio.Event()
+    written = []
+
+    class LegacyExtension(BaseVectorStoreBackend):
+        async def _build_vector_store(self):
+            message = "Legacy add_documents should handle its own ingestion"
+            raise AssertionError(message)
+
+        async def add_documents(self, docs):
+            started.set()
+            await release.wait()
+            written.extend(docs)
+
+    callback = AsyncMock()
+    extension = LegacyExtension(row.name)
+    guarded = runtime._GuardedMethods(extension, row, before_write=callback)
+    document = Document(page_content="extension-owned ingestion")
+    writing = asyncio.create_task(guarded.add_documents([document]))
+    await asyncio.wait_for(started.wait(), 1)
+    callback.assert_awaited_once()
+    acquired = asyncio.Event()
+
+    async def competing_delete():
+        async with runtime.operation(row):
+            acquired.set()
+
+    deleting = asyncio.create_task(competing_delete())
+    try:
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(acquired.wait(), 0.05)
+    finally:
+        release.set()
+        await writing
+        await deleting
+    assert written == [document]
+
+
+@pytest.mark.parametrize("exited", [True, False])
+def test_denied_same_user_process_is_rechecked_for_exit(monkeypatch, exited):
+    import psutil
+
+    denied = SimpleNamespace(
+        cmdline=lambda: (_ for _ in ()).throw(psutil.AccessDenied(123)),
+        status=lambda: psutil.STATUS_RUNNING,
+        username=lambda: "application",
+        is_running=lambda: not exited,
+    )
+    monkeypatch.setattr(maintenance.psutil, "Process", lambda: SimpleNamespace(username=lambda: "application"))
+    pauses = []
+    monkeypatch.setattr(maintenance.time, "sleep", pauses.append)
+    if exited:
+        assert not maintenance._legacy_process(denied)
+        assert pauses == [0.01]
+    else:
+        with pytest.raises(maintenance.MaintenanceRequiredError, match="application account"):
+            maintenance._legacy_process(denied)
+        assert pauses == [0.01] * 3
 
 
 async def test_fenced_session_purge_is_durable_and_replayed_before_retrieval(database, monkeypatch):
