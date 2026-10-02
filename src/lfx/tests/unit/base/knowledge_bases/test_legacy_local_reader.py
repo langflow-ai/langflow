@@ -24,6 +24,7 @@ from lfx.base.knowledge_bases.migration.protocol import (
 
 @pytest.fixture(params=["1.5.9", "0.5.23"])
 def legacy_source(tmp_path, request):
+    """Extract both supported Chroma generations into an isolated native store."""
     fixture = Path(__file__).with_name("fixtures") / f"chroma-{request.param}-local.tar.gz"
     with tarfile.open(fixture) as archive:
         for member in archive:
@@ -39,6 +40,7 @@ def legacy_source(tmp_path, request):
 
 @pytest.mark.parametrize("metric", ["l2", "cosine", "ip", "empty"])
 def test_native_vectors_and_pending_operations_are_preserved(legacy_source, tmp_path, metric):
+    """Verify documents, metadata and vectors after replaying pending native writes."""
     source, expected = legacy_source
     output = tmp_path / "export.jsonl"
     header = export_local_snapshot(
@@ -75,6 +77,7 @@ def test_native_vectors_and_pending_operations_are_preserved(legacy_source, tmp_
 
 
 def test_executable_index_metadata_is_rejected_without_execution(legacy_source, tmp_path):
+    """Reject executable pickle instructions without running their payload."""
     source, _ = legacy_source
     # GLOBAL + REDUCE would call os.system in a conventional pickle loader.
     hostile = b"cos\nsystem\n(S'touch " + str(tmp_path / "must-not-execute").encode() + b"'\ntR."
@@ -94,6 +97,7 @@ def test_executable_index_metadata_is_rejected_without_execution(legacy_source, 
 
 
 def test_corrupt_native_offsets_fail_without_a_completion_record(legacy_source, tmp_path):
+    """Keep malformed native indexes from producing an apparently complete export."""
     source, _ = legacy_source
     for path in source.glob("*/header.bin"):
         header = bytearray(path.read_bytes())
@@ -113,6 +117,7 @@ def test_corrupt_native_offsets_fail_without_a_completion_record(legacy_source, 
 
 
 def test_metadata_checkpoint_replays_pending_text_and_addition(legacy_source, tmp_path):
+    """Recover updated and newly added documents beyond the metadata checkpoint."""
     import sqlite3
 
     source, expected = legacy_source
@@ -157,6 +162,7 @@ def test_metadata_checkpoint_replays_pending_text_and_addition(legacy_source, tm
 
 
 def test_sqlite_wal_is_read_without_changing_pristine_source(legacy_source, tmp_path):
+    """Include committed WAL text while leaving the original database files intact."""
     import sqlite3
 
     source, _ = legacy_source
@@ -186,6 +192,7 @@ def test_sqlite_wal_is_read_without_changing_pristine_source(legacy_source, tmp_
 
 
 def test_hot_rollback_journal_recovers_committed_text_without_touching_source(legacy_source, tmp_path):
+    """Recover committed text from a crashed writer in a private database copy."""
     source, expected = legacy_source
     code = """
 import os, sqlite3, sys
@@ -218,6 +225,7 @@ os._exit(0)
 
 @pytest.mark.parametrize("metric", ["cosine", "ip"])
 def test_early_rust_vector_index_configuration_preserves_metric(legacy_source, tmp_path, metric):
+    """Read the original distance metric from early Rust collection configuration."""
     source, _ = legacy_source
     with sqlite3.connect(source / "chroma.sqlite3") as connection:
         collection = connection.execute("SELECT id FROM collections WHERE name=?", (f"fixture-{metric}",)).fetchone()[0]
@@ -245,6 +253,7 @@ def test_early_rust_vector_index_configuration_preserves_metric(legacy_source, t
 
 
 def test_uninitialized_empty_collection_directory_can_migrate(legacy_source, tmp_path):
+    """Accept an empty collection before its native vector checkpoint exists."""
     source, _ = legacy_source
     with sqlite3.connect(source / "chroma.sqlite3") as connection:
         collection = connection.execute("SELECT id FROM collections WHERE name='fixture-empty'").fetchone()[0]
@@ -272,6 +281,7 @@ def test_uninitialized_empty_collection_directory_can_migrate(legacy_source, tmp
 
 @pytest.mark.parametrize("key", [-1, 2**64, (2**61 - 1) * 100])
 def test_pickle_rejects_integer_dictionary_keys_outside_native_label_range(key):
+    """Reject integer labels outside the native range before dictionary insertion."""
     with pytest.raises(MigrationProtocolError):
         read_index_metadata(pickle.dumps({"label_to_id": {key: "document"}}, protocol=4))
 
@@ -287,6 +297,7 @@ def test_native_reader_limits_report_specific_recovery_requirement(monkeypatch, 
 
 
 def test_typed_array_metadata_preserves_order_and_pending_updates(legacy_source, tmp_path):
+    """Preserve list order and scalar types from the native array metadata table."""
     source, _ = legacy_source
     with sqlite3.connect(source / "chroma.sqlite3") as connection:
         connection.execute(
@@ -327,6 +338,7 @@ def test_typed_array_metadata_preserves_order_and_pending_updates(legacy_source,
 
 
 def test_cosine_restore_overflow_is_a_validation_failure(legacy_source, tmp_path):
+    """Report invalid cosine restoration as a bounded export validation failure."""
     source, _ = legacy_source
     with sqlite3.connect(source / "chroma.sqlite3") as connection:
         segment = connection.execute(

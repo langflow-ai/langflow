@@ -34,6 +34,7 @@ pytestmark = pytest.mark.no_blockbuster
 
 @pytest.fixture
 async def database(tmp_path, monkeypatch):
+    """Provide an isolated application database and owner-scoped vector directory."""
     root = tmp_path / "vectors"
     root.mkdir()
     path = tmp_path / "metadata.sqlite3"
@@ -51,6 +52,7 @@ async def database(tmp_path, monkeypatch):
 
     @asynccontextmanager
     async def sessions():
+        """Open a session against the fixture database without expiring committed rows."""
         async with AsyncSession(engine, expire_on_commit=False) as session:
             yield session
 
@@ -76,6 +78,7 @@ async def database(tmp_path, monkeypatch):
 
 
 async def make_kb(database, *, backend="chroma", config=None):
+    """Persist a knowledge base owned by the fixture user with the requested backend."""
     row = KnowledgeBaseRecord(
         user_id=database.user.id,
         name="knowledge",
@@ -90,11 +93,13 @@ async def make_kb(database, *, backend="chroma", config=None):
 
 
 async def read_kb(database, kb_id):
+    """Reload the persisted storage state after a migration or deletion operation."""
     async with database.sessions() as session:
         return await session.get(KnowledgeBaseRecord, kb_id)
 
 
 async def test_pending_batch_skips_disappeared_identity_and_continues(database, monkeypatch):
+    """Continue queued migrations when an earlier knowledge base has been deleted."""
     first = await make_kb(database, config={"mode": "cloud"})
     second = KnowledgeBaseRecord(
         user_id=database.user.id,
@@ -110,6 +115,7 @@ async def test_pending_batch_skips_disappeared_identity_and_continues(database, 
     attempts = []
 
     async def remove_first_queued_identity(kb_id):
+        """Delete the first queued record before attempting its captured migration."""
         attempts.append(kb_id)
         if len(attempts) == 1:
             # The inventory already captured this row. This is also the state
@@ -131,11 +137,13 @@ async def test_pending_batch_skips_disappeared_identity_and_continues(database, 
 
 
 async def test_pending_batch_keeps_existing_identity_lock_failure_visible(database, monkeypatch):
+    """Keep a surviving record fenced when its storage lease cannot be acquired."""
     row = await make_kb(database)
     await coordinator.fence_legacy_records()
 
     @asynccontextmanager
     async def broken_lock(*_args, **_kwargs):
+        """Fail lease entry before yielding access to an invalid storage path."""
         msg = "Invalid storage lock path"
         raise runtime.StorageUnavailableError(msg)
         yield  # pragma: no cover -- async context manager with a failing entry
@@ -149,9 +157,11 @@ async def test_pending_batch_keeps_existing_identity_lock_failure_visible(databa
 
 @pytest.fixture
 def export_helper(monkeypatch):
+    """Replace the managed exporter with a deterministic two-document export."""
     calls = []
 
     async def export(snapshot, output, **kwargs):
+        """Validate the frozen source and write vectors with their original metadata."""
         assert (snapshot / "index.bin").read_bytes() == b"native-index"
         calls.append(kwargs)
         header = ExportHeader(
@@ -180,6 +190,7 @@ def export_helper(monkeypatch):
 
 
 def frozen_source(database, monkeypatch):
+    """Create a fingerprinted source approved by the fixture controller receipt."""
     source = database.root / database.user.username / "knowledge"
     source.mkdir(parents=True)
     (source / "chroma.sqlite3").write_bytes(b"frozen-database")
@@ -193,6 +204,7 @@ def frozen_source(database, monkeypatch):
 
 
 async def test_automatic_migration_preserves_identity_vectors_and_retries(database, monkeypatch, export_helper):
+    """Preserve identity and vectors, make retries idempotent and fence stale routing."""
     row = await make_kb(database)
     source, fingerprint = frozen_source(database, monkeypatch)
     await coordinator.fence_legacy_records()
@@ -219,6 +231,7 @@ async def test_automatic_migration_preserves_identity_vectors_and_retries(databa
 
 
 async def test_restart_without_receipt_ignores_retained_migrated_source(database, monkeypatch, export_helper):
+    """Avoid adopting retained sources after successful migration or record deletion."""
     row = await make_kb(database)
     source, _ = frozen_source(database, monkeypatch)
     await coordinator.migrate_one(row.id)
@@ -239,11 +252,13 @@ async def test_restart_without_receipt_ignores_retained_migrated_source(database
 
 
 async def test_retry_after_complete_export_reuses_generation(database, monkeypatch, export_helper):
+    """Reuse the durable migration identity after a target import failure."""
     row = await make_kb(database)
     frozen_source(database, monkeypatch)
     original = coordinator.import_qualified_export
 
     async def crash(*_args, **_kwargs):
+        """Interrupt import after the exporter has written a complete artifact."""
         raise OSError
 
     monkeypatch.setattr(coordinator, "import_qualified_export", crash)
@@ -259,6 +274,7 @@ async def test_retry_after_complete_export_reuses_generation(database, monkeypat
 
 
 async def test_corrupt_retired_binding_keeps_inventory_unready(database, monkeypatch):
+    """Expose corrupt retirement evidence instead of silently adopting its source."""
     frozen_source(database, monkeypatch)
     monkeypatch.delenv("LANGFLOW_KB_UPGRADE_RECEIPT")
     binding = coordinator._binding_path("owner/knowledge")
@@ -270,6 +286,7 @@ async def test_corrupt_retired_binding_keeps_inventory_unready(database, monkeyp
 
 
 async def test_automatic_adoption_requires_controller_inventory_and_known_owner(database, monkeypatch, export_helper):
+    """Adopt inventoried disk data under its original identity and known owner."""
     source, _ = frozen_source(database, monkeypatch)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
@@ -287,6 +304,7 @@ async def test_automatic_adoption_requires_controller_inventory_and_known_owner(
 
 
 async def test_cancelled_snapshot_drains_worker_before_releasing_operation(database, monkeypatch, export_helper):
+    """Hold the storage lease until a cancelled snapshot worker stops writing."""
     row = await make_kb(database)
     frozen_source(database, monkeypatch)
     started = threading.Event()
@@ -294,6 +312,7 @@ async def test_cancelled_snapshot_drains_worker_before_releasing_operation(datab
     original = coordinator.snapshot_source
 
     def blocked(*args):
+        """Pause snapshot work until the test releases the cancellation barrier."""
         started.set()
         release.wait(timeout=10)
         return original(*args)
@@ -312,6 +331,7 @@ async def test_cancelled_snapshot_drains_worker_before_releasing_operation(datab
 
 
 async def test_deletion_retry_after_tombstone_and_missing_file(database):
+    """Finish deletion after a native tombstone or an absent target directory."""
     row = await make_kb(database, backend="sqlite")
     backend = await runtime.backend_for_record(row, create=True)
     await backend.ensure_ready()
@@ -334,6 +354,7 @@ async def test_deletion_retry_after_tombstone_and_missing_file(database):
 
 
 async def test_missing_source_persists_fence_without_calling_helper(database, export_helper):
+    """Keep missing legacy data fenced and expose a durable recovery requirement."""
     row = await make_kb(database)
     await coordinator.fence_legacy_records()
     await coordinator.run_pending()
@@ -348,11 +369,13 @@ async def test_missing_source_persists_fence_without_calling_helper(database, ex
 
 
 async def test_crash_after_routing_cas_recovers_target_without_reexport(database, monkeypatch, export_helper):
+    """Recover an activated target after completion bookkeeping fails."""
     row = await make_kb(database)
     frozen_source(database, monkeypatch)
     original = coordinator._complete
 
     async def crash(*_args):
+        """Interrupt completion after the new storage route has been persisted."""
         msg = "simulated process failure"
         raise OSError(msg)
 
@@ -368,10 +391,12 @@ async def test_crash_after_routing_cas_recovers_target_without_reexport(database
 
 
 async def test_failed_export_does_not_activate_or_delete_source(database, monkeypatch):
+    """Retain original routing and source bytes when export validation fails."""
     row = await make_kb(database)
     source, fingerprint = frozen_source(database, monkeypatch)
 
     async def failed(*_args, **_kwargs):
+        """Reject the native source before a target can be activated."""
         msg = "corrupt native store"
         raise ValueError(msg)
 
@@ -383,6 +408,7 @@ async def test_failed_export_does_not_activate_or_delete_source(database, monkey
 
 
 async def test_remote_chroma_blocked_without_local_root(database):
+    """Report remote Chroma recovery without requiring a local vector directory."""
     row = await make_kb(database, config={"mode": "cloud"})
     database.settings.settings.knowledge_bases_dir = None
     await coordinator.migrate_one(row.id)
@@ -393,12 +419,14 @@ async def test_remote_chroma_blocked_without_local_root(database):
 
 
 async def test_lock_reentrant_but_child_task_waits_and_stale_backend_is_fenced(database):
+    """Allow task-local reentry while fencing child tasks and deleted backends."""
     row = await make_kb(database, backend="sqlite")
     backend = await runtime.backend_for_record(row, create=True)
     await backend.ensure_ready()
     started = asyncio.Event()
 
     async def child():
+        """Record when a separate task obtains the parent-held storage lease."""
         async with runtime.operation(row):
             started.set()
 
@@ -415,6 +443,7 @@ async def test_lock_reentrant_but_child_task_waits_and_stale_backend_is_fenced(d
 
 
 async def test_remote_guard_does_not_require_local_vector_root(database):
+    """Acquire remote storage leases independently of local directory configuration."""
     row = await make_kb(database, backend="postgres")
     database.settings.settings.knowledge_bases_dir = None
     async with runtime.operation(row), runtime.operation(row):
@@ -422,6 +451,7 @@ async def test_remote_guard_does_not_require_local_vector_root(database):
 
 
 def test_snapshot_rejects_changes_and_symlinks(tmp_path):
+    """Require stable source bytes and refuse symbolic links during snapshotting."""
     source = tmp_path / "source"
     source.mkdir()
     (source / "index").write_bytes(b"before")
@@ -438,6 +468,7 @@ def test_snapshot_rejects_changes_and_symlinks(tmp_path):
 
 
 def test_receipt_rejects_live_workers_and_backup_corruption(tmp_path, monkeypatch):
+    """Require stopped legacy workers and an intact managed upgrade backup."""
     root = tmp_path / "vectors"
     root.mkdir()
     database = tmp_path / "metadata.sqlite3"
@@ -466,11 +497,13 @@ def test_receipt_rejects_live_workers_and_backup_corruption(tmp_path, monkeypatc
 
 
 def test_application_migration_fences_legacy_rows_and_preserves_remote_routing(monkeypatch):
+    """Fence legacy rows idempotently while preserving remote routes and aware timestamps."""
     migration = importlib.import_module("langflow.alembic.versions.c91d2e3f4a50_knowledge_base_storage_upgrade")
     create_table = migration.op.create_table
     ledger_columns = {}
 
     def capture_create_table(name, *columns, **kwargs):
+        """Capture emitted ledger columns for PostgreSQL timestamp type assertions."""
         if name == "knowledge_base_storage_migration":
             ledger_columns.update({column.name: column for column in columns})
         return create_table(name, *columns, **kwargs)
@@ -503,6 +536,7 @@ def test_application_migration_fences_legacy_rows_and_preserves_remote_routing(m
 
 
 async def test_deleted_migrated_source_cannot_be_reimported_by_disk_backfill(database, monkeypatch, export_helper):
+    """Honor retired source bindings when per-user or global backfill runs later."""
     from langflow.api.utils import knowledge_base_service
 
     monkeypatch.setattr(knowledge_base_service, "session_scope", database.sessions)
@@ -574,6 +608,7 @@ def native_source(database, name="fixture-l2", version="1.5.9"):
 
 @pytest.mark.parametrize("version", ["1.5.9", "0.5.23"])
 async def test_first_start_native_migration_without_receipt_docker_or_embeddings(database, monkeypatch, version):
+    """Migrate real legacy vectors on startup without Docker or embedding calls."""
     source = native_source(database, version=version)
     original = maintenance.tree_fingerprint(source)
     row = KnowledgeBaseRecord(user_id=database.user.id, name="fixture-l2", backend_type="chroma")
@@ -582,6 +617,7 @@ async def test_first_start_native_migration_without_receipt_docker_or_embeddings
         await session.commit()
 
     async def unavailable_helper(*_args, **_kwargs):
+        """Fail the test if automatic migration invokes the managed Docker helper."""
         pytest.fail("Automatic migration must not call the Docker helper")
 
     monkeypatch.setattr(coordinator.helper, "export_snapshot", unavailable_helper)
@@ -611,6 +647,7 @@ async def test_first_start_native_migration_without_receipt_docker_or_embeddings
 
 
 async def test_background_copy_keeps_other_bases_usable_and_resumes_on_restart(database, monkeypatch):
+    """Keep other stores usable while interrupted background migration resumes durably."""
     source = native_source(database)
     fingerprint = maintenance.tree_fingerprint(source)
     row = KnowledgeBaseRecord(user_id=database.user.id, name="fixture-l2", backend_type="chroma")
@@ -624,6 +661,7 @@ async def test_background_copy_keeps_other_bases_usable_and_resumes_on_restart(d
     export = coordinator.export_local_snapshot
 
     def paused_export(*args, **kwargs):
+        """Pause native export so availability and interruption can be observed."""
         entered.set()
         assert release.wait(timeout=10)
         return export(*args, **kwargs)
@@ -658,6 +696,7 @@ async def test_background_copy_keeps_other_bases_usable_and_resumes_on_restart(d
 
 
 async def test_multi_worker_upgrade_retains_source_and_reports_recovery(database, monkeypatch):
+    """Require managed recovery for multiple workers without altering legacy data."""
     from langflow.services.knowledge_base_storage.automatic import check_local_upgrade
 
     source = native_source(database)
@@ -685,6 +724,7 @@ async def test_multi_worker_upgrade_retains_source_and_reports_recovery(database
     ],
 )
 async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(database, embedding_metadata, selection):
+    """Recover disk-only bases with their original identity and embedding selection."""
     source = native_source(database)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
@@ -703,6 +743,7 @@ async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(da
 
 
 async def test_fresh_install_without_storage_directory_has_no_upgrade_warning(database):
+    """Treat an absent legacy storage directory as a healthy fresh installation."""
     database.root.rmdir()
     await coordinator.run_pending()
     assert await coordinator.published_inventory_status() == {"complete": True, "issues": 0}
@@ -710,6 +751,7 @@ async def test_fresh_install_without_storage_directory_has_no_upgrade_warning(da
 
 
 async def test_disk_only_cloud_base_preserves_remote_routing_and_original_source(database, monkeypatch):
+    """Preserve remote configuration despite a residual local directory."""
     source = native_source(database)
     identity = uuid4()
     config = {"mode": "cloud", "collection": "remote-original", "url_variable": "CHROMA_URL"}
@@ -719,6 +761,7 @@ async def test_disk_only_cloud_base_preserves_remote_routing_and_original_source
     original = maintenance.tree_fingerprint(source)
 
     def unexpected_local_copy(*_args, **_kwargs):
+        """Fail if a cloud base is mistaken for a migratable local source."""
         pytest.fail("Cloud routing must not be replaced by a residual local directory")
 
     monkeypatch.setattr(coordinator, "export_local_snapshot", unexpected_local_copy)

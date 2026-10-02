@@ -41,6 +41,7 @@ time.sleep(300)
 
 
 async def _until(predicate, timeout=10):
+    """Wait with a deadline for a disposable process to reach the required state."""
     deadline = asyncio.get_running_loop().time() + timeout
     while not predicate():
         if asyncio.get_running_loop().time() > deadline:
@@ -50,6 +51,7 @@ async def _until(predicate, timeout=10):
 
 @pytest.fixture
 async def installation(tmp_path, monkeypatch):
+    """Create an isolated supervisor family, storage source and replacement listener."""
     if os.getuid() == 0:
         pytest.skip("The production controller deliberately requires the non-root application account")
     root = tmp_path / "vectors"
@@ -86,6 +88,7 @@ async def installation(tmp_path, monkeypatch):
     staged = []
 
     async def stage():
+        """Record that helper staging occurs while the old supervisor is still alive."""
         staged.append(controller._process(options["supervisor"]) is not None)
 
     monkeypatch.setattr(controller, "stage_helper", stage)
@@ -124,6 +127,7 @@ async def installation(tmp_path, monkeypatch):
 
 
 async def test_real_worker_family_backup_launch_and_idempotent_resume(installation):
+    """Stop the exact worker family, verify backups and resume without another launch."""
     options, ready, environment, child, staged = installation
     ready.touch()
     result = await controller.upgrade(**options)
@@ -152,6 +156,7 @@ async def test_real_worker_family_backup_launch_and_idempotent_resume(installati
 
 
 async def test_stale_pid_and_current_session_cannot_stop_processes(installation):
+    """Reject stale identities and the controller's own session before stopping workers."""
     options, _, _, child, staged = installation
     with pytest.raises(controller.UpgradeControllerError, match="stale"):
         await controller.upgrade(**{**options, "supervisor": {**options["supervisor"], "created": 1}})
@@ -163,9 +168,11 @@ async def test_stale_pid_and_current_session_cannot_stop_processes(installation)
 
 
 async def test_signature_staging_failure_occurs_before_downtime(installation, monkeypatch):
+    """Leave the old service running when helper signature verification fails."""
     options, _, _, child, _ = installation
 
     async def fail():
+        """Reject helper staging before any worker termination."""
         msg = "signature rejected"
         raise controller.helper.MigrationHelperError(msg)
 
@@ -178,6 +185,7 @@ async def test_signature_staging_failure_occurs_before_downtime(installation, mo
 
 
 async def test_readiness_requires_owned_listener_and_recovers_same_new_process(installation):
+    """Resume readiness checks against the same recorded replacement process."""
     options, ready, _, _, _ = installation
     with pytest.raises(controller.UpgradeControllerError, match="Readiness timed out"):
         await controller.upgrade(**{**options, "readiness_timeout": 1})
@@ -190,6 +198,7 @@ async def test_readiness_requires_owned_listener_and_recovers_same_new_process(i
 
 
 async def test_cancellation_during_readiness_resumes_without_duplicate_launch(installation):
+    """Preserve the replacement identity when readiness waiting is cancelled."""
     options, ready, environment, _, _ = installation
     task = asyncio.create_task(controller.upgrade(**options))
     await _until(environment.exists)
@@ -204,10 +213,12 @@ async def test_cancellation_during_readiness_resumes_without_duplicate_launch(in
 
 
 async def test_backup_failure_retains_stopped_state_and_resumes(installation, monkeypatch):
+    """Resume from a durable stopped state after backup creation fails."""
     options, ready, _, _, _ = installation
     original = maintenance.create_receipt
 
     def fail(**_kwargs):
+        """Simulate a failed backup after the old worker family has stopped."""
         msg = "backup failed"
         raise maintenance.MaintenanceRequiredError(msg)
 
@@ -224,9 +235,11 @@ async def test_backup_failure_retains_stopped_state_and_resumes(installation, mo
 
 
 async def test_changed_instance_or_command_cannot_resume_journal(installation, monkeypatch):
+    """Require the original instance and launch command when resuming a journal."""
     options, _, _, _, _ = installation
 
     async def fail():
+        """Stop preparation at helper staging so resume configuration can be checked."""
         msg = "staging failed"
         raise controller.helper.MigrationHelperError(msg)
 
@@ -239,6 +252,7 @@ async def test_changed_instance_or_command_cannot_resume_journal(installation, m
 
 
 async def test_busy_unrelated_port_does_not_stop_old_workers(installation):
+    """Reject an occupied readiness port before taking the old service down."""
     options, _, _, _, _ = installation
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", options["port"]))
@@ -249,6 +263,7 @@ async def test_busy_unrelated_port_does_not_stop_old_workers(installation):
 
 
 async def test_external_restart_contract_is_required(installation):
+    """Require external restarters to be disabled before controlled shutdown."""
     options, _, _, _, _ = installation
     with pytest.raises(controller.UpgradeControllerError, match="restarters"):
         await controller.upgrade(**{**options, "external_restarts_disabled": False})
@@ -256,6 +271,7 @@ async def test_external_restart_contract_is_required(installation):
 
 
 async def test_atomic_exclusive_launch_record_rejects_duplicate(tmp_path):
+    """Preserve the first launch identity when an exclusive write is repeated."""
     path = tmp_path / "launch.json"
     identity = controller._identity(psutil.Process())
     controller._write(path, identity, exclusive=True)
@@ -265,11 +281,13 @@ async def test_atomic_exclusive_launch_record_rejects_duplicate(tmp_path):
 
 
 async def test_cancellation_drains_worker_stop_and_resumes_after_barrier(installation, monkeypatch):
+    """Finish the worker stop barrier before cancellation releases controller ownership."""
     options, ready, _, _, _ = installation
     entered, release = threading.Event(), threading.Event()
     original = controller._stop
 
     def delayed(*args):
+        """Hold worker termination until the test releases the cancellation barrier."""
         entered.set()
         assert release.wait(10)
         original(*args)
@@ -291,6 +309,7 @@ async def test_cancellation_drains_worker_stop_and_resumes_after_barrier(install
 
 
 async def test_dead_new_process_requires_explicit_forward_restart(installation):
+    """Require an explicit restart after a recorded replacement exits."""
     options, ready, _, _, _ = installation
     ready.touch()
     first = await controller.upgrade(**options)
@@ -306,6 +325,7 @@ async def test_dead_new_process_requires_explicit_forward_restart(installation):
 
 
 async def test_new_application_cannot_claim_unrelated_listener(installation):
+    """Refuse readiness attribution to a listener outside the recorded worker family."""
     options, _, _, _, _ = installation
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", options["port"]))
@@ -314,10 +334,12 @@ async def test_new_application_cannot_claim_unrelated_listener(installation):
 
 
 async def test_session_escape_is_rejected_before_any_termination(installation, monkeypatch):
+    """Reject a child that escaped its supervisor session before stopping any process."""
     options, _, _, child, _ = installation
     original = controller.os.getsid
 
     def escaped(pid):
+        """Report an escaped session only for the fixture's recorded child."""
         return child["pid"] if pid == child["pid"] else original(pid)
 
     monkeypatch.setattr(controller.os, "getsid", escaped)
@@ -332,12 +354,14 @@ async def test_session_escape_is_rejected_before_any_termination(installation, m
     ("status", "expected"), [(psutil.STATUS_ZOMBIE, False), (psutil.STATUS_DEAD, False), (psutil.STATUS_RUNNING, True)]
 )
 def test_receipt_worker_barrier_accepts_exited_unreaped_workers(monkeypatch, status, expected):
+    """Treat dead and zombie workers as stopped despite their unreaped identities."""
     process = SimpleNamespace(status=lambda: status, create_time=lambda: 1234)
     monkeypatch.setattr(maintenance.psutil, "Process", lambda _pid: process)
     assert maintenance._process_matches({"pid": 123, "created": 1234}) is expected
 
 
 async def test_forward_restart_rejects_surviving_new_workers(installation):
+    """Prevent a replacement restart while its orphaned workers remain alive."""
     options, ready, _, _, _ = installation
     child_file = options["cwd"] / "new-child.json"
     spawn = "\n".join(
@@ -365,6 +389,7 @@ async def test_forward_restart_rejects_surviving_new_workers(installation):
 
 
 async def test_ipv6_listener_cannot_attest_unrelated_ipv4_readiness(installation):
+    """Reject IPv6 ownership as proof of readiness on an unrelated IPv4 listener."""
     if not socket.has_ipv6:
         pytest.skip("IPv6 loopback is unavailable")
     options, _, _, _, _ = installation
@@ -396,6 +421,7 @@ async def test_ipv6_listener_cannot_attest_unrelated_ipv4_readiness(installation
 
 
 async def test_helper_isolation_profile_is_created_and_removed_before_downtime(monkeypatch):
+    """Verify the helper isolation profile with a disposable container before shutdown."""
     selected = "sha256:" + "2" * 64
     image = "ghcr.io/langflow-ai/langflow-chroma-migration@sha256:" + "0" * 64
     monkeypatch.setenv("LANGFLOW_KB_MIGRATION_HELPER_IMAGE", image)
@@ -403,11 +429,13 @@ async def test_helper_isolation_profile_is_created_and_removed_before_downtime(m
     monkeypatch.setattr(controller.helper.os, "cpu_count", lambda: 1)
 
     async def staged(*_args):
+        """Return the digest selected by successful helper verification."""
         return selected
 
     calls = []
 
     async def command(*args, **_kwargs):
+        """Record Docker isolation checks without launching a container."""
         calls.append(args)
         return b""
 
