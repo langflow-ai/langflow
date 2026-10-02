@@ -87,6 +87,10 @@
     "picomatch": "^4.0.4",
     "lodash": "4.18.1",
     "fast-xml-parser": "4.5.5",
+    "openapi-sampler": {
+      ".": "^1.7.6",
+      "fast-xml-parser": "^5.11.2"
+    },
     "fast-uri": "^3.1.8",
     "svgo": "^3.3.5",
     "postcss": "^8.5.23",
