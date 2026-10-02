@@ -373,12 +373,7 @@ class TestEmbeddingModels:
         assert any("kb-nameless" in p for p in check.problems)
 
     async def test_knowledge_bases_past_the_examples_are_counted_not_listed(self, safe_superuser):
-        await _add(
-            *(
-                KnowledgeBaseRecord(name=f"kb-{i}", user_id=safe_superuser.id, backend_type="chroma", chunks=0)
-                for i in range(7)
-            )
-        )
+        await _add(*(KnowledgeBaseRecord(name=f"kb-{i}", user_id=safe_superuser.id, chunks=0) for i in range(7)))
 
         check = _check(await run_preflight(), "embedding models")
 
