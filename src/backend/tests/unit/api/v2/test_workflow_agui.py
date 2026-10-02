@@ -1773,6 +1773,9 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        # Synthetic jobs have no trace row. Keep real database latency out of
+        # the cancellation handshake, just like status updates above.
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
 
         owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
@@ -1842,6 +1845,7 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
 
         owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="langflow")
@@ -1905,6 +1909,7 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
         monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
         owner_id = uuid4()
