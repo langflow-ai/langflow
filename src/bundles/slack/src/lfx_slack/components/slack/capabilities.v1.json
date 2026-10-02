@@ -48,6 +48,25 @@
         "self_managed": "customer",
         "headless": "customer"
       }
+    },
+    {
+      "id": "slack-app-token",
+      "kind": "api_key",
+      "identity": "bot",
+      "supports_pkce": false,
+      "supports_refresh": false,
+      "scope_separator": ",",
+      "default_scopes": [
+        "connections:write"
+      ],
+      "client_type_by_context": {
+        "self_managed": "external",
+        "desktop": "external"
+      },
+      "owner_by_context": {
+        "self_managed": "customer",
+        "desktop": "customer"
+      }
     }
   ],
   "capabilities": [
@@ -228,6 +247,94 @@
       ],
       "risk": "read",
       "component_ref": "SlackListChannelMembersComponent"
+    },
+    {
+      "id": "slack.trigger.message.events_api",
+      "display_name": "Slack: On Message",
+      "auth_profile_id": "slack-bot-install",
+      "identity": "bot",
+      "required_scopes": [
+        "channels:history",
+        "groups:history",
+        "im:history",
+        "mpim:history",
+        "app_mentions:read"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.trigger.message"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "SlackOnMessageTriggerComponent"
+    },
+    {
+      "id": "slack.trigger.message.socket_mode",
+      "display_name": "Slack: On Message",
+      "auth_profile_id": "slack-app-token",
+      "identity": "bot",
+      "required_scopes": [
+        "connections:write"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.trigger.message"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "self_managed",
+        "desktop"
+      ],
+      "risk": "read",
+      "component_ref": "SlackOnMessageTriggerComponent"
+    },
+    {
+      "id": "slack.trigger.reaction.events_api",
+      "display_name": "Slack: On Reaction",
+      "auth_profile_id": "slack-bot-install",
+      "identity": "bot",
+      "required_scopes": [
+        "reactions:read"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.trigger.reaction"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "SlackOnReactionTriggerComponent"
+    },
+    {
+      "id": "slack.trigger.reaction.socket_mode",
+      "display_name": "Slack: On Reaction",
+      "auth_profile_id": "slack-app-token",
+      "identity": "bot",
+      "required_scopes": [
+        "connections:write"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.trigger.reaction"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "self_managed",
+        "desktop"
+      ],
+      "risk": "read",
+      "component_ref": "SlackOnReactionTriggerComponent"
     }
   ]
 }

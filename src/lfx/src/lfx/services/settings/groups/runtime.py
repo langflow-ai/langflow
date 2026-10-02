@@ -131,6 +131,25 @@ class RuntimeSettings(BaseModel):
     """How often the scaled worker's periodic watchdog scans for orphaned leases
     (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
     restart. Must be > 0."""
+    background_retention_days: int = Field(default=0, ge=0)
+    """How many days to keep TERMINAL job rows (and their events, signals and
+    checkpoints) before deleting them. ``0``, the default, disables retention
+    entirely and keeps every row forever.
+
+    Enable this on any long-lived deployment: the job table records every flow
+    run (v1 runs and playground builds, v2 workflow runs, knowledge-base and
+    memory ingestion, trigger firings) and nothing else ever deletes those rows,
+    while ``job_events`` grows a row per durable milestone of a background run.
+    Live runs are never deleted at any age: QUEUED, IN_PROGRESS and SUSPENDED
+    rows are excluded (a suspended run is waiting on a human who may answer
+    weeks later). Jobs awaiting trigger reconciliation and ingestion jobs
+    referenced by memory workflow runs are also retained, preserving trigger
+    outcomes and memory auto-capture state. Referenced ingestion jobs can
+    outlive this window until the memory tracking rows are removed.
+
+    Cleanup first runs after about five minutes, then hourly (both jittered).
+    A request ``idempotency_key`` blocks a duplicate run only while the original
+    job row exists, so once that row is purged the same key starts a new run."""
     # Triggers (TRG-2): the leased dispatcher, the schedule tick producer, and
     # the ledger retention windows.
     trigger_dispatcher_enabled: bool = True
@@ -263,6 +282,29 @@ class RuntimeSettings(BaseModel):
     """Consecutive renewal failures before the problem is surfaced on the
     trigger the subscription feeds. A success clears it."""
 
+    # Slack sources (TRG-5). One Events API Request URL serves every workspace
+    # the app is installed in, so its budgets are per app and per workspace
+    # rather than per trigger; Socket Mode is bounded by Slack's per-app cap.
+    trigger_ingress_slack_app_rate_limit_per_minute: int = Field(default=20_000, gt=0)
+    """Ceiling on verified deliveries to one Slack app's Request URL. A flood
+    guard, not a quota: it sits well above what a hosted app installed in many
+    workspaces receives, because a verified Slack delivery that is refused is
+    retried, and one that keeps being refused gets the app's event delivery
+    disabled by Slack. Before the signature is checked each client has its own
+    counter at the same ceiling, so unsigned traffic - the Request URL is not a
+    secret - can never spend the app's budget."""
+    trigger_ingress_slack_team_rate_limit_per_hour: int = Field(default=60_000, gt=0)
+    """Ceiling on verified deliveries for one workspace of one Slack app,
+    counted over an hour because Slack's own delivery cap is hourly (30,000 per
+    workspace per app). Twice that cap, and over the same window, so a burst
+    Slack permits is never refused - only a leaked signing secret replaying
+    forged events ever reaches it."""
+    trigger_slack_socket_max_connections: int = Field(default=10, gt=0, le=10)
+    """Slack Socket Mode connections one app may hold open, as Slack counts
+    them. Slack allows ten per app; a listener whose new socket would take the
+    app past this closes it and backs off, leaving the sockets already open to
+    carry the app's events."""
+
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.
 
@@ -306,6 +348,16 @@ class RuntimeSettings(BaseModel):
 
     max_file_size_upload: int = 1024
     """The maximum file size for the upload in MB."""
+
+    url_component_max_response_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    """Maximum encoded or decoded size, in bytes, of a single response body the URL component
+    will read (LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES). Bounds memory use against a huge or
+    endless page; raise it only if legitimate pages are being rejected."""
+
+    url_component_max_total_bytes: int = Field(default=100 * 1024 * 1024, gt=0)
+    """Maximum total bytes the URL component may read across every URL and crawled link of one
+    fetch (LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES). Each response counts the larger of its
+    encoded and decoded sizes, including rejected responses. The crawl stops once this budget is spent."""
 
     max_ingestion_timeout_secs: int = 600
 

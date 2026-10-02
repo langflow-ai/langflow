@@ -14,6 +14,7 @@ const OTHER_ID = "user-bob";
 
 let mockUser: { id: string; is_superuser: boolean };
 let mockConnections: ConnectionRead[];
+let mockIntegrations: Record<string, unknown> = { data: { providers: [] } };
 const mockMutation = jest.fn();
 const mockSetErrorData = jest.fn();
 
@@ -22,7 +23,7 @@ jest.mock("@/controllers/API/queries/connections", () => {
   return {
     ...jest.requireActual("@/controllers/API/queries/connections"),
     useGetConnections: () => ({ data: mockConnections, isLoading: false }),
-    useIntegrationsQuery: () => ({ data: { providers: [] } }),
+    useIntegrationsQuery: () => mockIntegrations,
     useEffectiveIntegrationPolicyQuery: () => ({ data: undefined }),
     useTestConnectionMutation: mutation,
     useUpdateConnectionMutation: mutation,
@@ -89,6 +90,45 @@ describe("ConnectionsPage tabs", () => {
   afterEach(async () => {
     await act(() => i18n.changeLanguage("en"));
   });
+
+  it("disables Add connection and explains why when policy leaves no provider", () => {
+    mockIntegrations = { data: { providers: [] }, isSuccess: true };
+    mockUser = { id: SUPERUSER_ID, is_superuser: false };
+    mockConnections = [];
+    try {
+      render(<ConnectionsPage />);
+      expect(screen.getByTestId("add-connection")).toBeDisabled();
+      expect(screen.getByTestId("connections-no-providers")).toHaveTextContent(
+        /administrator controls/i,
+      );
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /administrator controls/i,
+      );
+    } finally {
+      mockIntegrations = { data: { providers: [] } };
+    }
+  });
+
+  it.each([
+    ["loading", { data: undefined, isLoading: true }],
+    ["failed", { data: undefined, isError: true }],
+  ])(
+    "keeps Add connection disabled without blaming policy while the provider list is %s",
+    (_state, query) => {
+      mockIntegrations = query;
+      mockUser = { id: SUPERUSER_ID, is_superuser: false };
+      mockConnections = [];
+      try {
+        render(<ConnectionsPage />);
+        expect(screen.getByTestId("add-connection")).toBeDisabled();
+        expect(
+          screen.getByTestId("connections-no-providers"),
+        ).toBeEmptyDOMElement();
+      } finally {
+        mockIntegrations = { data: { providers: [] } };
+      }
+    },
+  );
 
   it("shows the initial empty state only when there are no connections", () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };

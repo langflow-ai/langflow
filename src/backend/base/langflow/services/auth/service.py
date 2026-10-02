@@ -1642,7 +1642,7 @@ class AuthService(BaseAuthService):
         Note:
             - Returns empty string for invalid input (None, empty string)
             - Returns plaintext keys as-is (not starting with "gAAAAA")
-            - Logs warnings on decryption failures for security monitoring
+            - Logs errors on decryption failures so they are visible at the default log level
         """
         if not isinstance(encrypted_api_key, str) or not encrypted_api_key:
             logger.debug("decrypt_api_key called with invalid input (empty or non-string)")
@@ -1664,8 +1664,8 @@ class AuthService(BaseAuthService):
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
             except Exception as secondary_exception:  # noqa: BLE001
-                # Decryption failed completely - log warning and return empty string
-                logger.warning(
+                # Decryption failed completely - log at the default ERROR level and return empty string
+                logger.error(
                     "API key decryption failed after retry. This may indicate a corrupted key or "
                     "SECRET_KEY mismatch. Primary error: %r, Secondary error: %r",
                     primary_exception,

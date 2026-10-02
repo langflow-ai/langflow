@@ -293,10 +293,10 @@ class TestSqlBuilders:
 
     def test_iter_sql_selects_embedding_only_when_requested(self) -> None:
         assert _iter_documents_sql(_VALID_TABLE, include_embeddings=False) == (
-            f"SELECT document, cmetadata FROM {_VALID_TABLE}"  # noqa: S608
+            f"SELECT id, document, cmetadata FROM {_VALID_TABLE}"  # noqa: S608
         )
         assert _iter_documents_sql(_VALID_TABLE, include_embeddings=True) == (
-            f"SELECT document, cmetadata, embedding FROM {_VALID_TABLE}"  # noqa: S608
+            f"SELECT id, document, cmetadata, embedding FROM {_VALID_TABLE}"  # noqa: S608
         )
 
     @pytest.mark.parametrize(
@@ -398,7 +398,9 @@ class TestSecretResolution:
         await backend.ensure_ready()
 
         assert called["variable_service"] is False
-        assert backend._resolved_connection_string == "postgresql+psycopg://user:pass@localhost:5432/db"
+        assert backend._resolved_connection_string == _CONNECTION_STRING.replace(
+            "postgresql://", "postgresql+psycopg://"
+        )
 
     async def test_ignores_tenant_supplied_env_name(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", "postgresql://u:p@db:5432/safe")
@@ -822,7 +824,7 @@ class TestIterDocuments:
         assert await self._collect(backend) == []
 
     async def test_streams_in_batches(self, make_backend) -> None:
-        rows = tuple((f"doc {i}", {"i": i}, None) for i in range(5))
+        rows = tuple((f"id-{i}", f"doc {i}", {"i": i}, None) for i in range(5))
         backend = make_backend(_FakeConn(stream_rows=rows))
 
         batches = await self._collect(backend, batch_size=2)
@@ -831,9 +833,10 @@ class TestIterDocuments:
         assert batches[0][0].content == "doc 0"
         assert batches[0][0].metadata == {"i": 0}
         assert batches[0][0].embedding is None
+        assert batches[0][0].id == "id-0"
 
     async def test_includes_embeddings_on_request(self, make_backend) -> None:
-        conn = _FakeConn(stream_rows=((None, None, "[0.1, 0.2]"),))
+        conn = _FakeConn(stream_rows=(("id-0", None, None, "[0.1, 0.2]"),))
         backend = make_backend(conn)
 
         batches = await self._collect(backend, include_embeddings=True)
@@ -845,7 +848,7 @@ class TestIterDocuments:
 
     async def test_database_error_propagates(self, make_backend) -> None:
         # A streaming failure must not masquerade as an empty KB (data loss).
-        backend = make_backend(_FakeConn(raise_on="SELECT document"))
+        backend = make_backend(_FakeConn(raise_on="SELECT id, document"))
         with pytest.raises(_DatabaseError):
             await self._collect(backend)
 

@@ -75,9 +75,14 @@ export type ComponentsToUpdateType = {
 export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
   cancel: () => void;
   flush: () => Promise<void> | void;
+  // Saves `flow` after every pending and in-flight save; later autosaves wait
+  // for it. Rejects when that save fails.
+  enqueue: (flow: FlowType) => Promise<void>;
 };
 
 export type FlowStoreType = {
+  /** True once a user-originated mutation has landed since this flow was loaded. */
+  userEditedSinceLoad: boolean;
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
   removeDismissedNodes: (dismissedNodes: string[]) => void;

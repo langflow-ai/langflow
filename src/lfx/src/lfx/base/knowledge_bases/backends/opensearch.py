@@ -53,7 +53,9 @@ secrets — and round-trips cleanly through the UI.
   Operators pointing the KB at an externally-populated index can still
   set ``vector_field`` to read embeddings from a custom field.
 * ``text_field`` — document field for the chunk text. Defaults to
-  ``text``.
+  ``text``. Like ``vector_field``, LangChain ignores it and always writes and
+  searches ``text``, so ``iter_documents`` reads the configured field but
+  falls back to ``text``.
 * ``engine`` — k-NN engine (``jvector``, ``nmslib``, ``faiss``,
   ``lucene``). Defaults to ``jvector``.
 * ``space_type`` — distance metric. Defaults to ``l2``.
@@ -342,6 +344,23 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             space_type=space_type,
         )
 
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        # Like ingestion, no per-call field override: LangChain writes vectors to
+        # ``LANGCHAIN_DEFAULT_VECTOR_FIELD``, which is where ``iter_documents``
+        # and similarity search already look. ``add_embeddings`` creates the index
+        # with the right dimension when it does not exist yet.
+        # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
+        # default) per call, so split larger batches rather than fail the write.
+        bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
+        for start in range(0, len(docs), bulk_size):
+            chunk = docs[start : start + bulk_size]
+            await asyncio.to_thread(
+                self.vector_store.add_embeddings,  # type: ignore[attr-defined]
+                [(doc.content, doc.embedding) for doc in chunk],
+                metadatas=[doc.metadata for doc in chunk],
+                ids=ids[start : start + bulk_size],
+            )
+
     async def similarity_search(
         self,
         query: str,
@@ -576,12 +595,20 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         embedding_fields = [vector_field]
         if LANGCHAIN_DEFAULT_VECTOR_FIELD not in embedding_fields:
             embedding_fields.append(LANGCHAIN_DEFAULT_VECTOR_FIELD)
+        # Chunk text has the same split: LangChain writes and searches it under
+        # ``text`` whatever the config names, so fall back to that field too.
+        text_fields = [text_field]
+        if DEFAULT_TEXT_FIELD not in text_fields:
+            text_fields.append(DEFAULT_TEXT_FIELD)
         # Skip the embedding column(s) in ``_source`` when the caller doesn't
-        # need them — large embedding vectors dominate scroll payloads.
-        source_excludes = None if include_embeddings else list(embedding_fields)
+        # need them — large embedding vectors dominate scroll payloads. When the
+        # caller does, ask for ``_source`` explicitly: OpenSearch 3.8+ can strip
+        # knn_vector fields from every response (the knn_default_excludes
+        # processor) unless the request sets ``_source`` itself.
+        source_params = {"_source": True} if include_embeddings else {"_source_excludes": list(embedding_fields)}
         # Keys that are never chunk metadata when we have to reconstruct it from
         # a flat ``_source`` (the non-LangChain layout fallback below).
-        non_metadata_keys = {text_field, "metadata", *embedding_fields}
+        non_metadata_keys = {*text_fields, "metadata", *embedding_fields}
 
         sentinel = object()
         batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
@@ -603,8 +630,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     client,
                     index=index,
                     size=batch_size,
-                    _source_excludes=source_excludes,
                     preserve_order=False,
+                    **source_params,
                 )
                 buf: list[IngestedDocument] = []
                 for hit in scanner:
@@ -613,7 +640,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     source = hit.get("_source") if isinstance(hit, dict) else {}
                     if not isinstance(source, dict):
                         source = {}
-                    content = source.get(text_field) or ""
+                    content = next((source[field] for field in text_fields if source.get(field)), "")
                     metadata = source.get("metadata")
                     if not isinstance(metadata, dict):
                         metadata = {k: v for k, v in source.items() if k not in non_metadata_keys}
@@ -630,6 +657,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                             content=str(content),
                             metadata=dict(metadata),
                             embedding=embedding,
+                            id=hit.get("_id") if isinstance(hit, dict) else None,
                         )
                     )
                     if len(buf) >= batch_size:

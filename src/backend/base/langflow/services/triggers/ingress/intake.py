@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 from sqlmodel import col, select
 
-from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import (
     DEDUPE_KEY_MAX_LENGTH,
@@ -38,10 +37,10 @@ from langflow.services.triggers.constants import (
     KIND_INBOUND_WEBHOOK,
     PROVIDER_GOOGLE,
     PROVIDER_MICROSOFT,
-    PROVIDER_SLACK,
     PROVIDER_WEBHOOK,
 )
 from langflow.services.triggers.ingress.verifiers import IngressSecrets
+from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -56,12 +55,12 @@ if TYPE_CHECKING:
 #: at a surprising moment later.
 ACCEPTING_STATES = frozenset({TriggerState.ACTIVE.value, TriggerState.PENDING.value})
 
-#: Provider to the trigger ``kind`` prefix it may deliver for. A Slack-signed
+#: Provider to the trigger ``kind`` prefix it may deliver for. A Google-signed
 #: request must not be able to drive a trigger armed against Microsoft, even if
-#: it somehow guessed the public id.
+#: it somehow guessed the public id. Slack has no entry: its deliveries arrive
+#: on the per-app route (``providers/slack/ingress.py``), never by public id.
 _PROVIDER_KINDS = {
     PROVIDER_WEBHOOK: (KIND_INBOUND_WEBHOOK,),
-    PROVIDER_SLACK: ("slack.",),
     PROVIDER_MICROSOFT: ("microsoft.",),
     PROVIDER_GOOGLE: ("google.",),
 }
@@ -96,29 +95,6 @@ async def _webhook_secret(row: Trigger) -> str | None:
         return None
 
 
-async def _slack_signing_secret(session: AsyncSession, row: Trigger) -> str | None:
-    """The app-level signing secret of the registration behind the connection.
-
-    Slack signs with a secret that belongs to the app, not to the user who
-    installed it, so the path runs trigger -> connection -> OAuth row ->
-    registration rather than reading anything off the trigger itself.
-    """
-    if row.connection_id is None:
-        return None
-    statement = select(ConnectionOAuth).where(ConnectionOAuth.connection_id == row.connection_id)
-    oauth = (await session.exec(statement)).first()
-    if oauth is None:
-        return None
-    from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
-
-    try:
-        registration = get_oauth_settings().registration(oauth.registration_id)
-    except OAuthError:
-        return None
-    secret = registration.signing_secret
-    return secret.get_secret_value() if secret is not None else None
-
-
 async def _subscription_secrets(session: AsyncSession, row: Trigger) -> IngressSecrets:
     """The per-subscription secrets Microsoft and Google verify against."""
     # ACTIVE only, newest first. Excluding just ERROR was wrong: a retired
@@ -145,6 +121,9 @@ async def _subscription_secrets(session: AsyncSession, row: Trigger) -> IngressS
         client_state_digest=subscription.client_state_digest,
         channel_token_digest=subscription.client_state_digest,
         channel_id=provider_state.get("channel_id"),
+        resource_id=provider_state.get("resource_id"),
+        pubsub_service_account=provider_state.get("pubsub_service_account"),
+        pubsub_audience=provider_state.get("audience"),
     )
 
 
@@ -163,8 +142,6 @@ async def resolve_target(session: AsyncSession, *, provider: str, public_id: str
 
     if provider == PROVIDER_WEBHOOK:
         secrets = IngressSecrets(signing_secret=await _webhook_secret(row))
-    elif provider == PROVIDER_SLACK:
-        secrets = IngressSecrets(signing_secret=await _slack_signing_secret(session, row))
     else:
         secrets = await _subscription_secrets(session, row)
 
@@ -182,11 +159,12 @@ def dedupe_key(*, provider: str, suffix: str | None, fallback: str) -> str:
     """The ledger key for one delivery.
 
     Derived from the provider's own event identity whenever it offers one -
-    Slack's ``event_id``, Graph's subscription plus resource plus change type,
+    Slack's ``event_id``, Graph's notification id or item version,
     Google's channel plus message number - because that identity is exactly what
     survives a redelivery. ``fallback`` is used only when a provider sends
-    nothing stable, and it is a digest of the signed body, so two identical
-    bodies still collapse into one run.
+    nothing stable. Unversioned Graph hints use a fresh fallback because
+    distinct changes can produce identical bodies; canonical versions dedupe
+    downstream. Other providers use a signed-body digest.
     """
     key = f"{INGRESS_DEDUPE_PREFIX}:{provider}:{suffix or fallback}"
     if len(key) <= DEDUPE_KEY_MAX_LENGTH:
@@ -216,12 +194,21 @@ async def record_event(
     telling a provider "that was a duplicate" with an error status is how a
     provider is taught to retry forever.
     """
+    if provider == PROVIDER_MICROSOFT and not suffix:
+        from uuid import uuid4
+
+        # An identical thin wakeup is not evidence of an identical change.
+        fallback = str(uuid4())
     key = dedupe_key(provider=provider, suffix=suffix, fallback=fallback)
+    is_source_hint = provider in {PROVIDER_MICROSOFT, PROVIDER_GOOGLE}
+    envelope = {"provider": provider, "delivery": payload}
+    if is_source_hint:
+        envelope[SOURCE_HINT_FIELD] = True
     return await ledger.append_event(
         session,
         trigger_id=target.trigger_id,
         dedupe_key=key,
-        payload={"provider": provider, "delivery": payload},
+        payload=envelope,
     )
 
 

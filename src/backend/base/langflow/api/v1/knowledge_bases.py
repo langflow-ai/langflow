@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import json
 import tempfile
 import uuid
@@ -11,7 +10,6 @@ from typing import Annotated, Any
 
 import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
 from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError, ensure_storage_routing_allowed
@@ -41,6 +39,7 @@ from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
     KBStorageHelper,
+    chunk_text_for_ingestion,
     local_chroma_rejection_reason,
     resolve_local_store_path,
     validate_kb_name,
@@ -74,6 +73,7 @@ from langflow.services.deps import get_job_service, get_settings_service, get_ta
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService
 from langflow.services.task.service import TaskService
+from langflow.utils.canonical_json import canonical_json_digest
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
     KB_METADATA_RESERVED_KEYS,
@@ -340,17 +340,17 @@ def _build_connector_ingest_dedupe_key(
     of JSON key ordering. Only the hash (not the config) goes on the
     ``job`` row, so no credentials leak through ``dedupe_key``.
     """
-    canonical = json.dumps(
+    digest = canonical_json_digest(
         {
             "user_id": str(user_id),
             "kb_name": kb_name,
             "source_type": source_type,
             "source_config": source_config,
         },
-        sort_keys=True,
+        ensure_ascii=True,
+        separators=None,
         default=str,
     )
-    digest = hashlib.sha256(canonical.encode()).hexdigest()
     return f"kb_connector_ingest:{digest}"
 
 
@@ -946,13 +946,15 @@ async def preview_chunks(
     # these bounds, an authenticated user can request gigabytes.
     chunk_size: Annotated[int, Form(ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)] = 1000,
     chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
-    separator: Annotated[str, Form()] = "\n",
+    # Must match the ingest endpoint's default: FastAPI also substitutes it for
+    # an empty form value, which is what the UI sends for a blank separator.
+    separator: Annotated[str, Form()] = "",
     max_chunks: Annotated[int, Form(ge=MIN_MAX_CHUNKS, le=MAX_MAX_CHUNKS)] = 5,
 ) -> dict[str, object]:
     """Preview how files will be chunked without storing anything.
 
-    Uses the same RecursiveCharacterTextSplitter as the ingest endpoint
-    so the preview accurately reflects what will be stored.
+    Splits with :func:`chunk_text_for_ingestion` — the function every
+    ingestion path uses — so the preview shows exactly what will be stored.
     """
     await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.CREATE, kb_name=None)
     try:
@@ -960,19 +962,6 @@ async def preview_chunks(
 
         if not files:
             raise HTTPException(status_code=400, detail="No files provided")
-
-        # Build separators list: user separator first, then defaults
-        separators = None
-        if separator:
-            # Unescape common escape sequences
-            actual_separator = separator.replace("\\n", "\n").replace("\\t", "\t")
-            separators = [actual_separator, "\n\n", "\n", " ", ""]
-
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=separators,
-        )
 
         file_previews: list[dict[str, Any]] = []
         for uploaded_file in files:
@@ -995,7 +984,12 @@ async def preview_chunks(
                 # to avoid splitting the entire file (which is slow for large files)
                 preview_text_limit = max_chunks * chunk_size * CHUNK_PREVIEW_MULTIPLIER
                 preview_text = text_content[:preview_text_limit]
-                chunks = text_splitter.split_text(preview_text)
+                chunks = chunk_text_for_ingestion(
+                    preview_text,
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap,
+                    separator=separator,
+                )
 
                 # Estimate total chunks from full text length
                 effective_step = max(chunk_size - chunk_overlap, 1)

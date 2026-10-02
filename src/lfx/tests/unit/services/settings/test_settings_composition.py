@@ -127,6 +127,7 @@ EXPECTED_FIELDS = {
     # ObservabilitySettings
     "prometheus_enabled",
     "prometheus_port",
+    "background_metrics_interval",
     "max_transactions_to_keep",
     "max_vertex_builds_to_keep",
     "max_vertex_builds_per_vertex",
@@ -182,6 +183,8 @@ EXPECTED_FIELDS = {
     "fs_flows_polling_interval",
     "health_check_max_retries",
     "max_file_size_upload",
+    "url_component_max_response_bytes",
+    "url_component_max_total_bytes",
     "celery_enabled",
     # VariablesSettings
     "variable_store",
@@ -254,6 +257,7 @@ EXPECTED_FIELDS = {
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
+    "background_retention_days",
     "test_redis_url",
     # Triggers (TRG-2)
     "trigger_dispatcher_enabled",
@@ -282,6 +286,9 @@ EXPECTED_FIELDS = {
     "trigger_ingress_rate_limit_per_minute",
     "trigger_ingress_unknown_rate_limit_per_minute",
     "trigger_ingress_signature_tolerance_s",
+    "trigger_ingress_slack_app_rate_limit_per_minute",
+    "trigger_ingress_slack_team_rate_limit_per_hour",
+    "trigger_slack_socket_max_connections",
     "trigger_subscription_renew_fraction",
     "trigger_subscription_renew_lead_cap_s",
     "trigger_subscription_renew_interval_s",
@@ -294,6 +301,7 @@ EXPECTED_FIELDS = {
     "allow_public_custom_components",
     "block_code_interpreter_components",
     "restrict_local_file_access",
+    "database_tls_files_dir",
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
@@ -353,6 +361,7 @@ def test_critical_defaults_unchanged():
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
     assert settings.restrict_local_file_access is True
+    assert settings.database_tls_files_dir is None
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
     assert settings.mcp_server_allowed_packages is None
@@ -370,6 +379,11 @@ def test_critical_defaults_unchanged():
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
     assert settings.dangerously_allow_multi_worker_without_shared_queue is False
+
+
+def test_database_tls_files_dir_reads_operator_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("LANGFLOW_DATABASE_TLS_FILES_DIR", str(tmp_path))
+    assert Settings(_env_file=None).database_tls_files_dir == tmp_path
 
 
 def test_dict_defaults_unchanged():
@@ -624,3 +638,23 @@ def test_serving_end_user_env_vars_bind_to_fields(monkeypatch):
     assert settings.serving_end_user_header == "X-End-User-Id"
     assert settings.serving_trust_proxy_headers is True
     assert settings.serving_end_user_required is True
+
+
+def test_background_metrics_interval_default(monkeypatch):
+    """A default collector tick is fifteen seconds."""
+    monkeypatch.delenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", raising=False)
+    assert Settings().background_metrics_interval == 15
+
+
+def test_background_metrics_interval_from_environment(monkeypatch):
+    """The documented environment variable controls the positive tick interval."""
+    monkeypatch.setenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", "27")
+    assert Settings().background_metrics_interval == 27
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_background_metrics_interval_rejects_nonpositive_environment(monkeypatch, value):
+    """Invalid intervals cannot turn the collector into a database busy loop."""
+    monkeypatch.setenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", value)
+    with pytest.raises(ValidationError, match="background_metrics_interval"):
+        Settings()

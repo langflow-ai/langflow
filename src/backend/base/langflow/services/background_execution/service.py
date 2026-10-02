@@ -21,9 +21,11 @@ import contextlib
 import json
 import math
 import os
+import random
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from time import monotonic
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -57,6 +59,14 @@ if TYPE_CHECKING:
     # factory scans this module for ``Service`` subclasses (services/factory.py), so a
     # runtime alias here crashes service initialization on those interpreters.
     FrameSourceFactory = Callable[..., Any]
+
+# Retention starts after a short jittered delay, then runs hourly in chunks:
+# 5k jobs a batch, up to 50 batches a tick, clearing up to 250k terminal jobs
+# without keeping the entire backlog in one transaction.
+_RETENTION_INITIAL_DELAY_S = 300.0
+_RETENTION_INTERVAL_S = 3600.0
+_RETENTION_BATCH_SIZE = 5000
+_RETENTION_MAX_BATCHES_PER_TICK = 50
 
 # Durable statuses that mean the run is over. ``events()`` keys off these (not the
 # process-local live bus) so a reattach to a finished job replays and returns
@@ -120,12 +130,22 @@ class BackgroundExecutionService(Service):
         self._frame_source_factory = frame_source_factory
         self._deadline_task: asyncio.Task | None = None
         self._orphan_task: asyncio.Task | None = None
+        self._retention_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
     def _scaled(self) -> bool:
         """True when a redis-backed scaled backend is wired behind this facade."""
         return self._backend is not None
+
+    @property
+    def is_scaled(self) -> bool:
+        """Whether jobs run on a scaled backend rather than this process's executor.
+
+        Reflects the backend actually wired, not ``background_backend_is_scaled``:
+        a scaled request whose modules are unavailable degrades to in-process.
+        """
+        return self._scaled
 
     def _build_scaled_backend(self) -> Any:
         """Build the redis-backed scaled backend from settings.
@@ -158,13 +178,16 @@ class BackgroundExecutionService(Service):
         await self._executor.start()
         self._start_deadline_watchdog()
         self._start_orphan_watchdog()
+        self._start_retention_sweep()
 
     async def stop(self) -> None:
-        watchdogs = [task for task in (self._deadline_task, self._orphan_task) if task is not None]
+        tasks = (self._deadline_task, self._orphan_task, self._retention_task)
+        watchdogs = [task for task in tasks if task is not None]
         for task in watchdogs:
             task.cancel()
         self._deadline_task = None
         self._orphan_task = None
+        self._retention_task = None
         if watchdogs:
             await asyncio.gather(*watchdogs, return_exceptions=True)
         await self._executor.stop()
@@ -214,6 +237,60 @@ class BackgroundExecutionService(Service):
                     await logger.aexception("Periodic background orphan sweep failed")
 
         self._orphan_task = asyncio.create_task(_loop())
+
+    def _start_retention_sweep(self) -> None:
+        """Purge terminal jobs past the retention window, hourly, until caught up.
+
+        Periodic rather than startup-only on purpose: a fleet that never
+        restarts would otherwise never purge, which is the same "requires a
+        restart to reconcile" failure the lease watchdog exists to avoid. Each
+        tick deletes in chunks and keeps going while a chunk comes back full,
+        so an install that enables retention against a large backlog catches up
+        over a few ticks instead of issuing one enormous DELETE.
+
+        The first tick runs after about five minutes, with jitter, so replicas
+        that restart more often than once an hour can still make progress.
+
+        Skipped entirely when ``background_retention_days`` is 0 (the default),
+        so deployments that have not opted in spawn no extra task.
+        """
+        retention_days = self._settings.background_retention_days
+        if not retention_days or self._retention_task is not None:
+            return
+
+        async def _loop() -> None:
+            job_service = get_job_service()
+            delay = _RETENTION_INITIAL_DELAY_S
+            while True:
+                # Jitter so replicas running this loop do not all purge at once.
+                await asyncio.sleep(delay * random.uniform(0.75, 1.25))  # noqa: S311
+                delay = _RETENTION_INTERVAL_S
+                started = monotonic()
+                total_deleted = 0
+                batches = 0
+                for _ in range(_RETENTION_MAX_BATCHES_PER_TICK):
+                    try:
+                        deleted = await job_service.purge_terminal_jobs(
+                            older_than_days=retention_days, limit=_RETENTION_BATCH_SIZE
+                        )
+                    except Exception:  # noqa: BLE001
+                        # Log and stop this tick: a purge that cannot run must be
+                        # visible, not silently skipped until the table is huge.
+                        await logger.aexception("Background job retention sweep failed")
+                        break
+                    total_deleted += deleted
+                    batches += 1
+                    if deleted < _RETENTION_BATCH_SIZE:
+                        break
+                if total_deleted:
+                    await logger.ainfo(
+                        "Background job retention sweep completed",
+                        deleted_jobs=total_deleted,
+                        batches=batches,
+                        elapsed_s=round(monotonic() - started, 3),
+                    )
+
+        self._retention_task = asyncio.create_task(_loop())
 
     async def teardown(self) -> None:
         await self.stop()
@@ -858,13 +935,35 @@ class BackgroundExecutionService(Service):
                 )
                 continue
             user = self._user_stub(job.user_id)
-            with contextlib.suppress(Exception):
+            try:
                 await self._enqueue(
                     job_id=job.job_id,
                     flow_id=job.flow_id,
                     request=request_dict,
                     user=user,
                 )
+            except Exception as exc:  # noqa: BLE001
+                await logger.aerror(
+                    "Failed to re-enqueue queued workflow during startup recovery",
+                    job_id=str(job.job_id),
+                    flow_id=str(job.flow_id),
+                    stage="startup_enqueue",
+                    error_type=type(exc).__name__,
+                )
+                try:
+                    await job_service.release_queued_lease(
+                        job.job_id,
+                        owner=self._owner,
+                        heartbeat_at=lease_heartbeat,
+                    )
+                except Exception as release_exc:  # noqa: BLE001
+                    await logger.aerror(
+                        "Failed to release queued workflow lease after enqueue error",
+                        job_id=str(job.job_id),
+                        flow_id=str(job.flow_id),
+                        stage="startup_release",
+                        error_type=type(release_exc).__name__,
+                    )
         # Give up on runs that have sat suspended past their human-input deadline.
         with contextlib.suppress(Exception):
             await self.sweep_input_deadlines()

@@ -6,6 +6,7 @@ file upload, download, deletion, and listing operations.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import os
 from http import HTTPStatus
@@ -15,8 +16,29 @@ from langflow.logging.logger import logger
 
 from .service import StorageReadiness, StorageService
 
+# S3 parts are 5 MiB at least, except the last one.
+STREAM_PART_SIZE = 8 * 1024 * 1024
+# Server-side encryption modes whose ETag is not the body's MD5.
+_ETAG_NOT_MD5_ENCRYPTION = {"aws:kms", "aws:kms:dsse"}
+
+
+def md5_from_head(head: dict[str, Any]) -> str | None:
+    """The body's MD5 when a HeadObject response's ETag is one, otherwise None.
+
+    S3 sets the ETag to the MD5 of the body only for a single-part upload stored in
+    plain or SSE-S3 form. A multipart ETag carries a ``-``, and objects under SSE-KMS or
+    customer-provided keys (SSE-C) get an ETag that is not an MD5 at all.
+    """
+    etag = head.get("ETag", "").strip('"')
+    if not etag or "-" in etag:
+        return None
+    if head.get("ServerSideEncryption") in _ETAG_NOT_MD5_ENCRYPTION or head.get("SSECustomerAlgorithm"):
+        return None
+    return etag
+
+
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator, AsyncIterator
 
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
@@ -58,7 +80,12 @@ class S3StorageService(StorageService):
 
         # Create session - AWS credentials are picked up from environment variables
         self.session = get_session()
-        self._client = None
+        # One client per event loop. A client is bound to the loop that made it, and
+        # the service is reached from more than one: components running a loop of
+        # their own, CLI paths behind asyncio.run.
+        self._clients: dict[asyncio.AbstractEventLoop, tuple[AsyncGenerator[Any, None], Any]] = {}
+        # Bumped by teardown, so a client still being built when it runs is not cached.
+        self._generation = 0
 
         self.set_ready()
         logger.info(
@@ -165,9 +192,54 @@ class S3StorageService(StorageService):
         """
         return logical_path
 
-    def _get_client(self):
-        """Get or create an S3 client using the async context manager."""
-        return self.session.create_client("s3")
+    async def _hold_client(self) -> AsyncGenerator[Any, None]:
+        """Open a client and keep it open until this generator is closed.
+
+        Holding the client in an async generator ties it to its loop: a loop that shuts
+        down cleanly (``asyncio.run`` does) closes the async generators still open on
+        it, so a client built on a loop of its own is closed there, on that loop.
+        """
+        async with self.session.create_client("s3") as client:
+            yield client
+
+    @contextlib.asynccontextmanager
+    async def _get_client(self, *, shared: bool = True) -> AsyncIterator[Any]:
+        """Yield this event loop's S3 client, building it on first use.
+
+        Building a client per call costs a client and a TLS handshake for every
+        operation. The client stays open until ``teardown`` or until its loop shuts
+        down, so leaving the block does not close it.
+
+        ``shared=False`` yields a client of its own, closed when the block exits.
+        """
+        if not shared:
+            async with self.session.create_client("s3") as client:
+                yield client
+            return
+
+        loop = asyncio.get_running_loop()
+        # Its loop already closed what it could; only the reference is left to drop.
+        # A loop closed without shutdown_asyncgens never closed its client; the GC has to.
+        # Other threads prune and add entries too, so iterate a copy and tolerate a miss.
+        for closed in [other for other in list(self._clients) if other.is_closed()]:
+            self._clients.pop(closed, None)
+        if (held := self._clients.get(loop)) is not None:
+            yield held[1]
+            return
+
+        generation = self._generation
+        holder = self._hold_client()
+        client = await anext(holder)
+        if generation != self._generation or loop in self._clients:
+            # A teardown ran while this client was built, or another coroutine on this
+            # loop built one first. Use it for this call only.
+            try:
+                yield client
+            finally:
+                await holder.aclose()
+            return
+        self._clients[loop] = (holder, client)
+        yield client
 
     async def check_readiness(self) -> StorageReadiness:
         """Verify S3 credentials resolve and the configured bucket is reachable.
@@ -340,7 +412,10 @@ class S3StorageService(StorageService):
         key = self.build_full_path(flow_id, file_name)
 
         try:
-            async with self._get_client() as s3_client:
+            # A stream holds its connection until the caller has read it all, which a slow
+            # download can make as long as it likes. The shared client's 10 connections serve
+            # every operation on this loop, so a stream gets a client of its own.
+            async with self._get_client(shared=False) as s3_client:
                 response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
                 body = response["Body"]
 
@@ -452,10 +527,87 @@ class S3StorageService(StorageService):
         else:
             return file_size
 
-    async def teardown(self) -> None:
-        """Perform any cleanup operations when the service is being torn down.
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:
+        """The object's MD5 when its ETag is one (see ``md5_from_head``), otherwise None.
 
-        For S3, we don't need to do anything as aiobotocore handles cleanup
-        via context managers.
+        Raises:
+            FileNotFoundError: If the object does not exist, as ``get_file_size`` does.
         """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+        try:
+            async with self._get_client() as s3_client:
+                response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
+        except Exception as e:
+            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+                msg = f"File not found: {file_name}"
+                raise FileNotFoundError(msg) from e
+            raise
+        return md5_from_head(response)
+
+    async def save_file_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """Save a file from a stream of chunks, holding one part in memory at a time.
+
+        A body smaller than one part is a single ``put_object``; anything larger is a
+        multipart upload, aborted if any part fails so no partial object is left behind.
+        Returns the number of bytes written.
+        """
+        self._validate_identifiers(flow_id, file_name)
+        key = self.build_full_path(flow_id, file_name)
+        extra: dict[str, Any] = {}
+        if self.tags:
+            extra["Tagging"] = "&".join([f"{k}={v}" for k, v in self.tags.items()])
+
+        async with self._get_client() as s3_client:
+            buffer = bytearray()
+            written = 0
+            upload_id: str | None = None
+            parts: list[dict[str, Any]] = []
+
+            async def upload_part(body: bytes) -> None:
+                response = await s3_client.upload_part(
+                    Bucket=self.bucket_name, Key=key, UploadId=upload_id, PartNumber=len(parts) + 1, Body=body
+                )
+                parts.append({"ETag": response["ETag"], "PartNumber": len(parts) + 1})
+
+            try:
+                async for chunk in chunks:
+                    buffer += chunk
+                    written += len(chunk)
+                    while len(buffer) >= STREAM_PART_SIZE:
+                        if upload_id is None:
+                            created = await s3_client.create_multipart_upload(Bucket=self.bucket_name, Key=key, **extra)
+                            upload_id = created["UploadId"]
+                        await upload_part(bytes(buffer[:STREAM_PART_SIZE]))
+                        del buffer[:STREAM_PART_SIZE]
+                if upload_id is None:
+                    await s3_client.put_object(Bucket=self.bucket_name, Key=key, Body=bytes(buffer), **extra)
+                    return written
+                if buffer:
+                    await upload_part(bytes(buffer))
+                await s3_client.complete_multipart_upload(
+                    Bucket=self.bucket_name, Key=key, UploadId=upload_id, MultipartUpload={"Parts": parts}
+                )
+            except BaseException:
+                if upload_id is not None:
+                    with contextlib.suppress(Exception):
+                        await s3_client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=upload_id)
+                raise
+        return written
+
+    async def teardown(self) -> None:
+        """Close the clients this service built.
+
+        Assumes no operation is in flight: a client still in use is closed under it.
+        A client is closed on its own loop: this loop's here, a running loop's by a
+        close scheduled on it. A loop that has stopped closes its own when it shuts down.
+        """
+        self._generation += 1
+        loop = asyncio.get_running_loop()
+        clients, self._clients = self._clients, {}
+        for owner, (holder, _) in clients.items():
+            if owner is loop:
+                await holder.aclose()
+            elif owner.is_running():
+                asyncio.run_coroutine_threadsafe(holder.aclose(), owner)
         logger.info("S3 storage service teardown complete")
