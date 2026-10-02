@@ -74,6 +74,7 @@ class ALTKBaseAgentComponent(AgentComponent):
     """Preserve saved-node configuration and report retirement before execution."""
 
     def __init__(self, **kwargs):
+        """Initialize the component and its tool-pipeline manager."""
         super().__init__(**kwargs)
         self.pipeline_manager = ToolPipelineManager()
 

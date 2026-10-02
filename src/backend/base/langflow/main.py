@@ -106,6 +106,7 @@ _enterprise_lifespan_hooks: dict[str, list[Callable[[], Awaitable[None]]]] = {
 
 
 async def _run_enterprise_lifespan_hooks(phase: str) -> None:
+    """Run registered enterprise lifecycle hooks and isolate failures between hooks."""
     for hook in list(_enterprise_lifespan_hooks.get(phase, [])):
         try:
             await hook()
@@ -125,12 +126,15 @@ async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
+        """Initialize middleware that tracks client disconnections."""
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Race request handling against a client-disconnection watcher."""
         sentinel = object()
 
         async def cancel_handler():
+            """Wait until the requesting client disconnects."""
             while True:
                 if await request.is_disconnected():
                     return sentinel
@@ -151,6 +155,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Convert serialization failures into an HTTP response."""
         try:
             response = await call_next(request)
         except Exception as exc:
@@ -172,6 +177,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
 
 
 async def load_bundles_with_error_handling():
+    """Load configured bundles and fall back to an empty result on network errors."""
     try:
         return await load_bundles_from_urls()
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
@@ -625,6 +631,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
             async def delayed_init_mcp_servers():
+                """Initialize project MCP servers after starter-project setup has had time to finish."""
                 await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Loading MCP servers for projects")
@@ -1039,6 +1046,7 @@ def create_app():
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):
+        """Require a multipart boundary for file-upload requests."""
         if "/api/v1/files/upload" in request.url.path:
             content_type = request.headers.get("Content-Type")
 
@@ -1096,6 +1104,7 @@ def create_app():
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
+        """Expand comma-separated query values into repeated query parameters."""
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
             flattened.extend((key, entry) for entry in value.split(","))
@@ -1159,6 +1168,7 @@ def create_app():
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        """Return a conflict response when a deployment guard rejects an operation."""
         return JSONResponse(
             status_code=HTTPStatus.CONFLICT,
             content={"detail": exc.detail},
@@ -1244,6 +1254,7 @@ def create_app():
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
+        """Convert uncaught application exceptions into API responses."""
         if isinstance(exc, HTTPException):
             await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
@@ -1314,6 +1325,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     # get a native 405, and real API routes are registered earlier so they win.
     @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
     async def api_not_found(_path: str):
+        """Reject unknown API routes before the frontend catch-all route."""
         raise HTTPException(status_code=404, detail="Not Found")
 
     # Serve the favicon from an explicit high-priority route instead of relying on
@@ -1328,6 +1340,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.get("/favicon.ico", include_in_schema=False)
     async def favicon():
+        """Serve the frontend favicon when the asset exists."""
         if await anyio.Path(favicon_path).exists():
             return FileResponse(favicon_path, media_type="image/x-icon")
         raise HTTPException(status_code=404, detail="Not Found")
@@ -1342,6 +1355,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
         # Return JSON for all API endpoints to prevent HTML responses
+        """Return JSON for missing API routes and preserve frontend page handling."""
         if _request.url.path.startswith("/api"):
             # Extract detail from HTTPException if available
             detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"

@@ -301,6 +301,7 @@ class BaseVectorStoreBackend(ABC):
         return self._vector_store
 
     async def add_documents(self, docs: list[Document]) -> None:
+        """Write nonempty document batches through the initialized vector store."""
         if not docs:
             return
         await self.ensure_ready()
@@ -347,6 +348,7 @@ class BaseVectorStoreBackend(ABC):
         filter: dict[str, Any] | None = None,  # noqa: A002 — matches LangChain VectorStore API
         with_scores: bool = False,
     ) -> list[tuple[Document, float]]:
+        """Search with metadata filters and optionally return provider distance scores."""
         await self.ensure_ready()
         if with_scores:
             return await self.vector_store.asimilarity_search_with_score(query=query, k=k, filter=filter)
@@ -358,11 +360,13 @@ class BaseVectorStoreBackend(ABC):
         return -float(score)
 
     async def delete_by(self, where: dict[str, Any]) -> None:
+        """Delete matching documents through the initialized vector store."""
         await self.ensure_ready()
         await self.vector_store.adelete(where=where)
 
     async def count(self) -> int:
         # Default: iterate. Subclasses with a native count should override.
+        """Count documents by streaming batches when the backend has no native count."""
         await self.ensure_ready()
         total = 0
         async for batch in self.iter_documents(batch_size=5000):

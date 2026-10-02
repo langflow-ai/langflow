@@ -408,6 +408,7 @@ class MemoryBaseService(Service):
         await delete_kb(kb_name=kb_name, kb_username=kb_username)
 
     async def list_for_user(self, user_id: uuid.UUID) -> list[MemoryBase]:
+        """List Memory Bases owned by the specified user."""
         async with session_scope() as db:
             stmt = select(MemoryBase).where(MemoryBase.user_id == user_id)
             result = await db.exec(stmt)
@@ -440,6 +441,7 @@ class MemoryBaseService(Service):
         return stmt
 
     async def get(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> MemoryBase | None:
+        """Read a Memory Base only when it belongs to the specified user."""
         async with session_scope() as db:
             stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == user_id)
             result = await db.exec(stmt)
@@ -636,6 +638,7 @@ class MemoryBaseService(Service):
         actor_user_id: uuid.UUID,
         session_id: str,
     ) -> str:
+        """Authorize and enqueue ingestion for one Memory Base conversation."""
         return await _trigger_ingestion(
             memory_base_id,
             owner_user_id,
@@ -651,6 +654,7 @@ class MemoryBaseService(Service):
         session_id: str,
         job_id: uuid.UUID | None,
     ) -> None:
+        """Capture eligible flow output into the associated Memory Base session."""
         await _on_flow_output(
             flow_id,
             session_id,
@@ -659,6 +663,7 @@ class MemoryBaseService(Service):
         )
 
     async def check_mismatch(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Check whether the owner-scoped Memory Base embedding configuration has drifted."""
         return await _check_mismatch(
             memory_base_id,
             user_id,
@@ -671,6 +676,7 @@ class MemoryBaseService(Service):
         owner_user_id: uuid.UUID,
         actor_user_id: uuid.UUID,
     ) -> list[str]:
+        """Authorize and enqueue regeneration of the Memory Base sessions."""
         return await _regenerate(
             memory_base_id,
             owner_user_id,
@@ -711,6 +717,7 @@ class MemoryBaseService(Service):
     async def _get_or_create_session(
         self, db: AsyncSession, memory_base_id: uuid.UUID, session_id: str
     ) -> MemoryBaseSession:
+        """Find or initialize the processing cursor for a Memory Base conversation."""
         stmt = (
             select(MemoryBaseSession)
             .where(MemoryBaseSession.memory_base_id == memory_base_id)

@@ -169,6 +169,7 @@ async def create_record(
 
 
 async def get_by_user_and_name(user_id: UUID, name: str) -> KnowledgeBaseRecord | None:
+    """Find a knowledge base within the specified owner namespace."""
     async with session_scope() as session:
         stmt = select(KnowledgeBaseRecord).where(
             KnowledgeBaseRecord.user_id == user_id,
@@ -179,6 +180,7 @@ async def get_by_user_and_name(user_id: UUID, name: str) -> KnowledgeBaseRecord 
 
 
 async def get_by_id(record_id: UUID) -> KnowledgeBaseRecord | None:
+    """Read a knowledge base by UUID, leaving authorization to the caller."""
     async with session_scope() as session:
         return await session.get(KnowledgeBaseRecord, record_id)
 
@@ -481,6 +483,7 @@ async def delete_record(record_id: UUID) -> None:
 
 
 async def delete_by_user_and_name(user_id: UUID, name: str) -> None:
+    """Retire the matching owner-scoped knowledge base when it exists."""
     record = await get_by_user_and_name(user_id, name)
     if record is not None:
         await delete_record(record.id)
