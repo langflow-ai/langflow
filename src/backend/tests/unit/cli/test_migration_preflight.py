@@ -35,6 +35,8 @@ HEAD = script_directory().get_current_head()
 PARENT = "9d7e2a6c4b81"  # pragma: allowlist secret
 # The alembic head of Langflow 1.12.0, which the IBM Langflow 1.12.0-dev image runs.
 LANGFLOW_1_12_0 = "a3f8b1c9d7e2"  # pragma: allowlist secret
+# The revision that c3e1d5a7f902, which adds user.retired_at, revises: the last one that deletes the default superuser.
+BEFORE_RETIRED_AT = "f9d3b7a5c201"  # pragma: allowlist secret
 
 
 @pytest.fixture
@@ -205,6 +207,33 @@ class TestDefaultSuperuser:
         # On a target that deletes it, the workaround keeps it, and says what it leaves open.
         assert "last_login_at = now()" in deleted
         assert "API keys minted while AUTO_LOGIN was on keep working" in deleted
+
+    @pytest.fixture
+    async def owning_default_superuser(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        """The default superuser, never signed in and owning a flow."""
+        async with session_scope() as session:
+            default = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).one()
+            default.last_login_at = None
+            session.add(default)
+            session.add(Flow(name=f"owned-{uuid.uuid4().hex[:6]}", user_id=default.id, data={"nodes": []}))
+            await session.commit()
+
+    async def test_a_target_that_keeps_the_account_passes_and_says_what_to_set(self, owning_default_superuser):  # noqa: ARG002
+        # The head's migrations include the one that adds user.retired_at.
+        check = _check(await run_preflight(target_revision=HEAD), "default superuser")
+
+        assert check.status == "ok"
+        assert "the target keeps the account" in check.summary
+        assert f"LANGFLOW_SUPERUSER={DEFAULT_SUPERUSER}" in check.summary
+        assert "any other name deactivates it and its API keys" in check.summary
+
+    @pytest.mark.parametrize("target_revision", [BEFORE_RETIRED_AT, "0123456789ab"])
+    async def test_a_target_not_known_to_keep_the_account_is_refused(self, owning_default_superuser, target_revision):  # noqa: ARG002
+        # A schema from before user.retired_at, and a revision this Langflow does not know.
+        check = _check(await run_preflight(target_revision=target_revision), "default superuser")
+
+        assert check.status == "fail"
+        assert "last_login_at = now()" in check.problems[-1]
 
     async def test_a_default_superuser_that_signed_in_passes(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "default superuser").status == "ok"
