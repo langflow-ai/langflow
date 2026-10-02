@@ -1,8 +1,19 @@
+from typing import Annotated
 from unittest.mock import patch
 
 import pytest
+from fastapi import Depends, FastAPI
+from fastapi.testclient import TestClient
+from fastapi_pagination import Params
 from langflow.api.utils import get_suggestion_message, remove_api_keys
-from langflow.api.utils.core import build_content_disposition, format_exception_message, get_causing_exception
+from langflow.api.utils.core import (
+    MAX_PARAMS_PAGE_SIZE,
+    MIN_PAGE_SIZE,
+    build_content_disposition,
+    custom_params,
+    format_exception_message,
+    get_causing_exception,
+)
 from langflow.services.database.models.flow.utils import get_outdated_components
 from langflow.utils.version import get_version_info
 
@@ -294,3 +305,58 @@ def test_get_causing_exception_stops_at_curated_shim_error():
     curated = _raise_like_shim(raw)
     wrapped = _wrap_like_create_class(curated)
     assert get_causing_exception(wrapped) is curated
+
+
+@pytest.fixture(name="pagination_client")
+def pagination_client_fixture():
+    app = FastAPI()
+
+    @app.get("/paginated")
+    def paginated(params: Annotated[Params | None, Depends(custom_params)]):
+        return {"page": None if params is None else params.page, "size": None if params is None else params.size}
+
+    # raise_server_exceptions=False keeps the assertion on the status the client actually sees.
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        pytest.param("?page=1&size=101", id="size-above-ceiling"),
+        pytest.param("?page=1&size=1000", id="size-far-above-ceiling"),
+        pytest.param("?page=1&size=-5", id="size-negative"),
+        pytest.param("?page=1&size=0", id="size-zero-silently-defaulted"),
+        pytest.param("?page=0&size=10", id="page-zero-silently-defaulted"),
+    ],
+)
+def test_out_of_range_pagination_is_rejected_before_params_construction(pagination_client, query):
+    # Out-of-range values used to reach Params(), whose own bounds then raised ValidationError from
+    # inside the dependency: the route never ran and the client saw a 500 carrying the raw
+    # validation text, or a silently rewritten 200 for falsy values.
+    response = pagination_client.get(f"/paginated{query}")
+    assert response.status_code == 422, response.text
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        pytest.param("", (None, None), id="absent-params-stay-unpaginated"),
+        pytest.param("?page=2&size=10", (2, 10), id="in-range"),
+        pytest.param("?page=1&size=100", (1, 100), id="size-at-ceiling"),
+        pytest.param("?page=3", (3, 50), id="page-only-defaults-size"),
+        pytest.param("?size=20", (1, 20), id="size-only-defaults-page"),
+    ],
+)
+def test_accepted_pagination_values_are_unchanged(pagination_client, query, expected):
+    response = pagination_client.get(f"/paginated{query}")
+    assert response.status_code == 200, response.text
+    assert (response.json()["page"], response.json()["size"]) == expected
+
+
+def test_declared_pagination_bounds_match_fastapi_pagination():
+    # The bounds are declared twice on purpose, so pin the mirror: if fastapi-pagination ever moves
+    # them, this fails instead of custom_params quietly going back to raising 500s.
+    size_le = [c for c in Params.model_fields["size"].metadata if hasattr(c, "le")]
+    page_ge = [c for c in Params.model_fields["page"].metadata if hasattr(c, "ge")]
+    assert [c.le for c in size_le] == [MAX_PARAMS_PAGE_SIZE]
+    assert [c.ge for c in page_ge] == [MIN_PAGE_SIZE]
