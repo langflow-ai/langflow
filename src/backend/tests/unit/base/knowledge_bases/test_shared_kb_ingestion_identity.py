@@ -77,15 +77,28 @@ def _fake_backend() -> MagicMock:
 
 
 async def _run_dispatched_ingestion(
-    task_service: MagicMock, *, add_documents_error: Exception | None = None, metrics_error: Exception | None = None
+    task_service: MagicMock,
+    *,
+    add_documents_error: Exception | None = None,
+    metrics_error: Exception | None = None,
+    size_error: Exception | None = None,
+    metrics_result: dict[str, int] | None = None,
 ):
     """Run the ``perform_ingestion`` call a route dispatched, with storage mocked out."""
     dispatched = dict(task_service.fire_and_forget_task.await_args.kwargs)
     run = dispatched.pop("run_coro_func")
     dispatched.pop("job_id")
     backend = _fake_backend()
+    backend.storage_size_bytes.side_effect = size_error
     if add_documents_error is not None:
         backend.add_documents.side_effect = add_documents_error
+
+    async def update_metrics(scratch, _backend):
+        """Simulate a complete remote metric refresh or its independent failure."""
+        if metrics_error is not None:
+            raise metrics_error
+        scratch.update(metrics_result or {})
+
     with (
         patch(
             "langflow.services.knowledge_base_storage.runtime.create_backend", return_value=backend
@@ -98,7 +111,7 @@ async def _run_dispatched_ingestion(
         ) as cleanup,
         patch(
             "langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend",
-            new=AsyncMock(side_effect=metrics_error),
+            new=AsyncMock(side_effect=update_metrics),
         ),
         patch(
             "langflow.api.utils.ingestion_run_service.create_run", new=AsyncMock(return_value=uuid.uuid4())
@@ -348,4 +361,38 @@ async def test_metrics_failure_does_not_rollback_successful_ingestion(
     result.cleanup.assert_not_awaited()
     updated = await knowledge_base_service.get_by_user_and_name(user_two.id, KB_NAME)
     assert updated.status == "ready"
-    assert updated.size_bytes == 0
+    assert updated.size_bytes == 1234
+
+
+@pytest.mark.usefixtures("cross_user_grant")
+@pytest.mark.parametrize(("failure", "initial_chunks"), [("size", 0), ("size", 9), ("metrics", 9), ("both", 9)])
+async def test_ingestion_persists_independent_measurements(
+    client: AsyncClient, logged_in_headers, user_two, owners_kb, task_service, failure, initial_chunks
+):
+    """One unavailable remote measurement must preserve the other's cached aggregates."""
+    initial_metrics = (initial_chunks, 41 if initial_chunks else 0, 64 if initial_chunks else 0)
+    await knowledge_base_service.update_stats(
+        owners_kb.id, chunks=initial_metrics[0], words=initial_metrics[1], characters=initial_metrics[2], size_bytes=777
+    )
+    response = await client.post(
+        f"api/v1/knowledge_bases/{KB_NAME}/ingest",
+        headers=logged_in_headers,
+        files={"files": ("notes.txt", b"shared knowledge base content", "text/plain")},
+        data={"source_name": "notes", "chunk_size": "100", "chunk_overlap": "0"},
+    )
+    assert response.status_code == 200, response.text
+    result = await _run_dispatched_ingestion(
+        task_service,
+        metrics_error=RuntimeError("metrics unavailable") if failure in {"metrics", "both"} else None,
+        size_error=RuntimeError("size unavailable") if failure in {"size", "both"} else None,
+        metrics_result={"chunks": 5, "words": 17, "characters": 111},
+    )
+    result.cleanup.assert_not_awaited()
+    updated = await knowledge_base_service.get_by_user_and_name(user_two.id, KB_NAME)
+    assert updated.status == "ready"
+    assert (updated.chunks, updated.words, updated.characters) == (
+        (5, 17, 111) if failure == "size" else initial_metrics
+    )
+    assert knowledge_base_service.record_to_metadata_dict(updated)["status"] == "ready"
+    assert updated.size_bytes == (1234 if failure == "metrics" else 777)
+    assert updated.source_types == ["txt"]

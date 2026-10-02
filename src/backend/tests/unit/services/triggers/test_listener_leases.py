@@ -144,7 +144,7 @@ async def test_simultaneous_empty_claims_do_not_deadlock(make_connection, monkey
     """Overlap any lease reads so two contenders cannot rely on staggered snapshots."""
     connection_id = await make_connection()
     both_read = asyncio.Event()
-    readers = 0
+    readers: set[str] = set()
 
     async def contend(holder: str) -> datetime | None:
         """Claim through a real session, delaying reads until both contenders have read."""
@@ -158,11 +158,10 @@ async def test_simultaneous_empty_claims_do_not_deadlock(make_connection, monkey
 
             async def overlap_reads(statement, *args, **kwargs):
                 """Preserve real queries while forcing competing reads to overlap."""
-                nonlocal readers
                 result = await execute(statement, *args, **kwargs)
                 if isinstance(statement, Select):
-                    readers += 1
-                    if readers == 2:
+                    readers.add(holder)
+                    if len(readers) == 2:
                         both_read.set()
                     await both_read.wait()
                 return result
@@ -173,6 +172,8 @@ async def test_simultaneous_empty_claims_do_not_deadlock(make_connection, monkey
             )
 
     generations = await asyncio.wait_for(asyncio.gather(contend("alpha"), contend("beta")), timeout=10)
+    if readers:
+        assert readers == {"alpha", "beta"}
     assert sum(generation is not None for generation in generations) == 1
     async with session_scope() as session:
         assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=60) in {

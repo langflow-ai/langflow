@@ -749,35 +749,38 @@ class KBIngestionHelper:
             metrics: dict[str, Any] = {}
             try:
                 await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
+            except Exception as exc:  # noqa: BLE001 -- cached metrics must not roll back a successful write
+                metrics = {}
+                await logger.awarning("KB metrics refresh lagged for {}: {}", kb_name, type(exc).__name__)
+
+            size_bytes = None
+            try:
                 size_bytes = (
                     KBStorageHelper.get_directory_size(kb_path)
                     if kb_path is not None
                     else await backend.storage_size_bytes()
                 )
-            except Exception as exc:  # noqa: BLE001 -- cached metrics must not roll back a successful write
-                metrics = {}
-                size_bytes = None
-                await logger.awarning("KB metrics refresh lagged for %s: %s", kb_name, exc)
+            except Exception as exc:  # noqa: BLE001 -- size refresh must not discard successful metrics
+                await logger.awarning("KB size refresh lagged for {}: {}", kb_name, type(exc).__name__)
 
             existing_source_types = list(kb_record.source_types or []) if kb_record is not None else []
             merged_source_types = sorted(set(existing_source_types) | source_extension_tags)
 
             if kb_record_id is not None:
-                if size_bytes is not None:
-                    try:
-                        await knowledge_base_service.update_stats(
-                            kb_record_id,
-                            chunks=metrics.get("chunks", 0),
-                            words=metrics.get("words", 0),
-                            characters=metrics.get("characters", 0),
-                            size_bytes=size_bytes,
-                            source_types=merged_source_types,
-                            chunk_size=chunk_size,
-                            chunk_overlap=chunk_overlap,
-                            separator=separator or None,
-                        )
-                    except Exception as exc:  # noqa: BLE001
-                        await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, exc)
+                try:
+                    await knowledge_base_service.update_stats(
+                        kb_record_id,
+                        chunks=metrics.get("chunks"),
+                        words=metrics.get("words"),
+                        characters=metrics.get("characters"),
+                        size_bytes=size_bytes,
+                        source_types=merged_source_types,
+                        chunk_size=chunk_size,
+                        chunk_overlap=chunk_overlap,
+                        separator=separator or None,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("KB DB stat update lagged for {}: {}", kb_name, type(exc).__name__)
                 # Clear any previous failure marker once the run finishes
                 # writing chunks; ``final_status`` (PARTIAL/SUCCEEDED) is
                 # not "failed", so the KB row should reflect READY.

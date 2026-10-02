@@ -59,19 +59,24 @@ export const useKnowledgeBasePolling = ({
 
         // Collect status transitions for notification
         const transitions: KnowledgeBaseStatusTransition[] = [];
+        let storageStateChanged = false;
         if (currentData) {
           for (const kb of freshData) {
             const old = currentData.find((o) => o.dir_name === kb.dir_name);
+            if (old && old.storage_state !== kb.storage_state) {
+              storageStateChanged = true;
+            }
             if (old && old.status !== kb.status) {
               transitions.push({ kb, previousStatus: old.status || "empty" });
             }
           }
         }
 
-        // Check if any KB status changed or list size changed
+        // Publish storage transitions to every cache reader, including drawers.
         const statusChanged =
           !currentData ||
           currentData.length !== freshData.length ||
+          storageStateChanged ||
           transitions.length > 0;
 
         if (statusChanged) {
