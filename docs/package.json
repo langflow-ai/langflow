@@ -114,6 +114,10 @@
         "minimatch": "^9.0.7"
       }
     },
+    "ws": "^7.5.11",
+    "webpack-dev-server": {
+      "ws": "^8.21.0"
+    },
     "styled-components": {
       "postcss": "8.4.49"
     },
