@@ -203,7 +203,7 @@ Add `--dry-run` to see what it would copy, and `--username` to limit it to one u
 
 Add `--json` to run the command from another program. Standard output then carries one JSON object per line, and logs go to standard error:
 
-* `progress`: sent as each file finishes, with the files `done`, the `total`, and the `bytes` copied so far.
+* `progress`: the files `done`, the `total`, and the `bytes` copied so far. The first one is sent at the start with `"phase": "checking"` and a `total` of `null`, because the files aren't counted yet. The next ones have `"phase": "copying"` and the real `total`: one as soon as the files are counted, then one as each file finishes.
 * `item`: one result, sent as each file finishes. Chat history rewrites and uploaded files with no bytes on local disk follow the copies.
 * `error`: the command refused to start. The `code` is `schema_mismatch`, `source_not_local`, `no_such_user`, or `bucket_error`.
 * `report`: the last line of a run that reached its end, with the `counts` for each status, the `bytes` copied, and the failed items under `attention`.

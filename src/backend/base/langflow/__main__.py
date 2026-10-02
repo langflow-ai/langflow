@@ -1249,8 +1249,9 @@ def relocate_files(
     Files stream across, so memory scales with --concurrency alone.
 
     With --json, stdout carries one JSON object per line and logs go to stderr:
-    a "progress" and an "item" as each file finishes, an "error" when the run is
-    refused, and a closing "report" with the counts and the items that failed.
+    a "progress" at the start, another once the files are counted, a "progress"
+    and an "item" as each file finishes, an "error" when the run is refused, and
+    a closing "report" with the counts and the items that failed.
 
     Exits non-zero if any file could not be copied.
     """
@@ -1283,6 +1284,10 @@ async def _relocate_files(
     from langflow.cli.events import emit
     from langflow.services.utils import register_all_service_factories
 
+    if as_json:
+        # Before the checks and the listing, which on a large instance take a while: the
+        # caller learns the run is alive, and that the number of files is not known yet.
+        emit("progress", phase="checking", done=0, total=None, bytes=0, unit="files")
     # Not initialize_services(): that is the server's startup, which migrates the schema,
     # sets up the superuser and prunes history. Services are built on first use instead,
     # and building one writes nothing.
@@ -1297,7 +1302,11 @@ async def _relocate_files(
             concurrency=concurrency,
             on_result=(lambda result: emit("item", item=asdict(result))) if as_json else None,
             on_progress=(
-                (lambda done, total, copied: emit("progress", done=done, total=total, bytes=copied, unit="files"))
+                (
+                    lambda done, total, copied: emit(
+                        "progress", phase="copying", done=done, total=total, bytes=copied, unit="files"
+                    )
+                )
                 if as_json
                 else None
             ),

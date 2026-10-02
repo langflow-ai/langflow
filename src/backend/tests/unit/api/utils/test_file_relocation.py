@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import anyio
 import pytest
@@ -617,8 +617,9 @@ class TestResultsAsTheyAreProduced:
             target_bucket=bucket, target_prefix="files", on_progress=lambda *counts: progress.append(counts)
         )
 
-        # Copied, skipped and failed files all count as done. Only the copied one moved bytes.
-        assert [(done, total) for done, total, _ in progress] == [(1, 3), (2, 3), (3, 3)]
+        # The total is known before a file finishes. Copied, skipped and failed files all count
+        # as done, and only the copied one moved bytes.
+        assert [(done, total) for done, total, _ in progress] == [(0, 3), (1, 3), (2, 3), (3, 3)]
         assert progress[-1] == (3, 3, len(b"new"))
 
 
@@ -627,6 +628,15 @@ class TestJsonEvents:
 
     _flow_with_attachment = TestChatAttachmentPaths._flow_with_attachment
     _message = TestChatAttachmentPaths._message
+    # The first line of every run: it is alive, and does not know yet how many files there are.
+    _checking: ClassVar = {
+        "event": "progress",
+        "phase": "checking",
+        "done": 0,
+        "total": None,
+        "bytes": 0,
+        "unit": "files",
+    }
 
     async def _run(self, capsys, bucket: str, **options) -> tuple[int, list[dict]]:
         from langflow.__main__ import _relocate_files
@@ -659,8 +669,16 @@ class TestJsonEvents:
             ("copied", "report.pdf", None),
             ("repointed", "photo.png", None),
         ]
-        assert [event["done"] for event in progress] == [1, 2, 3]
-        assert progress[-1] == {"event": "progress", "done": 3, "total": 3, "bytes": 23, "unit": "files"}
+        assert events[:2] == [
+            self._checking,
+            {"event": "progress", "phase": "copying", "done": 0, "total": 3, "bytes": 0, "unit": "files"},
+        ]
+        assert [(event["phase"], event["done"], event["total"]) for event in progress[2:]] == [
+            ("copying", 1, 3),
+            ("copying", 2, 3),
+            ("copying", 3, 3),
+        ]
+        assert progress[-1]["bytes"] == 23
         assert report == {
             "event": "report",
             "ok": True,
@@ -670,6 +688,24 @@ class TestJsonEvents:
             "bytes": 23,
             "attention": [],
         }
+
+    async def test_an_instance_with_no_files_still_gets_both_phases(self, active_user, storage_dir, bucket, capsys):  # noqa: ARG002
+        failed, events = await self._run(capsys, bucket)
+
+        assert failed == 0
+        assert events == [
+            self._checking,
+            {"event": "progress", "phase": "copying", "done": 0, "total": 0, "bytes": 0, "unit": "files"},
+            {
+                "event": "report",
+                "ok": True,
+                "dry_run": False,
+                "scope": "all users",
+                "counts": {},
+                "bytes": 0,
+                "attention": [],
+            },
+        ]
 
     async def test_a_conflict_is_an_item_with_a_code_and_the_report_repeats_only_it(
         self, active_user, storage_dir, bucket, capsys
@@ -710,7 +746,14 @@ class TestJsonEvents:
 
         _, events = await self._run(capsys, bucket, dry_run=True, username=active_user.username)
 
-        assert events[-2] == {"event": "progress", "done": 1, "total": 1, "bytes": 0, "unit": "files"}
+        assert events[-2] == {
+            "event": "progress",
+            "phase": "copying",
+            "done": 1,
+            "total": 1,
+            "bytes": 0,
+            "unit": "files",
+        }
         assert events[-1] == {
             "event": "report",
             "ok": True,
@@ -734,8 +777,9 @@ class TestJsonEvents:
 
         events = self._events(capsys)
         assert refused.value.exit_code == 2
-        assert [(event["event"], event["code"]) for event in events] == [("error", "schema_mismatch")]
-        assert "not_this_version" in events[0]["message"]
+        assert events[0] == self._checking
+        assert [(event["event"], event["code"]) for event in events[1:]] == [("error", "schema_mismatch")]
+        assert "not_this_version" in events[1]["message"]
         assert await _stored_keys(bucket) == []
 
     async def test_a_username_nobody_has_is_a_single_error(self, active_user, storage_dir, bucket, capsys):  # noqa: ARG002
@@ -746,7 +790,10 @@ class TestJsonEvents:
 
         events = self._events(capsys)
         assert refused.value.exit_code == 2
-        assert events == [{"event": "error", "code": "no_such_user", "message": "no user named 'nobody'"}]
+        assert events == [
+            self._checking,
+            {"event": "error", "code": "no_such_user", "message": "no user named 'nobody'"},
+        ]
 
     async def test_an_s3_source_is_a_single_error(self, active_user, storage_dir, bucket, capsys, monkeypatch):  # noqa: ARG002
         import typer
@@ -758,7 +805,8 @@ class TestJsonEvents:
 
         events = self._events(capsys)
         assert refused.value.exit_code == 2
-        assert [(event["event"], event["code"]) for event in events] == [("error", "source_not_local")]
+        assert events[0] == self._checking
+        assert [(event["event"], event["code"]) for event in events[1:]] == [("error", "source_not_local")]
 
     async def test_a_bucket_that_does_not_exist_is_a_single_error(self, active_user, storage_dir, capsys):
         import typer
@@ -771,7 +819,8 @@ class TestJsonEvents:
 
         assert refused.value.exit_code == 2
         assert self._events(capsys) == [
-            {"event": "error", "code": "bucket_error", "message": f"bucket '{missing}' does not exist"}
+            self._checking,
+            {"event": "error", "code": "bucket_error", "message": f"bucket '{missing}' does not exist"},
         ]
 
     async def test_the_command_writes_only_json_to_stdout(self, active_user, storage_dir, bucket):
@@ -798,7 +847,11 @@ class TestJsonEvents:
 
         events = [json.loads(line) for line in stdout.decode().splitlines()]
         assert process.returncode == 1
-        assert sorted((event["event"], event.get("item", {}).get("status")) for event in events[:-1]) == [
+        assert events[:2] == [
+            self._checking,
+            {"event": "progress", "phase": "copying", "done": 0, "total": 3, "bytes": 0, "unit": "files"},
+        ]
+        assert sorted((event["event"], event.get("item", {}).get("status")) for event in events[2:-1]) == [
             ("item", "copied"),
             ("item", "copied"),
             ("item", "failed"),

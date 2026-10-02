@@ -110,9 +110,9 @@ async def relocate_files(
     alone.
 
     ``on_result`` is given each file's result as that file finishes, and ``on_progress``
-    the files finished, the files in all and the bytes copied so far. The results that
-    are not a file's copy, the rows without bytes and the repoints, follow once the
-    repoints are committed.
+    the files finished, the files in all and the bytes copied so far, the first time
+    as soon as the files are listed. The results that are not a file's copy, the rows
+    without bytes and the repoints, follow once the repoints are committed.
     """
     _refuse_a_source_that_is_not_local()
     source = get_storage_service()
@@ -128,6 +128,8 @@ async def relocate_files(
         results: list[FileRelocationResult] = [None] * len(work)  # type: ignore[list-item]
         limiter = anyio.CapacityLimiter(max(1, concurrency))
         done = copied = 0
+        if on_progress:
+            on_progress(0, len(work), 0)
 
         async def relocate(index: int, namespace: str, file_name: str) -> None:
             nonlocal done, copied
