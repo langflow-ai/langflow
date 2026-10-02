@@ -89,6 +89,8 @@
     "body-parser": "^1.20.6",
     "fflate": "^0.4.9",
     "http-proxy-middleware": "^2.0.10",
-    "launch-editor": "^2.14.1"
+    "launch-editor": "^2.14.1",
+    "minimatch@^8": "^8.0.6",
+    "minimatch@^9": "^9.0.7"
   }
 }
