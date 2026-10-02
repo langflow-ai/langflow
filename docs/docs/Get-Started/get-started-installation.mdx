@@ -200,7 +200,7 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     uv run langflow run
     ```
 
-    If the password is only in a `.env` file, pass that file with `--env-file`. The `langflow run` command loads a `.env` file only when `--env-file` is set:
+    If the password is in a `.env` file, pass that file with `--env-file`. This loads the file and overrides variables already set in the environment:
 
     ```bash
     uv run langflow run --env-file .env
