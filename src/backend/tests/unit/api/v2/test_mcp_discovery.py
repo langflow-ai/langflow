@@ -167,3 +167,95 @@ async def test_code_execution_restriction_precedes_discovery(discovery_db, serve
         await get_servers(user, discovery_db, None, settings, action_count=True)
     assert exc.value.status_code == 403
     assert processes[0] == []
+
+
+async def test_http_discovery_loads_user_variables_once_and_closes_clients(discovery_db, monkeypatch):
+    from aiohttp import web
+    from langflow.services.auth.utils import encrypt_api_key
+    from langflow.services.database.models.variable.model import Variable
+    from lfx.base.mcp import util
+
+    requests = []
+
+    async def respond(request):
+        requests.append((request.method, request.headers.get("Authorization")))
+        if request.method == "GET":
+            return web.Response(status=405)
+        if request.method == "DELETE":
+            return web.Response(status=200)
+        message = await request.json()
+        if "id" not in message:
+            return web.Response(status=202)
+        if message["method"] == "initialize":
+            result = {
+                "protocolVersion": message["params"]["protocolVersion"],
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": "discovery-test", "version": "1.0"},
+            }
+        else:
+            result = {"tools": [{"name": "echo", "inputSchema": {"type": "object", "properties": {}}}]}
+        return web.json_response(
+            {"jsonrpc": "2.0", "id": message["id"], "result": result},
+            headers={"Mcp-Session-Id": "discovery-test"},
+        )
+
+    app = web.Application()
+    app.router.add_route("*", "/mcp", respond)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    try:
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = runner.addresses[0][1]
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+        user = SimpleNamespace(id=uuid4(), is_superuser=False)
+        other_user_id = uuid4()
+        for user_id, token_value in [(user.id, "discovery-test-value"), (other_user_id, "other-user-value")]:
+            for name, value, variable_type in [
+                ("MCP_ENDPOINT", f"http://127.0.0.1:{port}/mcp", "Generic"),
+                ("MCP_TOKEN", token_value, "Credential"),
+            ]:
+                discovery_db.add(Variable(user_id=user_id, name=name, value=encrypt_api_key(value), type=variable_type))
+        for index in range(2):
+            discovery_db.add(
+                MCPServer(
+                    user_id=user.id,
+                    name=f"http-{index}",
+                    config={"url": "{{MCP_ENDPOINT}}", "headers": {"Authorization": "Bearer {{MCP_TOKEN}}"}},
+                    transport="streamable_http",
+                )
+            )
+        await discovery_db.commit()
+
+        variable_loads = 0
+        execute = discovery_db.exec
+
+        async def record_exec(statement, *args, **kwargs):
+            nonlocal variable_loads
+            if Variable.__table__ in statement.get_final_froms():
+                variable_loads += 1
+            return await execute(statement, *args, **kwargs)
+
+        monkeypatch.setattr(discovery_db, "exec", record_exec)
+        clients = []
+        create_client = util.create_mcp_http_client_with_ssl_option
+
+        def record_client(*args, **kwargs):
+            client = create_client(*args, **kwargs)
+            clients.append(client)
+            return client
+
+        monkeypatch.setattr(util, "create_mcp_http_client_with_ssl_option", record_client)
+        before = _manager_tasks()
+        results = await get_servers(user, discovery_db, None, get_settings_service(), action_count=True)
+
+        assert results == [{"name": f"http-{i}", "mode": "streamable_http", "toolsCount": 1} for i in range(2)]
+        assert variable_loads == 1
+        assert clients
+        assert all(client.is_closed for client in clients)
+        assert requests
+        assert all(value == "Bearer discovery-test-value" for _, value in requests)
+        assert sum(method == "DELETE" for method, _ in requests) >= 2
+        assert _manager_tasks() <= before
+    finally:
+        await runner.cleanup()

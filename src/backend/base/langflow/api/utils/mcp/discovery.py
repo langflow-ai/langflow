@@ -32,21 +32,25 @@ async def _finish_cleanup(future: asyncio.Future) -> bool:
 async def discovery_clients() -> AsyncIterator[tuple[MCPStdioClient, MCPStreamableHttpClient]]:
     """Own every session and background task created by a single discovery check."""
     manager = MCPSessionManager()
-    cache = ThreadingInMemoryCache()
-    cache.set("mcp_session_manager", manager)
-    stdio_client = MCPStdioClient(component_cache=cache)
-    http_client = MCPStreamableHttpClient(component_cache=cache)
+    stdio_client: MCPStdioClient | None = None
+    http_client: MCPStreamableHttpClient | None = None
 
     async def close_clients() -> None:
         try:
             try:
-                await stdio_client.disconnect()
+                if stdio_client is not None:
+                    await stdio_client.disconnect()
             finally:
-                await http_client.disconnect()
+                if http_client is not None:
+                    await http_client.disconnect()
         finally:
             await manager.cleanup_all()
 
     try:
+        cache: ThreadingInMemoryCache = ThreadingInMemoryCache()
+        cache.set("mcp_session_manager", manager)
+        stdio_client = MCPStdioClient(component_cache=cache)
+        http_client = MCPStreamableHttpClient(component_cache=cache)
         yield stdio_client, http_client
     finally:
         # disconnect() only releases established contexts. An interrupted handshake

@@ -132,3 +132,43 @@ async def test_unexpected_check_failure_is_propagated_and_releases_capacity():
     for _ in range(2):
         with pytest.raises(RuntimeError, match="broken"):
             await run_server_checks(["broken"] * MAX_CONCURRENT_CHECKS, broken, timeout=1)
+
+
+@pytest.mark.parametrize("stage", ["cache_creation", "cache_registration", "stdio_client", "http_client"])
+async def test_initialization_failure_cleans_owned_manager_and_constructed_clients(monkeypatch, stage):
+    from langflow.api.utils.mcp import discovery
+
+    before = asyncio.all_tasks()
+    disconnected = []
+    original_disconnect = discovery.MCPStdioClient.disconnect
+
+    async def record_disconnect(client):
+        disconnected.append(client)
+        await original_disconnect(client)
+
+    def fail(*_args, **_kwargs):
+        message = "discovery setup failed"
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(discovery.MCPStdioClient, "disconnect", record_disconnect)
+    if stage == "cache_creation":
+        monkeypatch.setattr(discovery, "ThreadingInMemoryCache", fail)
+    elif stage == "cache_registration":
+        monkeypatch.setattr(discovery.ThreadingInMemoryCache, "set", fail)
+    elif stage == "stdio_client":
+        monkeypatch.setattr(discovery, "MCPStdioClient", fail)
+    else:
+        monkeypatch.setattr(discovery, "MCPStreamableHttpClient", fail)
+
+    try:
+        with pytest.raises(RuntimeError, match="discovery setup failed"):
+            async with discovery.discovery_clients():
+                pytest.fail("Failed discovery initialization must not yield clients")
+        assert not asyncio.all_tasks() - before
+        assert len(disconnected) == (1 if stage == "http_client" else 0)
+    finally:
+        # Keep an unfixed implementation from leaking tasks into subsequent cases.
+        leaked = asyncio.all_tasks() - before
+        for task in leaked:
+            task.cancel()
+        await asyncio.gather(*leaked, return_exceptions=True)
