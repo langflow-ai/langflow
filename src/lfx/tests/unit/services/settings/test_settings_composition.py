@@ -54,6 +54,7 @@ EXPECTED_FIELDS = {
     # PathSettings
     "config_dir",
     "knowledge_bases_dir",
+    "knowledge_base_auto_migrate",
     "knowledge_base_storage_pool_size",
     # ServerSettings
     "deployment_profile",
@@ -350,6 +351,7 @@ def test_critical_defaults_unchanged():
     assert settings.host == "localhost"
     assert settings.port == 7860
     assert settings.workers == 1
+    assert settings.knowledge_base_auto_migrate is True
     assert settings.cache_type == "async"
     assert settings.storage_type == "local"
     assert settings.event_delivery == "streaming"
@@ -544,6 +546,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_HOST", "0.0.0.0", "host", "0.0.0.0"),
         ("LANGFLOW_PORT", "8080", "port", 8080),
         ("LANGFLOW_WORKERS", "2", "workers", 2),
+        ("LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE", "false", "knowledge_base_auto_migrate", False),
         ("LANGFLOW_LOG_LEVEL", "info", "log_level", "info"),
         ("LANGFLOW_CACHE_TYPE", "memory", "cache_type", "memory"),
         ("LANGFLOW_STORAGE_TYPE", "s3", "storage_type", "s3"),
