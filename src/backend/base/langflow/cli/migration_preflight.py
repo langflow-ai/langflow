@@ -26,6 +26,7 @@ from langflow.cli.integrity import (
     check_credentials,
     check_instance,
     check_schema,
+    recorded_revisions,
     script_directory,
 )
 
@@ -87,7 +88,12 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
     # get_heads() prints a list, such as ['<revision>']; pasted as is, it names that revision.
     target_revision = target_revision.strip("[]'\" ")
     script = script_directory()
-    source_revisions = [row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))]
+    try:
+        # A source with no alembic_version table records no revision, which the schema check reports.
+        source_revisions = sorted(await recorded_revisions(session))
+    except sa.exc.OperationalError:
+        await session.rollback()
+        return CheckResult(name, "warn", "not checked: the database could not be reached")
     try:
         target_ancestry = {revision.revision for revision in script.iterate_revisions(target_revision, "base")}
     except Exception:  # noqa: BLE001 - an unknown revision raises one of several alembic errors

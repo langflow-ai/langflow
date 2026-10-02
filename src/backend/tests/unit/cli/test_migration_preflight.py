@@ -14,7 +14,7 @@ import anyio
 import pytest
 import sqlalchemy as sa
 from cryptography.fernet import Fernet
-from langflow.cli.integrity import script_directory
+from langflow.cli.integrity import open_instance, script_directory
 from langflow.cli.migration_preflight import run_preflight
 from langflow.services.auth.utils import encrypt_api_key, ensure_fernet_key
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment
@@ -65,6 +65,25 @@ async def safe_superuser(active_user, storage_dir, kb_root):  # noqa: ARG001
         )
         await session.commit()
     return active_user
+
+
+@pytest.fixture
+async def instance_on(client, monkeypatch):  # noqa: ARG001
+    """Start the services from nothing on a database the test names, as the command starts them."""
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    manager = get_service_manager()
+    with monkeypatch.context() as patch:
+        patch.setattr(manager, "services", {})
+
+        def start(database_url: str) -> None:
+            patch.setenv("LANGFLOW_DATABASE_URL", database_url)
+            open_instance()
+
+        yield start
+        if database := manager.services.get(ServiceType.DATABASE_SERVICE):
+            await database.engine.dispose()
 
 
 def _check(report, name):
@@ -136,6 +155,29 @@ class TestVersionDirection:
         check = _check(await run_preflight(target_revision=str([LANGFLOW_1_12_0])), "version")
 
         assert check.status == "fail"
+
+
+class TestSourceThatCannotBeRead:
+    """With a target revision the version check reads the source first, and leaves reporting it to the schema check."""
+
+    async def test_a_source_with_no_alembic_version_table_fails_the_schema_check(self, instance_on, tmp_path):
+        instance_on(f"sqlite:///{tmp_path}/empty.db")
+
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [c.name for c in report.checks] == ["version", "source: schema"]
+        assert report.checks[1].status == "fail"
+        assert "no recorded revision" in report.checks[1].summary
+
+    async def test_a_source_that_cannot_be_reached_fails_the_schema_check(self, instance_on):
+        # Nothing listens on port 1, so the connection is refused.
+        instance_on("postgresql://user:not-to-be-shown@127.0.0.1:1/x")  # pragma: allowlist secret
+
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [(c.name, c.status) for c in report.checks] == [("version", "warn"), ("source: schema", "fail")]
+        assert "could not be reached" in report.checks[0].summary
+        assert "could not be reached" in report.checks[1].summary
 
 
 class TestDefaultSuperuser:
