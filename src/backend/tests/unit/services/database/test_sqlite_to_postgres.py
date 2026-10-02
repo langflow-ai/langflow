@@ -798,6 +798,42 @@ class TestCommandOutput:
             assert sa.inspect(conn).get_table_names() == []
         engine.dispose()
 
+    def test_target_at_a_revision_this_langflow_does_not_know_is_refused(
+        self, sqlite_source, postgres_database, run_cli
+    ):
+        _seed(sqlite_source)
+        engine = sa.create_engine(postgres_database)
+        with engine.begin() as conn:
+            # What a newer Langflow leaves behind: a revision this one has no migration for.
+            conn.execute(sa.text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
+            conn.execute(sa.text("INSERT INTO alembic_version VALUES ('ffffffffffff')"))
+        engine.dispose()
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", postgres_database)
+
+        assert result.exit_code == 1
+        # Alembic's own error escaping would leave a program reading --json without its report line.
+        assert isinstance(result.exception, SystemExit)
+        events = _events(result)
+        error, report = events[-2:]
+        assert [event["event"] for event in events if event["event"] != "progress"] == ["error", "report"]
+        assert error["code"] == "target_not_empty"
+        assert error["message"].startswith("target database is at revision ffffffffffff")
+        assert "another Langflow version" in error["message"]
+        assert "convert into an empty database" in error["message"]
+        assert report["problems"] == [{"code": "target_not_empty", "message": error["message"]}]
+
+        text = run_cli("--source", sqlite_source, "--target", postgres_database)
+
+        assert text.exit_code == 1
+        assert isinstance(text.exception, SystemExit)
+        assert text.stdout == ""
+        assert text.stderr == f"Problem: {error['message']}\n"
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == ["alembic_version"]
+        engine.dispose()
+
     def test_json_report_records_the_orphans_that_were_dropped(self, sqlite_source, postgres_database, run_cli):
         _seed(sqlite_source)
         _leave_orphans(sqlite_source)

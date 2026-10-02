@@ -25,6 +25,7 @@ import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from alembic.util import CommandError
 from sqlalchemy.dialects.postgresql import insert
 
 if TYPE_CHECKING:
@@ -151,7 +152,18 @@ def convert_sqlite_to_postgres(
             _preflight(source, target, models, report, drop_orphans=drop_orphans)
             if report.problems:
                 return report
-            upgrade_to_head(target_url)
+            try:
+                upgrade_to_head(target_url)
+            except CommandError as exc:
+                # Alembic refuses before it changes anything, so the target is as it was.
+                report.problems.append(
+                    Problem(
+                        "target_not_empty",
+                        f"target database is at revision {_revision(target)}, which this Langflow cannot migrate "
+                        f"({exc}), so it was last used by another Langflow version; convert into an empty database",
+                    )
+                )
+                return report
             _convert(
                 source,
                 target,
