@@ -88,6 +88,52 @@
     "colord": "^2.9.4",
     "fflate": "^0.4.9",
     "http-proxy-middleware": "^2.0.10",
+    "postcss-selector-parser": "^6.1.3",
+    "@csstools/postcss-cascade-layers": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "@csstools/postcss-is-pseudo-class": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "@csstools/postcss-scope-pseudo-class": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "css-blank-pseudo": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "css-has-pseudo": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-attribute-case-insensitive": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-custom-selectors": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-dir-pseudo-class": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-focus-visible": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-focus-within": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-modules-local-by-default": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-modules-scope": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-nesting": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-pseudo-class-any-link": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-selector-not": {
+      "postcss-selector-parser": "^7.1.3"
+    },
     "ajv": "^6.14.0",
     "ajv-formats": {
       "ajv": "^8.18.0"
