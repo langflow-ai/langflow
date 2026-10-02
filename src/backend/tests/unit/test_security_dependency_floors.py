@@ -182,10 +182,9 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
     for name, minimum in (("authlib", "1.8.0"), ("virtualenv", "21.14.2"), ("Werkzeug", "3.1.9")):
         _assert_floor(_requirement(overrides, name), minimum)
 
-    litellm = [Requirement(spec) for spec in overrides if Requirement(spec).name.lower() == "litellm"]
-    assert len(litellm) == 2
-    for requirement in litellm:
-        _assert_floor(requirement, "1.96.2")
+    litellm = _requirement(overrides, "litellm")
+    _assert_floor(litellm, "1.103.1")
+    _assert_specifier(litellm, "!=", "1.104.0rc1")
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
@@ -193,7 +192,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
         ("oauthlib", "4.0.0"),
         ("pyjwt", "2.15.1"),
         ("urllib3", "2.8.0"),
-        ("litellm", "1.96.2"),
+        ("litellm", "1.103.1"),
         ("a2a-sdk", "1.2.1"),
         ("authlib", "1.8.0"),
         ("virtualenv", "21.14.2"),
@@ -233,14 +232,16 @@ def test_published_packages_enforce_current_python_floors() -> None:
     _assert_specifier(urllib3, "<", "3.0.0")
 
     litellm = _requirement(base_project["optional-dependencies"]["litellm"], "litellm")
-    _assert_floor(litellm, "1.96.2")
+    _assert_floor(litellm, "1.103.1")
+    _assert_specifier(litellm, "!=", "1.104.0rc1")
 
     bundle_extras = _load_pyproject("src/bundles/lfx-bundles/pyproject.toml")["project"]["optional-dependencies"]
     for cuga_requirements in (base_project["optional-dependencies"]["cuga"], bundle_extras["cuga"]):
         cuga_litellm = [Requirement(spec) for spec in cuga_requirements if Requirement(spec).name.lower() == "litellm"]
         assert len(cuga_litellm) == 2
         for requirement in cuga_litellm:
-            _assert_floor(requirement, "1.96.2")
+            _assert_floor(requirement, "1.103.1")
+            _assert_specifier(requirement, "!=", "1.104.0rc1")
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["cuga"] == bundle_extras["cuga"]
