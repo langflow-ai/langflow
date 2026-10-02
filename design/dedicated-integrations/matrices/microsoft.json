@@ -9,7 +9,7 @@
   },
   "wave": 1,
   "max_included_actions": 8,
-  "verified_on": "2026-09-01",
+  "verified_on": "2026-10-02",
   "oauth_app_owner_by_context": {
     "hosted": "langflow",
     "self_managed": "customer",
@@ -41,49 +41,49 @@
       "url": "https://learn.microsoft.com/en-us/graph/throttling-limits",
       "title": "Microsoft Graph throttling limits",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Global: 130,000 requests per 10 seconds per app across all tenants. Outlook: 10,000 requests per 10 minutes and 4 concurrent requests per app per mailbox, 150 MB upload per 5 minutes. Teams: POST /chats/{id}/messages 200 rps per app, 20 rps per app per tenant, 1 rps per chat, 1 rps per user; POST /teams/{id}/channels/{id}/messages 500 rps per app, 50 rps per app per tenant, 1 rps per channel, 1 rps per user; a sustained rate of about 83 percent of the listed value is also enforced. Files and lists defer to the SharePoint throttling page."
     },
     "sharepoint-throttling": {
       "url": "https://learn.microsoft.com/en-us/sharepoint/dev/general-development/how-to-avoid-getting-throttled-or-blocked-in-sharepoint-online",
       "title": "Avoid getting throttled or blocked in SharePoint Online",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "429 or 503 with Retry-After; resource-unit costs (1 single-item or download, 2 list children or writes, 5 permission operations); per-user 3,000 requests per 5 minutes; per-app-per-tenant RU limits by license band; no IETF RateLimit headers; User-Agent decoration NONISV|CompanyName|AppName/Version."
     },
     "exchange-online-limits": {
       "url": "https://learn.microsoft.com/en-us/office365/servicedescriptions/exchange-online-service-description/exchange-online-limits",
       "title": "Exchange Online limits",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Default maximum message size is 35 MB for sending and 36 MB for receiving; admins may configure 1 MB to 150 MB; messages routed outside Microsoft datacenters are capped at 112 MB after encoding."
     },
     "work-iq-mcp": {
       "url": "https://learn.microsoft.com/en-us/microsoft-agent-365/tooling-servers-overview",
       "title": "Work IQ MCP overview (preview)",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "'This is a preview feature. Preview features aren't meant for production use.' 'You must have a Microsoft 365 Copilot license to use Work IQ MCP servers.' Tenant-scoped endpoint https://agent365.svc.cloud.microsoft/agents/tenants/{tenantId}/servers/mcp_MailTools; a customer enterprise app with WorkIQ-* permissions; admins allow or block servers in the Microsoft 365 admin center; servers for Mail, Calendar, Teams, SharePoint, OneDrive, User, Word."
     },
     "entra-auth-code-flow": {
       "url": "https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow",
       "title": "Microsoft identity platform: OAuth 2.0 authorization code flow",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "PKCE (code_challenge S256) recommended for all clients and required for single-page apps; public clients must not use secrets when redeeming codes; http://localhost is the recommended redirect for system-browser native apps; offline_access yields a refresh token; each refresh returns a new refresh token and the old one must be discarded; authority /common, /organizations, or /{tenant}; admin-restricted permissions return an error for non-admin users."
     },
     "entra-refresh-tokens": {
       "url": "https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens",
       "title": "Refresh tokens in the Microsoft identity platform",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Default lifetime 90 days (24 hours for SPAs and email OTP flows); refresh tokens replace themselves on every use; revocation table by credential change, user action, and admin action; B2B users must be revoked in the home tenant."
     },
     "entra-reply-url": {
       "url": "https://learn.microsoft.com/en-us/entra/identity-platform/reply-url",
       "title": "Redirect URI (reply URL) best practices and limitations",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "https required except localhost; the port is ignored when matching localhost redirects; IPv6 loopback [::1] unsupported; Microsoft recommends 127.0.0.1 over localhost but an http loopback URI must be added through the application manifest; at most 256 redirect URIs of 256 characters each."
     },
     "entra-user-consent": {
@@ -97,63 +97,63 @@
       "url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
       "title": "Publisher verification overview",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Requires a verified Microsoft AI Cloud Partner Program account (Partner One ID) associated with the app's tenant and a matching publisher domain; free; 'Beginning November 2020, if risk-based step-up consent is enabled, users can't consent to most newly registered multitenant apps that aren't publisher verified' when the app requests permissions beyond basic sign-in from users in other tenants."
     },
     "graph-user-sendmail": {
       "url": "https://learn.microsoft.com/en-us/graph/api/user-sendmail",
       "title": "Microsoft Graph: user: sendMail",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "POST /me/sendMail; least privileged Mail.Send for delegated (work or school and personal) and application; JSON body {message{subject, body{contentType, content}, toRecipients, ccRecipients, bccRecipients, attachments}, saveToSentItems} or base64 MIME; 202 Accepted with empty body; delivery subject to Exchange Online limits."
     },
     "graph-user-list-messages": {
       "url": "https://learn.microsoft.com/en-us/graph/api/user-list-messages",
       "title": "Microsoft Graph: List messages",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET /me/messages and /me/mailFolders/{id}/messages; least privileged Mail.ReadBasic (excludes body, previewBody, attachments), higher Mail.Read or Mail.ReadWrite; supports OData query parameters; $top 1 to 1000 with default 10; $orderby properties must also appear in $filter; bodies returned as HTML unless Prefer: outlook.body-content-type=text."
     },
     "graph-user-list-calendarview": {
       "url": "https://learn.microsoft.com/en-us/graph/api/user-list-calendarview",
       "title": "Microsoft Graph: List calendarView",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET /me/calendarView?startDateTime=...&endDateTime=... (also per calendar); least privileged Calendars.ReadBasic, higher Calendars.Read or Calendars.ReadWrite; expands recurring events into instances; Prefer: outlook.timezone header; startDateTime and endDateTime are required ISO 8601 values."
     },
     "graph-user-post-events": {
       "url": "https://learn.microsoft.com/en-us/graph/api/user-post-events",
       "title": "Microsoft Graph: Create event",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "POST /me/events or /me/calendars/{id}/events; Calendars.ReadWrite for delegated and application; body is an event resource (subject, body, start and end dateTimeTimeZone, location, attendees, isOnlineMeeting, recurrence); Prefer: outlook.timezone; transactionId to make retries idempotent; 201 Created."
     },
     "graph-chat-post-messages": {
       "url": "https://learn.microsoft.com/en-us/graph/api/chat-post-messages",
       "title": "Microsoft Graph: Send message in a chat",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "POST /chats/{chat-id}/messages; delegated least privileged ChatMessage.Send, higher Chat.ReadWrite; personal Microsoft accounts not supported; application permission only Teamwork.Migrate.All for migration; 201 Created; 'It's a violation of the terms of use to use Microsoft Teams as a log file.'"
     },
     "graph-channel-post-messages": {
       "url": "https://learn.microsoft.com/en-us/graph/api/channel-post-messages",
       "title": "Microsoft Graph: Send chatMessage in a channel",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "POST /teams/{team-id}/channels/{channel-id}/messages; delegated least privileged ChannelMessage.Send; personal accounts not supported; application permissions only for migration; only body is mandatory; 201 Created."
     },
     "graph-driveitem-list-children": {
       "url": "https://learn.microsoft.com/en-us/graph/api/driveitem-list-children",
       "title": "Microsoft Graph: List children of a driveItem",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET /me/drive/root/children, /drives/{drive-id}/items/{item-id}/children, /sites/{site-id}/drive/items/{item-id}/children; least privileged Files.Read, higher Files.ReadWrite, Files.Read.All, Files.ReadWrite.All, Sites.Read.All, Sites.ReadWrite.All; $expand, $select, $skipToken, $top, $orderby; default page 200 with @odata.nextLink."
     },
     "graph-driveitem-get-content": {
       "url": "https://learn.microsoft.com/en-us/graph/api/driveitem-get-content",
       "title": "Microsoft Graph: Download driveItem content",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET /me/drive/items/{item-id}/content and drives/sites/groups forms; least privileged Files.Read; returns 302 to a preauthenticated @microsoft.graph.downloadUrl valid for minutes and requiring no Authorization header; Range header for partial downloads."
     },
     "entra-public-client-apps": {

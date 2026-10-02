@@ -9,7 +9,7 @@
   },
   "wave": 1,
   "max_included_actions": 8,
-  "verified_on": "2026-09-01",
+  "verified_on": "2026-10-02",
   "oauth_app_owner_by_context": {
     "hosted": "langflow",
     "self_managed": "customer",
@@ -53,7 +53,7 @@
       "url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
       "title": "Gmail API: Choose Gmail API scopes",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Table classifies gmail.labels and the add-on compose/action scopes as non-sensitive; gmail.send and the add-on metadata/readonly scopes as sensitive; mail.google.com, gmail.readonly, gmail.compose, gmail.insert, gmail.modify, gmail.metadata, gmail.settings.* as restricted."
     },
     "drive-scopes": {
@@ -74,49 +74,49 @@
       "url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification",
       "title": "Google Identity: Sensitive scope verification",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Names 'reading events stored in Google Calendar' as an example of a sensitive scope. 'The sensitive scope verification process typically takes 3-5 business days to complete.' Exemptions: personal use, testing projects, service-account-only data, Internal Workspace/Cloud Identity use, domain-wide installation."
     },
     "google-restricted-scope-verification": {
       "url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
       "title": "Google Identity: Restricted scope verification (CASA)",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Brand verification first (typically 2-3 business days). Security assessment under the App Defense Alliance CASA framework by Google-empanelled assessors is mandatory for apps that access restricted data from or through a third-party server; it 'can potentially take several weeks to complete'; apps must be reverified at least every 12 months after the Letter of Assessment date. Unverified apps face a user cap and an unverified-app screen. Internal user type projects owned by the organization are exempt from verification but may need admin approval."
     },
     "google-oauth-app-audience": {
       "url": "https://support.google.com/cloud/answer/15549945",
       "title": "Google Cloud: Manage OAuth app audience (user type and publishing status)",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Internal user type is available only to projects in a Google Cloud Organization and limits authorization to organization members. Testing publishing status is limited to 100 test users and authorizations expire seven days from consent, including refresh tokens."
     },
     "google-oauth-verification-requirements": {
       "url": "https://support.google.com/cloud/answer/13464321",
       "title": "Google Cloud: OAuth app verification requirements",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Brand verification for all apps; use-case justification and demonstration video for sensitive and restricted scopes; annual external security assessment for restricted scopes."
     },
     "google-oauth2-overview": {
       "url": "https://developers.google.com/identity/protocols/oauth2",
       "title": "Google Identity: Using OAuth 2.0 to access Google APIs",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Refresh token expiration reasons, the 7-day Testing expiry, the limit of 100 refresh tokens per Google Account per OAuth client, and incremental authorization guidance."
     },
     "google-oauth2-web-server": {
       "url": "https://developers.google.com/identity/protocols/oauth2/web-server",
       "title": "Google Identity: OAuth 2.0 for web server applications",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Revoke endpoint https://oauth2.googleapis.com/revoke; access_type=offline; refresh_token only returned on first authorization unless prompt=consent; redirect URIs must use https except localhost and loopback IPs."
     },
     "google-oauth2-native-app": {
       "url": "https://developers.google.com/identity/protocols/oauth2/native-app",
       "title": "Google Identity: OAuth 2.0 for mobile and desktop apps",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Desktop app client type; client secret is not treated as confidential; PKCE recommended; loopback redirect http://127.0.0.1:port or http://[::1]:port with a random available port; custom URI schemes and the OOB copy/paste flow are no longer supported."
     },
     "workspace-admin-app-access": {
@@ -130,77 +130,77 @@
       "url": "https://developers.google.com/workspace/guides/configure-mcp-servers",
       "title": "Google Workspace: Configure MCP servers (Developer Preview)",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Eight remote servers (Gmail https://gmailmcp.googleapis.com/mcp/v1, Drive https://drivemcp.googleapis.com/mcp/v1, Docs, Sheets, Slides, Calendar https://calendarmcp.googleapis.com/mcp/v1, Chat, People). Users bring their own Google Cloud OAuth client. Gmail server requests gmail.readonly and gmail.compose; Drive server requests drive.readonly and drive.file. No rate limits or GA timeline stated."
     },
     "google-workspace-preview-program": {
       "url": "https://developers.google.com/workspace/preview",
       "title": "Google Workspace Developer Preview Program",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Preview features 'may not be included in public applications prior to the General Availability (GA) announcement' and end users outside the developer's own domain may not be granted access before GA; pre-GA APIs are provided as is with no guarantee of reaching GA; features usually stay in preview 3-6 months."
     },
     "gmail-quota": {
       "url": "https://developers.google.com/workspace/gmail/api/reference/quota",
       "title": "Gmail API: Usage limits",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Per project 1,200,000 quota units per minute; per user per project 6,000 quota units per minute; daily billing threshold 80,000,000 units per project; messages.send 100 units, messages.list 5 units, messages.get 20 units; 500 recipients per message. Quotas updated 2026-05-01."
     },
     "drive-limits": {
       "url": "https://developers.google.com/workspace/drive/api/guides/limits",
       "title": "Google Drive API: Usage limits",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Per project 1,000,000 quota units per minute; per user per project 325,000 quota units per minute; files.get 5 units, files.list 100 units, download 200 units; 403 'User rate limit exceeded' and 429 'Rate limit exceeded'; truncated exponential backoff."
     },
     "calendar-quota": {
       "url": "https://developers.google.com/workspace/calendar/api/guides/quota",
       "title": "Google Calendar API: Manage quotas",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Per project 10,000 requests per minute; per user per project 600 requests per minute; daily billing threshold 1,000,000 requests; 403 or 429 usageLimits on exceed; the Calendar MCP server shares the same per-minute allocation as query cost."
     },
     "gmail-messages-send": {
       "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send",
       "title": "Gmail API: users.messages.send",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "POST https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/send (or /upload/...). Body: Message with raw base64url RFC 2822, optional threadId and labelIds. Response: Message with id, threadId, labelIds. Scopes: mail.google.com, gmail.modify, gmail.compose, gmail.send."
     },
     "gmail-messages-list": {
       "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list",
       "title": "Gmail API: users.messages.list",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET .../users/{userId}/messages with q, labelIds, maxResults (default 100, max 500), pageToken, includeSpamTrash. Returns messages[] {id, threadId}, nextPageToken, resultSizeEstimate. Scopes: mail.google.com, gmail.modify, gmail.readonly, gmail.metadata; q 'cannot be used when accessing the api using the gmail.metadata scope'."
     },
     "drive-files-list": {
       "url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list",
       "title": "Google Drive API: files.list",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET https://www.googleapis.com/drive/v3/files with q, pageSize (max 1000), pageToken, corpora, driveId, includeItemsFromAllDrives, supportsAllDrives, orderBy, spaces, fields. Returns files[], nextPageToken, incompleteSearch. Scopes include drive, drive.file, drive.metadata, drive.metadata.readonly, drive.readonly; 'Some scopes are restricted and require a security assessment'."
     },
     "drive-files-get": {
       "url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get",
       "title": "Google Drive API: files.get",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET https://www.googleapis.com/drive/v3/files/{fileId}; alt=media downloads content; acknowledgeAbuse; supportsAllDrives. Google Docs, Sheets, Slides must be exported with files.export instead. Same scope list as files.list."
     },
     "calendar-events-list": {
       "url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/list",
       "title": "Google Calendar API: Events.list",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "GET .../calendars/{calendarId}/events; 'primary' for the user's primary calendar; timeMin, timeMax, q, maxResults (default 250, max 2500), singleEvents, orderBy, pageToken, syncToken, showDeleted. Returns items[], nextPageToken, nextSyncToken, timeZone. Scopes include calendar.readonly, calendar, calendar.events.readonly, calendar.events, calendar.events.owned(.readonly), calendar.events.freebusy, calendar.events.public.readonly, calendar.app.created."
     },
     "calendar-events-insert": {
       "url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/insert",
       "title": "Google Calendar API: Events.insert",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "POST .../calendars/{calendarId}/events; sendUpdates, conferenceDataVersion, supportsAttachments, maxAttendees; required start and end; optional summary, description, attendees[], location, reminders, recurrence[], conferenceData. Returns an Events resource. Scopes: calendar, calendar.events, calendar.app.created, calendar.events.owned."
     }
   },
