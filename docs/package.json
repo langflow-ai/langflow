@@ -105,7 +105,10 @@
     },
     "sucrase": {
       "glob": {
-        "minimatch": "^9.0.7"
+        "minimatch": {
+          ".": "^9.0.7",
+          "brace-expansion": "^2.0.2"
+        }
       }
     },
     "ws": "^7.5.11",
