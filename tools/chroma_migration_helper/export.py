@@ -52,7 +52,7 @@ def encode(value, *, sort_keys=False):
 
 
 def emit(value, *, sort_keys=False):
-    """Write one JSON protocol record while enforcing the total output limit."""
+    """Write one JSON protocol record while enforcing the per-record line limit."""
     payload = encode(value, sort_keys=sort_keys)
     if len(payload) + 1 > MAX_LINE_BYTES:
         msg = "Export record exceeds byte limit"

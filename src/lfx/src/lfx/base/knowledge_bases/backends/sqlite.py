@@ -500,10 +500,13 @@ class SQLiteBackend(BaseVectorStoreBackend):
             "owner_id": str(context.owner_id),
             "kb_id": str(context.kb_id),
             "generation": context.generation,
-            "metric": self.metric,
         }
-        if self.model_fingerprint is not None:
-            expected["model_fingerprint"] = self.model_fingerprint
+        # Erasure needs the immutable ownership identity, including for an
+        # unpublished migration target whose embedding config was never routed.
+        if not allow_deleted:
+            expected["metric"] = self.metric
+            if self.model_fingerprint is not None:
+                expected["model_fingerprint"] = self.model_fingerprint
         for key, value in expected.items():
             if header[key] != value:
                 msg = f"SQLite store {key} does not match its configured storage context"

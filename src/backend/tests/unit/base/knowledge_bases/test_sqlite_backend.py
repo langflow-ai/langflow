@@ -268,6 +268,34 @@ async def test_deleted_generation_cannot_be_recreated_by_stale_handle(context):
 
 
 @pytest.mark.asyncio
+async def test_erasure_does_not_require_unpublished_embedding_config(context):
+    store = backend(context, metric="cosine")
+    await store.add_embedded_documents([IngestedDocument("private-document", {}, [1.0, 0.0], id="a")])
+    default_config = backend(context, create=False)
+    with pytest.raises(BackendConfigurationError, match="metric"):
+        await default_config.count()
+    await default_config.delete_collection()
+    with pytest.raises(BackendConfigurationError, match="deleted"):
+        await store.count()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["owner_id", "kb_id", "generation"])
+async def test_erasure_still_requires_matching_immutable_identity(context, field):
+    store = backend(context)
+    await store.add_embedded_documents([IngestedDocument("retained-document", {}, [1.0, 0.0], id="a")])
+
+    def alter_identity():
+        with store._connect() as connection:
+            value = 2 if field == "generation" else str(uuid4())
+            connection.execute(f"UPDATE store_header SET {field}=? WHERE singleton=1", (value,))  # noqa: S608 -- parametrized constant fields
+
+    await store._run(alter_identity)
+    with pytest.raises(BackendConfigurationError, match=f"{field} does not match"):
+        await store.delete_collection()
+
+
+@pytest.mark.asyncio
 async def test_cosine_zero_vectors_and_duplicate_ids_are_rejected(context):
     store = backend(context, metric="cosine")
     with pytest.raises(BackendConfigurationError, match="nonzero"):

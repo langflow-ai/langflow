@@ -128,9 +128,9 @@ To configure these providers, go to **Settings → DB Providers**.
 The selected provider applies to all new knowledge bases and memory bases you create.
 Existing knowledge bases and memory bases continue to use the provider that was active when they were created.
 
-With Chroma Cloud and OpenSearch, each knowledge base and memory base stores its chunks in its own collection or index, named `lf_` followed by 24 hexadecimal characters derived from its owner and name.
-Users who share a Chroma Cloud database or OpenSearch cluster can create knowledge bases with the same name without sharing chunks.
-Only a superuser can create a knowledge base that uses a specific existing collection or index, by setting `collection_name` or `index_name` in its `backend_config`.
+With OpenSearch, each knowledge base and memory base stores its chunks in its own index, named `lf_` followed by 24 hexadecimal characters derived from its owner and name.
+Users who share an OpenSearch cluster can create knowledge bases with the same name without sharing chunks.
+Only a superuser can create a knowledge base that uses a specific existing index, by setting `index_name` in its `backend_config`.
 
 :::warning Upgrading from Chroma
 Chroma local storage and Chroma Cloud are retired in 1.13.

@@ -162,8 +162,9 @@ original data, migration ledger and Memory history for recovery. Its owning flow
 can then be deleted without removing those retained storage artifacts. Retry
 migration before detaching if the store should remain available.
 
-Liveness stays available for administration. `/healthz` waits for inventory
-discovery and reports application readiness. Individual fenced stores are
+Liveness stays available for administration. `/healthz` waits for the initial
+inventory scan to finish, including scans that report issues, and reports
+application readiness. Admin retries do not close this discovery gate again. Individual fenced stores are
 reported by the admin endpoints without making unrelated flows unavailable.
 The upgrade controller uses `/healthz?require_storage_ready=true`, which remains
 false until required migrations finish or an operator detaches a failed store.

@@ -42,6 +42,7 @@ from langflow.services.knowledge_base_storage.runtime import (
 
 _tasks: set[asyncio.Task] = set()
 _inventory_complete = True
+_inventory_scanned = False
 _inventory_issue_count = 0
 _retry_requested = False
 _MAX_BINDING_BYTES = 4096
@@ -590,6 +591,7 @@ async def run_pending() -> None:
     # This local-only discovery occurs after the controller barrier and before
     # selecting work, so legacy Memory/KB identities are included automatically.
     """Reconcile legacy inventory and resume eligible storage migrations."""
+    global _inventory_scanned  # noqa: PLW0603 -- separate completed discovery from inventory issues
     try:
         await reconcile_legacy_inventory()
     except Exception:  # noqa: BLE001 -- still persist actionable errors on registered KBs
@@ -600,6 +602,7 @@ async def run_pending() -> None:
                 await _worker(_publish_inventory_status)
             except Exception:  # noqa: BLE001 -- unavailable storage must not disable remote operations
                 logger.warning("Legacy storage inventory status could not be published")
+        _inventory_scanned = True
     async with session_scope() as session:
         rows = list(
             (
@@ -638,6 +641,7 @@ async def run_pending() -> None:
 def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
     """Schedule one background discovery and upgrade task per running coordinator."""
     global _inventory_complete  # noqa: PLW0603 -- readiness must close before scheduling inventory
+    global _inventory_scanned  # noqa: PLW0603 -- close initial discovery, keep admin retries available
     global _retry_requested  # noqa: PLW0603 -- coalesce retries requested during an existing run
     for existing in _tasks:
         if not existing.done():
@@ -645,6 +649,8 @@ def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
                 _retry_requested = True
             return existing
     _inventory_complete = False
+    if not retry:
+        _inventory_scanned = False
     _retry_requested = False
 
     async def run_requested():
@@ -685,7 +691,7 @@ async def wait_for_upgrade(*, timeout: float = 30) -> None:
 async def readiness(*, require_storage_ready: bool = True) -> bool:
     """Keep ordinary readiness usable while strict upgrade probes check retained stores."""
     if not require_storage_ready:
-        return True
+        return _inventory_scanned
     if not _inventory_complete:
         return False
     async with session_scope() as session:

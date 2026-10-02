@@ -20,12 +20,13 @@ from uuid import UUID
 from filelock import FileLock, Timeout
 from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, BaseVectorStoreBackend, IngestedDocument
-from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
+from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend, SQLiteStorageContext
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import select
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 
 _held_locks: dict[tuple[int, object, UUID], _OperationLease] = {}
@@ -496,6 +497,33 @@ async def backend_for_name(user_id, name, **kwargs):
     return await backend_for_record(await resolve_record(user_id, name), **kwargs)
 
 
+async def _erase_retired_sqlite_generations(record) -> None:
+    """Erase owned routed and unpublished targets while their routing fence is held."""
+    generations = {record.storage_generation} if record.backend_type == "sqlite" else set()
+    if record.active_migration_id and (
+        record.backend_type == "sqlite"
+        or (record.backend_type == "chroma" and record.backend_config.get("mode", "local") == "local")
+    ):
+        async with session_scope() as session:
+            run = await session.get(KnowledgeBaseStorageMigration, record.active_migration_id)
+        if run is not None:
+            if run.kb_id != record.id:
+                msg = "Migration target does not belong to this knowledge base"
+                raise StorageUnavailableError(msg)
+            generations.add(run.target_generation)
+    for generation in sorted(generations):
+        backend = SQLiteBackend(
+            record.name,
+            storage_context=SQLiteStorageContext(storage_root(), record.user_id, record.id, generation),
+        )
+        try:
+            await backend.delete_collection()
+        except FileNotFoundError:
+            pass  # No target was created, or this owned generation is already absent.
+        finally:
+            await backend.teardown()
+
+
 async def delete_storage_for_record(record) -> None:
     """Drain old operations, persist the deletion fence, then tombstone the store.
 
@@ -509,11 +537,12 @@ async def delete_storage_for_record(record) -> None:
         if current.storage_state == "deleted":
             return
         if current.storage_state in ("needs_attention", "detached") or current.backend_type == "chroma":
-            # Explicit removal of an unavailable/retired store releases its
-            # application identity without accessing or destroying its source.
+            # Preserve retired provider sources, but erase application-owned
+            # SQLite targets before releasing their routing identity.
             from langflow.services.knowledge_base_storage.coordinator import retire_legacy_source
 
             await retire_legacy_source(current)
+            await _erase_retired_sqlite_generations(current)
             async with session_scope() as session:
                 row = await session.get(KnowledgeBaseRecord, current.id)
                 row.storage_state = "deleted"

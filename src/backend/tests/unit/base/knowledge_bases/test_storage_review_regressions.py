@@ -13,7 +13,7 @@ from langflow.services.database.models.knowledge_base_storage_migration import K
 from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
 from langflow.services.knowledge_base_storage import cleanup, coordinator, maintenance, runtime
 from langflow.services.memory_base import ingestion
-from lfx.base.knowledge_bases.backends.base import IngestedDocument
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, IngestedDocument
 from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend, SQLiteStorageContext
 from sqlmodel import SQLModel
 
@@ -31,8 +31,88 @@ pytestmark = pytest.mark.no_blockbuster
 @pytest.mark.usefixtures("database")
 async def test_inventory_does_not_disable_ordinary_service_readiness(monkeypatch):
     monkeypatch.setattr(coordinator, "_inventory_complete", False)
+    monkeypatch.setattr(coordinator, "_inventory_scanned", True)
     assert await coordinator.readiness(require_storage_ready=False)
     assert not await coordinator.readiness(require_storage_ready=True)
+
+
+async def test_ordinary_readiness_waits_for_first_scan_but_recovers_with_issues(database, monkeypatch):
+    started, release = asyncio.Event(), asyncio.Event()
+    original = coordinator.reconcile_legacy_inventory
+    source = database.root / database.user.username / "unregistered"
+    source.mkdir(parents=True)
+    (source / "chroma.sqlite3").write_bytes(b"retained source")
+    monkeypatch.setattr(coordinator, "_inventory_scanned", False)
+
+    async def paused_scan():
+        started.set()
+        await release.wait()
+        await original()
+
+    monkeypatch.setattr(coordinator, "reconcile_legacy_inventory", paused_scan)
+    task = asyncio.create_task(coordinator.run_pending())
+    await started.wait()
+    try:
+        assert not await coordinator.readiness(require_storage_ready=False)
+    finally:
+        release.set()
+        await task
+    assert coordinator.inventory_status()["issues"] == 1
+    assert await coordinator.readiness(require_storage_ready=False)
+    assert not await coordinator.readiness(require_storage_ready=True)
+
+
+@pytest.mark.parametrize("state", ["needs_attention", "detached"])
+@pytest.mark.parametrize("backend_type", ["sqlite", "chroma"])
+async def test_unavailable_record_deletion_erases_owned_sqlite_generations(database, state, backend_type):
+    row = await make_kb(database, backend=backend_type)
+    run = KnowledgeBaseStorageMigration(kb_id=row.id, source_generation=1, target_generation=2)
+    async with database.sessions() as db:
+        db.add(run)
+        current = await db.get(KnowledgeBaseRecord, row.id)
+        current.storage_state = state
+        current.active_migration_id = run.id
+        await db.commit()
+    source = database.root / database.user.username / row.name
+    source.mkdir(parents=True)
+    (source / "chroma.sqlite3").write_bytes(b"original retained source")
+    generations = [1, 2] if backend_type == "sqlite" else [2]
+    sentinel = b"unavailable-store-private-document"
+    for generation in generations:
+        context = SQLiteStorageContext(database.root, row.user_id, row.id, generation)
+        target = SQLiteBackend(row.name, backend_config={"metric": "cosine"}, storage_context=context, create=True)
+        await target.add_embedded_documents([IngestedDocument(sentinel.decode(), {}, [1.0, 2.0])])
+        await target.teardown()
+    await runtime.delete_storage_for_record(await read_kb(database, row.id))
+    assert (await read_kb(database, row.id)).storage_state == "deleted"
+    assert (source / "chroma.sqlite3").read_bytes() == b"original retained source"
+    for generation in generations:
+        context = SQLiteStorageContext(database.root, row.user_id, row.id, generation)
+        assert sentinel not in b"".join(path.read_bytes() for path in context.database_path.parent.iterdir())
+        reader = SQLiteBackend(row.name, backend_config={"metric": "cosine"}, storage_context=context)
+        with pytest.raises(BackendConfigurationError, match="deleted"):
+            await reader.ensure_ready()
+        await reader.teardown()
+
+
+async def test_unavailable_sqlite_erasure_failure_keeps_routing_retryable(database, monkeypatch):
+    row = await make_kb(database, backend="sqlite")
+    context = SQLiteStorageContext(database.root, row.user_id, row.id)
+    target = SQLiteBackend(row.name, storage_context=context, create=True)
+    await target.add_embedded_documents([IngestedDocument("private-document", {}, [1.0, 2.0])])
+    await target.teardown()
+    async with database.sessions() as db:
+        current = await db.get(KnowledgeBaseRecord, row.id)
+        current.storage_state = "needs_attention"
+        await db.commit()
+    original = SQLiteBackend.delete_collection
+    monkeypatch.setattr(SQLiteBackend, "delete_collection", AsyncMock(side_effect=OSError("disk unavailable")))
+    with pytest.raises(OSError, match="disk unavailable"):
+        await runtime.delete_storage_for_record(await read_kb(database, row.id))
+    assert (await read_kb(database, row.id)).storage_state == "needs_attention"
+    monkeypatch.setattr(SQLiteBackend, "delete_collection", original)
+    await runtime.delete_storage_for_record(await read_kb(database, row.id))
+    assert (await read_kb(database, row.id)).storage_state == "deleted"
 
 
 async def test_detach_and_delete_retire_real_legacy_source_across_restart(database, monkeypatch):
@@ -286,6 +366,7 @@ async def test_accepted_retry_replays_failures_from_an_active_batch(monkeypatch)
 
     async def pending():
         calls.append(True)
+        coordinator._inventory_scanned = True
         if len(calls) == 1:
             first_started.set()
             await finish_first.wait()
@@ -293,6 +374,7 @@ async def test_accepted_retry_replays_failures_from_an_active_batch(monkeypatch)
     monkeypatch.setattr(coordinator, "run_pending", pending)
     monkeypatch.setattr(coordinator, "_tasks", set())
     monkeypatch.setattr(coordinator, "_inventory_complete", True)
+    monkeypatch.setattr(coordinator, "_inventory_scanned", True)
     monkeypatch.setattr(coordinator, "_retry_requested", False)
     task = coordinator.schedule_upgrade()
     await first_started.wait()
