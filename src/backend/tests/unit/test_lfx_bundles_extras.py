@@ -44,7 +44,7 @@ BUNDLES_DIR = REPO_ROOT / "src" / "bundles"
 AGGREGATE_EXTRAS = frozenset({"all", "all-no-torch"})
 COMPATIBILITY_EXTRAS = {
     "azure": ["lfx-azure>=0.1.0,<1.0.0"],
-    "google": ["lfx-google>=0.1.0,<1.0.0"],
+    "google": ["lfx-google>=0.2.5,<1.0.0"],
     "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
 }
 TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
