@@ -102,6 +102,9 @@
     "yaml@^2": "^2.8.3",
     "openapi-sampler": "^1.7.6",
     "chromedriver": "154.0.1",
-    "adm-zip": "^0.6.1"
+    "adm-zip": "^0.6.1",
+    "sockjs": {
+      "uuid": "^11.1.1"
+    }
   }
 }
