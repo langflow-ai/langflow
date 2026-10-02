@@ -224,6 +224,16 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-10-02 — Await model-provider policy during component builds
+
+`Component.build_results()` now awaits the existing
+`arequire_model_provider_policy()` hook before tracing or output execution.
+Custom synchronous `require_model_provider_policy()` overrides still run, in a
+context-preserving worker thread after the native async gate; their denials still
+abort the build. Policy waits leave the execution loop available to other tasks
+without skipping additional bundle restrictions. Existing synchronous hook signatures
+are unchanged, and `BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-24 — Async file loader dispatch
 
 Graph outputs and the Read File tool now await `@delegates_to` coroutine methods
