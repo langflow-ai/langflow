@@ -22,7 +22,12 @@ from langflow.api.v2.files import (
 )
 from langflow.api.v2.schemas import MCPServerConfig
 from langflow.logging import logger
-from langflow.services.auth.mcp_encryption import decrypt_mcp_config, encrypt_mcp_config
+from langflow.services.auth.mcp_encryption import (
+    decrypt_mcp_config,
+    encrypt_mcp_config,
+    redact_mcp_config,
+    restore_mcp_config_secrets,
+)
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -376,7 +381,7 @@ async def get_server_endpoint(
     server = await get_server(server_name, current_user, session, storage_service, settings_service)
     if server is None:
         raise HTTPException(status_code=404, detail="Server not found.")
-    return server
+    return redact_mcp_config(server)
 
 
 def _derive_transport(config: dict) -> str | None:
@@ -409,6 +414,13 @@ async def _persist(session, *, owns_transaction: bool) -> None:
         await session.commit()
     else:
         await session.flush()
+
+
+def _restore_config_secrets(server_config: dict, existing: dict | None) -> dict:
+    try:
+        return restore_mcp_config_secrets(server_config, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 async def update_server(
@@ -469,12 +481,13 @@ async def update_server(
             raise HTTPException(status_code=409, detail="Server already exists.")
 
         if existing is None:
+            resolved_config = _restore_config_secrets(server_config, None)
             session.add(
                 MCPServer(
                     user_id=user_id,
                     name=server_name,
-                    config=encrypt_mcp_config(server_config),
-                    transport=_derive_transport(server_config),
+                    config=encrypt_mcp_config(resolved_config),
+                    transport=_derive_transport(resolved_config),
                 )
             )
             try:
@@ -499,7 +512,9 @@ async def update_server(
             break
 
         if merge_existing:
-            merged = {**decrypt_mcp_config(existing.config or {}), **server_config}
+            previous = decrypt_mcp_config(existing.config or {})
+            resolved_config = _restore_config_secrets(server_config, previous)
+            merged = {**previous, **resolved_config}
             ensure_mcp_stdio_access(merged, current_user, settings)
             updated = await session.execute(
                 update(MCPServer)
@@ -528,12 +543,13 @@ async def update_server(
         # (version = version + 1) so it stays strictly monotonic even when our ORM copy
         # is stale. An ORM `+= 1` off a stale read could reuse a version a concurrent
         # PATCH already consumed, letting a later guarded PATCH pass its version check.
+        resolved_config = _restore_config_secrets(server_config, decrypt_mcp_config(existing.config or {}))
         replaced = await session.execute(
             update(MCPServer)
             .where(MCPServer.id == existing.id)
             .values(
-                config=encrypt_mcp_config(server_config),
-                transport=_derive_transport(server_config),
+                config=encrypt_mcp_config(resolved_config),
+                transport=_derive_transport(resolved_config),
                 version=MCPServer.version + 1,
                 updated_at=datetime.now(timezone.utc),
             )
@@ -574,7 +590,7 @@ async def add_server(
             detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
         )
 
-    return await update_server(
+    updated = await update_server(
         server_name,
         _enforce_immutable_server_name(server_name, server_config.model_dump(exclude_unset=True)),
         current_user,
@@ -583,6 +599,7 @@ async def add_server(
         settings_service,
         check_existing=True,
     )
+    return redact_mcp_config(updated)
 
 
 @router.patch("/servers/{server_name}")
@@ -601,7 +618,7 @@ async def update_server_endpoint(
             detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
         )
 
-    return await update_server(
+    updated = await update_server(
         server_name,
         _enforce_immutable_server_name(server_name, server_config.model_dump(exclude_unset=True)),
         current_user,
@@ -610,6 +627,7 @@ async def update_server_endpoint(
         settings_service,
         merge_existing=True,
     )
+    return redact_mcp_config(updated)
 
 
 @router.delete("/servers/{server_name}")
