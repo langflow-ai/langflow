@@ -158,6 +158,39 @@ class TestSourceChecks:
         assert error["message"].startswith("could not read the source database: ")
         assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
 
+    def test_source_url_with_a_port_that_is_not_a_number_is_reported(self, run_cli):
+        # SQLAlchemy raises a bare ValueError for this one, not its own ArgumentError.
+        source = "sqlite://user@localhost:not-a-port/db"
+
+        result = run_cli("--json", "--source", source, "--target", self.UNREACHABLE_TARGET)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "source_unreadable")
+        assert error["message"].startswith("could not read the source database: the URL could not be read")
+        assert (report["event"], report["ok"]) == ("report", False)
+        assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
+
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "sqlite:///{path}?timeout=soon",  # a ValueError, from an option instead of the port
+            "sqlite+nope:///{path}",  # no such driver
+            "sqlite+pysqlcipher:///{path}",  # a driver that is not installed
+        ],
+    )
+    def test_source_url_refused_once_the_file_is_found_is_reported(self, tmp_path, monkeypatch, source):
+        # The file exists, so these get past the missing-file check and fail building the engine.
+        (tmp_path / "langflow.db").touch()
+        monkeypatch.setitem(sys.modules, "pysqlcipher3", None)
+        monkeypatch.setitem(sys.modules, "sqlcipher3", None)
+
+        report = convert_sqlite_to_postgres(source.format(path=tmp_path / "langflow.db"), self.UNREACHABLE_TARGET)
+
+        assert [p.code for p in report.problems] == ["source_unreadable"]
+
     def test_source_file_that_is_not_a_database_is_reported(self, tmp_path, run_cli):
         notes = tmp_path / "notes.db"
         notes.write_text("Not a SQLite file, only text that is longer than the header SQLite reads first. " * 4)
@@ -215,6 +248,45 @@ class TestSourceChecks:
             "orphans": [],
             "problems": [{"code": "target_unreachable", "message": error["message"]}],
         }
+
+    def test_target_url_with_a_port_that_is_not_a_number_is_reported(self, sqlite_source, run_cli):
+        target = "postgresql://user@localhost:not-a-port/db"
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", target)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "target_unreachable")
+        assert error["message"].startswith("could not use the target database: the URL could not be read")
+        assert (report["event"], report["ok"]) == ("report", False)
+        assert report["problems"] == [{"code": "target_unreachable", "message": error["message"]}]
+
+    def test_target_host_the_driver_cannot_encode_is_reported(self, sqlite_source, run_cli):
+        # An empty label fails before any lookup, with a UnicodeError the driver lets through.
+        target = "postgresql://user@db..example.com:5432/langflow"
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", target)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "target_unreachable")
+        assert report["problems"] == [{"code": "target_unreachable", "message": error["message"]}]
+
+    def test_a_password_the_parser_took_for_the_port_is_not_printed(self, sqlite_source, run_cli):
+        # With the host left out, what follows the user's colon is read as the port, and
+        # the parser's error quotes it.
+        secret = "SuperSecretPw123"  # noqa: S105  # pragma: allowlist secret
+
+        result = run_cli("--source", sqlite_source, "--target", f"postgresql://postgres:{secret}/langflow")
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        assert "Problem: could not use the target database: the URL could not be read" in result.output
+        assert secret not in result.output
 
     def test_json_stdout_of_a_child_process_holds_only_events(self, sqlite_source):
         # Run the way an admin UI runs it, with the logger at its noisiest and in the JSON

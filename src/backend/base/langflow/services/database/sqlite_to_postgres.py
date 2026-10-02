@@ -116,15 +116,16 @@ def convert_sqlite_to_postgres(
         on_progress("checking", 0, None, None)
     try:
         source_path = sa.engine.make_url(_sync_sqlite_url(source_url)).database
-    except sa.exc.ArgumentError as exc:
+        if not source_path or not Path(source_path).is_file():
+            # Checked up front because opening a missing SQLite file creates an empty one.
+            report.problems.append(Problem("source_missing", f"source database {source_path!r} does not exist"))
+            return report
+        source = sa.create_engine(_sync_sqlite_url(source_url))
+    except (sa.exc.ArgumentError, ValueError, ImportError) as exc:
+        # Everything a URL is refused with. A port or an option that is not a number is a bare ValueError.
         report.problems.append(_source_unreadable(exc))
         return report
-    if not source_path or not Path(source_path).is_file():
-        # Checked up front because opening a missing SQLite file creates an empty one.
-        report.problems.append(Problem("source_missing", f"source database {source_path!r} does not exist"))
-        return report
 
-    source = sa.create_engine(_sync_sqlite_url(source_url))
     try:
         head = _script_head()
         source_revision = _revision(source)
@@ -151,8 +152,17 @@ def convert_sqlite_to_postgres(
         models = _model_tables()
         target = None
         try:
-            # create_engine imports the driver, so it belongs inside the handler below.
-            target = sa.create_engine(_sync_postgres_url(target_url))
+            try:
+                # create_engine imports the driver, so it belongs inside the handler below.
+                target = sa.create_engine(_sync_postgres_url(target_url))
+                # The first connection reads the host. One the driver cannot encode is a ValueError as well.
+                target.connect().close()
+            except ValueError as exc:
+                # Only these two lines read the URL. Further down a ValueError is about a row.
+                report.problems.append(
+                    Problem("target_unreachable", f"could not use the target database: {_describe(exc)}")
+                )
+                return report
             # Everything that can refuse runs before the target is migrated, so a
             # refused run leaves the target exactly as it was.
             _preflight(source, target, models, report, drop_orphans=drop_orphans)
@@ -369,12 +379,16 @@ class _CoercionError(Exception):
     """A source value the target column cannot take."""
 
 
-def _describe(exc: sa.exc.SQLAlchemyError) -> str:
+def _describe(exc: Exception) -> str:
+    if isinstance(exc, ValueError):
+        # Raised reading a URL. Its text quotes what was taken for the port, which is
+        # the password when the URL has no host, so it is not passed on.
+        return "the URL could not be read: a host, port or option in it is not a valid value"
     cause = getattr(exc, "orig", None) or exc
     return f"{cause.__class__.__name__}: {str(cause).splitlines()[0]}"
 
 
-def _source_unreadable(exc: sa.exc.SQLAlchemyError) -> Problem:
+def _source_unreadable(exc: Exception) -> Problem:
     return Problem("source_unreadable", f"could not read the source database: {_describe(exc)}")
 
 
