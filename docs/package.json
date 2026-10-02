@@ -94,6 +94,13 @@
     "schema-utils@4.3.2": {
       "ajv": "^8.18.0"
     },
+    "bn.js": "^4.12.3",
+    "browserify-rsa": {
+      "bn.js": "^5.2.3"
+    },
+    "browserify-sign": {
+      "bn.js": "^5.2.3"
+    },
     "styled-components": {
       "postcss": "8.4.49"
     },
