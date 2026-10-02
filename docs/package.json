@@ -66,19 +66,7 @@
     "nanoid": "^3.3.17",
     "dompurify": "^3.4.16",
     "picomatch": "^4.0.4",
-    "lodash": "4.17.21",
-    "openapi-to-postmanv2": {
-      "lodash": "4.17.21"
-    },
-    "postman-collection": {
-      "lodash": "4.17.21"
-    },
-    "json-schema-resolve-allof": {
-      "lodash": "4.17.21"
-    },
-    "json-refs": {
-      "lodash": "4.17.21"
-    },
+    "lodash": "4.18.1",
     "fast-uri": "^3.1.8",
     "fast-xml-parser@^4": "^4.5.5",
     "fast-xml-parser@^5": "^5.7.0",
