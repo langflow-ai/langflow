@@ -84,6 +84,7 @@
     "qs": "^6.16.0",
     "launch-editor": "^2.14.1",
     "body-parser": "^1.20.6",
+    "colord": "^2.9.4",
     "styled-components": {
       "postcss": "8.4.49"
     },
