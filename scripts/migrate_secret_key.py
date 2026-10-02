@@ -53,7 +53,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, _argv_secret_positions
 from platformdirs import user_cache_dir
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, make_url, text
 
 MINIMUM_KEY_LENGTH = 32
 # Holds the new key from just before the database commit until it replaces secret_key.
@@ -431,9 +431,6 @@ def get_default_database_url(config_dir: Path) -> str | None:
     return None
 
 
-DATABASE_URL_DISPLAY_LENGTH = 50
-
-
 def warn_env_secret_key(new_key: str | None = None, key_file: Path | None = None) -> None:
     """Langflow uses LANGFLOW_SECRET_KEY over the key file and writes it back over the file on start."""
     print("\n" + "!" * 50)
@@ -511,12 +508,7 @@ def migrate(
 
     print("\nConfiguration:")
     print(f"  Config dir: {config_dir}")
-    db_display = (
-        f"{database_url[:DATABASE_URL_DISPLAY_LENGTH]}..."
-        if len(database_url) > DATABASE_URL_DISPLAY_LENGTH
-        else database_url
-    )
-    print(f"  Database: {db_display}")
+    print(f"  Database: {make_url(database_url).render_as_string(hide_password=True)}")
     print(f"  Dry run: {dry_run}")
     if os.environ.get("LANGFLOW_SECRET_KEY"):
         warn_env_secret_key()

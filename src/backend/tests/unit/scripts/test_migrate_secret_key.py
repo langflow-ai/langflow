@@ -19,7 +19,7 @@ from langflow.services.auth.utils import _ensure_legacy_fernet_key, ensure_ferne
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from sqlalchemy import create_engine, make_url, text
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, OperationalError
 from sqlalchemy.schema import CreateSchema, DropSchema
 
 
@@ -1161,6 +1161,20 @@ class TestKeysStayOutOfOutput:
         assert new_key not in output
         assert _fingerprint(new_key) in output
         assert list(config_dir.iterdir()) == []
+
+
+def test_printed_database_url_hides_the_password(migrate_module, tmp_path, old_key, capsys):
+    password = "s3cr3t-db-pass"  # noqa: S105  # pragma: allowlist secret
+    url = f"postgresql://langflow:{password}@127.0.0.1:1/langflow_production"  # pragma: allowlist secret
+
+    # Nothing listens on that port. The configuration is printed before the script connects.
+    with pytest.raises((OperationalError, ModuleNotFoundError)) as error:
+        migrate_module.migrate(tmp_path, url, old_key=old_key, dry_run=True)
+
+    output = capsys.readouterr().out
+    assert "  Database: postgresql://langflow:***@127.0.0.1:1/langflow_production\n" in output
+    assert password not in output
+    assert password not in str(error.value)
 
 
 class TestPendingKeyFile:
