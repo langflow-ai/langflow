@@ -32,6 +32,7 @@ CANARY_CONFIG = {
 
 @pytest.fixture(params=[False, True], ids=["user", "superuser"])
 async def credential_api(request, monkeypatch, tmp_path):
+    """Exercise the MCP router with a real database and isolated encryption key."""
     auth_settings = AuthSettings(CONFIG_DIR=str(tmp_path))
     auth_settings.SECRET_KEY = SecretStr(Fernet.generate_key().decode())
     settings = SimpleNamespace(settings=SimpleNamespace(), auth_settings=auth_settings)
@@ -47,6 +48,7 @@ async def credential_api(request, monkeypatch, tmp_path):
         app.include_router(router, prefix="/api/v2")
 
         async def db_session():
+            """Share the local test transaction with the API dependencies."""
             yield session
 
         app.dependency_overrides[auth_utils.get_current_active_user] = lambda: user
@@ -60,6 +62,7 @@ async def credential_api(request, monkeypatch, tmp_path):
 
 @pytest.mark.parametrize("encrypted", [False, True], ids=["legacy", "encrypted"])
 async def test_get_masks_credentials_and_keeps_runtime_values(credential_api, encrypted):
+    """Mask both legacy and encrypted credentials without changing runtime reads."""
     client, session, user = credential_api
     config = encrypt_mcp_config(CANARY_CONFIG) if encrypted else CANARY_CONFIG
     row = MCPServer(user_id=user.id, name="secure", config=config)
@@ -79,6 +82,7 @@ async def test_get_masks_credentials_and_keeps_runtime_values(credential_api, en
 
 
 async def test_post_masks_credentials_and_encrypts_them_at_rest(credential_api):
+    """Persist new map credentials as ciphertext and return masks to the caller."""
     client, session, user = credential_api
     response = await client.post("/api/v2/mcp/servers/secure", json=CANARY_CONFIG)
     assert response.status_code == 200
@@ -91,6 +95,7 @@ async def test_post_masks_credentials_and_encrypts_them_at_rest(credential_api):
 
 
 async def test_patch_roundtrip_preserves_and_replaces_credentials(credential_api):
+    """Preserve unchanged masks while honoring credential rotation and removal."""
     client, session, user = credential_api
     await client.post("/api/v2/mcp/servers/secure", json=CANARY_CONFIG)
     fetched = (await client.get("/api/v2/mcp/servers/secure")).json()
@@ -115,6 +120,7 @@ async def test_patch_roundtrip_preserves_and_replaces_credentials(credential_api
 
 
 async def test_masked_patch_uses_latest_credential(credential_api):
+    """Keep a rotated credential when an older editor submits an unchanged mask."""
     client, session, user = credential_api
     await client.post("/api/v2/mcp/servers/secure", json=CANARY_CONFIG)
     stale_editor = (await client.get("/api/v2/mcp/servers/secure")).json()
@@ -131,6 +137,7 @@ async def test_masked_patch_uses_latest_credential(credential_api):
 
 
 async def test_unknown_redacted_credential_is_rejected_without_a_write(credential_api):
+    """Reject masks that cannot resolve to a stored credential without writing."""
     client, session, user = credential_api
     response = await client.post("/api/v2/mcp/servers/new", json={"headers": {"Authorization": MASK}})
     assert response.status_code == 422
@@ -142,6 +149,7 @@ async def test_unknown_redacted_credential_is_rejected_without_a_write(credentia
 
 
 async def test_credentials_remain_scoped_to_current_user(credential_api):
+    """Keep another user's configuration inaccessible, including to superusers."""
     client, session, _user = credential_api
     session.add(MCPServer(user_id=uuid4(), name="other-user", config=CANARY_CONFIG))
     await session.commit()
@@ -171,6 +179,7 @@ PROJECT_CONFIG = {
 
 @pytest.mark.parametrize("encrypted", [False, True], ids=["legacy", "encrypted"])
 async def test_project_header_arguments_are_redacted_and_preserved(credential_api, encrypted):
+    """Retain generated project credentials through masked edits and flag reordering."""
     client, session, user = credential_api
     config = encrypt_mcp_config(PROJECT_CONFIG) if encrypted else PROJECT_CONFIG
     row = MCPServer(user_id=user.id, name="project", config=config)
@@ -211,6 +220,7 @@ async def test_project_header_arguments_are_redacted_and_preserved(credential_ap
 
 
 async def test_project_argument_masks_preserve_rotation_and_reject_deleted_or_renamed_headers(credential_api):
+    """Resolve current argument credentials and reject masks for removed headers."""
     client, session, user = credential_api
     response = await client.post("/api/v2/mcp/servers/project", json=PROJECT_CONFIG)
     assert response.status_code == 200
@@ -235,6 +245,7 @@ async def test_project_argument_masks_preserve_rotation_and_reject_deleted_or_re
 
 
 async def test_duplicate_header_argument_masks_require_matching_occurrences(credential_api):
+    """Preserve repeated header values without guessing after duplicate removal."""
     client, session, user = credential_api
     config = {
         "command": "uvx",
@@ -261,6 +272,7 @@ async def test_duplicate_header_argument_masks_require_matching_occurrences(cred
 
 
 async def test_new_redacted_header_arguments_are_rejected(credential_api):
+    """Reject placeholder argument credentials when creating a new server."""
     client, session, user = credential_api
     response = await client.post(
         "/api/v2/mcp/servers/new",
@@ -268,3 +280,51 @@ async def test_new_redacted_header_arguments_are_rejected(credential_api):
     )
     assert response.status_code == 422
     assert await get_server("new", user, session, None, None) is None
+
+
+async def test_post_and_patch_encrypt_header_arguments_at_rest(credential_api):
+    """Encrypt repeated argv credentials on both creation and rotation, preserving runtime values."""
+    client, session, user = credential_api
+    response = await client.post("/api/v2/mcp/servers/project", json=PROJECT_CONFIG)
+    assert response.status_code == 200
+    assert "mcp-canary" not in response.text
+    row = (await session.exec(select(MCPServer).where(MCPServer.user_id == user.id, MCPServer.name == "project"))).one()
+    header_index = PROJECT_CONFIG["args"].index("--headers")
+    for index in [header_index + 2, header_index + 5]:
+        assert row.config["args"][index].startswith("gAAAAA")
+        assert row.config["args"][index] != PROJECT_CONFIG["args"][index]
+    assert "mcp-canary" not in str(row.config)
+    assert await get_server("project", user, session, None, None) == PROJECT_CONFIG
+
+    rotated = {**PROJECT_CONFIG, "args": list(PROJECT_CONFIG["args"])}
+    rotated["args"][header_index + 2] = "mcp-canary-new-project-key"
+    rotated["args"][-1:-1] = ["--headers", "X-New-Token", "mcp-canary-added-token", "--headers", "X-Empty", ""]
+    response = await client.patch("/api/v2/mcp/servers/project", json=rotated)
+    assert response.status_code == 200
+    assert "mcp-canary" not in response.text
+    await session.refresh(row)
+    positions = [index + 2 for index, value in enumerate(rotated["args"]) if value == "--headers"]
+    for index in positions:
+        if rotated["args"][index]:
+            assert row.config["args"][index].startswith("gAAAAA")
+            assert row.config["args"][index] != rotated["args"][index]
+        else:
+            assert row.config["args"][index] == ""
+    assert "mcp-canary" not in str(row.config)
+    assert await get_server("project", user, session, None, None) == rotated
+
+
+async def test_public_server_listing_returns_only_metadata(credential_api):
+    """Keep public listings free of credentials while internal reads remain runnable."""
+    client, session, user = credential_api
+    await client.post("/api/v2/mcp/servers/secure", json=CANARY_CONFIG)
+    await client.post("/api/v2/mcp/servers/project", json=PROJECT_CONFIG)
+    response = await client.get("/api/v2/mcp/servers")
+    assert response.status_code == 200
+    assert response.json() == [
+        {"name": "secure", "mode": None, "toolsCount": None},
+        {"name": "project", "mode": None, "toolsCount": None},
+    ]
+    assert "mcp-canary" not in response.text
+    assert await get_server("secure", user, session, None, None) == CANARY_CONFIG
+    assert await get_server("project", user, session, None, None) == PROJECT_CONFIG

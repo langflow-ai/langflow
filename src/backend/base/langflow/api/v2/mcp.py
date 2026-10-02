@@ -417,6 +417,7 @@ async def _persist(session, *, owns_transaction: bool) -> None:
 
 
 def _restore_config_secrets(server_config: dict, existing: dict | None) -> dict:
+    """Translate an invalid editor mask into an API validation error."""
     try:
         return restore_mcp_config_secrets(server_config, existing)
     except ValueError as exc:
@@ -584,6 +585,7 @@ async def add_server(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    """Create a server and return its configuration with credentials masked."""
     if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
@@ -612,6 +614,7 @@ async def update_server_endpoint(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    """Patch a server and return its configuration with credentials masked."""
     if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
