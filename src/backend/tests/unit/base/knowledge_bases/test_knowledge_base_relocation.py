@@ -571,7 +571,7 @@ def test_progress_total_is_null_when_the_source_count_is_not_known(capsys):
     progress(result)
 
     assert _json_events(capsys.readouterr().out) == [
-        {"event": "progress", "done": 5, "total": None, "unit": "chunks", "subject": str(kb_id)}
+        {"event": "progress", "phase": "copying", "done": 5, "total": None, "unit": "chunks", "subject": str(kb_id)}
     ]
 
 
@@ -968,7 +968,9 @@ class TestRelocationToPostgresLive:
             # Progress belongs to the one knowledge base that was copied, and comes before its item.
             progress = [event for event in events if event["event"] == "progress"]
             assert [(event["done"], event["total"]) for event in progress] == [(5, 12), (10, 12), (12, 12)]
-            assert {(event["unit"], event["subject"]) for event in progress} == {("chunks", str(moved.id))}
+            assert {(event["phase"], event["unit"], event["subject"]) for event in progress} == {
+                ("copying", "chunks", str(moved.id))
+            }
             moved_item = {"event": "item", "item": items[str(moved.id)]}
             assert events.index(progress[-1]) < events.index(moved_item)
 
