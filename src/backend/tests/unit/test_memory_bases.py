@@ -1973,6 +1973,9 @@ class TestIngestMemoryTask:
         record = MagicMock(id=uuid.uuid4())
         monkeypatch.setattr(task_module, "resolve_record", AsyncMock(return_value=record))
         monkeypatch.setattr(task_module, "operation", lambda *_args, **_kwargs: contextlib.nullcontext(record))
+        # This task unit fixture supplies synthetic scope and history. Its
+        # tracking identity must not depend on another test initializing the DB.
+        monkeypatch.setattr(task_module, "_read_live_session_id", AsyncMock(return_value=None))
 
         async def resolve_scope(_db, *, memory_base_id, owner_user_id, actor_user_id):
             flow = Flow(id=uuid.uuid4(), user_id=owner_user_id, name="stored test flow")
