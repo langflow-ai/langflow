@@ -56,7 +56,7 @@ naming what it created, so a test can assert what survived a migration.
 | Six encrypted columns across six tables | `variable.value`, `apikey.api_key`, `user.store_api_key`, `folder.auth_settings` and `mcp_server.config` are Fernet under `LANGFLOW_SECRET_KEY`; `sso_config.client_secret_encrypted` is an AES-256-GCM envelope keyed by HKDF off the same secret. A wrong key returns `""` rather than raising | <!-- pragma: allowlist secret -->
 | Knowledge base with empty `model_selection` | Embedding resolution silently falls back to a default, so the row reports a model it may never have used. Its store holds as many vectors as the row records, so the empty selection is the only thing wrong with it |
 | Knowledge base naming a stubbed backend | `BackendType` still carries `astra` and `mongodb`, so the row parses and then fails at backend construction |
-| Knowledge base with 300 real vectors in a local Chroma store | Enough to force batched reads, so count reconciliation and partial-read behaviour get exercised. The store's `count()` matches the row's cached `chunks`, so a reconciliation run starts clean |
+| Knowledge base with 300 real vectors in a local SQLite store | The copy path. Every `sqlite` row gets its store the way the app creates a new knowledge base (storage generation 1, `storage_state` `ready`), filled through `add_embedded_documents`, so no embedding model is involved. Each store's `count()` matches its row's cached `chunks`, so a reconciliation run starts clean. Raise `--chunks` past a reader's batch size (`iter_documents` defaults to 5000) to exercise batched reads |
 | Knowledge base ingestion run on kb-ok | The run lives on an ingestion `job` whose `asset_id` is the knowledge base, which is what the app reads. A legacy `ingestion_run` row sits beside it, as on an older instance, with a `kb_id` FK (`ON DELETE SET NULL`), the `kb_name` pointer and an FK-less `job_id` |
 | Memory base with its own knowledge base and ingestion records | The backing knowledge base is named `<name>_<8 hex>` and marked `source_types=["memory"]`, as `MemoryBaseService` creates it, with one vector per ingested message. Cursors advance only after a confirmed vector write, so records marked ingested are never reprocessed |
 | Suspended job with a checkpoint, and an A2A task with its checkpoint | Resume state, not history. Dropping it makes a paused run unresumable. The blobs are placeholders, not a real `GraphCheckpoint` dump or A2A task state, so these rows only check that the state is carried, not that a run resumes from it |
@@ -89,3 +89,18 @@ object through a typed `bindparam`.
 Besides naming what was seeded, the manifest carries `expected_failures`: the rows
 seeded to fail a check on purpose, with the reason. A rehearsal needs that to tell an
 intended negative, like the knowledge base on a stubbed backend, from a real one.
+
+`vectors` maps each SQLite knowledge base's name to its `chunks`, `owner_id`, `kb_id`,
+`generation` and the store's `path`, which is
+`<vector_store_root>/sqlite/<owner_id>/<kb_id>/<generation>/vectors.sqlite3`.
+`vector_store_root` is the resolved `LANGFLOW_KNOWLEDGE_BASES_DIR`. Open a store with
+`SQLiteBackend(name, storage_context=SQLiteStorageContext(root, owner_id, kb_id, generation))`.
+The astra row has no store, so it is not in `vectors`.
+
+## Rehearsing the Chroma-to-SQLite upgrade
+
+This seeds SQLite stores, which is what 1.13 writes. Rehearsing the one-time upgrade
+from local Chroma needs Chroma stores, and only a release before #15509 can write them.
+Seed from 7244cc9a13, the last commit that still has `chromadb`, then start a 1.13
+server once against the same database and knowledge bases directory. The upgrade runs
+at startup.
