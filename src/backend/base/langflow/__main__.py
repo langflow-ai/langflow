@@ -1230,8 +1230,10 @@ def relocate_files(
     A file counts as copied only once the bucket reports an object of the same
     size, and files already there are skipped, so a run can be repeated.
 
-    Nothing is deleted from the source and no database row changes: readers
-    address a file by its owner and name, which the copy preserves.
+    Nothing is deleted from the source. Readers address a file by its owner and
+    name, which the copy preserves. Chat history is the exception: it records
+    attachments by absolute local path, so those entries are rewritten to the
+    owner/name form, which both storage backends read.
 
     Uploads, chat attachments and files attached to flows are copied. Profile
     pictures and knowledge bases live outside the storage backend and stay where
@@ -1278,7 +1280,9 @@ async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry
         concurrency=concurrency,
     )
     for result in results:
-        line = f"{result.status:12} {result.owner}/{result.file_name}  {result.size} bytes  -> {result.key}"
+        # A repoint rewrites a path in message.files and moves no bytes.
+        size = "" if result.status in ("repointed", "would_repoint") else f"  {result.size} bytes"
+        line = f"{result.status:12} {result.owner}/{result.file_name}{size}  -> {result.key}"
         typer.echo(f"{line}  ({result.reason})" if result.reason else line)
     counts: dict[str, int] = {}
     for result in results:

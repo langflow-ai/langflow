@@ -46,6 +46,22 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.13.x
+
+Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
+### Breaking changes
+
+- Official packages require authentication by default
+
+    Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
+    For a new installation, set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
+    Setting `LANGFLOW_SUPERUSER_PASSWORD` does not replace an existing account's non-legacy password. If you are upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before you upgrade.
+    Development branches and local builds from those branches still default to automatic login.
+    For trusted local development with a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true`.
+
+    For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
+
 ## 1.12.x
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).

@@ -3159,7 +3159,7 @@ class TestMemoriesAPIHandlers:
     # ---------------------------------------------------------------- #
 
     @pytest.mark.asyncio
-    async def test_list_memory_base_messages_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_not_found_raises_404(self, active_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
@@ -3186,14 +3186,14 @@ class TestMemoriesAPIHandlers:
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
                 session_id="s1",
-                current_user=mock_user,
+                current_user=active_user,
                 params=Params(),
             )
 
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, active_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
@@ -3219,7 +3219,7 @@ class TestMemoriesAPIHandlers:
         ):
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
-                current_user=mock_user,
+                current_user=active_user,
                 params=Params(),
             )
 
