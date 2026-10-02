@@ -1165,6 +1165,43 @@ class TestRelocationToPostgresLive:
 
 
 @pytest.mark.api_key_required
+async def test_write_opensearch_rejects_is_reported_without_the_chunks(active_user, kb_root, tmp_path: Path):  # noqa: ARG001
+    if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
+        pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
+    pytest.importorskip("opensearchpy")
+    # The target index is left from another embedding model, with 4-dimensional vectors.
+    # opensearch-py's error for the refused write quotes each chunk back, vector included.
+    kb_name = f"kb_os_dim_{uuid.uuid4().hex[:6]}"
+    config = {"url_variable": "OPENSEARCH_URL"}
+    record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 2)
+    source = await backend_for_record(record)
+    try:
+        # As SQLite returns them, in float32, which is what the write would quote back.
+        seeded = [doc async for batch in source.iter_documents(include_embeddings=True) for doc in batch]
+    finally:
+        await source.teardown()
+    target = create_backend(
+        "opensearch", kb_name=kb_name, kb_path=tmp_path, backend_config=config, user_id=active_user.id
+    )
+    try:
+        await target.add_embedded_documents([IngestedDocument(id="stale", content="stale", embedding=[0.5] * 4)])
+
+        results = await relocate_knowledge_bases(target_backend_type="opensearch", target_backend_config=config)
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert (result.status, result.code) == ("failed", "kb_failed")
+        assert result.reason.startswith("RuntimeError: 2 document(s) failed to index. mapper_parsing_exception: ")
+        assert "Vector dimension mismatch. Expected: 4, Given: 8" in result.reason
+        for doc in seeded:
+            assert doc.content not in result.reason
+            assert repr(doc.embedding[1]) not in result.reason
+        assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+    finally:
+        await target.delete_collection()
+        await target.teardown()
+
+
+@pytest.mark.api_key_required
 async def test_opensearch_kb_is_not_relocated_onto_its_own_index(active_user, kb_root, tmp_path: Path):  # noqa: ARG001
     if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
         pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
