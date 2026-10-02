@@ -1177,6 +1177,142 @@ def test_printed_database_url_hides_the_password(migrate_module, tmp_path, old_k
     assert password not in str(error.value)
 
 
+def _run_cli(migrate_module, monkeypatch, *args):
+    monkeypatch.setattr(sys, "argv", ["migrate_secret_key.py", *map(str, args)])
+    migrate_module.main()
+
+
+class TestKeySources:
+    """Keys and the database URL come from files or the environment, not only from the command line."""
+
+    rotation_db = TestMigrateEndToEnd.rotation_db
+
+    @pytest.fixture(autouse=True)
+    def _no_ambient_sources(self, monkeypatch):
+        for name in ("LANGFLOW_OLD_SECRET_KEY", "LANGFLOW_NEW_SECRET_KEY", "LANGFLOW_MIGRATION_TARGET_URL"):
+            monkeypatch.delenv(name, raising=False)
+
+    @staticmethod
+    def _stored_api_key(migrate_module, engine, key):
+        with engine.connect() as conn:
+            return migrate_module.decrypt_with_key(conn.execute(text("SELECT api_key FROM apikey")).scalar(), key)
+
+    def test_reads_keys_from_files(self, migrate_module, rotation_db, old_key, new_key, tmp_path, monkeypatch):
+        engine, config_dir, url = rotation_db
+        (tmp_path / "old.key").write_text(f"{old_key}\n")
+        (tmp_path / "new.key").write_text(f"{new_key}\n")
+
+        _run_cli(
+            migrate_module,
+            monkeypatch,
+            *("--config-dir", config_dir, "--database-url", url),
+            *("--old-key-file", tmp_path / "old.key", "--new-key-file", tmp_path / "new.key"),
+        )
+
+        assert self._stored_api_key(migrate_module, engine, new_key) == "lf-api-key-value"
+        # Langflow reads secret_key as it is, so the newline that ends a key file must not reach it.
+        assert (config_dir / "secret_key").read_text() == new_key
+
+    def test_reads_keys_and_database_url_from_the_environment(
+        self, migrate_module, rotation_db, old_key, new_key, tmp_path, monkeypatch
+    ):
+        engine, config_dir, url = rotation_db
+        # Lower in precedence: a key file and a default database that would both fail the run.
+        (config_dir / "secret_key").write_text(secrets.token_urlsafe(32))
+        (config_dir / "langflow.db").touch()
+        monkeypatch.setenv("LANGFLOW_OLD_SECRET_KEY", old_key)
+        monkeypatch.setenv("LANGFLOW_NEW_SECRET_KEY", new_key)
+        monkeypatch.setenv("LANGFLOW_MIGRATION_TARGET_URL", url)
+        # In the migration UI this is the source instance's database, which the script must not open.
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{tmp_path / 'source.db'}")
+
+        _run_cli(migrate_module, monkeypatch, "--config-dir", config_dir)
+
+        assert self._stored_api_key(migrate_module, engine, new_key) == "lf-api-key-value"
+        assert (config_dir / "secret_key").read_text() == new_key
+        assert not (tmp_path / "source.db").exists()
+
+    @pytest.mark.parametrize("source", ["flag", "file"])
+    def test_command_line_wins_over_the_environment(
+        self, migrate_module, rotation_db, old_key, new_key, tmp_path, monkeypatch, source
+    ):
+        engine, config_dir, url = rotation_db
+        monkeypatch.setenv("LANGFLOW_OLD_SECRET_KEY", secrets.token_urlsafe(32))
+        monkeypatch.setenv("LANGFLOW_NEW_SECRET_KEY", secrets.token_urlsafe(32))
+        monkeypatch.setenv("LANGFLOW_MIGRATION_TARGET_URL", f"sqlite:///{tmp_path / 'other.db'}")
+        if source == "flag":
+            key_args = (f"--old-key={old_key}", f"--new-key={new_key}")
+        else:
+            (tmp_path / "old.key").write_text(old_key)
+            (tmp_path / "new.key").write_text(new_key)
+            key_args = ("--old-key-file", tmp_path / "old.key", "--new-key-file", tmp_path / "new.key")
+
+        _run_cli(migrate_module, monkeypatch, "--config-dir", config_dir, "--database-url", url, *key_args)
+
+        assert self._stored_api_key(migrate_module, engine, new_key) == "lf-api-key-value"
+        assert (config_dir / "secret_key").read_text() == new_key
+        assert not (tmp_path / "other.db").exists()
+
+    @pytest.mark.parametrize("which", ["old", "new"])
+    def test_key_and_its_file_together_is_a_usage_error(
+        self, migrate_module, rotation_db, old_key, new_key, tmp_path, monkeypatch, capsys, which
+    ):
+        engine, config_dir, url = rotation_db
+        (tmp_path / "key").write_text(secrets.token_urlsafe(32))
+
+        with pytest.raises(SystemExit) as exit_info:
+            _run_cli(
+                migrate_module,
+                monkeypatch,
+                *("--config-dir", config_dir, "--database-url", url, f"--old-key={old_key}", f"--new-key={new_key}"),
+                *(f"--{which}-key-file", tmp_path / "key"),
+            )
+
+        error = capsys.readouterr().err
+        assert exit_info.value.code == 2
+        assert f"--{which}-key-file: not allowed with argument --{which}-key" in error
+        assert old_key not in error
+        assert new_key not in error
+        assert self._stored_api_key(migrate_module, engine, old_key) == "lf-api-key-value"
+
+    @pytest.mark.parametrize("content", [None, "\n"], ids=["missing", "empty"])
+    def test_unusable_key_file_is_a_usage_error(
+        self, migrate_module, rotation_db, old_key, tmp_path, monkeypatch, capsys, content
+    ):
+        engine, config_dir, url = rotation_db
+        if content is not None:
+            (tmp_path / "new.key").write_text(content)
+
+        with pytest.raises(SystemExit) as exit_info:
+            _run_cli(
+                migrate_module,
+                monkeypatch,
+                *("--config-dir", config_dir, "--database-url", url, f"--old-key={old_key}"),
+                *("--new-key-file", tmp_path / "new.key"),
+            )
+
+        assert exit_info.value.code == 2
+        assert "argument --new-key-file: " in capsys.readouterr().err
+        assert self._stored_api_key(migrate_module, engine, old_key) == "lf-api-key-value"
+        assert list(config_dir.iterdir()) == []
+
+    def test_help_lists_the_sources_without_the_lint_pragma(self, migrate_module, monkeypatch, capsys):
+        with pytest.raises(SystemExit) as exit_info:
+            _run_cli(migrate_module, monkeypatch, "--help")
+
+        output = capsys.readouterr().out
+        assert exit_info.value.code == 0
+        assert "pragma" not in output
+        for name in (
+            "--old-key-file",
+            "--new-key-file",
+            "LANGFLOW_OLD_SECRET_KEY",
+            "LANGFLOW_NEW_SECRET_KEY",
+            "LANGFLOW_MIGRATION_TARGET_URL",
+        ):
+            assert name in output
+
+
 class TestPendingKeyFile:
     """The new key is on disk before the commit, so stopping after the commit cannot lose it."""
 
@@ -1306,7 +1442,7 @@ class TestPendingKeyFile:
 
         output = capsys.readouterr().out
         assert exit_info.value.code == 1
-        assert str(pending) in output
+        assert f"--dry-run --old-key-file {pending}" in output
         assert _fingerprint(new_key) in output
         assert all(key not in output for key in (old_key, new_key, next_key))
         assert pending.read_text() == new_key
@@ -1315,7 +1451,9 @@ class TestPendingKeyFile:
             api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
         assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
 
-    def test_dry_run_shows_which_key_opens_the_data(self, migrate_module, rotation_db, old_key, new_key, capsys):
+    def test_dry_run_shows_which_key_opens_the_data(
+        self, migrate_module, rotation_db, old_key, new_key, monkeypatch, capsys
+    ):
         _, config_dir, url = rotation_db
         (config_dir / "secret_key").mkdir()
         with pytest.raises(SystemExit):
@@ -1324,8 +1462,12 @@ class TestPendingKeyFile:
         pending = config_dir / "secret_key.new"
         capsys.readouterr()
 
-        # The check the leftover-file notice asks for: the pending key as the old key.
-        migrate_module.migrate(config_dir, url, old_key=pending.read_text(), dry_run=True)
+        # The check the leftover-file notice asks for.
+        _run_cli(
+            migrate_module,
+            monkeypatch,
+            *("--config-dir", config_dir, "--database-url", url, "--dry-run", "--old-key-file", pending),
+        )
 
         assert "Would migrate 5 items, 0 failures" in capsys.readouterr().out
         assert pending.read_text() == new_key

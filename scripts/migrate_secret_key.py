@@ -31,6 +31,13 @@ Usage:
     uv run python scripts/migrate_secret_key.py --help
     uv run python scripts/migrate_secret_key.py --dry-run
     uv run python scripts/migrate_secret_key.py --database-url postgresql://...
+    uv run python scripts/migrate_secret_key.py --old-key-file old.key --new-key-file new.key
+
+Values given on the command line show up in the process list and shell history.
+Keys can come from a file (--old-key-file, --new-key-file) or the environment
+(LANGFLOW_OLD_SECRET_KEY, LANGFLOW_NEW_SECRET_KEY), and the database URL from
+LANGFLOW_MIGRATION_TARGET_URL. A command-line value wins over the environment,
+which wins over the defaults. LANGFLOW_DATABASE_URL is not read.
 """
 
 import argparse
@@ -129,6 +136,18 @@ def read_secret_key_from_file(config_dir: Path) -> str | None:
     if secret_file.exists():
         return secret_file.read_text(encoding="utf-8").strip()
     return None
+
+
+def read_key_file(path: str) -> str:
+    """Read a key from a file given on the command line, stripped like the config directory's secret_key."""
+    try:
+        key = Path(path).read_text(encoding="utf-8").strip()
+    except OSError as e:
+        raise argparse.ArgumentTypeError(e) from e
+    if not key:
+        msg = f"{path} is empty"
+        raise argparse.ArgumentTypeError(msg)
+    return key
 
 
 def write_secret_key_to_file(config_dir: Path, key: str, filename: str = "secret_key") -> None:
@@ -491,7 +510,7 @@ def migrate(
     if not old_key:
         print("Error: Could not find current secret key.")
         print(f"  Checked: {config_dir}/secret_key")
-        print("  Use --old-key to provide it explicitly")
+        print("  Use --old-key-file or LANGFLOW_OLD_SECRET_KEY to provide it explicitly")
         sys.exit(1)
 
     # Determine new key
@@ -519,7 +538,7 @@ def migrate(
         pending_fingerprint = key_fingerprint(pending_file.read_text(encoding="utf-8"))
         print(f"\nA previous run stopped before saving its new key: {pending_file} exists.")
         print(f"The database may already be encrypted with the key in that file (fingerprint: {pending_fingerprint}).")
-        print("To find out, do a dry run with that key as the old key:")
+        print(f"To find out, run with --dry-run --old-key-file {pending_file}:")
         print(f"  0 failures: the database is on that key. Move {pending_file} to {secret_file}.")
         print(f"  Failures: the database is not on that key. Delete {pending_file}.")
         if not dry_run:
@@ -793,10 +812,17 @@ Examples:
   %(prog)s
 
   # Custom database and config
-  %(prog)s --database-url postgresql://user:pass@host/db --config-dir /etc/langflow  # pragma: allowlist secret
+  %(prog)s --database-url postgresql://user@host/db --config-dir /etc/langflow
 
-  # Provide keys explicitly
-  %(prog)s --old-key "current-key" --new-key "replacement-key"
+  # Keys from files, which keeps them out of the process list and shell history
+  %(prog)s --old-key-file old.key --new-key-file new.key
+
+Environment variables, used when the matching option is not given:
+  LANGFLOW_MIGRATION_TARGET_URL  Database URL. Use it for a URL that holds a password.
+  LANGFLOW_OLD_SECRET_KEY        Current secret key
+  LANGFLOW_NEW_SECRET_KEY        New secret key
+  LANGFLOW_CONFIG_DIR            Langflow config directory
+LANGFLOW_DATABASE_URL is not read.
         """,
     )
 
@@ -817,38 +843,58 @@ Examples:
         type=str,
         default=None,
         metavar="URL",
-        help="Database connection URL (default: sqlite in config dir)",
+        help="Database connection URL (default: LANGFLOW_MIGRATION_TARGET_URL, then sqlite in config dir)",
     )
-    parser.add_argument(
+    old_key_group = parser.add_mutually_exclusive_group()
+    old_key_group.add_argument(
         "--old-key",
         type=str,
         default=None,
         metavar="KEY",
-        help="Current secret key (default: read from config dir)",
+        help="Current secret key. Shows in the process list: prefer --old-key-file",
     )
-    parser.add_argument(
+    old_key_group.add_argument(
+        "--old-key-file",
+        dest="old_key",
+        type=read_key_file,
+        metavar="PATH",
+        help="File holding the current secret key (default: LANGFLOW_OLD_SECRET_KEY, then secret_key in config dir)",
+    )
+    new_key_group = parser.add_mutually_exclusive_group()
+    new_key_group.add_argument(
         "--new-key",
         type=str,
         default=None,
         metavar="KEY",
-        help="New secret key (default: auto-generated)",
+        help="New secret key. Shows in the process list: prefer --new-key-file",
+    )
+    new_key_group.add_argument(
+        "--new-key-file",
+        dest="new_key",
+        type=read_key_file,
+        metavar="PATH",
+        help="File holding the new secret key (default: LANGFLOW_NEW_SECRET_KEY, then auto-generated)",
     )
 
     args = parser.parse_args()
 
     # Resolve database URL
-    database_url = args.database_url or get_default_database_url(args.config_dir)
+    database_url = (
+        args.database_url
+        or os.environ.get("LANGFLOW_MIGRATION_TARGET_URL")
+        or get_default_database_url(args.config_dir)
+    )
     if not database_url:
         print("Error: Could not determine database URL.")
         print(f"  No database found at {args.config_dir}/langflow.db")
-        print("  Use --database-url to specify the database location")
+        print("  Use --database-url or LANGFLOW_MIGRATION_TARGET_URL to specify the database location")
         sys.exit(1)
 
     migrate(
         config_dir=args.config_dir,
         database_url=database_url,
-        old_key=args.old_key,
-        new_key=args.new_key,
+        old_key=args.old_key or os.environ.get("LANGFLOW_OLD_SECRET_KEY"),
+        new_key=args.new_key or os.environ.get("LANGFLOW_NEW_SECRET_KEY"),
         dry_run=args.dry_run,
     )
 
