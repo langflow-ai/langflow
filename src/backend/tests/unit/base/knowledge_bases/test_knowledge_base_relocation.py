@@ -25,7 +25,7 @@ from langflow.api.utils.knowledge_base_relocation import (
     validate_relocation_target_config,
 )
 from langflow.services.database.models.auth import AuthzAuditLog
-from langflow.services.database.models.knowledge_base import KnowledgeBaseStatus
+from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.knowledge_base_storage.runtime import backend_for_record
@@ -34,8 +34,6 @@ from pydantic import SecretStr
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 
 DIM = 8
 MODEL = {"name": "m", "provider": "p"}
@@ -92,6 +90,16 @@ async def _seed_sqlite_kb(
     finally:
         await backend.teardown()
     return record, docs
+
+
+async def _set_row(record_id: uuid.UUID, **fields) -> None:
+    """Change a knowledge base's row, as a storage operation elsewhere in Langflow would."""
+    async with session_scope() as session:
+        row = await session.get(KnowledgeBaseRecord, record_id)
+        for name, value in fields.items():
+            setattr(row, name, value)
+        session.add(row)
+        await session.commit()
 
 
 @pytest.mark.usefixtures("kb_root")
@@ -161,6 +169,41 @@ class TestRelocationWithoutATarget:
         assert "4 of 10" in result.reason
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "sqlite"
+
+    @pytest.mark.parametrize(
+        ("backend_type", "backend_config", "storage_state", "expected"),
+        [
+            # Local Chroma the startup upgrade has not reached yet, or could not finish.
+            ("chroma", {"mode": "local"}, "ready", "storage upgrade to SQLite has not finished"),
+            ("chroma", {"mode": "local"}, "needs_attention", "storage upgrade to SQLite has not finished"),
+            ("sqlite", {}, "migrating", "storage upgrade to SQLite has not finished"),
+            ("chroma", {"mode": "cloud"}, "needs_attention", "Chroma Cloud"),
+            ("sqlite", {}, "deleting", "storage_state deleting"),
+        ],
+    )
+    async def test_kb_whose_storage_is_not_ready_is_refused_unread(
+        self, active_user, backend_type, backend_config, storage_state, expected
+    ):
+        # Reading any of these would fail some other way: nothing reads Chroma, and
+        # the SQLite store is empty while its row records 3 chunks.
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=f"kb_{backend_type}_{storage_state}",
+            backend_type=backend_type,
+            backend_config=backend_config,
+            model_selection=MODEL,
+            chunks=3,
+        )
+        await _set_row(record.id, storage_state=storage_state)
+
+        results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert result.status == "failed"
+        assert expected in result.reason
+        assert (result.copied, result.target_count) == (0, 0)
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert (row.backend_type, row.storage_state) == (backend_type, storage_state)
 
 
 async def _database_state() -> tuple[str, list[uuid.UUID], uuid.UUID]:
