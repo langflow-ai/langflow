@@ -129,9 +129,10 @@ class SplitTextComponent(Component):
             # Convert string 'False'/'True' to boolean
             keep_sep = self.keep_separator
             if isinstance(keep_sep, str):
-                if keep_sep.lower() == "false":
+                keep_sep = keep_sep.lower()
+                if keep_sep == "false":
                     keep_sep = False
-                elif keep_sep.lower() == "true":
+                elif keep_sep == "true":
                     keep_sep = True
                 # 'start' and 'end' are kept as strings
 
