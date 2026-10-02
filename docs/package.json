@@ -171,6 +171,7 @@
     },
     "ws": "^7.5.11",
     "webpack-dev-server": {
+      ".": "^5.2.6",
       "ws": "^8.21.0"
     },
     "puppeteer-core": {
@@ -185,7 +186,6 @@
     "gray-matter": {
       "js-yaml": "^3.15.2"
     },
-    "node-forge": "^1.4.0",
     "ajv": "^6.14.0",
     "schema-utils@4.3.2": {
       "ajv": "^8.18.0"
