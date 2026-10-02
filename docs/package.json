@@ -76,6 +76,7 @@
     "postcss": "^8.5.26",
     "browserslist": "^4.28.7",
     "image-size": "^2.0.3",
-    "joi": "^17.13.7"
+    "joi": "^17.13.7",
+    "baseline-browser-mapping": "^2.11.0"
   }
 }
