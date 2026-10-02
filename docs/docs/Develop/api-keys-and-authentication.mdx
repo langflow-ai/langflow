@@ -539,7 +539,7 @@ In a shared server where users you do not fully trust can build flows, set `LANG
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 | `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` | Boolean | `True` | Apply SSRF host validation to connector components that take a tenant-controlled host or URL. Uses `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS` for the host policy. Set to `false`, or allowlist specific hosts, only when a trusted single-tenant deployment intentionally connects to private-network services. |
 | `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | Boolean | `True` | When connector SSRF validation is enabled, allow literal loopback hosts (`localhost`, `127.0.0.0/8`, `::1`) and local Redis/MongoDB Unix sockets. Multi-tenant deployments where a tenant must not reach the server's loopback should set this to `false`. |
-| `LANGFLOW_KB_ALLOWED_HOSTS` | List[String] | Not set | An **exclusive** allowlist of destination hosts for the network knowledge base backends (OpenSearch and Chroma Cloud). Accepts the same patterns as `LANGFLOW_SSRF_ALLOWED_HOSTS`. Unlike that variable, which is an exception list that still admits any unlisted public host, this one denies by default: a destination a user supplies is refused unless its host is listed here. A destination Langflow reads from a server environment variable is already operator-controlled and does not need an entry, so setting `OPENSEARCH_URL` on the server keeps working unchanged. Chroma Cloud's default host is also unaffected. See the note below. |
+| `LANGFLOW_KB_ALLOWED_HOSTS` | List[String] | Not set | An **exclusive** allowlist of destination hosts for the network knowledge base backends (OpenSearch and Postgres pgvector). Accepts the same patterns as `LANGFLOW_SSRF_ALLOWED_HOSTS`. Unlike that variable, which is an exception list that still admits any unlisted public host, this one denies by default: a destination a user supplies is refused unless its host is listed here. A destination Langflow reads from a server environment variable is already operator-controlled and does not need an entry, so setting `OPENSEARCH_URL` on the server keeps working unchanged. See the note below. |
 
 Connector validation covers Cassandra, MongoDB, Redis vector store, PGVector, Couchbase, Valkey, Supabase, and the other vector stores and tools listed above. Private service names in container networks (for example, `redis`, `mongo`, or `postgres` resolving to 172.x addresses) require an entry in `LANGFLOW_SSRF_ALLOWED_HOSTS`. MongoDB and Couchbase SRV targets are checked by their own hostnames; allowlisting only the seed name does not cover those targets. For a single Couchbase DNS seed with an explicit port, validation checks both the seed and any SRV targets. Allowlist the target names with a wildcard such as `*.cluster.internal`, or their address range with a CIDR.
 
@@ -566,10 +566,10 @@ export LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS=http://172.17.0.3:8080
 
 #### Knowledge base destinations {#kb-allowed-hosts}
 
-The OpenSearch and Chroma Cloud knowledge base backends need a stricter rule than the other connectors.
+The OpenSearch knowledge base backend needs a stricter rule than the other connectors.
 
 The SSRF variables above validate a hostname and then hand the original URL to a vendor SDK, which resolves DNS again when it connects.
-For the **API Request** component Langflow closes that gap by pinning the validated IP address, but neither knowledge base SDK exposes a place to do that: `chromadb` builds its own HTTP client inside `CloudClient` and connects while the client is still being constructed, and `OpenSearchVectorSearch` passes one set of arguments to both its synchronous and asynchronous clients, so a single pinned transport cannot serve both.
+For the **API Request** component Langflow closes that gap by pinning the validated IP address. `OpenSearchVectorSearch` passes one set of arguments to both its synchronous and asynchronous clients, so a single pinned transport cannot serve both.
 A hostname whose DNS answer changes between validation and connection can therefore still reach an internal address.
 
 `LANGFLOW_KB_ALLOWED_HOSTS` closes that by requiring the destination to be one you chose:
@@ -584,11 +584,12 @@ A destination is permitted when either of the following is true:
 * Its host appears in `LANGFLOW_KB_ALLOWED_HOSTS`.
 
 Everything else is refused, including hosts that resolve to ordinary public addresses.
-A cluster URL a user saved as a Langflow variable in the UI, and a `cloud_host` sent in a request body, both need an entry.
-Chroma Cloud's fixed default host, `api.trychroma.com`, takes no user input and is always permitted.
+A cluster URL a user saved as a Langflow variable in the UI needs an entry.
 
 This is a second check rather than a replacement: an approved host must still satisfy `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS`, so an environment variable pointing at a cloud metadata address is still refused.
 Both checks share the `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` switch.
+
+The pgvector knowledge base backend uses the database URL validation described below, including connector SSRF checks and restrictions on local TLS files.
 
 ### Component hardening for untrusted users {#multi-tenant-component-hardening}
 

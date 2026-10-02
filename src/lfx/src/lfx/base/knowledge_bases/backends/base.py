@@ -64,6 +64,7 @@ class BackendType(str, Enum):
     """
 
     CHROMA = "chroma"
+    SQLITE = "sqlite"
     MONGODB = "mongodb"
     ASTRA = "astra"
     POSTGRES = "postgres"
@@ -156,10 +157,10 @@ class BaseVectorStoreBackend(ABC):
         embedding_function: Embeddings | None = None,
         user_id: UUID | str | None = None,
     ) -> None:
-        # ``kb_path`` is meaningful only to local Chroma, the one backend that
-        # persists to this box's filesystem. Every other backend ignores it, so
-        # callers that resolved a non-local backend pass ``None`` rather than
-        # inventing a throwaway directory just to satisfy the signature.
+        # Legacy local Chroma uses kb_path. SQLite derives its own path from
+        # trusted immutable storage context. Remote backends ignore it, so
+        # their callers pass None rather than inventing a directory.
+        """Capture backend configuration and the trusted storage and embedding context."""
         self.kb_name = kb_name
         self.kb_path = kb_path
         self.backend_config = backend_config or {}
@@ -300,6 +301,7 @@ class BaseVectorStoreBackend(ABC):
         return self._vector_store
 
     async def add_documents(self, docs: list[Document]) -> None:
+        """Write nonempty document batches through the initialized vector store."""
         if not docs:
             return
         await self.ensure_ready()
@@ -346,6 +348,7 @@ class BaseVectorStoreBackend(ABC):
         filter: dict[str, Any] | None = None,  # noqa: A002 — matches LangChain VectorStore API
         with_scores: bool = False,
     ) -> list[tuple[Document, float]]:
+        """Search with metadata filters and optionally return provider distance scores."""
         await self.ensure_ready()
         if with_scores:
             return await self.vector_store.asimilarity_search_with_score(query=query, k=k, filter=filter)
@@ -357,11 +360,13 @@ class BaseVectorStoreBackend(ABC):
         return -float(score)
 
     async def delete_by(self, where: dict[str, Any]) -> None:
+        """Delete matching documents through the initialized vector store."""
         await self.ensure_ready()
         await self.vector_store.adelete(where=where)
 
     async def count(self) -> int:
         # Default: iterate. Subclasses with a native count should override.
+        """Count documents by streaming batches when the backend has no native count."""
         await self.ensure_ready()
         total = 0
         async for batch in self.iter_documents(batch_size=5000):

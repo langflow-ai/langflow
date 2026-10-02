@@ -205,7 +205,7 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
         values.extend(
             (column, row_id, value)
             for row_id, value in rows
-            if isinstance(value, str) and value and (always_encrypted or value.startswith(_FERNET_PREFIX))
+            if isinstance(value, str) and (always_encrypted or (value and value.startswith(_FERNET_PREFIX)))
         )
 
     # Generic variables are stored as typed, so only credentials are encrypted.
@@ -295,10 +295,11 @@ async def _check_knowledge_bases(
     with None where the store could not be read.
     """
     from lfx.base.knowledge_bases.backends import create_backend
+    from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
 
-    from langflow.api.utils.kb_helpers import resolve_local_store_path
     from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
     from langflow.services.database.models.user.model import User
+    from langflow.services.knowledge_base_storage.runtime import storage_root
 
     rows = (
         await session.exec(
@@ -313,39 +314,30 @@ async def _check_knowledge_bases(
         label = f"{owner}/{record.name} ({record.backend_type})"
         counts[(record.user_id, record.name)] = None
         try:
-            kb_path = resolve_local_store_path(
-                record.name,
-                owner,
-                backend_type=record.backend_type,
-                backend_config=record.backend_config,
-                create=False,
+            context = (
+                SQLiteStorageContext(storage_root(), record.user_id, record.id, record.storage_generation)
+                if record.backend_type == "sqlite"
+                else None
             )
-            if kb_path is not None and not kb_path.exists():
-                # A local store that was never written to has no directory yet. Opening
-                # one would create it, and this check does not write.
-                count = 0
-            else:
-                backend = create_backend(
-                    record.backend_type,
-                    kb_name=record.name,
-                    kb_path=kb_path,
-                    backend_config=record.backend_config,
-                    user_id=record.user_id,
-                )
-                try:
-                    if kb_path is None:
-                        # A remote store's connection probe only reads. A local one's opens a
-                        # client, which creates the store in an empty directory, so the
-                        # read-only count below stands in for it.
-                        connection = await backend.test_connection()
-                        if not connection.ok:
-                            unreachable.append(f"{label}: {connection.message}")
-                            continue
-                    # None means the store or its collection does not exist, which reads
-                    # the same as a store never written to.
-                    count = await backend.read_only_count() or 0
-                finally:
-                    await backend.teardown()
+            backend = create_backend(
+                record.backend_type,
+                kb_name=record.name,
+                backend_config=record.backend_config,
+                user_id=record.user_id,
+                storage_context=context,
+            )
+            try:
+                if context is None:
+                    # Local inspection bypasses runtime initialization and storage leases,
+                    # which can create files. Remote probes only read.
+                    connection = await backend.test_connection()
+                    if not connection.ok:
+                        unreachable.append(f"{label}: {connection.message}")
+                        continue
+                # None means a store never written to, which reads as empty.
+                count = await backend.read_only_count() or 0
+            finally:
+                await backend.teardown()
         except Exception as exc:  # noqa: BLE001 - reported per knowledge base
             unreachable.append(f"{label}: {type(exc).__name__}: {exc}")
             continue

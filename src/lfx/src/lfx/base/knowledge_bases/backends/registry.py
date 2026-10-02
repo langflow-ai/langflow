@@ -1,12 +1,13 @@
 """Vector-store backend registry.
 
-New backends register themselves by calling ``register_backend`` once on
-import (see ``backends/__init__.py``). Call sites use ``create_backend`` to
-obtain an instance without hard-coding backend classes.
+Built-in backends load lazily on selection. Extensions register classes with
+``register_backend``. Call sites use ``create_backend`` without importing
+provider SDKs themselves.
 """
 
 from __future__ import annotations
 
+from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import BackendType
@@ -18,9 +19,18 @@ if TYPE_CHECKING:
     from langchain_core.embeddings import Embeddings
 
     from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
+    from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
 
 
 _BACKEND_REGISTRY: dict[BackendType, type[BaseVectorStoreBackend]] = {}
+
+# Resolve provider classes only when selected. In particular, importing the
+# SQLite backend or inspecting capabilities must not import Chroma's SDK.
+_BUILTIN_BACKENDS = {
+    BackendType.SQLITE: ("sqlite", "SQLiteBackend"),
+    BackendType.OPENSEARCH: ("opensearch", "OpenSearchBackend"),
+    BackendType.POSTGRES: ("postgres", "PostgresBackend"),
+}
 
 
 def register_backend(backend_type: BackendType, backend_class: type[BaseVectorStoreBackend]) -> None:
@@ -29,7 +39,13 @@ def register_backend(backend_type: BackendType, backend_class: type[BaseVectorSt
     Idempotent: re-registering the same class is a no-op; re-registering a
     different class raises ``ValueError`` to catch accidental collisions.
     """
+    if backend_type == BackendType.CHROMA:
+        from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
+
+        raise ChromaMigrationRequiredError
     existing = _BACKEND_REGISTRY.get(backend_type)
+    if existing is None and backend_type in _BUILTIN_BACKENDS:
+        existing = get_backend_class(backend_type)
     if existing is not None and existing is not backend_class:
         msg = (
             f"Backend {backend_type.value!r} is already registered to "
@@ -46,10 +62,18 @@ def get_backend_class(backend_type: BackendType | str) -> type[BaseVectorStoreBa
     config-parsing boundaries.
     """
     resolved = _resolve_backend_type(backend_type)
+    if resolved == BackendType.CHROMA:
+        from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
+
+        raise ChromaMigrationRequiredError
+    if resolved not in _BACKEND_REGISTRY and resolved in _BUILTIN_BACKENDS:
+        module_name, class_name = _BUILTIN_BACKENDS[resolved]
+        module = import_module(f"lfx.base.knowledge_bases.backends.{module_name}")
+        _BACKEND_REGISTRY[resolved] = getattr(module, class_name)
     try:
         return _BACKEND_REGISTRY[resolved]
     except KeyError as exc:
-        available = ", ".join(sorted(bt.value for bt in _BACKEND_REGISTRY))
+        available = ", ".join(bt.value for bt in registered_backends())
         msg = (
             f"Vector-store backend {resolved.value!r} is not registered. Registered backends: {available or '<none>'}."
         )
@@ -58,16 +82,26 @@ def get_backend_class(backend_type: BackendType | str) -> type[BaseVectorStoreBa
 
 def registered_backends() -> tuple[BackendType, ...]:
     """Tuple of currently registered backend identifiers (stable ordering)."""
-    return tuple(sorted(_BACKEND_REGISTRY, key=lambda bt: bt.value))
+    return tuple(sorted(_BACKEND_REGISTRY.keys() | _BUILTIN_BACKENDS.keys(), key=lambda bt: bt.value))
+
+
+def is_local_backend(backend_type: BackendType | str | None, backend_config: dict[str, Any] | None) -> bool:
+    """Whether this store depends on host-local storage.
+
+    Missing legacy routing continues to mean local Chroma. Unknown routing
+    fails closed rather than being mistaken for a deployable remote backend.
+    This predicate does not load any optional provider SDK.
+    """
+    resolved = _resolve_backend_type(backend_type or BackendType.CHROMA)
+    return resolved == BackendType.SQLITE or is_local_chroma(resolved, backend_config)
 
 
 def is_local_chroma(backend_type: BackendType | str | None, backend_config: dict[str, Any] | None) -> bool:
     """True when this KB's vectors live in a local Chroma directory on this box.
 
-    The single predicate every "does this KB need the filesystem?" decision must
-    go through. Local Chroma is the *only* backend that stores anything on local
-    disk; every other target (Chroma Cloud, OpenSearch, pgVector, Astra, Mongo)
-    is reachable from any replica and needs no path at all.
+    This legacy predicate identifies Chroma's display-name-based layout. Use
+    ``is_local_backend`` for locality/production/deployment decisions, which
+    must also account for SQLite's immutable identity-based layout.
 
     Cloud-vs-local is not visible in ``backend_type`` — both Chroma modes are
     stored as ``"chroma"`` and the discriminator is ``backend_config["mode"]``.
@@ -98,38 +132,51 @@ def create_backend(
     backend_config: dict[str, Any] | None = None,
     embedding_function: Embeddings | None = None,
     user_id: UUID | str | None = None,
+    storage_context: SQLiteStorageContext | None = None,
+    create: bool = False,
 ) -> BaseVectorStoreBackend:
     """Factory: build a backend instance for ``kb_name``.
 
-    Parameters mirror ``BaseVectorStoreBackend.__init__``. Intended as the
-    single entry point for KB helper code so swapping the default backend is a
-    one-line change in ``kb_helpers``.
+    SQLite additionally requires trusted ``storage_context``. Its normal open
+    path never creates a missing database. Only new-store creation or an
+    unpublished migration generation may explicitly pass ``create=True``.
 
-    ``kb_path`` is required only by local Chroma. Callers that resolved a remote
-    backend pass ``None``; see :func:`is_local_chroma`.
+    SQLite derives its path from immutable storage context. Remote backends
+    pass ``None`` for ``kb_path``. Legacy Chroma routing requires migration.
 
     ``user_id`` is forwarded so backends can resolve credential *variables*
     through Langflow's ``variable_service`` (same pattern as the connector
     ingestion sources). Legacy call sites that pass ``None`` still work —
     the backends fall back to ``os.environ`` in that case.
 
-    For ``BackendType.CHROMA`` the factory dispatches to ``ChromaLocalBackend``
-    or ``ChromaCloudBackend`` based on ``backend_config["mode"]`` so callers
-    never need to know which class to use.
+    Retired Chroma routing always raises a migration-required error.
     """
-    cfg = backend_config or {}
     resolved = _resolve_backend_type(backend_type)
-
     if resolved == BackendType.CHROMA:
-        from lfx.base.knowledge_bases.backends.chroma import (
-            ChromaCloudBackend,
-            ChromaLocalBackend,
-        )
+        from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
 
-        mode = str(cfg.get("mode", "local")).lower()
-        backend_class: type[BaseVectorStoreBackend] = ChromaCloudBackend if mode == "cloud" else ChromaLocalBackend
-    else:
-        backend_class = get_backend_class(resolved)
+        raise ChromaMigrationRequiredError
+
+    if resolved == BackendType.SQLITE:
+        from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend
+
+        if storage_context is None:
+            msg = "SQLite requires trusted owner, KB and storage-generation context."
+            raise ValueError(msg)
+        return SQLiteBackend(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            backend_config=backend_config,
+            embedding_function=embedding_function,
+            user_id=user_id,
+            storage_context=storage_context,
+            create=create,
+        )
+    if storage_context is not None or create:
+        msg = "Explicit local storage context and creation are supported only by SQLite."
+        raise ValueError(msg)
+
+    backend_class = get_backend_class(resolved)
 
     return backend_class(
         kb_name=kb_name,

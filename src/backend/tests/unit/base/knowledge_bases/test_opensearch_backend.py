@@ -15,7 +15,9 @@ guard.
 
 from __future__ import annotations
 
+import asyncio
 import re
+import threading
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
@@ -51,6 +53,88 @@ def _make_backend(
     backend._resolved_password = "secret"  # noqa: S105 — test fixture  # pragma: allowlist secret
     backend._secrets_resolved = True
     return backend
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.parametrize("operation", ["delete_by", "delete_collection", "embedded_write"])
+async def test_cancelled_remote_mutation_drains_native_worker(tmp_path, operation):
+    from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+    backend = _make_backend(tmp_path)
+    started = threading.Event()
+    release = threading.Event()
+    completed = threading.Event()
+
+    def blocked_request(*_args, **_kwargs):
+        started.set()
+        assert release.wait(5)
+        completed.set()
+        return {"acknowledged": True, "deleted": 1, "failures": [], "timed_out": False}
+
+    client = MagicMock()
+    client.indices.delete.side_effect = blocked_request
+    client.delete_by_query.side_effect = blocked_request
+    backend._os_client = client
+    backend._os_index = "test_index"
+    backend._vector_store = MagicMock(bulk_size=500)
+    backend._vector_store.add_embeddings.side_effect = blocked_request
+    if operation == "embedded_write":
+        pending = backend._write_embedded(["id"], [IngestedDocument(id="id", content="text", embedding=[1.0])])
+    elif operation == "delete_by":
+        pending = backend.delete_by({"session_id": "session"})
+    else:
+        pending = backend.delete_collection()
+    task = asyncio.create_task(pending)
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        task.cancel()
+        await asyncio.sleep(0.05)
+        assert not task.done(), "The native request must drain before the coroutine releases its fence"
+        assert not completed.is_set()
+    finally:
+        release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert completed.is_set()
+
+
+@pytest.mark.parametrize("operation", ["delete_by", "delete_collection"])
+async def test_remote_delete_propagates_transport_failure(tmp_path, operation):
+    backend = _make_backend(tmp_path)
+    client = MagicMock()
+    client.indices.delete.side_effect = OSError("remote unavailable")
+    client.delete_by_query.side_effect = OSError("remote unavailable")
+    backend._os_client = client
+    backend._os_index = "test_index"
+    pending = backend.delete_by({"session_id": "session"}) if operation == "delete_by" else backend.delete_collection()
+    with pytest.raises(OSError, match="remote unavailable"):
+        await pending
+
+
+@pytest.mark.parametrize("result", [{"timed_out": True}, {"failures": [{}]}, {"version_conflicts": 1}])
+async def test_document_delete_rejects_partial_success(tmp_path, result):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.delete_by_query.return_value = result
+    backend._os_index = "test_index"
+    with pytest.raises(RuntimeError, match="did not complete"):
+        await backend.delete_by({"session_id": "session"})
+
+
+async def test_collection_delete_initializes_fresh_client_and_requires_acknowledgement(tmp_path):
+    backend = OpenSearchBackend(kb_name="test", kb_path=tmp_path)
+    client = MagicMock()
+    client.indices.delete.return_value = {"acknowledged": False}
+
+    async def initialize():
+        backend._os_client = client
+        backend._os_index = "test_index"
+
+    backend.ensure_ready = AsyncMock(side_effect=initialize)
+    with pytest.raises(RuntimeError, match="did not acknowledge"):
+        await backend.delete_collection()
+    backend.ensure_ready.assert_awaited_once()
+    client.indices.delete.assert_called_once_with(index="test_index", ignore_unavailable=True)
 
 
 class TestOpenSearchBackendVectorFieldDefault:

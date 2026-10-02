@@ -1,7 +1,7 @@
 """Tests for the instance integrity check.
 
 Each test seeds one real disagreement between the database and something outside
-it, against the real test database, local storage and local Chroma, and checks it
+it, against the real test database, local storage and local SQLite, and checks it
 is reported. A clean instance has to pass, and a run has to leave the database as
 it found it.
 """
@@ -30,6 +30,8 @@ from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from lfx.base.knowledge_bases.backends import create_backend
+from lfx.base.knowledge_bases.backends.base import IngestedDocument
+from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
 from sqlmodel import select
 
 if TYPE_CHECKING:
@@ -64,28 +66,27 @@ async def _add(*rows) -> None:
         await session.commit()
 
 
-async def _seed_chroma(kb_root: Path, username: str, user_id, name: str, vectors: int, *, recorded: int) -> None:
-    """A local Chroma knowledge base holding real vectors, and its row."""
-    kb_path = kb_root / username / name
-    kb_path.mkdir(parents=True)
-    backend = create_backend("chroma", kb_name=name, kb_path=kb_path, user_id=user_id)
+async def _seed_sqlite(kb_root: Path, user_id, name: str, vectors: int, *, recorded: int) -> KnowledgeBaseRecord:
+    """A local SQLite knowledge base holding real vectors, and its row."""
+    record = KnowledgeBaseRecord(name=name, user_id=user_id, backend_type="sqlite", chunks=recorded)
+    context = SQLiteStorageContext(kb_root, user_id, record.id, record.storage_generation)
+    backend = create_backend("sqlite", kb_name=name, storage_context=context, user_id=user_id, create=True)
     await backend.ensure_ready()
     if vectors:
-        backend.vector_store._collection.upsert(
-            ids=[f"c{i}" for i in range(vectors)],
-            embeddings=[[float(i), 1.0, 0.0, 0.0] for i in range(vectors)],
-            documents=[f"chunk {i}" for i in range(vectors)],
+        await backend.add_embedded_documents(
+            [IngestedDocument(f"chunk {i}", {}, [float(i), 1.0, 0.0, 0.0], id=f"c{i}") for i in range(vectors)]
         )
     await backend.teardown()
-    await _add(KnowledgeBaseRecord(name=name, user_id=user_id, backend_type="chroma", chunks=recorded))
+    await _add(record)
+    return record
 
 
 def _contents(directory: Path) -> dict[str, str]:
-    """A digest of every file under a directory: anything written there changes it."""
+    """Digest persisted data, excluding SQLite's shared-memory locks and empty WAL."""
     return {
         str(path.relative_to(directory)): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(directory.rglob("*"))
-        if path.is_file()
+        if path.is_file() and not path.name.endswith("-shm") and (not path.name.endswith("-wal") or path.stat().st_size)
     }
 
 
@@ -105,7 +106,7 @@ class TestCleanInstance:
         ]
 
     async def test_a_run_leaves_the_database_as_it_found_it(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-fine", 3, recorded=3)
+        await _seed_sqlite(kb_root, active_user.id, "kb-fine", 3, recorded=3)
         await _add(File(user_id=active_user.id, name="gone", path=f"{active_user.id}/gone.txt", size=1))
 
         async def snapshot():
@@ -152,7 +153,8 @@ class TestCredentials:
         assert check.status == "fail"
         assert any(p.startswith("apikey.api_key row ") for p in check.problems)
 
-    async def test_a_connection_payload_that_lost_its_token_prefix_is_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+    @pytest.mark.parametrize("empty_payload", [False, True], ids=["damaged-prefix", "empty"])
+    async def test_a_malformed_connection_payload_is_counted(self, active_user, storage_dir, kb_root, empty_payload):  # noqa: ARG002
         # A connection's payload is always written encrypted, and its reader raises on one it cannot decode.
         from langflow.services.connection.service import (
             ConnectionSecretError,
@@ -169,7 +171,7 @@ class TestCredentials:
         await _add(ConnectionSecret(connection_id=connection.id, encrypted_payload=payload))
         assert _check(await check_instance(), "credentials").status == "ok"
 
-        damaged = "damaged" + payload.removeprefix("gAAAAA")
+        damaged = "" if empty_payload else "damaged" + payload.removeprefix("gAAAAA")
         async with session_scope() as session:
             (await session.get(ConnectionSecret, connection.id)).encrypted_payload = damaged
             await session.commit()
@@ -280,7 +282,7 @@ class TestKnowledgeBases:
         assert not re.search(r"\): \w+(Error|Exception): ", check.problems[0]), check.problems[0]
 
     async def test_a_store_holding_fewer_vectors_than_its_row_is_reported(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-short", 3, recorded=5)
+        await _seed_sqlite(kb_root, active_user.id, "kb-short", 3, recorded=5)
 
         report = await check_instance()
 
@@ -290,17 +292,19 @@ class TestKnowledgeBases:
         assert "store holds 3, row records 5" in counts.problems[0]
 
     async def test_a_matching_store_passes(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-fine", 3, recorded=3)
+        await _seed_sqlite(kb_root, active_user.id, "kb-fine", 3, recorded=3)
 
         assert _check(await check_instance(), "vector counts").status == "ok"
 
     async def test_a_store_never_written_to_is_not_created(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        await _add(KnowledgeBaseRecord(name="kb-empty", user_id=active_user.id, backend_type="chroma", chunks=0))
+        record = KnowledgeBaseRecord(name="kb-empty", user_id=active_user.id, backend_type="sqlite", chunks=0)
+        await _add(record)
 
         report = await check_instance()
 
+        assert _check(report, "knowledge bases").status == "ok"
         assert _check(report, "vector counts").status == "ok"
-        assert not (kb_root / active_user.username / "kb-empty").exists()
+        assert not SQLiteStorageContext(kb_root, active_user.id, record.id).database_path.parent.exists()
 
 
 class TestMemoryBases:
@@ -324,7 +328,7 @@ class TestMemoryBases:
         assert "missing" in check.problems[0]
 
     async def test_ingested_messages_with_an_empty_knowledge_base_are_reported(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-memory", 0, recorded=0)
+        await _seed_sqlite(kb_root, active_user.id, "kb-memory", 0, recorded=0)
         await self._memory_with_one_ingested_message(active_user, "kb-memory")
 
         check = _check(await check_instance(), "memory bases")
@@ -333,7 +337,7 @@ class TestMemoryBases:
         assert "is empty" in check.problems[0]
 
     async def test_ingested_messages_with_vectors_pass(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-memory", 2, recorded=2)
+        await _seed_sqlite(kb_root, active_user.id, "kb-memory", 2, recorded=2)
         await self._memory_with_one_ingested_message(active_user, "kb-memory")
 
         assert _check(await check_instance(), "memory bases").status == "ok"
@@ -447,31 +451,26 @@ class TestReadOnly:
     """The check reads. Running it must not create storage or change the database."""
 
     async def test_an_existing_empty_store_directory_is_not_initialized(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        kb_path = kb_root / active_user.username / "kb-empty-dir"
+        record = KnowledgeBaseRecord(name="kb-empty-dir", user_id=active_user.id, backend_type="sqlite", chunks=0)
+        kb_path = SQLiteStorageContext(kb_root, active_user.id, record.id).database_path.parent
         kb_path.mkdir(parents=True)
-        await _add(KnowledgeBaseRecord(name="kb-empty-dir", user_id=active_user.id, backend_type="chroma", chunks=0))
-
-        await check_instance()
-
-        assert list(kb_path.iterdir()) == []
-
-    async def test_a_store_without_this_collection_does_not_get_one(self, active_user, storage_dir, kb_root):  # noqa: ARG002
-        import chromadb
-
-        # A store directory that exists and holds another collection, but not this one.
-        kb_path = kb_root / active_user.username / "kb-no-collection"
-        kb_path.mkdir(parents=True)
-        client = chromadb.PersistentClient(path=str(kb_path))
-        client.get_or_create_collection("something-else")
-        del client
-        await _add(
-            KnowledgeBaseRecord(name="kb-no-collection", user_id=active_user.id, backend_type="chroma", chunks=3)
-        )
+        await _add(record)
 
         report = await check_instance()
 
-        client = chromadb.PersistentClient(path=str(kb_path))
-        assert sorted(c.name for c in client.list_collections()) == ["something-else"]
+        assert _check(report, "knowledge bases").status == "ok"
+        assert list(kb_path.iterdir()) == []
+
+    async def test_a_store_for_another_knowledge_base_is_not_used_or_created(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        await _seed_sqlite(kb_root, active_user.id, "something-else", 3, recorded=3)
+        record = KnowledgeBaseRecord(name="kb-no-store", user_id=active_user.id, backend_type="sqlite", chunks=3)
+        await _add(record)
+        before = _contents(kb_root)
+
+        report = await check_instance()
+
+        assert not SQLiteStorageContext(kb_root, active_user.id, record.id).database_path.exists()
+        assert _contents(kb_root) == before
         assert "store holds 0, row records 3" in " ".join(_check(report, "vector counts").problems)
 
     @pytest.mark.parametrize("older_schema", [True, False], ids=["older-schema", "current-schema"])
@@ -482,28 +481,36 @@ class TestReadOnly:
         kb_root,
         older_schema,
     ):
-        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-kept", 3, recorded=3)
-        kb_path = kb_root / active_user.username / "kb-kept"
+        record = await _seed_sqlite(kb_root, active_user.id, "kb-kept", 3, recorded=3)
+        context = SQLiteStorageContext(kb_root, active_user.id, record.id)
+        kb_path = context.database_path.parent
         if older_schema:
-            # As the Chroma release before the metadata-array migration left a store. A client
-            # that opens it applies the migration, and one that opens any store records a lock row.
-            store = sqlite3.connect(kb_path / "chroma.sqlite3")
-            store.executescript(
-                "DELETE FROM migrations WHERE dir = 'metadb' AND version = 6; DROP TABLE embedding_metadata_array;"
-            )
+            store = sqlite3.connect(context.database_path)
+            store.execute("UPDATE store_header SET schema_version = schema_version - 1")
+            store.commit()
             store.close()
         before = _contents(kb_path)
 
-        backend = create_backend("chroma", kb_name="kb-kept", kb_path=kb_path, user_id=active_user.id)
-        count = await backend.read_only_count()
-        await backend.teardown()
+        report = await check_instance()
 
-        assert count == 3
+        assert _check(report, "knowledge bases").status == ("fail" if older_schema else "ok")
+        if older_schema:
+            assert "schema_version" in " ".join(_check(report, "knowledge bases").problems)
+        else:
+            assert _check(report, "vector counts").status == "ok"
         assert _contents(kb_path) == before
+
+    async def test_retired_chroma_is_reported_without_opening_its_store(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        kb_path = kb_root / active_user.username / "kb-retired"
+        kb_path.mkdir(parents=True)
+        (kb_path / "chroma.sqlite3").write_bytes(b"original retired store")
+        await _add(KnowledgeBaseRecord(name="kb-retired", user_id=active_user.id, backend_type="chroma", chunks=3))
+        before = _contents(kb_path)
 
         report = await check_instance()
 
-        assert _check(report, "vector counts").status == "ok"
+        assert _check(report, "knowledge bases").status == "fail"
+        assert "requires migration" in " ".join(_check(report, "knowledge bases").problems)
         assert _contents(kb_path) == before
 
     async def test_a_store_that_cannot_be_read_is_reported_and_not_counted_as_empty(
@@ -512,16 +519,16 @@ class TestReadOnly:
         storage_dir,  # noqa: ARG002
         kb_root,
     ):
-        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-unreadable", 3, recorded=3)
-        store = sqlite3.connect(kb_root / active_user.username / "kb-unreadable" / "chroma.sqlite3")
-        store.executescript("DROP TABLE embeddings")
+        record = await _seed_sqlite(kb_root, active_user.id, "kb-unreadable", 3, recorded=3)
+        store = sqlite3.connect(SQLiteStorageContext(kb_root, active_user.id, record.id).database_path)
+        store.executescript("DROP TABLE chunks")
         store.close()
 
         report = await check_instance()
 
         problems = " ".join(_check(report, "knowledge bases").problems)
         assert "kb-unreadable" in problems
-        assert "no such table: embeddings" in problems
+        assert "no such table: chunks" in problems
         assert _check(report, "vector counts").status == "ok"
 
     async def test_a_database_on_another_schema_is_reported_and_not_read(self, active_user, storage_dir, kb_root):  # noqa: ARG002
