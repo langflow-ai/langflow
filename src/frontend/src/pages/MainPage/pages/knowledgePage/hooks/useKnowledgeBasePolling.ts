@@ -37,7 +37,9 @@ export const useKnowledgeBasePolling = ({
   // When data arrives, check if polling is needed
   useEffect(() => {
     if (knowledgeBases) {
-      pollingRef.current = knowledgeBases.some((kb) => isBusyStatus(kb.status));
+      pollingRef.current = knowledgeBases.some(
+        (kb) => isBusyStatus(kb.status) || kb.storage_state === "migrating",
+      );
     }
   }, [knowledgeBases]);
 
@@ -93,8 +95,10 @@ export const useKnowledgeBasePolling = ({
           }
         }
 
-        pollingRef.current = freshData.some((kb) => isBusyStatus(kb.status));
-      } catch (e) {
+        pollingRef.current = freshData.some(
+          (kb) => isBusyStatus(kb.status) || kb.storage_state === "migrating",
+        );
+      } catch {
         // Silently ignore polling errors
       }
     };

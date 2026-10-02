@@ -3,7 +3,7 @@
 import asyncio
 import threading
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -36,7 +36,7 @@ async def test_inventory_does_not_disable_ordinary_service_readiness(monkeypatch
     assert not await coordinator.readiness(require_storage_ready=True)
 
 
-async def test_ordinary_readiness_waits_for_first_scan_but_recovers_with_issues(database, monkeypatch):
+async def test_ordinary_readiness_stays_available_during_first_scan_with_issues(database, monkeypatch):
     started, release = asyncio.Event(), asyncio.Event()
     original = coordinator.reconcile_legacy_inventory
     source = database.root / database.user.username / "unregistered"
@@ -53,7 +53,7 @@ async def test_ordinary_readiness_waits_for_first_scan_but_recovers_with_issues(
     task = asyncio.create_task(coordinator.run_pending())
     await started.wait()
     try:
-        assert not await coordinator.readiness(require_storage_ready=False)
+        assert await coordinator.readiness(require_storage_ready=False)
     finally:
         release.set()
         await task
@@ -540,8 +540,11 @@ async def test_legacy_inventory_does_not_skip_previously_valid_usernames(databas
     source.mkdir(parents=True)
     (source / "chroma.sqlite3").write_bytes(b"legacy data")
     row = await make_kb(database)
+    fingerprint = Mock(wraps=coordinator.tree_fingerprint)
+    monkeypatch.setattr(coordinator, "tree_fingerprint", fingerprint)
     await coordinator.reconcile_legacy_inventory()
-    assert coordinator.inventory_status() == {"complete": False, "issues": 1}
+    fingerprint.assert_any_call(source)
+    assert coordinator.inventory_status() == {"complete": True, "issues": 0}
     monkeypatch.setattr(maintenance, "_process_matches", lambda _identity: False)
     monkeypatch.setattr(maintenance, "remaining_legacy_workers", list)
     receipt = database.root.parent / "receipt.json"

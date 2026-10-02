@@ -9,26 +9,105 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_
 from sqlmodel import col, select
 
-from langflow.api.utils import DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.authorization import KnowledgeBaseAction, filter_visible_resources
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.knowledge_base_storage.cleanup import detach_attention_store, retry_pending_cleanup
-from langflow.services.knowledge_base_storage.coordinator import published_inventory_status, schedule_upgrade
+from langflow.services.knowledge_base_storage.coordinator import (
+    published_inventory_status,
+    schedule_upgrade,
+    upgrade_in_progress,
+)
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 
 router = APIRouter(prefix="/knowledge-base-storage", tags=["Knowledge Base Upgrade"])
 
 _GUIDANCE = {
-    "maintenance_required": "Use the managed upgrade controller to establish the stopped-worker receipt and backup.",
+    "maintenance_required": "Check storage access and free disk space, then retry. Your original data is preserved.",
+    "automatic_upgrade_disabled": (
+        "Enable LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE and restart Langflow to upgrade local data."
+    ),
+    "single_host_required": (
+        "Stop all old instances, then run one Langflow worker on the host with the original "
+        "local data. Distributed deployments need administrator recovery."
+    ),
+    "legacy_workers_running": "Stop the other Langflow instance using this data, then retry the upgrade.",
+    "local_filesystem_required": (
+        "Copy the original data to a local filesystem and run one Langflow worker there. "
+        "Shared filesystems require administrator recovery."
+    ),
     "remote_source_requires_migration": "Migrate the remote collection to a configured pgVector or OpenSearch store.",
     "validation_failed": "The copy failed validation. Preserve the original source and inspect the upgrade logs.",
     "storage_changed": "Routing changed during upgrade. Inspect the authoritative KB record before retrying.",
     "interrupted": "The upgrade was interrupted. Retry resumes the unpublished generation safely.",
-    "migration_failed": "Verify helper availability, source compatibility and free disk space, then retry.",
+    "migration_failed": (
+        "Check storage access, source compatibility and free disk space, then retry. Your original data is preserved."
+    ),
 }
+
+
+@router.get("/status")
+async def storage_status(session: DbSession, current_user: CurrentActiveUser):
+    """Show users their own availability and administrators the recovery queue.
+
+    Paths, embedding credentials and other users' resources never appear in
+    regular-user responses. Progress is joined to the active migration only.
+    """
+    statement = (
+        select(KnowledgeBaseRecord, KnowledgeBaseStorageMigration)
+        .outerjoin(
+            KnowledgeBaseStorageMigration,
+            KnowledgeBaseRecord.active_migration_id == KnowledgeBaseStorageMigration.id,
+        )
+        .where(
+            col(KnowledgeBaseRecord.storage_state).in_(("migrating", "needs_attention"))
+            | col(KnowledgeBaseRecord.active_migration_id).is_not(None)
+        )
+    )
+    if not current_user.is_superuser:
+        statement = statement.where(KnowledgeBaseRecord.user_id == current_user.id)
+    rows = (
+        await session.exec(
+            statement.order_by(
+                (col(KnowledgeBaseRecord.storage_state) != "ready").desc(),
+                col(KnowledgeBaseStorageMigration.updated_at).desc(),
+            ).limit(500)
+        )
+    ).all()
+    if not current_user.is_superuser:
+        rows = await filter_visible_resources(
+            current_user,
+            resource_type="knowledge_base",
+            candidates=rows,
+            key=lambda item: item[0].id,
+            owner_extractor=lambda item: item[0].user_id,
+            act=KnowledgeBaseAction.READ,
+        )
+    return {
+        "stores": [
+            {
+                "kb_id": record.id,
+                "name": record.name,
+                "storage_state": record.storage_state,
+                "migration_id": run.id if run else None,
+                "phase": run.phase if run else "discovered",
+                "error_code": run.error_code if run else None,
+                "guidance": _GUIDANCE.get(run.error_code or "") if run else None,
+                "can_retry": bool(current_user.is_superuser and run and record.storage_state == "needs_attention"),
+            }
+            for record, run in rows
+            if record.storage_state in ("migrating", "needs_attention")
+        ],
+        "revision": max((run.updated_at.isoformat() for _, run in rows if run and run.phase == "complete"), default=""),
+        "running": any(record.storage_state == "migrating" for record, _ in rows)
+        or (current_user.is_superuser and upgrade_in_progress()),
+        "inventory": await published_inventory_status() if current_user.is_superuser else None,
+        "is_admin": bool(current_user.is_superuser),
+    }
 
 
 class CleanupRetryRequest(BaseModel):

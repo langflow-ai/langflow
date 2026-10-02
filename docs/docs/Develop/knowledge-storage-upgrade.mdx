@@ -8,38 +8,59 @@ Existing OpenSearch and Postgres pgvector stores keep their routing.
 Chroma Cloud and the Chroma, Local DB, and ALTK components are retired.
 Saved components from released 1.x versions can still load for inspection and replacement without reinstalling the retired SDKs.
 
-## Before upgrading
+## Local development: upgrade and keep working
 
-Back up the application database and the complete knowledge-base directory, including native indexes and WAL files.
-Stop every old API and Memory worker before migrating local data.
-An old worker cannot honor the new storage fences.
-Keep backups and retained legacy sources until the upgraded data is verified.
+For a single local Langflow instance, upgrade the package or container image and start Langflow normally.
+On first startup, Langflow automatically upgrades supported local Chroma Knowledge and Memory stores in the background.
+The built-in reader copies existing vectors directly into SQLite without Docker, a helper image, a Chroma SDK, or calls to the embedding provider.
+The base IDs, names, document IDs, text, metadata, vector dimensions and distance metric are retained.
+The reader is qualified against persistent HNSW stores produced by Chroma 0.5.23 and 1.5.9, including pending additions, updates and deletes.
+Unsupported or damaged formats remain preserved and show recovery guidance.
 
-Automatic migration requires a non-root POSIX account, local disk, Docker, the qualified cosign version, and a SQLite application database.
-The foreground supervisor must lead a dedicated process session, and its external restart policy must be disabled.
-Recent MCP stdio servers can use separate sessions. Stop those tools and their child processes before attempting the managed upgrade.
-The controller refuses escaped workers before terminating the selected service.
+You can use the rest of Langflow during the upgrade, including existing ready bases and newly created bases.
+Only a base waiting for or undergoing migration is temporarily unavailable.
+The upgrade notice shows progress from any screen. Knowledge and Memory details show the affected base's availability.
+An affected base does not display **Ready**, and a flow that accesses it explains that an upgrade is in progress.
+Ordinary `/healthz` checks remain available during discovery and copying.
 
-Use the [managed controller runbook](https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/development/sqlite-kb-controller.md) and the [signed helper instructions](https://github.com/langflow-ai/langflow/blob/release-1.13.0/tools/chroma_migration_helper/README.md).
-The controller verifies the signature, local image, and Docker isolation profile before downtime.
-It then stops the selected process family, records a backup and receipt, starts 1.13, and waits for migration readiness.
+Langflow retains the original Chroma directory, takes a pristine source snapshot, and saves private routing metadata before copying.
+For a SQLite application database, it also takes one consistent database backup shared by the migration runs.
+Each run records the backup's location, so multiple bases do not duplicate the full application database.
+For a PostgreSQL application database, the local copy uses the same path and saves the base's routing metadata. Keep your usual PostgreSQL backups.
+The target remains unpublished until the complete export and import have passed validation.
+Exact SQLite search can order tied results differently from Chroma's approximate search.
 
-## Pip, container, Kubernetes, and PostgreSQL application-database upgrades
+If Langflow restarts or an upgrade is interrupted, the next startup automatically resumes the durable migration.
+An incomplete target cannot be used as an empty replacement for the old base.
+Do not remove retained originals or backups until you have verified your data.
+Existing installations already upgraded to 1.13 resume through the same startup path. You do not need to downgrade first.
 
-Replacing the package or image starts the application normally.
-Ordinary `/healthz` probes check service readiness and do not block the entire instance on retained Chroma directories.
-Affected Knowledge and Memory stores remain fenced, and their operations report HTTP 409 with recovery guidance.
-The application does not read legacy Chroma data directly or create an empty replacement under the old identity.
+## Shared and distributed installations
 
-The managed controller does not support PostgreSQL application databases, Windows services, distributed workers, or container orchestrators.
-Before upgrading those installations, export or re-ingest each legacy store into a supported remote provider using the old release.
-If an installation has already been upgraded, retain its backup and use an isolated old-release environment to recover the source data.
-An administrator can detach a failed store, and its owner can remove the application record and create a new SQLite or remote store for re-ingestion.
-Detachment and retirement preserve legacy files and Cloud data. They do not delete the provider's source data.
+Automatic local migration requires one worker on a supported local filesystem, with no other running Langflow instance that could write the source.
+It applies to single-host local data with either a SQLite or PostgreSQL application database.
+Set `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE=false` to leave migration under operator control.
+
+Multiple workers, orchestrators and shared filesystems require a maintenance window managed by the administrator.
+Stop all old API and Memory workers before migrating. An old worker cannot honor the new storage fences.
+Retain a backup of the application database and the complete knowledge-base directory, including native indexes and WAL files.
+For local stores, run one Langflow worker outside the orchestrator on a supported local filesystem with the original data and authoritative application database.
+The automatic migration then copies the data without re-embedding. A local SQLite vector store must continue to run on one host and local disk.
+For stores that must serve across hosts, export or re-ingest into a supported remote provider using an isolated old-release environment.
+The notice explains the required recovery action, and ordinary users see instructions to contact their administrator.
+
+The [managed controller](https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/development/sqlite-kb-controller.md) remains available for operators who want a supervised stop, backup, launch and readiness check.
+That optional path uses the [signed helper](https://github.com/langflow-ai/langflow/blob/release-1.13.0/tools/chroma_migration_helper/README.md) and its own POSIX/Docker/SQLite prerequisites.
+Those prerequisites do not apply to the built-in automatic reader.
+
+Chroma Cloud stores require migration to a supported provider. They are never replaced silently.
+Existing OpenSearch and pgvector stores continue to work with their configured providers.
 
 ## Inspect and recover a failed upgrade
 
-Active superusers can inspect `/api/v1/knowledge-base-storage/migrations` and `/api/v1/knowledge-base-storage/inventory`.
+Users can open the upgrade notice and see progress for their own bases through `/api/v1/knowledge-base-storage/status`.
+Administrators can retry a failed migration from that notice after resolving the reported cause.
+Active superusers can also inspect `/api/v1/knowledge-base-storage/migrations` and `/api/v1/knowledge-base-storage/inventory`.
 Inventory reports the latest completed scan shared across workers on the configured storage root.
 Use the returned KB UUID and storage generation for retry or detachment.
 Retries never change the readiness of unrelated flows.

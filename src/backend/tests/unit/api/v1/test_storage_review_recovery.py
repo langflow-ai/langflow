@@ -123,3 +123,90 @@ async def test_fenced_memory_does_not_prevent_session_history_deletion(
         assert not list(
             (await db.exec(select(MessageTable).where(MessageTable.session_id == tracking.session_id))).all()
         )
+
+
+@pytest.mark.parametrize(
+    ("state", "display_status"), [("migrating", "upgrading"), ("needs_attention", "needs_migration")]
+)
+async def test_storage_availability_overrides_ready_in_knowledge_and_memory(
+    client,
+    logged_in_headers,
+    active_user,
+    state,
+    display_status,
+):
+    record = await knowledge_base_service.create_record(
+        user_id=active_user.id, name=f"mem_{uuid4().hex}", backend_type="sqlite"
+    )
+    memory = MemoryBase(name="storage-status", flow_id=uuid4(), user_id=active_user.id, kb_name=record.name)
+    async with session_scope() as db:
+        current = await db.get(KnowledgeBaseRecord, record.id)
+        current.storage_state = state
+        current.backend_type = "chroma"
+        current.chunks = 500
+        current.status = "ready"
+        db.add(memory)
+        await db.commit()
+    # Memory's backing KB is omitted from the Knowledge list. Its own API
+    # must still expose the same availability and immutable storage identity.
+    response = await client.get(f"/api/v1/memories/{memory.id}", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["storage_state"] == state
+    assert response.json()["storage_kb_id"] == str(record.id)
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    store = next(item for item in response.json()["stores"] if item["kb_id"] == str(record.id))
+    assert store["storage_state"] == state
+    assert "source_identity" not in store
+    assert "backend_config" not in store
+    from langflow.api.v1.knowledge_bases import _build_kb_info
+
+    info = _build_kb_info(
+        kb_name=record.name, dir_name=record.name, metadata={"chunks": 500, "status": "ready", "storage_state": state}
+    )
+    assert info.status == display_status
+
+
+async def test_regular_user_upgrade_status_excludes_other_owners(client, logged_in_headers, active_user):
+    from langflow.services.database.models.user.model import User
+
+    other = User(username=f"private_{uuid4().hex}", password=uuid4().hex, is_active=True)
+    owned = KnowledgeBaseRecord(
+        name="owned-upgrade", user_id=active_user.id, backend_type="chroma", storage_state="migrating"
+    )
+    hidden = KnowledgeBaseRecord(
+        name="hidden-upgrade", user_id=other.id, backend_type="chroma", storage_state="needs_attention"
+    )
+    async with session_scope() as db:
+        db.add_all([other, owned, hidden])
+        await db.commit()
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert not result["is_admin"]
+    assert result["inventory"] is None
+    assert str(owned.id) in {item["kb_id"] for item in result["stores"]}
+    assert str(hidden.id) not in {item["kb_id"] for item in result["stores"]}
+    assert all(not item["can_retry"] for item in result["stores"])
+
+
+async def test_status_revision_exposes_completion_between_polls(client, logged_in_headers, active_user):
+    from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+
+    record = await knowledge_base_service.create_record(
+        user_id=active_user.id, name=f"completed_{uuid4().hex}", backend_type="sqlite"
+    )
+    run = KnowledgeBaseStorageMigration(
+        kb_id=record.id, source_backend="chroma", source_generation=1, target_generation=2, phase="complete"
+    )
+    async with session_scope() as db:
+        db.add(run)
+        current = await db.get(KnowledgeBaseRecord, record.id)
+        current.active_migration_id = run.id
+        current.storage_generation = 2
+        await db.commit()
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["revision"]
+    assert str(record.id) not in {item["kb_id"] for item in result["stores"]}

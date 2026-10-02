@@ -65,6 +65,8 @@ export type MemoryDocumentPanelProps = {
 };
 
 export type MemoryKnowledgeBaseSectionProps = {
+  storageState?: string;
+  storageKbId?: string | null;
   docsData?: {
     total?: number;
     sessions?: string[];

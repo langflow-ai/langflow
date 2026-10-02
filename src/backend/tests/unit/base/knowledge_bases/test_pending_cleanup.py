@@ -22,9 +22,14 @@ pytestmark = pytest.mark.no_blockbuster
 
 
 @pytest.fixture
-def storage_root(active_user, monkeypatch, tmp_path):  # noqa: ARG001 -- initialize application services
+async def storage_root(client, active_user, monkeypatch, tmp_path):  # noqa: ARG001 -- initialize application services
+    from langflow.services.knowledge_base_storage import coordinator
+
+    await coordinator.wait_for_upgrade()
     root = tmp_path / "knowledge"
+    root.mkdir()
     monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(root))
+    await coordinator.reconcile_legacy_inventory()
     return root
 
 
@@ -311,12 +316,8 @@ async def test_storage_recovery_requires_superuser(client, logged_in_headers, ro
     assert response.status_code == 403
 
 
-async def test_inventory_and_empty_status_routes(client, admin_headers, monkeypatch):
+async def test_inventory_and_empty_status_routes(client, admin_headers, storage_root):  # noqa: ARG001 -- isolated inventory
     """Inventory and empty status endpoints expose their documented HTTP response shapes."""
-    from langflow.services.knowledge_base_storage import coordinator
-
-    monkeypatch.setattr(coordinator, "_inventory_complete", True)
-    monkeypatch.setattr(coordinator, "_inventory_issue_count", 0)
     inventory = await client.get("/api/v1/knowledge-base-storage/inventory", headers=admin_headers)
     assert inventory.status_code == 200
     assert inventory.json() == {"complete": True, "issues": 0}

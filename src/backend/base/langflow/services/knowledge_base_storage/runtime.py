@@ -200,6 +200,26 @@ class StorageUnavailableError(ValueError):
     status_code = 409
 
 
+def storage_unavailable_message(state: str) -> str:
+    """Give flow and API callers the same actionable availability message."""
+    if state == "detached":
+        return (
+            "Storage for this base was detached. Contact your administrator to recover it, or "
+            "delete the base and create a replacement."
+        )
+    if state in ("deleting", "deleted"):
+        return "This base is being deleted and is unavailable."
+    if state == "migrating":
+        return (
+            "This knowledge or memory base is upgrading automatically. Wait for the upgrade to "
+            "finish, then try again. Progress is shown in Langflow."
+        )
+    return (
+        "This knowledge or memory base needs a storage upgrade. Your original data is "
+        "preserved. Open the upgrade notice in Langflow, or contact your administrator."
+    )
+
+
 def storage_root() -> Path:
     """Resolve the configured local storage root independently of display names."""
     configured = get_settings_service().settings.knowledge_bases_dir
@@ -265,6 +285,11 @@ async def operation(record_or_id, *, allowed_states=("ready",), shared=False):
     if initial is None:
         msg = "Knowledge base no longer exists"
         raise StorageUnavailableError(msg)
+    if initial.storage_state not in allowed_states:
+        # Migration holds the exclusive lease through verification. Return
+        # useful progress immediately instead of waiting for that lease.
+        msg = storage_unavailable_message(initial.storage_state)
+        raise StorageUnavailableError(msg)
     local = initial.backend_type == "sqlite" or (
         initial.backend_type == "chroma" and initial.backend_config.get("mode", "local") == "local"
     )
@@ -276,7 +301,7 @@ async def operation(record_or_id, *, allowed_states=("ready",), shared=False):
             msg = "Knowledge base no longer exists"
             raise StorageUnavailableError(msg)
         if current.storage_state not in allowed_states:
-            msg = f"Knowledge base storage is {current.storage_state}. Check upgrade status."
+            msg = storage_unavailable_message(current.storage_state)
             raise StorageUnavailableError(msg)
         if isinstance(record_or_id, KnowledgeBaseRecord) and (
             current.storage_generation != record_or_id.storage_generation

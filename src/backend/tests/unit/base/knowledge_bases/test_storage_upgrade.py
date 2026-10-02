@@ -62,6 +62,7 @@ async def database(tmp_path, monkeypatch):
     monkeypatch.setattr(runtime, "get_db_service", lambda: service)
     monkeypatch.setattr(coordinator, "get_db_service", lambda: service)
     monkeypatch.setattr(coordinator, "get_settings_service", lambda: settings)
+    monkeypatch.setattr(coordinator, "check_local_upgrade", lambda *_args: None)
     monkeypatch.setattr(coordinator, "_inventory_complete", True)
     monkeypatch.setattr(coordinator, "_inventory_scanned", False)
     monkeypatch.setattr(coordinator, "_inventory_issue_count", 0)
@@ -332,7 +333,7 @@ async def test_deletion_retry_after_tombstone_and_missing_file(database):
     assert (await read_kb(database, absent.id)).storage_state == "deleted"
 
 
-async def test_missing_barrier_persists_fence_without_calling_helper(database, export_helper):
+async def test_missing_source_persists_fence_without_calling_helper(database, export_helper):
     row = await make_kb(database)
     await coordinator.fence_legacy_records()
     await coordinator.run_pending()
@@ -544,3 +545,160 @@ async def test_deleted_migrated_source_cannot_be_reimported_by_disk_backfill(dat
         )
     assert await read_kb(database, row.id) is None
     assert len(export_helper) == 1
+
+
+def native_source(database, name="fixture-l2", version="1.5.9"):
+    """Install a synthetic store produced by the real native Chroma SDK."""
+    import tarfile
+    from pathlib import Path
+
+    archive = (
+        Path(__file__).resolve().parents[6]
+        / f"src/lfx/tests/unit/base/knowledge_bases/fixtures/chroma-{version}-local.tar.gz"
+    )
+    source = database.root / database.user.username / name
+    source.mkdir(parents=True)
+    with tarfile.open(archive) as fixture:
+        for member in fixture:
+            if not member.name.startswith("source/"):
+                continue
+            relative = Path(member.name).relative_to("source")
+            assert member.isfile()
+            assert ".." not in relative.parts
+            destination = source / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with fixture.extractfile(member) as stream:
+                destination.write_bytes(stream.read())
+    return source
+
+
+@pytest.mark.parametrize("version", ["1.5.9", "0.5.23"])
+async def test_first_start_native_migration_without_receipt_docker_or_embeddings(database, monkeypatch, version):
+    source = native_source(database, version=version)
+    original = maintenance.tree_fingerprint(source)
+    row = KnowledgeBaseRecord(user_id=database.user.id, name="fixture-l2", backend_type="chroma")
+    async with database.sessions() as session:
+        session.add(row)
+        await session.commit()
+
+    async def unavailable_helper(*_args, **_kwargs):
+        pytest.fail("Automatic migration must not call the Docker helper")
+
+    monkeypatch.setattr(coordinator.helper, "export_snapshot", unavailable_helper)
+    await coordinator.fence_legacy_records()
+    await coordinator.run_pending()
+    current = await read_kb(database, row.id)
+    assert current.storage_state == "ready"
+    assert current.backend_type == "sqlite"
+    assert current.id == row.id
+    assert current.chunks == 239
+    backend = await runtime.backend_for_record(current)
+    documents = {doc.id: doc async for batch in backend.iter_documents(include_embeddings=True) for doc in batch}
+    assert documents["doc-2"].content == "Updated document"
+    assert documents["doc-2"].embedding == [0.5, 1.0, 2.0, 3.0]
+    assert documents["pending-doc"].embedding == [1.0, 2.0, 3.0, 4.0]
+    assert "doc-5" not in documents
+    assert "doc-9" not in documents
+    assert maintenance.tree_fingerprint(source) == original
+    backups = database.root / ".migration" / str(row.id) / str(current.active_migration_id)
+    assert (backups / "routing-before-upgrade.json").is_file()
+    reference = json.loads((backups / "application-backup.json").read_text())
+    with sqlite3.connect(database.root / ".migration" / reference["backup"]) as connection:
+        assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    await coordinator.run_pending()
+    assert (await read_kb(database, row.id)).storage_generation == 2
+    await backend.teardown()
+
+
+async def test_background_copy_keeps_other_bases_usable_and_resumes_on_restart(database, monkeypatch):
+    source = native_source(database)
+    fingerprint = maintenance.tree_fingerprint(source)
+    row = KnowledgeBaseRecord(user_id=database.user.id, name="fixture-l2", backend_type="chroma")
+    async with database.sessions() as session:
+        session.add(row)
+        await session.commit()
+    available = await make_kb(database, backend="sqlite")
+    backend = await runtime.backend_for_record(available, create=True)
+    await backend.ensure_ready()
+    entered, release = threading.Event(), threading.Event()
+    export = coordinator.export_local_snapshot
+
+    def paused_export(*args, **kwargs):
+        entered.set()
+        assert release.wait(timeout=10)
+        return export(*args, **kwargs)
+
+    monkeypatch.setattr(coordinator, "export_local_snapshot", paused_export)
+    await coordinator.fence_legacy_records()
+    task = coordinator.schedule_upgrade()
+    assert await asyncio.to_thread(entered.wait, 5)
+    assert await coordinator.readiness(require_storage_ready=False)
+    assert await backend.count() == 0
+    with pytest.raises(runtime.StorageUnavailableError, match="upgrading automatically"):
+        await asyncio.wait_for(runtime.backend_for_record(await read_kb(database, row.id)), timeout=1)
+    task.cancel()
+    release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    interrupted = await read_kb(database, row.id)
+    assert interrupted.storage_state == "needs_attention"
+    async with database.sessions() as session:
+        run = await session.get(KnowledgeBaseStorageMigration, interrupted.active_migration_id)
+    assert run.error_code == "interrupted"
+    monkeypatch.setattr(coordinator, "export_local_snapshot", export)
+    # A new startup schedules the same durable migration automatically.
+    await coordinator.schedule_upgrade()
+    resumed = await read_kb(database, row.id)
+    assert resumed.storage_state == "ready"
+    assert resumed.active_migration_id == interrupted.active_migration_id
+    assert resumed.storage_generation == 2
+    assert resumed.chunks == 239
+    assert maintenance.tree_fingerprint(source) == fingerprint
+    await backend.teardown()
+
+
+async def test_multi_worker_upgrade_retains_source_and_reports_recovery(database, monkeypatch):
+    from langflow.services.knowledge_base_storage.automatic import check_local_upgrade
+
+    source = native_source(database)
+    row = KnowledgeBaseRecord(user_id=database.user.id, name="fixture-l2", backend_type="chroma")
+    async with database.sessions() as session:
+        session.add(row)
+        await session.commit()
+    database.settings.settings.workers = 2
+    monkeypatch.setattr(coordinator, "check_local_upgrade", check_local_upgrade)
+    await coordinator.migrate_one(row.id)
+    current = await read_kb(database, row.id)
+    assert current.backend_type == "chroma"
+    assert current.storage_state == "needs_attention"
+    assert source.exists()
+    async with database.sessions() as session:
+        run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)
+    assert run.error_code == "single_host_required"
+
+
+async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(database):
+    source = native_source(database)
+    identity = uuid4()
+    (source / "embedding_metadata.json").write_text(
+        json.dumps(
+            {"id": str(identity), "name": "fixture-l2", "embedding_provider": "test", "embedding_model": "fixed"}
+        )
+    )
+    original = maintenance.tree_fingerprint(source)
+    await coordinator.run_pending()
+    current = await read_kb(database, identity)
+    assert current is not None
+    assert current.storage_state == "ready"
+    assert current.user_id == database.user.id
+    assert current.name == "fixture-l2"
+    assert current.model_selection == {"provider": "test", "name": "fixed"}
+    assert current.chunks == 239
+    assert maintenance.tree_fingerprint(source) == original
+
+
+async def test_fresh_install_without_storage_directory_has_no_upgrade_warning(database):
+    database.root.rmdir()
+    await coordinator.run_pending()
+    assert await coordinator.published_inventory_status() == {"complete": True, "issues": 0}
+    assert await coordinator.readiness()

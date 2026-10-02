@@ -7,6 +7,7 @@ import { useGetMemoryMessages } from "@/controllers/API/queries/memories/use-get
 
 type UseMemoryDocumentsArgs = {
   memoryId?: string | null;
+  storageState?: string;
   sessionId: string | null;
   memorySessions: MemorySessionInfo[];
 };
@@ -15,6 +16,7 @@ const DEFAULT_PAGE_SIZE = 50;
 
 export const useMemoryDocuments = ({
   memoryId,
+  storageState,
   sessionId,
   memorySessions,
 }: UseMemoryDocumentsArgs) => {
@@ -32,7 +34,7 @@ export const useMemoryDocuments = ({
       size: DEFAULT_PAGE_SIZE,
     },
     {
-      enabled: !!memoryId,
+      enabled: !!memoryId && (!storageState || storageState === "ready"),
     },
   );
 

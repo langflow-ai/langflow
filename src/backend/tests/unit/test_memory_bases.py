@@ -2758,12 +2758,16 @@ class TestMemoriesAPIHandlers:
         """get_memory_base enriches backend type + config from the knowledge_base row."""
         from langflow.api.v1 import memories as memories_module
         from langflow.api.v1.memories import get_memory_base
+        from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 
         mb = _make_mb(user_id=mock_user.id)
+        record = KnowledgeBaseRecord(user_id=mb.user_id, name=mb.kb_name, backend_type="opensearch")
 
         class _FakeCtx:
             async def __aenter__(self):
-                return AsyncMock()
+                session = AsyncMock()
+                session.exec.return_value = MagicMock(all=lambda: [record])
+                return session
 
             async def __aexit__(self, *_a):
                 pass
@@ -2781,6 +2785,8 @@ class TestMemoriesAPIHandlers:
 
         assert result.backend_type == "opensearch"
         assert result.backend_config == {"index_name": "idx"}
+        assert result.storage_state == "ready"
+        assert result.storage_kb_id == record.id
         # Resolved via the single batched lookup (eager), not per-item.
         batch_lookup.assert_awaited_once_with([mb.kb_name])
 

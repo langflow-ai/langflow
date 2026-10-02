@@ -10,9 +10,9 @@ workloads, the temporary helper disposition and remaining release gates.
 The application workspace, universal lock and all-packages/all-extras/all-groups
 export no longer require `chromadb`, `langchain-chroma` or
 `agent-lifecycle-toolkit`. `langflow-base` installs `lfx[sqlite]`, including APSW
-3.53.4.0 and sqlite-vec 0.1.9. The Chroma-bearing upgrade reader is a **separate
-artifact**, described below. Its scan and security disposition remain separate
-from those of the application.
+3.53.4.0 and sqlite-vec 0.1.9. The default automatic reader is bundled, uses SQLite and bounded inert HNSW
+data parsing, and imports no Chroma SDK or native HNSW library. The optional
+managed controller retains a separate signed helper artifact and security gate.
 
 ## Runtime and storage
 
@@ -66,6 +66,32 @@ Cleanup never manually unlinks active WAL/SHM files or
 truncates live databases.
 
 ## Automatic upgrade
+
+A plain package or image upgrade now copies supported local Chroma stores on
+first startup, without a controller receipt, Docker, cosign, helper publication
+or embedding calls. The built-in reader replays vector and metadata checkpoints
+independently and reconciles pending log operations. Index metadata is decoded
+as inert data, never through `pickle.load` or a native HNSW loader. Real fixtures
+cover Python Chroma 0.5.23 and Rust Chroma 1.5.9.
+
+The single-worker preflight checks for other Langflow entry points, orchestrator
+configuration and the storage filesystem. It preserves routing metadata and a
+SQLite application backup when applicable. PostgreSQL app databases need their
+usual deployment backup, and the base's routing metadata is retained locally.
+The coordinator checks the source fingerprint again before publishing routing.
+Unsupported topologies and formats stay fenced with explicit UI guidance.
+See the [published upgrade guide](../docs/Develop/knowledge-storage-upgrade.mdx).
+
+Discovery, export and copying run in the background. Ordinary service health
+stays available while the individual base remains fenced. Migration identity,
+source fingerprint, phase and destination generation survive restart. The next
+startup retries the same migration, preserving source files and validating the
+unpublished target before it becomes ready. The UI shows progress, availability
+and administrator retry controls, including Memory bases. Status revisions
+refresh cached resource lists even when a migration finishes between polls.
+
+### Optional managed controller
+
 
 Alembic adds storage state, generation and active migration identity, plus a
 durable migration ledger. It fences existing Chroma rows without reading vector

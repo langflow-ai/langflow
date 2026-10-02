@@ -73,6 +73,7 @@ from langflow.services.jobs.service import JobService
 from langflow.services.knowledge_base_storage.runtime import (
     StorageUnavailableError,
     backend_for_record,
+    storage_unavailable_message,
 )
 from langflow.services.task.service import TaskService
 from langflow.utils.canonical_json import canonical_json_digest
@@ -224,7 +225,7 @@ async def _guard_kb_action(
     ):
         raise HTTPException(
             status_code=409,
-            detail="Knowledge base storage is unavailable while its upgrade or recovery is pending.",
+            detail=storage_unavailable_message(resolved_record.storage_state),
         )
     # Resolve the owner User so routes can compute disk paths against the
     # right username. For the common owner-only case the actor is the owner
@@ -491,6 +492,9 @@ def _build_kb_info(
     else:
         status = "ready" if chunks_count > 0 else "empty"
         failure_reason = None
+    storage_state = metadata.get("storage_state", "ready")
+    if storage_state != "ready":
+        status = {"migrating": "upgrading", "needs_attention": "needs_migration"}.get(storage_state, "unavailable")
     return KnowledgeBaseInfo(
         id=str(metadata.get("id") or dir_name),
         dir_name=dir_name,
@@ -1354,7 +1358,7 @@ async def list_knowledge_bases(
             for kb_info in knowledge_bases:
                 try:
                     kb_uuid = uuid.UUID(kb_info.id)
-                    if kb_uuid in latest_jobs:
+                    if kb_uuid in latest_jobs and kb_info.storage_state == "ready":
                         job = latest_jobs[kb_uuid]
                         raw_status = job.status.value if hasattr(job.status, "value") else str(job.status)
                         mapped = job_status_map.get(raw_status)

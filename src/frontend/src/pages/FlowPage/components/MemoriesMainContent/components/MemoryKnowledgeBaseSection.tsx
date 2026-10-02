@@ -1,6 +1,7 @@
 import type { UIEvent } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
+import { StorageUpgradePanel } from "@/components/common/storageUpgradeNotice";
 import StringReader from "@/components/common/stringReaderComponent";
 import Loading from "@/components/ui/loading";
 import {
@@ -25,6 +26,8 @@ import { MemoryKnowledgeBaseSectionProps } from "../types";
 const noop = () => {};
 
 export function MemoryKnowledgeBaseSection({
+  storageState,
+  storageKbId,
   docsData,
   docsLoading,
   fetchNextMessagesPage,
@@ -84,7 +87,18 @@ export function MemoryKnowledgeBaseSection({
       </div>
 
       <div className="flex-1 overflow-auto" onScroll={handleScroll}>
-        {docsLoading ? (
+        {storageState && storageState !== "ready" ? (
+          <div className="space-y-3 p-4">
+            <p className="text-sm">
+              {t(
+                storageState === "migrating"
+                  ? "storageUpgrade.automatic"
+                  : "storageUpgrade.contactAdmin",
+              )}
+            </p>
+            {storageKbId && <StorageUpgradePanel kbId={storageKbId} />}
+          </div>
+        ) : docsLoading ? (
           <div className="flex h-32 items-center justify-center">
             <Loading size={32} className="text-primary" />
           </div>

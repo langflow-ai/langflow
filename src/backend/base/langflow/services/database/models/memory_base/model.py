@@ -97,6 +97,9 @@ class MemoryBaseRead(MemoryBaseBase):
     # Memory Base with no resolvable KB row.
     backend_type: str = "sqlite"
     backend_config: dict = Field(default_factory=dict)
+    storage_state: str = "ready"
+    storage_kb_id: UUID | None = None
+    active_migration_id: UUID | None = None
 
 
 class MemoryBaseSessionBase(SQLModel):

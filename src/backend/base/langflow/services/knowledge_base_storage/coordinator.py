@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 
 from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend, SQLiteStorageContext
 from lfx.base.knowledge_bases.migration import import_qualified_export, qualify_export
+from lfx.base.knowledge_bases.migration.legacy_reader import export_local_snapshot
 from lfx.base.knowledge_bases.migration.protocol import MigrationProtocolError
 from lfx.log.logger import logger
 from sqlalchemy import update
@@ -25,6 +26,11 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.service import get_sqlite_database_file_path
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.knowledge_base_storage import helper
+from langflow.services.knowledge_base_storage.automatic import (
+    AutomaticUpgradeUnavailableError,
+    check_local_upgrade,
+    preserve_routing,
+)
 from langflow.services.knowledge_base_storage.maintenance import (
     MaintenanceRequiredError,
     _fsync_directory,
@@ -108,6 +114,7 @@ async def _prepare(record: KnowledgeBaseRecord) -> KnowledgeBaseStorageMigration
             current.active_migration_id = run.id
         current.storage_state = "migrating"
         run.attempts += 1
+        run.phase = "discovered"
         run.error_code = None
         run.coordinator = f"{socket.gethostname()}:{os.getpid()}"
         run.updated_at = datetime.now(timezone.utc)
@@ -295,12 +302,16 @@ async def migrate_one(kb_id: UUID) -> None:
                 return
             database = get_sqlite_database_file_path(get_db_service().database_url)
             receipt_name = os.environ.get("LANGFLOW_KB_UPGRADE_RECEIPT")
-            if database is None or not receipt_name:
-                msg = "A managed stopped-worker receipt and metadata backup are required"
-                raise MaintenanceRequiredError(msg)
-            receipt = await _worker(
-                validate_receipt, root=storage_root(), database=database, receipt=Path(receipt_name)
-            )
+            receipt = None
+            if receipt_name:
+                if database is None:
+                    msg = "The managed receipt requires a SQLite application database"
+                    raise MaintenanceRequiredError(msg)
+                receipt = await _worker(
+                    validate_receipt, root=storage_root(), database=database, receipt=Path(receipt_name)
+                )
+            else:
+                await _worker(check_local_upgrade, storage_root(), get_settings_service().settings)
             async with session_scope() as session:
                 owner = await session.get(User, row.user_id)
             if owner is None:
@@ -316,7 +327,11 @@ async def migrate_one(kb_id: UUID) -> None:
             if source.parent.is_symlink() or (source / ".kb_deleted").exists():
                 msg = "Legacy source is a symlink or a deletion tombstone"
                 raise MaintenanceRequiredError(msg)
-            fingerprint = receipt.get("sources", {}).get(source.relative_to(storage_root()).as_posix())
+            fingerprint = (
+                receipt.get("sources", {}).get(source.relative_to(storage_root()).as_posix())
+                if receipt
+                else await _worker(tree_fingerprint, source)
+            )
             if not isinstance(fingerprint, str):
                 msg = "Source was not inventoried by the stopped-worker controller"
                 raise MaintenanceRequiredError(msg)
@@ -324,6 +339,14 @@ async def migrate_one(kb_id: UUID) -> None:
                 msg = "Source fingerprint changed between migration attempts"
                 raise MaintenanceRequiredError(msg)
             directory = private_directory(storage_root() / ".migration" / str(row.id) / str(run.id))
+            if receipt is None:
+                await _worker(
+                    preserve_routing,
+                    directory,
+                    row,
+                    database,
+                    backup_directory=private_directory(storage_root() / ".migration" / "application-backups"),
+                )
             snapshot = directory / "source"
             await _phase(
                 run.id,
@@ -338,14 +361,16 @@ async def migrate_one(kb_id: UUID) -> None:
             # The pristine source remains authoritative, so retry may safely
             # discard and re-export this disposable file into the same ledger.
             output.unlink(missing_ok=True)
-            header = await helper.export_snapshot(
-                snapshot,
-                output,
-                collection_name=row.name,
-                source_id=str(row.id),
-                source_fingerprint=fingerprint,
-                model_fingerprint=_model_fingerprint(row),
-            )
+            arguments = {
+                "collection_name": row.name,
+                "source_id": str(row.id),
+                "source_fingerprint": fingerprint,
+                "model_fingerprint": _model_fingerprint(row),
+            }
+            if receipt is not None:
+                header = await helper.export_snapshot(snapshot, output, **arguments)
+            else:
+                header = await _worker(export_local_snapshot, snapshot, output, **arguments)
             await _phase(
                 run.id, "importing", source_version=header.source_version, validation={"header": asdict(header)}
             )
@@ -360,6 +385,11 @@ async def migrate_one(kb_id: UUID) -> None:
             with source_export:
                 verified = await import_qualified_export(source_export, target, migration_id=run.id)
             await _phase(run.id, "verified", validation=json.loads(json.dumps(asdict(verified), default=str)))
+            if receipt is None:
+                await _worker(check_local_upgrade, storage_root(), get_settings_service().settings)
+            if await _worker(tree_fingerprint, source) != fingerprint:
+                msg = "The legacy source changed before activation"
+                raise MaintenanceRequiredError(msg)
             # Target completion is durable before this compare-and-swap. Backend
             # routing and ownership never depend on a path supplied by the helper.
             async with session_scope() as session:
@@ -395,7 +425,9 @@ async def migrate_one(kb_id: UUID) -> None:
             raise
         except Exception as exc:  # noqa: BLE001 -- persist a safe failure, never expose a partial target
             code = (
-                "maintenance_required"
+                exc.code
+                if isinstance(exc, AutomaticUpgradeUnavailableError)
+                else "maintenance_required"
                 if isinstance(exc, MaintenanceRequiredError)
                 else "validation_failed"
                 if isinstance(exc, MigrationProtocolError)
@@ -422,7 +454,7 @@ async def fence_legacy_records() -> None:
 
 
 async def reconcile_legacy_inventory() -> None:
-    """Adopt only controller-inventoried, unambiguous local sidecar identities.
+    """Adopt unambiguous local sidecar identities from a bounded source inventory.
 
     Unknown owners or damaged metadata remain visible upgrade blockers. They
     cannot disappear just because there is no corresponding application row.
@@ -430,42 +462,42 @@ async def reconcile_legacy_inventory() -> None:
     global _inventory_complete, _inventory_issue_count  # noqa: PLW0603 -- process-local readiness during inventory
     _inventory_complete = False
     receipt_name = os.environ.get("LANGFLOW_KB_UPGRADE_RECEIPT")
-    if not receipt_name:
-        # Missing rows are not evidence of a fresh install. Detect old source
-        # directories so an unconfigured upgrade cannot silently ignore them.
-        configured = get_settings_service().settings.knowledge_bases_dir
-        if configured:
-
-            def discover():
-                root = storage_root()
-                if not root.exists():
-                    return 0
-                count = 0
-                for owner in root.iterdir():
-                    if owner.is_symlink():
-                        return 1
-                    if owner.is_dir():
-                        count += sum(
-                            1
-                            for source in owner.iterdir()
-                            if source.is_dir()
-                            and (source / "chroma.sqlite3").exists()
-                            and not (source / ".kb_deleted").exists()
-                            and not _is_retired_source(source.relative_to(root).as_posix())
-                        )
-                return count
-
-            _inventory_issue_count = await _worker(discover)
-        else:
+    if receipt_name:
+        database = get_sqlite_database_file_path(get_db_service().database_url)
+        if database is None:
+            msg = "The local upgrade controller requires a SQLite metadata database"
+            raise MaintenanceRequiredError(msg)
+        receipt = await _worker(validate_receipt, root=storage_root(), database=database, receipt=Path(receipt_name))
+    else:
+        if not get_settings_service().settings.knowledge_bases_dir:
             _inventory_issue_count = 0
-        _inventory_complete = _inventory_issue_count == 0
-        return
-    _inventory_complete = False
-    database = get_sqlite_database_file_path(get_db_service().database_url)
-    if database is None:
-        msg = "The local upgrade controller requires a SQLite metadata database"
-        raise MaintenanceRequiredError(msg)
-    receipt = await _worker(validate_receipt, root=storage_root(), database=database, receipt=Path(receipt_name))
+            _inventory_complete = True
+            return
+
+        def discover():
+            root = storage_root()
+            sources = {}
+            if not root.exists():
+                return {"sources": sources}
+            for owner in root.iterdir():
+                if owner.is_symlink():
+                    msg = "Legacy owner directory is a symbolic link"
+                    raise MaintenanceRequiredError(msg)
+                if not owner.is_dir():
+                    continue
+                for source in owner.iterdir():
+                    if (
+                        not source.is_dir()
+                        or not (source / "chroma.sqlite3").exists()
+                        or (source / ".kb_deleted").exists()
+                    ):
+                        continue
+                    relative = source.relative_to(root).as_posix()
+                    if not _is_retired_source(relative):
+                        sources[relative] = tree_fingerprint(source)
+            return {"sources": sources}
+
+        receipt = await _worker(discover)
     async with session_scope() as session:
         owners = {user.username: user for user in (await session.exec(select(User))).all()}
         rows = {(row.user_id, row.name): row for row in (await session.exec(select(KnowledgeBaseRecord))).all()}
@@ -482,7 +514,11 @@ async def reconcile_legacy_inventory() -> None:
             issues.append({"code": "missing_source_owner"})
             continue
         source = storage_root() / relative
-        if (source / ".kb_deleted").exists() or (owner.id, parts[1]) in rows:
+        if (source / ".kb_deleted").exists():
+            continue
+        if (owner.id, parts[1]) in rows:
+            if rows[owner.id, parts[1]].backend_type != "chroma":
+                issues.append({"code": "ambiguous_source_identity", "owner_id": str(owner.id)})
             continue
         try:
             if await _worker(tree_fingerprint, source) != receipt["sources"][relative]:
@@ -546,6 +582,11 @@ def inventory_status() -> dict:
     return {"complete": _inventory_complete, "issues": _inventory_issue_count}
 
 
+def upgrade_in_progress() -> bool:
+    """Report background work without making it an application readiness gate."""
+    return any(not task.done() for task in _tasks)
+
+
 def _publish_inventory_status() -> None:
     """Share the latest completed scan across workers on this storage root."""
     directory = private_directory(storage_root() / ".migration")
@@ -588,20 +629,19 @@ async def published_inventory_status() -> dict:
 
 
 async def run_pending() -> None:
-    # This local-only discovery occurs after the controller barrier and before
-    # selecting work, so legacy Memory/KB identities are included automatically.
     """Reconcile legacy inventory and resume eligible storage migrations."""
-    global _inventory_scanned  # noqa: PLW0603 -- separate completed discovery from inventory issues
+    global _inventory_scanned, _inventory_issue_count  # noqa: PLW0603 -- process-local discovery status
     try:
         await reconcile_legacy_inventory()
     except Exception:  # noqa: BLE001 -- still persist actionable errors on registered KBs
-        logger.warning("Legacy storage inventory requires controller recovery")
+        _inventory_issue_count = max(1, _inventory_issue_count)
+        await logger.awarning("Legacy storage inventory requires administrator recovery")
     finally:
         if get_settings_service().settings.knowledge_bases_dir:
             try:
                 await _worker(_publish_inventory_status)
             except Exception:  # noqa: BLE001 -- unavailable storage must not disable remote operations
-                logger.warning("Legacy storage inventory status could not be published")
+                await logger.awarning("Legacy storage inventory status could not be published")
         _inventory_scanned = True
     async with session_scope() as session:
         rows = list(
@@ -668,7 +708,7 @@ def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
     def finished(completed):
         _tasks.discard(completed)
         if not completed.cancelled() and completed.exception() is not None:
-            logger.error("Knowledge base upgrade coordinator failed. Readiness remains blocked.")
+            logger.error("Knowledge base upgrade coordinator failed. Unfinished bases remain unavailable.")
 
     task.add_done_callback(finished)
     return task
@@ -691,7 +731,9 @@ async def wait_for_upgrade(*, timeout: float = 30) -> None:
 async def readiness(*, require_storage_ready: bool = True) -> bool:
     """Keep ordinary readiness usable while strict upgrade probes check retained stores."""
     if not require_storage_ready:
-        return _inventory_scanned
+        # Discovery and copying are background work. Ordinary health probes
+        # must not restart the process while either is still progressing.
+        return True
     if not _inventory_complete:
         return False
     async with session_scope() as session:
