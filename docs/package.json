@@ -80,6 +80,7 @@
     "fast-uri": "^3.1.8",
     "svgo": "^3.3.5",
     "postcss": "^8.5.23",
+    "node-forge": "^1.4.0",
     "styled-components": {
       "postcss": "8.4.49"
     },
