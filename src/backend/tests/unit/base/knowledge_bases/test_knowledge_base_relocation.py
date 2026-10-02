@@ -381,6 +381,49 @@ class TestRelocationWithoutATarget:
         assert result.code == "kb_failed"
 
 
+@pytest.mark.parametrize(
+    ("target", "config", "variable", "nowhere", "driver", "error"),
+    [
+        (
+            "postgres",
+            {},
+            "PGVECTOR_CONNECTION_STRING",
+            "postgresql+psycopg://postgres@127.0.0.1:1/none",
+            "psycopg",
+            "OperationalError",
+        ),
+        (
+            "opensearch",
+            {"url_variable": "OPENSEARCH_URL"},
+            "OPENSEARCH_URL",
+            "http://127.0.0.1:1",
+            "opensearchpy",
+            "ConnectionError",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("kb_root")
+async def test_target_that_cannot_be_reached_at_the_write_is_told_apart(
+    active_user, monkeypatch, target, config, variable, nowhere, driver, error
+):
+    # A real run first connects to the target when it writes, and nothing listens there.
+    pytest.importorskip(driver)
+    if target == "postgres":
+        pytest.importorskip("pgvector")
+    monkeypatch.setenv(variable, nowhere)
+    kb_name = f"kb_nowhere_{target}"
+    record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 2)
+
+    results = await relocate_knowledge_bases(target_backend_type=target, target_backend_config=config)
+
+    result = next(r for r in results if r.kb_id == record.id)
+    assert result.status == "failed"
+    assert result.reason.startswith(f"{error}: ")
+    assert result.copied == 0
+    assert result.code == "kb_target_unreachable"
+    assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+
+
 async def _database_state() -> tuple[str, list[uuid.UUID], uuid.UUID]:
     async with session_scope() as session:
         revision = (await session.exec(sa.text("SELECT version_num FROM alembic_version"))).one()[0]
