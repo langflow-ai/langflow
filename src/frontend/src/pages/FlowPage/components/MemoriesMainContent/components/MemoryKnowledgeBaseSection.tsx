@@ -96,7 +96,7 @@ export function MemoryKnowledgeBaseSection({
       </div>
 
       <div className="flex-1 overflow-auto" onScroll={handleScroll}>
-        {storageState && storageState !== "ready" ? (
+        {storageState && storageState !== "ready" && (
           <div className="space-y-3 p-4">
             {storageKbId ? (
               <StorageUpgradePanel
@@ -107,7 +107,8 @@ export function MemoryKnowledgeBaseSection({
               upgradeFallback
             )}
           </div>
-        ) : docsLoading ? (
+        )}
+        {docsLoading ? (
           <div className="flex h-32 items-center justify-center">
             <Loading size={32} className="text-primary" />
           </div>

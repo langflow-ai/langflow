@@ -13,9 +13,9 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend, SQLiteStorageContext
-from lfx.base.knowledge_bases.migration import import_qualified_export, qualify_export
+from lfx.base.knowledge_bases.migration import ExportHeader, import_qualified_export, qualify_export, write_export
 from lfx.base.knowledge_bases.migration.legacy_reader import export_local_snapshot
-from lfx.base.knowledge_bases.migration.protocol import MigrationProtocolError
+from lfx.base.knowledge_bases.migration.protocol import AutomaticMigrationLimitError, MigrationProtocolError
 from lfx.log.logger import logger
 from sqlalchemy import update
 from sqlmodel import col, select
@@ -124,18 +124,25 @@ async def _prepare(record: KnowledgeBaseRecord) -> KnowledgeBaseStorageMigration
         return run
 
 
-async def _attention(kb_id: UUID, migration_id: UUID, code: str) -> None:
+async def _attention(kb_id: UUID, migration_id: UUID, code: str, *, exception_type: str | None = None) -> str:
     """Retain the source and record a safe error code for operator recovery."""
     async with session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, kb_id)
         run = await session.get(KnowledgeBaseStorageMigration, migration_id)
         if row is not None and row.active_migration_id == migration_id:
             row.storage_state = "needs_attention"
+        phase = run.phase if run else "discovered"
         if run is not None:
+            if exception_type:
+                run.validation = {
+                    **run.validation,
+                    "diagnostic": {"phase": phase, "exception_type": exception_type[:100]},
+                }
             run.phase = "needs_attention"
             run.error_code = code
             run.updated_at = datetime.now(timezone.utc)
         await session.commit()
+    return phase
 
 
 async def _complete(row: KnowledgeBaseRecord, run: KnowledgeBaseStorageMigration, target: SQLiteBackend) -> None:
@@ -340,6 +347,7 @@ async def migrate_one(kb_id: UUID) -> None:
                 msg = "Source fingerprint changed between migration attempts"
                 raise MaintenanceRequiredError(msg)
             directory = private_directory(storage_root() / ".migration" / str(row.id) / str(run.id))
+            await _phase(run.id, "snapshotting")
             if receipt is None:
                 await _worker(
                     preserve_routing,
@@ -368,7 +376,18 @@ async def migrate_one(kb_id: UUID) -> None:
                 "source_fingerprint": fingerprint,
                 "model_fingerprint": _model_fingerprint(row),
             }
-            if receipt is not None:
+            if (
+                receipt is None
+                and row.chunks == 0
+                and not (snapshot / "chroma.sqlite3").exists()
+                and not any(path.name != "embedding_metadata.json" for path in snapshot.iterdir())
+            ):
+                # Historical empty rows can have only an empty directory or
+                # embedding sidecar. Any other file requires source recovery.
+                header = ExportHeader(str(row.id), fingerprint, "chroma-empty", 0, None, "l2", _model_fingerprint(row))
+                with output.open("wb") as stream:
+                    write_export(stream, header, [])
+            elif receipt is not None:
                 header = await helper.export_snapshot(snapshot, output, **arguments)
             else:
                 header = await _worker(export_local_snapshot, snapshot, output, **arguments)
@@ -428,6 +447,8 @@ async def migrate_one(kb_id: UUID) -> None:
             code = (
                 exc.code
                 if isinstance(exc, AutomaticUpgradeUnavailableError)
+                else "automatic_reader_limit"
+                if isinstance(exc, AutomaticMigrationLimitError)
                 else "maintenance_required"
                 if isinstance(exc, MaintenanceRequiredError)
                 else "validation_failed"
@@ -436,8 +457,14 @@ async def migrate_one(kb_id: UUID) -> None:
                 if isinstance(exc, StorageUnavailableError)
                 else "migration_failed"
             )
-            await _attention(row.id, run.id, code)
-            await logger.awarning("Knowledge base storage upgrade %s requires attention (%s)", row.id, code)
+            phase = await _attention(row.id, run.id, code, exception_type=type(exc).__name__)
+            await logger.awarning(
+                "Knowledge base storage upgrade {} requires attention: code={} phase={} exception={}",
+                row.id,
+                code,
+                phase,
+                type(exc).__name__,
+            )
         finally:
             if target is not None:
                 await target.teardown()
@@ -477,12 +504,12 @@ async def ensure_legacy_name_available(user_id: UUID, name: str) -> None:
     try:
         unavailable = await _worker(reserved)
     except (OSError, MaintenanceRequiredError, ValueError) as exc:
-        msg = "Legacy storage needs administrator attention before this name can be reused. Check upgrade status."
+        msg = "This name is held by data from a previous version. Choose another name or contact your administrator."
         raise StorageUnavailableError(msg) from exc
     if unavailable:
         msg = (
-            f"Knowledge base '{name}' already exists in legacy storage and is waiting for its upgrade. "
-            "Open the upgrade notice to check progress, or choose a different name."
+            f"Knowledge base '{name}' is held by data from a previous version. "
+            "Choose another name or contact your administrator."
         )
         raise StorageUnavailableError(msg)
 
@@ -536,6 +563,7 @@ async def reconcile_legacy_inventory() -> None:
     async with session_scope() as session:
         owners = {user.username: user for user in (await session.exec(select(User))).all()}
         rows = {(row.user_id, row.name): row for row in (await session.exec(select(KnowledgeBaseRecord))).all()}
+        runs = {run.id: run for run in (await session.exec(select(KnowledgeBaseStorageMigration))).all()}
     issues = []
     for relative in receipt.get("sources", {}):
         parts = Path(relative).parts
@@ -552,7 +580,18 @@ async def reconcile_legacy_inventory() -> None:
         if (source / ".kb_deleted").exists():
             continue
         if (owner.id, parts[1]) in rows:
-            if rows[owner.id, parts[1]].backend_type != "chroma":
+            row = rows[owner.id, parts[1]]
+            run = runs.get(row.active_migration_id)
+            recovering_activation = bool(
+                row.backend_type == "sqlite"
+                and run
+                and run.source_backend == "chroma"
+                and run.source_identity == relative
+                and run.source_fingerprint == receipt["sources"][relative]
+                and run.target_generation == row.storage_generation
+                and row.storage_state in ("migrating", "needs_attention")
+            )
+            if row.backend_type != "chroma" and not recovering_activation:
                 issues.append({"code": "ambiguous_source_identity", "owner_id": str(owner.id)})
             continue
         try:

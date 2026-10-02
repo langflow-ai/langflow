@@ -89,6 +89,22 @@ async def installation(tmp_path, monkeypatch):
         staged.append(controller._process(options["supervisor"]) is not None)
 
     monkeypatch.setattr(controller, "stage_helper", stage)
+    process_iter = psutil.process_iter
+
+    def installation_processes():
+        """Keep the real process checks inside this disposable installation."""
+        selected = {old.pid, child["pid"]}
+        sessions = {old.pid}
+        if options["state"].exists():
+            sessions.update(controller._read(path)["pid"] for path in options["state"].glob("launch-*.json"))
+        for process in process_iter():
+            try:
+                if process.pid in selected or os.getsid(process.pid) in sessions:
+                    yield process
+            except (psutil.NoSuchProcess, ProcessLookupError):
+                continue
+
+    monkeypatch.setattr(psutil, "process_iter", installation_processes)
     monkeypatch.setenv(
         "LANGFLOW_KB_MIGRATION_HELPER_IMAGE", "ghcr.io/langflow-ai/langflow-chroma-migration@sha256:" + "a" * 64
     )

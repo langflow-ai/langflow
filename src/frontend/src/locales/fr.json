@@ -18,6 +18,7 @@
   "storageUpgrade.validationFailed": "La copie a échoué à la validation. Vos données originales sont conservées. Consultez les journaux de mise à niveau avant de réessayer.",
   "storageUpgrade.interrupted": "La mise à niveau a été interrompue. Réessayez pour reprendre en toute sécurité.",
   "storageUpgrade.checkStorage": "Vérifiez l’accès au stockage, l’espace libre et les journaux de mise à niveau, puis réessayez. Vos données originales sont conservées.",
+  "storageUpgrade.readerLimit": "Ce stockage dépasse les limites du lecteur automatique. Conservez la source et utilisez le contrôleur géré avec un outil signé vérifié, ou exportez depuis un environnement isolé de l’ancienne version.",
   "storageUpgrade.retry": "Réessayer la mise à niveau",
   "storageUpgrade.retryFailed": "Impossible de planifier la mise à niveau. Actualisez la page et réessayez.",
   "storageUpgrade.viewProgress": "Voir la progression",

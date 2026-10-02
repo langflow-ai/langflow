@@ -34,7 +34,11 @@ def test_automatic_upgrade_requires_exclusive_local_storage(tmp_path, monkeypatc
     )
     if case == "orchestrated":
         monkeypatch.setenv("KUBERNETES_SERVICE_HOST", "cluster")
-    monkeypatch.setattr(automatic.psutil, "Process", lambda: SimpleNamespace(parents=lambda: [SimpleNamespace(pid=42)]))
+    monkeypatch.setattr(
+        automatic.psutil,
+        "Process",
+        lambda: SimpleNamespace(parents=lambda: [SimpleNamespace(pid=42)], children=lambda **_kwargs: []),
+    )
 
     def other_processes(*, excluded_pids):
         assert excluded_pids == {42}

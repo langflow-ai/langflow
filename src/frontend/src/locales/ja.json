@@ -18,6 +18,7 @@
   "storageUpgrade.validationFailed": "コピーの検証に失敗しました。元のデータは保持されています。再試行する前にアップグレードログを確認してください。",
   "storageUpgrade.interrupted": "アップグレードが中断されました。再試行すると安全に再開できます。",
   "storageUpgrade.checkStorage": "ストレージへのアクセス、空き容量、アップグレードログを確認し、再試行してください。元のデータは保持されています。",
+  "storageUpgrade.readerLimit": "このストアは自動読み取りの上限を超えています。元データを保持し、検証済みの署名付きヘルパーで管理コントローラーを使用するか、旧バージョンの隔離環境からエクスポートしてください。",
   "storageUpgrade.retry": "アップグレードを再試行",
   "storageUpgrade.retryFailed": "アップグレードを開始できませんでした。ページを更新して再試行してください。",
   "storageUpgrade.viewProgress": "アップグレードの進行状況を表示",

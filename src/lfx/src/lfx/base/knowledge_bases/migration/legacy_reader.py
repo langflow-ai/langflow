@@ -64,6 +64,11 @@ def _metric(connection, collection: dict, segment_id: str) -> str:
                 # when the actual index uses hnsw:space from segment metadata.
                 target = legacy_defaults if config[key].get("_type") == "HNSWConfigurationInternal" else metrics
                 target.add(config[key]["space"])
+        vector_index = config.get("vector_index", {})
+        if isinstance(vector_index, dict) and isinstance(vector_index.get("hnsw"), dict):
+            space = vector_index["hnsw"].get("space")
+            if space is not None:
+                metrics.add(space)
         # Rust stores the actual index metric in the collection schema.
         vector = config.get("keys", {}).get("#embedding", {}).get("float_list", {}).get("vector_index", {})
         if vector.get("config", {}).get("space") is not None:
@@ -149,9 +154,17 @@ def export_local_snapshot(
     with tempfile.TemporaryDirectory(prefix="legacy-reader-", dir=output.parent) as temporary:
         working = Path(temporary) / "source.sqlite3"
         shutil.copyfile(database, working)
-        wal = source / "chroma.sqlite3-wal"
-        if wal.exists():
-            shutil.copyfile(regular_file(wal, 8 * 1024**3), working.with_name("source.sqlite3-wal"))
+        for suffix in ("-wal", "-journal"):
+            companion = source / f"chroma.sqlite3{suffix}"
+            if companion.exists():
+                shutil.copyfile(regular_file(companion, 8 * 1024**3), working.with_name(f"source.sqlite3{suffix}"))
+        # A killed DELETE-journal writer can leave uncommitted pages. Recover
+        # only this private copy before opening it read-only for export.
+        with closing(sqlite3.connect(working)) as recovery:
+            recovery.execute("PRAGMA trusted_schema=OFF")
+            if recovery.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                msg = "Legacy SQLite snapshot failed integrity verification"
+                raise MigrationProtocolError(msg)
         with (
             closing(sqlite3.connect(f"{working.as_uri()}?mode=ro", uri=True)) as connection,
             closing(sqlite3.connect(Path(temporary) / "staging.sqlite3")) as staging,
@@ -263,7 +276,8 @@ def _export(connection, staging, source, output, *, collection_name, source_id, 
     }
     index = source / segment_id
     vector_checkpoint = 0
-    if index.exists():
+    empty_index = index.is_dir() and not index.is_symlink() and not any(index.iterdir())
+    if index.exists() and not (empty_index and not checkpoints.get(segment_id, 0)):
         if index.is_symlink() or not index.is_dir() or dimensions is None:
             msg = "Invalid legacy index directory"
             raise MigrationProtocolError(msg)
@@ -309,6 +323,7 @@ def _export(connection, staging, source, output, *, collection_name, source_id, 
             values[row[1]] = value
     if current_id is not None:
         staging.execute("INSERT INTO documents VALUES (?,?)", (current_id, json.dumps(values)))
+    _array_metadata(connection, staging, metadata[0]["id"])
     topic = collection.get("topic") or f"persistent://default/default/{collection['id']}"
     _replay(connection, staging, topic, vector_checkpoint, checkpoints.get(metadata[0]["id"], 0), dimensions)
     missing = staging.execute(
@@ -341,3 +356,58 @@ def _export(connection, staging, source, output, *, collection_name, source_id, 
     with output.open("wb") as stream:
         write_export(stream, header, documents())
     return header
+
+
+def _array_metadata(connection, staging, segment_id: str) -> None:
+    """Retain typed Chroma 1.5 lists in insertion order, under per-document bounds."""
+    table = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='embedding_metadata_array'"
+    ).fetchone()
+    if table is None:
+        return
+    if not (table[0] or "").lstrip().upper().startswith("CREATE TABLE"):
+        msg = "Unsupported legacy array metadata schema"
+        raise MigrationProtocolError(msg)
+    if connection.execute(
+        "SELECT 1 FROM embedding_metadata_array WHERE length(key)>? OR length(string_value)>? LIMIT 1",
+        (DEFAULT_LIMITS.max_line_bytes, DEFAULT_LIMITS.max_line_bytes),
+    ).fetchone():
+        msg = "Legacy array metadata value exceeds migration bounds"
+        raise MigrationProtocolError(msg)
+    rows = connection.execute(
+        "SELECT e.embedding_id,m.key,m.string_value,m.int_value,m.float_value,m.bool_value "
+        "FROM embeddings e JOIN embedding_metadata_array m ON e.id=m.id "
+        "WHERE e.segment_id=? ORDER BY e.id,m.key,m.rowid",
+        (segment_id,),
+    )
+    current_id, current_key, values, size = None, None, {}, 0
+    for number, row in enumerate(rows):
+        if number >= DEFAULT_LIMITS.max_records * 100:
+            msg = "Legacy array metadata exceeds migration bounds"
+            raise MigrationProtocolError(msg)
+        if row[0] != current_id:
+            if current_id is not None:
+                staging.execute("UPDATE documents SET metadata=? WHERE id=?", (json.dumps(values), current_id))
+            saved = staging.execute("SELECT metadata FROM documents WHERE id=?", (row[0],)).fetchone()
+            if saved is None:
+                msg = "Legacy array metadata document is missing"
+                raise MigrationProtocolError(msg)
+            current_id, current_key, values, size = row[0], None, json.loads(saved[0]), len(saved[0].encode())
+        populated = [value for value in row[2:] if value is not None]
+        if type(row[1]) is not str or len(populated) != 1:
+            msg = "Unsupported legacy array metadata value"
+            raise MigrationProtocolError(msg)
+        value = bool(row[5]) if row[5] is not None else populated[0]
+        size += len(json.dumps(value, ensure_ascii=False).encode()) + len(row[1].encode()) + 4
+        if size > DEFAULT_LIMITS.max_line_bytes:
+            msg = "Legacy document array metadata exceeds migration bounds"
+            raise MigrationProtocolError(msg)
+        if row[1] != current_key:
+            if row[1] in values:
+                msg = "Legacy scalar and array metadata overlap"
+                raise MigrationProtocolError(msg)
+            current_key = row[1]
+            values[current_key] = []
+        values[current_key].append(value)
+    if current_id is not None:
+        staging.execute("UPDATE documents SET metadata=? WHERE id=?", (json.dumps(values), current_id))

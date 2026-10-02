@@ -82,7 +82,7 @@ async def test_legacy_name_cannot_be_claimed_while_discovery_is_running(database
                 backend_type="sqlite",
                 backend_config={},
             )
-        with pytest.raises(runtime.StorageUnavailableError, match=r"legacy.*upgrade"):
+        with pytest.raises(runtime.StorageUnavailableError, match="held by data from a previous version"):
             await creation
         assert await knowledge_base_service.get_by_user_and_name(database.user.id, "fixture-l2") is None
     finally:

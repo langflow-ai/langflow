@@ -44,6 +44,10 @@ class MigrationProtocolError(ValueError):
     """An export or destination failed a mandatory migration invariant."""
 
 
+class AutomaticMigrationLimitError(MigrationProtocolError):
+    """The bounded native reader requires an isolated managed helper for this store."""
+
+
 @dataclass(frozen=True)
 class ExportLimits:
     """Resource bounds checked before allocation or writing staging records."""

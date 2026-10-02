@@ -18,6 +18,7 @@
   "storageUpgrade.validationFailed": "副本验证失败。您的原始数据已保留。重试前请检查升级日志。",
   "storageUpgrade.interrupted": "升级已中断。重试即可安全恢复。",
   "storageUpgrade.checkStorage": "请检查存储访问权限、可用磁盘空间和升级日志，然后重试。您的原始数据已保留。",
+  "storageUpgrade.readerLimit": "此存储超出自动读取器的限制。请保留源数据，并使用经验证的签名辅助程序运行管理控制器，或从隔离的旧版本环境导出。",
   "storageUpgrade.retry": "重试升级",
   "storageUpgrade.retryFailed": "无法安排升级。请刷新页面后重试。",
   "storageUpgrade.viewProgress": "查看升级进度",

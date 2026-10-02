@@ -18,6 +18,7 @@
   "storageUpgrade.validationFailed": "The copy failed validation. Your original data is preserved. Check the upgrade logs before retrying.",
   "storageUpgrade.interrupted": "The upgrade was interrupted. Retry to resume safely.",
   "storageUpgrade.checkStorage": "Check storage access, free disk space and the upgrade logs, then retry. Your original data is preserved.",
+  "storageUpgrade.readerLimit": "This store exceeds the automatic reader limits. Preserve the source and use the managed controller with a qualified signed helper, or export it from an isolated old-release environment.",
   "storageUpgrade.retry": "Retry upgrade",
   "storageUpgrade.retryFailed": "Could not schedule the upgrade. Refresh and try again.",
   "storageUpgrade.viewProgress": "View upgrade progress",

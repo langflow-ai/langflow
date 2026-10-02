@@ -8,7 +8,11 @@ import struct
 from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.migration.inert_pickle import MAX_INDEX_METADATA_BYTES, read_index_metadata
-from lfx.base.knowledge_bases.migration.protocol import DEFAULT_LIMITS, MigrationProtocolError
+from lfx.base.knowledge_bases.migration.protocol import (
+    DEFAULT_LIMITS,
+    AutomaticMigrationLimitError,
+    MigrationProtocolError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -23,9 +27,12 @@ _MAX_SOURCE_BYTES = 8 * 1024**3
 def regular_file(path: Path, limit: int) -> Path:
     """Reject links, special files and excessive allocation before reading."""
     info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > limit:
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
         msg = "Legacy source contains an invalid or oversized file"
         raise MigrationProtocolError(msg)
+    if info.st_size > limit:
+        msg = "Legacy source exceeds automatic reader resource limits"
+        raise AutomaticMigrationLimitError(msg)
     return path
 
 
@@ -98,7 +105,12 @@ def read_persisted_vectors(directory: Path, dimensions: int, metric: str) -> Ite
                 msg = "Legacy vector contains a non-finite value"
                 raise MigrationProtocolError(msg)
             observed.add(native_id)
-            yield native_id, vector_format.pack(*vector)
+            try:
+                encoded = vector_format.pack(*vector)
+            except (OverflowError, struct.error) as exc:
+                msg = "Legacy restored vector exceeds float32 bounds"
+                raise MigrationProtocolError(msg) from exc
+            yield native_id, encoded
     if len(observed) != len(ids):
         msg = "Legacy index does not contain every declared vector"
         raise MigrationProtocolError(msg)

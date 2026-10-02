@@ -90,14 +90,15 @@ unpublished target before it becomes ready. The UI shows progress, availability
 and administrator retry controls, including Memory bases. Status revisions
 refresh cached resource lists even when a migration finishes between polls.
 
-### Optional managed controller
-
-
 Alembic adds storage state, generation and active migration identity, plus a
 durable migration ledger. It fences existing Chroma rows without reading vector
 data. Ingestion status is independent and cannot clear this fence.
 
-Startup inventories legacy sources and schedules migration automatically. The
+Startup inventories legacy sources and schedules migration automatically.
+
+### Optional managed controller
+
+The
 managed controller accepts a **non-root POSIX single-host installation with a
 SQLite application metadata database**, local disk and a dedicated foreground
 supervisor session. See [the controller guide](sqlite-kb-controller.md) for its

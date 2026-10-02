@@ -138,14 +138,15 @@ async def test_storage_availability_overrides_ready_in_knowledge_and_memory(
     record = await knowledge_base_service.create_record(
         user_id=active_user.id, name=f"mem_{uuid4().hex}", backend_type="sqlite"
     )
-    memory = MemoryBase(name="storage-status", flow_id=uuid4(), user_id=active_user.id, kb_name=record.name)
+    flow = Flow(name="storage-status-chat", data={}, user_id=active_user.id)
+    memory = MemoryBase(name="storage-status", flow_id=flow.id, user_id=active_user.id, kb_name=record.name)
     async with session_scope() as db:
         current = await db.get(KnowledgeBaseRecord, record.id)
         current.storage_state = state
         current.backend_type = "chroma"
         current.chunks = 500
         current.status = "ready"
-        db.add(memory)
+        db.add_all([flow, memory])
         await db.commit()
     # Memory's backing KB is omitted from the Knowledge list. Its own API
     # must still expose the same availability and immutable storage identity.
@@ -153,10 +154,16 @@ async def test_storage_availability_overrides_ready_in_knowledge_and_memory(
     assert response.status_code == 200, response.text
     assert response.json()["storage_state"] == state
     assert response.json()["storage_kb_id"] == str(record.id)
+    response = await client.patch(f"/api/v1/memories/{memory.id}", json={"threshold": 75}, headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["storage_state"] == state
+    assert response.json()["storage_kb_id"] == str(record.id)
     response = await client.get("/api/v1/knowledge-base-storage/status", headers=logged_in_headers)
     assert response.status_code == 200, response.text
     store = next(item for item in response.json()["stores"] if item["kb_id"] == str(record.id))
     assert store["storage_state"] == state
+    assert store["name"] == memory.name
+    assert store["kind"] == "memory"
     assert "source_identity" not in store
     assert "backend_config" not in store
     from langflow.api.v1.knowledge_bases import _build_kb_info

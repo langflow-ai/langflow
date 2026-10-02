@@ -16,7 +16,6 @@ const DEFAULT_PAGE_SIZE = 50;
 
 export const useMemoryDocuments = ({
   memoryId,
-  storageState,
   sessionId,
   memorySessions,
 }: UseMemoryDocumentsArgs) => {
@@ -34,7 +33,7 @@ export const useMemoryDocuments = ({
       size: DEFAULT_PAGE_SIZE,
     },
     {
-      enabled: !!memoryId && (!storageState || storageState === "ready"),
+      enabled: !!memoryId,
     },
   );
 

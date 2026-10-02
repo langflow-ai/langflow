@@ -53,6 +53,30 @@ permissions:
   contents: read
 
 jobs:
+  windows-automatic-upgrade:
+    name: Windows automatic Chroma upgrade
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          version: latest-known
+          python-version: '3.12'
+      - name: Configure isolated data directories
+        shell: pwsh
+        run: |
+          "UV_PROJECT_ENVIRONMENT=$env:RUNNER_TEMP/sqlite-upgrade-runtime" >> $env:GITHUB_ENV
+          "LANGFLOW_CONFIG_DIR=$env:RUNNER_TEMP/sqlite-upgrade-config" >> $env:GITHUB_ENV
+          "LANGFLOW_KNOWLEDGE_BASES_DIR=$env:RUNNER_TEMP/sqlite-upgrade-knowledge" >> $env:GITHUB_ENV
+      - name: Install application and test dependencies
+        run: |
+          uv sync --frozen --package langflow-base --group dev
+          uv pip install --python "$env:UV_PROJECT_ENVIRONMENT" blockbuster==1.5.26 pyleak==0.2.0
+      - name: Test real process scan, NTFS snapshot, backup and durable activation
+        run: uv run --no-sync pytest -q -n 0 src/backend/tests/unit/base/knowledge_bases/test_storage_latest_review.py::test_native_first_start_with_real_platform_checks
   application-integration:
     name: Chroma-free SQLite application and upgrade integration
     runs-on: ubuntu-latest

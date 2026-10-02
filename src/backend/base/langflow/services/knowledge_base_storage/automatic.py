@@ -37,6 +37,7 @@ _LOCAL_FILESYSTEMS = {
     "zfs",
     "overlay",
     "virtiofs",
+    "fakeowner",  # Docker Desktop's local VirtioFS passthrough
     "tmpfs",
     "ntfs",
     "NTFS",
@@ -61,9 +62,18 @@ def check_local_upgrade(root: Path, settings) -> None:
     if getattr(settings, "workers", 1) != 1 or any(os.environ.get(key) for key in _ORCHESTRATORS):
         msg = "single_host_required"
         raise AutomaticUpgradeUnavailableError(msg)
-    # The current CLI/supervisor may appear in the process listing. Exclude
-    # only this process's ancestors, never another independently running app.
-    excluded = {process.pid for process in psutil.Process().parents()}
+    # Our supervisor and same-interpreter listener children are current-release
+    # processes. Other children and independently running apps remain fenced.
+    from langflow.services.triggers.listeners.subprocess_host import listener_command
+
+    current = psutil.Process()
+    excluded = {process.pid for process in current.parents()}
+    for child in current.children(recursive=True):
+        try:
+            if child.cmdline() == list(listener_command()):
+                excluded.add(child.pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
     if remaining_legacy_workers(excluded_pids=excluded):
         msg = "legacy_workers_running"
         raise AutomaticUpgradeUnavailableError(msg)
@@ -122,13 +132,13 @@ def preserve_routing(directory: Path, row, database: Path | None, *, backup_dire
                     closing(sqlite3.connect(f"{database.as_uri()}?mode=ro", uri=True)) as source,
                     closing(sqlite3.connect(temporary)) as destination,
                 ):
-                    # Release the source read lock between page batches so a
-                    # large rollback backup does not hold up normal app writes.
-                    source.backup(destination, pages=128)
+                    # One snapshot step cannot restart indefinitely under normal
+                    # traffic. WAL writers continue while this background copy runs.
+                    source.backup(destination, pages=-1)
                     if destination.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                         msg = "Application backup failed verification"
                         raise MaintenanceRequiredError(msg)
-                with temporary.open("rb") as stream:
+                with temporary.open("r+b") as stream:
                     os.fsync(stream.fileno())
                 temporary.replace(backup)
                 _fsync_directory(backup_directory)

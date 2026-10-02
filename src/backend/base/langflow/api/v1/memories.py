@@ -438,7 +438,9 @@ async def update_memory_base(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     if mb is None:
         raise HTTPException(status_code=404, detail="Memory base not found")
-    return MemoryBaseRead.model_validate(mb)
+    read = MemoryBaseRead.model_validate(mb)
+    await _storage_availability([read])
+    return read
 
 
 @router.delete("/{memory_base_id}", status_code=HTTPStatus.NO_CONTENT)

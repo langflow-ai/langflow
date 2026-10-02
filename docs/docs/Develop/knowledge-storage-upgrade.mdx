@@ -10,6 +10,9 @@ Saved components from released 1.x versions can still load for inspection and re
 
 ## Local development: upgrade and keep working
 
+Before changing Langflow versions, back up the application database and the complete knowledge-base directory.
+Keep these old-version backups if you need to roll back. See [database migration guidance](./database-migrations.mdx).
+
 For a single local Langflow instance, upgrade the package or container image and start Langflow normally.
 On first startup, Langflow automatically upgrades supported local Chroma Knowledge and Memory stores in the background.
 The built-in reader copies existing vectors directly into SQLite without Docker, a helper image, a Chroma SDK, or calls to the embedding provider.
@@ -25,6 +28,8 @@ Ordinary `/healthz` checks remain available during discovery and copying.
 
 Langflow retains the original Chroma directory, takes a pristine source snapshot, and saves private routing metadata before copying.
 For a SQLite application database, it also takes one consistent database backup shared by the migration runs.
+This automatic `application-before-upgrade-*.sqlite3` backup is created **after** the application schema upgrade.
+It supports recovery within 1.13. It is not an old-version database backup and must not be used to downgrade to 1.12.
 Each run records the backup's location, so multiple bases do not duplicate the full application database.
 For a PostgreSQL application database, the local copy uses the same path and saves the base's routing metadata. Keep your usual PostgreSQL backups.
 The target remains unpublished until the complete export and import have passed validation.
@@ -33,6 +38,12 @@ Exact SQLite search can order tied results differently from Chroma's approximate
 If Langflow restarts or an upgrade is interrupted, the next startup automatically resumes the durable migration.
 An incomplete target cannot be used as an empty replacement for the old base.
 Do not remove retained originals or backups until you have verified your data.
+Allow free space for approximately four times each Chroma store's size plus 64 MiB while it is migrated.
+The application database backup also requires twice the combined database and WAL size plus 64 MiB of free space.
+Retained files include `.migration/<base-id>/<run-id>/source/`, `routing-before-upgrade.json`, and `.migration/application-backups/`.
+They can contain document text, user data and encrypted credentials. Protect them as you protect the application database.
+After verifying all migrated bases and making a fresh backup, an administrator can archive or remove the retained source snapshots and application backups.
+Keep `.migration/bindings/` and active migration targets. Bindings prevent an old source from being adopted again.
 Existing installations already upgraded to 1.13 resume through the same startup path. You do not need to downgrade first.
 
 ## Shared and distributed installations
@@ -42,6 +53,8 @@ It applies to single-host local data with either a SQLite or PostgreSQL applicat
 Set `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE=false` to leave migration under operator control.
 
 Multiple workers, orchestrators and shared filesystems require a maintenance window managed by the administrator.
+For Docker Desktop bind mounts that report `fuse.grpcfuse`, move the data to a local named volume for migration.
+Local VirtioFS mounts, including the `fakeowner` passthrough, are supported.
 Stop all old API and Memory workers before migrating. An old worker cannot honor the new storage fences.
 Retain a backup of the application database and the complete knowledge-base directory, including native indexes and WAL files.
 For local stores, run one Langflow worker outside the orchestrator on a supported local filesystem with the original data and authoritative application database.

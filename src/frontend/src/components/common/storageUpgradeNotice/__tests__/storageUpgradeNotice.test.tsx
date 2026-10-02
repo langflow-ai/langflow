@@ -156,3 +156,48 @@ it("refreshes Knowledge and Memory even when a small upgrade completes between p
     screen.queryByTestId("storage-upgrade-notice"),
   ).not.toBeInTheDocument();
 });
+
+it("closes after completion and does not reopen for later activity", () => {
+  const { rerender } = render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  const previousStore = status.stores[0];
+  status = { ...status, running: false, stores: [], revision: "complete" };
+  rerender(<StorageUpgradeNotice />);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  status = { ...status, running: true, stores: [previousStore] };
+  rerender(<StorageUpgradeNotice />);
+  expect(screen.getByTestId("storage-upgrade-notice")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("lets a viewer dismiss the notice until the availability changes", () => {
+  const { rerender } = render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  expect(
+    screen.getByRole("region", { name: "Upgrading your data" }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(
+    screen.queryByTestId("storage-upgrade-notice"),
+  ).not.toBeInTheDocument();
+  status = { ...status, stores: [{ ...status.stores[0], phase: "importing" }] };
+  rerender(<StorageUpgradeNotice />);
+  expect(
+    screen.queryByTestId("storage-upgrade-notice"),
+  ).not.toBeInTheDocument();
+  status = {
+    ...status,
+    running: false,
+    stores: [
+      {
+        ...status.stores[0],
+        storage_state: "needs_attention",
+        error_code: "validation_failed",
+      },
+    ],
+  };
+  rerender(<StorageUpgradeNotice />);
+  expect(screen.getByTestId("storage-upgrade-notice")).toBeInTheDocument();
+});

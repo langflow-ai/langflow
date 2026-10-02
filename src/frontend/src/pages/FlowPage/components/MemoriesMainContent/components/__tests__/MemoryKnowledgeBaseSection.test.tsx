@@ -78,6 +78,18 @@ beforeEach(() => {
 });
 
 describe("MemoryKnowledgeBaseSection", () => {
+  it("keeps existing message history visible beside the upgrade banner", () => {
+    render(
+      <MemoryKnowledgeBaseSection
+        {...makeBaseProps()}
+        storageState="migrating"
+      />,
+    );
+    expect(screen.getByText("hello")).toBeInTheDocument();
+    expect(
+      screen.getByText(/upgrading this base automatically/i),
+    ).toBeInTheDocument();
+  });
   const makeBaseProps = () => {
     const documents: MemoryDocumentItem[] = [
       {
@@ -135,7 +147,7 @@ describe("MemoryKnowledgeBaseSection", () => {
           ? /become available when the upgrade finishes/
           : /Contact your administrator/;
       expect(screen.getAllByText(guidance)).toHaveLength(1);
-      expect(screen.queryByText("hello")).not.toBeInTheDocument();
+      expect(screen.getByText("hello")).toBeInTheDocument();
     },
   );
 

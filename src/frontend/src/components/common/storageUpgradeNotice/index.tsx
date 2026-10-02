@@ -13,6 +13,7 @@ import {
 import type { StorageUpgrade } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
 import { useGetStorageStatus } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
 import { usePostStorageRetry } from "@/controllers/API/queries/knowledge-base-storage/use-post-storage-retry";
+import useAuthStore from "@/stores/authStore";
 
 const PHASE_KEYS: Record<string, string> = {
   discovered: "storageUpgrade.queued",
@@ -33,6 +34,7 @@ const GUIDANCE_KEYS: Record<string, string> = {
   remote_source_requires_migration: "storageUpgrade.remote",
   validation_failed: "storageUpgrade.validationFailed",
   interrupted: "storageUpgrade.interrupted",
+  automatic_reader_limit: "storageUpgrade.readerLimit",
 };
 
 function UpgradeCard({
@@ -112,14 +114,28 @@ export function StorageUpgradeNotice() {
   const { t } = useTranslation();
   const { data } = useGetStorageStatus();
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const userId = useAuthStore((state) => state.userData?.id);
   const queryClient = useQueryClient();
   const previous = useRef<string | null>(null);
   const signature = JSON.stringify({
-    stores: data?.stores.map((store) => [store.kb_id, store.storage_state]),
+    viewer: userId,
+    stores: data?.stores.map((store) => [
+      store.kb_id,
+      store.storage_state,
+      store.error_code,
+    ]),
     revision: data?.revision,
     running: data?.running,
     inventoryComplete: data?.inventory?.complete,
+    inventoryIssues: data?.inventory?.issues,
   });
+  const visible =
+    !!data &&
+    (data.running || !!data.stores.length || !!data.inventory?.issues);
+  useEffect(() => {
+    if (!visible || dismissed === signature) setOpen(false);
+  }, [visible, dismissed, signature]);
   useEffect(() => {
     if (!data) return;
     if (previous.current !== null && previous.current !== signature) {
@@ -133,11 +149,7 @@ export function StorageUpgradeNotice() {
     }
     previous.current = signature;
   }, [data, signature, queryClient]);
-  if (
-    !data ||
-    (!data.running && !data.stores.length && !data.inventory?.issues)
-  )
-    return null;
+  if (!data || !visible || dismissed === signature) return null;
   const needsAttention =
     data.stores.some((store) => store.storage_state !== "migrating") ||
     !!data.inventory?.issues;
@@ -146,6 +158,8 @@ export function StorageUpgradeNotice() {
       <div
         className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-border bg-background p-3 shadow-lg"
         data-testid="storage-upgrade-notice"
+        role="region"
+        aria-label={t("storageUpgrade.title")}
       >
         <p role="status" className="mb-2 text-sm">
           {t(
@@ -159,6 +173,13 @@ export function StorageUpgradeNotice() {
             {t("storageUpgrade.viewProgress")}
           </Button>
         </DialogTrigger>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setDismissed(signature)}
+        >
+          {t("common.close")}
+        </Button>
       </div>
       <DialogContent>
         <DialogHeader>

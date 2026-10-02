@@ -988,7 +988,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
                     msg = "SQLite migration checkpoint is blocked by another connection"
                     raise BackendConfigurationError(msg)
             path = self._check_path()
-            with path.open("rb") as file:
+            with path.open("r+b") as file:
                 os.fsync(file.fileno())
             if os.name != "nt":
                 descriptor = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))

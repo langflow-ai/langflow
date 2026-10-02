@@ -161,20 +161,27 @@ def _legacy_process(process: psutil.Process) -> bool:
         return False
     except psutil.AccessDenied as exc:
         try:
+            # Windows protects SYSTEM process tokens from ordinary accounts.
+            # Only a confirmed application-account identity may fence us.
+            username = process.username()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return False
+        if username != psutil.Process().username():
+            return False
+        try:
             if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
                 return False
-            if process.username() == psutil.Process().username():
-                # macOS can deny cmdline() briefly while a same-user process
-                # exits. Confirm the identity remains live before failing closed.
-                for _attempt in range(3):
-                    time.sleep(0.01)
-                    if not process.is_running() or process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
-                        return False
-                msg = "Cannot inspect a process belonging to the application account"
-                raise MaintenanceRequiredError(msg) from exc
+            # macOS can deny cmdline() briefly while a same-user process exits.
+            for _attempt in range(3):
+                time.sleep(0.01)
+                if not process.is_running() or process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+                    return False
         except psutil.NoSuchProcess:
             return False
-        return False
+        except psutil.AccessDenied:
+            pass
+        msg = "Cannot inspect a process belonging to the application account"
+        raise MaintenanceRequiredError(msg) from exc
 
 
 def process_identity(process: psutil.Process) -> dict:
@@ -368,7 +375,7 @@ def snapshot_source(source: Path, destination: Path, expected_fingerprint: str) 
         raise MaintenanceRequiredError(msg)
     for path in temporary.rglob("*"):
         if path.is_file():
-            with path.open("rb") as stream:
+            with path.open("r+b") as stream:
                 os.fsync(stream.fileno())
     temporary.rename(destination)
     _fsync_directory(destination.parent)

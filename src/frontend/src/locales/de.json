@@ -18,6 +18,7 @@
   "storageUpgrade.validationFailed": "Die Kopie hat die Prüfung nicht bestanden. Ihre ursprünglichen Daten bleiben erhalten. Prüfen Sie vor einem erneuten Versuch die Aktualisierungsprotokolle.",
   "storageUpgrade.interrupted": "Die Aktualisierung wurde unterbrochen. Versuchen Sie es erneut, um sicher fortzufahren.",
   "storageUpgrade.checkStorage": "Prüfen Sie den Speicherzugriff, den freien Speicherplatz und die Aktualisierungsprotokolle. Versuchen Sie es dann erneut. Ihre ursprünglichen Daten bleiben erhalten.",
+  "storageUpgrade.readerLimit": "Dieser Speicher überschreitet die Grenzen des automatischen Lesers. Bewahren Sie die Quelle auf und verwenden Sie den verwalteten Controller mit einem qualifizierten signierten Hilfsprogramm, oder exportieren Sie die Daten in einer isolierten Umgebung der alten Version.",
   "storageUpgrade.retry": "Aktualisierung wiederholen",
   "storageUpgrade.retryFailed": "Die Aktualisierung konnte nicht geplant werden. Laden Sie die Seite neu und versuchen Sie es erneut.",
   "storageUpgrade.viewProgress": "Aktualisierungsfortschritt anzeigen",
