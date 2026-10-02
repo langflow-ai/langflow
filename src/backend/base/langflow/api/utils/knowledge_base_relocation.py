@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
-from sqlmodel import select
+from sqlmodel import select, update
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.database.models.user.model import User
@@ -210,8 +210,15 @@ async def _relocate_one(
             )
             return result
 
-        if not await _repoint(record.id, target_backend_type, target_backend_config, result.source_count):
+        repoint = await _repoint(record, target_backend_type, target_backend_config, result.source_count)
+        if repoint == "deleted":
             result.reason = "knowledge base was deleted during the move"
+            return result
+        if repoint == "changed":
+            result.reason = (
+                "knowledge base's storage changed during the move (its backend, storage generation or storage "
+                "state is no longer what was copied), so it still points at its old store; re-run"
+            )
             return result
         result.status = "relocated"
     except Exception as exc:  # noqa: BLE001 - reported per knowledge base
@@ -274,14 +281,27 @@ async def _settled_count(backend: BaseVectorStoreBackend, expected: int) -> int:
     return count
 
 
-async def _repoint(record_id: UUID, backend_type: str, backend_config: dict[str, Any], chunks: int) -> bool:
+async def _repoint(
+    record: KnowledgeBaseRecord, backend_type: str, backend_config: dict[str, Any], chunks: int
+) -> Literal["repointed", "changed", "deleted"]:
+    """Point the row at the target, only if it still routes where ``record`` said when it was read.
+
+    The storage runtime can move a row to a new generation or start deleting it
+    while its chunks are copied, so the copy is only what the row names if these
+    columns are unchanged. One conditional UPDATE checks and writes at once.
+    """
     async with session_scope() as session:
-        row = await session.get(KnowledgeBaseRecord, record_id)
-        if row is None:
-            return False
-        row.backend_type = backend_type
-        row.backend_config = backend_config
-        row.chunks = chunks
-        session.add(row)
-        await session.commit()
-    return True
+        moved = await session.exec(
+            update(KnowledgeBaseRecord)
+            .where(
+                KnowledgeBaseRecord.id == record.id,
+                KnowledgeBaseRecord.backend_type == record.backend_type,
+                KnowledgeBaseRecord.storage_generation == record.storage_generation,
+                KnowledgeBaseRecord.storage_state == record.storage_state,
+            )
+            .values(backend_type=backend_type, backend_config=backend_config, chunks=chunks)
+        )
+        if moved.rowcount == 1:
+            await session.commit()
+            return "repointed"
+        return "deleted" if await session.get(KnowledgeBaseRecord, record.id) is None else "changed"

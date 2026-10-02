@@ -21,6 +21,7 @@ from langflow.__main__ import _relocate_kb
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.knowledge_base_relocation import (
     KBRelocationResult,
+    _repoint,
     relocate_knowledge_bases,
     validate_relocation_target_config,
 )
@@ -204,6 +205,34 @@ class TestRelocationWithoutATarget:
         assert (result.copied, result.target_count) == (0, 0)
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_state) == (backend_type, storage_state)
+
+    async def test_repoint_moves_a_row_still_routed_as_it_was_read(self, active_user):
+        record, _ = await _seed_sqlite_kb(active_user.id, "kb_unchanged", 2)
+
+        assert await _repoint(record, "postgres", {}, 2) == "repointed"
+
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert (row.backend_type, row.chunks) == ("postgres", 2)
+
+    @pytest.mark.parametrize(
+        "change", [{"storage_generation": 2}, {"storage_state": "deleting"}, {"backend_type": "opensearch"}]
+    )
+    async def test_repoint_leaves_a_row_that_changed_after_it_was_read(self, active_user, change):
+        # ``record`` is the row as relocate-kb read it; the change is what a storage
+        # operation elsewhere in Langflow, or another run, does to it before the repoint.
+        record, _ = await _seed_sqlite_kb(active_user.id, "kb_moved_on", 2)
+        await _set_row(record.id, **change)
+
+        assert await _repoint(record, "postgres", {}, 2) == "changed"
+
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert row.backend_type == change.get("backend_type", "sqlite")
+
+    async def test_repoint_tells_a_deleted_row_from_a_changed_one(self, active_user):
+        record, _ = await _seed_sqlite_kb(active_user.id, "kb_deleted_first", 2)
+        await knowledge_base_service.delete_record(record.id)
+
+        assert await _repoint(record, "postgres", {}, 2) == "deleted"
 
 
 async def _database_state() -> tuple[str, list[uuid.UUID], uuid.UUID]:
@@ -416,6 +445,23 @@ class TestRelocationToPostgresLive:
 
         assert result.status == "failed"
         assert "deleted" in result.reason
+
+    async def test_row_moved_to_another_generation_mid_copy_is_not_repointed(self, active_user, tmp_path, during_copy):
+        # The copy goes on reading the generation it opened, so its counts agree;
+        # only the row shows that what it routes to is no longer what was copied.
+        kb_name = f"kb_regen_{uuid.uuid4().hex[:6]}"
+        records = []
+
+        async def new_generation():
+            await _set_row(records[0].id, storage_generation=2)
+
+        during_copy(new_generation)
+        record, result = await self._move(active_user, tmp_path, kb_name, on_record=records.append)
+
+        assert result.status == "failed", (result.source_count, result.copied, result.target_count)
+        assert "changed during the move" in result.reason
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert (row.backend_type, row.storage_generation) == ("sqlite", 2)
 
 
 @pytest.mark.api_key_required
