@@ -87,9 +87,18 @@ def test_capability_matrices_are_complete() -> None:
     assert validate_all() == []
 
 
-@pytest.mark.parametrize("capability_reference_date", [date(2026, 10, 2)], indirect=True)
+def _committed_evidence_expiry_date() -> date:
+    """Derive expiry from matrix dates and all cited sources, including refreshed evidence."""
+    dates = []
+    for path in DEFAULT_MATRIX_DIR.glob("*.json"):
+        matrix = json.loads(path.read_text(encoding="utf-8"))
+        dates.extend(date.fromisoformat(item["verified_on"]) for item in [matrix, *matrix["sources"].values()])
+    return min(dates) + timedelta(days=31)
+
+
+@pytest.mark.parametrize("capability_reference_date", [_committed_evidence_expiry_date()], indirect=True)
 def test_committed_evidence_expires_after_the_reference_period() -> None:
-    """The live checker must still reject September evidence after its thirty-day lifetime."""
+    """Committed evidence must expire thirty-one days after its oldest verification date."""
     assert any("older than 30 days" in error for error in validate_all())
 
 

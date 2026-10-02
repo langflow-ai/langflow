@@ -252,50 +252,61 @@ def create_receipt(*, root: Path, database: Path, receipt: Path, previous_worker
         raise MaintenanceRequiredError(msg)
     backup = receipt.with_suffix(".metadata.sqlite3")
     descriptor = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    os.close(descriptor)
-    with (
-        closing(sqlite3.connect(f"{database.as_uri()}?mode=ro", uri=True)) as source,
-        closing(sqlite3.connect(backup)) as target,
-    ):
-        source.backup(target)
-        if target.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
-            msg = "Application metadata backup failed integrity validation"
+    receipt_created = False
+    try:
+        os.close(descriptor)
+        with (
+            closing(sqlite3.connect(f"{database.as_uri()}?mode=ro", uri=True)) as source,
+            closing(sqlite3.connect(backup)) as target,
+        ):
+            source.backup(target)
+            if target.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
+                msg = "Application metadata backup failed integrity validation"
+                raise MaintenanceRequiredError(msg)
+        with backup.open("rb") as stream:
+            os.fsync(stream.fileno())
+        _fsync_directory(backup.parent)
+        sources = {}
+        for owner in sorted(root.iterdir()):
+            if owner.is_symlink():
+                msg = "Legacy owner directory is a symbolic link"
+                raise MaintenanceRequiredError(msg)
+            if not owner.is_dir():
+                continue
+            for candidate in sorted(owner.iterdir()):
+                if candidate.is_dir() and (candidate / "chroma.sqlite3").is_file():
+                    sources[candidate.relative_to(root).as_posix()] = tree_fingerprint(candidate)
+        payload = {
+            "version": 1,
+            "scope": "managed-single-host",
+            "host": socket.gethostname(),
+            "root": str(root),
+            "database": str(database),
+            "backup": str(backup.resolve()),
+            "backup_sha256": file_sha256(backup),
+            "stopped_processes": previous_workers,
+            "sources": sources,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        encoded = json.dumps(payload, separators=(",", ":")).encode()
+        if len(encoded) > MAX_RECEIPT_BYTES:
+            msg = "Upgrade inventory exceeds the receipt bound"
             raise MaintenanceRequiredError(msg)
-    with backup.open("rb") as stream:
-        os.fsync(stream.fileno())
-    _fsync_directory(backup.parent)
-    sources = {}
-    for owner in sorted(root.iterdir()):
-        if owner.is_symlink():
-            msg = "Legacy owner directory is a symbolic link"
-            raise MaintenanceRequiredError(msg)
-        if not owner.is_dir():
-            continue
-        for candidate in sorted(owner.iterdir()):
-            if candidate.is_dir() and (candidate / "chroma.sqlite3").is_file():
-                sources[candidate.relative_to(root).as_posix()] = tree_fingerprint(candidate)
-    payload = {
-        "version": 1,
-        "scope": "managed-single-host",
-        "host": socket.gethostname(),
-        "root": str(root),
-        "database": str(database),
-        "backup": str(backup.resolve()),
-        "backup_sha256": file_sha256(backup),
-        "stopped_processes": previous_workers,
-        "sources": sources,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    encoded = json.dumps(payload, separators=(",", ":")).encode()
-    if len(encoded) > MAX_RECEIPT_BYTES:
-        msg = "Upgrade inventory exceeds the receipt bound"
-        raise MaintenanceRequiredError(msg)
-    descriptor = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(descriptor, "wb") as stream:
-        stream.write(encoded)
-        stream.flush()
-        os.fsync(stream.fileno())
-    _fsync_directory(receipt.parent)
+        descriptor = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        receipt_created = True
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(encoded)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _fsync_directory(receipt.parent)
+
+    except BaseException:
+        # Only remove artifacts created by this attempt. Existing backups and
+        # receipts belong to earlier attempts and must remain untouched.
+        if receipt_created:
+            receipt.unlink(missing_ok=True)
+        backup.unlink(missing_ok=True)
+        raise
 
 
 def validate_receipt(*, root: Path, database: Path, receipt: Path) -> dict:

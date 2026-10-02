@@ -37,6 +37,15 @@ export function MemoryKnowledgeBaseSection({
   handleOpenDocumentPanel,
 }: MemoryKnowledgeBaseSectionProps) {
   const { t } = useTranslation();
+  const upgradeFallback = (
+    <p className="text-sm">
+      {t(
+        storageState === "migrating"
+          ? "storageUpgrade.automatic"
+          : "storageUpgrade.contactAdmin",
+      )}
+    </p>
+  );
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
     if (!hasNextMessagesPage || isFetchingNextMessagesPage) return;
     const el = e.currentTarget;
@@ -89,14 +98,14 @@ export function MemoryKnowledgeBaseSection({
       <div className="flex-1 overflow-auto" onScroll={handleScroll}>
         {storageState && storageState !== "ready" ? (
           <div className="space-y-3 p-4">
-            <p className="text-sm">
-              {t(
-                storageState === "migrating"
-                  ? "storageUpgrade.automatic"
-                  : "storageUpgrade.contactAdmin",
-              )}
-            </p>
-            {storageKbId && <StorageUpgradePanel kbId={storageKbId} />}
+            {storageKbId ? (
+              <StorageUpgradePanel
+                kbId={storageKbId}
+                fallback={upgradeFallback}
+              />
+            ) : (
+              upgradeFallback
+            )}
           </div>
         ) : docsLoading ? (
           <div className="flex h-32 items-center justify-center">

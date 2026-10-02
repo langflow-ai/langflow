@@ -60,7 +60,9 @@ jobs:
     env:
       LFX_TEST_ALLOW_LANGFLOW: '1'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Configure isolated application test paths
         run: |
           {
@@ -68,7 +70,7 @@ jobs:
             echo "LANGFLOW_CONFIG_DIR=$RUNNER_TEMP/sqlite-application-config"
             echo "LANGFLOW_KNOWLEDGE_BASES_DIR=$RUNNER_TEMP/sqlite-application-knowledge"
           } >> "$GITHUB_ENV"
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           version: latest-known
           python-version: '3.12'
@@ -139,8 +141,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           version: latest-known
           python-version: '3.12'
@@ -156,8 +160,10 @@ jobs:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
         python: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           version: latest-known
           python-version: ${{ matrix.python }}

@@ -115,6 +115,14 @@ async def create_record(
     that read from ``model_selection``. Callers that previously passed
     those two params now just supply ``model_selection``.
     """
+    from langflow.api.utils.kb_helpers import validate_kb_name
+    from langflow.services.knowledge_base_storage.coordinator import ensure_legacy_name_available
+
+    validate_kb_name(name)
+    if backend_type != "chroma":
+        # All creates, including Knowledge components and Memory stores, must
+        # preserve names owned by sources the startup scan has not adopted yet.
+        await ensure_legacy_name_available(user_id, name)
     normalized_selection = _normalize_model_selection(model_selection)
     record = KnowledgeBaseRecord(
         id=record_id or uuid4(),

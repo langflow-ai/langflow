@@ -454,6 +454,38 @@ async def fence_legacy_records() -> None:
         await session.commit()
 
 
+async def ensure_legacy_name_available(user_id: UUID, name: str) -> None:
+    """Reserve an unadopted source name even while background discovery is running."""
+    if not get_settings_service().settings.knowledge_bases_dir:
+        return
+    async with session_scope() as session:
+        owner = await session.get(User, user_id)
+    if owner is None:
+        return
+
+    def reserved():
+        root = storage_root()
+        owner_path = root / owner.username
+        source = owner_path / name
+        if owner_path.is_symlink() or source.is_symlink() or not source.resolve().is_relative_to(root):
+            return True
+        if not (source / "chroma.sqlite3").exists() or (source / ".kb_deleted").exists():
+            return False
+        return not _is_retired_source(source.relative_to(root).as_posix())
+
+    try:
+        unavailable = await _worker(reserved)
+    except (OSError, MaintenanceRequiredError, ValueError) as exc:
+        msg = "Legacy storage needs administrator attention before this name can be reused. Check upgrade status."
+        raise StorageUnavailableError(msg) from exc
+    if unavailable:
+        msg = (
+            f"Knowledge base '{name}' already exists in legacy storage and is waiting for its upgrade. "
+            "Open the upgrade notice to check progress, or choose a different name."
+        )
+        raise StorageUnavailableError(msg)
+
+
 async def reconcile_legacy_inventory() -> None:
     """Adopt unambiguous local sidecar identities from a bounded source inventory.
 
@@ -569,12 +601,12 @@ async def reconcile_legacy_inventory() -> None:
             async with session_scope() as session:
                 found = (
                     await session.exec(
-                        select(KnowledgeBaseRecord.id).where(
+                        select(KnowledgeBaseRecord).where(
                             KnowledgeBaseRecord.user_id == owner.id, KnowledgeBaseRecord.name == parts[1]
                         )
                     )
                 ).first()
-            if found is None:
+            if found is None or found.backend_type != "chroma":
                 issues.append({"code": "unreadable_or_ambiguous_legacy_metadata", "owner_id": str(owner.id)})
     _inventory_issue_count = len(issues)
     directory = private_directory(storage_root() / ".migration")

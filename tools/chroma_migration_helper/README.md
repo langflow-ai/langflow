@@ -115,7 +115,8 @@ Before dispatching a release, a repository administrator must configure the
 team reviewer. The workflow checks the environment through GitHub's read-only
 API with `actions: read` before building a publication candidate and rechecks
 before signing and durable publication. An absent or inaccessible environment,
-an API error, or missing required reviewers, with self-review prevented and administrator bypass disabled blocks publication. The workflow
+an API error, missing required reviewers, allowed self-review, or enabled
+administrator bypass blocks publication. The workflow
 does not create or configure the environment. A wait timer alone is insufficient.
 
 See [application upgrade and recovery](../../docs/development/sqlite-kb-upgrade.md)

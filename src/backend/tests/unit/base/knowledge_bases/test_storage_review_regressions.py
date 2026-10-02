@@ -1,11 +1,14 @@
 """Upgrade, privacy and concurrency regressions reproduced by the PR review."""
 
 import asyncio
+import hashlib
+import json
 import threading
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
+import pandas as pd
 import pytest
 from langchain_core.documents import Document
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
@@ -15,6 +18,7 @@ from langflow.services.knowledge_base_storage import cleanup, coordinator, maint
 from langflow.services.memory_base import ingestion
 from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, BaseVectorStoreBackend, IngestedDocument
 from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend, SQLiteStorageContext
+from lfx.components.files_and_knowledge.knowledge import KnowledgeComponent
 from sqlmodel import SQLModel
 
 from . import test_storage_upgrade as storage_tests
@@ -26,6 +30,124 @@ read_kb = storage_tests.read_kb
 frozen_source = storage_tests.frozen_source
 
 pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.mark.parametrize("name", ["../victim/knowledge", ".", "..", "bad\\name", "bad\0name"])
+async def test_create_service_rejects_unsafe_names_before_disk_or_persistence(database, monkeypatch, name):
+    """Every create entry point must reject unsafe paths before reserving legacy names."""
+    from langflow.api.utils import knowledge_base_service
+
+    monkeypatch.setattr(knowledge_base_service, "session_scope", database.sessions)
+    monkeypatch.setattr(
+        coordinator, "ensure_legacy_name_available", AsyncMock(side_effect=AssertionError("unsafe path inspected"))
+    )
+    with pytest.raises(ValueError, match="KB name"):
+        await knowledge_base_service.create_record(user_id=database.user.id, name=name)
+    assert await knowledge_base_service.get_by_user_and_name(database.user.id, name) is None
+
+
+@pytest.mark.parametrize("entrypoint", ["service", "component"])
+async def test_legacy_name_cannot_be_claimed_while_discovery_is_running(database, monkeypatch, entrypoint):
+    """A create overlapping discovery must leave the original identity available for adoption."""
+    from langflow.api.utils import knowledge_base_service
+
+    monkeypatch.setattr(knowledge_base_service, "session_scope", database.sessions)
+    source = storage_tests.native_source(database)
+    identity = uuid4()
+    (source / "embedding_metadata.json").write_text(
+        json.dumps({"id": str(identity), "name": "fixture-l2", "embedding_model": "text-embedding-3-small"})
+    )
+    original = maintenance.tree_fingerprint(source)
+    started, release = threading.Event(), threading.Event()
+    fingerprint = coordinator.tree_fingerprint
+
+    def paused_discovery(path):
+        if path == source and not started.is_set():
+            started.set()
+            assert release.wait(timeout=10)
+        return fingerprint(path)
+
+    monkeypatch.setattr(coordinator, "tree_fingerprint", paused_discovery)
+    discovery = asyncio.create_task(coordinator.run_pending())
+    assert await asyncio.to_thread(started.wait, 5)
+    try:
+        if entrypoint == "service":
+            creation = knowledge_base_service.create_record(user_id=database.user.id, name="fixture-l2")
+        else:
+            component = KnowledgeComponent()
+            creation = component._create_knowledge_base_record(
+                user_id=database.user.id,
+                name="fixture-l2",
+                model_selection=[{"name": "text-embedding-3-small", "provider": "OpenAI"}],
+                backend_type="sqlite",
+                backend_config={},
+            )
+        with pytest.raises(runtime.StorageUnavailableError, match=r"legacy.*upgrade"):
+            await creation
+        assert await knowledge_base_service.get_by_user_and_name(database.user.id, "fixture-l2") is None
+    finally:
+        release.set()
+        await discovery
+    adopted = await read_kb(database, identity)
+    assert (adopted.storage_state, adopted.backend_type, adopted.chunks) == ("ready", "sqlite", 239)
+    assert maintenance.tree_fingerprint(source) == original
+    assert coordinator.inventory_status()["issues"] == 0
+
+
+@pytest.mark.parametrize("action", ["duplicate", "reroute"])
+async def test_knowledge_component_embeds_without_lock_and_rechecks_before_write(database, monkeypatch, action):
+    """Concurrent reads/writes stay available, and changes during embedding are respected."""
+    from langflow.api.utils import knowledge_base_service
+
+    monkeypatch.setattr(knowledge_base_service, "session_scope", database.sessions)
+    row = await make_kb(database, backend="sqlite")
+    reader = await runtime.backend_for_record(row, create=True)
+    await reader.ensure_ready()
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def embed(_texts):
+        started.set()
+        await release.wait()
+        return [[1.0, 2.0]]
+
+    component = KnowledgeComponent(_user_id=str(row.user_id))
+    component.set(knowledge_base=row.name, allow_duplicates=False)
+    writing = asyncio.create_task(
+        component._create_vector_store(
+            pd.DataFrame({"text": ["overlapping document"]}),
+            [{"column_name": "text", "vectorize": True, "identifier": True}],
+            SimpleNamespace(aembed_documents=embed),
+        )
+    )
+    await asyncio.wait_for(started.wait(), 1)
+    try:
+        assert await asyncio.wait_for(reader.count(), 1) == 0
+        if action == "duplicate":
+            doc_hash = hashlib.sha256(b"overlapping document").hexdigest()
+            await asyncio.wait_for(
+                reader.add_embedded_documents(
+                    [IngestedDocument("winning concurrent write", {"_id": doc_hash}, [1.0, 2.0], id="winner")]
+                ),
+                1,
+            )
+        else:
+            async with runtime.operation(row), database.sessions() as session:
+                current = await session.get(KnowledgeBaseRecord, row.id)
+                current.storage_generation += 1
+                await session.commit()
+    finally:
+        release.set()
+        if action == "reroute":
+            with pytest.raises(runtime.StorageUnavailableError, match="storage changed"):
+                await writing
+        else:
+            await writing
+        await reader.teardown()
+    original = SQLiteBackend(row.name, storage_context=SQLiteStorageContext(database.root, row.user_id, row.id))
+    try:
+        assert await original.count() == (1 if action == "duplicate" else 0)
+    finally:
+        await original.teardown()
 
 
 @pytest.mark.usefixtures("database")
@@ -557,6 +679,71 @@ async def test_legacy_inventory_does_not_skip_previously_valid_usernames(databas
         f"{username}/knowledge": maintenance.tree_fingerprint(source)
     }
     assert (await read_kb(database, row.id)).id == row.id
+
+
+@pytest.mark.parametrize("failure", ["inventory", "size", "receipt_sync"])
+async def test_failed_receipt_creation_cleans_owned_artifacts_and_can_retry(database, monkeypatch, failure):
+    """Failure after backup creation must not leave a retry-blocking or incomplete receipt."""
+    source = database.root / database.user.username / "legacy"
+    source.mkdir(parents=True)
+    (source / "chroma.sqlite3").write_bytes(b"retained legacy data")
+    original = maintenance.tree_fingerprint(source)
+    receipt = database.root.parent / "retryable-receipt.json"
+    backup = receipt.with_suffix(".metadata.sqlite3")
+    monkeypatch.setattr(maintenance, "_process_matches", lambda _identity: False)
+    monkeypatch.setattr(maintenance, "remaining_legacy_workers", list)
+    options = {
+        "root": database.root,
+        "database": database.path,
+        "receipt": receipt,
+        "previous_workers": [{"pid": 999999, "created": 1}],
+    }
+    with monkeypatch.context() as failing:
+        if failure == "inventory":
+            failing.setattr(maintenance, "tree_fingerprint", Mock(side_effect=OSError("inventory failed")))
+        elif failure == "size":
+            failing.setattr(maintenance, "MAX_RECEIPT_BYTES", 1)
+        else:
+            sync = maintenance._fsync_directory
+            calls = 0
+
+            def fail_receipt_sync(directory):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    msg = "receipt sync failed"
+                    raise OSError(msg)
+                sync(directory)
+
+            failing.setattr(maintenance, "_fsync_directory", fail_receipt_sync)
+        with pytest.raises((OSError, maintenance.MaintenanceRequiredError)):
+            maintenance.create_receipt(**options)
+    assert not receipt.exists()
+    assert not backup.exists()
+    assert maintenance.tree_fingerprint(source) == original
+    maintenance.create_receipt(**options)
+    assert receipt.is_file()
+    assert backup.is_file()
+    assert json.loads(receipt.read_bytes())["sources"] == {f"{database.user.username}/legacy": original}
+
+
+@pytest.mark.parametrize("existing", ["backup", "receipt"])
+async def test_receipt_creation_preserves_preexisting_artifacts(database, monkeypatch, existing):
+    """Exclusive-create failures cannot remove another attempt's recovery artifacts."""
+    database.root.mkdir(parents=True, exist_ok=True)
+    receipt = database.root.parent / "existing-receipt.json"
+    artifact = receipt if existing == "receipt" else receipt.with_suffix(".metadata.sqlite3")
+    artifact.write_bytes(b"previous attempt must remain")
+    monkeypatch.setattr(maintenance, "_process_matches", lambda _identity: False)
+    monkeypatch.setattr(maintenance, "remaining_legacy_workers", list)
+    with pytest.raises((FileExistsError, maintenance.MaintenanceRequiredError)):
+        maintenance.create_receipt(
+            root=database.root,
+            database=database.path,
+            receipt=receipt,
+            previous_workers=[{"pid": 999999, "created": 1}],
+        )
+    assert artifact.read_bytes() == b"previous attempt must remain"
 
 
 async def test_real_postgres_coordination_allows_more_than_four_callers(monkeypatch):

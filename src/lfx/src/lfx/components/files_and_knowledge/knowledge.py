@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 
 from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, IngestedDocument
 from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
@@ -918,7 +919,7 @@ class KnowledgeComponent(Component):
         from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
 
         record = await resolve_record(owner_id, self.knowledge_base)
-        async with operation(record):
+        async with operation(record, shared=True):
             existing_ids = set()
             if not self.allow_duplicates:
                 async with aclosing(backend.iter_documents()) as batches:
@@ -928,20 +929,48 @@ class KnowledgeComponent(Component):
                             if doc_id:
                                 existing_ids.add(doc_id)
 
-            data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
 
-            user_metadata_tag = self._resolve_user_metadata_tag()
+        user_metadata_tag = self._resolve_user_metadata_tag()
 
-            documents = []
-            for data_obj in data_objects:
-                doc = data_obj.to_lc_document()
-                if user_metadata_tag:
-                    doc.metadata["source_metadata"] = user_metadata_tag
-                documents.append(doc)
+        documents = []
+        for data_obj in data_objects:
+            doc = data_obj.to_lc_document()
+            if user_metadata_tag:
+                doc.metadata["source_metadata"] = user_metadata_tag
+            documents.append(doc)
+        if not documents:
+            return backend
 
-            if documents:
-                await backend.add_documents(documents)
-                self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+        # No storage lease may surround the provider call. The write lease
+        # below rechecks routing and IDs after concurrent operations finish.
+        vectors = await embedding_function.aembed_documents([doc.page_content for doc in documents])
+        if len(vectors) != len(documents):
+            msg = "Embedding provider returned an incorrect number of vectors"
+            raise BackendConfigurationError(msg)
+        embedded = [
+            IngestedDocument(doc.page_content, doc.metadata, vector, id=doc.id)
+            for doc, vector in zip(documents, vectors, strict=True)
+        ]
+        async with operation(record):
+            if not self.allow_duplicates:
+                current_ids = set()
+                async with aclosing(backend.iter_documents()) as batches:
+                    async for batch in batches:
+                        current_ids.update(doc.metadata["_id"] for doc in batch if doc.metadata.get("_id"))
+                unique = []
+                for doc in embedded:
+                    doc_id = doc.metadata.get("_id")
+                    if doc_id and doc_id in current_ids:
+                        continue
+                    if doc_id:
+                        current_ids.add(doc_id)
+                    unique.append(doc)
+                embedded = unique
+
+            if embedded:
+                await backend.add_embedded_documents(embedded)
+                self.log(f"Added {len(embedded)} documents to vector store '{self.knowledge_base}'")
 
         return backend
 

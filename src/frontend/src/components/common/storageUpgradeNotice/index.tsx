@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,12 +92,20 @@ function UpgradeCard({
   );
 }
 
-export function StorageUpgradePanel({ kbId }: { kbId: string }) {
+export function StorageUpgradePanel({
+  kbId,
+  fallback = null,
+}: {
+  kbId: string;
+  fallback?: ReactNode;
+}) {
   const { data } = useGetStorageStatus();
   const store = data?.stores.find((item) => item.kb_id === kbId);
   return store ? (
     <UpgradeCard store={store} isAdmin={data?.is_admin ?? false} />
-  ) : null;
+  ) : (
+    fallback
+  );
 }
 
 export function StorageUpgradeNotice() {

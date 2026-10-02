@@ -1,10 +1,10 @@
 """Persistent KB identity + configuration.
 
-One row per Knowledge Base, and the sole source of truth. It replaced the
-``embedding_metadata.json`` + ``schema.json`` sidecars, which are no longer
-written or read: a KB exists because this row exists, not because a directory
-does. Directories left by a version that predates the row are adopted only by
-the explicit ``langflow reconcile-kb-from-disk`` command.
+One row per Knowledge Base, and the sole source of truth for current routing.
+New bases no longer write ``embedding_metadata.json`` or ``schema.json``
+sidecars. The background upgrade inventories and adopts legacy directories
+using their preserved sidecars. Operators may also explicitly reconcile old
+metadata with ``langflow reconcile-kb-from-disk``.
 
 Cached statistics (chunk / word / character counts, on-disk size,
 file-extension list) live alongside the config so list endpoints can

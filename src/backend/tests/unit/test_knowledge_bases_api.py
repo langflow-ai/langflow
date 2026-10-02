@@ -90,6 +90,22 @@ def seed_kb(active_user):
     return _seed
 
 
+@pytest.fixture
+def seed_legacy_kb(active_user):
+    """Seed historical malformed rows directly, bypassing current create validation."""
+    from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+    from langflow.services.deps import session_scope
+
+    async def seed(name: str):
+        row = KnowledgeBaseRecord(user_id=active_user.id, name=name, backend_type="chroma")
+        async with session_scope() as session:
+            session.add(row)
+            await session.commit()
+        return row
+
+    return seed
+
+
 class TestKnowledgeBaseHelpers:
     """Tests for helper functions in kb_helpers.py via class methods."""
 
@@ -1661,19 +1677,19 @@ class TestKnowledgeBaseAPI:
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_rejects_traversal_when_a_row_carries_the_name(
-        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_legacy_kb
     ):
         """The containment guard still fires when a row's own name traverses.
 
-        A user can create a KB whose *name* is a traversal string, which gives it
-        a legitimate row. Path resolution must still refuse to build a path
-        outside their namespace from it.
+        Historical or malformed metadata can contain a traversal-shaped name.
+        Current creates reject it, but the persisted row must remain fenced.
+        Path resolution must still refuse to build a path outside the owner namespace.
         """
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser").mkdir(parents=True)
         victim_kb = tmp_path / "victim_user" / "secret_kb"
         victim_kb.mkdir(parents=True)
-        await seed_kb("../victim_user/secret_kb")
+        await seed_legacy_kb("../victim_user/secret_kb")
 
         response = await client.request(
             "DELETE",
@@ -1688,7 +1704,7 @@ class TestKnowledgeBaseAPI:
     @patch("langflow.api.v1.knowledge_bases.logger")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_path_traversal_logs_warning(
-        self, mock_root, mock_logger, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
+        self, mock_root, mock_logger, client: AsyncClient, logged_in_headers, tmp_path, seed_legacy_kb
     ):
         """A traversal attempt must emit a warning log with user context."""
         mock_root.return_value = tmp_path
@@ -1696,7 +1712,7 @@ class TestKnowledgeBaseAPI:
         (tmp_path / "activeuser").mkdir(parents=True)
         (tmp_path / "victim_user" / "secret_kb").mkdir(parents=True)
         # A row must exist for path resolution — and therefore the guard — to run.
-        await seed_kb("../victim_user/secret_kb")
+        await seed_legacy_kb("../victim_user/secret_kb")
 
         await client.request(
             "DELETE",
