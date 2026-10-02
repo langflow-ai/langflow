@@ -89,6 +89,10 @@
     "fflate": "^0.4.9",
     "http-proxy-middleware": "^2.0.10",
     "postcss-selector-parser": "^6.1.3",
+    "yaml": "^1.10.3",
+    "postcss-load-config": {
+      "yaml": "^2.8.3"
+    },
     "@csstools/postcss-cascade-layers": {
       "postcss-selector-parser": "^7.1.3"
     },
