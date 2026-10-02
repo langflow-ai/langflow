@@ -277,7 +277,7 @@ class TestRoleAssignments:
 
 class TestEmbeddingModels:
     async def test_a_knowledge_base_with_no_recorded_model_is_a_warning(self, safe_superuser):
-        await _add(KnowledgeBaseRecord(name="kb-unknown", user_id=safe_superuser.id, backend_type="chroma", chunks=0))
+        await _add(KnowledgeBaseRecord(name="kb-unknown", user_id=safe_superuser.id, chunks=0))
 
         check = _check(await run_preflight(), "embedding models")
 
@@ -290,7 +290,6 @@ class TestEmbeddingModels:
             KnowledgeBaseRecord(
                 name="kb-nameless",
                 user_id=safe_superuser.id,
-                backend_type="chroma",
                 chunks=0,
                 model_selection=selection,
             )
@@ -306,7 +305,6 @@ class TestEmbeddingModels:
             KnowledgeBaseRecord(
                 name="kb-known",
                 user_id=safe_superuser.id,
-                backend_type="chroma",
                 chunks=0,
                 model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
             )
