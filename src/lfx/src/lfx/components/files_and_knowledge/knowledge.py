@@ -1530,16 +1530,21 @@ class KnowledgeComponent(Component):
             return await self.build_kb_info()
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
 
-        # Lazy import: langflow's user/DB models aren't part of lfx's
-        # standalone install, so ``lfx run <starter>.json`` can't resolve
-        # this symbol at module import time. Deferring to use keeps the
-        # component importable in both environments.
-        from langflow.services.database.models.user.crud import get_user_by_id
+        if not self.user_id:
+            msg = "User ID is required for fetching Knowledge Base data."
+            raise ValueError(msg)
+
+        # Saved flows can load in standalone lfx, but knowledge retrieval
+        # requires the application's user database and storage services.
+        try:
+            from langflow.services.database.models.user.crud import get_user_by_id
+        except ModuleNotFoundError as exc:
+            if exc.name != "langflow":
+                raise
+            msg = "Knowledge Base retrieval requires Langflow's application services. Run this flow in Langflow."
+            raise RuntimeError(msg) from None
 
         async with session_scope() as db:
-            if not self.user_id:
-                msg = "User ID is required for fetching Knowledge Base data."
-                raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
             if not current_user:
                 msg = f"User with ID {self.user_id} not found."
