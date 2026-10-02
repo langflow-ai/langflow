@@ -19,7 +19,7 @@ import anyio
 import pytest
 import sqlalchemy as sa
 from cryptography.fernet import Fernet
-from langflow.cli.integrity import check_instance
+from langflow.cli.integrity import check_instance, open_instance
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment, CasbinRule
 from langflow.services.database.models.file.model import File
@@ -53,6 +53,25 @@ def kb_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root.mkdir()
     monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(root))
     return root
+
+
+@pytest.fixture
+async def instance_on(client, monkeypatch):  # noqa: ARG001
+    """Start the services from nothing on a database the test names, as the command starts them."""
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    manager = get_service_manager()
+    with monkeypatch.context() as patch:
+        patch.setattr(manager, "services", {})
+
+        def start(database_url: str) -> None:
+            patch.setenv("LANGFLOW_DATABASE_URL", database_url)
+            open_instance()
+
+        yield start
+        if database := manager.services.get(ServiceType.DATABASE_SERVICE):
+            await database.engine.dispose()
 
 
 def _check(report, name):
@@ -119,6 +138,32 @@ class TestCleanInstance:
         await check_instance()
 
         assert await snapshot() == before
+
+
+class TestSchema:
+    """A database that cannot be reached is not one on another schema."""
+
+    async def test_a_database_that_cannot_be_reached_is_reported_as_unreachable(self, instance_on):
+        # Nothing listens on port 1, so the connection is refused.
+        instance_on("postgresql://user:not-to-be-shown@127.0.0.1:1/x")  # pragma: allowlist secret
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        summary = report.checks[0].summary
+        assert "could not be reached" in summary
+        assert "127.0.0.1" in summary
+        assert "no recorded revision" not in summary
+        assert "not-to-be-shown" not in summary
+        assert "postgresql" not in summary
+
+    async def test_a_database_with_no_alembic_version_table_has_no_recorded_revision(self, instance_on, tmp_path):
+        instance_on(f"sqlite:///{tmp_path}/empty.db")
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        assert "no recorded revision" in report.checks[0].summary
 
 
 class TestCredentials:
