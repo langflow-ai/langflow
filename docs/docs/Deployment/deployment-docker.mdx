@@ -325,11 +325,15 @@ The following environment variables are set by default:
 | `LANGFLOW_AUTO_LOGIN` | `false` | Require users to sign in unless explicitly enabled for local development |
 | `LANGFLOW_CONFIG_DIR` | `/var/lib/langflow` | Directory for Langflow config and data |
 
-Set `LANGFLOW_SUPERUSER_PASSWORD` in the repository root `.env` file before startup. Optionally set `LANGFLOW_SUPERUSER` there to change the username.
+Set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password in the repository root `.env` file before startup. The service loads this file through `env_file: ../.env`; it does not override the authentication values in its `environment:` block. Set `LANGFLOW_SUPERUSER` in that file to use a different username. For trusted local development, set `LANGFLOW_AUTO_LOGIN=true` in the same file to use automatic login instead. When omitted, auto-login retains the image default of `false`. The legacy password `langflow` is not allowed when auto-login is disabled.
 
-To change `LANGFLOW_DATABASE_URL` or `LANGFLOW_CONFIG_DIR`, edit `docker/dev.docker-compose.yml`. Those values are set in the Compose file and override `.env`.
+Exporting these authentication variables in your shell alone does not forward them to this service; configure them in the repository root `.env` file.
+
+`LANGFLOW_DATABASE_URL` and `LANGFLOW_CONFIG_DIR` remain literal values in the Compose `environment:` block to configure the bundled PostgreSQL service and container paths. These entries take precedence over `.env`; edit `docker/dev.docker-compose.yml` directly to change them.
 
 ## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
+
+If your existing instance uses auto-login, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before switching to an image that requires authentication. Setting `LANGFLOW_SUPERUSER_PASSWORD` alone does not reset an existing account's non-legacy password.
 
 To upgrade a Langflow Docker deployment without losing your database or flows, do the following:
 
@@ -404,7 +408,8 @@ For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release not
 
 <PartialAutoLoginDefaults />
 
-As of Langflow 1.11.x, official Langflow Docker images also set `LANGFLOW_AUTO_LOGIN=false` at image build time, including DEV/CDK images.
+As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false` at image build time.
+DEV and CDK images set `LANGFLOW_AUTO_LOGIN=false` starting in Langflow 1.13.
 
 To enable automatic login in a container, set `LANGFLOW_AUTO_LOGIN=true`:
 

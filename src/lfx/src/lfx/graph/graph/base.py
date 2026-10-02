@@ -164,6 +164,9 @@ class Graph:
         self.description = description
         self.user_id = user_id
         self.execution_principal = ExecutionPrincipal.unknown()
+        # Runtime provenance, never read from flow JSON or caller-supplied IDs.
+        # Standalone LFX's synthetic identity must not select a new file tree each run.
+        self._headless_filesystem_user_id: str | None = None
         # Warm-registry templates need the parsed graph structure without
         # executing component constructors at preload/reconcile time. Normal
         # graphs keep the historical eager-instantiation behavior.
@@ -383,6 +386,29 @@ class Graph:
         self._cycle_vertices = None
         self._is_cyclic = None
         self._graph_data = process_flow(self.raw_graph_data)
+
+        # Group proxies may replace child template fields while process_flow expands the graph.
+        # Re-check the effective anonymous graph before initialize instantiates those children.
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        if str(self.user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID):
+            from lfx.utils.flow_validation import revalidate_public_executable_flow
+
+            revalidate_public_executable_flow(self._graph_data)
+
+        # Group proxies can replace a child's type-specific input or code after the payload
+        # checks in from_payload. Apply the active restricted policies to the executable view
+        # before initialize constructs any child component.
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+        if settings_service is not None and (
+            not getattr(settings_service.settings, "allow_custom_components", True)
+            or getattr(settings_service.settings, "block_code_interpreter_components", False)
+        ):
+            from lfx.utils.flow_validation import validate_flow_for_current_settings
+
+            validate_flow_for_current_settings(self._graph_data)
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
@@ -1618,6 +1644,7 @@ class Graph:
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
+            "_headless_filesystem_user_id": self._headless_filesystem_user_id,
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
             "inactivated_vertices": self.inactivated_vertices,
@@ -1721,6 +1748,8 @@ class Graph:
 
         new_graph.requires_extension_event_replay = self.requires_extension_event_replay
         new_graph.execution_principal = self.execution_principal
+        if user_id == self.user_id:
+            new_graph._headless_filesystem_user_id = self._headless_filesystem_user_id  # noqa: SLF001
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
@@ -1766,7 +1795,11 @@ class Graph:
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
+        state.setdefault("_headless_filesystem_user_id", None)
         state.setdefault("branch_inactivation_sources", {})
+        # __getstate__ omits end_user_id, so graphs restored from cache/checkpoint
+        # payloads need the default for _vertex_result_cache_key to read it safely.
+        state.setdefault("end_user_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -2278,6 +2311,36 @@ class Graph:
         """
         return run_until_complete(self.astep(inputs, files, user_id))
 
+    def _vertex_result_cache_key(self, vertex_id: str) -> str:
+        """Namespace the vertex result cache key to the executing principal.
+
+        Frozen-vertex results were historically cached under the bare vertex UUID,
+        which let any tenant read or overwrite another tenant's cached component
+        output by reusing the vertex id in their own flow (H1-3985565). Served
+        executions always carry the authenticated user (editor/API plane) or the
+        executing flow (anonymous public runs), so the key is prefixed with that
+        principal scope; entries written under other scopes become unreachable,
+        which fails closed against stale keys written by older versions. Graphs
+        with no principal context (standalone ``lfx run``, scripted graphs) have
+        no tenant boundary and keep the bare key, matching the empty-scope
+        contract of ``enforce_storage_key_scope``.
+        """
+        user_scope = str(self.user_id).strip() if self.user_id is not None else ""
+        if user_scope:
+            from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+            if user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
+                # Serving-plane runs execute as a service account on behalf of many
+                # end users, so include the end-user identity when one is present.
+                end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
+                if end_user_scope:
+                    return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
+                return f"user:{user_scope}:{vertex_id}"
+        flow_scope = str(self.flow_id).strip() if self.flow_id is not None else ""
+        if flow_scope:
+            return f"flow:{flow_scope}:{vertex_id}"
+        return vertex_id
+
     async def build_vertex(
         self,
         vertex_id: str,
@@ -2324,9 +2387,9 @@ class Graph:
                 # Reauthorize before even consulting the result cache so a
                 # revoked provider cannot reuse output from an earlier run.
                 await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
-                # Check the cache for the vertex
+                # Check the cache for the vertex under the principal-scoped key
                 if get_cache is not None:
-                    cached_result = await get_cache(key=vertex.id)
+                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id))
                 else:
                     cached_result = CacheMiss()
                 if isinstance(cached_result, CacheMiss):
@@ -2372,7 +2435,7 @@ class Graph:
                         "full_data": vertex.full_data,
                     }
 
-                    await set_cache(key=vertex.id, data=vertex_dict)
+                    await set_cache(key=self._vertex_result_cache_key(vertex.id), data=vertex_dict)
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):
@@ -3206,6 +3269,7 @@ class Graph:
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
         subgraph.execution_principal = self.execution_principal
+        subgraph._headless_filesystem_user_id = self._headless_filesystem_user_id
         # A subgraph extends the parent's run, so it inherits the ephemeral
         # (no-persist) decision too.
         subgraph.persist_messages = self.persist_messages

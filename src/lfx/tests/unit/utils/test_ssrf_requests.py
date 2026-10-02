@@ -3,11 +3,23 @@
 import ipaddress
 import os
 import socket
+import ssl
 from unittest.mock import Mock, patch
 
+import certifi
+import httpcore
+import httpx
 import pytest
+import requests
 from lfx.utils.ssrf_protection import SSRFProtectionError
-from lfx.utils.ssrf_requests import ssrf_safe_get
+from lfx.utils.ssrf_requests import (
+    REDIRECT_STATUS_CODES,
+    SENSITIVE_REDIRECT_HEADERS,
+    refuse_aiohttp_redirects,
+    refuse_redirects,
+    ssrf_safe_get,
+)
+from lfx.utils.ssrf_transport import SSRFProtectedSyncTransport
 
 
 def _resolve_public(host, *_args, **_kwargs):
@@ -23,21 +35,25 @@ def _resolve_public(host, *_args, **_kwargs):
 
 
 def _response(status_code=200, *, location=None, body=b"ok"):
-    """Build a minimal mock ``requests.Response``."""
-    response = Mock()
-    response.status_code = status_code
-    response.headers = {"Location": location} if location else {}
-    response.content = body
-    response.raise_for_status = Mock()
-    return response
+    """Build a buffered response for the pinned transport's HTTP client."""
+    headers = {"Location": location} if location else {}
+    return httpx.Response(
+        status_code, headers=headers, content=body, request=httpx.Request("GET", "http://example.com")
+    )
 
 
 class TestSSRFSafeGet:
+    @pytest.fixture(autouse=True)
+    def _clear_environment_proxies(self, monkeypatch):
+        for name in tuple(os.environ):
+            if name.lower().endswith("_proxy"):
+                monkeypatch.delenv(name)
+
     def test_direct_internal_ip_is_blocked(self):
         """A literal internal IP is blocked before any request is made."""
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("requests.get") as mock_get,
+            patch("httpx.Client.get") as mock_get,
             pytest.raises(SSRFProtectionError),
         ):
             ssrf_safe_get("http://127.0.0.1:8080/secret", timeout=5)
@@ -47,7 +63,7 @@ class TestSSRFSafeGet:
         """A URL interpreted differently by stdlib and Requests is blocked before transport."""
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("requests.get") as mock_get,
+            patch("httpx.Client.get") as mock_get,
             pytest.raises(SSRFProtectionError, match="backslash"),
         ):
             ssrf_safe_get("http://127.0.0.1\\@1.1.1.1/", timeout=5)
@@ -65,7 +81,7 @@ class TestSSRFSafeGet:
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", return_value=_response()) as mock_get,
+            patch("httpx.Client.get", return_value=_response()) as mock_get,
         ):
             ssrf_safe_get(url, timeout=5)
         mock_get.assert_called_once()
@@ -74,7 +90,7 @@ class TestSSRFSafeGet:
         """The cloud metadata endpoint is blocked before any request is made."""
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("requests.get") as mock_get,
+            patch("httpx.Client.get") as mock_get,
             pytest.raises(SSRFProtectionError),
         ):
             ssrf_safe_get("http://169.254.169.254/latest/meta-data/", timeout=5)
@@ -85,13 +101,73 @@ class TestSSRFSafeGet:
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", return_value=_response(200, body=b"feed")) as mock_get,
+            patch("httpx.Client.get", return_value=_response(200, body=b"feed")) as mock_get,
         ):
             response = ssrf_safe_get("http://feed.example.com/rss", timeout=5)
         assert response.status_code == 200
+        assert isinstance(response, requests.Response)
         assert mock_get.call_count == 1
         # Auto-redirects must be disabled so each hop can be validated.
-        assert mock_get.call_args.kwargs["allow_redirects"] is False
+        assert mock_get.call_args.kwargs["follow_redirects"] is False
+
+    @pytest.mark.parametrize(
+        ("cause", "expected"),
+        [
+            (httpx.ConnectError("connection refused"), requests.ConnectionError),
+            (httpx.ConnectTimeout("connect timed out"), requests.ConnectTimeout),
+            (httpx.ReadTimeout("read timed out"), requests.ReadTimeout),
+            (httpx.InvalidURL("invalid URL"), requests.exceptions.InvalidURL),
+        ],
+    )
+    def test_pinned_errors_use_requests_exceptions(self, cause, expected):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("httpx.Client.get", side_effect=cause),
+            pytest.raises(expected),
+        ):
+            ssrf_safe_get("http://feed.example.com/rss", timeout=5)
+
+    def test_invalid_url_from_pin_host_uses_requests_exception(self):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("lfx.utils.ssrf_requests.pin_host_for_url", side_effect=httpx.InvalidURL("invalid URL")),
+            pytest.raises(requests.exceptions.InvalidURL),
+        ):
+            ssrf_safe_get("http://feed.example.com/rss", timeout=5)
+
+    def test_pinned_get_preserves_connect_and_read_timeouts(self):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("httpx.Client.get", return_value=_response()) as mock_get,
+        ):
+            ssrf_safe_get("http://feed.example.com/rss", timeout=(2.5, 7.5))
+
+        timeout = mock_get.call_args.kwargs["timeout"]
+        assert timeout.connect == timeout.pool == 2.5
+        assert timeout.read == timeout.write == 7.5
+
+    @pytest.mark.parametrize(
+        ("content_type", "expected_encoding"),
+        [("text/plain", "ISO-8859-1"), ("application/json", "utf-8"), ("application/octet-stream", None)],
+    )
+    def test_pinned_response_keeps_requests_charset_rules(self, content_type, expected_encoding):
+        """A pinned response must decode the same way as a Requests response."""
+        upstream = httpx.Response(
+            200,
+            headers={"Content-Type": content_type},
+            content=b"feed",
+            request=httpx.Request("GET", "http://example.com"),
+        )
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("httpx.Client.get", return_value=upstream),
+        ):
+            response = ssrf_safe_get("http://feed.example.com/rss", timeout=5)
+        assert response.encoding == expected_encoding
 
     def test_redirect_to_internal_is_blocked(self):
         """A public URL that redirects to an internal address is blocked at the redirect hop."""
@@ -99,7 +175,7 @@ class TestSSRFSafeGet:
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
             patch(
-                "requests.get",
+                "httpx.Client.get",
                 return_value=_response(302, location="http://169.254.169.254/latest/meta-data/"),
             ) as mock_get,
             pytest.raises(SSRFProtectionError),
@@ -118,7 +194,7 @@ class TestSSRFSafeGet:
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", side_effect=responses) as mock_get,
+            patch("httpx.Client.get", side_effect=responses) as mock_get,
         ):
             response = ssrf_safe_get("http://hop1.example.com/a", timeout=5)
         assert response.status_code == 200
@@ -131,7 +207,7 @@ class TestSSRFSafeGet:
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", side_effect=responses) as mock_get,
+            patch("httpx.Client.get", side_effect=responses) as mock_get,
         ):
             response = ssrf_safe_get("http://feed.example.com/a", timeout=5)
         assert response.status_code == 200
@@ -142,7 +218,7 @@ class TestSSRFSafeGet:
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", return_value=_response(302, location="file:///etc/passwd")),
+            patch("httpx.Client.get", return_value=_response(302, location="file:///etc/passwd")),
             pytest.raises(SSRFProtectionError),
         ):
             ssrf_safe_get("http://feed.example.com/a", timeout=5)
@@ -153,7 +229,7 @@ class TestSSRFSafeGet:
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
             patch(
-                "requests.get",
+                "httpx.Client.get",
                 return_value=_response(302, location="http://loop.example.com/again"),
             ) as mock_get,
             pytest.raises(SSRFProtectionError, match="Exceeded the maximum"),
@@ -183,12 +259,15 @@ class TestSSRFSafeGet:
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", side_effect=responses) as mock_get,
+            patch("httpx.Client.get", side_effect=responses) as mock_get,
         ):
             ssrf_safe_get("http://feed.example.com/a", timeout=5, headers=headers)
         # First hop (intended host) keeps all headers; second hop (cross-host) drops the secrets.
-        assert mock_get.call_args_list[0].kwargs["headers"] == headers
-        assert mock_get.call_args_list[1].kwargs["headers"] == {"User-Agent": "langflow-test"}
+        first_headers = mock_get.call_args_list[0].kwargs["headers"]
+        second_headers = mock_get.call_args_list[1].kwargs["headers"]
+        assert all(first_headers[name] == value for name, value in headers.items())
+        assert second_headers["User-Agent"] == "langflow-test"
+        assert not any(name in second_headers for name in SENSITIVE_REDIRECT_HEADERS)
         # The caller's dict must not be mutated.
         assert "Authorization" in headers
 
@@ -199,7 +278,211 @@ class TestSSRFSafeGet:
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", side_effect=responses) as mock_get,
+            patch("httpx.Client.get", side_effect=responses) as mock_get,
         ):
             ssrf_safe_get("http://feed.example.com/a", timeout=5, headers=headers)
-        assert mock_get.call_args_list[1].kwargs["headers"] == headers
+        second_headers = mock_get.call_args_list[1].kwargs["headers"]
+        assert all(second_headers[name] == value for name, value in headers.items())
+
+    def test_dns_rebinding_uses_the_validated_ip_for_the_connection(self):
+        """A public validation answer cannot be replaced by a loopback connect answer."""
+        resolved = 0
+        connected_to = []
+
+        def resolve(_host, *_args, **_kwargs):
+            nonlocal resolved
+            resolved += 1
+            ip = "8.8.8.8" if resolved == 1 else "127.0.0.1"
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+        def connect(_self, host, port, **_kwargs):
+            connected_to.append((host, port))
+            return httpcore.MockStream([b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nfeed"])
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=resolve),
+            patch.object(httpcore.SyncBackend, "connect_tcp", connect),
+        ):
+            response = ssrf_safe_get("http://rebinding.test:8080/rss", timeout=5)
+
+        assert resolved == 1
+        assert connected_to == [("8.8.8.8", 8080)]
+        assert isinstance(response, requests.Response)
+        assert response.content == b"feed"
+
+    def test_environment_proxy_preserves_requests_egress_path(self):
+        """A mandatory proxy must not be bypassed by the direct pinned transport."""
+        response = requests.Response()
+        response.status_code = 200
+        with (
+            patch.dict(
+                os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "HTTP_PROXY": "http://proxy.test:3128"}
+            ),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("requests.get", return_value=response) as requests_get,
+            patch("httpx.Client.get") as httpx_get,
+        ):
+            assert ssrf_safe_get("http://feed.example.com/rss", timeout=5) is response
+        requests_get.assert_called_once()
+        httpx_get.assert_not_called()
+
+    def test_requests_ca_bundle_is_used_by_the_pinned_transport(self):
+        """Protected HTTPS requests retain Requests' corporate CA override."""
+        ca_bundle = certifi.where()
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "REQUESTS_CA_BUNDLE": ca_bundle}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("lfx.utils.ssrf_requests.SSRFProtectedSyncTransport", wraps=SSRFProtectedSyncTransport) as transport,
+            patch("lfx.utils.ssrf_requests.ssl.create_default_context", wraps=ssl.create_default_context) as context,
+            patch("httpx.Client.get", return_value=_response()),
+        ):
+            ssrf_safe_get("https://feed.example.com/rss", timeout=5)
+        assert isinstance(transport.call_args.kwargs["verify"], ssl.SSLContext)
+        assert any(call.kwargs.get("cafile") == ca_bundle for call in context.call_args_list)
+
+    def test_requests_ca_directory_is_used_by_the_pinned_transport(self, tmp_path):
+        context = ssl.create_default_context()
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "REQUESTS_CA_BUNDLE": str(tmp_path)}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("lfx.utils.ssrf_requests.SSRFProtectedSyncTransport", wraps=SSRFProtectedSyncTransport) as transport,
+            patch("lfx.utils.ssrf_requests.ssl.create_default_context", return_value=context) as create_context,
+            patch("httpx.Client.get", return_value=_response()),
+        ):
+            ssrf_safe_get("https://feed.example.com/rss", timeout=5)
+        assert transport.call_args.kwargs["verify"] is context
+        assert any(call.kwargs.get("capath") == str(tmp_path) for call in create_context.call_args_list)
+
+
+class TestRefuseRedirects:
+    """Transports that own their session cannot re-validate hops, so they must not follow one."""
+
+    @staticmethod
+    def _resp(status_code, location=None):
+        """A response mock whose ``is_redirect`` follows requests' own definition."""
+        response = Mock()
+        response.status_code = status_code
+        response.headers = {"Location": location} if location else {}
+        response.url = "https://api.example.com/v1/chat/completions"
+        response.is_redirect = bool(location) and status_code in REDIRECT_STATUS_CODES
+        return response
+
+    @staticmethod
+    def _session():
+        return refuse_redirects(requests.Session())
+
+    @pytest.mark.parametrize("status", sorted(REDIRECT_STATUS_CODES))
+    def test_should_raise_on_any_redirect_status(self, status):
+        response = self._resp(status, "https://elsewhere.example.com/v1")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            list(self._session().resolve_redirects(response, Mock()))
+
+    def test_should_raise_on_a_same_host_port_change(self):
+        """The Authorization header survives a same-host redirect, including a new port."""
+        response = self._resp(302, "http://api.example.com:9999/internal")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            list(self._session().resolve_redirects(response, Mock()))
+
+    def test_should_be_a_no_op_for_a_normal_response(self):
+        assert list(self._session().resolve_redirects(self._resp(200), Mock())) == []
+
+    def test_should_not_raise_on_the_yield_requests_probe(self):
+        """Session.send probes for a follow-up request without following it; that is not egress."""
+        response = self._resp(302, "https://elsewhere.example.com/v1")
+
+        assert list(self._session().resolve_redirects(response, Mock(), yield_requests=True)) == []
+
+    def test_should_leave_the_rest_of_the_session_intact(self):
+        session = requests.Session()
+        session.verify = "/etc/ssl/corp-ca.pem"
+        session.headers["X-Marker"] = "kept"
+
+        hardened = refuse_redirects(session)
+
+        assert hardened is session
+        assert hardened.verify == "/etc/ssl/corp-ca.pem"
+        assert hardened.headers["X-Marker"] == "kept"
+
+
+class _StubAiohttpSession:
+    """The two attributes ``refuse_aiohttp_redirects`` touches, without depending on aiohttp.
+
+    ``aiohttp`` is not an lfx dependency -- only bundles that ship an SDK using it pull it in
+    -- so the helper duck-types the session and these tests do the same. The real transport is
+    exercised against the pinned SDK in ``src/bundles/lfx-bundles/tests/test_nvidia_component.py``.
+    """
+
+    def __init__(self, response):
+        self._response = response
+        self.calls: list[dict] = []
+
+    async def _request(self, method, url, **kwargs):
+        self.calls.append({"method": method, "url": url, **kwargs})
+        return self._response
+
+
+class _StubAiohttpResponse:
+    def __init__(self, status, location=None):
+        self.status = status
+        self.headers = {"Location": location} if location else {}
+        self.url = "https://api.example.com/v1/chat/completions"
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+class TestRefuseAiohttpRedirects:
+    """The async transports need the same refusal; aiohttp follows redirects by default too."""
+
+    @staticmethod
+    def _session(status, location=None):
+        response = _StubAiohttpResponse(status, location)
+        session = _StubAiohttpSession(response)
+        return refuse_aiohttp_redirects(session), response
+
+    @pytest.mark.parametrize("status", sorted(REDIRECT_STATUS_CODES))
+    async def test_should_raise_on_any_redirect_status(self, status):
+        session, response = self._session(status, "https://elsewhere.example.com/v1")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            await session._request("POST", "https://api.example.com/v1/chat/completions")
+
+        assert response.closed, "the refused response must be released, not left dangling"
+
+    async def test_should_raise_on_a_same_host_port_change(self):
+        """A same-host hop keeps the Authorization header, so a new port is still a new service."""
+        session, _ = self._session(307, "http://api.example.com:9999/internal")
+
+        with pytest.raises(SSRFProtectionError, match="Refusing to follow the redirect"):
+            await session._request("POST", "https://api.example.com/v1/chat/completions")
+
+    async def test_should_disable_redirect_following_on_every_request(self):
+        """Refusing the response is the backstop; aiohttp must not have followed it already."""
+        session, _ = self._session(200)
+
+        await session._request("POST", "https://api.example.com/v1", json={"prompt": "hi"})
+
+        assert session.calls[0]["allow_redirects"] is False
+        assert session.calls[0]["json"] == {"prompt": "hi"}
+
+    async def test_should_override_a_caller_supplied_allow_redirects(self):
+        session, _ = self._session(200)
+
+        await session._request("GET", "https://api.example.com/v1/models", allow_redirects=True)
+
+        assert session.calls[0]["allow_redirects"] is False
+
+    async def test_should_return_a_normal_response_untouched(self):
+        session, response = self._session(200)
+
+        assert await session._request("GET", "https://api.example.com/v1/models") is response
+        assert not response.closed
+
+    def test_should_return_the_same_session(self):
+        session = _StubAiohttpSession(_StubAiohttpResponse(200))
+
+        assert refuse_aiohttp_redirects(session) is session

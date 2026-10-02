@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import json
 import tempfile
 import uuid
@@ -11,9 +10,9 @@ from typing import Annotated, Any
 
 import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError, ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.ingestion_sources import (
     FolderSource,
@@ -40,6 +39,7 @@ from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
     KBStorageHelper,
+    chunk_text_for_ingestion,
     local_chroma_rejection_reason,
     resolve_local_store_path,
     validate_kb_name,
@@ -73,6 +73,7 @@ from langflow.services.deps import get_job_service, get_settings_service, get_ta
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService
 from langflow.services.task.service import TaskService
+from langflow.utils.canonical_json import canonical_json_digest
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
     KB_METADATA_RESERVED_KEYS,
@@ -339,17 +340,17 @@ def _build_connector_ingest_dedupe_key(
     of JSON key ordering. Only the hash (not the config) goes on the
     ``job`` row, so no credentials leak through ``dedupe_key``.
     """
-    canonical = json.dumps(
+    digest = canonical_json_digest(
         {
             "user_id": str(user_id),
             "kb_name": kb_name,
             "source_type": source_type,
             "source_config": source_config,
         },
-        sort_keys=True,
+        ensure_ascii=True,
+        separators=None,
         default=str,
     )
-    digest = hashlib.sha256(canonical.encode()).hexdigest()
     return f"kb_connector_ingest:{digest}"
 
 
@@ -545,7 +546,6 @@ async def _cancel_inflight_ingestion_for_kb(
     *,
     kb_name: str,
     asset_id: uuid.UUID,
-    current_user: CurrentActiveUser,
     job_service: JobService,
 ) -> None:
     """Cancel queued / in-progress ingestion jobs for the named KB.
@@ -560,12 +560,15 @@ async def _cancel_inflight_ingestion_for_kb(
     user's actual delete intent. Failures are logged and the delete
     proceeds — the worst case is the same as before this helper
     existed.
+
+    Not filtered by user: ``asset_id`` is the KB row the caller is already
+    authorized to delete, and a collaborator's run on a shared KB must stop
+    too, or it keeps writing into the deleted KB's storage.
     """
     try:
         cancelled = await job_service.cancel_in_flight_jobs_by_asset(
             asset_id=asset_id,
             asset_type="knowledge_base",
-            user_id=current_user.id,
         )
     except Exception as exc:  # noqa: BLE001
         await logger.awarning("Cancel-on-delete failed for KB %s: %s", kb_name, exc)
@@ -756,6 +759,10 @@ async def create_knowledge_base(
         # guard below never runs for them — this is what keeps a name like
         # ``../victim_user/evil_kb`` from being persisted on a remote backend.
         _validate_kb_name_or_403(kb_name, current_user)
+        try:
+            ensure_storage_routing_allowed(request.backend_config, is_superuser=bool(current_user.is_superuser))
+        except StorageRoutingNotAllowedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
         # The ``knowledge_base`` row is the authority on existence, and
         # ``uq_knowledge_base_user_name`` is the real guard against duplicates.
         existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
@@ -939,13 +946,15 @@ async def preview_chunks(
     # these bounds, an authenticated user can request gigabytes.
     chunk_size: Annotated[int, Form(ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)] = 1000,
     chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
-    separator: Annotated[str, Form()] = "\n",
+    # Must match the ingest endpoint's default: FastAPI also substitutes it for
+    # an empty form value, which is what the UI sends for a blank separator.
+    separator: Annotated[str, Form()] = "",
     max_chunks: Annotated[int, Form(ge=MIN_MAX_CHUNKS, le=MAX_MAX_CHUNKS)] = 5,
 ) -> dict[str, object]:
     """Preview how files will be chunked without storing anything.
 
-    Uses the same RecursiveCharacterTextSplitter as the ingest endpoint
-    so the preview accurately reflects what will be stored.
+    Splits with :func:`chunk_text_for_ingestion` — the function every
+    ingestion path uses — so the preview shows exactly what will be stored.
     """
     await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.CREATE, kb_name=None)
     try:
@@ -953,19 +962,6 @@ async def preview_chunks(
 
         if not files:
             raise HTTPException(status_code=400, detail="No files provided")
-
-        # Build separators list: user separator first, then defaults
-        separators = None
-        if separator:
-            # Unescape common escape sequences
-            actual_separator = separator.replace("\\n", "\n").replace("\\t", "\t")
-            separators = [actual_separator, "\n\n", "\n", " ", ""]
-
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=separators,
-        )
 
         file_previews: list[dict[str, Any]] = []
         for uploaded_file in files:
@@ -988,7 +984,12 @@ async def preview_chunks(
                 # to avoid splitting the entire file (which is slow for large files)
                 preview_text_limit = max_chunks * chunk_size * CHUNK_PREVIEW_MULTIPLIER
                 preview_text = text_content[:preview_text_limit]
-                chunks = text_splitter.split_text(preview_text)
+                chunks = chunk_text_for_ingestion(
+                    preview_text,
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap,
+                    separator=separator,
+                )
 
                 # Estimate total chunks from full text length
                 effective_step = max(chunk_size - chunk_overlap, 1)
@@ -1164,6 +1165,7 @@ async def ingest_files_to_knowledge_base(
             separator=separator,
             source_name=source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -1315,6 +1317,7 @@ async def ingest_folder_to_knowledge_base(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -1439,6 +1442,8 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
                 description=getattr(source_cls, "description", "") or "",
                 icon=getattr(source_cls, "icon", None),
                 requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+                provider_key=getattr(source_cls, "connection_provider", "") or None,
+                required_scopes=list(getattr(source_cls, "connection_required_scopes", ()) or ()),
             )
         )
     return entries
@@ -1889,6 +1894,7 @@ async def ingest_via_connector(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -2042,7 +2048,6 @@ async def delete_knowledge_base(
         await _cancel_inflight_ingestion_for_kb(
             kb_name=kb_name,
             asset_id=record.id,
-            current_user=kb_owner,
             job_service=job_service,
         )
 
@@ -2161,7 +2166,6 @@ async def delete_knowledge_bases_bulk(
                 await _cancel_inflight_ingestion_for_kb(
                     kb_name=kb_name,
                     asset_id=record.id,
-                    current_user=kb_guard.owner_user,
                     job_service=job_service,
                 )
                 remote_warning = await _delete_remote_backend_collection(
@@ -2269,19 +2273,17 @@ async def cancel_ingestion(
         # Update status immediately so background task can see it
         await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
 
-        # Clean up any partially ingested chunks from this job. Forward
-        # the KB's configured backend + user_id so non-Chroma KBs
-        # (Mongo/Astra/Postgres) actually find their variable-backed
-        # credentials and delete against the right store — otherwise
-        # cleanup silently falls back to Chroma and remote chunks
-        # written before the cancel stick around.
+        # Clean up any partially ingested chunks from this job. Forward the KB's
+        # configured backend and its owner's id: remote backends name their
+        # storage from the owner, so a collaborator cancelling a shared KB's run
+        # must still delete from the owner's collection, not their own.
         await KBIngestionHelper.cleanup_chroma_chunks_by_job(
             job.job_id,
             kb_path,
             kb_name,
             backend_type=backend_type_value,
             backend_config=backend_config,
-            user_id=current_user.id,
+            user_id=_kb_guard.owner_user.id,
         )
 
         if revoked:

@@ -54,6 +54,7 @@ from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
     get_user_by_username,
+    get_user_by_username_case_insensitive,
     update_user_last_login_at,
 )
 from langflow.services.database.models.user.model import User, UserRead
@@ -1029,11 +1030,13 @@ class AuthService(BaseAuthService):
 
     @staticmethod
     async def _unique_external_username(db: AsyncSession, identity: ExternalIdentity) -> str:
+        # Case-insensitive: "Alice" is taken when "alice" exists (ix_user_username_lower),
+        # so an exact-match miss must not skip the fallback tiers.
         desired = identity.username
-        if await get_user_by_username(db, desired) is None:
+        if await get_user_by_username_case_insensitive(db, desired) is None:
             return desired
         fallback = _external_username_fallback(identity.provider, identity.subject)
-        if await get_user_by_username(db, fallback) is None:
+        if await get_user_by_username_case_insensitive(db, fallback) is None:
             return fallback
         # Final tier: fold the desired name into the digest so two providers'
         # subjects that collide on the helper's digest still resolve uniquely.
@@ -1639,7 +1642,7 @@ class AuthService(BaseAuthService):
         Note:
             - Returns empty string for invalid input (None, empty string)
             - Returns plaintext keys as-is (not starting with "gAAAAA")
-            - Logs warnings on decryption failures for security monitoring
+            - Logs errors on decryption failures so they are visible at the default log level
         """
         if not isinstance(encrypted_api_key, str) or not encrypted_api_key:
             logger.debug("decrypt_api_key called with invalid input (empty or non-string)")
@@ -1661,8 +1664,8 @@ class AuthService(BaseAuthService):
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
             except Exception as secondary_exception:  # noqa: BLE001
-                # Decryption failed completely - log warning and return empty string
-                logger.warning(
+                # Decryption failed completely - log at the default ERROR level and return empty string
+                logger.error(
                     "API key decryption failed after retry. This may indicate a corrupted key or "
                     "SECRET_KEY mismatch. Primary error: %r, Secondary error: %r",
                     primary_exception,

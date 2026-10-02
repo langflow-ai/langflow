@@ -665,6 +665,21 @@ If you experience this when upgrading a flow that you created in Langflow versio
 
 5. Click **Check & Save** to apply the code changes.
 
+## Langflow Assistant issues {#langflow-assistant}
+
+The following issues can occur when using [Langflow Assistant](/langflow-assistant).
+
+### The agent ran out of steps before finishing
+
+If **Langflow Assistant** stops with `The agent ran out of steps before finishing. Try again, or break the request into smaller parts.`, the request needed more steps than the Assistant's step limit allows.
+
+To resolve this error, raise the limit for your session with the `/iterations` command, such as `/iterations 150`, and then send the request again.
+The default limit is `100`, and the maximum is `200`.
+To raise the default for every user of your Langflow server, set [`LANGFLOW_ASSISTANT_ITERATIONS`](/environment-variables).
+You can also split the request into smaller prompts.
+
+For more information, see [The agent ran out of steps before finishing](/langflow-assistant#the-agent-ran-out-of-steps-before-finishing).
+
 ## Token length limit errors in Embedding Model components
 
 Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.

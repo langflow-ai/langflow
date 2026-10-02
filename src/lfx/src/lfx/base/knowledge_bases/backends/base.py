@@ -22,11 +22,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any, Literal
+from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
 from lfx.utils.env_var_security import safe_getenv
+
+# Who controls a resolved secret's value. A Langflow variable is written by the
+# tenant through the UI/API; a process env var can only be set by whoever runs the
+# server. Destination policy for network backends turns on this distinction.
+SecretSource = Literal["variable", "environment", "missing"]
 
 if TYPE_CHECKING:
     import queue as sync_queue
@@ -89,6 +94,9 @@ class IngestedDocument:
     content: str
     metadata: dict[str, Any] = field(default_factory=dict)
     embedding: list[float] | None = None
+    # The store's own id for the chunk. Carrying it lets a copy between stores
+    # write each chunk under the same id, so re-running the copy upserts.
+    id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -175,6 +183,17 @@ class BaseVectorStoreBackend(ABC):
     async def resolve_secret(self, variable_name: str) -> str | None:
         """Look up ``variable_name`` through Langflow's variable service.
 
+        Thin wrapper over :meth:`resolve_secret_with_source` for the callers that
+        only need the value. Returns ``None`` when neither source has a value;
+        callers decide whether that's fatal. Never raises — ``_build_vector_store``
+        is the right place for hard "credential missing" errors.
+        """
+        value, _source = await self.resolve_secret_with_source(variable_name)
+        return value
+
+    async def resolve_secret_with_source(self, variable_name: str) -> tuple[str | None, SecretSource]:
+        """Resolve ``variable_name`` and report *who controls the value*.
+
         Resolution order matches the connector ingestion sources
         (``connector_base.ConnectorIngestionSource.resolve_secret``):
 
@@ -182,12 +201,19 @@ class BaseVectorStoreBackend(ABC):
         2. Process env var of the same name as a fallback for desktop /
            single-user deployments that skip the UI step.
 
-        Returns ``None`` when neither source has a value; callers
-        decide whether that's fatal. Never raises — ``_build_vector_store``
-        is the right place for hard "credential missing" errors.
+        The provenance matters for values that become a *network destination*.
+        A Langflow variable is written by the tenant through the UI/API, so a URL
+        from source ``"variable"`` is tenant-controlled. A process env var can only
+        be set by whoever runs the server, so source ``"environment"`` is
+        operator-controlled. ``destination_policy.enforce_kb_destination`` uses that
+        distinction to decide whether a KB destination needs to be named in
+        ``LANGFLOW_KB_ALLOWED_HOSTS``.
+
+        Returns:
+            ``(value, source)``, with source ``"missing"`` when neither lookup hit.
         """
         if not variable_name:
-            return None
+            return None, "missing"
 
         user_uuid = self._coerce_user_uuid()
         if user_uuid is not None:
@@ -207,16 +233,18 @@ class BaseVectorStoreBackend(ABC):
                         # CREDENTIAL_TYPE variables are returned as SecretStr;
                         # str() on SecretStr yields "**********", not the secret.
                         try:
-                            return value.get_secret_value()  # type: ignore[union-attr]
+                            return value.get_secret_value(), "variable"  # type: ignore[union-attr]
                         except AttributeError:
-                            return str(value)
+                            return str(value), "variable"
             except Exception as exc:  # noqa: BLE001 — fall through to env
                 logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
 
         # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
         # tenant-supplied KB secret name cannot exfiltrate the server's own secrets.
         env_value = safe_getenv(variable_name)
-        return env_value or None
+        if env_value:
+            return env_value, "environment"
+        return None, "missing"
 
     async def resolve_required_secret(self, variable_name: str) -> str:
         """Like ``resolve_secret`` but raises if no value is found."""
@@ -276,6 +304,39 @@ class BaseVectorStoreBackend(ABC):
             return
         await self.ensure_ready()
         await self.vector_store.aadd_documents(docs)
+
+    async def add_embedded_documents(self, docs: list[IngestedDocument]) -> None:
+        """Write chunks whose vectors are already computed, without re-embedding.
+
+        This is how a knowledge base moves between stores: what one backend
+        returns from ``iter_documents(include_embeddings=True)`` is written here
+        as-is, so no embedding model or provider credentials are involved.
+
+        Every document needs an ``embedding`` of the same width. A document with
+        an ``id`` is written under that id, so writing the same batch twice
+        upserts instead of duplicating; one without gets a fresh id.
+        """
+        if not docs:
+            return
+        missing = [i for i, doc in enumerate(docs) if doc.embedding is None or len(doc.embedding) == 0]
+        if missing:
+            msg = f"add_embedded_documents needs an embedding on every document; missing at positions {missing[:5]}"
+            raise ValueError(msg)
+        widths = {len(doc.embedding) for doc in docs}  # type: ignore[arg-type]
+        if len(widths) > 1:
+            msg = f"add_embedded_documents needs one embedding width per batch; got {sorted(widths)}"
+            raise ValueError(msg)
+        await self.ensure_ready()
+        await self._write_embedded([doc.id or str(uuid4()) for doc in docs], docs)
+
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        """Store ``docs`` under ``ids`` with their existing vectors. Backends override this.
+
+        There is deliberately no fallback: a silent no-op here would read as a
+        successful copy that lost every chunk.
+        """
+        msg = f"{type(self).__name__} does not support writing precomputed embeddings"
+        raise NotImplementedError(msg)
 
     async def similarity_search(
         self,

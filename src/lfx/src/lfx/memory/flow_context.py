@@ -1,4 +1,4 @@
-"""Ambient flow-scope for chat-memory retrieval (defense-in-depth for old saved flows).
+"""Ambient flow and owner scope for chat-memory retrieval.
 
 Langflow executes the *frozen* component ``code`` embedded in each saved flow, not the installed
 library version (see ``lfx.interface.initialize.loading.instantiate_class`` ->
@@ -7,15 +7,10 @@ library version (see ``lfx.interface.initialize.loading.instantiate_class`` ->
 chat history across flows on a colliding ``session_id`` (issue #13059) — even on a patched server,
 because the fix only updated the library default, not code already frozen into saved flows.
 
-This ContextVar carries the executing graph's ``flow_id`` so ``aget_messages`` can default the
-scope when a caller omits it. It is bound only for the duration of a component's execution
-(``get_instance_results``) and reset afterward, so:
-
-* callers that pass ``flow_id`` explicitly are unaffected (the default applies only when ``None``),
-* callers outside a graph run see an unset ContextVar and thus identical, legacy behavior.
-
-This is not new semantics — it is the PR #13087 flow-scoping contract, applied at the platform
-function the frozen code calls instead of inside the (unchangeable) frozen code.
+ContextVars carry the executing graph's ``flow_id`` and resolved message owner for the
+duration of a component's execution (``get_instance_results``). Backend chat-memory
+operations use both predicates even when frozen code omits them. Unscoped callers fail
+closed; trusted service callers outside a graph may supply both IDs explicitly.
 """
 
 from __future__ import annotations
@@ -35,13 +30,21 @@ _END_USER_UUID_NAMESPACE = uuid5(NAMESPACE_DNS, "end-user.serving.langflow.ai")
 
 _current_flow_id: contextvars.ContextVar[str | UUID | None] = contextvars.ContextVar(
     "lfx_current_flow_id",
-    default=None,
 )
 
 
 def get_current_flow_id() -> str | UUID | None:
     """Return the ``flow_id`` of the graph currently executing, or ``None`` outside a graph run."""
-    return _current_flow_id.get()
+    return _current_flow_id.get(None)
+
+
+def has_current_flow_scope() -> bool:
+    """Distinguish a graph with no flow ID from code outside a graph run."""
+    try:
+        _current_flow_id.get()
+    except LookupError:
+        return False
+    return True
 
 
 def set_current_flow_id(flow_id: str | UUID | None) -> contextvars.Token[str | UUID | None]:
@@ -52,6 +55,44 @@ def set_current_flow_id(flow_id: str | UUID | None) -> contextvars.Token[str | U
 def reset_current_flow_id(token: contextvars.Token[str | UUID | None]) -> None:
     """Restore the previous ambient flow scope."""
     _current_flow_id.reset(token)
+
+
+_current_message_owner_id: contextvars.ContextVar[UUID | None] = contextvars.ContextVar("lfx_current_message_owner_id")
+
+
+def get_current_message_owner_id() -> UUID | None:
+    """Return the UUID owner of messages for the executing graph, if any."""
+    return _current_message_owner_id.get(None)
+
+
+def set_current_message_owner_id(owner_id: UUID | None) -> contextvars.Token[UUID | None]:
+    """Bind the trusted graph principal used to stamp and query chat messages."""
+    return _current_message_owner_id.set(owner_id)
+
+
+def reset_current_message_owner_id(token: contextvars.Token[UUID | None]) -> None:
+    """Restore the previous message owner scope."""
+    _current_message_owner_id.reset(token)
+
+
+_current_message_executor_id: contextvars.ContextVar[UUID | None] = contextvars.ContextVar(
+    "lfx_current_message_executor_id"
+)
+
+
+def get_current_message_executor_id() -> UUID | None:
+    """Return the graph's service or editor user for legacy owner hints."""
+    return _current_message_executor_id.get(None)
+
+
+def set_current_message_executor_id(executor_id: UUID | None) -> contextvars.Token[UUID | None]:
+    """Bind the executing user's ID beside the effective message owner."""
+    return _current_message_executor_id.set(executor_id)
+
+
+def reset_current_message_executor_id(token: contextvars.Token[UUID | None]) -> None:
+    """Restore the previous executing user scope."""
+    _current_message_executor_id.reset(token)
 
 
 # Ambient "may this run persist chat memory?" flag. Bound per component execution
@@ -146,7 +187,7 @@ def resolve_message_owner_id(graph: Any) -> UUID | None:
     non-UUID gateway id and never crashes the write or raises on retrieval. With no end
     user, the executing (service-account / human) user id is used — it is already a
     UUID, so it is coerced only, never derived (a non-UUID there means no real owner and
-    yields ``None`` → unscoped, as before). Both the write path
+    yields ``None``). Both the write path
     (``Component._store_message``) and the read path (``_safe_graph_user_id``) resolve
     through this one function so the stored owner and the retrieval predicate agree.
     """
@@ -162,8 +203,8 @@ def resolve_message_owner_id(graph: Any) -> UUID | None:
 def coerce_flow_id(flow_id: str | UUID | None) -> UUID | None:
     """Coerce an ambient ``flow_id`` (usually ``graph.flow_id``, a ``str``) to ``UUID``.
 
-    Returns ``None`` when the value is missing or not a valid UUID (synthetic/test graph ids),
-    so retrieval degrades to the previous unscoped behavior rather than crashing.
+    Returns ``None`` when the value is missing or not a valid UUID (synthetic/test graph ids).
+    Chat memory callers must fail closed rather than using an unscoped query then.
     """
     if flow_id is None or flow_id == "":
         return None

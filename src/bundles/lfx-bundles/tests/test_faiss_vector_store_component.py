@@ -1,6 +1,7 @@
 """Regression tests for FaissVectorStoreComponent security defaults and per-user isolation."""
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -12,6 +13,15 @@ from langchain_core.documents import Document
 from lfx.io import BoolInput
 from lfx.schema.data import Data
 from lfx_bundles.faiss.faiss import FaissVectorStoreComponent
+
+
+@pytest.fixture(autouse=True)
+def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise index scoping against tmp_path, not containment; opt out of restriction."""
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
 
 
 class _FakeFAISS:

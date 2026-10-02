@@ -29,6 +29,7 @@ from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.file_path_security import validate_storage_key
+from lfx.utils.flow_validation import is_protected_tweak_field
 
 if TYPE_CHECKING:
     from langchain_core.callbacks.base import BaseCallbackHandler
@@ -190,10 +191,24 @@ class CustomComponent(BaseComponent):
         per-user / per-flow storage directory, so it is validated against the executing graph's
         own scopes before the storage service is asked to build a path for it. Without that
         check a caller could address another user's uploads by their storage key.
+
+        ``get_storage_service`` returns ``None`` whenever no storage factory is registered --
+        standalone ``lfx`` never registers one, and ``get_service`` also degrades to ``None``
+        when resolution fails. There is then no storage root to build against, so the key is
+        already the path the caller should see; this mirrors
+        ``ParameterHandler._resolve_storage_key``. Dereferencing the missing service instead
+        raised ``AttributeError``, which both call sites in ``base_file`` / ``file`` had to
+        catch and retry as a plain local path -- the same value this now returns directly,
+        but reached through an exception that hid every real ``AttributeError`` behind it.
+
+        Skipping *resolution* never skips *containment*: ``validate_storage_key`` runs first
+        either way, and callers still pin the result with ``enforce_local_file_access``.
         """
-        storage_svc: StorageService = get_storage_service()
+        storage_svc: StorageService | None = get_storage_service()
 
         flow_id, file_name = validate_storage_key(self, path)
+        if storage_svc is None:
+            return path
         return storage_svc.build_full_path(flow_id, file_name)
 
     @property
@@ -479,8 +494,11 @@ class CustomComponent(BaseComponent):
             if context and "request_variables" in context:
                 request_variables = context["request_variables"]
                 if name in request_variables:
-                    logger.debug(f"Found context override for variable '{name}'")
-                    return request_variables[name]
+                    if is_protected_tweak_field(type(self).__name__, field):
+                        logger.warning("Ignoring request variable override for protected field {!r}.", field)
+                    else:
+                        logger.debug(f"Found context override for variable '{name}'")
+                        return request_variables[name]
 
         # Only check user_id when we need to access the database
         if hasattr(self, "_user_id") and not self.user_id:

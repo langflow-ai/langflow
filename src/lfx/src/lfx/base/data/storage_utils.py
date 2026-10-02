@@ -9,6 +9,7 @@ implementations.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,36 @@ if TYPE_CHECKING:
 
 # Constants for path parsing
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
+
+
+class StorageServiceUnavailableError(RuntimeError):
+    """An object-storage read was requested, but no storage service is registered.
+
+    ``get_storage_service`` returns ``None`` whenever no ``StorageServiceFactory`` is
+    registered -- only ``langflow`` registers one, so a standalone ``lfx run`` / ``lfx serve``
+    never has one -- and ``lfx.services.deps.get_service`` also degrades to ``None`` when
+    resolution fails. The S3 branches in this module have no local file to fall back to, so
+    unlike ``ParameterHandler._resolve_storage_key`` they cannot keep going; they fail. This
+    type is what that failure looks like, instead of the ``AttributeError: 'NoneType' object
+    has no attribute 'get_file'`` that whichever attribute happened to be touched first would
+    otherwise raise.
+
+    It subclasses ``RuntimeError`` rather than ``ValueError``/``FileNotFoundError`` on
+    purpose: ``file_exists`` swallows those two, and a storage backend that was never
+    configured must not be reported to callers as a file that does not exist.
+    """
+
+
+def require_storage_service(storage_service: StorageService | None) -> StorageService:
+    """Return ``storage_service``, or raise if object storage is configured but unavailable."""
+    if storage_service is None:
+        msg = (
+            "storage_type is 's3' but no storage service is registered. Object storage is "
+            "provided by the langflow package; a standalone lfx run only supports "
+            "storage_type='local'."
+        )
+        raise StorageServiceUnavailableError(msg)
+    return storage_service
 
 
 def _is_existing_local_file(file_path: str) -> bool:
@@ -87,6 +118,29 @@ def parse_storage_path(path: str) -> tuple[str, str] | None:
     return parts[0], parts[1]
 
 
+def to_storage_path(file_path: str) -> str:
+    """Convert a storage backend key into the "flow_id/filename" form the helpers here expect.
+
+    ``StorageService.build_full_path`` returns backend keys (on S3 they carry the ``files/``
+    prefix), while ``parse_storage_path`` splits on the first slash and would read the prefix
+    as the flow_id. Local paths are returned unchanged.
+
+    Raises:
+        ValueError: under S3, if the path is absolute. A storage key never is, and passing one
+            on would reach the local-file escape hatch in ``get_file_size`` / ``read_file_bytes``.
+        StorageServiceUnavailableError: under S3, if no storage service is registered.
+    """
+    if get_settings_service().settings.storage_type != "s3":
+        return file_path
+
+    flow_id, file_name = require_storage_service(get_storage_service()).parse_file_path(file_path)
+    storage_path = f"{flow_id}/{file_name}"
+    if Path(storage_path).is_absolute():
+        msg = f"Not a storage key: {file_path}"
+        raise ValueError(msg)
+    return storage_path
+
+
 async def read_file_bytes(
     file_path: str,
     storage_service: StorageService | None = None,
@@ -106,12 +160,13 @@ async def read_file_bytes(
 
     Raises:
         FileNotFoundError: If the file doesn't exist
+        StorageServiceUnavailableError: under S3, if no storage service is registered
     """
     settings = get_settings_service().settings
 
     if settings.storage_type == "s3":
-        if _is_existing_local_file(file_path):
-            return Path(_confine_local_read(file_path, resolve_path)).read_bytes()
+        if await asyncio.to_thread(_is_existing_local_file, file_path):
+            return await asyncio.to_thread(lambda: Path(_confine_local_read(file_path, resolve_path)).read_bytes())
 
         parsed = parse_storage_path(file_path)
         if not parsed:
@@ -119,21 +174,20 @@ async def read_file_bytes(
             raise ValueError(msg)
 
         if storage_service is None:
-            storage_service = get_storage_service()
+            storage_service = require_storage_service(get_storage_service())
 
         flow_id, filename = parsed
         return await storage_service.get_file(flow_id, filename)
 
-    # For local storage, resolve path if resolver provided
-    if resolve_path:
-        file_path = resolve_path(file_path)
+    def read_local() -> bytes:
+        path = resolve_path(file_path) if resolve_path else file_path
+        path_obj = Path(path)
+        if not path_obj.exists():
+            msg = f"File not found: {path}"
+            raise FileNotFoundError(msg)
+        return path_obj.read_bytes()
 
-    path_obj = Path(file_path)
-    if not path_obj.exists():
-        msg = f"File not found: {file_path}"
-        raise FileNotFoundError(msg)
-
-    return path_obj.read_bytes()
+    return await asyncio.to_thread(read_local)
 
 
 async def read_file_text(
@@ -196,6 +250,7 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
 
     Raises:
         FileNotFoundError: If the file doesn't exist
+        StorageServiceUnavailableError: under S3, if no storage service is registered
     """
     settings = get_settings_service().settings
 
@@ -211,7 +266,7 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
             raise ValueError(msg)
 
         if storage_service is None:
-            storage_service = get_storage_service()
+            storage_service = require_storage_service(get_storage_service())
 
         flow_id, filename = parsed
         return run_until_complete(storage_service.get_file_size(flow_id, filename))
@@ -225,6 +280,28 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
     return path_obj.stat().st_size
 
 
+async def get_file_size_async(file_path: str, storage_service: StorageService | None = None) -> int:
+    """Async counterpart of ``get_file_size`` that awaits object-storage lookups on the caller's loop.
+
+    Local files (including real local files under S3) are stat'ed in a worker thread through
+    ``get_file_size``, so they keep its containment checks.
+    """
+    settings = get_settings_service().settings
+    if settings.storage_type != "s3" or _is_existing_local_file(file_path):
+        return await asyncio.to_thread(get_file_size, file_path, storage_service)
+
+    parsed = parse_storage_path(file_path)
+    if not parsed:
+        msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+        raise ValueError(msg)
+
+    if storage_service is None:
+        storage_service = require_storage_service(get_storage_service())
+
+    flow_id, filename = parsed
+    return await storage_service.get_file_size(flow_id, filename)
+
+
 def file_exists(file_path: str, storage_service: StorageService | None = None) -> bool:
     """Check if a file exists in either storage service or local filesystem.
 
@@ -234,6 +311,11 @@ def file_exists(file_path: str, storage_service: StorageService | None = None) -
 
     Returns:
         bool: True if the file exists
+
+    Raises:
+        StorageServiceUnavailableError: under S3, if no storage service is registered. Only
+            "this file is not there" is answered with ``False``; a backend that was never
+            configured is a deployment fault and must not be reported as an absent file.
     """
     try:
         get_file_size(file_path, storage_service)

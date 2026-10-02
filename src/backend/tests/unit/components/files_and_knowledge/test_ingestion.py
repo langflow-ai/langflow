@@ -1,5 +1,5 @@
 import hashlib
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
@@ -410,8 +410,35 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert mock_create_record.call_args.kwargs["backend_config"] == {}
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
-    async def test_update_build_config_new_kb_persists_backend_selection(
+    async def test_update_build_config_new_kb_rejects_storage_routing_for_regular_users(
         self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """A regular user cannot point a component-created KB at a named index."""
+        from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError
+
+        component = component_class(**default_kwargs)
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
+        field_value = {
+            "01_new_kb_name": "opensearch_test_kb",
+            "02_embedding_model": [{"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace"}],
+            "03_knowledge_backend": {
+                "backend_type": "opensearch",
+                "backend_config": {"url_variable": "OPENSEARCH_URL", "index_name": "kb-index"},
+            },
+        }
+
+        with (
+            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
+            pytest.raises(StorageRoutingNotAllowedError, match="index_name"),
+        ):
+            await component.update_build_config(build_config, field_value, "knowledge_base")
+
+        mock_create_record.assert_not_called()
+        mock_get_embeddings.assert_not_called()
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_update_build_config_new_kb_persists_backend_selection(
+        self, mock_get_embeddings, component_class, default_kwargs, active_user
     ):
         """Test creating knowledge from the component dialog preserves the selected backend."""
         component = component_class(**default_kwargs)
@@ -438,7 +465,15 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
         mock_get_embeddings.return_value = mock_embeddings
 
-        with patch.object(component, "_create_knowledge_base_record") as mock_create_record:
+        # Only a superuser may name the index a KB uses.
+        superuser = MagicMock(username=active_user.username, is_superuser=True)
+        with (
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                new=AsyncMock(return_value=superuser),
+            ),
+            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
+        ):
             await component.update_build_config(build_config, field_value, "knowledge_base")
 
         assert mock_create_record.call_args.kwargs["backend_type"] == "opensearch"

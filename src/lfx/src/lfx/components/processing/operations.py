@@ -39,6 +39,7 @@ from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
+from lfx.utils.jq_security import validate_jq_program
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -1007,6 +1008,7 @@ class OperationsComponent(Component):
                 msg = "Missing input data or selected key."
                 raise ValueError(msg)
             input_payload = self.data[0].data if isinstance(self.data, list) else self.data.data
+            validate_jq_program(self.selected_key)
             compiled = jq.compile(self.selected_key)
             result = compiled.input(input_payload).first()
             if isinstance(result, dict):
@@ -1034,6 +1036,7 @@ class OperationsComponent(Component):
             repaired = repair_json(input_str)
             data_json = json.loads(repaired)
             jq_input = data_json["data"] if isinstance(data_json, dict) and "data" in data_json else data_json
+            validate_jq_program(self.query)
             results = jq.compile(self.query).input(jq_input).all()
             if not results:
                 msg = "No result from JSON query."

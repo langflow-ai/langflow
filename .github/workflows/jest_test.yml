@@ -43,6 +43,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./src/frontend/package-lock.json
 
+      - name: Run i18n Extraction and Parity Check
+        working-directory: src/frontend
+        run: npm run check:i18n
+
+      - name: Test the i18n Checker Itself
+        working-directory: src/frontend
+        run: npm run test:i18n-checker
+
       - name: Run Frontend Unit Tests
         run: make test_frontend_ci
 

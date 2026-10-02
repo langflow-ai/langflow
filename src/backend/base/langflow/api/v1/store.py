@@ -5,7 +5,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.log.logger import logger
 
-from langflow.api.utils import CurrentActiveUser, check_langflow_version
+from langflow.api.utils import CurrentActiveUser, DbSession, check_langflow_version
+from langflow.api.v1.flows_helpers import _export_variable_names
 from langflow.services.auth import utils as auth_utils
 from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.exceptions import CustomError
@@ -66,10 +67,13 @@ async def check_if_store_has_api_key(
 async def share_component(
     component: StoreComponentCreate,
     store_api_key: Annotated[str, Depends(get_user_store_api_key)],
+    session: DbSession,
+    user: CurrentActiveUser,
 ) -> CreateComponentResponse:
     try:
         await check_langflow_version(component)
-        return await get_store_service().upload(store_api_key, component)
+        known_variable_names = await _export_variable_names(session, user.id)
+        return await get_store_service().upload(store_api_key, component, known_variable_names=known_variable_names)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -79,10 +83,15 @@ async def update_shared_component(
     component_id: UUID,
     component: StoreComponentCreate,
     store_api_key: Annotated[str, Depends(get_user_store_api_key)],
+    session: DbSession,
+    user: CurrentActiveUser,
 ) -> CreateComponentResponse:
     try:
         await check_langflow_version(component)
-        return await get_store_service().update(store_api_key, component_id, component)
+        known_variable_names = await _export_variable_names(session, user.id)
+        return await get_store_service().update(
+            store_api_key, component_id, component, known_variable_names=known_variable_names
+        )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

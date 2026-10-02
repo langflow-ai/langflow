@@ -93,6 +93,11 @@ jest.mock("@/stores/flowsManagerStore", () => ({
 
 // Import after mocks are set up
 import { api } from "@/controllers/API/api";
+import { diffGraphs } from "@/utils/flow-diff";
+import {
+  clearLoadRefreshes,
+  withoutLoadRefreshes,
+} from "@/utils/load-refreshes";
 import {
   buildRefreshPayload,
   createUpdatedNode,
@@ -494,6 +499,60 @@ describe("refreshAllModelInputs", () => {
       undefined,
       { autoSave: false },
     );
+  });
+
+  describe("attributing what the refresh rewrote", () => {
+    const refreshedTo = (value: string) =>
+      (api.post as jest.Mock).mockResolvedValue({
+        data: {
+          template: {
+            model: {
+              type: "model",
+              value,
+              options: [value],
+              required: true,
+              list: false,
+              show: true,
+              readonly: false,
+            },
+          },
+        },
+      });
+    const refreshOnlyChange = () => {
+      const base = createMockModelNodeWithValue("node-1", "");
+      const updater = mockSetNode.mock.calls[0][1];
+      const refreshed = updater(createMockModelNodeWithValue("node-1", ""));
+      const changes = diffGraphs(
+        { nodes: [base], edges: [] },
+        { nodes: [refreshed], edges: [] },
+      );
+      expect(changes.length).toBeGreaterThan(0);
+      return { changes, kept: withoutLoadRefreshes("flow-123", changes) };
+    };
+
+    beforeEach(() => {
+      clearLoadRefreshes();
+      mockNodes = [createMockModelNodeWithValue("node-1", "")];
+      refreshedTo("gpt-4");
+    });
+
+    it("should record the fields a refresh on flow open rewrote", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      await refreshAllModelInputs(mockQueryClient as any, {
+        silent: true,
+        origin: "load",
+      });
+
+      expect(refreshOnlyChange().kept).toEqual([]);
+    });
+
+    it("should not record a refresh the person asked for", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      await refreshAllModelInputs(mockQueryClient as any, { silent: false });
+
+      const { changes, kept } = refreshOnlyChange();
+      expect(kept).toEqual(changes);
+    });
   });
 
   it("should handle API errors gracefully", async () => {
@@ -942,6 +1001,97 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     await refreshAllModelInputs(mockQueryClient as any, { silent: true });
 
     expect(getRefreshedModelValue()).toEqual(ANTHROPIC_SAVED_VALUE);
+  });
+
+  it("should keep a model selected while the refresh request was in flight", async () => {
+    const pickedMidFlight = [
+      {
+        name: "gpt-4o-mini",
+        provider: "OpenAI Compatible",
+        icon: "Plug",
+        metadata: {},
+      },
+    ];
+    mockNodes = [createMockModelNodeWithValue("node-1", [])];
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    (api.post as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    const refresh = refreshAllModelInputs(mockQueryClient as any, {
+      silent: true,
+    });
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+
+    mockNodes = [createMockModelNodeWithValue("node-1", pickedMidFlight)];
+    resolveResponse?.({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: [],
+            options: [OPENAI_OPTION, { ...pickedMidFlight[0], metadata: {} }],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+    await refresh;
+
+    const applied = mockSetNode.mock.calls.map(
+      ([, updater]) =>
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
+        (updater(mockNodes[0]) as any).data.node.template.model.value,
+    );
+    expect(applied).not.toContainEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
+  });
+
+  it("should apply the refresh when an empty model only changed representation in flight", async () => {
+    mockNodes = [createMockModelNodeWithValue("node-1", "")];
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    (api.post as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    const refresh = refreshAllModelInputs(mockQueryClient as any, {
+      silent: true,
+    });
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+
+    mockNodes = [createMockModelNodeWithValue("node-1", [])];
+    resolveResponse?.({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: [],
+            options: [OPENAI_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+    await refresh;
+
+    expect(getRefreshedModelValue()).toEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
   });
 
   it("should keep the saved model when it is still enabled", async () => {

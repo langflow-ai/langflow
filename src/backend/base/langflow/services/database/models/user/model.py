@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel
-from sqlalchemy import JSON, Column
+from lfx.schema.validators import ensure_utc
+from pydantic import BaseModel, field_validator
+from sqlalchemy import JSON, Column, Index, text
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -11,6 +12,8 @@ from langflow.schema.serialize import UUIDstr
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
     from langflow.services.database.models.auth.authz import AuthzRoleAssignment
+    from langflow.services.database.models.connection.model import Connection
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.file.model import File
@@ -27,6 +30,11 @@ class UserOptin(BaseModel):
 
 
 class User(SQLModel, table=True):  # type: ignore[call-arg]
+    # Created by migration 1d28fd31a982. Declared here as well so autogenerate
+    # (and the startup ``alembic check``) sees it: Postgres reflects expression
+    # indexes, so an index missing from the model reads as a ``remove_index`` diff.
+    __table_args__ = (Index("ix_user_username_lower", text("lower(username)"), unique=True),)
+
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
@@ -36,6 +44,8 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: datetime | None = Field(default=None, nullable=True)
+    # Set when AUTO_LOGIN teardown retires the default superuser, so it is retired once.
+    retired_at: datetime | None = Field(default=None, nullable=True)
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
@@ -87,6 +97,18 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
             "foreign_keys": "AuthzRoleAssignment.assigned_by",
         },
     )
+    # Same SQLite gap on connection.owner_id and connection_oauth.user_id, both
+    # declared ON DELETE CASCADE. Without these a deleted user's connections,
+    # their encrypted credential envelopes (removed through Connection.secret),
+    # and any consent the user left pending, possibly on an instance connection,
+    # survive as orphans. Instance connections have no owner and are untouched.
+    # Like the user-delete route itself, this revokes nothing at the provider.
+    connections: list["Connection"] = Relationship(
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    connection_oauth_bindings: list["ConnectionOAuth"] = Relationship(
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
     optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)
     )
@@ -121,3 +143,8 @@ class UserUpdate(SQLModel):
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
     optins: dict[str, Any] | None = None
+
+    @field_validator("last_login_at")
+    @classmethod
+    def normalize_last_login(cls, value: datetime | None) -> datetime | None:
+        return ensure_utc(value) if value is not None else None

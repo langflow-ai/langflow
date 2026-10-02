@@ -14,6 +14,7 @@ from langflow.api.utils.kb_helpers import (
     KBAnalysisHelper,
     KBIngestionHelper,
     KBStorageHelper,
+    chunk_text_for_ingestion,
 )
 from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 
@@ -40,6 +41,20 @@ def empty_text_file():
 def whitespace_text_file():
     """Create a whitespace-only in-memory text file for testing."""
     return ("whitespace.txt", "   \n\n   \t   ")
+
+
+@pytest.fixture
+def long_lines_text_file():
+    """Three ~1,500-character single-line paragraphs — each longer than the default chunk size."""
+    line = " ".join(["lorem"] * 250)
+    return ("long_lines.txt", "\n".join([line] * 3))
+
+
+@pytest.fixture
+def paragraphs_text_file():
+    r"""Two paragraphs of short lines — chunks differ depending on whether ``\n`` or ``\n\n`` is tried first."""
+    paragraph = "\n".join([f"line {i:02d} " + "x" * 30 for i in range(4)])
+    return ("paragraphs.txt", f"{paragraph}\n\n{paragraph}")
 
 
 @pytest.fixture
@@ -275,6 +290,91 @@ class TestProductionProfileRejectsLocalChroma:
         assert response.status_code == 201, response.json()
         assert (tmp_path / active_user.username / "Dev_Local_KB").is_dir()
 
+    @pytest.mark.parametrize(
+        ("backend_type", "backend_config"),
+        [
+            ("opensearch", {"index_name": "another_users_index"}),
+            ("chroma", {"mode": "cloud", "collection_name": "docs"}),
+            ("opensearch", {"legacy_shared_index": "docs"}),
+        ],
+    )
+    async def test_create_storage_routing_override_requires_superuser(
+        self, client: AsyncClient, logged_in_headers, active_user, backend_type, backend_config
+    ):
+        # A storage name says nothing about who owns the data behind it: a regular
+        # user pointing a new KB at a named index or collection could read or
+        # delete another user's chunks.
+        from lfx.base.knowledge_bases.backends.chroma import ChromaCloudBackend
+        from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
+        connection = AsyncMock()
+        with (
+            patch.object(OpenSearchBackend, "test_connection", new=connection),
+            patch.object(ChromaCloudBackend, "test_connection", new=connection),
+        ):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "Routed_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": backend_type,
+                    "backend_config": backend_config,
+                },
+            )
+
+        assert response.status_code == 403, response.text
+        assert "superuser" in response.json()["detail"]
+        connection.assert_not_called()
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, "Routed_KB") is None
+
+    async def test_superuser_may_point_a_kb_at_a_named_index(
+        self, client: AsyncClient, logged_in_headers_super_user, active_super_user
+    ):
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
+        connection_result = TestConnectionResult(ok=True, message="Connected")
+        with patch.object(OpenSearchBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers_super_user,
+                json={
+                    "name": "External_Index_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": "opensearch",
+                    "backend_config": {"index_name": "external_index"},
+                },
+            )
+
+        assert response.status_code == 201, response.text
+        record = await knowledge_base_service.get_by_user_and_name(active_super_user.id, "External_Index_KB")
+        assert record.backend_config == {"index_name": "external_index"}
+
+    async def test_memory_base_storage_routing_override_requires_superuser(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+        from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError
+
+        payload = MagicMock(backend_type="chroma", backend_config={"mode": "cloud", "collection_name": "docs"})
+        with pytest.raises(StorageRoutingNotAllowedError, match="collection_name"):
+            await MemoryBaseService().create(payload, user_id=uuid.uuid4(), is_superuser=False)
+
+    async def test_memory_base_storage_routing_override_is_allowed_for_superusers(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        payload = MagicMock(backend_type="opensearch", backend_config={"index_name": "external_index"})
+        # The routing check passes, so creation proceeds to the flow ownership lookup.
+        with (
+            patch(
+                "langflow.services.memory_base.service.resolve_owned_memory_flow",
+                new=AsyncMock(side_effect=LookupError("reached flow lookup")),
+            ),
+            pytest.raises(LookupError, match="reached flow lookup"),
+        ):
+            await MemoryBaseService().create(payload, user_id=uuid.uuid4(), is_superuser=True)
+
     async def test_create_memory_base_with_local_chroma_is_rejected(
         self,
         prod_profile,  # noqa: ARG002 — fixture applied for its side effect
@@ -327,6 +427,52 @@ class TestPreviewChunks:
         assert response.status_code == 422, response.text
         assert "chunk size" in response.json()["detail"].lower()
 
+    async def test_preview_matches_ingestion_chunks_with_separator(
+        self, client: AsyncClient, logged_in_headers, long_lines_text_file
+    ):
+        r"""The preview must show exactly the chunks ingestion will store (UI defaults: 1000 / 200 / ``\n``)."""
+        file_name, file_content = long_lines_text_file
+        response = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=logged_in_headers,
+            files={"files": (file_name, io.BytesIO(file_content.encode()), "text/plain")},
+            data={"chunk_size": "1000", "chunk_overlap": "200", "separator": "\\n", "max_chunks": "50"},
+        )
+
+        assert response.status_code == 200, response.text
+        previewed = [chunk["content"] for chunk in response.json()["files"][0]["preview_chunks"]]
+        ingested = chunk_text_for_ingestion(file_content, chunk_size=1000, chunk_overlap=200, separator="\\n")
+        assert previewed == ingested
+        assert max(len(chunk) for chunk in ingested) <= 1000
+
+    @pytest.mark.parametrize(
+        "separator_field",
+        [
+            pytest.param({}, id="omitted"),
+            # FastAPI substitutes the Form default for an empty string, so this is
+            # what the UI sends when the user clears the Separator field.
+            pytest.param({"separator": ""}, id="empty"),
+        ],
+    )
+    async def test_preview_matches_ingestion_chunks_without_separator(
+        self, client: AsyncClient, logged_in_headers, paragraphs_text_file, separator_field
+    ):
+        """With no separator the preview must use the same default split points as ingestion."""
+        file_name, file_content = paragraphs_text_file
+        response = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=logged_in_headers,
+            files={"files": (file_name, io.BytesIO(file_content.encode()), "text/plain")},
+            data={"chunk_size": "150", "chunk_overlap": "0", "max_chunks": "50", **separator_field},
+        )
+
+        assert response.status_code == 200, response.text
+        previewed = [chunk["content"] for chunk in response.json()["files"][0]["preview_chunks"]]
+        ingested = chunk_text_for_ingestion(file_content, chunk_size=150, chunk_overlap=0, separator="")
+        # Guard the fixture: a newline-first split must chunk this text differently.
+        assert ingested != chunk_text_for_ingestion(file_content, chunk_size=150, chunk_overlap=0, separator="\n")
+        assert previewed == ingested
+
 
 class TestKnowledgeBaseAPI:
     """Tests for KR CRUD endpoints."""
@@ -359,14 +505,15 @@ class TestKnowledgeBaseAPI:
                     "embedding_model": "text-embedding-3-small",
                     "model_selection": model_selection,
                     "backend_type": "opensearch",
-                    "backend_config": {"index_name": "new_kb_index"},
+                    # Clients send an empty ``index_name`` to mean "not set".
+                    "backend_config": {"url_variable": "OPENSEARCH_URL", "index_name": ""},
                 },
             )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "New KB"
         assert data["backend_type"] == "opensearch"
-        assert data["backend_config"] == {"index_name": "new_kb_index"}
+        assert data["backend_config"] == {"url_variable": "OPENSEARCH_URL", "index_name": ""}
         mock_fresh_client.assert_not_called()
         record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
         assert record is not None
@@ -677,7 +824,7 @@ class TestKnowledgeBaseAPI:
                     "embedding_provider": "OpenAI",
                     "embedding_model": "text-embedding-3-small",
                     "backend_type": "opensearch",
-                    "backend_config": {"index_name": "unreachable_idx"},
+                    "backend_config": {"url_variable": "OPENSEARCH_URL"},
                 },
             )
 
@@ -2284,8 +2431,15 @@ class TestKnowledgeBaseAPI:
         assert mock_create_backend.call_args.kwargs["kb_path"] is None
 
 
+@pytest.mark.usefixtures("client")
 class TestPerformIngestionTask:
-    """Tests for the internal KBIngestionHelper.perform_ingestion background task."""
+    """Tests for the internal KBIngestionHelper.perform_ingestion background task.
+
+    ``perform_ingestion`` looks up the ``knowledge_base`` row before anything
+    else, so these tests need the database the ``client`` fixture creates.
+    Without it they pass only when an earlier test on the same worker happened
+    to leave the tables behind.
+    """
 
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
@@ -2360,6 +2514,56 @@ class TestPerformIngestionTask:
         written_docs = [doc for call in mock_backend.add_documents.call_args_list for doc in call.args[0]]
         assert written_docs, "expected at least one chunk document to be written"
         assert all(doc.metadata.get("source_type") == "file_upload" for doc in written_docs)
+
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
+    async def test_perform_ingestion_respects_chunk_size_with_separator(
+        self,
+        mock_update_metrics,  # noqa: ARG002
+        mock_size,
+        mock_build,
+        mock_backend_cls,
+        mock_create_run,
+        mock_mark_running,  # noqa: ARG002
+        mock_finalize_run,  # noqa: ARG002
+        mock_kb_path,
+        long_lines_text_file,
+    ):
+        """Text between two separators that exceeds ``chunk_size`` is split, not stored whole."""
+        mock_build.return_value = MagicMock()
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock()
+        mock_backend.teardown = AsyncMock()
+        mock_backend_cls.return_value = mock_backend
+        mock_create_run.return_value = uuid.uuid4()
+        mock_size.return_value = 100
+
+        file_name, file_content = long_lines_text_file
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
+
+        await KBIngestionHelper.perform_ingestion(
+            kb_name="test_kb",
+            kb_path=mock_kb_path,
+            files_data=[(file_name, file_content.encode())],
+            chunk_size=1000,
+            chunk_overlap=200,
+            separator="\\n",
+            source_name="src",
+            current_user=current_user,
+            model_selection={"name": "model", "provider": "OpenAI"},
+            task_job_id=uuid.uuid4(),
+            job_service=AsyncMock(),
+        )
+
+        stored = [doc.page_content for call in mock_backend.add_documents.call_args_list for doc in call.args[0]]
+        assert len(stored) > 3
+        assert max(len(chunk) for chunk in stored) <= 1000
 
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)

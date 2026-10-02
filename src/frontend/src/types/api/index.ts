@@ -206,7 +206,8 @@ export type Users = {
   username: string;
   is_active: boolean;
   is_superuser: boolean;
-  profile_image: string;
+  // UserRead.profile_image is nullable; users who never picked one get null.
+  profile_image: string | null;
   create_at: Date;
   updated_at: Date;
   optins?: {

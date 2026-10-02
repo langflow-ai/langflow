@@ -10,6 +10,15 @@ from lfx.services.cache.utils import CacheMiss
 from tests.base import ComponentTestBaseWithoutClient
 
 
+@pytest.fixture(autouse=True)
+def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise SQL execution against a local sqlite fixture, not SSRF containment."""
+    monkeypatch.setattr(
+        "lfx.utils.ssrf_protection.is_local_file_access_restricted",
+        lambda: False,
+    )
+
+
 class FakeSharedComponentCache:
     def __init__(self, values=None):
         self.values = values or {}
@@ -23,10 +32,9 @@ class FakeSharedComponentCache:
 
 class TestSQLComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
-    def test_db(self):
+    def test_db(self, tmp_path: Path):
         """Fixture that creates a temporary SQLite database for testing."""
-        test_data_dir = Path(__file__).parent.parent.parent.parent / "data"
-        db_path = test_data_dir / "test.db"
+        db_path = tmp_path / "test.db"
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("""

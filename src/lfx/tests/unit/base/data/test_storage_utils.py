@@ -1,5 +1,6 @@
 """Tests for base/data/storage_utils.py - storage-aware file utilities."""
 
+import threading
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -10,6 +11,7 @@ from lfx.base.data.storage_utils import (
     parse_storage_path,
     read_file_bytes,
     read_file_text,
+    to_storage_path,
 )
 from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
 
@@ -58,9 +60,68 @@ class TestParseStoragePath:
         assert result == ("flow_abc", "file-name_v2.0.txt")
 
 
+class TestToStoragePath:
+    """Test to_storage_path function."""
+
+    @staticmethod
+    def _settings(storage_type: str) -> Mock:
+        settings_service = Mock()
+        settings_service.settings.storage_type = storage_type
+        return settings_service
+
+    @staticmethod
+    def _s3_like_storage() -> Mock:
+        storage = Mock()
+        storage.parse_file_path.side_effect = lambda path: tuple(path.removeprefix("files/").rsplit("/", 1))
+        return storage
+
+    def test_should_return_local_path_unchanged(self):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("local")):
+            assert to_storage_path("/data/flow_123/file.txt") == "/data/flow_123/file.txt"
+
+    def test_should_strip_backend_prefix_on_s3(self):
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("s3")),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=self._s3_like_storage()),
+        ):
+            assert to_storage_path("files/flow_123/file.txt") == "flow_123/file.txt"
+
+    def test_should_reject_absolute_path_on_s3(self):
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("s3")),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=self._s3_like_storage()),
+            pytest.raises(ValueError, match="Not a storage key"),
+        ):
+            to_storage_path("files//etc/hostname")
+
+
 @pytest.mark.asyncio
 class TestReadFileBytes:
     """Test read_file_bytes function."""
+
+    @pytest.mark.parametrize("storage_type", ["local", "s3"])
+    async def test_real_local_read_runs_off_the_event_loop(self, tmp_path, storage_type):
+        test_file = tmp_path / "test.txt"
+        test_file.write_bytes(b"payload")
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = storage_type
+        mock_settings.settings.restrict_local_file_access = False
+        read_threads = []
+        original_read = Path.read_bytes
+
+        def record_read(path):
+            read_threads.append(threading.current_thread())
+            return original_read(path)
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
+            patch.object(Path, "read_bytes", record_read),
+        ):
+            assert await read_file_bytes(str(test_file)) == b"payload"
+
+        assert read_threads
+        assert all(thread is not threading.current_thread() for thread in read_threads)
 
     async def test_read_local_file(self, tmp_path):
         """Test reading a local file when storage_type is local."""
@@ -152,6 +213,9 @@ class TestReadFileBytes:
         components dir) into a Directory node. That path is not an S3 key, so the
         S3 reader must fall back to a local read instead of raising
         "Invalid S3 path format".
+
+        Local reads outside the storage scope require the operator opt-out
+        (``restrict_local_file_access=False``), which is the default only before 1.12.3.
         """
         test_file = tmp_path / "_importing.py"
         test_content = b"x = 1\n"
@@ -159,11 +223,13 @@ class TestReadFileBytes:
 
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.restrict_local_file_access = False
 
         mock_storage = AsyncMock()
 
         with (
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             content = await read_file_bytes(str(test_file))
@@ -248,18 +314,24 @@ class TestReadFileText:
         assert content == expected_content
 
     async def test_should_read_existing_local_text_file_when_storage_type_is_s3(self, tmp_path):
-        """Regression for #13798: read_file_text must read a real local file under S3 mode."""
+        """Regression for #13798: read_file_text must read a real local file under S3 mode.
+
+        Local reads outside the storage scope require the operator opt-out
+        (``restrict_local_file_access=False``), which is the default only before 1.12.3.
+        """
         test_file = tmp_path / "notes.txt"
         test_content = "hello from disk"
         test_file.write_text(test_content, encoding="utf-8")
 
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.restrict_local_file_access = False
 
         mock_storage = AsyncMock()
 
         with (
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             content = await read_file_text(str(test_file))
@@ -295,17 +367,23 @@ class TestGetFileSize:
                 get_file_size("/nonexistent/file.txt")
 
     def test_should_get_existing_local_file_size_when_storage_type_is_s3(self, tmp_path):
-        """Regression for #13798: get_file_size must stat a real local file under S3 mode."""
+        """Regression for #13798: get_file_size must stat a real local file under S3 mode.
+
+        Local reads outside the storage scope require the operator opt-out
+        (``restrict_local_file_access=False``), which is the default only before 1.12.3.
+        """
         test_file = tmp_path / "sized.txt"
         test_file.write_bytes(b"X" * 1234)
 
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.restrict_local_file_access = False
 
         mock_storage = AsyncMock()
 
         with (
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             size = get_file_size(str(test_file))

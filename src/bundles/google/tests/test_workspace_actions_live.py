@@ -75,9 +75,14 @@ MANIFEST_PATH = (
 
 
 def _manifest_scopes() -> set[str]:
-    """The distinct scopes the five capabilities declare: the least-privilege grant."""
+    """The five action scopes used by this opt-in action suite."""
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    return {scope for capability in manifest["capabilities"] for scope in capability["required_scopes"]}
+    return {
+        scope
+        for capability in manifest["capabilities"]
+        if not capability["id"].startswith("google.trigger.")
+        for scope in capability["required_scopes"]
+    }
 
 
 def _mint_access_token() -> dict | None:
@@ -181,7 +186,7 @@ async def test_live_gmail_send(headless) -> None:
         )
     )
 
-    result = await component.send_message()
+    result = await component.send_email()
 
     assert result.data["id"]
     assert "SENT" in result.data.get("labelIds", [])

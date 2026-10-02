@@ -155,9 +155,11 @@ async def run_single_component(
     run_input: Any | None = None,
     session_id: str | None = None,
     input_type: str | None = "chat",
+    user_id: str | None = None,
+    flow_id: str | None = None,
 ) -> dict[str, Any]:
-    user_id = str(uuid.uuid4())
-    flow_id = str(uuid.uuid4())
+    user_id = user_id or str(uuid.uuid4())
+    flow_id = flow_id or str(uuid.uuid4())
     graph = Graph(user_id=user_id, flow_id=flow_id)
 
     def _add_component(clazz: type, inputs: dict | None = None) -> str:

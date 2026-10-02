@@ -21,19 +21,50 @@ const connectionField = (required: boolean) => ({
   provider: "google",
 });
 
+// Mirrors the ``/api/v1/all`` shape: extension-bundle components are keyed
+// ``ext:<bundle>:<ClassName>@<slot>`` and carry their legacy palette name in
+// ``name``; built-in components are keyed by that name directly.
 const mockData = {
   google: {
-    GmailSendComponent: {
+    "ext:google:GmailSendComponent@official": {
+      name: "GmailSendComponent",
       display_name: "Send Gmail",
       template: { connection: connectionField(true) },
     },
-    GoogleDriveListComponent: {
+    "ext:google:GoogleDriveListComponent@official": {
+      name: "GoogleDriveListComponent",
       display_name: "List Drive Files",
       template: { connection: connectionField(true) },
     },
-    GmailLoaderComponent: {
+    "ext:google:GmailLoaderComponent@official": {
+      name: "GmailLoaderComponent",
       display_name: "Gmail Loader",
       template: { connection: connectionField(false) },
+    },
+    // An @extra copy listed first must not shadow the shipped bundle.
+    "ext:google:GoogleSerperAPICore@extra": {
+      name: "GoogleSerperAPICore",
+      display_name: "Serper (local copy)",
+      template: {},
+    },
+    "ext:google:GoogleSerperAPICore@official": {
+      name: "GoogleSerperAPICore",
+      display_name: "Google Serper API",
+      template: {},
+    },
+    "ext:google:LocalOnlyComponent@extra": {
+      name: "LocalOnlyComponent",
+      display_name: "Local Only",
+      template: {},
+    },
+  },
+  datastax: {
+    // ``datastax.AstraDB`` names the component's ``name`` attribute, not its
+    // class, so only the ``name`` field links the reference to this entry.
+    "ext:datastax:AstraDBVectorStoreComponent@official": {
+      name: "AstraDB",
+      display_name: "Astra DB",
+      template: {},
     },
   },
   data: {
@@ -65,10 +96,61 @@ describe("useGetReplacementComponents", () => {
   });
 
   it("returns a falsy entry for unknown or malformed references", () => {
-    const result = render(["google.Missing", "nodot", "unknown.Component"]);
+    const result = render([
+      "google.Missing",
+      "nodot",
+      "unknown.Component",
+      "google.GoogleSerper",
+    ]);
+
+    expect(result).toHaveLength(4);
+    expect(result.every((entry) => !entry)).toBe(true);
+  });
+
+  it("resolves built-in components by their bare key", () => {
+    expect(render(["data.APIRequest"])).toEqual([
+      { displayName: "API Request", filterKey: "data.APIRequest" },
+    ]);
+  });
+
+  it("resolves extension-bundle components by their ext: key", () => {
+    expect(render(["google.GoogleSerperAPICore"])).toEqual([
+      {
+        displayName: "Google Serper API",
+        filterKey: "google.ext:google:GoogleSerperAPICore@official",
+      },
+    ]);
+  });
+
+  it("falls back to a non-official slot when that is the only copy", () => {
+    expect(render(["google.LocalOnlyComponent"])).toEqual([
+      {
+        displayName: "Local Only",
+        filterKey: "google.ext:google:LocalOnlyComponent@extra",
+      },
+    ]);
+  });
+
+  it("resolves references that name the component rather than its class", () => {
+    expect(render(["datastax.AstraDB"])).toEqual([
+      {
+        displayName: "Astra DB",
+        filterKey: "datastax.ext:datastax:AstraDBVectorStoreComponent@official",
+      },
+    ]);
+  });
+
+  it("keeps positions aligned when the first replacement is unresolved", () => {
+    const result = render([
+      "serpapi.Serp",
+      "google.GoogleSerperAPICore",
+      "data.APIRequest",
+    ]);
 
     expect(result).toHaveLength(3);
-    expect(result.every((entry) => !entry)).toBe(true);
+    expect(result[0]).toBeUndefined();
+    expect(result[1]?.displayName).toBe("Google Serper API");
+    expect(result[2]?.displayName).toBe("API Request");
   });
 
   describe("with ENABLE_INTEGRATIONS off", () => {
@@ -90,8 +172,8 @@ describe("useGetReplacementComponents", () => {
       ]);
 
       expect(result[0]).toBeFalsy();
-      expect(result[1]).toBe("Gmail Loader");
-      expect(result[2]).toBe("API Request");
+      expect(result[1]?.displayName).toBe("Gmail Loader");
+      expect(result[2]?.displayName).toBe("API Request");
     });
   });
 
@@ -107,7 +189,14 @@ describe("useGetReplacementComponents", () => {
         "data.APIRequest",
       ]);
 
-      expect(result).toEqual(["Send Gmail", "List Drive Files", "API Request"]);
+      expect(result.map((entry) => entry?.displayName)).toEqual([
+        "Send Gmail",
+        "List Drive Files",
+        "API Request",
+      ]);
+      expect(result[0]?.filterKey).toBe(
+        "google.ext:google:GmailSendComponent@official",
+      );
     });
   });
 });

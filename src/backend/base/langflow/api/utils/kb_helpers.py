@@ -72,6 +72,12 @@ class IngestionCancelledError(Exception):
     """Custom error for when an ingestion job is cancelled."""
 
 
+# Split points tried after a user-supplied separator (the splitter's own
+# defaults). Without them, text between two separators that is longer than
+# ``chunk_size`` has nowhere else to split and is stored as one oversized chunk.
+_FALLBACK_CHUNK_SEPARATORS: tuple[str, ...] = ("\n\n", "\n", " ", "")
+
+
 def chunk_text_for_ingestion(
     text: str,
     *,
@@ -82,13 +88,14 @@ def chunk_text_for_ingestion(
     r"""Split text into chunks using ``RecursiveCharacterTextSplitter``.
 
     Single source of truth for chunking config used by every ingestion path —
-    KB file ingestion and Memory Base raw / preprocessed message ingestion.
-    Centralizing this keeps chunk-size / overlap behavior identical so a
-    chunk that fits in one path won't suddenly overflow in another.
+    KB file ingestion, the ``/preview-chunks`` endpoint, and Memory Base raw /
+    preprocessed message ingestion. Centralizing this keeps chunk-size /
+    overlap behavior identical so the preview shows exactly what is stored.
 
-    ``separator``: when provided, escaped newlines (``"\\n"``) are unescaped
-    and the value is passed as a single-element ``separators`` list, matching
-    the behavior of ``KBIngestionHelper.perform_ingestion``.
+    ``separator``: when provided, escaped newlines / tabs (``"\\n"`` /
+    ``"\\t"``) are unescaped and the value becomes the *preferred* split
+    point, followed by ``_FALLBACK_CHUNK_SEPARATORS`` so no chunk exceeds
+    ``chunk_size``. When empty, the splitter's defaults are used.
 
     Returns ``[]`` for empty / whitespace-only input.
     """
@@ -96,7 +103,8 @@ def chunk_text_for_ingestion(
         return []
     splitter_kwargs: dict = {"chunk_size": chunk_size, "chunk_overlap": chunk_overlap}
     if separator:
-        splitter_kwargs["separators"] = [separator.replace("\\n", "\n")]
+        unescaped = separator.replace("\\n", "\n").replace("\\t", "\t")
+        splitter_kwargs["separators"] = [unescaped, *_FALLBACK_CHUNK_SEPARATORS]
     splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
     return splitter.split_text(text)
 
@@ -629,8 +637,19 @@ class KBIngestionHelper:
         source_metadata: dict | None = None,
         source: KBIngestionSource | None = None,
         per_file_metadata: dict[str, dict] | None = None,
+        kb_owner: CurrentActiveUser | None = None,
     ) -> dict[str, object]:
         """Orchestrate the ingestion of content into a knowledge base.
+
+        ``current_user`` is the user who started the run and ``kb_owner`` the
+        knowledge base's owner (defaults to ``current_user``). They differ when an
+        authorization plugin shares the knowledge base. Everything that locates the
+        knowledge base follows the owner: the ``knowledge_base`` row, the run's
+        ``kb_id``, the backend's ``user_id`` (which names owner-scoped storage and
+        resolves the owner's connection variables), and rollback cleanup. What the
+        actor brings stays with the actor: the embedding model credentials (so a
+        collaborator never spends the owner's keys) and the ingestion source (the
+        actor's uploads, folders, and connector credentials).
 
         Accepts either a preloaded ``files_data`` list (the long-standing
         file-upload path) or a ``source`` — any ``KBIngestionSource``
@@ -661,6 +680,7 @@ class KBIngestionHelper:
             get_embedding_provider,
         )
 
+        owner = kb_owner if kb_owner is not None else current_user
         embedding_provider = get_embedding_provider(model_selection)
         embedding_model = get_embedding_model(model_selection)
 
@@ -694,7 +714,7 @@ class KBIngestionHelper:
         # During the Phase 1.5 rollout some KBs still only exist in
         # JSON files; in that case ``kb_id`` stays None and the run
         # row keeps pointing at ``kb_name`` for N-1 compatibility.
-        kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        kb_record = await knowledge_base_service.get_by_user_and_name(owner.id, kb_name)
         kb_record_id = kb_record.id if kb_record is not None else None
         run_id = await ingestion_run_service.create_run(
             kb_name=kb_name,
@@ -739,11 +759,9 @@ class KBIngestionHelper:
                 kb_path=kb_path,
                 backend_config=backend_config,
                 embedding_function=embeddings,
-                # Forward the user id so Mongo/Astra/Postgres backends can
-                # pull their connection URI / tokens from Langflow's
-                # variable_service instead of forcing the server to export
-                # matching env vars.
-                user_id=getattr(current_user, "id", None),
+                # The owner's id names owner-scoped storage and resolves the
+                # owner's connection variables through ``variable_service``.
+                user_id=getattr(owner, "id", None),
             )
 
             job_id_str = str(task_job_id)
@@ -931,7 +949,7 @@ class KBIngestionHelper:
                 kb_name,
                 backend_type=kb_record.backend_type if kb_record is not None else None,
                 backend_config=kb_record.backend_config if kb_record is not None else None,
-                user_id=getattr(current_user, "id", None),
+                user_id=getattr(owner, "id", None),
             )
             if kb_record_id is not None:
                 try:
@@ -957,7 +975,7 @@ class KBIngestionHelper:
                 kb_name,
                 backend_type=kb_record.backend_type if kb_record is not None else None,
                 backend_config=kb_record.backend_config if kb_record is not None else None,
-                user_id=getattr(current_user, "id", None),
+                user_id=getattr(owner, "id", None),
             )
             if kb_record_id is not None:
                 try:

@@ -13,12 +13,13 @@ from lfx.services.deps import (
     get_integration_policy_service,
     get_model_provider_policy_service,
 )
-from lfx.services.integration_policy import normalize_integration_policy_key
+from lfx.services.integration_policy import integration_policy_key_provider, normalize_integration_policy_key
 from lfx.services.model_provider_policy import normalize_blocked_model_key
 from lfx.services.policy_bundle import PolicyBundleSnapshot
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
+from langflow.api.v1.integrations import loaded_integrations
 from langflow.api.v1.policy_bundle_errors import policy_bundle_revision_conflict
 from langflow.api.v1.schemas.catalog_policy import CatalogPolicyKeyList, normalize_catalog_policy_keys
 from langflow.services.auth.utils import get_current_active_superuser
@@ -197,6 +198,58 @@ def _raise_if_externally_managed() -> None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
+def _declared_integration_policy_keys() -> dict[str, frozenset[str]]:
+    """Return the capability policy keys each loaded integration declares, by provider id."""
+    declared: dict[str, set[str]] = {}
+    for integration in loaded_integrations():
+        provider_keys = declared.setdefault(integration.provider_id.casefold(), set())
+        for capability in integration.capability_manifest.capabilities:
+            provider_keys.update(key.casefold() for key in capability.policy_keys)
+    return {provider_id: frozenset(keys) for provider_id, keys in declared.items()}
+
+
+async def _reject_new_undeclared_integration_action_keys(session: DbSession, keys: list[str]) -> None:
+    """Refuse a newly blocked action key that its loaded provider does not declare.
+
+    Blocking matches a capability's exact policy keys, so a typo under a loaded
+    provider is a rule that never fires yet reads as enforced. A key for a
+    provider that is not loaded passes: the grammar check deliberately allows
+    preconfiguring policy before the provider's bundle is installed. A key
+    already in the active bundle is grandfathered, so a save that carries every
+    list through unchanged (a catalog or model-policy edit) is never refused
+    over an old entry.
+    """
+    declared = _declared_integration_policy_keys()
+    undeclared = [
+        key
+        for key in keys
+        if (provider_id := integration_policy_key_provider(key)) in declared and key not in declared[provider_id]
+    ]
+    if not undeclared:
+        return
+    try:
+        active = await get_policy_bundle_state(session)
+    except PolicyBundleNotInitializedError as exc:
+        raise _unavailable() from exc
+    persisted = {key.casefold() for key in active.blocked_integration_action_keys}
+    introduced: dict[str, list[str]] = {}
+    for key in undeclared:
+        if key not in persisted:
+            introduced.setdefault(integration_policy_key_provider(key), []).append(key)
+    if not introduced:
+        return
+    problems = [
+        f"provider {provider_id!r} does not declare {', '.join(provider_keys)} "
+        f"(declared: {', '.join(sorted(declared[provider_id])) or 'none'})"
+        for provider_id, provider_keys in sorted(introduced.items())
+    ]
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail="Blocked integration action keys must match an action the loaded provider declares: "
+        + "; ".join(problems),
+    )
+
+
 async def _audit_bundle(snapshot: PolicyBundleSnapshot, *, user_id: UUID, action: str) -> None:
     await audit_decision(
         user_id=user_id,
@@ -234,6 +287,7 @@ async def replace_policy_bundle(
     session: DbSession,
 ) -> PolicyBundleRead:
     _raise_if_externally_managed()
+    await _reject_new_undeclared_integration_action_keys(session, payload.blocked_integration_action_keys)
     try:
         snapshot = await replace_policy_bundle_state(
             session,

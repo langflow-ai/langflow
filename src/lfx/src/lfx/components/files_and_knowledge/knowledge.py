@@ -28,6 +28,7 @@ import pandas as pd
 from langchain_chroma import Chroma
 
 from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
     IngestionItemStatus,
@@ -602,6 +603,7 @@ class KnowledgeComponent(Component):
                 backend_type, backend_config = self._normalize_backend_selection(
                     field_value.get("03_knowledge_backend")
                 )
+                ensure_storage_routing_allowed(backend_config, is_superuser=bool(current_user.is_superuser))
                 new_kb_name = field_value["01_new_kb_name"]
                 if backend_type == BackendType.CHROMA.value:
                     validate_collection_name(

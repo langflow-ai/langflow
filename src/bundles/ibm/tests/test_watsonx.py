@@ -489,3 +489,23 @@ class TestWatsonxAIComponent:
 
         # Ensure ChatWatsonx was not called
         mock_chatwatsonx.assert_not_called()
+
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
+    def test_build_model_blocks_metadata_url(self, mock_chatwatsonx, wx_component, monkeypatch):
+        """base_url is tenant-editable; SSRF policy must block internal/cloud-metadata hosts."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
+        wx_component.base_url = "http://169.254.169.254/latest/meta-data"
+        wx_component.project_id = "test-project-id"
+        wx_component.space_id = None
+        wx_component.model_name = "ibm/granite-3-8b-instruct"
+        wx_component.stream = False
+        wx_component.max_tokens = 1000
+        wx_component.stop_sequence = None
+        wx_component.logit_bias = None
+
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            wx_component.build_model()
+
+        mock_chatwatsonx.assert_not_called()

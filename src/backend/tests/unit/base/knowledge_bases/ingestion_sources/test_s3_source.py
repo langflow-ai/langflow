@@ -1,9 +1,10 @@
 """Stub-state tests for the disabled cloud-connector ingestion sources.
 
-The S3 / OneDrive / SharePoint sources ship as stubs in this phase (see
-each module's docstring under
-``lfx.base.knowledge_bases.ingestion_sources``). These tests pin the
-"intentionally disabled" contract:
+The S3 source ships as a stub (see its module docstring under
+``lfx.base.knowledge_bases.ingestion_sources``). OneDrive and SharePoint
+are enabled: they are registered and resolve their credentials through a
+Microsoft connection, and ``test_microsoft_graph_source.py`` covers them.
+These tests pin the "intentionally disabled" contract for what remains:
 
 * the classes still import (preserves enum + type compatibility),
 * the registry does NOT bind them (``create_source('s3')`` raises),
@@ -21,19 +22,13 @@ from __future__ import annotations
 import pytest
 from lfx.base.knowledge_bases.ingestion_sources import (
     GoogleDriveSource,
-    OneDriveSource,
     S3Source,
-    SharePointSource,
     SourceType,
     create_source,
     registered_sources,
 )
 
-_STUBBED_SOURCES = (
-    (SourceType.S3, S3Source),
-    (SourceType.ONEDRIVE, OneDriveSource),
-    (SourceType.SHAREPOINT, SharePointSource),
-)
+_STUBBED_SOURCES = ((SourceType.S3, S3Source),)
 
 
 class TestStubbedSourcesNotRegistered:

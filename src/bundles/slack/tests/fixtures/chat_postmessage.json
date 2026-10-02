@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "channel": "C0SLACKDEMO",
+  "ts": "1700000200.000400",
+  "message": {
+    "type": "message",
+    "user": "U0SLACKUSER",
+    "text": "release is out",
+    "ts": "1700000200.000400",
+    "team": "T0SLACKTEAM"
+  }
+}

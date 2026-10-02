@@ -24,3 +24,7 @@ class FlowVersionNotFoundError(FlowVersionError):
 
 class FlowVersionDeployedError(FlowVersionError):
     """Raised when an operation targets a flow version attached to a deployment."""
+
+
+class FlowVersionPinnedError(FlowVersionError):
+    """Raised when deleting a flow version still pinned by a trigger."""

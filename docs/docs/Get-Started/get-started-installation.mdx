@@ -192,10 +192,18 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     Both packages use the `langflow` command. In Langflow 1.12,
     `langflow-base` does not provide a `langflow-base` executable.
 
-4. Set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password in your environment or `.env` file, then start Langflow:
+4. Set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password, then start Langflow.
+
+    If the password is exported in your environment:
 
     ```bash
     uv run langflow run
+    ```
+
+    If the password is only in a `.env` file, pass that file with `--env-file`. The `langflow run` command loads a `.env` file only when `--env-file` is set:
+
+    ```bash
+    uv run langflow run --env-file .env
     ```
 
     It can take a few minutes for Langflow to start.

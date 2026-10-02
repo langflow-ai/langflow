@@ -24,6 +24,7 @@ from langflow.services.deployment_artifacts.builder import (
     _FlowSnapshot,
     _resolve_dependencies,
     _scrub_backend_config,
+    _validated_backend_config,
 )
 
 # Fake, non-functional fixture values (not real credentials): one variable-NAME pointer
@@ -45,6 +46,20 @@ def test_scrub_backend_config_keeps_routing_and_variable_name_pointers():
     cfg = {"mode": "cloud", "api_key_variable": _KEY_VAR_NAME, "tenant_variable": "CHROMA_TENANT"}
     # variable-NAME pointers + routing are non-secret and must survive verbatim
     assert _scrub_backend_config(cfg) == cfg
+
+
+@pytest.mark.parametrize(
+    ("cfg", "name_key"),
+    [
+        ({"mode": "cloud", "collection_name": "docs", "collection_name_origin": "legacy_kb_name"}, "collection_name"),
+        ({"index_name": "docs", "index_name_origin": "legacy_kb_name"}, "index_name"),
+    ],
+)
+def test_scrub_backend_config_keeps_pinned_storage_names(cfg, name_key):
+    # A knowledge base pinned to its pre-scoping storage must deploy pointing at it.
+    scrubbed = _scrub_backend_config(cfg)
+    assert scrubbed[name_key] == "docs"
+    assert f"{name_key}_origin" not in scrubbed
 
 
 @pytest.mark.parametrize(
@@ -74,6 +89,16 @@ def test_scrub_backend_config_drops_unknown_nested_values():
 
     assert scrubbed == {"mode": "cloud", "cloud_host": "api.trychroma.com"}
     assert _RAW_SECRET not in json.dumps(scrubbed)
+
+
+def test_strict_backend_config_refuses_values_ordinary_scrubbing_would_drop():
+    with pytest.raises(ProjectArtifactError, match="unsupported or unsafe backend configuration"):
+        _validated_backend_config(
+            "postgres",
+            {"host": "db.example", "password": _RAW_SECRET},
+            resource_kind="Knowledge Base",
+            strict=True,
+        )
 
 
 # --- reference collection -----------------------------------------------------
@@ -273,6 +298,32 @@ async def test_resolve_dependencies_fails_when_a_reference_is_missing(dependency
             workspace_id=uuid4(),
             project_id=uuid4(),
             snapshots=(snapshot,),
+        )
+
+
+@pytest.mark.asyncio
+async def test_strict_resolve_dependencies_refuses_missing_reference_without_empty_fallback():
+    owner_id = uuid4()
+    snapshot = SimpleNamespace(
+        owner_id=owner_id,
+        payload={
+            "data": {
+                "nodes": [{"data": {"node": {"template": {"knowledge_base": {"value": "missing"}}}}}],
+            }
+        },
+    )
+    session = AsyncMock()
+    session.exec.return_value = _exec_result([])
+
+    with pytest.raises(ProjectArtifactError, match="referenced Knowledge Base"):
+        await _resolve_dependencies(
+            session,
+            user=SimpleNamespace(id=owner_id),
+            owner_id=owner_id,
+            workspace_id=uuid4(),
+            project_id=uuid4(),
+            snapshots=(snapshot,),
+            strict=True,
         )
 
 

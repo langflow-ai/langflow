@@ -59,6 +59,14 @@ class TestFileComponent(BaseFileComponent):
 class TestLoadFilesMessage:
     """Test cases for BaseFileComponent.load_files_message method."""
 
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self, monkeypatch):
+        """These tests exercise file loading mechanics, not containment; opt out of restriction."""
+        settings = SimpleNamespace(restrict_local_file_access=False)
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service", lambda: SimpleNamespace(settings=settings)
+        )
+
     def setup_method(self):
         """Set up test fixtures."""
         self.component = TestFileComponent()
@@ -91,6 +99,23 @@ class TestLoadFilesMessage:
 
         assert isinstance(result, Message)
         assert result.text == "Hello world"
+
+    @pytest.mark.parametrize("unsupported_name", ["private", "private.bin"])
+    def test_silent_errors_never_processes_unsupported_files(self, unsupported_name):
+        """Suppressing errors must not bypass the extension allow-list."""
+        supported = self.temp_path / "allowed.txt"
+        supported.write_text("allowed content", encoding="utf-8")
+        unsupported = self.temp_path / unsupported_name
+        unsupported.write_text("private content", encoding="utf-8")
+
+        self.component.path = [str(supported), str(unsupported)]
+        self.component.silent_errors = True
+        self.component.ignore_unsupported_extensions = False
+        self.component.delete_server_file_after_processing = False
+
+        result = self.component.load_files_base()
+
+        assert [item.data["text"] for item in result] == ["allowed content"]
 
     def test_load_files_message_with_json_dict_content(self):
         """Test load_files_message with JSON file containing dict (simulates get_text() returning dict)."""
@@ -125,6 +150,10 @@ class TestLoadFilesMessage:
         assert "First text" in result.text
         assert "Second text" in result.text
         assert "\n\n" in result.text  # Default separator
+        assert result.data["source_files"] == [
+            {"file_path": str(file1), "text": "First text"},
+            {"file_path": str(file2), "text": "Second text"},
+        ]
 
     def test_load_files_message_with_custom_separator(self):
         """Test load_files_message with custom separator."""
@@ -141,6 +170,20 @@ class TestLoadFilesMessage:
         result = self.component.load_files_message()
 
         assert result.text == "First | Second"
+
+    def test_multiple_data_rows_from_one_file_stay_together(self):
+        self.component.load_files_core = lambda: [
+            Data(data={"file_path": "first.txt", "text": "first part"}),
+            Data(data={"file_path": "second.txt", "text": "second file"}),
+            Data(data={"file_path": "first.txt", "text": "second part"}),
+        ]
+
+        result = self.component.load_files_message()
+
+        assert result.data["source_files"] == [
+            {"file_path": "first.txt", "text": "first part\n\nsecond part"},
+            {"file_path": "second.txt", "text": "second file"},
+        ]
 
     def test_load_files_message_with_json_complex_structure(self):
         """Test load_files_message with complex JSON structure."""
@@ -258,6 +301,14 @@ class TestLoadFilesMessage:
 
 class TestDeleteAfterProcessingRaceCondition:
     """Tests for race condition when delete_server_file_after_processing=True."""
+
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self, monkeypatch):
+        """These tests exercise file loading mechanics, not containment; opt out of restriction."""
+        settings = SimpleNamespace(restrict_local_file_access=False)
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service", lambda: SimpleNamespace(settings=settings)
+        )
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -436,6 +487,19 @@ class TestS3DeleteAfterProcessingSecurity:
         assert result[0].data["text"] == "SAFE_CANARY"
         assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
 
+    def test_silent_errors_skips_unsupported_local_file_with_s3_storage(self, tmp_path):
+        """S3 ignores the local-storage skip flag, so silent errors must still filter."""
+        canary = tmp_path / "private"
+        canary.write_text("SAFE_CANARY", encoding="utf-8")
+
+        component = TestFileComponent()
+        component.file_path = Data(data={"file_path": str(canary)})
+        component.silent_errors = True
+        component.delete_server_file_after_processing = False
+
+        assert component.load_files_base() == []
+        assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
+
     def test_s3_component_temp_file_uses_explicit_local_cleanup(self, monkeypatch, tmp_path):
         temp_file = tmp_path / "component-download.txt"
         temp_file.write_text("SAFE_CANARY", encoding="utf-8")
@@ -549,7 +613,7 @@ class TestStorageKeyNamespaceOwnership:
         settings = SimpleNamespace(
             config_dir=str(config_dir),
             database_url="",
-            # OSS default: local-file containment is OFF. Namespace ownership must hold anyway.
+            # Containment explicitly disabled (legacy opt-out). Namespace ownership must hold anyway.
             restrict_local_file_access=False,
             storage_type="local",
         )

@@ -22,7 +22,6 @@ preserving Langflow's security floor on the Python pgvector client; released
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import uuid
@@ -38,6 +37,7 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
+from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -137,7 +137,7 @@ def _drop_table_sql(table: str) -> str:
 
 
 def _iter_documents_sql(table: str, *, include_embeddings: bool) -> str:
-    columns = "document, cmetadata" + (", embedding" if include_embeddings else "")
+    columns = "id, document, cmetadata" + (", embedding" if include_embeddings else "")
     return f"SELECT {columns} FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
 
 
@@ -306,9 +306,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         if owner_id is None:
             msg = "PostgresBackend requires a valid user_id to isolate its collection."
             raise ValueError(msg)
-        owner = str(owner_id)
-        payload = f"{len(owner)}:{owner}{len(self.kb_name)}:{self.kb_name}"
-        return f"lf_{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
+        return owner_scoped_collection_name(owner_id, self.kb_name)
 
     @property
     def table_name(self) -> str:
@@ -515,6 +513,38 @@ class PostgresBackend(BaseVectorStoreBackend):
         if not vectors:
             return []
 
+        document_ids = (
+            list(ids)
+            if ids is not None
+            else [str(document.id) if document.id is not None else str(uuid.uuid4()) for document in documents]
+        )
+        if len(document_ids) != len(documents):
+            msg = "The number of document ids must match the number of documents."
+            raise ValueError(msg)
+        await self._upsert_rows(
+            document_ids,
+            [document.page_content for document in documents],
+            [document.metadata for document in documents],
+            vectors,
+        )
+        return document_ids
+
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        await self._upsert_rows(
+            ids,
+            [doc.content for doc in docs],
+            [doc.metadata for doc in docs],
+            [doc.embedding for doc in docs],  # type: ignore[misc]  # validated non-empty by the caller
+        )
+
+    async def _upsert_rows(
+        self,
+        ids: list[str],
+        contents: list[str],
+        metadatas: list[dict[str, Any]],
+        vectors: list[list[float]],
+    ) -> None:
+        """Upsert rows keyed by id. Shared by the embedding and precomputed-vector writes."""
         # The embedding dimension is only knowable once we have real vectors, so
         # the typed, indexed table is provisioned lazily on first write. Memoize
         # per (backend instance, dimension): a large ingest batches through one
@@ -529,25 +559,11 @@ class PostgresBackend(BaseVectorStoreBackend):
         embedding = self._embedding_table()
         from sqlalchemy.dialects.postgresql import insert
 
-        document_ids = (
-            list(ids)
-            if ids is not None
-            else [str(document.id) if document.id is not None else str(uuid.uuid4()) for document in documents]
-        )
-        if len(document_ids) != len(documents):
-            msg = "The number of document ids must match the number of documents."
-            raise ValueError(msg)
-
         engine = self._ensure_async_engine()
         async with engine.begin() as conn:
             rows = [
-                {
-                    "id": document_id,
-                    "embedding": vector,
-                    "document": document.page_content,
-                    "cmetadata": document.metadata,
-                }
-                for document_id, document, vector in zip(document_ids, documents, vectors, strict=True)
+                {"id": row_id, "embedding": vector, "document": content, "cmetadata": metadata}
+                for row_id, content, metadata, vector in zip(ids, contents, metadatas, vectors, strict=True)
             ]
             statement = insert(embedding).values(rows)
             statement = statement.on_conflict_do_update(
@@ -559,7 +575,6 @@ class PostgresBackend(BaseVectorStoreBackend):
                 },
             )
             await conn.execute(statement)
-        return document_ids
 
     async def _similarity_search(
         self,
@@ -661,9 +676,10 @@ class PostgresBackend(BaseVectorStoreBackend):
             async for row in result:
                 batch.append(
                     IngestedDocument(
-                        content=row[0] or "",
-                        metadata=dict(row[1] or {}),
-                        embedding=_coerce_embedding(row[2]) if include_embeddings else None,
+                        content=row[1] or "",
+                        metadata=dict(row[2] or {}),
+                        embedding=_coerce_embedding(row[3]) if include_embeddings else None,
+                        id=row[0],
                     )
                 )
                 if len(batch) >= batch_size:

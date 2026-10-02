@@ -1,11 +1,23 @@
 import type { APIClassType, APIDataType } from "@/types/api";
-import { applyFeatureFlagFilters } from "../apply-feature-flag-filters";
+import {
+  applyFeatureFlagFilters,
+  TRIGGERS_CATEGORY,
+} from "../apply-feature-flag-filters";
 
 const component = (
   display_name: string,
   template: Record<string, unknown> = {},
+  metadata: Record<string, unknown> = {},
 ): APIClassType =>
-  ({ display_name, description: "", template }) as unknown as APIClassType;
+  ({
+    display_name,
+    description: "",
+    template,
+    metadata,
+  }) as unknown as APIClassType;
+
+const trigger = (display_name: string, trigger_kind: string): APIClassType =>
+  component(display_name, {}, { trigger_kind });
 
 const connectionField = (required: boolean) => ({
   type: "connection_ref",
@@ -34,6 +46,9 @@ const buildRawData = (): APIDataType => ({
       connection: { ...connectionField(true), provider: "microsoft" },
     }),
   },
+  triggers: {
+    ScheduleTrigger: component("Schedule"),
+  },
 });
 
 describe("applyFeatureFlagFilters", () => {
@@ -43,13 +58,18 @@ describe("applyFeatureFlagFilters", () => {
     const result = applyFeatureFlagFilters(rawData, {
       enableKnowledgeBases: true,
       enableIntegrations: true,
+      enableTriggers: true,
     });
 
     expect(result).toBe(rawData);
   });
 
   describe("with ENABLE_INTEGRATIONS off", () => {
-    const options = { enableKnowledgeBases: true, enableIntegrations: false };
+    const options = {
+      enableKnowledgeBases: true,
+      enableIntegrations: false,
+      enableTriggers: true,
+    };
 
     it("hides components that require a connection, whatever the provider", () => {
       const result = applyFeatureFlagFilters(buildRawData(), options);
@@ -83,6 +103,7 @@ describe("applyFeatureFlagFilters", () => {
       const result = applyFeatureFlagFilters(rawData, {
         enableKnowledgeBases: false,
         enableIntegrations: true,
+        enableTriggers: true,
       });
 
       expect(Object.keys(result.files_and_knowledge)).toEqual(["File"]);
@@ -100,6 +121,7 @@ describe("applyFeatureFlagFilters", () => {
       const result = applyFeatureFlagFilters(rawData, {
         enableKnowledgeBases: false,
         enableIntegrations: false,
+        enableTriggers: true,
       });
 
       expect(Object.keys(result.files_and_knowledge)).toEqual(["File"]);
@@ -111,10 +133,116 @@ describe("applyFeatureFlagFilters", () => {
     it("tolerates data without a files_and_knowledge category", () => {
       const result = applyFeatureFlagFilters(
         { google: {} },
-        { enableKnowledgeBases: false, enableIntegrations: false },
+        {
+          enableKnowledgeBases: false,
+          enableIntegrations: false,
+          enableTriggers: true,
+        },
       );
 
       expect(result).toEqual({ google: {} });
+    });
+  });
+
+  describe("with ENABLE_TRIGGERS off", () => {
+    const options = {
+      enableKnowledgeBases: true,
+      enableIntegrations: true,
+      enableTriggers: false,
+    };
+
+    it("hides the Triggers category, so neither browsing nor search offers Schedule", () => {
+      const result = applyFeatureFlagFilters(buildRawData(), options);
+
+      expect(result).not.toHaveProperty(TRIGGERS_CATEGORY);
+    });
+
+    it("leaves every other category alone and does not mutate the store data", () => {
+      const rawData = buildRawData();
+      const snapshot = JSON.parse(JSON.stringify(rawData));
+
+      const result = applyFeatureFlagFilters(rawData, options);
+
+      expect(Object.keys(result)).toEqual([
+        "files_and_knowledge",
+        "google",
+        "microsoft",
+      ]);
+      expect(result.google).toBe(rawData.google);
+      expect(rawData).toEqual(snapshot);
+    });
+
+    it("returns the store data untouched when there is no Triggers category", () => {
+      const rawData = { google: {} };
+
+      expect(applyFeatureFlagFilters(rawData, options)).toBe(rawData);
+    });
+
+    it("composes with the integrations filter", () => {
+      const result = applyFeatureFlagFilters(buildRawData(), {
+        ...options,
+        enableIntegrations: false,
+      });
+
+      expect(result).not.toHaveProperty(TRIGGERS_CATEGORY);
+      expect(Object.keys(result.google)).toEqual(["GmailLoaderComponent"]);
+    });
+
+    it("hides provider triggers listed in their provider's group, and keeps its actions", () => {
+      const rawData: APIDataType = {
+        ...buildRawData(),
+        slack: {
+          SlackPostAsAppComponent: component("Slack: Post Message (as app)"),
+          SlackOnMessageTriggerComponent: trigger(
+            "Slack: On Message",
+            "slack.message",
+          ),
+          SlackOnReactionTriggerComponent: trigger(
+            "Slack: On Reaction",
+            "slack.reaction",
+          ),
+        },
+      };
+      const snapshot = JSON.parse(JSON.stringify(rawData));
+
+      const result = applyFeatureFlagFilters(rawData, options);
+
+      expect(Object.keys(result.slack)).toEqual(["SlackPostAsAppComponent"]);
+      expect(rawData).toEqual(snapshot);
+    });
+
+    it("drops a group that held nothing but triggers", () => {
+      const rawData: APIDataType = {
+        google: {},
+        slack_triggers_only: {
+          SlackOnMessageTriggerComponent: trigger(
+            "Slack: On Message",
+            "slack.message",
+          ),
+        },
+      };
+
+      const result = applyFeatureFlagFilters(rawData, options);
+
+      expect(result).toEqual({ google: {} });
+    });
+
+    it("keeps provider triggers when triggers are enabled", () => {
+      const rawData: APIDataType = {
+        slack: {
+          SlackOnMessageTriggerComponent: trigger(
+            "Slack: On Message",
+            "slack.message",
+          ),
+        },
+      };
+
+      const result = applyFeatureFlagFilters(rawData, {
+        ...options,
+        enableTriggers: true,
+      });
+
+      expect(result).toBe(rawData);
     });
   });
 });

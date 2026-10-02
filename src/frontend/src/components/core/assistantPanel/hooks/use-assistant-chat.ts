@@ -10,6 +10,7 @@ import {
 } from "@/controllers/API/queries/agentic";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { BASE_URL_API } from "@/customization/config-constants";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
@@ -98,7 +99,7 @@ export function useAssistantChat(
   skipAllRef.current = skipAll;
   // `/history N` memory window; null = backend defaults. Ref for same-tick reads.
   const historyLimitRef = useRef<number | null>(readHistoryLimit());
-  // `/iterations N` step budget; null = backend default (30). Ref for same-tick reads.
+  // `/iterations N` step budget; null = backend default (DEFAULT_ITERATIONS_LIMIT). Ref for same-tick reads.
   const iterationsLimitRef = useRef<number | null>(readIterationsLimit());
   // Auto-approve queue: a ref so handlers see the value in the same tick.
   const autoApprovePlanRef = useRef<string | null>(null);
@@ -629,7 +630,15 @@ export function useAssistantChat(
         return;
       continuedEditMsgIds.current.add(messageId);
 
-      await saveFlow();
+      try {
+        await saveFlow();
+      } catch (error) {
+        // The continuation reads the flow back from the database, so carrying on
+        // after a refused save would have the assistant answer about a version
+        // the canvas no longer holds.
+        if (handleBlockedSave(error)) return;
+        throw error;
+      }
       await handleSend(EDIT_CONTINUATION_INPUT, lastModelRef.current, {
         silent: true,
         internal: true,

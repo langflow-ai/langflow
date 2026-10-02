@@ -14,6 +14,7 @@ import importlib.util
 import json
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -49,6 +50,14 @@ class FakeEmbeddings(Embeddings):
 @requires_ibm_db
 class TestDB2VectorStoreComponent:
     """Test DB2 Vector Store Component."""
+
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self, monkeypatch):
+        """These tests exercise connection mechanics against temp certs, not containment; opt out of restriction."""
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+        )
 
     @pytest.fixture
     def component(self):
