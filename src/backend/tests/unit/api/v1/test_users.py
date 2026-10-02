@@ -309,7 +309,7 @@ async def test_read_all_users_exact_role_name_filter(client: AsyncClient, logged
         assert response.json()["total_count"] == 1
         assert [row["id"] for row in response.json()["users"]] == [users[0]["id"]]
         assert missing_response.status_code == status.HTTP_200_OK
-        assert missing_response.json() == {"total_count": 0, "users": []}
+        assert missing_response.json() == {"total_count": 0, "users": [], "deletion_requests": {}}
     finally:
         for assignment in assignments:
             await client.delete(

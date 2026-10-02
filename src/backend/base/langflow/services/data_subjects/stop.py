@@ -24,6 +24,7 @@ from langflow.services.database.models.jobs.model import ExecutionSignal, Job, J
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.user.model import User
 from langflow.services.triggers.cleanup import delete_triggers
+from langflow.services.triggers.source_cleanup import preserve_user_cleanup_credentials
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -112,6 +113,8 @@ async def stop_builder(session: AsyncSession, user: User) -> dict[str, int]:
     session.add(user)
     trigger_ids = list((await session.exec(select(Trigger.id).where(Trigger.user_id == user.id))).all())
     await delete_triggers(session, trigger_ids=trigger_ids)
+    # Remote subscriptions are torn down after the account goes; seal their tokens while connections exist.
+    await preserve_user_cleanup_credentials(session, user_id=user.id)
     keys = await session.exec(delete(ApiKey).where(ApiKey.user_id == user.id))
     public_flows = await session.exec(
         update(Flow)

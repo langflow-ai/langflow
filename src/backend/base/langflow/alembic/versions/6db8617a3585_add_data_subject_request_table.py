@@ -1,7 +1,7 @@
 """Add the data_subject_request table for GDPR access and erasure requests.
 
 Revision ID: 6db8617a3585
-Revises: 4e7a2b9c1d05
+Revises: b8e1f3a5c709
 Create Date: 2026-09-30
 
 Phase: EXPAND
@@ -17,7 +17,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 JsonVariant = sa.JSON().with_variant(JSONB(), "postgresql")
 
 revision = "6db8617a3585"  # pragma: allowlist secret
-down_revision = "4e7a2b9c1d05"  # pragma: allowlist secret
+down_revision = "b8e1f3a5c709"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 

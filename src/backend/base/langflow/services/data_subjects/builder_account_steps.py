@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from sqlalchemy import delete
 from sqlmodel import and_, col, or_, select
 
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
@@ -31,6 +32,7 @@ from langflow.services.database.models.jobs.model import Job
 from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.policy_bundle.model import PolicyBundleRevision
+from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.variable.model import Variable
 
 if TYPE_CHECKING:
@@ -124,6 +126,16 @@ async def erase_connections(session: AsyncSession, ctx: EraseContext) -> int:
     return await delete_batch(session, Connection, Connection.owner_id == uid)
 
 
+async def erase_project_receipts(session: AsyncSession, ctx: EraseContext) -> int:
+    """Replacement receipts can hold project content; they are capped per project, so one statement suffices."""
+    result = await session.exec(
+        delete(ProjectReplacementOperation).where(
+            col(ProjectReplacementOperation.project_user_id) == ctx.subject_user_id
+        )
+    )
+    return result.rowcount or 0
+
+
 async def erase_folders(session: AsyncSession, ctx: EraseContext) -> int:
     """Leaf folders first, so a parent is never deleted while a child still points at it."""
     uid = ctx.subject_user_id
@@ -166,5 +178,6 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("sso_config_editor", _clear_reference(SSOConfig, SSOConfig.updated_by)),
     ("audit_redaction", redact_audit_rows),
     ("audit_subject", _clear_reference(AuthzAuditLog, AuthzAuditLog.user_id)),
+    ("project_receipts", erase_project_receipts),
     ("folders", erase_folders),
 )
