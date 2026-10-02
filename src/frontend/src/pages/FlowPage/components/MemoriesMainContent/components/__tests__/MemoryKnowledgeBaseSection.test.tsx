@@ -1,4 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { StorageUpgradeStatus } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
+import { useGetStorageStatus } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
+import { usePostStorageRetry } from "@/controllers/API/queries/knowledge-base-storage/use-post-storage-retry";
 import type { MemoryDocumentItem } from "@/controllers/API/queries/memories/types";
 import type { MemoryKnowledgeBaseSectionProps } from "../../types";
 import { MemoryKnowledgeBaseSection } from "../MemoryKnowledgeBaseSection";
@@ -31,7 +34,62 @@ jest.mock("@/components/ui/tooltip", () => ({
   ),
 }));
 
+jest.mock(
+  "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status",
+  () => ({ useGetStorageStatus: jest.fn() }),
+);
+jest.mock(
+  "@/controllers/API/queries/knowledge-base-storage/use-post-storage-retry",
+  () => ({ usePostStorageRetry: jest.fn() }),
+);
+
+let status: StorageUpgradeStatus;
+beforeEach(() => {
+  status = {
+    is_admin: false,
+    running: false,
+    revision: "first",
+    stores: [],
+    inventory: { complete: true, issues: 0 },
+  };
+  jest
+    .mocked(useGetStorageStatus)
+    .mockImplementation(
+      () => ({ data: status }) as ReturnType<typeof useGetStorageStatus>,
+    );
+  jest.mocked(usePostStorageRetry).mockReturnValue({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    reset: jest.fn(),
+    data: undefined,
+    error: null,
+    isPending: false,
+    isError: false,
+    isIdle: true,
+    isSuccess: false,
+    isPaused: false,
+    status: "idle",
+    variables: undefined,
+    submittedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    context: undefined,
+  });
+});
+
 describe("MemoryKnowledgeBaseSection", () => {
+  it("keeps existing message history visible beside the upgrade banner", () => {
+    render(
+      <MemoryKnowledgeBaseSection
+        {...makeBaseProps()}
+        storageState="migrating"
+      />,
+    );
+    expect(screen.getByText("hello")).toBeInTheDocument();
+    expect(
+      screen.getByText(/upgrading this base automatically/i),
+    ).toBeInTheDocument();
+  });
   const makeBaseProps = () => {
     const documents: MemoryDocumentItem[] = [
       {
@@ -61,6 +119,82 @@ describe("MemoryKnowledgeBaseSection", () => {
 
     return base;
   };
+
+  it.each(["migrating", "needs_attention"] as const)(
+    "shows a single guidance message for a %s Memory Base",
+    (storageState) => {
+      status.stores = [
+        {
+          kb_id: "memory-kb",
+          name: "My memory",
+          storage_state: storageState,
+          phase:
+            storageState === "migrating" ? "snapshotting" : "needs_attention",
+          migration_id: "migration",
+          can_retry: false,
+          error_code: "single_host_required",
+        },
+      ];
+      render(
+        <MemoryKnowledgeBaseSection
+          {...makeBaseProps()}
+          storageState={storageState}
+          storageKbId="memory-kb"
+        />,
+      );
+      const guidance =
+        storageState === "migrating"
+          ? /become available when the upgrade finishes/
+          : /Contact your administrator/;
+      expect(screen.getAllByText(guidance)).toHaveLength(1);
+      expect(screen.getByText("hello")).toBeInTheDocument();
+    },
+  );
+
+  it("shows administrator recovery guidance without telling the administrator to contact themselves", () => {
+    status.is_admin = true;
+    status.stores = [
+      {
+        kb_id: "memory-kb",
+        name: "My memory",
+        storage_state: "needs_attention",
+        phase: "needs_attention",
+        migration_id: "migration",
+        can_retry: true,
+        error_code: "legacy_workers_running",
+      },
+    ];
+    render(
+      <MemoryKnowledgeBaseSection
+        {...makeBaseProps()}
+        storageState="needs_attention"
+        storageKbId="memory-kb"
+      />,
+    );
+    expect(
+      screen.getByText(/Stop the other Langflow instance/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /retry upgrade/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Contact your administrator/),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([undefined, "missing-from-status"])(
+    "keeps fallback guidance when the detailed inventory has no entry for %s",
+    (storageKbId) => {
+      render(
+        <MemoryKnowledgeBaseSection
+          {...makeBaseProps()}
+          storageState="needs_attention"
+          storageKbId={storageKbId}
+        />,
+      );
+      expect(screen.getAllByText(/Contact your administrator/)).toHaveLength(1);
+    },
+  );
 
   it("shows loading state", () => {
     const props = makeBaseProps();

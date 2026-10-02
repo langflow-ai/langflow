@@ -18,6 +18,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@pytest.fixture(autouse=True)
+def local_store_root(active_user, tmp_path, monkeypatch):  # noqa: ARG001 - initialize the app first
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path / "knowledge"))
+
+
 class TestCreateAndRead:
     async def test_create_and_get_by_user_and_name(self, active_user):
         record = await knowledge_base_service.create_record(
@@ -471,3 +478,31 @@ class TestUniqueConstraint:
                 name="phase_15_kb_dup",
                 model_selection={"name": "m", "provider": "OpenAI"},
             )
+
+
+@pytest.mark.parametrize("binding_state", ["retired", "invalid_json", "changed_source"])
+async def test_explicit_recovery_root_does_not_re_adopt_bound_sources(active_user, tmp_path, binding_state):
+    from langflow.services.knowledge_base_storage import coordinator, maintenance
+
+    recovery_root = tmp_path / "explicit_recovery"
+    source = recovery_root / active_user.username / "retired_source"
+    source.mkdir(parents=True)
+    (source / "embedding_metadata.json").write_text(
+        json.dumps({"embedding_provider": "OpenAI", "embedding_model": "m"})
+    )
+    relative = source.relative_to(recovery_root).as_posix()
+    binding = coordinator._binding_path(relative, root=recovery_root)
+    binding.parent.mkdir(parents=True)
+    binding.write_text(json.dumps({"source": relative, "fingerprint": maintenance.tree_fingerprint(source)}))
+    if binding_state == "invalid_json":
+        binding.write_text("incomplete")
+    elif binding_state == "changed_source":
+        (source / "unexpected_native_write").write_text("must require explicit recovery")
+    for dry_run in (True, False):
+        assert (
+            await knowledge_base_service.backfill_from_disk(
+                user_id=active_user.id, kb_user_root=source.parent, dry_run=dry_run
+            )
+            == 0
+        )
+    assert await knowledge_base_service.get_by_user_and_name(active_user.id, source.name) is None

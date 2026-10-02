@@ -12,6 +12,10 @@ from starlette.datastructures import Headers
 def enable_rate_limiting(monkeypatch):
     """Enable rate limiting for tests that need to verify rate limit behavior."""
     monkeypatch.setenv("LANGFLOW_RATE_LIMIT_ENABLED", "true")
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(get_settings_service().settings, "rate_limit_per_minute", 5)
 
 
 @pytest.fixture
