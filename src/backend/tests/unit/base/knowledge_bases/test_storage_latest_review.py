@@ -1,11 +1,13 @@
 """First-start portability and restart regressions from the latest review."""
 
 import json
+import logging
 import os
 from types import SimpleNamespace
 
 import psutil
 import pytest
+import structlog
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.knowledge_base_storage import automatic, coordinator, maintenance
@@ -93,6 +95,8 @@ async def test_failure_diagnostic_retains_phase_and_class_without_sensitive_payl
     database, monkeypatch, exception_class
 ):
     """Operator diagnostics explain where to investigate without storing exception text."""
+    warning_logger = structlog.make_filtering_bound_logger(logging.WARNING)(structlog.ReturnLogger(), [], {})
+    monkeypatch.setattr(coordinator, "logger", warning_logger)
     storage_tests.native_source(database)
     row = KnowledgeBaseRecord(user_id=database.user.id, name="fixture-l2", backend_type="chroma")
     async with database.sessions() as session:

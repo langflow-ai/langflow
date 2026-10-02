@@ -194,6 +194,7 @@ If this plane does not serve MCP, set `LANGFLOW_MCP_SERVER_ENABLED=false`. Other
 ### Knowledge and Memory storage
 
 Langflow 1.13 uses local SQLite storage by default. Local storage is intended for a single host with one worker.
+With `LANGFLOW_DEPLOYMENT_PROFILE=prod`, Langflow refuses to create knowledge bases and memory bases on local SQLite.
 For deployments with multiple workers or replicas, configure a shared pgVector or OpenSearch store.
 Chroma local storage and Chroma Cloud are retired. For existing stores, see [Upgrade Knowledge and Memory storage](../Develop/knowledge-storage-upgrade.mdx).
 

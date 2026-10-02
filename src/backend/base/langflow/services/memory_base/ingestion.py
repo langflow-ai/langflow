@@ -436,7 +436,9 @@ async def session_storage_operation(*, user_id: uuid.UUID, session_ids: list[str
         # Stable ordering avoids deadlocks when concurrent requests overlap.
         for record_id in sorted(records, key=str):
             await stack.enter_async_context(
-                operation(records[record_id], allowed_states=("ready", "needs_attention", "detached"))
+                operation(
+                    records[record_id], allowed_states=("ready", "needs_attention", "detached", "deleting", "deleted")
+                )
             )
         yield [(mb, mbs) for mb, mbs in pairs if mbs is not None]
 
@@ -449,8 +451,9 @@ async def purge_session_data(
 ) -> int:
     """Delete session vectors and history while holding all affected KB fences.
 
-    A fenced or unavailable store leaves tracking/history intact for retry.
-    The caller must propagate failure instead of reporting a successful purge.
+    Ready stores purge vectors first. Unavailable or retired stores queue durable
+    vector purges so relational history can be removed. Active migrations remain
+    fenced, and failures deleting ready vectors must propagate to the caller.
     """
     from sqlalchemy import delete as sa_delete
 

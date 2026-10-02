@@ -751,7 +751,7 @@ class KBIngestionHelper:
                 await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
             except Exception as exc:  # noqa: BLE001 -- cached metrics must not roll back a successful write
                 metrics = {}
-                await logger.awarning("KB metrics refresh lagged for {}: {}", kb_name, type(exc).__name__)
+                await logger.awarning("KB metrics refresh lagged for %s: %s", kb_name, type(exc).__name__)
 
             size_bytes = None
             try:
@@ -761,7 +761,7 @@ class KBIngestionHelper:
                     else await backend.storage_size_bytes()
                 )
             except Exception as exc:  # noqa: BLE001 -- size refresh must not discard successful metrics
-                await logger.awarning("KB size refresh lagged for {}: {}", kb_name, type(exc).__name__)
+                await logger.awarning("KB size refresh lagged for %s: %s", kb_name, type(exc).__name__)
 
             existing_source_types = list(kb_record.source_types or []) if kb_record is not None else []
             merged_source_types = sorted(set(existing_source_types) | source_extension_tags)
@@ -780,7 +780,7 @@ class KBIngestionHelper:
                         separator=separator or None,
                     )
                 except Exception as exc:  # noqa: BLE001
-                    await logger.awarning("KB DB stat update lagged for {}: {}", kb_name, type(exc).__name__)
+                    await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, type(exc).__name__)
                 # Clear any previous failure marker once the run finishes
                 # writing chunks; ``final_status`` (PARTIAL/SUCCEEDED) is
                 # not "failed", so the KB row should reflect READY.

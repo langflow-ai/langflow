@@ -18,7 +18,7 @@
   "storageUpgrade.validationFailed": "La copia no superó la validación. Tus datos originales se conservan. Revisa los registros de actualización antes de volver a intentarlo.",
   "storageUpgrade.interrupted": "La actualización se interrumpió. Vuelve a intentarlo para continuar de forma segura.",
   "storageUpgrade.checkStorage": "Revisa el acceso al almacenamiento, el espacio libre y los registros de actualización. Luego vuelve a intentarlo. Tus datos originales se conservan.",
-  "storageUpgrade.readerLimit": "Este almacén supera los límites del lector automático. Conserve la fuente y use el controlador administrado con un auxiliar firmado verificado, o exporte desde un entorno aislado de la versión anterior.",
+  "storageUpgrade.readerLimit": "Este almacén supera los límites del lector automático. Conserva la fuente y usa el controlador administrado con un auxiliar firmado verificado, o exporta desde un entorno aislado de la versión anterior.",
   "storageUpgrade.retry": "Reintentar actualización",
   "storageUpgrade.retryFailed": "No se pudo programar la actualización. Actualiza la página y vuelve a intentarlo.",
   "storageUpgrade.viewProgress": "Ver progreso de la actualización",

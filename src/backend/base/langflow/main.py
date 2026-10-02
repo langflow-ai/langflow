@@ -793,13 +793,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             try:
                 await stop_upgrade()
             except Exception as exc:  # noqa: BLE001 -- storage shutdown must not skip other cleanup
-                await logger.awarning("Failed to stop storage upgrade: {}", type(exc).__name__)
+                await logger.awarning("Failed to stop storage upgrade: %s", type(exc).__name__)
             from langflow.services.knowledge_base_storage.runtime import close_coordination_pools
 
             try:
                 await close_coordination_pools()
             except Exception as exc:  # noqa: BLE001 -- failed disposal must not skip service and sandbox cleanup
-                await logger.awarning("Failed to close storage coordination pools: {}", type(exc).__name__)
+                await logger.awarning("Failed to close storage coordination pools: %s", type(exc).__name__)
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give

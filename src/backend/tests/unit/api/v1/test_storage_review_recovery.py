@@ -87,14 +87,17 @@ async def test_session_delete_without_messages_still_purges_memory(
         assert await db.get(MemoryBaseSession, tracking.id) is None
 
 
-@pytest.mark.parametrize("state", ["needs_attention", "detached"])
+@pytest.mark.parametrize("state", ["needs_attention", "detached", "deleting", "deleted"])
+@pytest.mark.parametrize("bulk", [False, True])
 async def test_fenced_memory_does_not_prevent_session_history_deletion(
     client,
     logged_in_headers,
     active_user,
     monkeypatch,
     state,
+    bulk,
 ):
+    """Single and bulk history deletion must not wait for unavailable vector stores."""
     record = await knowledge_base_service.create_record(
         user_id=active_user.id, name=f"mem_{uuid4().hex}", backend_type="sqlite"
     )
@@ -113,8 +116,15 @@ async def test_fenced_memory_does_not_prevent_session_history_deletion(
         await db.commit()
     deleted_chunks = AsyncMock()
     monkeypatch.setattr(ingestion, "_delete_chunks_for_session", deleted_chunks)
-    response = await client.delete(f"/api/v1/monitor/messages/session/{tracking.session_id}", headers=logged_in_headers)
-    assert response.status_code == 204, response.text
+    if bulk:
+        response = await client.request(
+            "DELETE", "/api/v1/monitor/messages/sessions", json=[tracking.session_id], headers=logged_in_headers
+        )
+    else:
+        response = await client.delete(
+            f"/api/v1/monitor/messages/session/{tracking.session_id}", headers=logged_in_headers
+        )
+    assert response.status_code == (200 if bulk else 204), response.text
     deleted_chunks.assert_not_awaited()
     async with session_scope() as db:
         pending = await db.get(MemoryBaseSession, tracking.id)

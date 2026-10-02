@@ -11,12 +11,14 @@ with the collaborator who started the run.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import structlog
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.kb_helpers import KBIngestionHelper
 from lfx.base.knowledge_bases.backends.base import METADATA_KEY_JOB_ID
@@ -396,3 +398,32 @@ async def test_ingestion_persists_independent_measurements(
     assert knowledge_base_service.record_to_metadata_dict(updated)["status"] == "ready"
     assert updated.size_bytes == (1234 if failure == "metrics" else 777)
     assert updated.source_types == ["txt"]
+
+
+@pytest.mark.usefixtures("cross_user_grant", "owners_kb")
+@pytest.mark.parametrize("failure", ["metrics", "size", "database"])
+async def test_warning_logging_does_not_rollback_successful_ingestion(
+    client, logged_in_headers, task_service, monkeypatch, failure
+):
+    """Real warning formatting must preserve chunks after an aggregate refresh failure."""
+    from langflow.api.utils import kb_helpers
+
+    warning_logger = structlog.make_filtering_bound_logger(logging.WARNING)(structlog.ReturnLogger(), [], {})
+    monkeypatch.setattr(kb_helpers, "logger", warning_logger)
+    response = await client.post(
+        f"api/v1/knowledge_bases/{KB_NAME}/ingest",
+        headers=logged_in_headers,
+        files={"files": ("notes.txt", b"shared knowledge base content", "text/plain")},
+        data={"source_name": "notes", "chunk_size": "100", "chunk_overlap": "0"},
+    )
+    assert response.status_code == 200, response.text
+    with patch(
+        "langflow.api.utils.knowledge_base_service.update_stats",
+        new=AsyncMock(side_effect=OSError("stats unavailable") if failure == "database" else None),
+    ):
+        result = await _run_dispatched_ingestion(
+            task_service,
+            metrics_error=RuntimeError("metrics unavailable") if failure == "metrics" else None,
+            size_error=OSError("size unavailable") if failure == "size" else None,
+        )
+    result.cleanup.assert_not_awaited()

@@ -72,7 +72,7 @@ def resolve_shipped_storage_component(code: str):
         return None
     try:
         identity = _known_sources().get(source_fingerprint(code))
-    except (SyntaxError, ValueError, RecursionError):
+    except (SyntaxError, ValueError, RecursionError, OSError, KeyError, TypeError):
         return None
     if identity is None:
         return None

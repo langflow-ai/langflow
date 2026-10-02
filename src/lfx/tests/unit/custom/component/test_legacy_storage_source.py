@@ -5,6 +5,7 @@ import importlib.abc
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from lfx.custom.eval import eval_custom_component_code
@@ -68,3 +69,35 @@ def test_saved_source_dependency_export_does_not_reinstall_retired_sdks(name):
     from lfx.utils.flow_requirements import _extract_imports
 
     assert not _extract_imports(SOURCES[name]) & {"chromadb", "langchain_chroma", "altk"}
+
+
+@pytest.mark.parametrize(
+    "inventory", [FileNotFoundError, PermissionError, '{"entries":[{}]}', '{"entries":[null]}', "[]"]
+)
+def test_unavailable_inventory_preserves_custom_component_evaluation(monkeypatch, inventory):
+    """An unreadable or malformed shipped inventory must preserve normal custom evaluation."""
+    from lfx.custom import legacy_storage_compat
+
+    def read_text(**_kwargs):
+        """Return malformed package data or simulate an unavailable inventory file."""
+        if isinstance(inventory, type):
+            msg = "inventory unavailable"
+            raise inventory(msg)
+        return inventory
+
+    monkeypatch.setattr(
+        legacy_storage_compat,
+        "files",
+        lambda _package: SimpleNamespace(joinpath=lambda *_parts: SimpleNamespace(read_text=read_text)),
+    )
+    legacy_storage_compat._known_sources.cache_clear()
+    source = (
+        "from lfx.custom import Component\n"
+        "class KnowledgeComponent(Component):\n"
+        "    display_name = 'Custom knowledge'\n"
+    )
+    try:
+        assert resolve_shipped_storage_component(source) is None
+        assert eval_custom_component_code(source).__name__ == "KnowledgeComponent"
+    finally:
+        legacy_storage_compat._known_sources.cache_clear()

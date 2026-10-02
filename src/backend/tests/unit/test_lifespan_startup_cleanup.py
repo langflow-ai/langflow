@@ -14,10 +14,12 @@ asserts the cleanup path no longer raises.
 Issue: https://github.com/langflow-ai/langflow/issues/13634
 """
 
+import logging
 from unittest.mock import AsyncMock, MagicMock
 
 import langflow.main as main_module
 import pytest
+import structlog
 
 
 async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkeypatch):
@@ -92,6 +94,8 @@ async def test_storage_shutdown_failure_does_not_skip_later_cleanup(monkeypatch,
     """Drive the real lifespan's finally block with a failing storage shutdown step."""
     from langflow.services.knowledge_base_storage import coordinator, runtime
 
+    warning_logger = structlog.make_filtering_bound_logger(logging.WARNING)(structlog.ReturnLogger(), [], {})
+    monkeypatch.setattr(main_module, "logger", warning_logger)
     sentinel = RuntimeError("startup failed before bundle loading")
     monkeypatch.setattr(main_module, "initialize_services", AsyncMock(side_effect=sentinel))
     monkeypatch.setattr(main_module, "log_exception_to_telemetry", AsyncMock())

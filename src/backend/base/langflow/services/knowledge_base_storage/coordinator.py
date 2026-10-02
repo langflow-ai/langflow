@@ -459,7 +459,7 @@ async def migrate_one(kb_id: UUID) -> None:
             )
             phase = await _attention(row.id, run.id, code, exception_type=type(exc).__name__)
             await logger.awarning(
-                "Knowledge base storage upgrade {} requires attention: code={} phase={} exception={}",
+                "Knowledge base storage upgrade %s requires attention: code=%s phase=%s exception=%s",
                 row.id,
                 code,
                 phase,
