@@ -78,6 +78,9 @@
     "image-size": "^2.0.3",
     "joi": "^17.13.7",
     "baseline-browser-mapping": "^2.11.0",
-    "@babel/plugin-transform-modules-systemjs": "^7.29.4"
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+    "express": {
+      "path-to-regexp": "^0.1.13"
+    }
   }
 }
