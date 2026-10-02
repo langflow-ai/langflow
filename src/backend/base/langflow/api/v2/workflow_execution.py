@@ -345,8 +345,8 @@ async def _stream_event_frames(
             # consumer task that resumes it.
             #
             # The queued-run link rides alongside for the same reason and in the same place. It
-            # is None for a run with a live request above it, and the context manager is a no-op
-            # then, so this costs a synchronous path nothing.
+            # is absent for a nonqueued run; only an actual job binds queued intent.
+            # A queued job with no valid carrier binds explicit absence instead.
             with (
                 scoped_model_provider_policy_for_flow(
                     provider_policy_flow,
@@ -354,7 +354,11 @@ async def _stream_event_frames(
                     is_superuser=bool(getattr(current_user, "is_superuser", False)),
                 ),
                 execution_protocol(protocol),
-                queued_trace_link(await _queued_trace_link_for(job_id)),
+                (
+                    queued_trace_link(await _queued_trace_link_for(job_id))
+                    if job_id is not None
+                    else contextlib.nullcontext()
+                ),
             ):
                 await asyncio.wait_for(
                     generate_flow_events(
