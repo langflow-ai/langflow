@@ -101,6 +101,19 @@
     "browserify-sign": {
       "bn.js": "^5.2.3"
     },
+    "@redocly/openapi-core": {
+      "minimatch": "^5.1.8"
+    },
+    "rimraf": {
+      "glob": {
+        "minimatch": "^8.0.6"
+      }
+    },
+    "sucrase": {
+      "glob": {
+        "minimatch": "^9.0.7"
+      }
+    },
     "styled-components": {
       "postcss": "8.4.49"
     },
