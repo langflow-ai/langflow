@@ -8,7 +8,9 @@ it found it.
 
 from __future__ import annotations
 
+import hashlib
 import re
+import sqlite3
 import uuid
 from typing import TYPE_CHECKING
 
@@ -75,6 +77,15 @@ async def _seed_chroma(kb_root: Path, username: str, user_id, name: str, vectors
         )
     await backend.teardown()
     await _add(KnowledgeBaseRecord(name=name, user_id=user_id, backend_type="chroma", chunks=recorded))
+
+
+def _contents(directory: Path) -> dict[str, str]:
+    """A digest of every file under a directory: anything written there changes it."""
+    return {
+        str(path.relative_to(directory)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(directory.rglob("*"))
+        if path.is_file()
+    }
 
 
 class TestCleanInstance:
@@ -421,6 +432,56 @@ class TestReadOnly:
         client = chromadb.PersistentClient(path=str(kb_path))
         assert sorted(c.name for c in client.list_collections()) == ["something-else"]
         assert "store holds 0, row records 3" in " ".join(_check(report, "vector counts").problems)
+
+    @pytest.mark.parametrize("older_schema", [True, False], ids=["older-schema", "current-schema"])
+    async def test_an_existing_store_is_left_byte_for_byte_as_it_was(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,
+        older_schema,
+    ):
+        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-kept", 3, recorded=3)
+        kb_path = kb_root / active_user.username / "kb-kept"
+        if older_schema:
+            # As the Chroma release before the metadata-array migration left a store. A client
+            # that opens it applies the migration, and one that opens any store records a lock row.
+            store = sqlite3.connect(kb_path / "chroma.sqlite3")
+            store.executescript(
+                "DELETE FROM migrations WHERE dir = 'metadb' AND version = 6; DROP TABLE embedding_metadata_array;"
+            )
+            store.close()
+        before = _contents(kb_path)
+
+        backend = create_backend("chroma", kb_name="kb-kept", kb_path=kb_path, user_id=active_user.id)
+        count = await backend.read_only_count()
+        await backend.teardown()
+
+        assert count == 3
+        assert _contents(kb_path) == before
+
+        report = await check_instance()
+
+        assert _check(report, "vector counts").status == "ok"
+        assert _contents(kb_path) == before
+
+    async def test_a_store_that_cannot_be_read_is_reported_and_not_counted_as_empty(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,
+    ):
+        await _seed_chroma(kb_root, active_user.username, active_user.id, "kb-unreadable", 3, recorded=3)
+        store = sqlite3.connect(kb_root / active_user.username / "kb-unreadable" / "chroma.sqlite3")
+        store.executescript("DROP TABLE embeddings")
+        store.close()
+
+        report = await check_instance()
+
+        problems = " ".join(_check(report, "knowledge bases").problems)
+        assert "kb-unreadable" in problems
+        assert "no such table: embeddings" in problems
+        assert _check(report, "vector counts").status == "ok"
 
     async def test_a_database_on_another_schema_is_reported_and_not_read(self, active_user, storage_dir, kb_root):  # noqa: ARG002
         async with session_scope() as session:

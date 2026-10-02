@@ -29,6 +29,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import gc
+import sqlite3
 import uuid
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -85,6 +86,20 @@ def _upsert_embedded(collection: Any, ids: list[str], docs: list[IngestedDocumen
         # Chroma rejects an empty metadata dict, but accepts None for "no metadata".
         metadatas=[doc.metadata or None for doc in docs],
     )
+
+
+# The chunks a collection holds, counted as Chroma counts them: the rows of its metadata
+# segment in ``embeddings``. Every table and column named here comes from Chroma's first
+# SQLite migrations, so a store written by any release since 0.4.0 can be read. Tenants
+# and databases came later, so the collection is matched by name alone: a knowledge
+# base's directory only ever holds the default ones.
+_RECORD_COUNT_SQL = """
+SELECT COUNT(DISTINCT collections.id), COUNT(embeddings.id)
+FROM collections
+LEFT JOIN segments ON segments.collection = collections.id AND segments.scope = 'METADATA'
+LEFT JOIN embeddings ON embeddings.segment_id = segments.id
+WHERE collections.name = ?
+"""
 
 
 class ChromaLocalBackend(BaseVectorStoreBackend):
@@ -170,15 +185,21 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
             return 0
 
     async def read_only_count(self) -> int | None:
-        # Opening a client on an empty directory creates chroma.sqlite3, and the vector
-        # store path creates a missing collection, so check for both before reading.
-        if not (self.kb_path / "chroma.sqlite3").exists():
+        # A chromadb client writes to the store it opens: it applies pending schema
+        # migrations, records a lock row and can rewrite the vector segment, and on an
+        # empty directory it creates the store. So this reads the store's SQLite file.
+        return await asyncio.to_thread(self._count_in_sqlite)
+
+    def _count_in_sqlite(self) -> int | None:
+        database = self.kb_path / "chroma.sqlite3"
+        if not database.exists():
             return None
-        self._client = self._get_fresh_client()
-        try:
-            return self._client.get_collection(self.kb_name).count()
-        except chromadb.errors.NotFoundError:
-            return None
+        # mode=ro and not immutable=1: a running Langflow may be writing to this store, and
+        # immutable skips the locking that keeps this read consistent with that writer.
+        uri = f"{database.resolve().as_uri()}?mode=ro"
+        with contextlib.closing(sqlite3.connect(uri, uri=True)) as connection:
+            collections, count = connection.execute(_RECORD_COUNT_SQL, (self.kb_name,)).fetchone()
+        return count if collections else None
 
     async def iter_documents(
         self,
