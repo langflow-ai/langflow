@@ -32,6 +32,7 @@ EXPECTED_RECORDS = 717
 
 
 def sha256(payload: bytes) -> str:
+    """Hash release evidence bytes for immutable artifact binding."""
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -59,6 +60,7 @@ def copy_verified_archive(source: Path, destination: Path, expected: str) -> Non
 
 
 def changed_signature(payload: bytes) -> bytes:
+    """Mutate a signature for the offline verifier's rejection test."""
     bundle = json.loads(payload)
     signature = bytearray(base64.b64decode(bundle["messageSignature"]["signature"], validate=True))
     if not signature:
@@ -70,12 +72,14 @@ def changed_signature(payload: bytes) -> bytes:
 
 
 def require_network_isolation() -> None:
+    """Reject qualification when the signed kit can reach an external network."""
     if platform.system() != "Linux" or any(name != "lo" for _, name in socket.if_nameindex()):
         msg = "Signed offline qualification must run in an isolated Linux network namespace"
         raise ValueError(msg)
 
 
 async def qualify_kit(*, image: str, manifest: Path, bundle: Path, trusted_root: Path, archive: Path) -> dict:
+    """Validate signed offline artifacts and exercise rejection before source access."""
     require_network_isolation()
     docker, cosign = shutil.which("docker"), shutil.which("cosign")
     if not docker or not cosign:
@@ -232,6 +236,7 @@ def build_attestation(manifest_bytes: bytes, results: list[dict]) -> dict:
 
 
 def main() -> None:
+    """Run signed-kit qualification and emit the evidence bound to its release manifest."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     run = commands.add_parser("qualify")

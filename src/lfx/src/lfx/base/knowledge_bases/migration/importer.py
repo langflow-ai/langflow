@@ -58,6 +58,7 @@ class MigrationReceipt:
 
 
 def _manifest(source: QualifiedExport, migration_id: UUID, target: dict[str, Any]) -> dict[str, Any]:
+    """Build target migration evidence from the fully qualified source export."""
     return {
         "protocol_version": PROTOCOL_VERSION,
         "migration_id": str(migration_id),
@@ -75,6 +76,7 @@ def _manifest(source: QualifiedExport, migration_id: UUID, target: dict[str, Any
 
 
 def _validate_target(source: QualifiedExport, target: dict[str, Any], *, final: bool) -> None:
+    """Verify that the target identity and embedding schema match the qualified source."""
     if target.get("lifecycle") != "active":
         msg = "Migration target generation is not active"
         raise MigrationProtocolError(msg)

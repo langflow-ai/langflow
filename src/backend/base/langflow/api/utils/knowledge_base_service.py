@@ -422,6 +422,7 @@ async def update_status(
     status: KnowledgeBaseStatus,
     failure_reason: str | None = None,
 ) -> None:
+    """Persist the KB ingestion status and refresh its activity timestamp."""
     from langflow.services.knowledge_base_storage.runtime import operation
 
     if await get_by_id(record_id) is None:
@@ -441,6 +442,7 @@ async def update_column_config(
     record_id: UUID,
     column_config: list[dict[str, Any]],
 ) -> None:
+    """Persist the KB's source metadata column configuration."""
     from langflow.services.knowledge_base_storage.runtime import operation
 
     if await get_by_id(record_id) is None:

@@ -44,6 +44,7 @@ def source_fingerprint(code: str) -> str:
 
 @lru_cache(maxsize=1)
 def _known_sources() -> dict[str, tuple[str, str]]:
+    """Cache recognized shipped sources for safe resolution to current retired-component classes."""
     path = files("lfx").joinpath("_assets", "legacy_storage_sources.json")
     data = json.loads(path.read_text(encoding="utf-8"))
     return {entry["sha256"]: (entry["module"], entry["class_name"]) for entry in data["entries"]}

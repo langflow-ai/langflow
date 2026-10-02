@@ -27,17 +27,21 @@ from lfx.base.knowledge_bases.backends import IngestedDocument, SQLiteBackend, S
 
 class FixedQuery(Embeddings):
     def __init__(self, vector: list[float]) -> None:
+        """Store the fixed query vector used to compare benchmark runs."""
         self.vector = vector
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:  # noqa: ARG002
+        """Reject document embedding so the benchmark measures stored vectors alone."""
         msg = "The benchmark must import vectors without embedding documents"
         raise AssertionError(msg)
 
     def embed_query(self, text: str) -> list[float]:  # noqa: ARG002
+        """Return the same query vector for every benchmark search."""
         return self.vector
 
 
 async def benchmark(rows: int, dimensions: int, runs: int) -> dict:
+    """Measure vector import and filtered search latency with deterministic inputs."""
     generator = np.random.default_rng(20261001)
     query = generator.standard_normal(dimensions, dtype=np.float32).tolist()
     with tempfile.TemporaryDirectory(prefix="lfx-sqlite-benchmark-") as directory:
@@ -92,6 +96,7 @@ async def benchmark(rows: int, dimensions: int, runs: int) -> dict:
 
 
 async def main() -> None:
+    """Run the requested SQLite benchmark and print its measurements as JSON."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rows", type=int, default=10000)
     parser.add_argument("--dimensions", type=int, nargs="+", default=[384, 1536, 3072])

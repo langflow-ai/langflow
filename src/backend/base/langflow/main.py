@@ -205,6 +205,7 @@ def warn_about_future_cors_changes(settings):
 
 
 def get_lifespan(*, fix_migration=False, version=None):
+    """Build the application startup and shutdown context for services and background workers."""
     initialize_settings_service()
 
     @asynccontextmanager

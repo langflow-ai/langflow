@@ -16,6 +16,7 @@ class PreToolValidationWrapper(BaseToolWrapper):
 
     @staticmethod
     def convert_langchain_tools_to_sparc_tool_specs_format(tools):  # noqa: ARG004 - legacy interface
+        """Reject validation-tool conversion through the retired ALTK integration."""
         raise ALTKRetiredError
 
 

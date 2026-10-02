@@ -17,6 +17,7 @@ import sqlite_vec
 
 
 def open_connection(path: Path) -> apsw.Connection:
+    """Load the pinned vector extension and disable further extension loading."""
     connection = apsw.Connection(str(path))
     try:
         connection.enable_load_extension(enable=True)
@@ -34,6 +35,7 @@ def open_connection(path: Path) -> apsw.Connection:
 
 
 def qualify_runtime() -> dict[str, str]:
+    """Verify native versions, distance functions, WAL persistence and database integrity."""
     if apsw.apswversion() != "3.53.4.0" or apsw.sqlitelibversion() != "3.53.4":
         msg = "Unexpected APSW/SQLite version. Qualify a pin change explicitly."
         raise RuntimeError(msg)

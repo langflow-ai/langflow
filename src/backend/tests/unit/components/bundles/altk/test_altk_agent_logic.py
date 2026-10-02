@@ -2,7 +2,7 @@
 
 import pytest
 from lfx.base.agents.altk_base_agent import ALTKBaseAgentComponent
-from lfx_bundles.altk.altk_agent import ALTKAgentComponent, get_parent_agent_inputs
+from lfx.components.altk.altk_agent import ALTKAgentComponent, get_parent_agent_inputs
 
 
 async def test_legacy_component_subclass_loads_but_cannot_execute():

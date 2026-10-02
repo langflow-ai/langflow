@@ -163,12 +163,12 @@ describe("DBProvidersPage characterization", () => {
       ]);
     });
 
-    it("marks chroma as the active provider when no backend variable exists", () => {
+    it("marks sqlite as the active provider when no backend variable exists", () => {
       render(<DBProvidersPage />);
-      const chromaItem = screen.getByTestId("db-provider-item-sqlite");
-      expect(chromaItem).toHaveTextContent("Active");
+      const sqliteItem = screen.getByTestId("db-provider-item-sqlite");
+      expect(sqliteItem).toHaveTextContent("Active");
       expect(
-        chromaItem.querySelector('[data-testid="icon-Check"]'),
+        sqliteItem.querySelector('[data-testid="icon-Check"]'),
       ).toBeInTheDocument();
     });
 
@@ -196,8 +196,8 @@ describe("DBProvidersPage characterization", () => {
     });
   });
 
-  describe("chroma panel (default selection)", () => {
-    it("shows a disabled 'SQLite selected' action while chroma is active", () => {
+  describe("sqlite panel (default selection)", () => {
+    it("shows a disabled 'SQLite selected' action while sqlite is active", () => {
       render(<DBProvidersPage />);
       const button = getSaveButton(/sqlite selected/i);
       expect(button).toBeDisabled();

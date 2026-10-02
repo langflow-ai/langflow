@@ -16,6 +16,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add storage generations, migration state and the resumable upgrade ledger."""
     connection = op.get_bind()
     inspector = sa.inspect(connection)
     columns = {column["name"] for column in inspector.get_columns("knowledge_base")}
@@ -59,6 +60,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove the upgrade ledger and storage routing columns."""
     connection = op.get_bind()
     if connection.execute(sa.text("SELECT 1 FROM knowledge_base WHERE backend_type = 'sqlite' LIMIT 1")).first():
         msg = "SQLite knowledge bases require forward repair or the complete pre-upgrade backup"

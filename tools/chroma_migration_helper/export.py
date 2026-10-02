@@ -34,21 +34,25 @@ class NoChromaPython(importlib.abc.MetaPathFinder):
     """Never load stored embedding-function definitions through the SDK."""
 
     def find_spec(self, fullname, path=None, target=None):  # noqa: ARG002 -- importlib interface
+        """Reject Chroma Python SDK imports from the isolated native reader."""
         if fullname == "chromadb" or fullname.startswith("chromadb."):
             msg = "Python Chroma SDK is disabled in the migration reader"
             raise RuntimeError(msg)
 
 
 def no_pickle(*_args, **_kwargs):
+    """Reject Python pickle decoding during untrusted legacy export."""
     msg = "Python pickle decoding is disabled in the migration reader"
     raise RuntimeError(msg)
 
 
 def encode(value, *, sort_keys=False):
+    """Encode finite UTF-8 JSON with optional canonical key ordering."""
     return json.dumps(value, ensure_ascii=False, sort_keys=sort_keys, separators=(",", ":"), allow_nan=False).encode()
 
 
 def emit(value, *, sort_keys=False):
+    """Write one JSON protocol record while enforcing the total output limit."""
     payload = encode(value, sort_keys=sort_keys)
     if len(payload) + 1 > MAX_LINE_BYTES:
         msg = "Export record exceeds byte limit"
@@ -87,6 +91,7 @@ def clone_snapshot(source: Path, destination: Path):
 
 
 def metadata_depth(value, depth=0):
+    """Reject unsupported metadata types, non-string keys and excessive nesting."""
     if depth > MAX_METADATA_DEPTH:
         msg = "Metadata exceeds depth limit"
         raise ValueError(msg)
@@ -105,6 +110,7 @@ def metadata_depth(value, depth=0):
 
 
 def export(request, source: Path, work: Path):
+    """Read the isolated snapshot through the pinned native binding and emit bounded records."""
     sys.meta_path.insert(0, NoChromaPython())
     pickle.load = no_pickle
     pickle.loads = no_pickle
@@ -218,6 +224,7 @@ def export(request, source: Path, work: Path):
 
 
 def main():
+    """Read the helper request and export the mounted snapshot under fixed limits."""
     payload = sys.stdin.buffer.read(MAX_REQUEST_BYTES + 1)
     if len(payload) > MAX_REQUEST_BYTES:
         msg = "Request exceeds byte limit"

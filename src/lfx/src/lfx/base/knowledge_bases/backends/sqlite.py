@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS migration_manifest (
 def _worker_executor() -> ThreadPoolExecutor:
     # A prefork server may already have used the parent's pool. Its threads do
     # not survive fork, and shutting down that inherited pool can deadlock.
+    """Reuse the bounded executor that owns blocking SQLite operations."""
     global _EXECUTOR, _EXECUTOR_PID  # noqa: PLW0603 - process-private runtime
     if os.getpid() != _EXECUTOR_PID:
         _EXECUTOR = ThreadPoolExecutor(max_workers=_WORKERS, thread_name_prefix="kb-sqlite")
@@ -125,6 +126,7 @@ class SQLiteStorageContext:
         # The administrator's root can have canonical OS aliases among its
         # ancestors (macOS /var -> /private/var). Resolve those only. Keep the
         # root itself and all generated children subject to symlink rejection.
+        """Validate the absolute root, immutable UUIDs and positive storage generation."""
         root = Path(self.root).absolute()
         object.__setattr__(self, "root", root.parent.resolve() / root.name)
         object.__setattr__(self, "owner_id", UUID(str(self.owner_id)))
@@ -135,14 +137,18 @@ class SQLiteStorageContext:
 
     @property
     def database_path(self) -> Path:
+        """Derive the database location from owner, KB UUID and generation."""
         return self.root / "sqlite" / str(self.owner_id) / str(self.kb_id) / str(self.generation) / "vectors.sqlite3"
 
 
 def _json(value: Any) -> str:
+    """Serialize bounded, finite JSON for durable SQLite metadata."""
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
 def _metadata_json(metadata: dict[str, Any]) -> str:
+    """Serialize metadata only after verifying its structure and size limits."""
+
     def validate(value: Any) -> None:
         if isinstance(value, dict):
             if any(not isinstance(key, str) for key in value):
@@ -167,6 +173,7 @@ def _metadata_json(metadata: dict[str, Any]) -> str:
 
 
 def _vector_blob(vector: Iterable[float] | None, *, metric: str) -> tuple[bytes, int]:
+    """Encode a finite, dimension-checked vector in the storage format."""
     try:
         if vector is None:
             raise ValueError
@@ -317,6 +324,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         storage_context: SQLiteStorageContext,
         create: bool = False,
     ) -> None:
+        """Bind metric configuration and embeddings to a trusted immutable storage context."""
         super().__init__(kb_name, kb_path, backend_config, embedding_function, user_id)
         if kb_path is not None and Path(kb_path).absolute() != storage_context.database_path.parent:
             msg = "SQLite paths must come from immutable storage context"
@@ -365,6 +373,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
             return result
 
     def _check_path(self, *, create: bool = False) -> Path:
+        """Validate the store path and reject missing, symlinked or retired storage."""
         context = self.storage_context
         paths = [context.root]
         for segment in ("sqlite", str(context.owner_id), str(context.kb_id), str(context.generation)):
@@ -399,6 +408,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
     @contextlib.contextmanager
     def _connect(self, *, initialize: bool = False, allow_deleted: bool = False) -> Iterator[Any]:
         # Lazy native imports keep unrelated backends and component discovery lightweight.
+        """Open the private runtime connection and load only its pinned vector extension."""
         import apsw
         import sqlite_vec
 
@@ -463,6 +473,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
             connection.close()
 
     def _header(self, connection: Any, *, allow_deleted: bool = False) -> dict[str, Any]:
+        """Read and validate the store identity, metric and embedding schema."""
         try:
             rows = list(
                 connection.execute(
@@ -496,19 +507,23 @@ class SQLiteBackend(BaseVectorStoreBackend):
         return header
 
     def _initialize(self) -> None:
+        """Create the database schema and persist its immutable storage header."""
         with self._connect(initialize=self._create):
             pass
 
     async def ensure_ready(self) -> None:
+        """Validate or explicitly initialize the store in a worker thread."""
         if not self._ready:
             await self._run(self._initialize)
             self._ready = True
             self._create = False
 
     def _build_vector_store(self) -> VectorStore:
+        """Expose the LangChain adapter for this SQLite backend."""
         return _SQLiteVectorStore(self)
 
     def _upsert(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        """Atomically persist document text, metadata and already validated vectors."""
         if len(ids) != len(docs) or len(set(ids)) != len(ids):
             msg = "SQLite document IDs must be unique within a batch"
             raise ValueError(msg)
@@ -573,10 +588,12 @@ class SQLiteBackend(BaseVectorStoreBackend):
                 raise
 
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        """Offload supplied-vector writes without calling an embedding provider."""
         await self.ensure_ready()
         await self._run(self._upsert, ids, docs)
 
     async def _add_documents(self, docs: list[Document], ids: list[str] | None = None) -> list[str]:
+        """Embed document batches and persist them with stable IDs."""
         if not docs:
             return []
         if self.embedding_function is None:
@@ -600,6 +617,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
     def _search(
         self, vector: list[float], k: int, filters: dict[str, Any] | None, source_filter: dict[str, list[str]] | None
     ) -> list[tuple[Document, float]]:
+        """Find exact nearest neighbors with bound metadata filters and stable result ordering."""
         blob, dimension = _vector_blob(vector, metric=self.metric)
         where, parameters = _where(filters, source_filter)
         with self._connect() as connection:
@@ -677,6 +695,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         with_scores: bool = False,
         source_filter: dict[str, list[str]] | None = None,
     ) -> list[tuple[Document, float]]:
+        """Embed a query and search the validated store with optional source filters."""
         if type(k) is not int or k < 0:
             msg = "SQLite search k must be a nonnegative integer"
             raise ValueError(msg)
@@ -692,10 +711,12 @@ class SQLiteBackend(BaseVectorStoreBackend):
         return result if with_scores else [(document, 0.0) for document, _ in result]
 
     def _count(self) -> int:
+        """Count durable documents using a checked runtime connection."""
         with self._connect() as connection:
             return connection.execute("SELECT count(*) FROM chunks").fetchone()[0]
 
     async def count(self) -> int:
+        """Offload the document count so SQLite cannot block the event loop."""
         await self.ensure_ready()
         return await self._run(self._count)
 
@@ -704,6 +725,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
     ) -> list[IngestedDocument]:
         # Keyset pagination does not skip rows merely because an earlier row is deleted.
         # Strict cross-batch snapshot consistency requires the caller's whole-KB guard.
+        """Read a bounded batch after the supplied stable document cursor."""
         with self._connect() as connection:
             where, parameters = ("id > ?", [after]) if after is not None else ("1", [])
             vector_column = "vector" if include_embeddings else "NULL"
@@ -731,6 +753,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
     async def iter_documents(
         self, *, batch_size: int = 5000, include_embeddings: bool = False, max_batch_bytes: int = 16 * 1024 * 1024
     ) -> AsyncIterator[list[IngestedDocument]]:
+        """Stream durable documents in bounded batches with optional stored embeddings."""
         if type(batch_size) is not int or batch_size < 1:
             msg = "SQLite batch_size must be positive"
             raise ValueError(msg)
@@ -750,6 +773,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
             after = batch[-1].id
 
     def _delete(self, *, ids: list[str] | None = None, where: dict[str, Any] | None = None) -> None:
+        """Remove matching documents using bound metadata predicates."""
         if ids is None and not where:
             msg = "SQLite deletion requires IDs or a nonempty filter"
             raise ValueError(msg)
@@ -778,6 +802,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
                 raise
 
     async def delete_by(self, where: dict[str, Any]) -> None:
+        """Offload filtered deletion while preserving the collection schema."""
         await self.ensure_ready()
         await self._run(self._delete, where=where)
 
@@ -802,6 +827,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self._run(tombstone)
 
     async def storage_size_bytes(self) -> int:
+        """Measure the database and its WAL and shared-memory files."""
         await self.ensure_ready()
 
         def size() -> int:
@@ -815,6 +841,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         return await self._run(size)
 
     async def inspect_store(self) -> dict[str, Any]:
+        """Read storage header metadata without creating a missing database."""
         await self.ensure_ready()
 
         def inspect() -> dict[str, Any]:
@@ -824,6 +851,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         return await self._run(inspect)
 
     async def integrity_check(self) -> None:
+        """Verify SQLite integrity and the persisted collection schema."""
         await self.ensure_ready()
 
         def check() -> None:
@@ -882,6 +910,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self._run(set_dimension)
 
     async def read_migration_manifest(self) -> dict[str, Any] | None:
+        """Read the target's migration evidence without mutating the store."""
         await self.ensure_ready()
 
         def read() -> dict[str, Any] | None:
@@ -892,6 +921,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         return await self._run(read)
 
     async def save_migration_manifest(self, manifest: dict[str, Any]) -> None:
+        """Persist migration evidence for resumable target verification."""
         await self.ensure_ready()
         if not isinstance(manifest, dict):
             msg = "SQLite migration manifest must be an object"
@@ -931,6 +961,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self._run(flush)
 
     async def test_connection(self) -> TestConnectionResult:
+        """Verify local runtime availability without requiring provider credentials."""
         try:
             await self.ensure_ready()
             await self.integrity_check()
@@ -943,24 +974,29 @@ class _SQLiteVectorStore(VectorStore):
     """LangChain facade. Async operations retain worker cancellation guarantees."""
 
     def __init__(self, backend: SQLiteBackend) -> None:
+        """Adapt the backend to the LangChain vector-store interface."""
         self._backend = backend
 
     @property
     def embeddings(self) -> Embeddings | None:
+        """Expose the embedding function configured on the backing store."""
         return self._backend.embedding_function
 
     @classmethod
     def from_texts(
         cls, texts: list[str], embedding: Embeddings, metadatas: list[dict[str, Any]] | None = None, **kwargs: Any
     ) -> _SQLiteVectorStore:
+        """Reject implicit construction without the required immutable storage context."""
         msg = "Construct SQLite stores through SQLiteBackend with trusted storage context"
         raise NotImplementedError(msg)
 
     def similarity_search(self, query: str, k: int = 4, **kwargs: Any) -> list[Document]:
+        """Reject synchronous search in favor of the asynchronous SQLite API."""
         msg = "Use SQLiteVectorStore async search methods"
         raise NotImplementedError(msg)
 
     async def aadd_documents(self, documents: list[Document], **kwargs: Any) -> list[str]:
+        """Delegate document embedding and persistence to the SQLite backend."""
         return await self._backend._add_documents(documents, ids=kwargs.get("ids"))  # noqa: SLF001 - companion facade
 
     async def aadd_texts(
@@ -971,6 +1007,7 @@ class _SQLiteVectorStore(VectorStore):
         ids: list[str] | None = None,
         **kwargs: Any,  # noqa: ARG002 - LangChain interface
     ) -> list[str]:
+        """Convert texts and metadata into documents before asynchronous ingestion."""
         materialized = list(texts)
         if metadatas is not None and len(metadatas) != len(materialized):
             msg = "SQLite text and metadata counts must match"
@@ -982,21 +1019,25 @@ class _SQLiteVectorStore(VectorStore):
         return await self._backend._add_documents(documents, ids=ids)  # noqa: SLF001 - companion facade
 
     async def asimilarity_search(self, query: str, k: int = 4, **kwargs: Any) -> list[Document]:
+        """Return matching documents from the backend's asynchronous query."""
         return [doc for doc, _ in await self.asimilarity_search_with_score(query, k=k, **kwargs)]
 
     async def asimilarity_search_with_score(
         self, query: str, k: int = 4, **kwargs: Any
     ) -> list[tuple[Document, float]]:
+        """Return matching documents with the backend's metric scores."""
         return await self._backend.similarity_search(
             query, k, filter=kwargs.get("filter"), source_filter=kwargs.get("source_filter"), with_scores=True
         )
 
     async def adelete(self, ids: list[str] | None = None, **kwargs: Any) -> bool:
+        """Delete the requested document IDs from the SQLite collection."""
         await self._backend.ensure_ready()
         await self._backend._run(self._backend._delete, ids=ids, where=kwargs.get("where"))  # noqa: SLF001 - companion facade
         return True
 
     async def aget_by_ids(self, ids: list[str]) -> list[Document]:
+        """Retrieve stored documents for the requested stable IDs."""
         await self._backend.ensure_ready()
         if not ids:
             return []

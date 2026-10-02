@@ -68,7 +68,8 @@ The maintenance verifier creates and checks a consistent SQLite metadata backup,
 fingerprints every legacy source, and writes a private receipt. The new process
 is launched only after this barrier. It records its own identity atomically
 before executing the application, so resuming after a parent-controller crash
-cannot launch a second instance. Readiness requires both a successful `/healthz`
+cannot launch a second instance. Readiness requires both a successful
+`/healthz?require_storage_ready=true`
 response and a listening socket owned by that exact new supervisor's session.
 An unrelated healthy service on the port cannot satisfy the gate.
 

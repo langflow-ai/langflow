@@ -146,6 +146,8 @@ Authenticated superuser endpoints expose status and exceptional recovery:
 - `GET /api/v1/knowledge-base-storage/pending-cleanup`
 - `POST /api/v1/knowledge-base-storage/pending-cleanup/{kb_id}/retry` with
   `{"expected_generation": <storage_generation from the inventory>}`
+- `POST /api/v1/knowledge-base-storage/attention/{kb_id}/detach` with
+  `{"expected_generation": <storage_generation from the inventory>}`
 
 Cleanup retry holds the immutable KB identity and generation guard until its
 storage and exact metadata row are removed. Repeated requests are idempotent.
@@ -153,8 +155,17 @@ An active Memory reference returns 409 and its UUID in the admin inventory
 directs the operator to the normal Memory deletion endpoint. This prevents KB
 recovery from silently removing Memory history. Source backups remain retained.
 
-Liveness stays available for administration. Readiness remains false while
-required migrations or inventory problems remain unresolved. Errors are safe
+Detaching a `needs_attention` store disables its routing while preserving the
+original data, migration ledger and Memory history for recovery. Its owning flow
+can then be deleted without removing those retained storage artifacts. Retry
+migration before detaching if the store should remain available.
+
+Liveness stays available for administration. `/healthz` waits for inventory
+discovery and reports application readiness. Individual fenced stores are
+reported by the admin endpoints without making unrelated flows unavailable.
+The upgrade controller uses `/healthz?require_storage_ready=true`, which remains
+false until required migrations finish or an operator detaches a failed store.
+Errors are safe
 codes with guidance and do not expose document contents, credentials or native
 parser tracebacks.
 

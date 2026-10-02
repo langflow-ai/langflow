@@ -307,7 +307,7 @@ class TestMemoryBaseProviderPolicyPreflight:
         try:
             with (
                 _patched_session_scope(db),
-                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
+                patch("langflow.api.utils.kb_helpers.resolve_embedding_selection", selection_lookup),
                 patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
                 pytest.raises(ModelProviderPolicyError),
             ):
@@ -365,7 +365,7 @@ class TestMemoryBaseProviderPolicyPreflight:
         try:
             with (
                 _patched_session_scope(_exec_owner_scoped(mb_row)),
-                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
+                patch("langflow.api.utils.kb_helpers.resolve_embedding_selection", selection_lookup),
                 patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
                 patch("lfx.base.models.unified_models.get_embeddings", get_embeddings),
                 patch("langflow.api.utils.kb_helpers.backend_for_name", return_value=backend),
@@ -593,7 +593,7 @@ class TestMemoryBaseRetrievalInvariants:
         with (
             _patched_session_scope(db),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 new=AsyncMock(return_value=None),
             ),
             pytest.raises(ValueError, match="owner account"),
@@ -662,11 +662,11 @@ class TestMemoryBaseRetrievalBehavior:
         for cm in (
             _patched_session_scope(db),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 new=AsyncMock(return_value=owner),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.resolve_embedding_selection",
+                "langflow.api.utils.kb_helpers.resolve_embedding_selection",
                 new=AsyncMock(return_value=(provider, model)),
             ),
             patch("lfx.base.models.unified_models.get_embeddings", return_value=MagicMock()),

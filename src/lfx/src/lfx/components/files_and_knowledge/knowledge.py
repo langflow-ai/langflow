@@ -1608,6 +1608,8 @@ class KnowledgeComponent(Component):
                             key = _embedding_match_key(entry.content, entry.metadata)
                             if key in wanted_keys:
                                 embeddings_by_key[key] = entry.embedding
+                        if wanted_keys <= embeddings_by_key.keys():
+                            break
 
             data_list: list[Data] = []
             for doc, score in results:

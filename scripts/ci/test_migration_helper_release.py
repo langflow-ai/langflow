@@ -143,22 +143,34 @@ class ReleaseQualificationTests(unittest.TestCase):
     def test_dependency_binding_allows_only_workspace_version_stamps(self):
         before = {"name": "lfx", "version": "1.13.0rc1", "dependencies": ["lfx==1.13.0rc1", "apsw==3.53.4.0"]}
         after = {"name": "lfx", "version": "1.13.0", "dependencies": ["lfx==1.13.0", "apsw==3.53.4.0"]}
-        assert normalize_dependencies(before, {"lfx": "1.13.0rc1"}) == normalize_dependencies(after, {"lfx": "1.13.0"})
+        assert normalize_dependencies(before, {"lfx": {"1.13.0rc1", "1.13.0"}}) == normalize_dependencies(
+            after, {"lfx": {"1.13.0rc1", "1.13.0"}}
+        )
         for dependency in ("apsw==3.52.0.0", "lfx>=1.12.0"):
             changed = {**after, "dependencies": ["lfx==1.13.0", dependency]}
-            assert normalize_dependencies(before, {"lfx": "1.13.0rc1"}) != normalize_dependencies(
-                changed, {"lfx": "1.13.0"}
+            assert normalize_dependencies(before, {"lfx": {"1.13.0rc1", "1.13.0"}}) != normalize_dependencies(
+                changed, {"lfx": {"1.13.0rc1", "1.13.0"}}
             )
+
+    def test_unchanged_constraints_survive_workspace_restamps(self):
+        for before_version, after_version in (("1.13.0.dev0", "1.13.0"), ("1.13.0", "1.13.1")):
+            with self.subTest(before=before_version, after=after_version):
+                versions = {"lfx": {before_version, after_version}}
+                before = {"name": "lfx", "version": before_version, "dependencies": ["lfx~=1.13.0"]}
+                after = {**before, "version": after_version}
+                assert normalize_dependencies(before, versions) == normalize_dependencies(after, versions)
+                changed = {**after, "dependencies": ["lfx>=1.13.0"]}
+                assert normalize_dependencies(before, versions) != normalize_dependencies(changed, versions)
 
     def test_changed_native_lock_rejected(self):
         lock = b'[[package]]\nname="apsw"\nversion="3.53.4.0"\nsource={registry="https://pypi.org/simple"}\n'
         metadata = b'[project]\nname="lfx"\nversion="1.13.0"\n'
         reads = [
             lock,
-            metadata,
-            metadata,
-            metadata,
             lock.replace(b"3.53.4.0", b"3.52.0.0"),
+            metadata,
+            metadata,
+            metadata,
             metadata,
             metadata,
             metadata,

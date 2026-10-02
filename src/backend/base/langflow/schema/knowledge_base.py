@@ -117,6 +117,7 @@ class TestBackendConnectionRequest(BaseModel):
     @field_validator("backend_type")
     @classmethod
     def validate_backend_type(cls, value: str) -> str:
+        """Reject unsupported and retired providers before connection testing."""
         normalized = value or BackendType.SQLITE.value
         try:
             backend = BackendType(normalized).value

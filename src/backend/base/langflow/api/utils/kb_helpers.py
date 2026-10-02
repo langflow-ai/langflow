@@ -737,11 +737,11 @@ class KBIngestionHelper:
             metrics: dict[str, Any] = {}
             await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
 
-            # ``size`` is a local-Chroma concept: it measures the persistence
-            # directory. Remote stores keep nothing on this box, so reporting a
-            # directory walk there would be meaningless (and would need a path we
-            # deliberately no longer resolve).
-            size_bytes = KBStorageHelper.get_directory_size(kb_path) if kb_path is not None else 0
+            size_bytes = (
+                KBStorageHelper.get_directory_size(kb_path)
+                if kb_path is not None
+                else await backend.storage_size_bytes()
+            )
 
             existing_source_types = list(kb_record.source_types or []) if kb_record is not None else []
             merged_source_types = sorted(set(existing_source_types) | source_extension_tags)
@@ -868,14 +868,19 @@ class KBIngestionHelper:
         always comes from the owner's current row and crosses the same lifecycle
         fence as ingestion, so cleanup cannot write into a retired generation.
         """
-        backend = await backend_for_name(user_id, kb_name)
+        backend = None
         try:
+            backend = await backend_for_name(user_id, kb_name)
             await backend.delete_by({METADATA_KEY_JOB_ID: str(job_id)})
             await logger.ainfo(f"Cleaned up chunks for job {job_id} in knowledge base '{kb_name}'")
-        except (OSError, ValueError, TypeError) as cleanup_error:
+        except Exception as cleanup_error:  # noqa: BLE001 - rollback must preserve the ingestion failure
             await logger.aerror(f"Failed to clean up chunks for job {job_id}: {cleanup_error}")
         finally:
-            await backend.teardown()
+            if backend is not None:
+                try:
+                    await backend.teardown()
+                except Exception as cleanup_error:  # noqa: BLE001 - closing cleanup must preserve the ingestion failure
+                    await logger.aerror("Failed to close ingestion cleanup backend: %s", cleanup_error)
 
     @staticmethod
     async def write_documents_to_backend(

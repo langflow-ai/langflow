@@ -1824,7 +1824,7 @@
   "settings.dbProviders.description": "Configurar proveedores de almacenamiento vectorial para bases de conocimiento.",
   "settings.dbProviders.errorMissingConfig": "Falta la configuración necesaria",
   "settings.dbProviders.errorSaving": "Error al guardar el proveedor de base de datos",
-  "settings.dbProviders.errorSelectingSQLite": "Error al seleccionar el crominancia",
+  "settings.dbProviders.errorSelectingSQLite": "Error al seleccionar SQLite",
   "settings.dbProviders.errorTesting": "Error al comprobar la conexión con el proveedor",
   "settings.dbProviders.fields.CHROMA_API_KEY.label": "Clave de API",
   "settings.dbProviders.fields.CHROMA_DATABASE.label": "Base de datos",

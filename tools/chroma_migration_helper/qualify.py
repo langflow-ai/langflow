@@ -32,6 +32,7 @@ from lfx.base.knowledge_bases.migration.protocol import qualify_export
 
 
 async def qualify(image: str, *, signed: bool = False) -> dict:
+    """Exercise the isolated reader against the supported legacy-store qualification cases."""
     docker = shutil.which("docker")
     if not docker:
         msg = "Docker is required for actual helper containment qualification"

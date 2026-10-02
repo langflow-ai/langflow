@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlmodel import col, select
 
 from langflow.api.utils.kb_helpers import _coerce_backend_config_value
@@ -25,6 +25,7 @@ from langflow.services.database.models.memory_base.model import (
     MessageIngestionRecord,
 )
 from langflow.services.database.models.user.model import User
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 from langflow.services.memory_base.ingestion import cancel_active_jobs
 from langflow.services.memory_base.kb_path_helpers import delete_kb
 
@@ -84,16 +85,6 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
 
     handles: list[FlowMemoryBaseCleanup] = []
     for mb in memory_bases:
-        # Cancel in-flight ingestion so a running job cannot write to a
-        # collection we are about to drop. Best-effort — never let job teardown
-        # block the flow deletion.
-        try:
-            await cancel_active_jobs(memory_base_id=mb.id, db=session)
-        except Exception as exc:  # noqa: BLE001 — job teardown is best-effort
-            await logger.awarning(
-                "Could not cancel ingestion jobs for Memory Base %s during flow deletion: %s", mb.id, exc
-            )
-
         # Retain and fence routing for post-commit cleanup, and capture a trusted
         # snapshot for the owner-deletion case where an FK cascade removes it.
         kb_record = (
@@ -106,7 +97,24 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
         if kb_record is not None:
             backend_type = kb_record.backend_type or "chroma"
             backend_config = _coerce_backend_config_value(kb_record.backend_config)
-            kb_record.storage_state = "deleting"
+            if kb_record.storage_state != "detached":
+                if backend_type == "chroma" or kb_record.storage_state not in ("ready", "deleting", "deleted"):
+                    msg = "Memory Base storage requires upgrade recovery before deleting its flow"
+                    raise StorageUnavailableError(msg)
+                if kb_record.storage_state == "ready":
+                    changed = await session.exec(
+                        update(KnowledgeBaseRecord)
+                        .where(KnowledgeBaseRecord.id == kb_record.id)
+                        .where(KnowledgeBaseRecord.storage_generation == kb_record.storage_generation)
+                        .where(KnowledgeBaseRecord.backend_type == kb_record.backend_type)
+                        .where(KnowledgeBaseRecord.storage_state == "ready")
+                        .values(storage_state="deleting")
+                        .execution_options(synchronize_session=False)
+                    )
+                    if changed.rowcount != 1:
+                        msg = "Memory Base storage changed during flow deletion. Retry after upgrade recovery."
+                        raise StorageUnavailableError(msg)
+                    await session.refresh(kb_record)
             session.add(kb_record)
         else:
             # No row to resolve a remote backend from; treat as local so the
@@ -127,6 +135,15 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
         )
 
     memory_base_ids = [mb.id for mb in memory_bases]
+
+    # Validate every backing store before cancelling any running jobs.
+    for mb in memory_bases:
+        try:
+            await cancel_active_jobs(memory_base_id=mb.id, db=session)
+        except Exception as exc:  # noqa: BLE001 - job teardown is best-effort
+            await logger.awarning(
+                "Could not cancel ingestion jobs for Memory Base %s during flow deletion: %s", mb.id, exc
+            )
 
     # Children first (explicit — SQLite may not enforce FK cascades), then the
     # Memory rows. Backing KB rows remain available for storage cleanup retries.
@@ -154,6 +171,8 @@ async def finalize_flow_memory_base_cleanup(handles: list[FlowMemoryBaseCleanup]
     """
     for handle in handles:
         try:
+            if handle.storage_record is not None and handle.storage_record.storage_state == "detached":
+                continue  # Preserve detached routing, ledger and source for operator recovery.
             await _drop_remote_collection(handle)
             # Only after storage cleanup succeeds, remove residual legacy
             # directories. A failed or incomplete upgrade leaves them intact.

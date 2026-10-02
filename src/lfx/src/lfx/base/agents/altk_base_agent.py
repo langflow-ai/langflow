@@ -25,6 +25,7 @@ class ALTKRetiredError(RuntimeError):
     """An existing flow tried to execute the retired ALTK integration."""
 
     def __init__(self):
+        """Expose replacement guidance for an attempted retired ALTK operation."""
         super().__init__(ALTK_RETIREMENT_MESSAGE)
 
 
@@ -45,6 +46,7 @@ class BaseToolWrapper:
     """Import-compatible marker for retired ALTK wrappers."""
 
     def __init__(self, *_args, **_kwargs):
+        """Reject construction of a retired ALTK tool wrapper."""
         raise ALTKRetiredError
 
 
@@ -56,12 +58,15 @@ class ToolPipelineManager:
     """Allow saved component construction while rejecting pipeline execution."""
 
     def __init__(self):
+        """Keep the saved pipeline holder constructible without loading the retired SDK."""
         self.wrappers = []
 
     def configure_wrappers(self, wrappers):  # noqa: ARG002 - preserve saved-source keyword compatibility
+        """Reject configuration of retired ALTK wrappers."""
         raise ALTKRetiredError
 
     def process_tools(self, tools, **_kwargs):  # noqa: ARG002 - preserve saved-source keyword compatibility
+        """Reject tool processing through the retired ALTK pipeline."""
         raise ALTKRetiredError
 
 
@@ -73,24 +78,31 @@ class ALTKBaseAgentComponent(AgentComponent):
         self.pipeline_manager = ToolPipelineManager()
 
     async def message_response(self) -> Message:
+        """Reject execution of a saved ALTK message output."""
         raise ALTKRetiredError
 
     async def json_response(self) -> Data:
+        """Reject execution of a saved ALTK JSON output."""
         raise ALTKRetiredError
 
     def create_agent_runnable(self, **_kwargs):
+        """Reject creation of a runnable for the retired integration."""
         raise ALTKRetiredError
 
     async def run_agent(self, agent) -> Message:  # noqa: ARG002 - preserve the parent interface
+        """Reject agent execution and retain the saved configuration for replacement."""
         raise ALTKRetiredError
 
     def configure_tool_pipeline(self) -> None:
+        """Reject runtime pipeline configuration for a retired node."""
         raise ALTKRetiredError
 
     def _initialize_tool_pipeline(self) -> None:
+        """Reject initialization of the retired tool pipeline."""
         raise ALTKRetiredError
 
     def update_runnable_instance(self, agent, runnable, tools):  # noqa: ARG002 - legacy interface
+        """Reject updates to a retired agent runnable."""
         raise ALTKRetiredError
 
     def build_conversation_context(self) -> list[BaseMessage]:

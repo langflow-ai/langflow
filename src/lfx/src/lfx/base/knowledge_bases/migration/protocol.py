@@ -56,6 +56,7 @@ class ExportLimits:
     max_metadata_depth: int = 32
 
     def __post_init__(self) -> None:
+        """Reject invalid export bounds before processing any untrusted records."""
         if any(type(value) is not int or value <= 0 for value in asdict(self).values()):
             msg = "Export limits must be positive integers"
             raise ValueError(msg)
@@ -103,10 +104,12 @@ def _json_bytes(value: Any, *, sort_keys: bool = False) -> bytes:
 
 
 def _fail(message: str) -> NoReturn:
+    """Raise a protocol error without adopting partially validated data."""
     raise MigrationProtocolError(message)
 
 
 def _validate_header(header: ExportHeader, limits: ExportLimits) -> None:
+    """Validate source identity, metric, embedding schema and protocol limits."""
     if not isinstance(header, ExportHeader):
         _fail("Expected an export header")
     if type(header.count) is not int or not 0 <= header.count <= limits.max_records:
@@ -130,10 +133,12 @@ def _validate_header(header: ExportHeader, limits: ExportLimits) -> None:
 
 
 def _header_record(header: ExportHeader) -> dict[str, Any]:
+    """Serialize the canonical header used to bind the export digest."""
     return {"type": "header", "protocol_version": PROTOCOL_VERSION, **asdict(header)}
 
 
 def _validate_json(value: Any, *, depth: int, limits: ExportLimits) -> None:
+    """Check metadata types, finiteness, depth and collection limits."""
     if depth > limits.max_metadata_depth:
         _fail("Metadata depth exceeds limit")
     if value is None or type(value) in (bool, str, int):
@@ -181,12 +186,14 @@ def document_record(doc: IngestedDocument, header: ExportHeader, limits: ExportL
 
 
 def _document(record: dict[str, Any]) -> IngestedDocument:
+    """Decode a document only after checking IDs, metadata and vector dimensions."""
     return IngestedDocument(
         id=record["id"], content=record["content"], metadata=record["metadata"], embedding=record["embedding"]
     )
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject duplicate JSON fields in untrusted export records."""
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
@@ -196,6 +203,7 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _parse(line: bytes) -> dict[str, Any]:
+    """Decode a finite JSON object and reject malformed export records."""
     try:
         record = json.loads(line, object_pairs_hook=_unique_object, parse_constant=lambda _: _fail("Nonfinite JSON"))
     except (UnicodeError, ValueError, RecursionError) as exc:
@@ -209,6 +217,7 @@ def _parse(line: bytes) -> dict[str, Any]:
 
 
 def _same_keys(record: dict[str, Any], keys: set[str]) -> None:
+    """Reject missing or unsupported fields in a protocol record."""
     if set(record) != keys:
         _fail("Export record has missing or unsupported fields")
 
@@ -217,6 +226,7 @@ def _same_keys(record: dict[str, Any], keys: set[str]) -> None:
 def _connect(path: Path) -> Iterator[sqlite3.Connection]:
     # Private qualification data, not the production vector store. No extension
     # loading or custom functions are enabled on this temporary audit ledger.
+    """Own a transaction and connection to the private qualification ledger."""
     connection = sqlite3.connect(path)
     try:
         with connection:
@@ -239,6 +249,7 @@ class QualifiedExport:
         manifest: ExportManifest,
         limits: ExportLimits,
     ) -> None:
+        """Bind a fully validated manifest to its private replay ledger and export limits."""
         self._directory = directory
         self.path = Path(directory.name) / "qualified.sqlite3"
         self.header = header
@@ -247,24 +258,29 @@ class QualifiedExport:
         self._closed = False
 
     def __enter__(self) -> Self:
+        """Return the qualified ledger for bounded replay within a managed lifetime."""
         return self
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
+        """Remove plaintext qualification data when leaving the managed lifetime."""
         self.close()
 
     def close(self) -> None:
+        """Idempotently remove private staging data and mark the export closed."""
         self._closed = True
         self._directory.cleanup()
 
     def _check_open(self) -> None:
+        """Reject reads after the qualified staging ledger has been closed."""
         if self._closed:
             _fail("Qualified source is closed")
 
     def read_batch(
         self, offset: int, *, batch_size: int = 500, max_batch_bytes: int = 16 * 1024 * 1024
     ) -> list[IngestedDocument]:
+        """Read a bounded, cursor-ordered batch from the qualified source ledger."""
         self._check_open()
         if (
             type(offset) is not int

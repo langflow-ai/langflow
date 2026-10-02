@@ -1136,6 +1136,13 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
     taken only for genuine owners.
     """
 
+    @pytest.fixture(autouse=True)
+    def _storage_lookup(self, monkeypatch):
+        """Isolate provider-identity assertions from the separately tested storage gate."""
+        monkeypatch.setattr(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name", AsyncMock(return_value=None)
+        )
+
     @pytest.mark.asyncio
     async def test_update_passes_real_kb_identity_to_guard(self):
         from langflow.api.v1.memories import update_memory_base
@@ -2633,8 +2640,13 @@ class TestMemoriesAPIRouting:
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_flush_conflict_returns_409(self, patched_service):
+    async def test_flush_conflict_returns_409(self, patched_service, monkeypatch):
         """trigger_ingestion raising RuntimeError should map to HTTP 409."""
+        monkeypatch.setattr(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            AsyncMock(return_value=None),
+        )
+
         from langflow.api.v1.memories import flush_memory_base
 
         # We call the handler directly to test the error mapping
@@ -2668,6 +2680,13 @@ class TestMemoriesAPIRouting:
 
 class TestMemoriesAPIHandlers:
     """Call endpoint handlers directly, mocking _service, to test all status-code branches."""
+
+    @pytest.fixture(autouse=True)
+    def _storage_lookup(self, monkeypatch):
+        """Isolate handler result mapping from the separately tested storage gate."""
+        monkeypatch.setattr(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name", AsyncMock(return_value=None)
+        )
 
     @pytest.fixture
     def mock_user(self):
@@ -3018,7 +3037,12 @@ class TestMemoriesAPIHandlers:
         assert result == {"job_id": job_id}
 
     @pytest.mark.asyncio
-    async def test_flush_value_error_raises_404(self, mock_user):
+    async def test_flush_value_error_raises_404(self, mock_user, monkeypatch):
+        monkeypatch.setattr(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            AsyncMock(return_value=None),
+        )
+
         from fastapi import HTTPException
         from langflow.api.v1.memories import FlushRequest, flush_memory_base
 

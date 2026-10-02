@@ -83,4 +83,5 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
+        """Reject execution of the retired component while retaining its saved identity."""
         raise ChromaMigrationRequiredError

@@ -32,6 +32,7 @@ class MaintenanceRequiredError(ValueError):
 
 
 def _fsync_directory(path: Path) -> None:
+    """Flush directory metadata after publishing a durable maintenance artifact."""
     if os.name != "nt":
         descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
         try:
@@ -41,6 +42,7 @@ def _fsync_directory(path: Path) -> None:
 
 
 def file_sha256(path: Path) -> str:
+    """Hash a file's contents for receipt and backup integrity checks."""
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
@@ -83,6 +85,7 @@ def tree_fingerprint(path: Path) -> str:
 
 
 def _legacy_process(process: psutil.Process) -> bool:
+    """Identify a process that may still be using the legacy local store."""
     try:
         command = process.cmdline()
         names = [Path(part).name for part in command]
@@ -101,6 +104,7 @@ def _legacy_process(process: psutil.Process) -> bool:
 
 
 def _process_matches(identity: dict) -> bool:
+    """Compare a live process against the captured maintenance identity."""
     if (
         not isinstance(identity, dict)
         or type(identity.get("pid")) is not int
@@ -255,6 +259,7 @@ def snapshot_source(source: Path, destination: Path, expected_fingerprint: str) 
 
 
 def main() -> None:
+    """Create or validate the stopped-worker maintenance receipt from CLI arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--database", required=True, type=Path)

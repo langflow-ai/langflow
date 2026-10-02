@@ -300,6 +300,80 @@ async def test_session_purge_drains_ingestion_message_snapshot(stored_memory_his
     assert await backend.count() == 0
 
 
+@pytest.mark.parametrize("change", ["purge", "edit"])
+async def test_preprocessing_releases_storage_lock_and_rejects_stale_result(
+    stored_memory_history, active_user, monkeypatch, change
+):
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+
+    from langflow.services.deps import session_scope
+    from langflow.services.memory_base import task
+    from langflow.services.memory_base.preprocessing import PreprocessingResult
+    from langflow.services.memory_base.service import MemoryBaseService
+
+    record, memory, message, tracked, _ingested, _processed, backend = stored_memory_history
+    async with session_scope() as session:
+        row = await session.get(type(tracked), tracked.id)
+        row.cursor_id = None
+        session.add(row)
+        source = await session.get(type(message), message.id)
+        source.category = "message"
+        session.add(source)
+    started = asyncio.Event()
+    finish_model = asyncio.Event()
+
+    async def paused_preprocessing(**_kwargs):
+        started.set()
+        await finish_model.wait()
+        return PreprocessingResult(status="ingested", output_text="stale result", raw_response="stale result")
+
+    monkeypatch.setattr(task, "preflight_memory_provider_use", AsyncMock(return_value=MagicMock()))
+    monkeypatch.setattr(task, "run_preprocessing", paused_preprocessing)
+    request = task.IngestionRequest(
+        memory_base_id=memory.id,
+        session_id=message.session_id,
+        flow_id=memory.flow_id,
+        kb_name=record.name,
+        kb_username=active_user.username,
+        owner_user_id=active_user.id,
+        actor_user_id=active_user.id,
+        embedding_provider="OpenAI",
+        embedding_model="test",
+        cursor_id=None,
+        task_job_id=uuid.uuid4(),
+        job_service=MagicMock(),
+        preprocessing=True,
+        preproc_model="test",
+    )
+    writer = asyncio.create_task(task.ingest_memory_task(request=request))
+    try:
+        model_started = asyncio.create_task(started.wait())
+        await asyncio.wait((writer, model_started), timeout=10, return_when=asyncio.FIRST_COMPLETED)
+        assert not writer.done(), f"Ingestion stopped before preprocessing: {writer.result()}"
+        assert started.is_set()
+        assert await asyncio.wait_for(backend.count(), timeout=1) == 1
+        if change == "purge":
+            await asyncio.wait_for(
+                MemoryBaseService().purge_session_data(active_user.id, [message.session_id]), timeout=5
+            )
+        else:
+            async with session_scope() as session:
+                row = await session.get(type(message), message.id)
+                row.text = "edited during model call"
+                session.add(row)
+        finish_model.set()
+        with pytest.raises(StorageUnavailableError, match="changed during preprocessing"):
+            await asyncio.wait_for(writer, timeout=10)
+    finally:
+        started.set()
+        finish_model.set()
+        if not writer.done():
+            writer.cancel()
+            await asyncio.gather(writer, return_exceptions=True)
+    assert await backend.count() == (0 if change == "purge" else 1)
+
+
 async def test_session_delete_fences_capture_before_tracking_row_exists(
     stored_memory_history, client, logged_in_headers
 ):

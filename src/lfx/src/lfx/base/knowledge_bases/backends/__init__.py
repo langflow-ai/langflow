@@ -46,6 +46,7 @@ _LAZY_EXPORTS = {
 
 
 def __getattr__(name: str) -> Any:
+    """Load provider backend classes lazily without importing optional SDKs at package import."""
     if name not in _LAZY_EXPORTS:
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)

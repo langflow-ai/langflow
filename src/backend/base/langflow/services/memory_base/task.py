@@ -3,8 +3,8 @@
 Design principles enforced here:
 - Cursor atomicity: cursor_id is NEVER updated before ingestion confirms success.
 - Retry safety: If a job fails, cursor_id remains at the last known good position.
-- Serialization: The KB storage fence spans message reads, preprocessing, vector writes,
-  and tracking commits, so migration and session deletion drain existing writers.
+- Serialization: The KB storage fence spans validated message reads, vector writes,
+  and tracking commits. Preprocessing runs outside it and revalidates its snapshot.
   A per-session ingestion lock also coordinates duplicate ingestion jobs.
 - Live cursor: After acquiring the lock, the current cursor_id is re-read from the DB
   (not the dispatch-time snapshot) so the pending message fetch always starts from the
@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import weakref
+from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -47,7 +48,7 @@ from langflow.services.database.models.memory_base.model import (
 )
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError, operation, resolve_record
 from langflow.services.memory_base.document_builders import (
     build_documents_from_messages,
     build_preprocessed_document,
@@ -198,6 +199,16 @@ async def _read_live_cursor(db: Session, memory_base_id: uuid.UUID, session_id: 
     return result.first()
 
 
+async def _read_live_session_id(db: Session, memory_base_id: uuid.UUID, session_id: str) -> uuid.UUID | None:
+    """Read the tracking identity to detect a session purged and recreated during preprocessing."""
+    result = await db.exec(
+        select(MemoryBaseSession.id)
+        .where(MemoryBaseSession.memory_base_id == memory_base_id)
+        .where(MemoryBaseSession.session_id == session_id)
+    )
+    return result.first()
+
+
 async def ingest_memory_task(*, request: IngestionRequest) -> dict:
     """Re-resolve and bind trusted provider scope before distributed ingestion."""
     async with session_scope() as db:
@@ -220,8 +231,13 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
         is_superuser=provider_scope.is_superuser,
     ):
         record = await resolve_record(request.owner_user_id, provider_scope.memory_base.kb_name)
-        # The lock spans the message snapshot, model preprocessing, vector write,
-        # and tracking commit. A session purge must drain every old writer.
+        if request.preprocessing:
+            # Validate routing before the model call. The scope rechecks routing
+            # and source messages under an exclusive fence before committing.
+            async with operation(record, shared=True):
+                pass
+            return await _ingest_memory_task_in_scope(request=request, provider_policies=provider_policies)
+        # Raw ingestion drains its message snapshot before a session purge.
         async with operation(record):
             return await _ingest_memory_task_in_scope(
                 request=request,
@@ -327,6 +343,7 @@ async def _ingest_memory_task_in_scope(
 
     # ---- 0. Acquire per-session serialization lock ----
     async with session_scope() as db:
+        storage_stack = AsyncExitStack()
         try:
             lock_handle = await _acquire_session_lock(db, memory_base_id, session_id)
         except asyncio.TimeoutError:
@@ -339,8 +356,10 @@ async def _ingest_memory_task_in_scope(
             raise
 
         try:
+            storage_record = await resolve_record(owner_user_id, kb_name) if preprocessing else None
             # ---- 0b. Re-read live cursor inside the lock ----
             live_cursor_id = await _read_live_cursor(db, memory_base_id, session_id)
+            live_session_id = await _read_live_session_id(db, memory_base_id, session_id) if preprocessing else None
             await logger.adebug(
                 "Ingestion lock acquired | memory_base=%s session=%s live_cursor=%s job=%s",
                 memory_base_id,
@@ -362,6 +381,21 @@ async def _ingest_memory_task_in_scope(
                 )
                 return {"message": "No pending messages", "ingested": 0}
 
+            async def fence_preprocessing_snapshot() -> None:
+                """Refuse a result computed from messages purged or changed during the LLM call."""
+                await storage_stack.enter_async_context(operation(storage_record))
+                async with session_scope() as fresh:
+                    current_session_id = await _read_live_session_id(fresh, memory_base_id, session_id)
+                    current_cursor = await _read_live_cursor(fresh, memory_base_id, session_id)
+                    current_messages = await _fetch_pending_messages(
+                        fresh, flow_id=flow_id, session_id=session_id, cursor_id=current_cursor
+                    )
+                originals = {message.id: message.model_dump() for message in messages}
+                current = {message.id: message.model_dump() for message in current_messages if message.id in originals}
+                if current_session_id != live_session_id or current_cursor != live_cursor_id or current != originals:
+                    msg = "Memory source messages changed during preprocessing. Retry ingestion."
+                    raise StorageUnavailableError(msg)
+
             # ---- 2. Build documents (preprocessing → Phase A; raw → direct) ----
             # ``preproc_row`` is non-None only on the preprocessing path; in Phase B
             # we flip its status from "processed" to "ingested" inside the same
@@ -374,6 +408,7 @@ async def _ingest_memory_task_in_scope(
                 preproc_row = await _get_pending_preproc_row(db, memory_base_id, session_id)
 
                 if preproc_row is not None:
+                    await fence_preprocessing_snapshot()
                     # Resume: restrict the working batch to the messages this row
                     # was built from.  Do NOT call the LLM again — the prior
                     # judgment (and cost) is preserved across crashes.
@@ -409,6 +444,7 @@ async def _ingest_memory_task_in_scope(
                         actor_user_id=actor_user_id,
                         provider_policy=provider_policies.preprocessing,
                     )
+                    await fence_preprocessing_snapshot()
                     if result.status == "skipped":
                         # Kill phrase — record the skip, advance the cursor, but
                         # never write vectors. _mark_messages_ingested still
@@ -573,7 +609,10 @@ async def _ingest_memory_task_in_scope(
             return {"message": "Success", "ingested": ingested_count}
 
         finally:
-            await _release_session_lock(db, lock_handle)
+            try:
+                await storage_stack.aclose()
+            finally:
+                await _release_session_lock(db, lock_handle)
 
 
 async def _fetch_pending_messages(

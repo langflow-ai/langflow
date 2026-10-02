@@ -7,6 +7,7 @@ from sqlalchemy import delete, exists
 from sqlmodel import col, select
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.deps import session_scope
 from langflow.services.knowledge_base_storage.runtime import (
@@ -14,6 +15,34 @@ from langflow.services.knowledge_base_storage.runtime import (
     delete_storage_for_record,
     operation,
 )
+
+
+async def detach_attention_store(kb_id: UUID, *, expected_generation: int) -> None:
+    """Disable a failed store while retaining its source, routing and migration ledger.
+
+    Linked Memory Bases remain unavailable until explicitly deleted. Detachment
+    never invokes a retired backend or removes a local or remote source.
+    """
+    async with operation(kb_id, allowed_states=("needs_attention",)) as record:
+        if record.storage_generation != expected_generation:
+            msg = "Storage generation changed. Refresh migration status before detaching."
+            raise StorageUnavailableError(msg)
+        async with session_scope() as session:
+            current = await session.get(KnowledgeBaseRecord, kb_id)
+            if (
+                current is None
+                or current.storage_generation != expected_generation
+                or current.storage_state != "needs_attention"
+            ):
+                msg = "Storage changed. Refresh migration status before detaching."
+                raise StorageUnavailableError(msg)
+            current.storage_state = "detached"
+            if current.active_migration_id:
+                run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)
+                if run is not None:
+                    run.phase = "detached"
+            await session.commit()
+
 
 if TYPE_CHECKING:
     from typing import Any

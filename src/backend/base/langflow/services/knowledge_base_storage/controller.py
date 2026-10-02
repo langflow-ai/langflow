@@ -51,14 +51,17 @@ class UpgradeControllerError(RuntimeError):
 
 
 def _error(message: str) -> UpgradeControllerError:
+    """Construct an upgrade error with actionable operator guidance."""
     return UpgradeControllerError(message)
 
 
 def _identity(process: psutil.Process) -> dict:
+    """Capture a process's PID and creation time to detect PID reuse."""
     return {"pid": process.pid, "created": process.create_time()}
 
 
 def _process(identity: dict) -> psutil.Process | None:
+    """Resolve a live process only when its creation time matches the saved identity."""
     if (
         type(identity) is not dict
         or type(identity.get("pid")) is not int
@@ -81,6 +84,7 @@ def _process(identity: dict) -> psutil.Process | None:
 
 
 def _private_directory(path: Path) -> Path:
+    """Create or validate a private directory for controller state."""
     if not path.is_absolute() or path.is_symlink():
         msg = "The controller state directory must be an absolute private directory"
         raise _error(msg)
@@ -93,6 +97,7 @@ def _private_directory(path: Path) -> Path:
 
 
 def _read(path: Path) -> dict:
+    """Load the controller's journal from a bounded, validated file."""
     if path.is_symlink():
         msg = "Invalid controller state file"
         raise _error(msg)
@@ -114,6 +119,7 @@ def _read(path: Path) -> dict:
 
 
 def _write(path: Path, payload: dict, *, exclusive: bool = False) -> None:
+    """Persist controller state atomically with an optional exclusive creation guard."""
     encoded = json.dumps(payload, separators=(",", ":")).encode()
     if len(encoded) > _MAX_JOURNAL_BYTES:
         msg = "Controller state exceeds its size bound"
@@ -135,6 +141,7 @@ def _write(path: Path, payload: dict, *, exclusive: bool = False) -> None:
 
 
 def _family(session_id: int) -> list[psutil.Process]:
+    """Find processes belonging to the controller-managed process session."""
     family = []
     for process in psutil.process_iter():
         try:
@@ -154,6 +161,7 @@ def _family(session_id: int) -> list[psutil.Process]:
 
 
 def _validate_supervisor(identity: dict) -> psutil.Process:
+    """Reject an unsafe supervisor identity before stopping any processes."""
     process = _process(identity)
     if process is None:
         msg = "The selected supervisor identity is stale. No processes were stopped"
@@ -250,6 +258,7 @@ async def stage_helper() -> None:
 
 
 def _launch_environment(config: dict, receipt: str) -> dict[str, str]:
+    """Bind the verified upgrade receipt to the new worker environment."""
     environment = dict(os.environ)
     for key in _HELPER_ENV:
         environment.pop(key, None)
@@ -278,6 +287,7 @@ def _launch(journal_path: Path) -> None:
 
 
 async def _start(journal_path: Path, journal: dict) -> dict:
+    """Launch or resume observation of the new instance using the durable journal."""
     launch = Path(journal["launch"])
     if not launch.exists():
         log = journal_path.parent / "application.log"
@@ -322,6 +332,7 @@ async def _start(journal_path: Path, journal: dict) -> dict:
 
 
 def _owns_listener(identity: dict, port: int) -> bool:
+    """Check that the saved instance family owns the expected readiness listener."""
     if _process(identity) is None:
         return False
     for process in _family(identity["pid"]):
@@ -340,6 +351,7 @@ def _owns_listener(identity: dict, port: int) -> bool:
 
 
 async def _wait_ready(identity: dict, port: int, timeout: float) -> None:
+    """Wait for strict storage readiness from the instance that owns the listener."""
     deadline = time.monotonic() + timeout
     async with httpx.AsyncClient(trust_env=False, timeout=2, follow_redirects=False) as client:
         while time.monotonic() < deadline:
@@ -348,7 +360,7 @@ async def _wait_ready(identity: dict, port: int, timeout: float) -> None:
                 raise _error(msg)
             if await helper._disk_call(_owns_listener, identity, port):
                 try:
-                    response = await client.get(f"http://127.0.0.1:{port}/healthz")
+                    response = await client.get(f"http://127.0.0.1:{port}/healthz?require_storage_ready=true")
                     if response.status_code == _HTTP_OK and response.json().get("status") == "ok":
                         return
                 except (httpx.HTTPError, ValueError, AttributeError):
@@ -491,6 +503,7 @@ async def upgrade(
 
 
 def main() -> None:
+    """Parse operator arguments and run or resume the managed upgrade controller."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--launch", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--root", type=Path)

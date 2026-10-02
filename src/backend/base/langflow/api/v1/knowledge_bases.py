@@ -477,6 +477,7 @@ def _build_kb_info(
     metadata: dict[str, Any],
     size: int | None = None,
 ) -> KnowledgeBaseInfo:
+    """Format persisted KB metadata and its storage availability for the API."""
     chunks_count = metadata.get("chunks") or 0
     # Trust a persisted "failed" status (set by ``perform_ingestion``)
     # so the UI can surface ``failure_reason`` after a backend error.

@@ -62,6 +62,7 @@ async def _worker(function, *args, **kwargs):
 
 
 def _model_fingerprint(record: KnowledgeBaseRecord) -> str:
+    """Hash the persisted embedding selection for migration compatibility checks."""
     selection = record.model_selection
     if isinstance(selection, list):
         selection = selection[0] if selection else {}
@@ -71,6 +72,7 @@ def _model_fingerprint(record: KnowledgeBaseRecord) -> str:
 
 
 async def _phase(migration_id: UUID, phase: str, **changes) -> None:
+    """Persist migration progress and its updated timestamp in the ledger."""
     async with session_scope() as session:
         run = await session.get(KnowledgeBaseStorageMigration, migration_id)
         run.phase = phase
@@ -81,6 +83,7 @@ async def _phase(migration_id: UUID, phase: str, **changes) -> None:
 
 
 async def _prepare(record: KnowledgeBaseRecord) -> KnowledgeBaseStorageMigration:
+    """Create or resume a migration identity and fence its current routing generation."""
     async with session_scope() as session:
         current = await session.get(KnowledgeBaseRecord, record.id)
         run = (
@@ -108,6 +111,7 @@ async def _prepare(record: KnowledgeBaseRecord) -> KnowledgeBaseStorageMigration
 
 
 async def _attention(kb_id: UUID, migration_id: UUID, code: str) -> None:
+    """Retain the source and record a safe error code for operator recovery."""
     async with session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, kb_id)
         run = await session.get(KnowledgeBaseStorageMigration, migration_id)
@@ -121,6 +125,7 @@ async def _attention(kb_id: UUID, migration_id: UUID, code: str) -> None:
 
 
 async def _complete(row: KnowledgeBaseRecord, run: KnowledgeBaseStorageMigration, target: SQLiteBackend) -> None:
+    """Verify the activated target and publish readiness only if its routing still matches."""
     await target.ensure_ready()
     manifest = await target.read_migration_manifest()
     if (
@@ -161,11 +166,13 @@ async def _complete(row: KnowledgeBaseRecord, run: KnowledgeBaseStorageMigration
 
 
 def _qualify(path, header, directory):
+    """Validate a helper export into a private replayable staging ledger."""
     with path.open("rb") as stream:
         return qualify_export(stream, expected_header=header, scratch_directory=directory)
 
 
 def _binding_path(relative: str, *, root: Path | None = None) -> Path:
+    """Derive the retained source binding path from its relative identity."""
     return (
         (root or storage_root()) / ".migration" / "bindings" / f"{hashlib.sha256(relative.encode()).hexdigest()}.json"
     )
@@ -189,6 +196,7 @@ def _write_source_binding(relative: str, fingerprint: str, kb_id: UUID) -> None:
 
 
 def _is_retired_source(relative: str, *, root: Path | None = None) -> bool:
+    """Check whether a retained legacy source was already adopted by an upgrade."""
     source_root = root or storage_root()
     path = _binding_path(relative, root=source_root)
     if not path.exists() and not path.is_symlink():
@@ -484,12 +492,14 @@ async def reconcile_legacy_inventory() -> None:
 
 
 def inventory_status() -> dict:
+    """Report discovery completion and the number of unresolved source identities."""
     return {"complete": _inventory_complete, "issues": _inventory_issue_count}
 
 
 async def run_pending() -> None:
     # This local-only discovery occurs after the controller barrier and before
     # selecting work, so legacy Memory/KB identities are included automatically.
+    """Reconcile legacy inventory and resume eligible storage migrations."""
     try:
         await reconcile_legacy_inventory()
     except Exception:  # noqa: BLE001 -- still persist actionable errors on registered KBs
@@ -530,6 +540,7 @@ async def run_pending() -> None:
 
 
 def schedule_upgrade() -> asyncio.Task:
+    """Schedule one background discovery and upgrade task per running coordinator."""
     global _inventory_complete  # noqa: PLW0603 -- readiness must close before scheduling inventory
     for existing in _tasks:
         if not existing.done():
@@ -548,21 +559,25 @@ def schedule_upgrade() -> asyncio.Task:
 
 
 async def stop_upgrade() -> None:
+    """Cancel and drain coordinator tasks before application shutdown."""
     for task in tuple(_tasks):
         task.cancel()
     if _tasks:
         await asyncio.gather(*tuple(_tasks), return_exceptions=True)
 
 
-async def readiness() -> bool:
+async def readiness(*, require_storage_ready: bool = True) -> bool:
+    """Gate inventory globally, with optional strict migration readiness for upgrades."""
     if not _inventory_complete:
         return False
+    if not require_storage_ready:
+        return True
     async with session_scope() as session:
         row = (
             await session.exec(
                 select(KnowledgeBaseRecord.id)
                 .where(
-                    (KnowledgeBaseRecord.backend_type == "chroma")
+                    ((KnowledgeBaseRecord.backend_type == "chroma") & (KnowledgeBaseRecord.storage_state != "detached"))
                     | col(KnowledgeBaseRecord.storage_state).in_(("migrating", "needs_attention"))
                 )
                 .limit(1)

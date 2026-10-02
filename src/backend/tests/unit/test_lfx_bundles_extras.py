@@ -40,6 +40,7 @@ BUNDLES_DIR = REPO_ROOT / "src" / "bundles"
 # scripts/migrate/consolidate_bundles.py. ``all`` pulls every provider;
 # ``all-no-torch`` is ``all`` minus the torch-pulling providers (TORCH_EXTRAS).
 AGGREGATE_EXTRAS = frozenset({"all", "all-no-torch"})
+RETIRED_EXTRAS = frozenset({"chroma"})
 COMPATIBILITY_EXTRAS = {
     "azure": ["lfx-azure>=0.1.0,<1.0.0"],
     "google": ["lfx-google>=0.1.0,<1.0.0"],
@@ -77,7 +78,9 @@ def test_every_provider_has_an_extra_and_vice_versa() -> None:
 def test_all_extra_is_exactly_the_per_provider_self_refs() -> None:
     extras = _load_extras()
     expected = {
-        f"lfx-bundles[{key}]" for key in extras if key not in AGGREGATE_EXTRAS and key not in COMPATIBILITY_EXTRAS
+        f"lfx-bundles[{key}]"
+        for key in extras
+        if key not in AGGREGATE_EXTRAS and key not in COMPATIBILITY_EXTRAS and key not in RETIRED_EXTRAS
     }
     actual = set(extras["all"])
     assert actual == expected, (
@@ -90,7 +93,10 @@ def test_all_no_torch_extra_is_all_minus_torch_providers() -> None:
     expected = {
         f"lfx-bundles[{key}]"
         for key in extras
-        if key not in AGGREGATE_EXTRAS and key not in TORCH_EXTRAS and key not in COMPATIBILITY_EXTRAS
+        if key not in AGGREGATE_EXTRAS
+        and key not in TORCH_EXTRAS
+        and key not in COMPATIBILITY_EXTRAS
+        and key not in RETIRED_EXTRAS
     }
     actual = set(extras["all-no-torch"])
     assert actual == expected, (

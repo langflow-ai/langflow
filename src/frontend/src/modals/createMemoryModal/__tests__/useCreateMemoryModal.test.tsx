@@ -59,7 +59,7 @@ jest.mock("@/controllers/API/queries/memories/use-create-memory", () => ({
   useCreateMemory: () => ({ mutate: mockMutate, isPending: false }),
 }));
 
-// No DB providers configured in the test env → default to local Chroma, which
+// No DB providers configured in the test env → default to local SQLite, which
 // `isDBProviderConfigured` always treats as configured.
 jest.mock("@/controllers/API/queries/variables", () => ({
   useGetGlobalVariables: (...args: unknown[]) => {
@@ -404,7 +404,7 @@ describe("useCreateMemoryModal", () => {
     );
   });
 
-  it("omits the implicit Chroma type so the server can choose its default", () => {
+  it("omits the implicit SQLite type so the server can choose its default", () => {
     const { result } = renderHook(() =>
       useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
     );

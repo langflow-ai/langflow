@@ -36,17 +36,21 @@ class QualificationError(ValueError):
 
 
 def _require(condition: bool, message: str) -> None:  # noqa: FBT001 - assertion condition, not a behavioral flag
+    """Raise a qualification error when a release evidence condition fails."""
     if not condition:
         raise QualificationError(message)
 
 
 def _read(path: Path) -> bytes:
+    """Read release evidence bytes from the supplied path."""
     _require(not path.is_symlink() and path.is_file(), "Expected a regular release evidence file")
     _require(path.stat().st_size <= 1024 * 1024, "Release evidence exceeds its size bound")
     return path.read_bytes()
 
 
 def _object(data: bytes) -> dict:
+    """Decode a JSON object while rejecting duplicate fields."""
+
     def unique(pairs):
         result = {}
         for key, value in pairs:
@@ -137,14 +141,17 @@ def validate_documents(manifest_bytes: bytes, qualification_bytes: bytes, releas
 
 
 def _run(*args: str) -> bytes:
+    """Capture a checked command's output within the release validation deadline."""
     return subprocess.run(args, check=True, capture_output=True, timeout=120).stdout  # noqa: S603
 
 
-def normalize_dependencies(value: dict, workspace_versions: dict[str, str]) -> dict:
+def normalize_dependencies(value: dict, workspace_versions: dict[str, set[str]]) -> dict:
     """Permit exact workspace version restamps without ignoring constraints."""
 
-    def stamp(text: str, version: str) -> str:
-        return re.sub(r"(?<![\w.+-])" + re.escape(version) + r"(?![\w.+-])", "<workspace-version>", text)
+    def stamp(text: str, versions: set[str]) -> str:
+        for version in sorted(versions, key=len, reverse=True):
+            text = re.sub(r"(?<![\w.+-])" + re.escape(version) + r"(?![\w.+-])", "<workspace-version>", text)
+        return text
 
     def normalize(item):
         if isinstance(item, list):
@@ -157,12 +164,12 @@ def normalize_dependencies(value: dict, workspace_versions: dict[str, str]) -> d
         if not isinstance(item, dict):
             return item
         result = {key: normalize(child) for key, child in item.items()}
-        version = workspace_versions.get(item.get("name"))
-        if version:
-            if result.get("version") == version:
+        versions = workspace_versions.get(item.get("name"))
+        if versions:
+            if result.get("version") in versions:
                 result["version"] = "<workspace-version>"
             if isinstance(result.get("specifier"), str):
-                result["specifier"] = stamp(result["specifier"], version)
+                result["specifier"] = stamp(result["specifier"], versions)
         return result
 
     return normalize(value)
@@ -171,13 +178,13 @@ def normalize_dependencies(value: dict, workspace_versions: dict[str, str]) -> d
 def validate_dependency_compatibility(commit: str, source_ref: str) -> None:
     """Bind qualification to every third-party resolution and runtime setting."""
     snapshots = []
-    for ref in (commit, source_ref):
-        lock = tomllib.loads(_run("git", "show", f"{ref}:uv.lock").decode())
-        versions = {
-            package["name"]: package["version"]
-            for package in lock["package"]
-            if any(key in package.get("source", {}) for key in ("editable", "virtual", "directory"))
-        }
+    locks = [tomllib.loads(_run("git", "show", f"{ref}:uv.lock").decode()) for ref in (commit, source_ref)]
+    versions: dict[str, set[str]] = {}
+    for lock in locks:
+        for package in lock["package"]:
+            if any(key in package.get("source", {}) for key in ("editable", "virtual", "directory")):
+                versions.setdefault(package["name"], set()).add(package["version"])
+    for ref, lock in zip((commit, source_ref), locks, strict=True):
         snapshot = {"lock": normalize_dependencies(lock, versions)}
         for path in MANIFESTS:
             metadata = tomllib.loads(_run("git", "show", f"{ref}:{path}").decode())
@@ -243,6 +250,7 @@ def check_release(*, kit: Path, trusted_root: Path, release_tag: str, source_ref
 
 
 def main() -> None:
+    """Validate signed helper evidence against the requested release source."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kit", required=True, type=Path)
     parser.add_argument("--trusted-root", required=True, type=Path)

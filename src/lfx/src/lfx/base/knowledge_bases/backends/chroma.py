@@ -15,6 +15,7 @@ class ChromaMigrationRequiredError(RuntimeError):
     """Legacy routing cannot be served by the Chroma-free runtime."""
 
     def __init__(self) -> None:
+        """Describe the supported migration path while preserving original Chroma data."""
         super().__init__(
             "Chroma support was retired in Langflow 1.13. This store requires migration. "
             "For a local Knowledge Base, check the automatic upgrade migration status. "
@@ -30,9 +31,11 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
     backend_type = BackendType.CHROMA
 
     def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+        """Reject retired Chroma construction before touching storage or credentials."""
         raise ChromaMigrationRequiredError
 
     def _build_vector_store(self) -> VectorStore:
+        """Reject creation of a vector store through a retired Chroma backend."""
         raise ChromaMigrationRequiredError
 
 

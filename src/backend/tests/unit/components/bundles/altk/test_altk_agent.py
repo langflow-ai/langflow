@@ -5,7 +5,7 @@ import sys
 from importlib.abc import MetaPathFinder
 
 import pytest
-from lfx_bundles.altk.altk_agent import ALTKAgentComponent
+from lfx.components.altk.altk_agent import ALTKAgentComponent
 
 
 class RejectALTKImports(MetaPathFinder):
@@ -22,11 +22,11 @@ def test_discovery_without_altk_sdk(monkeypatch):
     for name in (
         "lfx.base.agents.altk_base_agent",
         "lfx.base.agents.altk_tool_wrappers",
-        "lfx_bundles.altk.altk_agent",
+        "lfx.components.altk.altk_agent",
     ):
         module = importlib.import_module(name)
         importlib.reload(module)
-    from lfx_bundles.altk import ALTKAgentComponent as DiscoveredComponent
+    from lfx.components.altk import ALTKAgentComponent as DiscoveredComponent
 
     component = DiscoveredComponent()
     assert component.name == "ALTK Agent"

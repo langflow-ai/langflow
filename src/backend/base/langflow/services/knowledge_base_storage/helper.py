@@ -64,6 +64,7 @@ async def _drain_task(task):
 async def _stop_reader(docker, name, process):
     # Creation has finished before execution begins. Stop/drain the attach
     # client, then remove the known container. A late create cannot race this.
+    """Stop the isolated export reader and drain its subprocess handles."""
     if process is not None and process.returncode is None:
         process.kill()
         await process.wait()
@@ -74,6 +75,7 @@ def _client_environment() -> dict[str, str]:
     # Docker/cosign need the controller's registry configuration. These values
     # are never passed into the container. No model/database credentials pass
     # through to either client.
+    """Build a restricted subprocess environment for helper verification and execution."""
     names = (
         "PATH",
         "HOME",
@@ -90,6 +92,7 @@ def _client_environment() -> dict[str, str]:
 
 
 async def _command(*args: str, timeout: int = 120, capture: bool = False) -> bytes:
+    """Run a bounded helper command and drain its process on failure or cancellation."""
     try:
         process = await asyncio.create_subprocess_exec(
             *args,
@@ -203,6 +206,7 @@ def _release_image_id(payload: bytes, image: str) -> str:
 
 
 async def _check_cosign_version(cosign: str) -> None:
+    """Reject an unqualified cosign version before helper verification."""
     try:
         version = json.loads(await _command(cosign, "version", "--json", capture=True))
         if version.get("gitVersion") != _COSIGN_VERSION:
@@ -259,6 +263,7 @@ async def _verified_offline_image(cosign: str, image: str, bundle: str) -> str:
 
 
 async def _stage_verified_helper(docker: str, cosign: str, image: str) -> str:
+    """Verify the configured helper and stage its immutable image identity."""
     await _check_cosign_version(cosign)
     bundle = os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_BUNDLE")
     if bundle:
@@ -328,6 +333,7 @@ async def cleanup_helper_artifact() -> None:
 
 
 def _validate_snapshot(snapshot: Path) -> Path:
+    """Reject unsafe snapshot paths before mounting legacy data into the reader."""
     if not snapshot.is_absolute() or snapshot.is_symlink() or not snapshot.is_dir():
         msg = "Migration snapshot must be a private absolute directory."
         raise MigrationHelperError(msg)
@@ -399,6 +405,7 @@ def isolated_command(docker: str, image: str, snapshot: Path, name: str) -> list
 
 
 def _read_header(path: Path, request: dict) -> ExportHeader:
+    """Decode and validate the helper header against the migration request."""
     with path.open("rb") as stream:
         line = stream.readline(_MAX_HEADER_BYTES + 1)
     if len(line) > _MAX_HEADER_BYTES or not line.endswith(b"\n"):

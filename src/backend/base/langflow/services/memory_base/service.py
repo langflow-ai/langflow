@@ -259,6 +259,7 @@ class MemoryBaseService(Service):
         *,
         is_superuser: bool = False,
     ) -> MemoryBase:
+        """Validate the owned flow and providers before provisioning a Memory Base and its KB."""
         backend_type = payload.backend_type or resolve_default_kb_backend()
         backend_config = payload.backend_config or {}
 

@@ -158,7 +158,9 @@ class LocalDBComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
+        """Reject construction of the retired Local DB store and provide migration guidance."""
         raise ChromaMigrationRequiredError
 
     def perform_search(self) -> DataFrame:
+        """Reject search through the retired Local DB component."""
         raise ChromaMigrationRequiredError

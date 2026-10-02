@@ -291,3 +291,147 @@ async def test_cancelled_remote_delete_drains_before_concurrent_retry(active_use
     assert await second is True
     assert calls == ["delete", "delete"]
     assert await knowledge_base_service.get_by_id(record.id) is None
+
+
+@pytest.mark.parametrize("route", ["inventory", "migrations", "pending-cleanup"])
+async def test_storage_status_requires_superuser(client, logged_in_headers, route):
+    """Ordinary authenticated users cannot enumerate storage administration state."""
+    response = await client.get(f"/api/v1/knowledge-base-storage/{route}", headers=logged_in_headers)
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize("route", ["migrations/{id}/retry", "attention/{id}/detach"])
+async def test_storage_recovery_requires_superuser(client, logged_in_headers, route):
+    """Recovery authorization precedes lookup and mutation."""
+    response = await client.post(
+        f"/api/v1/knowledge-base-storage/{route.format(id=uuid4())}",
+        headers=logged_in_headers,
+        json={"expected_generation": 1},
+    )
+    assert response.status_code == 403
+
+
+async def test_inventory_and_empty_status_routes(client, admin_headers, monkeypatch):
+    """Inventory and empty status endpoints expose their documented HTTP response shapes."""
+    from langflow.services.knowledge_base_storage import coordinator
+
+    monkeypatch.setattr(coordinator, "_inventory_complete", True)
+    monkeypatch.setattr(coordinator, "_inventory_issue_count", 0)
+    inventory = await client.get("/api/v1/knowledge-base-storage/inventory", headers=admin_headers)
+    assert inventory.status_code == 200
+    assert inventory.json() == {"complete": True, "issues": 0}
+    for route in ("migrations", "pending-cleanup"):
+        response = await client.get(f"/api/v1/knowledge-base-storage/{route}", headers=admin_headers)
+        assert response.status_code == 200
+        assert response.json() == []
+
+
+async def _attention_migration(user_id):
+    """Bind an attention ledger to a retired cloud store without opening its source."""
+    from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+
+    record = await pending_record(user_id, state="needs_attention", backend_type="chroma")
+    run = KnowledgeBaseStorageMigration(
+        kb_id=record.id,
+        source_generation=1,
+        target_generation=2,
+        phase="needs_attention",
+        error_code="remote_source_requires_migration",
+    )
+    async with session_scope() as session:
+        row = await session.get(KnowledgeBaseRecord, record.id)
+        row.backend_config = {"mode": "cloud"}
+        row.active_migration_id = run.id
+        session.add(run)
+        await session.commit()
+    return record, run
+
+
+async def test_migration_status_retry_and_detach(client, admin_headers, active_user, storage_root, monkeypatch):
+    """Admins can inspect, retry, and explicitly detach a blocked store while retaining its evidence."""
+    from unittest.mock import Mock
+
+    from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+    from langflow.services.knowledge_base_storage import coordinator
+
+    record, run = await _attention_migration(active_user.id)
+    source = storage_root / "retained-source"
+    source.mkdir(parents=True, exist_ok=True)
+    (source / "chroma.sqlite3").write_bytes(b"operator-owned source")
+    scheduled = Mock()
+    monkeypatch.setattr("langflow.api.v1.knowledge_base_storage.schedule_upgrade", scheduled)
+    response = await client.get("/api/v1/knowledge-base-storage/migrations", headers=admin_headers)
+    assert response.status_code == 200
+    entry = next(row for row in response.json() if row["id"] == str(run.id))
+    assert entry["kb_id"] == str(record.id)
+    assert entry["error_code"] == "remote_source_requires_migration"
+    assert "pgVector" in entry["guidance"]
+    response = await client.post(f"/api/v1/knowledge-base-storage/migrations/{run.id}/retry", headers=admin_headers)
+    assert response.status_code == 202
+    assert response.json() == {"id": str(run.id), "status": "scheduled"}
+    scheduled.assert_called_once_with()
+    assert (await knowledge_base_service.get_by_id(record.id)).storage_state == "needs_attention"
+    assert not await coordinator.readiness()
+    assert await coordinator.readiness(require_storage_ready=False)
+    response = await client.post(
+        f"/api/v1/knowledge-base-storage/attention/{record.id}/detach",
+        headers=admin_headers,
+        json={"expected_generation": 1},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"kb_id": str(record.id), "status": "detached", "source_preserved": True}
+    assert (source / "chroma.sqlite3").read_bytes() == b"operator-owned source"
+    assert (await knowledge_base_service.get_by_id(record.id)).storage_state == "detached"
+    async with session_scope() as session:
+        assert (await session.get(KnowledgeBaseStorageMigration, run.id)).phase == "detached"
+    assert await coordinator.readiness()
+
+
+@pytest.mark.parametrize("state", ["ready", "deleting", "detached"])
+async def test_migration_retry_rejects_changed_routing(client, admin_headers, active_user, state):
+    """The ledger alone cannot authorize a retry after the routing fence changed."""
+    record, run = await _attention_migration(active_user.id)
+    async with session_scope() as session:
+        row = await session.get(KnowledgeBaseRecord, record.id)
+        row.storage_state = state
+        await session.commit()
+    response = await client.post(f"/api/v1/knowledge-base-storage/migrations/{run.id}/retry", headers=admin_headers)
+    assert response.status_code == 409
+    assert response.json() == {"detail": "This storage migration cannot be retried"}
+
+
+async def test_unknown_migration_retry_returns_404(client, admin_headers):
+    """An unknown migration UUID has a stable not-found response."""
+    response = await client.post(f"/api/v1/knowledge-base-storage/migrations/{uuid4()}/retry", headers=admin_headers)
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Storage migration not found"}
+
+
+@pytest.mark.parametrize("generation", [2, 0, "1"])
+async def test_detach_rejects_stale_or_invalid_generation(client, admin_headers, active_user, generation):
+    """Detachment cannot bypass the original immutable generation confirmation."""
+    record, _run = await _attention_migration(active_user.id)
+    response = await client.post(
+        f"/api/v1/knowledge-base-storage/attention/{record.id}/detach",
+        headers=admin_headers,
+        json={"expected_generation": generation},
+    )
+    assert response.status_code == (409 if generation == 2 else 422)
+    assert (await knowledge_base_service.get_by_id(record.id)).storage_state == "needs_attention"
+
+
+@pytest.mark.parametrize("outcome", ["ready", "blocked", "exception"])
+@pytest.mark.parametrize("strict", [False, True])
+async def test_http_healthz_storage_gate(client, monkeypatch, outcome, strict):
+    """HTTP readiness fails closed on inventory errors and preserves the controller's strict option."""
+    from unittest.mock import AsyncMock
+
+    ready = AsyncMock(return_value=outcome == "ready")
+    if outcome == "exception":
+        ready.side_effect = RuntimeError("private storage details")
+    monkeypatch.setattr("langflow.services.knowledge_base_storage.coordinator.readiness", ready)
+    response = await client.get(f"/healthz?require_storage_ready={str(strict).lower()}")
+    ready.assert_awaited_once_with(require_storage_ready=strict)
+    assert response.status_code == (200 if outcome == "ready" else 503)
+    if outcome != "ready":
+        assert response.json() == {"detail": "Knowledge base storage upgrade requires attention"}

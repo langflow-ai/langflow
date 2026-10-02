@@ -17,6 +17,7 @@ FORBIDDEN_PACKAGES = {"chromadb", "langchain-chroma", "agent-lifecycle-toolkit"}
 
 
 def check_inventory(root: Path) -> None:
+    """Reject retired SDK distributions in an installed application artifact."""
     uv = shutil.which("uv")
     if uv is None:
         msg = "uv is required to verify the universal application dependency export."

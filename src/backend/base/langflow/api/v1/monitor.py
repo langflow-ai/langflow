@@ -324,6 +324,7 @@ async def delete_messages(
     session: DbSession,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> None:
+    """Delete authorized messages after fencing associated Memory storage and tracking data."""
     try:
         # Ownership guard lives in the CRUD layer: only messages belonging to
         # current_user are selected and deleted; foreign IDs are ignored.

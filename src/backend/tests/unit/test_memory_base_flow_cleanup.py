@@ -448,3 +448,43 @@ async def test_owner_cascade_preserves_unfinished_legacy_migration(active_user, 
     monkeypatch.setattr("langflow.services.memory_base.flow_cleanup.delete_kb", delete_kb)
     await finalize_flow_memory_base_cleanup([handle])
     delete_kb.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("backend", "state"), [("sqlite", "migrating"), ("sqlite", "needs_attention"), ("chroma", "ready")]
+)
+async def test_flow_purge_preserves_migration_fence(client, json_flow, logged_in_headers, backend, state):
+    """Reject flow deletion without overwriting a migration or retired-store fence."""
+    from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
+
+    flow_id, user_id = await _create_flow(client, json_flow, logged_in_headers)
+    kb_name = f"fenced_{uuid.uuid4().hex[:8]}"
+    mb_id = await _seed_memory_base(flow_id, user_id, kb_name=kb_name)
+    record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    async with session_scope() as db:
+        row = await db.get(KnowledgeBaseRecord, record.id)
+        row.backend_type = backend
+        row.storage_state = state
+    with pytest.raises(StorageUnavailableError):
+        async with session_scope() as db:
+            await purge_flow_memory_bases(db, flow_id)
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert response.status_code == 409, response.text
+    assert (await knowledge_base_service.get_by_id(record.id)).storage_state == state
+    assert await _count_rows(MemoryBase, id=mb_id) == 1
+    assert await _count_rows(MemoryBaseSession, memory_base_id=mb_id) == 1
+
+
+async def test_flow_delete_retains_detached_store(client, json_flow, logged_in_headers):
+    """A detached Memory can leave its flow without deleting retained storage."""
+    flow_id, user_id = await _create_flow(client, json_flow, logged_in_headers)
+    kb_name = f"detached_{uuid.uuid4().hex[:8]}"
+    mb_id = await _seed_memory_base(flow_id, user_id, kb_name=kb_name)
+    record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    async with session_scope() as db:
+        row = await db.get(KnowledgeBaseRecord, record.id)
+        row.storage_state = "detached"
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    assert await _count_rows(MemoryBase, id=mb_id) == 0
+    assert (await knowledge_base_service.get_by_id(record.id)).storage_state == "detached"

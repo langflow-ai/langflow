@@ -720,6 +720,7 @@ def _validated_backend_config(
     resource_kind: str,
     strict: bool = False,
 ) -> tuple[str, dict[str, Any]]:
+    """Validate the deployment's storage provider and portable configuration."""
     if not isinstance(backend_type, str) or not backend_type.strip():
         msg = f"referenced {resource_kind} has no deployable backend type"
         raise ProjectArtifactError(msg)

@@ -23,6 +23,7 @@ SETUP_REQUIRED = (
 
 
 def require_reviewers(payload: object) -> None:
+    """Require the configured release environment's approval controls before signing."""
     if not isinstance(payload, dict) or payload.get("name") != ENVIRONMENT:
         raise ValueError(SETUP_REQUIRED)
     rules = payload.get("protection_rules")
@@ -48,6 +49,7 @@ def require_reviewers(payload: object) -> None:
 
 
 def check_environment() -> None:
+    """Verify that the helper release environment enforces the expected publication protections."""
     try:
         executable = shutil.which("gh")
         if executable is None:

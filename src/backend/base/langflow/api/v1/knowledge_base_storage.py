@@ -15,7 +15,7 @@ from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
-from langflow.services.knowledge_base_storage.cleanup import retry_pending_cleanup
+from langflow.services.knowledge_base_storage.cleanup import detach_attention_store, retry_pending_cleanup
 from langflow.services.knowledge_base_storage.coordinator import inventory_status, schedule_upgrade
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 
@@ -39,11 +39,13 @@ class CleanupRetryRequest(BaseModel):
 
 @router.get("/inventory")
 async def get_inventory(_admin: Annotated[User, Depends(get_current_active_superuser)]):
+    """Report whether legacy storage discovery completed and requires recovery."""
     return inventory_status()
 
 
 @router.get("/pending-cleanup")
 async def pending_cleanup(session: DbSession, _admin: Annotated[User, Depends(get_current_active_superuser)]):
+    """List pending deletions with the linked Memory Bases that own their history."""
     rows = (
         await session.exec(
             select(KnowledgeBaseRecord)
@@ -90,6 +92,7 @@ async def retry_cleanup(
     request: CleanupRetryRequest,
     _admin: Annotated[User, Depends(get_current_active_superuser)],
 ):
+    """Retry deletion only for the UUID and generation confirmed by the administrator."""
     try:
         removed = await retry_pending_cleanup(kb_id, expected_generation=request.expected_generation)
     except StorageUnavailableError as exc:
@@ -103,8 +106,23 @@ async def retry_cleanup(
     return {"kb_id": kb_id, "status": "deleted" if removed else "already_absent"}
 
 
+@router.post("/attention/{kb_id}/detach")
+async def detach_storage(
+    kb_id: UUID,
+    request: CleanupRetryRequest,
+    _admin: Annotated[User, Depends(get_current_active_superuser)],
+):
+    """Abandon a failed migration without deleting its source or recovery evidence."""
+    try:
+        await detach_attention_store(kb_id, expected_generation=request.expected_generation)
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"kb_id": kb_id, "status": "detached", "source_preserved": True}
+
+
 @router.get("/migrations")
 async def list_migrations(session: DbSession, _admin: Annotated[User, Depends(get_current_active_superuser)]):
+    """Return bounded, credential-free migration status and operator guidance."""
     rows = (
         await session.exec(
             select(KnowledgeBaseStorageMigration)
@@ -133,6 +151,7 @@ async def list_migrations(session: DbSession, _admin: Annotated[User, Depends(ge
 async def retry_migration(
     migration_id: UUID, session: DbSession, _admin: Annotated[User, Depends(get_current_active_superuser)]
 ):
+    """Schedule recovery of the migration still bound to the current KB record."""
     run = await session.get(KnowledgeBaseStorageMigration, migration_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Storage migration not found")

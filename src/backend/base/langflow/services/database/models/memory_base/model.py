@@ -61,6 +61,7 @@ class MemoryBaseCreate(MemoryBaseBase):
 
     @model_validator(mode="after")
     def preprocessing_defaults(self) -> "MemoryBaseCreate":
+        """Validate storage selection and populate preprocessing defaults when enabled."""
         if self.backend_type not in (None, "sqlite", "postgres", "opensearch"):
             msg = "Memory bases support SQLite Local, pgVector and OpenSearch"
             raise ValueError(msg)

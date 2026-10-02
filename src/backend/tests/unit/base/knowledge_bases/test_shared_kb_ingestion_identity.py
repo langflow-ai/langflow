@@ -69,7 +69,10 @@ def task_service():
 def _fake_backend() -> MagicMock:
     backend = MagicMock()
     backend.add_documents = AsyncMock()
+    backend.ensure_ready = AsyncMock()
+    backend.storage_size_bytes = AsyncMock(return_value=1234)
     backend.teardown = AsyncMock()
+    backend.delete_collection = AsyncMock()
     return backend
 
 
@@ -82,7 +85,9 @@ async def _run_dispatched_ingestion(task_service: MagicMock, *, add_documents_er
     if add_documents_error is not None:
         backend.add_documents.side_effect = add_documents_error
     with (
-        patch("langflow.api.utils.kb_helpers.create_backend", return_value=backend) as create_backend,
+        patch(
+            "langflow.services.knowledge_base_storage.runtime.create_backend", return_value=backend
+        ) as create_backend,
         patch(
             "langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new=AsyncMock(return_value=MagicMock())
         ) as build_embeddings,
@@ -112,7 +117,7 @@ async def _run_dispatched_ingestion(task_service: MagicMock, *, add_documents_er
 
 def _assert_routed_to_owner(result: SimpleNamespace, *, owner, actor, owners_kb) -> None:
     result.create_backend.assert_called_once()
-    assert result.create_backend.call_args.args == ("opensearch",)
+    assert result.create_backend.call_args.kwargs["backend_type"] == "opensearch"
     assert result.create_backend.call_args.kwargs["backend_config"] == OWNER_CONFIG
     assert result.create_backend.call_args.kwargs["user_id"] == owner.id
     assert result.run_row.await_args.kwargs["kb_id"] == owners_kb.id
@@ -135,6 +140,8 @@ async def test_file_ingest_writes_to_the_owners_storage(
     result = await _run_dispatched_ingestion(task_service)
 
     _assert_routed_to_owner(result, owner=user_two, actor=active_user, owners_kb=owners_kb)
+    updated = await knowledge_base_service.get_by_user_and_name(user_two.id, KB_NAME)
+    assert updated.size_bytes == 1234
 
 
 @pytest.mark.usefixtures("cross_user_grant")
@@ -240,13 +247,17 @@ async def test_cancel_cleans_the_owners_storage(client: AsyncClient, logged_in_h
     assert cleanup.await_args.kwargs["backend_config"] == OWNER_CONFIG
 
 
-async def test_cleanup_deletes_by_job_id_through_the_given_owner():
+@pytest.mark.usefixtures("owners_kb")
+async def test_cleanup_deletes_by_job_id_through_the_given_owner(user_two):
     job_id = uuid.uuid4()
-    owner_id = uuid.uuid4()
+    owner_id = user_two.id
     backend = MagicMock()
     backend.delete_by = AsyncMock()
     backend.teardown = AsyncMock()
-    with patch("langflow.api.utils.kb_helpers.create_backend", return_value=backend) as create_backend:
+    backend.delete_collection = AsyncMock()
+    with patch(
+        "langflow.services.knowledge_base_storage.runtime.create_backend", return_value=backend
+    ) as create_backend:
         await KBIngestionHelper.cleanup_chroma_chunks_by_job(
             job_id, None, KB_NAME, backend_type="opensearch", backend_config=OWNER_CONFIG, user_id=owner_id
         )
@@ -284,9 +295,34 @@ async def test_deleting_a_kb_cancels_a_collaborators_inflight_ingestion(
     )
     await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
-    with patch("langflow.api.v1.knowledge_bases._delete_remote_backend_collection", new=AsyncMock(return_value=None)):
+    with patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=_fake_backend()):
         response = await client.delete(f"api/v1/knowledge_bases/{KB_NAME}", headers=logged_in_headers)
 
     assert response.status_code == 200, response.text
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.CANCELLED
+
+
+@pytest.mark.parametrize("stage", ["lookup", "delete", "teardown"])
+@pytest.mark.parametrize("error_type", [OSError, RuntimeError])
+async def test_rollback_cleanup_failure_does_not_mask_ingestion_error(stage, error_type):
+    """Fenced lookup and cleanup failures leave the original ingestion handler in control."""
+    from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
+
+    backend = _fake_backend()
+    backend.delete_by = AsyncMock()
+    lookup = AsyncMock(return_value=backend)
+    if stage == "lookup":
+        lookup.side_effect = (
+            StorageUnavailableError("deleting") if error_type is OSError else error_type("lookup failed")
+        )
+    elif stage == "delete":
+        backend.delete_by.side_effect = error_type("delete failed")
+    else:
+        backend.teardown.side_effect = error_type("close failed")
+    with patch("langflow.api.utils.kb_helpers.backend_for_name", lookup):
+        await KBIngestionHelper.cleanup_chroma_chunks_by_job(uuid.uuid4(), None, KB_NAME, user_id=uuid.uuid4())
+    if stage == "lookup":
+        backend.teardown.assert_not_awaited()
+    else:
+        backend.teardown.assert_awaited_once()

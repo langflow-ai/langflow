@@ -1824,7 +1824,7 @@
   "settings.dbProviders.description": "Configurer les fournisseurs de stockage vectoriel pour les bases de connaissances.",
   "settings.dbProviders.errorMissingConfig": "Configuration obligatoire manquante",
   "settings.dbProviders.errorSaving": "Erreur lors de l'enregistrement du fournisseur de base de données",
-  "settings.dbProviders.errorSelectingSQLite": "Erreur lors de la sélection de la chrominance",
+  "settings.dbProviders.errorSelectingSQLite": "Erreur lors de la sélection de SQLite",
   "settings.dbProviders.errorTesting": "Erreur lors de la vérification de la connexion au fournisseur",
   "settings.dbProviders.fields.CHROMA_API_KEY.label": "Clé d'API",
   "settings.dbProviders.fields.CHROMA_DATABASE.label": "Base de données",

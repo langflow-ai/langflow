@@ -29,8 +29,8 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: '3.13'
           version: latest-known
@@ -48,8 +48,8 @@ jobs:
       matrix:
         runner: [ubuntu-latest, ubuntu-24.04-arm]
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: '3.13'
           version: latest-known
@@ -101,7 +101,7 @@ jobs:
             src/backend/tests/unit/base/knowledge_bases/test_signed_helper_kit.py \
             src/backend/tests/unit/base/knowledge_bases/test_helper_release_environment.py -q
       - name: Generate separate helper vulnerability report
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: langflow-chroma-migration:qualification
           format: json
@@ -111,13 +111,13 @@ jobs:
           # requires a separate reviewed security disposition below.
           exit-code: '0'
       - name: Generate helper SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           image: langflow-chroma-migration:qualification
           format: spdx-json
           output-file: helper-sbom.spdx.json
           upload-artifact: false
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: helper-security-${{ matrix.runner }}
           path: |
@@ -135,17 +135,17 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and publish separately from application images
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: tools/chroma_migration_helper/Dockerfile
@@ -169,12 +169,12 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: '3.13'
           version: latest-known
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -185,13 +185,13 @@ jobs:
       - name: Qualify the immutable candidate, without rebuilding
         run: uv run --no-sync python tools/chroma_migration_helper/qualify.py --image "$HELPER_IMAGE"
       - name: Scan the exact candidate that can be signed
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: ${{ env.HELPER_IMAGE }}
           format: json
           output: helper-final-vulnerabilities.json
           exit-code: '0'
-      - uses: anchore/sbom-action@v0
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           image: ${{ env.HELPER_IMAGE }}
           format: spdx-json
@@ -220,11 +220,11 @@ jobs:
               "archive_sha256": digest.hexdigest(),
           }, indent=2))
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: helper-final-manifest-${{ matrix.runner }}
           path: helper-platform.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: helper-final-${{ matrix.runner }}
           compression-level: 6
@@ -246,8 +246,8 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: '3.13'
           version: latest-known
@@ -255,7 +255,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: uv run --no-project python tools/chroma_migration_helper/check_release_environment.py
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -267,7 +267,7 @@ jobs:
           printf '%s  %s\n' 4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71 "$RUNNER_TEMP/cosign-bin/cosign" | sha256sum --check
           chmod 700 "$RUNNER_TEMP/cosign-bin/cosign"
           echo "$RUNNER_TEMP/cosign-bin" >> "$GITHUB_PATH"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: helper-final-manifest-*
           path: platform-manifests
@@ -312,7 +312,7 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             helper-release.json
       - name: Publish verification material for online and offline upgrade controllers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: chroma-migration-helper-release
           path: |
@@ -335,17 +335,17 @@ jobs:
     env:
       HELPER_IMAGE: ghcr.io/langflow-ai/langflow-chroma-migration@${{ needs.build-candidate.outputs.digest }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: '3.13'
           version: latest-known
       - run: uv sync --frozen --package langflow-base --group dev
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: chroma-migration-helper-release
           path: signed-kit
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: helper-final-${{ matrix.runner }}
           path: signed-kit
@@ -376,7 +376,7 @@ jobs:
             --trusted-root "$RUNNER_TEMP/independent-cosign-tuf/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json" \
             --archive "$GITHUB_WORKSPACE/signed-kit/helper-image-linux-$ARCHITECTURE.tar" \
             --output "$GITHUB_WORKSPACE/helper-qualified-$ARCHITECTURE.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: helper-signed-qualified-${{ matrix.architecture }}
           path: helper-qualified-${{ matrix.architecture }}.json
@@ -395,24 +395,24 @@ jobs:
       HELPER_IMAGE: ghcr.io/langflow-ai/langflow-chroma-migration@${{ needs.build-candidate.outputs.digest }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: '3.13'
           version: latest-known
       - run: uv sync --frozen --package langflow-base --group dev
       - name: Recheck required reviewers before durable publication
         run: uv run --no-project python tools/chroma_migration_helper/check_release_environment.py
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: chroma-migration-helper-release
           path: offline-kit
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: helper-signed-qualified-*
           path: platform-qualifications
           merge-multiple: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: helper-final-ubuntu*
           path: platform-artifacts

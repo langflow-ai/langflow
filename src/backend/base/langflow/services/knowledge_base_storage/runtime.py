@@ -30,6 +30,19 @@ from langflow.services.deps import get_db_service, get_settings_service, session
 _held_locks: dict[tuple[int, object, UUID], _OperationLease] = {}
 _pg_transactions: dict[tuple[int, object, str], _PostgresTransaction] = {}
 _coordination_engines: dict[tuple[int, str, object], Any] = {}
+LOCK_TIMEOUT_SECONDS = 30.0
+_READ_METHODS = frozenset(
+    {
+        "similarity_search",
+        "asimilarity_search",
+        "asimilarity_search_with_score",
+        "count",
+        "iter_documents",
+        "storage_size_bytes",
+        "read_migration_manifest",
+        "integrity_check",
+    }
+)
 
 
 @dataclass
@@ -38,6 +51,7 @@ class _OperationLease:
 
     owner: tuple[int, object, UUID]
     release: Any
+    shared: bool = False
     users: int = 0
     active: bool = True
 
@@ -52,11 +66,13 @@ class _PostgresTransaction:
 
 
 def _owner(kb_id: UUID) -> tuple[int, object, UUID]:
+    """Identify lock ownership by process, asyncio task and immutable KB UUID."""
     return os.getpid(), asyncio.current_task(), kb_id
 
 
 @asynccontextmanager
 async def _use_lease(lease: _OperationLease):
+    """Retain a live lease until its final nested operation releases it."""
     lease.users += 1
     try:
         yield
@@ -72,6 +88,7 @@ async def _use_lease(lease: _OperationLease):
 
 
 async def _drain_cleanup(awaitable):
+    """Finish asynchronous resource cleanup before propagating cancellation."""
     task = asyncio.ensure_future(awaitable)
     cancelled = False
     while not task.done():
@@ -86,6 +103,7 @@ async def _drain_cleanup(awaitable):
 
 
 async def _release_transaction(transaction: _PostgresTransaction) -> None:
+    """Close the coordination transaction when its last lease is released."""
     transaction.users -= 1
     if not transaction.users:
         transaction.active = False
@@ -94,32 +112,81 @@ async def _release_transaction(transaction: _PostgresTransaction) -> None:
         await _drain_cleanup(transaction.manager.__aexit__(None, None, None))
 
 
+async def _wait_for_lock(deadline: float) -> None:
+    """Bound contention without blocking the event loop."""
+    remaining = deadline - asyncio.get_running_loop().time()
+    if remaining <= 0:
+        msg = "Knowledge base storage is busy. Retry the operation."
+        raise StorageUnavailableError(msg)
+    await asyncio.sleep(min(0.05, remaining))
+
+
+def _check_lease_mode(lease: _OperationLease, *, shared: bool) -> None:
+    """Reject a nested write that attempts to upgrade an existing shared lease."""
+    if lease.shared and not shared:
+        msg = "Cannot upgrade a shared storage operation to a write operation"
+        raise StorageUnavailableError(msg)
+
+
 @asynccontextmanager
-async def _file_operation_lock(kb_id: UUID, path: Path):
+async def _file_operation_lock(kb_id: UUID, path: Path, *, shared: bool = False):
+    """Acquire a bounded local read or write lease and retain it through finalization."""
     owner = _owner(kb_id)
     existing = _held_locks.get(owner)
     if existing is not None and existing.active:
+        _check_lease_mode(existing, shared=shared)
         async with _use_lease(existing):
             yield
         return
     if path.is_symlink():
         msg = "Invalid storage lock path"
         raise StorageUnavailableError(msg)
-    lock = FileLock(path, thread_local=False)
-    while True:
+    deadline = asyncio.get_running_loop().time() + LOCK_TIMEOUT_SECONDS
+    if os.name == "posix":
+        import fcntl
+
+        descriptor = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        mode = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
+        leased = False
         try:
-            lock.acquire(timeout=0)
-            break
-        except Timeout:
-            await asyncio.sleep(0.05)
+            while True:
+                try:
+                    fcntl.flock(descriptor, mode | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    await _wait_for_lock(deadline)
 
-    async def release():
-        lock.release()
+            async def release():
+                try:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                finally:
+                    os.close(descriptor)
 
-    lease = _OperationLease(owner, release)
-    _held_locks[owner] = lease
-    async with _use_lease(lease):
-        yield
+            lease = _OperationLease(owner, release, shared=shared)
+            _held_locks[owner] = lease
+            leased = True
+            async with _use_lease(lease):
+                yield
+        finally:
+            if not leased:
+                os.close(descriptor)
+    else:
+        # Windows FileLock preserves the exclusive lifecycle fence.
+        lock = FileLock(path, thread_local=False)
+        while True:
+            try:
+                lock.acquire(timeout=0)
+                break
+            except Timeout:
+                await _wait_for_lock(deadline)
+
+        async def release():
+            lock.release()
+
+        lease = _OperationLease(owner, release, shared=shared)
+        _held_locks[owner] = lease
+        async with _use_lease(lease):
+            yield
 
 
 class StorageUnavailableError(ValueError):
@@ -129,6 +196,7 @@ class StorageUnavailableError(ValueError):
 
 
 def storage_root() -> Path:
+    """Resolve the configured local storage root independently of display names."""
     configured = get_settings_service().settings.knowledge_bases_dir
     if not configured:
         msg = "Knowledge base storage directory is not configured"
@@ -160,7 +228,16 @@ async def exclusive_lock(kb_id: UUID):
         yield
 
 
+@asynccontextmanager
+async def shared_lock(kb_id: UUID):
+    """Allow concurrent local readers while excluding migration and deletion."""
+    directory = private_directory(storage_root() / ".locks")
+    async with _file_operation_lock(kb_id, directory / f"{UUID(str(kb_id))}.lock", shared=True):
+        yield
+
+
 async def resolve_record(user_id: UUID, name: str) -> KnowledgeBaseRecord:
+    """Load owner-scoped routing or reject a KB that no longer exists."""
     async with session_scope() as session:
         row = (
             await session.exec(
@@ -176,7 +253,8 @@ async def resolve_record(user_id: UUID, name: str) -> KnowledgeBaseRecord:
 
 
 @asynccontextmanager
-async def operation(record_or_id, *, allowed_states=("ready",)):
+async def operation(record_or_id, *, allowed_states=("ready",), shared=False):
+    """Fence a complete operation and reject changed generations or unavailable routing."""
     kb_id = record_or_id.id if isinstance(record_or_id, KnowledgeBaseRecord) else UUID(str(record_or_id))
     async with session_scope() as session:
         initial = await session.get(KnowledgeBaseRecord, kb_id)
@@ -186,7 +264,8 @@ async def operation(record_or_id, *, allowed_states=("ready",)):
     local = initial.backend_type == "sqlite" or (
         initial.backend_type == "chroma" and initial.backend_config.get("mode", "local") == "local"
     )
-    async with exclusive_lock(kb_id) if local else _remote_lock(kb_id):
+    local_lock = shared_lock if shared else exclusive_lock
+    async with local_lock(kb_id) if local else _remote_lock(kb_id, shared=shared):
         async with session_scope() as session:
             current = await session.get(KnowledgeBaseRecord, kb_id)
         if current is None:
@@ -207,16 +286,21 @@ async def operation(record_or_id, *, allowed_states=("ready",)):
 
 
 @asynccontextmanager
-async def _remote_lock(kb_id: UUID):
+async def _remote_lock(kb_id: UUID, *, shared=False):
     """Postgres advisory transaction locks coordinate remote-store replicas."""
     owner = _owner(kb_id)
     existing = _held_locks.get(owner)
     if existing is not None and existing.active:
+        _check_lease_mode(existing, shared=shared)
         async with _use_lease(existing):
             yield
         return
     database = get_db_service()
     if database.database_url.startswith(("postgres", "postgresql")):
+        deadline = asyncio.get_running_loop().time() + LOCK_TIMEOUT_SECONDS
+        query = text(
+            "SELECT pg_try_advisory_xact_lock_shared(:key)" if shared else "SELECT pg_try_advisory_xact_lock(:key)"
+        )
         key = int.from_bytes(hashlib.sha256(kb_id.bytes).digest()[:8], "big", signed=True)
         # Advisory locks must not consume the app pool while their holder
         # needs that same pool to read routing or resolve credentials. Keep a
@@ -242,11 +326,15 @@ async def _remote_lock(kb_id: UUID):
             # of sorted locks requires only one bounded-pool connection.
             while True:
                 manager = engine.begin()
-                connection = await manager.__aenter__()
                 try:
-                    acquired = (
-                        await connection.execute(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key})
-                    ).scalar_one()
+                    connection = await asyncio.wait_for(
+                        manager.__aenter__(), max(0, deadline - asyncio.get_running_loop().time())
+                    )
+                except asyncio.TimeoutError as exc:
+                    msg = "Knowledge base storage coordination is busy. Retry the operation."
+                    raise StorageUnavailableError(msg) from exc
+                try:
+                    acquired = (await connection.execute(query, {"key": key})).scalar_one()
                 except BaseException:
                     await _drain_cleanup(manager.__aexit__(None, None, None))
                     raise
@@ -255,16 +343,14 @@ async def _remote_lock(kb_id: UUID):
                     _pg_transactions[transaction_owner] = transaction
                     break
                 await _drain_cleanup(manager.__aexit__(None, None, None))
-                await asyncio.sleep(0.05)
+                await _wait_for_lock(deadline)
         else:
             # Reserve ownership while acquisition awaits. Closing an outer
             # generator in another task cannot release this transaction early.
             transaction.users += 1
             try:
-                while not (  # noqa: ASYNC110 -- cross-process advisory locks have no local event to await
-                    await transaction.connection.execute(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key})
-                ).scalar_one():
-                    await asyncio.sleep(0.05)
+                while not (await transaction.connection.execute(query, {"key": key})).scalar_one():
+                    await _wait_for_lock(deadline)
             except BaseException:
                 await _release_transaction(transaction)
                 raise
@@ -272,7 +358,7 @@ async def _remote_lock(kb_id: UUID):
         async def release():
             await _release_transaction(transaction)
 
-        lease = _OperationLease(owner, release)
+        lease = _OperationLease(owner, release, shared=shared)
         _held_locks[owner] = lease
         async with _use_lease(lease):
             yield
@@ -291,11 +377,12 @@ async def _remote_lock(kb_id: UUID):
             raise StorageUnavailableError(msg)
         directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         path = directory / f"{kb_id}.lock"
-        async with _file_operation_lock(kb_id, path):
+        async with _file_operation_lock(kb_id, path, shared=shared):
             yield
 
 
 def _raw_backend(record, *, embedding_function=None, create=False, credential_user_id=None):
+    """Construct a provider backend from authoritative routing and trusted storage identity."""
     if record.backend_type == "chroma":
         msg = "This knowledge base requires the automatic SQLite upgrade before use"
         raise StorageUnavailableError(msg)
@@ -320,10 +407,12 @@ def _raw_backend(record, *, embedding_function=None, create=False, credential_us
 
 class _GuardedMethods:
     def __init__(self, target, record):
+        """Capture the backend and routing snapshot used to guard future operations."""
         self._target = target
         self._record = record
 
     def __getattr__(self, name):
+        """Wrap asynchronous methods and iterators with the appropriate storage lease."""
         if name.startswith("_"):
             raise AttributeError(name)
         value = getattr(self._target, name)
@@ -332,7 +421,10 @@ class _GuardedMethods:
         if inspect.isasyncgenfunction(value):
 
             async def iterate(*args, **kwargs):
-                async with operation(self._record), aclosing(value(*args, **kwargs)) as iterator:
+                async with (
+                    operation(self._record, shared=name in _READ_METHODS),
+                    aclosing(value(*args, **kwargs)) as iterator,
+                ):
                     async for batch in iterator:
                         yield batch
 
@@ -343,7 +435,7 @@ class _GuardedMethods:
                 # Teardown releases handles even after a migration fence appeared.
                 if name == "teardown":
                     return await value(*args, **kwargs)
-                async with operation(self._record):
+                async with operation(self._record, shared=name in _READ_METHODS):
                     return await value(*args, **kwargs)
 
             return call
@@ -358,6 +450,7 @@ class _GuardedMethods:
 
 
 async def backend_for_record(record, *, embedding_function=None, create=False, credential_user_id=None):
+    """Validate routing and initialize a guarded backend for its immutable generation."""
     async with operation(record) as current:
         backend = _raw_backend(
             current, embedding_function=embedding_function, create=create, credential_user_id=credential_user_id
@@ -366,6 +459,7 @@ async def backend_for_record(record, *, embedding_function=None, create=False, c
 
 
 async def backend_for_name(user_id, name, **kwargs):
+    """Resolve owner-scoped routing before constructing a guarded backend."""
     return await backend_for_record(await resolve_record(user_id, name), **kwargs)
 
 
@@ -424,6 +518,7 @@ async def delete_orphaned_storage(record) -> None:
 
 
 async def close_coordination_pools() -> None:
+    """Dispose coordination engines during application shutdown."""
     for key, engine in tuple(_coordination_engines.items()):
         if key[0] == os.getpid() and key[2] is asyncio.get_running_loop():
             await engine.dispose()

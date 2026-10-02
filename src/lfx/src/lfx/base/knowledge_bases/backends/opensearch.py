@@ -366,6 +366,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # with the right dimension when it does not exist yet.
         # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
         # default) per call, so split larger batches rather than fail the write.
+        """Write supplied vectors with stable document identities without invoking an embedder."""
         bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
         for start in range(0, len(docs), bulk_size):
             chunk = docs[start : start + bulk_size]
@@ -799,6 +800,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return 0
 
     async def teardown(self) -> None:
+        """Close provider resources while draining outstanding OpenSearch cleanup."""
         client = getattr(self, "_os_client", None)
         if client is not None and hasattr(client, "close"):
             try:

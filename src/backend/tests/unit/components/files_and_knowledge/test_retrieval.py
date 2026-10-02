@@ -611,6 +611,36 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
 
     # ---- include_embeddings against a real SQLite backend ------------
 
+    async def test_embedding_join_stops_and_closes_after_all_hits(self, component_class, default_kwargs):
+        """Close the iterator as soon as all search hits have their stored vectors."""
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+        default_kwargs["search_query"] = "selected"
+        default_kwargs["include_embeddings"] = True
+        backend = MagicMock()
+        backend.similarity_search = AsyncMock(return_value=[(Document(page_content="selected", metadata={}), 0.0)])
+        backend.teardown = AsyncMock()
+        closed = []
+
+        async def batches(**_kwargs):
+            try:
+                yield [IngestedDocument(id="selected", content="selected", metadata={}, embedding=[1.0, 0.0])]
+                pytest.fail("Embedding lookup scanned past all requested hits")
+            finally:
+                closed.append(True)
+
+        backend.iter_documents = batches
+        component = component_class(**default_kwargs)
+        with (
+            patch(
+                "lfx.components.files_and_knowledge.knowledge.get_embeddings", return_value=_DeterministicEmbeddings()
+            ),
+            patch("langflow.api.utils.kb_helpers.backend_for_name", AsyncMock(return_value=backend)),
+        ):
+            result = await component.retrieve_data()
+        assert result.to_dict("records")[0]["_embeddings"] == [1.0, 0.0]
+        assert closed == [True]
+
     async def _retrieve_against_real_kb(self, component_class, default_kwargs, active_user, docs):
         """Exercise guarded SQLite ingestion, reopen, search and embedding join."""
         from langflow.api.utils.kb_helpers import backend_for_name

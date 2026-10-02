@@ -179,7 +179,8 @@ async def test_guarded_iterator_closes_underlying_iterator_before_unlock(monkeyp
     closed = []
 
     @asynccontextmanager
-    async def operation(_record):
+    async def operation(_record, *, shared=False):
+        assert shared is True
         async with runtime.exclusive_lock(kb_id):
             yield
 
@@ -222,4 +223,55 @@ async def test_cancelled_nested_remote_acquisition_releases_its_parent_transacti
         assert remote_engine.active == 1
         assert len(remote_engine.locks) == 1
     assert not remote_engine.locks
+    assert remote_engine.active == 0
+
+
+@pytest.mark.skipif(os.name != "posix", reason="Shared file locks require POSIX flock")
+@pytest.mark.usefixtures("local_root")
+async def test_shared_readers_overlap_and_exclude_writer(monkeypatch):
+    """Concurrent readers must overlap, while a writer times out without entering."""
+    kb_id = uuid4()
+    entered = asyncio.Event()
+    finish = asyncio.Event()
+    monkeypatch.setattr(runtime, "LOCK_TIMEOUT_SECONDS", 0.1)
+
+    async def reader():
+        async with runtime.shared_lock(kb_id):
+            entered.set()
+            await finish.wait()
+
+    async with runtime.shared_lock(kb_id):
+        task = asyncio.create_task(reader())
+        try:
+            await asyncio.wait_for(entered.wait(), 1)
+            with pytest.raises(runtime.StorageUnavailableError, match="upgrade"):
+                async with runtime.exclusive_lock(kb_id):
+                    pytest.fail("A read lease was upgraded")
+
+            async def writer():
+                async with runtime.exclusive_lock(kb_id):
+                    pytest.fail("Writer entered during active reads")
+
+            with pytest.raises(runtime.StorageUnavailableError, match="busy"):
+                await asyncio.create_task(writer())
+        finally:
+            finish.set()
+            await task
+    async with runtime.exclusive_lock(kb_id):
+        pass
+
+
+async def test_remote_lock_contention_has_bounded_wait(remote_engine, monkeypatch):
+    """A remote contender releases its pool connection when the deadline expires."""
+    monkeypatch.setattr(runtime, "LOCK_TIMEOUT_SECONDS", 0.05)
+    kb_id = uuid4()
+
+    async def contender():
+        async with runtime._remote_lock(kb_id):
+            pytest.fail("Contender bypassed the writer")
+
+    async with runtime._remote_lock(kb_id):
+        with pytest.raises(runtime.StorageUnavailableError, match="busy"):
+            await asyncio.create_task(contender())
+        assert remote_engine.active == 1
     assert remote_engine.active == 0
