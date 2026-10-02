@@ -150,6 +150,7 @@ def _metadata_json(metadata: dict[str, Any]) -> str:
     """Serialize metadata only after verifying its structure and size limits."""
 
     def validate(value: Any) -> None:
+        """Reject nested metadata objects with non-string keys."""
         if isinstance(value, dict):
             if any(not isinstance(key, str) for key in value):
                 msg = "SQLite metadata object keys must be strings"
@@ -221,6 +222,7 @@ def _stable_distance_function(query_blob: bytes, *, metric: str) -> Callable[[by
     query_norm = math.hypot(*query) if metric == "cosine" else 0.0
 
     def distance(stored_blob: bytes) -> float:
+        """Compute the configured distance from a stored float32 vector to the query."""
         stored = struct.unpack(f"<{dimension}f", stored_blob)
         if metric == "l2":
             return math.dist(stored, query)
@@ -831,6 +833,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         """Tombstone before removing rows. File removal belongs to guarded lifecycle cleanup."""
 
         def tombstone() -> None:
+            """Erase chunk content and persist the generation deletion tombstone atomically."""
             with self._connect(allow_deleted=True) as connection:
                 connection.execute("BEGIN IMMEDIATE")
                 try:
@@ -860,6 +863,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
 
         def size() -> int:
+            """Sum the current database, write-ahead log and shared-memory file sizes."""
             path = self._check_path()
             total = 0
             for candidate in (path, Path(f"{path}-wal"), Path(f"{path}-shm")):
@@ -874,6 +878,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
 
         def inspect() -> dict[str, Any]:
+            """Read the validated storage identity and lifecycle header."""
             with self._connect() as connection:
                 return self._header(connection)
 
@@ -884,6 +889,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
 
         def check() -> None:
+            """Require SQLite integrity and foreign-key checks to pass."""
             with self._connect() as connection:
                 if list(connection.execute("PRAGMA integrity_check")) != [("ok",)] or list(
                     connection.execute("PRAGMA foreign_key_check")
@@ -915,6 +921,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
 
         def set_dimension() -> None:
+            """Persist the embedding dimension or reject a conflicting existing dimension."""
             with self._connect() as connection:
                 connection.execute("BEGIN IMMEDIATE")
                 try:
@@ -943,6 +950,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
 
         def read() -> dict[str, Any] | None:
+            """Read the durable migration manifest when one has been recorded."""
             with self._connect() as connection:
                 row = connection.execute("SELECT manifest FROM migration_manifest WHERE singleton=1").fetchone()
                 return json.loads(row[0]) if row else None
@@ -958,6 +966,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         encoded = _json(manifest)
 
         def save() -> None:
+            """Persist the encoded migration manifest in a single transaction."""
             with self._connect() as connection, connection:
                 connection.execute(
                     "INSERT INTO migration_manifest VALUES(1,?) "
@@ -972,6 +981,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self.save_migration_manifest(manifest)
 
         def flush() -> None:
+            """Checkpoint migration writes and synchronize the target files."""
             with self._connect() as connection:
                 busy, _log, _checkpointed = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
                 if busy:
@@ -1072,6 +1082,7 @@ class _SQLiteVectorStore(VectorStore):
             return []
 
         def get() -> list[Document]:
+            """Fetch requested documents once each while preserving request order."""
             with self._backend._connect() as connection:  # noqa: SLF001 - companion facade
                 documents = {}
                 for document_id in dict.fromkeys(ids):

@@ -210,6 +210,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        """Start application services and stop their owned background tasks on shutdown."""
         from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
         from langflow.preload import (

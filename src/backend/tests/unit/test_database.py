@@ -1345,6 +1345,7 @@ async def test_get_nonexistent_flow(client: AsyncClient, logged_in_headers):
 
 @pytest.mark.usefixtures("active_user")
 async def test_update_flow_idempotency(client: AsyncClient, json_flow: str, logged_in_headers):
+    """Repeating an upsert preserves flow content while its write timestamp may advance."""
     flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow_data = FlowCreate(name="Test Flow", description="description", data=data)
@@ -1353,7 +1354,12 @@ async def test_update_flow_idempotency(client: AsyncClient, json_flow: str, logg
     updated_flow = FlowCreate(name="Updated Flow", description="description", data=data)
     response1 = await client.put(f"api/v1/flows/{flow_id}", json=updated_flow.model_dump(), headers=logged_in_headers)
     response2 = await client.put(f"api/v1/flows/{flow_id}", json=updated_flow.model_dump(), headers=logged_in_headers)
-    assert response1.json() == response2.json()
+    assert response1.status_code == response2.status_code == 200
+    first, second = response1.json(), response2.json()
+    first_updated_at = datetime.fromisoformat(first.pop("updated_at"))
+    second_updated_at = datetime.fromisoformat(second.pop("updated_at"))
+    assert second_updated_at >= first_updated_at
+    assert first == second
 
 
 @pytest.mark.usefixtures("active_user")

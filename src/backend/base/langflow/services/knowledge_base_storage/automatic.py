@@ -48,6 +48,7 @@ class AutomaticUpgradeUnavailableError(MaintenanceRequiredError):
     """A supported single-host maintenance window has not been established."""
 
     def __init__(self, code: str):
+        """Retain the safe recovery code used to explain an unsupported automatic upgrade."""
         self.code = code
         super().__init__(code)
 

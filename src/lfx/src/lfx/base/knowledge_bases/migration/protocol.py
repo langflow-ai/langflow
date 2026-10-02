@@ -352,6 +352,7 @@ def qualify_export(
             total_bytes = 0
 
             def read_record() -> dict[str, Any] | None:
+                """Read one export record while enforcing line and total-byte limits."""
                 nonlocal total_bytes
                 line = stream.readline(limits.max_line_bytes + 1)
                 if not line:
@@ -429,6 +430,7 @@ def write_export(
     total_bytes = 0
 
     def emit(record: dict[str, Any], *, preserve_order: bool = False) -> bytes:
+        """Write a complete export record while enforcing stream byte limits."""
         nonlocal total_bytes
         payload = _json_bytes(record) if preserve_order else canonical_json(record)
         total_bytes += len(payload) + 1

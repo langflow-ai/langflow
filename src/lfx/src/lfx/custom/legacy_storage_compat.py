@@ -21,6 +21,7 @@ def source_fingerprint(code: str) -> str:
     """Hash Python semantics, independent of comments, layout and AST positions."""
 
     def canonical(node):
+        """Normalize syntax recursively for trusted legacy-source compatibility checks."""
         if isinstance(node, ast.AST):
             return [
                 type(node).__name__,

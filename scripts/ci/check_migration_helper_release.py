@@ -52,6 +52,7 @@ def _object(data: bytes) -> dict:
     """Decode a JSON object while rejecting duplicate fields."""
 
     def unique(pairs):
+        """Reject duplicate keys when decoding release evidence."""
         result = {}
         for key, value in pairs:
             _require(key not in result, "Duplicate release evidence key")
@@ -153,11 +154,13 @@ def normalize_dependencies(value: dict, workspace_versions: dict[str, set[str]])
     """Permit exact workspace version restamps without ignoring constraints."""
 
     def stamp(text: str, versions: set[str]) -> str:
+        """Replace workspace version stamps without changing dependency constraints."""
         for version in sorted(versions, key=len, reverse=True):
             text = re.sub(r"(?<![\w.+-])" + re.escape(version) + r"(?![\w.+-])", "<workspace-version>", text)
         return text
 
     def normalize(item):
+        """Normalize workspace dependency versions recursively for release comparison."""
         if isinstance(item, list):
             return [normalize(child) for child in item]
         if isinstance(item, str):

@@ -2691,6 +2691,11 @@ class TestMemoriesAPIHandlers:
         monkeypatch.setattr(
             "langflow.api.utils.knowledge_base_service.get_by_user_and_name", AsyncMock(return_value=None)
         )
+        session = AsyncMock()
+        session.exec.return_value = MagicMock(all=list)
+        context = MagicMock()
+        context.__aenter__.return_value = session
+        monkeypatch.setattr("langflow.api.v1.memories.session_scope", MagicMock(return_value=context))
 
     @pytest.fixture
     def mock_user(self):

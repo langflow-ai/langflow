@@ -134,6 +134,7 @@ class ALTKBaseAgentComponent(AgentComponent):
         return context
 
     def get_user_query(self) -> str:
+        """Extract text from message inputs or stringify other query values."""
         if hasattr(self.input_value, "get_text") and callable(self.input_value.get_text):
             return self.input_value.get_text()
         return str(self.input_value)

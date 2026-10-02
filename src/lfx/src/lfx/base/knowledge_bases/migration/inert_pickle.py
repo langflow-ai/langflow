@@ -35,6 +35,7 @@ def read_index_metadata(payload: bytes) -> dict[str, Any]:
     memo: dict = {}
 
     def marked() -> list:
+        """Pop values through the last pickle marker without constructing objects."""
         items = []
         while stack and stack[-1] is not _MARK:
             items.append(stack.pop())

@@ -115,6 +115,7 @@ async def _command(*args: str, timeout: int = 120, capture: bool = False) -> byt
         raise MigrationHelperError(msg) from exc
 
     async def complete() -> bytes:
+        """Collect bounded verification output and require a successful process exit."""
         output = bytearray()
         if capture and process.stdout is not None:
             while chunk := await process.stdout.read(_MAX_HEADER_BYTES + 1):
@@ -169,6 +170,7 @@ def _release_platform(payload: bytes, image: str) -> dict[str, str]:
     """Bind a signed manifest to the requested release and local platform."""
 
     def unique_pairs(pairs):
+        """Decode helper evidence only when every JSON key is unique."""
         result = {}
         for key, value in pairs:
             if key in result:
@@ -574,6 +576,7 @@ async def export_snapshot(
             )
 
             async def transfer() -> None:
+                """Send the export request and stream validated helper output to the target."""
                 if process is None or process.stdin is None or process.stdout is None:
                     msg = "Migration helper pipes could not be opened."
                     raise MigrationHelperError(msg)

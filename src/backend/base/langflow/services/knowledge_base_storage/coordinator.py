@@ -464,6 +464,7 @@ async def ensure_legacy_name_available(user_id: UUID, name: str) -> None:
         return
 
     def reserved():
+        """Check whether a live legacy directory reserves this owner and display name."""
         root = storage_root()
         owner_path = root / owner.username
         source = owner_path / name
@@ -508,6 +509,7 @@ async def reconcile_legacy_inventory() -> None:
             return
 
         def discover():
+            """Inventory legacy sources without following owner or storage symlinks."""
             root = storage_root()
             sources = {}
             if not root.exists():
@@ -747,6 +749,7 @@ def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
     _tasks.add(task)
 
     def finished(completed):
+        """Remove a finished task and report unexpected coordinator failures."""
         _tasks.discard(completed)
         if not completed.cancelled() and completed.exception() is not None:
             logger.error("Knowledge base upgrade coordinator failed. Unfinished bases remain unavailable.")

@@ -31,9 +31,11 @@ Vector store components read and write to vector databases.
 Typically, these components connect to remote databases, but some vector store components support local databases.
 
 As of Langflow 1.12, most vector store bundles, including the **Chroma DB** component in the visual editor, are not in the default Langflow installation.
-Knowledge bases still use local Chroma storage in the default installation.
+In Langflow 1.13, knowledge bases use local SQLite storage by default.
+Existing local Chroma knowledge bases upgrade automatically on supported single-host installations.
+For progress and recovery options, see [Upgrade knowledge and memory storage](/knowledge-storage-upgrade).
 You will have to install any additional vector store providers.
-FOr more information, see [Additional bundles](/extensions-bundle-list#additional-bundles).
+For more information, see [Additional bundles](/extensions-bundle-list#additional-bundles).
 
 import PartialVectorRagBlurb from '@site/docs/_partial-vector-rag-blurb.mdx';
 

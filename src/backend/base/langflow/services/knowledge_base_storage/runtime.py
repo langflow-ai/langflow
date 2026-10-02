@@ -162,6 +162,7 @@ async def _file_operation_lock(kb_id: UUID, path: Path, *, shared: bool = False)
                     await _wait_for_lock(deadline)
 
             async def release():
+                """Unlock and close the descriptor owned by this storage lease."""
                 try:
                     fcntl.flock(descriptor, fcntl.LOCK_UN)
                 finally:
@@ -186,6 +187,7 @@ async def _file_operation_lock(kb_id: UUID, path: Path, *, shared: bool = False)
                 await _wait_for_lock(deadline)
 
         async def release():
+            """Release the process-local storage lock."""
             lock.release()
 
         lease = _OperationLease(owner, release, shared=shared)
@@ -385,6 +387,7 @@ async def _remote_lock(kb_id: UUID, *, shared=False):
                 raise
 
         async def release():
+            """Release the transaction that owns the PostgreSQL storage lease."""
             await _release_transaction(transaction)
 
         lease = _OperationLease(owner, release, shared=shared)
@@ -451,6 +454,7 @@ class _GuardedMethods:
         if inspect.isasyncgenfunction(value):
 
             async def iterate(*args, **kwargs):
+                """Hold a storage lease while yielding batches from an asynchronous iterator."""
                 async with (
                     operation(self._record, shared=name in _READ_METHODS),
                     aclosing(value(*args, **kwargs)) as iterator,
@@ -463,6 +467,7 @@ class _GuardedMethods:
 
             async def call(*args, **kwargs):
                 # Teardown releases handles even after a migration fence appeared.
+                """Route an asynchronous operation through the appropriate storage fence."""
                 if name == "teardown":
                     return await value(*args, **kwargs)
                 if (
@@ -503,6 +508,7 @@ class _GuardedMethods:
         if callable(value) and name not in ("normalize_score",):
 
             def unsupported(*_args, **_kwargs):
+                """Reject synchronous operations that cannot honor asynchronous storage fences."""
                 msg = "Use asynchronous knowledge base operations so storage fences are honored"
                 raise StorageUnavailableError(msg)
 

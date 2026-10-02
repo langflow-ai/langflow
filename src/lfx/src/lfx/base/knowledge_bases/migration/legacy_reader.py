@@ -31,6 +31,7 @@ _CHECKPOINT_BYTES = 8
 
 
 def _sequence(value) -> int:
+    """Decode a supported nonnegative legacy write-ahead-log sequence number."""
     if isinstance(value, bytes):
         if len(value) != _CHECKPOINT_BYTES:
             msg = "Unsupported legacy checkpoint"
@@ -43,6 +44,7 @@ def _sequence(value) -> int:
 
 
 def _metric(connection, collection: dict, segment_id: str) -> str:
+    """Resolve a consistent distance metric from the legacy collection configuration."""
     metrics = set()
     legacy_defaults = set()
     for column in ("config_json_str", "schema_str"):
@@ -85,6 +87,7 @@ def _metric(connection, collection: dict, segment_id: str) -> str:
 
 
 def _replay(connection, staging, topic: str, vector_checkpoint: int, metadata_checkpoint: int, dimensions: int | None):
+    """Replay vector and metadata updates independently after their saved checkpoints."""
     rows = connection.execute(
         "SELECT seq_id, operation, id, vector, encoding, metadata FROM embeddings_queue "
         "WHERE topic=? AND seq_id>? ORDER BY seq_id",
@@ -319,6 +322,7 @@ def _export(connection, staging, source, output, *, collection_name, source_id, 
     header = ExportHeader(source_id, source_fingerprint, "chroma-hnsw-v1", count, dimensions, metric, model_fingerprint)
 
     def documents():
+        """Yield staged documents and embeddings after removing Chroma document metadata."""
         for native_id, vector, metadata in staging.execute(
             "SELECT v.id, v.embedding, d.metadata FROM vectors v JOIN documents d ON v.id=d.id ORDER BY v.id"
         ):

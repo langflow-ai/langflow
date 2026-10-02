@@ -160,6 +160,7 @@ class BaseVectorStoreBackend(ABC):
         # Legacy local Chroma uses kb_path. SQLite derives its own path from
         # trusted immutable storage context. Remote backends ignore it, so
         # their callers pass None rather than inventing a directory.
+        """Capture backend configuration and the trusted storage and embedding context."""
         self.kb_name = kb_name
         self.kb_path = kb_path
         self.backend_config = backend_config or {}
