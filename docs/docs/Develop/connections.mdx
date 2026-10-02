@@ -24,8 +24,8 @@ To add a connection, do the following:
 4. Select a **Provider**, such as **Google Workspace**, **Microsoft 365**, or **Slack**.
 5. Enter a **Handle**. The handle is a stable name for the connection that is stored with a flow and can travel with exported flow JSONs without sharing keys. The handle cannot be renamed.
 6. Enter a **Display name**. This is the label in the Langflow UI. The display name can be renamed.
-7. If you're connecting Slack, select whether the connection acts as the signed-in user, or as a Slackbot.
-   Google Workspace and Microsoft 365 connections always act as the signed-in user.
+7. If you're connecting Slack, select whether the connection acts as the account that authorizes it, or as a Slackbot.
+   Google Workspace and Microsoft 365 connections act as the account that authorized the connection, including when another user selects an instance-shared connection.
 8. In **Scopes to request**, select the permissions your flows require, and clear the rest.
    Components that perform actions through connections require specific scopes. For example, the Gmail component requires the `gmail.send` scope to send emails.
 9. Click **Continue**, and complete consent in the OAuth provider window.
@@ -77,11 +77,11 @@ Open <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the row.
 * **Check credential** tests the stored credential. It is available after the connection has one.
 * **Authorize** or **Reconnect** starts consent again. Scopes the connection already holds stay selected. Check another scope to add it, or clear one to drop it. A pending connection offers **Authorize**. A connection that already completed consent offers **Reconnect**.
 * **Rename** changes the display name. The handle stays the same, so flows that reference it keep working.
-* **Allow scheduled and deployed runs** is off until the connection owner enables it. A connection owner is a signed-in user.
+* **Allow scheduled and deployed runs** lets the owner opt a user-owned connection into unattended execution.
 
-    Enable this setting when Langflow runs the flow as the connection _owner_, rather than as the user who sent the request. For example, a flow triggered by a webhook at `POST /api/v1/webhook/FLOW_ID` will run the flow as the flow's owner using the webhook connection's owner.
+    Enable this setting for owner-based webhooks, deployments, and resumed jobs that use a user-owned connection. For example, `POST /api/v1/webhook/FLOW_ID` runs the flow as the flow's owner and resolves connections for that owner.
 
-    The playground and `POST /api/v1/run` endpoints always act as the signed-in caller and use that caller's connection, and this setting has no effect on them.
+    The authenticated playground and `POST /api/v1/run` endpoints act as the signed-in caller. They can use the caller's own connections, connections shared with the caller, or instance connections without enabling this setting.
 
     A [public playground link](/concepts-playground#share-a-flows-playground) or an [A2A agent](/a2a-server) cannot use a connection, whether this setting is enabled or disabled.
 * **Revoke** removes the stored credential. The row stays, with status **Revoked**, and later runs fail until someone authorizes the connection again.
