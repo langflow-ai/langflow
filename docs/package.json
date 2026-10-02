@@ -177,9 +177,7 @@
     "puppeteer-core": {
       "ws": "^8.21.0"
     },
-    "styled-components": {
-      "postcss": "8.4.49"
-    },
+    "styled-components": "^6.5.3",
     "serve-handler": {
       ".": "^6.1.7"
     },
