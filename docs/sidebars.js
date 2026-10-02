@@ -168,6 +168,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/knowledge-storage-upgrade",
             "Develop/memory-bases",
           ],
         },
