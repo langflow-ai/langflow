@@ -3176,8 +3176,11 @@ class TestMemoriesAPIHandlers:
             async def __aexit__(self, *a):
                 pass
 
+        memory_base_service = MagicMock()
+        memory_base_service.get = AsyncMock(return_value=None)
         with (
             patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=memory_base_service),
             pytest.raises(HTTPException) as exc_info,
         ):
             await list_memory_base_messages(
@@ -3207,8 +3210,11 @@ class TestMemoriesAPIHandlers:
             async def __aexit__(self, *a):
                 pass
 
+        memory_base_service = MagicMock()
+        memory_base_service.get = AsyncMock(return_value=None)
         with (
             patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=memory_base_service),
             pytest.raises(HTTPException) as exc_info,
         ):
             await list_memory_base_messages(
@@ -3940,6 +3946,7 @@ class TestMemoryBaseDBDriven:
             patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch("langflow.services.memory_base.service.cancel_active_jobs", AsyncMock()),
             patch("langflow.services.memory_base.service.delete_kb", AsyncMock()),
+            patch("langflow.services.memory_base.service.delete_kb_remote_collection", AsyncMock()),
             patch("langflow.api.utils.knowledge_base_service.delete_by_user_and_name", delete_row),
         ):
             result = await service.delete(mb.id, user_id=user_id)
