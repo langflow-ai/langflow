@@ -54,6 +54,7 @@ EXPECTED_FIELDS = {
     # PathSettings
     "config_dir",
     "knowledge_bases_dir",
+    "knowledge_base_storage_pool_size",
     # ServerSettings
     "deployment_profile",
     "host",
@@ -379,6 +380,7 @@ def test_critical_defaults_unchanged():
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
     assert settings.dangerously_allow_multi_worker_without_shared_queue is False
+    assert settings.knowledge_base_storage_pool_size == 20
 
 
 def test_database_tls_files_dir_reads_operator_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

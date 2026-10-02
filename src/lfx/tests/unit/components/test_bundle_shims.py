@@ -39,7 +39,7 @@ import pytest
 # tests/unit/components/<this file> -> parents[3] = the src/lfx package root.
 COMPONENTS_DIR = Path(__file__).resolve().parents[3] / "src" / "lfx" / "components"
 SHIM_MARKER = "# lfx-bundles-shim"
-RETIRED_SHIMS = {"chroma", "vectorstores"}
+RETIRED_SHIMS = {"altk": "ALTKAgentComponent", "chroma": "LocalDBComponent", "vectorstores": "LocalDBComponent"}
 
 # The two install-message shapes the shims are allowed to emit.
 _METAPACKAGE_MSG = "Install it with: pip install lfx-bundles."
@@ -372,10 +372,15 @@ def test_real_metapackage_shim_live() -> None:
 def test_retired_shim_remains_importable_without_provider_bundle(provider):
     """Retired imports preserve saved class identities without installing their SDK."""
     module = importlib.import_module(f"lfx.components.{provider}")
-    assert module.LocalDBComponent.legacy is True
-    assert module.LocalDBComponent.__name__ == "LocalDBComponent"
+    class_name = RETIRED_SHIMS[provider]
+    component = getattr(module, class_name)
+    assert component.legacy is True
+    assert component.__name__ == class_name
     for path in (COMPONENTS_DIR / provider).glob("*.py"):
         source = path.read_text()
         assert SHIM_MARKER in (COMPONENTS_DIR / provider / "__init__.py").read_text()
         assert "import chromadb" not in source
         assert "import langchain_chroma" not in source
+        assert "from altk " not in source
+        assert "from altk." not in source
+        assert "import altk" not in source
