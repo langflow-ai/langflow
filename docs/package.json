@@ -91,6 +91,7 @@
       ".": "^1.7.6",
       "fast-xml-parser": "^5.11.2"
     },
+    "chromedriver": "^154.0.1",
     "fast-uri": "^3.1.8",
     "svgo": "^3.3.5",
     "postcss": "^8.5.23",
@@ -171,6 +172,9 @@
     },
     "ws": "^7.5.11",
     "webpack-dev-server": {
+      "ws": "^8.21.0"
+    },
+    "puppeteer-core": {
       "ws": "^8.21.0"
     },
     "styled-components": {
