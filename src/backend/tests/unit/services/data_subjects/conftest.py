@@ -4,6 +4,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _run_erase_inline(monkeypatch):
     """Tests drive the engine directly; the background worker must not race them."""
+
     async def _no_worker(_self) -> None:
         return None
 
