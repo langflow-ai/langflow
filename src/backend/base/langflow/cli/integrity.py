@@ -187,7 +187,7 @@ async def check_credentials(session: AsyncSession, settings_service: SettingsSer
         return CheckResult("credentials", "fail", f"the configured secret key is not usable: {str(exc).rstrip('.')}")
     counted = 0
     problems = []
-    for column, row_id, value in await _encrypted_values(session):
+    for column, row, value in await _encrypted_values(session):
         counted += 1
         try:
             if column == "sso_config.client_secret_encrypted":
@@ -197,7 +197,7 @@ async def check_credentials(session: AsyncSession, settings_service: SettingsSer
             else:
                 fernet.decrypt(value.encode())
         except (InvalidToken, ValueError, TypeError):
-            problems.append(f"{column} row {row_id}")
+            problems.append(f"{column} row {row}")
     return _result(
         "credentials",
         problems,
@@ -206,8 +206,14 @@ async def check_credentials(session: AsyncSession, settings_service: SettingsSer
     )
 
 
-async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]:
-    """Every encrypted value as (column, row id, ciphertext). Plaintext the app still reads is not counted."""
+def _row(row_id: Any, name: str | None, owner: str | None) -> str:
+    """A row as an operator can find it: its id, then the name and the owner's username it has."""
+    known = ", ".join(filter(None, (name, owner and f"owner {owner}")))
+    return f"{row_id} ({known})" if known else str(row_id)
+
+
+async def _encrypted_values(session: AsyncSession) -> list[tuple[str, str, str]]:
+    """Every encrypted value as (column, row, ciphertext). Plaintext the app still reads is not counted."""
     from langflow.services.auth.mcp_encryption import (
         MCP_SECRET_CONFIG_MAPS,
         SENSITIVE_FIELDS,
@@ -215,7 +221,7 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
     )
     from langflow.services.database.models.api_key.model import ApiKey
     from langflow.services.database.models.auth.sso import SSOConfig
-    from langflow.services.database.models.connection.model import ConnectionSecret
+    from langflow.services.database.models.connection.model import Connection, ConnectionSecret
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.database.models.mcp_server.model import MCPServer
@@ -224,53 +230,61 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
     from langflow.services.database.models.variable.model import Variable
     from langflow.services.variable.constants import CREDENTIAL_TYPE
 
-    values: list[tuple[str, Any, str]] = []
+    values: list[tuple[str, str, str]] = []
 
-    def add(column: str, rows: Iterable[tuple[Any, Any]], *, always_encrypted: bool = False) -> None:
+    def add(column: str, rows: Iterable[tuple[Any, Any, Any, Any]], *, always_encrypted: bool = False) -> None:
         values.extend(
-            (column, row_id, value)
-            for row_id, value in rows
+            (column, _row(row_id, name, owner), value)
+            for row_id, name, owner, value in rows
             if isinstance(value, str) and (always_encrypted or (value and value.startswith(_FERNET_PREFIX)))
         )
 
+    def owned(model: Any, column: Any) -> Any:
+        # Still one query per table: the owner comes from a join, which keeps a row whose owner is gone.
+        return select(model.id, model.name, User.username, column).join(User, User.id == model.user_id, isouter=True)
+
     # Generic variables are stored as typed, so only credentials are encrypted.
-    add(
-        "variable.value",
-        await session.exec(select(Variable.id, Variable.value).where(Variable.type == CREDENTIAL_TYPE)),
-    )
-    add("apikey.api_key", await session.exec(select(ApiKey.id, ApiKey.api_key)))
-    add("user.store_api_key", await session.exec(select(User.id, User.store_api_key)))
+    add("variable.value", await session.exec(owned(Variable, Variable.value).where(Variable.type == CREDENTIAL_TYPE)))
+    add("apikey.api_key", await session.exec(owned(ApiKey, ApiKey.api_key)))
+    add("user.store_api_key", await session.exec(select(User.id, User.username, sa.null(), User.store_api_key)))
     add(
         "deployment_provider_account.api_key",
-        await session.exec(select(DeploymentProviderAccount.id, DeploymentProviderAccount.api_key)),
+        await session.exec(owned(DeploymentProviderAccount, DeploymentProviderAccount.api_key)),
     )
     # Nothing writes this payload in plaintext and its reader raises on one it cannot decode,
     # so every value is checked, including a token that lost its prefix.
     add(
         "connection_secret.encrypted_payload",
-        await session.exec(select(ConnectionSecret.connection_id, ConnectionSecret.encrypted_payload)),
+        await session.exec(
+            select(ConnectionSecret.connection_id, Connection.name, User.username, ConnectionSecret.encrypted_payload)
+            .select_from(ConnectionSecret)
+            .join(Connection, Connection.id == ConnectionSecret.connection_id, isouter=True)
+            .join(User, User.id == Connection.owner_id, isouter=True)
+        ),
         always_encrypted=True,
     )
-    add("trigger.signing_secret_encrypted", await session.exec(select(Trigger.id, Trigger.signing_secret_encrypted)))
+    add("trigger.signing_secret_encrypted", await session.exec(owned(Trigger, Trigger.signing_secret_encrypted)))
 
-    for folder_id, settings in await session.exec(select(Folder.id, Folder.auth_settings)):
+    for folder_id, name, owner, settings in await session.exec(owned(Folder, Folder.auth_settings)):
         if isinstance(settings, dict):
-            add("folder.auth_settings", ((folder_id, settings.get(key)) for key in SENSITIVE_FIELDS))
+            add("folder.auth_settings", ((folder_id, name, owner, settings.get(key)) for key in SENSITIVE_FIELDS))
 
-    for server_id, config in await session.exec(select(MCPServer.id, MCPServer.config)):
+    for server_id, name, owner, config in await session.exec(owned(MCPServer, MCPServer.config)):
         if not isinstance(config, dict):
             continue
         for map_name in MCP_SECRET_CONFIG_MAPS:
             secrets = config.get(map_name)
             if isinstance(secrets, dict):
-                add(f"mcp_server.config.{map_name}", ((server_id, value) for value in secrets.values()))
+                add(f"mcp_server.config.{map_name}", ((server_id, name, owner, value) for value in secrets.values()))
         args = config.get("args")
-        add("mcp_server.config.args", ((server_id, args[i]) for i in _argv_secret_positions(args)))
+        add("mcp_server.config.args", ((server_id, name, owner, args[i]) for i in _argv_secret_positions(args)))
 
     # SSO secrets are an AES-GCM envelope, not a Fernet token, so they are taken as stored.
     values.extend(
-        ("sso_config.client_secret_encrypted", row_id, value)
-        for row_id, value in await session.exec(select(SSOConfig.id, SSOConfig.client_secret_encrypted))
+        ("sso_config.client_secret_encrypted", _row(row_id, name, None), value)
+        for row_id, name, value in await session.exec(
+            select(SSOConfig.id, SSOConfig.display_name, SSOConfig.client_secret_encrypted)
+        )
         if value
     )
     return values

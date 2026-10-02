@@ -19,7 +19,7 @@ import anyio
 import pytest
 import sqlalchemy as sa
 from cryptography.fernet import Fernet
-from langflow.cli.integrity import check_instance, open_instance
+from langflow.cli.integrity import _FERNET_PREFIX, check_instance, open_instance
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment, CasbinRule
 from langflow.services.database.models.file.model import File
@@ -226,7 +226,8 @@ class TestCredentials:
         with pytest.raises(ConnectionSecretError):
             _decrypt_credential_payload(damaged)
         assert check.status == "fail"
-        assert f"connection_secret.encrypted_payload row {connection.id}" in check.problems
+        owner = active_user.username
+        assert f"connection_secret.encrypted_payload row {connection.id} (gh, owner {owner})" in check.problems
 
     async def test_a_legacy_plaintext_api_key_is_not_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
         # Keys from 1.6.x are stored as issued, and the app still matches them as they are.
@@ -238,6 +239,36 @@ class TestCredentials:
 
         assert check.status == "ok"
         assert check.summary == before.summary
+
+    async def test_a_problem_names_the_row_and_its_owner_and_never_the_value(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        from langflow.services.database.models.folder.model import Folder
+        from langflow.services.database.models.mcp_server.model import MCPServer
+
+        other = Fernet(Fernet.generate_key())
+
+        def foreign() -> str:
+            return other.encrypt(b"sk-from-another-instance").decode()
+
+        owner = active_user.id
+        variable = Variable(name="OPENAI_API_KEY", value=foreign(), type=CREDENTIAL_TYPE, user_id=owner)
+        named_key = ApiKey(name="ci", api_key=foreign(), user_id=owner)
+        unnamed_key = ApiKey(api_key=foreign(), user_id=owner)
+        project = Folder(name="Support", user_id=owner, auth_settings={"auth_type": "apikey", "api_key": foreign()})
+        server = MCPServer(name="github", user_id=owner, config={"command": "npx", "env": {"TOKEN": foreign()}})
+        await _add(variable, named_key, unnamed_key, project, server)
+
+        check = _check(await check_instance(), "credentials")
+
+        assert sorted(check.problems) == sorted(
+            [
+                f"variable.value row {variable.id} (OPENAI_API_KEY, owner {active_user.username})",
+                f"apikey.api_key row {named_key.id} (ci, owner {active_user.username})",
+                f"apikey.api_key row {unnamed_key.id} (owner {active_user.username})",
+                f"folder.auth_settings row {project.id} (Support, owner {active_user.username})",
+                f"mcp_server.config.env row {server.id} (github, owner {active_user.username})",
+            ]
+        )
+        assert _FERNET_PREFIX not in " ".join(check.problems)
 
     async def test_a_trigger_signing_secret_under_another_key_is_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
         # Webhook ingress decrypts this with the instance key and rejects every delivery when it does not open.
