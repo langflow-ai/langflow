@@ -93,7 +93,7 @@ def convert_sqlite_to_postgres(
     *,
     batch_size: int = 1000,
     drop_orphans: bool = False,
-    on_progress: Callable[[int, int, str], None] | None = None,
+    on_progress: Callable[[str, int, int | None, str | None], None] | None = None,
     on_table: Callable[[TableCopy], None] | None = None,
 ) -> ConversionReport:
     """Copy every row of a SQLite Langflow database into a Postgres database.
@@ -103,11 +103,17 @@ def convert_sqlite_to_postgres(
     refused or failed. Rows whose foreign key points at a row that is gone are
     refused unless ``drop_orphans``, which applies their ON DELETE rule instead.
 
-    While it copies, ``on_progress`` gets the rows written so far, the rows the
-    run will write and the table being written, and ``on_table`` gets each
-    table once it is copied and counted. A copy that fails after that is rolled back.
+    ``on_progress`` gets the phase, the rows written so far, the rows the run
+    will write and the table being written. It is called once when the source
+    checks start ("checking") and once when the target is about to be migrated
+    ("preparing_target"), both before the total and any table are known, so
+    with None for them. Then it is called for every table and insert batch
+    ("copying"). ``on_table`` gets each table once it is copied and counted. A
+    copy that fails after that is rolled back.
     """
     report = ConversionReport()
+    if on_progress is not None:
+        on_progress("checking", 0, None, None)
     try:
         source_path = sa.engine.make_url(_sync_sqlite_url(source_url)).database
     except sa.exc.ArgumentError as exc:
@@ -152,6 +158,9 @@ def convert_sqlite_to_postgres(
             _preflight(source, target, models, report, drop_orphans=drop_orphans)
             if report.problems:
                 return report
+            if on_progress is not None:
+                # Said before it starts: on an empty target this runs every migration.
+                on_progress("preparing_target", 0, None, None)
             try:
                 upgrade_to_head(target_url)
             except CommandError as exc:
@@ -281,7 +290,7 @@ def _convert(
     *,
     batch_size: int,
     drop_orphans: bool,
-    on_progress: Callable[[int, int, str], None] | None,
+    on_progress: Callable[[str, int, int | None, str | None], None] | None,
     on_table: Callable[[TableCopy], None] | None,
 ) -> None:
     metadata = sa.MetaData()
@@ -308,7 +317,7 @@ def _convert(
             nonlocal done
             done += rows
             if on_progress is not None:
-                on_progress(done, total, table_name)
+                on_progress("copying", done, total, table_name)
 
         try:
             with target.begin() as tgt:

@@ -11,8 +11,10 @@ if TYPE_CHECKING:
     from langflow.services.database.sqlite_to_postgres import ConversionReport, TableCopy
 
 
-def emit_progress(done: int, total: int, table: str) -> None:
-    emit("progress", done=done, total=total, unit="rows", subject=table)
+def emit_progress(phase: str, done: int, total: int | None, table: str | None) -> None:
+    # Before the copy there is no total and no table yet: total is null, never a placeholder 0.
+    subject = {} if table is None else {"subject": table}
+    emit("progress", phase=phase, done=done, total=total, unit="rows", **subject)
 
 
 def emit_table(table: TableCopy) -> None:

@@ -106,6 +106,11 @@ def _events(result) -> list[dict]:
     return [json.loads(line) for line in result.stdout.splitlines()]
 
 
+# What a --json run says before the first table, so a slow start does not look like a hang.
+CHECKING = {"event": "progress", "phase": "checking", "done": 0, "total": None, "unit": "rows"}
+PREPARING_TARGET = {"event": "progress", "phase": "preparing_target", "done": 0, "total": None, "unit": "rows"}
+
+
 class TestSourceChecks:
     # The target is never reached, so these need no Postgres server.
     UNREACHABLE_TARGET = "postgresql://nobody@127.0.0.1:1/none"
@@ -147,7 +152,8 @@ class TestSourceChecks:
         assert result.exit_code == 1
         # A traceback instead would leave a program reading --json without its report line.
         assert isinstance(result.exception, SystemExit)
-        error, report = _events(result)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
         assert (error["event"], error["code"]) == ("error", "source_unreadable")
         assert error["message"].startswith("could not read the source database: ")
         assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
@@ -160,7 +166,8 @@ class TestSourceChecks:
 
         assert result.exit_code == 1
         assert isinstance(result.exception, SystemExit)
-        error, report = _events(result)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
         assert (error["event"], error["code"]) == ("error", "source_unreadable")
         assert error["message"].startswith("could not read the source database: ")
         assert "file is not a database" in error["message"]
@@ -196,7 +203,8 @@ class TestSourceChecks:
         result = run_cli("--json", "--source", sqlite_source, "--target", self.UNREACHABLE_TARGET)
 
         assert result.exit_code == 1
-        error, report = _events(result)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
         assert (error["event"], error["code"]) == ("error", "target_unreachable")
         assert report == {
             "event": "report",
@@ -232,7 +240,7 @@ class TestSourceChecks:
         )
 
         assert result.returncode == 1, result.stderr
-        assert [json.loads(line)["event"] for line in result.stdout.splitlines()] == ["error", "report"]
+        assert [json.loads(line)["event"] for line in result.stdout.splitlines()] == ["progress", "error", "report"]
         assert "Logger set up with log level" in result.stderr
 
     def test_urls_are_read_from_the_environment(self, sqlite_source, run_cli):
@@ -753,14 +761,19 @@ class TestCommandOutput:
         assert {item["table"]: item["target_rows"] for item in items} == _counts(postgres_database, copied)
         assert all(item["source_rows"] == item["target_rows"] for item in items)
 
+        # The source checks and the target's migrations are announced before the first table.
+        assert events[:2] == [CHECKING, PREPARING_TARGET]
+        copying = progress[2:]
         rows = sum(item["source_rows"] for item in items)
-        done = [event["done"] for event in progress]
+        done = [event["done"] for event in copying]
         assert done == sorted(done)
         assert done[-1] == rows
-        assert all(event["total"] == rows and event["unit"] == "rows" for event in progress)
+        assert all(
+            event["phase"] == "copying" and event["total"] == rows and event["unit"] == "rows" for event in copying
+        )
         # Every table reports, empty ones included, and a table larger than a batch reports per batch.
-        assert {event["subject"] for event in progress} == set(copied)
-        user = [event["done"] for event in progress if event["subject"] == "user"]
+        assert {event["subject"] for event in copying} == set(copied)
+        user = [event["done"] for event in copying if event["subject"] == "user"]
         assert [count - user[0] for count in user] == [0, 1, 2]
 
         assert report == {
@@ -782,7 +795,8 @@ class TestCommandOutput:
         result = run_cli("--json", "--source", sqlite_source, "--target", postgres_database)
 
         assert result.exit_code == 1
-        decision, report = _events(result)
+        checking, decision, report = _events(result)
+        assert checking == CHECKING
         assert (decision["event"], decision["code"], decision["flag"]) == (
             "decision_needed",
             "orphans_droppable",
@@ -816,7 +830,7 @@ class TestCommandOutput:
         assert isinstance(result.exception, SystemExit)
         events = _events(result)
         error, report = events[-2:]
-        assert [event["event"] for event in events if event["event"] != "progress"] == ["error", "report"]
+        assert events[:-2] == [CHECKING, PREPARING_TARGET]
         assert error["code"] == "target_not_empty"
         assert error["message"].startswith("target database is at revision ffffffffffff")
         assert "another Langflow version" in error["message"]
@@ -860,7 +874,7 @@ class TestCommandOutput:
         result = run_cli("--json", "--source", sqlite_source, "--target", postgres_database)
 
         assert result.exit_code == 1
-        *errors, report = _events(result)
+        _, *errors, report = _events(result)
         # Rerunning with --drop-orphans would not be enough, so no decision is offered.
         assert {event["event"] for event in errors} == {"error"}
         codes = [event["code"] for event in errors]
