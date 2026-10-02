@@ -84,6 +84,9 @@ langflow convert-sqlite-to-postgres \
   --target postgresql://user:password@host:5432/langflow
 ```
 
+A command line is visible to other users of the machine, so to keep the PostgreSQL password out of it, set `LANGFLOW_MIGRATION_SOURCE_URL` and `LANGFLOW_MIGRATION_TARGET_URL` instead of passing `--source` and `--target`.
+If both are given, the options win.
+
 The SQLite database must already be on the schema of the Langflow version you run the command with, so start that version against it once first.
 If you copy the SQLite file before converting, use `sqlite3 langflow.db ".backup copy.db"` or `VACUUM INTO`. Langflow runs SQLite in WAL mode, so a plain file copy can come out empty.
 

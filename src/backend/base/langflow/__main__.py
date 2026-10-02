@@ -1173,8 +1173,16 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
 
 @app.command(name="convert-sqlite-to-postgres")
 def convert_sqlite_to_postgres(
-    source: str = typer.Option(..., help="SQLite database URL to read, e.g. sqlite:////data/langflow.db."),
-    target: str = typer.Option(..., help="Postgres database URL to write. It is upgraded to the latest schema first."),
+    source: str = typer.Option(
+        ...,
+        help="SQLite database URL to read, e.g. sqlite:////data/langflow.db.",
+        envvar="LANGFLOW_MIGRATION_SOURCE_URL",
+    ),
+    target: str = typer.Option(
+        ...,
+        help="Postgres database URL to write. It is upgraded to the latest schema first.",
+        envvar="LANGFLOW_MIGRATION_TARGET_URL",
+    ),
     batch_size: int = typer.Option(1000, help="Rows per insert batch."),
     drop_orphans: bool = typer.Option(  # noqa: FBT001
         default=False,
@@ -1198,6 +1206,10 @@ def convert_sqlite_to_postgres(
 
     SQLite never enforced Langflow's foreign keys, so deletes can leave rows that
     point at nothing. They are refused, naming each key, unless --drop-orphans.
+
+    A command line is visible to other users of the machine. Set the URLs in
+    LANGFLOW_MIGRATION_SOURCE_URL and LANGFLOW_MIGRATION_TARGET_URL instead of
+    the options to keep the target's password out of it.
 
     Exits non-zero if anything was refused or failed. With --json every problem
     carries a stable code, and the last line is the report.

@@ -210,6 +210,38 @@ class TestSourceChecks:
         assert [json.loads(line)["event"] for line in result.stdout.splitlines()] == ["error", "report"]
         assert "Logger set up with log level" in result.stderr
 
+    def test_urls_are_read_from_the_environment(self, sqlite_source, run_cli):
+        # How a parent process passes them, so the target's password is never in argv.
+        env = {"LANGFLOW_MIGRATION_SOURCE_URL": sqlite_source, "LANGFLOW_MIGRATION_TARGET_URL": self.UNREACHABLE_TARGET}
+
+        result = run_cli("--json", env=env)
+
+        assert result.exit_code == 1, result.output
+        assert [problem["code"] for problem in _events(result)[-1]["problems"]] == ["target_unreachable"]
+
+    def test_flags_win_over_the_environment(self, sqlite_source, tmp_path, run_cli):
+        missing = f"sqlite:///{tmp_path / 'typo.db'}"
+        env = {"LANGFLOW_MIGRATION_SOURCE_URL": sqlite_source, "LANGFLOW_MIGRATION_TARGET_URL": "postgresql://unused"}
+
+        result = run_cli("--json", "--source", missing, "--target", self.UNREACHABLE_TARGET, env=env)
+
+        assert [problem["code"] for problem in _events(result)[-1]["problems"]] == ["source_missing"]
+
+    def test_help_names_the_environment_variables_and_never_shows_their_values(self, run_cli):
+        secret = "SuperSecretPw123"  # noqa: S105  # pragma: allowlist secret
+        env = {
+            "LANGFLOW_MIGRATION_SOURCE_URL": "sqlite:////data/private-name.db",
+            "LANGFLOW_MIGRATION_TARGET_URL": f"postgresql://postgres:{secret}@db/langflow",
+        }
+
+        result = run_cli("--help", env=env)
+
+        assert result.exit_code == 0
+        assert "LANGFLOW_MIGRATION_SOURCE_URL" in result.output
+        assert "LANGFLOW_MIGRATION_TARGET_URL" in result.output
+        assert secret not in result.output
+        assert "private-name" not in result.output
+
 
 # --------------------------------------------------------------------------
 # End to end against a real Postgres server
