@@ -45,6 +45,7 @@ members = [
     "lfx-firecrawl",
     "lfx-google",
     "lfx-ibm",
+    "lfx-linkup",
     "lfx-microsoft",
     "lfx-nextplaid",
     "lfx-ollama",
@@ -7696,6 +7697,7 @@ bundles = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-linkup" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
@@ -7815,6 +7817,7 @@ requires-dist = [
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-linkup", marker = "extra == 'bundles'", editable = "src/bundles/linkup" },
     { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
     { name = "lfx-ollama", editable = "src/bundles/ollama" },
@@ -10102,6 +10105,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-linkup"
+version = "0.1.0"
+source = { editable = "src/bundles/linkup" }
+dependencies = [
+    { name = "lfx" },
+    { name = "linkup-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "linkup-sdk", specifier = ">=0.23.0,<1.0.0" },
+]
+
+[[package]]
 name = "lfx-microsoft"
 version = "0.1.2"
 source = { editable = "src/bundles/microsoft" }
@@ -10537,6 +10555,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b8/c7/b3efe646c8b9fdc6fe26720860276c8a2bb745ffe30f5bcbc9726b975673/line_profiler-5.0.2-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:74febeca89128a37a32e6500c99665943c0d11e6043f46ce95596d7d1e1732a7", size = 2494741, upload-time = "2026-02-23T23:30:50.755Z" },
     { url = "https://files.pythonhosted.org/packages/0e/ad/ddadd39eb92900f063f27e8f6d748c03dc2638873f07ebf3cee75f29711f/line_profiler-5.0.2-cp314-cp314-win_amd64.whl", hash = "sha256:d6ce98faff60d9552a30e233648a848682b5d664a7e09e9669163a8f01e28147", size = 485700, upload-time = "2026-02-23T23:30:52.373Z" },
     { url = "https://files.pythonhosted.org/packages/d0/45/a529f355eea8fb790fbdee0273d6c0049dba3232a36e82c30d849b00e996/line_profiler-5.0.2-cp314-cp314-win_arm64.whl", hash = "sha256:8be7cc5f4ed9ad87352129d1a494cf5ba7f0fced0472201d83ac9fbfa20f798b", size = 469781, upload-time = "2026-02-23T23:30:53.747Z" },
+]
+
+[[package]]
+name = "linkup-sdk"
+version = "0.23.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/b2/511a35464ec6985ed6adee4d6757bcbfa8f7bd0119a7c54c42ba13050b03/linkup_sdk-0.23.1.tar.gz", hash = "sha256:4474ea8608e404d04074928ae1612a2eca4800627960f7485d99d25c967255f0", size = 196782, upload-time = "2026-09-30T10:15:31.556Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/c8/2794afbfa44419852cdd3a0d9282e42eaebfd88038152282cb4ba42d70a7/linkup_sdk-0.23.1-py3-none-any.whl", hash = "sha256:29a1e1c9537588ee7206017b3fbdabc46ce99a09901b55c819300498fa0d60f9", size = 22241, upload-time = "2026-09-30T10:15:30.116Z" },
 ]
 
 [[package]]

@@ -5057,6 +5057,16 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "LinkupFetchComponent",
+      "target": "ext:linkup:LinkupFetchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "LinkupSearchComponent",
+      "target": "ext:linkup:LinkupSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"

@@ -1,0 +1,59 @@
+---
+title: Linkup
+slug: /bundles-linkup
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="linkup" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Linkup** bundle.
+
+Both components require a Linkup API key. Get one from the [Linkup dashboard](https://app.linkup.so). For details on the underlying API, see the [Linkup documentation](https://docs.linkup.so).
+
+## Linkup Search
+
+This component searches the web in real time with [Linkup](https://www.linkup.so) and returns relevant, citable sources.
+
+It has two outputs:
+
+* **Search Results**: A [`Table`](/data-types#table) with one row per source and `title`, `url`, and `content` columns. The `text` of each row is the source content.
+* **Sourced Answer**: A [`Message`](/data-types#message) containing a natural-language answer to the query, followed by a list of the sources it is based on.
+
+In [tool mode](/agents-tools), the component exposes the tools `linkup_search` and `linkup_sourced_answer`, which an [**Agent** component](/agents) can call with a search query.
+
+### Linkup Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`query`) | String | Input parameter. The search query to execute with Linkup. |
+| Linkup API Key (`linkup_api_key`) | SecretString | Input parameter. Your Linkup API key. |
+| Depth (`depth`) | Dropdown | Input parameter. One of `fast`, `standard`, or `deep`. Use `standard` for most queries and `deep` for complex, multi-step questions. Default: `standard`. |
+| Max Results (`max_results`) | Integer | Input parameter. Maximum number of results to return. `0` leaves it at Linkup's default. Default: `10`. |
+| Include Domains (`include_domains`) | String | Input parameter. Optional. Comma-separated allowlist of domains. |
+| Exclude Domains (`exclude_domains`) | String | Input parameter. Optional. Comma-separated denylist of domains. |
+| From Date (`from_date`) | String | Input parameter. Optional. ISO date (`YYYY-MM-DD`). Only return results published on or after this date. |
+| To Date (`to_date`) | String | Input parameter. Optional. ISO date (`YYYY-MM-DD`). Only return results published on or before this date. |
+
+## Linkup Fetch
+
+This component fetches a single web page with Linkup and returns its content as clean markdown in a [`Message`](/data-types#message).
+
+In [tool mode](/agents-tools), the component exposes a single tool named `linkup_fetch` that an [**Agent** component](/agents) can call with a URL.
+
+### Linkup Fetch parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| URL (`url`) | String | Input parameter. The URL of the web page to fetch. |
+| Linkup API Key (`linkup_api_key`) | SecretString | Input parameter. Your Linkup API key. |
+| Render JavaScript (`render_js`) | Boolean | Input parameter. Render the page in a browser before extracting content. Slower, but needed for pages built with client-side JavaScript. Default: `false`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**URL** component](/url)
+* [**Exa** bundle](/bundles-exa)
