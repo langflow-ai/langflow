@@ -87,6 +87,13 @@
     "colord": "^2.9.4",
     "fflate": "^0.4.9",
     "http-proxy-middleware": "^2.0.10",
+    "ajv": "^6.14.0",
+    "ajv-formats": {
+      "ajv": "^8.18.0"
+    },
+    "schema-utils@4.3.2": {
+      "ajv": "^8.18.0"
+    },
     "styled-components": {
       "postcss": "8.4.49"
     },
