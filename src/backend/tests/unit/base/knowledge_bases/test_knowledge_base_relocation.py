@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
+import logging
 import math
 import os
 import uuid
@@ -21,7 +23,7 @@ import sqlalchemy as sa
 import typer
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
-from langflow.__main__ import _relocate_kb
+from langflow.__main__ import _relocate_kb, app
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.knowledge_base_relocation import (
     KBRelocationResult,
@@ -36,6 +38,7 @@ from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.knowledge_base_storage.runtime import backend_for_record, operation, unfenced_backend
 from lfx.base.knowledge_bases.backends import IngestedDocument, SQLiteBackend, create_backend
 from pydantic import SecretStr
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -73,6 +76,20 @@ def during_copy(monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(SQLiteBackend, "iter_documents", iter_documents)
 
     return install
+
+
+@pytest.fixture
+def quiet_libraries(caplog: pytest.LogCaptureFixture) -> None:
+    """Keep library INFO records (alembic's, here) off stdout for tests that read what the command prints.
+
+    The test session's log handler prints them there; the command line's own prints to stderr.
+    """
+    caplog.set_level(logging.WARNING)
+
+
+def _json_events(out: str) -> list[dict]:
+    """Every line of ``out`` parsed as JSON, so a stray non-JSON line fails the test."""
+    return [json.loads(line) for line in out.splitlines()]
 
 
 def _vector(i: int, *, unit: bool) -> list[float]:
@@ -134,6 +151,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert "astra" in result.reason
+        assert result.code == "kb_backend_missing"
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "astra"
 
@@ -155,6 +173,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert "target" in result.reason
+        assert result.code == "kb_target_unreachable"
 
     async def test_kb_being_ingested_is_not_moved(self, active_user):
         # An ingestion still running would keep writing to the source after the copy.
@@ -166,6 +185,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert "ingesting" in result.reason
+        assert result.code == "kb_ingesting"
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "sqlite"
 
@@ -187,6 +207,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert "4 of 10" in result.reason
+        assert result.code == "kb_short"
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "sqlite"
 
@@ -254,13 +275,19 @@ class TestRelocationWithoutATarget:
         assert await _repoint(record, "postgres", {}, 2) == "deleted"
 
     @pytest.mark.parametrize(
-        ("target", "config", "how"),
+        ("target", "config", "how", "flag", "suggested"),
         [
-            ("postgres", {}, "--allow-metric-change"),
-            ("opensearch", {"url_variable": "OPENSEARCH_URL", "space_type": "cosinesimil"}, '{"space_type": "l2"}'),
+            ("postgres", {}, "--allow-metric-change", "--allow-metric-change", None),
+            (
+                "opensearch",
+                {"url_variable": "OPENSEARCH_URL", "space_type": "cosinesimil"},
+                '{"space_type": "l2"}',
+                None,
+                {"space_type": "l2"},
+            ),
         ],
     )
-    async def test_metric_refusal_says_how_to_proceed(self, active_user, target, config, how):
+    async def test_metric_refusal_says_how_to_proceed(self, active_user, target, config, how, flag, suggested):
         # pgvector's metric is fixed, so the only way through is to accept the change.
         kb_name = f"kb_metric_{target}"
         record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6, unit=False)
@@ -270,6 +297,44 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert how in result.reason
+        assert (result.code, result.flag, result.target_config) == ("kb_metric_change", flag, suggested)
+
+    async def test_unknown_target_backend_is_reported_as_missing(self, active_user):
+        record, _ = await _seed_sqlite_kb(active_user.id, "kb_nowhere", 2)
+
+        results = await relocate_knowledge_bases(target_backend_type="nope", target_backend_config={})
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert result.status == "failed"
+        assert result.reason.startswith("ValueError: Unknown vector-store backend 'nope'")
+        assert result.code == "kb_backend_missing"
+
+    async def test_target_without_its_connection_settings_is_told_apart_from_other_failures(
+        self, active_user, monkeypatch
+    ):
+        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+        record, _ = await _seed_sqlite_kb(active_user.id, "kb_no_target", 2)
+
+        results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert result.status == "failed"
+        assert result.reason.startswith("ValueError: PostgresBackend needs the 'PGVECTOR_CONNECTION_STRING'")
+        assert result.code == "kb_target_unreachable"
+
+    async def test_source_that_cannot_be_opened_is_a_plain_failure(self, active_user):
+        # A row whose SQLite store was never created, or has been lost since.
+        record = KnowledgeBaseRecord(user_id=active_user.id, name="kb_lost", model_selection=MODEL, chunks=2)
+        async with session_scope() as session:
+            session.add(record)
+            await session.commit()
+
+        results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert result.status == "failed"
+        assert result.reason == "FileNotFoundError: SQLite knowledge base storage is missing"
+        assert result.code == "kb_failed"
 
 
 async def _database_state() -> tuple[str, list[uuid.UUID], uuid.UUID]:
@@ -318,6 +383,153 @@ class TestRelocateKbCommand:
 
         assert await _database_state() == before
         assert earlier in capsys.readouterr().err
+
+    @pytest.mark.usefixtures("old_audit_row", "quiet_libraries")
+    async def test_json_reports_a_database_behind_this_langflow_as_an_error_event(self, capsys):
+        earlier = "9d7e2a6c4b81"  # pragma: allowlist secret
+        async with session_scope() as session:
+            await session.exec(sa.text("UPDATE alembic_version SET version_num = :v").bindparams(v=earlier))
+        capsys.readouterr()
+
+        with pytest.raises(typer.Exit) as refused:
+            await _relocate_kb(
+                target_backend_type="postgres",
+                target_backend_config={},
+                username=None,
+                dry_run=True,
+                batch_size=500,
+                as_json=True,
+            )
+
+        assert refused.value.exit_code == 1
+        (event,) = _json_events(capsys.readouterr().out)
+        assert (event["event"], event["code"]) == ("error", "schema_mismatch")
+        assert earlier in event["message"]
+
+    @pytest.mark.usefixtures("quiet_libraries")
+    async def test_json_stream_of_a_dry_run(self, active_user, kb_root, capsys, monkeypatch):  # noqa: ARG002
+        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+        refused, _ = await _seed_sqlite_kb(active_user.id, "kb_json_metric", 6, unit=False)
+        busy, _ = await _seed_sqlite_kb(active_user.id, "kb_json_busy", 2)
+        await knowledge_base_service.update_status(busy.id, status=KnowledgeBaseStatus.INGESTING)
+        skipped = await knowledge_base_service.create_record(
+            user_id=active_user.id, name="kb_json_there", backend_type="postgres"
+        )
+        capsys.readouterr()
+
+        failed = await _relocate_kb(
+            target_backend_type="postgres",
+            target_backend_config={},
+            username=active_user.username,
+            dry_run=True,
+            batch_size=500,
+            as_json=True,
+        )
+
+        # Every line of stdout is an event: one item per knowledge base, then the report.
+        *items, report = _json_events(capsys.readouterr().out)
+        assert failed == 2
+        assert {event["event"] for event in items} == {"item"}
+        by_id = {event["item"]["kb_id"]: event["item"] for event in items}
+        assert len(items) == len(by_id) == 3
+        assert by_id[str(skipped.id)] == {
+            "kb_id": str(skipped.id),
+            "kb_name": "kb_json_there",
+            "owner": active_user.username,
+            "source_backend": "postgres",
+            "target_backend": "postgres",
+            "status": "skipped",
+            "source_count": 0,
+            "copied": 0,
+            "target_count": 0,
+            "reason": "already on the target backend",
+            "warnings": [],
+            "code": None,
+            "flag": None,
+            "target_config": None,
+        }
+        assert by_id[str(busy.id)]["code"] == "kb_ingesting"
+        metric = by_id[str(refused.id)]
+        assert (metric["status"], metric["code"], metric["flag"]) == (
+            "failed",
+            "kb_metric_change",
+            "--allow-metric-change",
+        )
+        assert report["event"] == "report"
+        assert (report["ok"], report["dry_run"], report["counts"]) == (False, True, {"failed": 2, "skipped": 1})
+        # The report repeats only what needs attention, in the shape the items came in.
+        assert sorted(report["attention"], key=str) == sorted([by_id[str(busy.id)], metric], key=str)
+
+    @pytest.mark.usefixtures("quiet_libraries")
+    async def test_text_output_is_the_same_without_json(self, active_user, kb_root, capsys, monkeypatch):  # noqa: ARG002
+        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+        await _seed_sqlite_kb(active_user.id, "kb_text", 2, model_selection=None)
+        await knowledge_base_service.create_record(
+            user_id=active_user.id, name="kb_text_there", backend_type="postgres"
+        )
+        capsys.readouterr()
+
+        failed = await _relocate_kb(
+            target_backend_type="postgres",
+            target_backend_config={},
+            username=active_user.username,
+            dry_run=True,
+            batch_size=500,
+        )
+
+        owner = active_user.username
+        moving = [
+            f"failed          {owner}/kb_text  sqlite -> postgres  chunks 0/2  (target is not reachable: "
+            "PostgresBackend needs the 'PGVECTOR_CONNECTION_STRING' environment variable populated with a "
+            "Postgres connection string, e.g. "
+            "'postgresql+psycopg://user:pass@host:5432/dbname'.)",  # pragma: allowlist secret
+            "                warning: model_selection is empty, "
+            "so the embedding model that produced these vectors is unknown",
+            "                warning: the source ranks by l2 distance and the target by cosine; "
+            "these vectors are unit length, so the same neighbours come back but scores change scale",
+        ]
+        there = (
+            f"skipped         {owner}/kb_text_there  postgres -> postgres  chunks 0  (already on the target backend)"
+        )
+        summary = "Knowledge base relocation dry run complete: 1 failed, 1 skipped."
+        # Knowledge bases come in whatever order the database returns them.
+        assert capsys.readouterr().out.splitlines() in ([*moving, there, summary], [there, *moving, summary])
+        assert failed == 1
+
+
+@pytest.mark.parametrize(
+    "target_config",
+    ["{not json", '["a list"]', '{"index_name": "shared"}'],
+)
+def test_json_reports_a_bad_target_config_as_an_error_event(target_config):
+    result = CliRunner().invoke(app, ["relocate-kb", "--to", "opensearch", "--target-config", target_config, "--json"])
+
+    assert result.exit_code == 2
+    (event,) = _json_events(result.stdout)
+    assert (event["event"], event["code"]) == ("error", "bad_target_config")
+    assert "--target-config" in event["message"]
+
+
+def test_progress_total_is_null_when_the_source_count_is_not_known(capsys):
+    from langflow.cli.relocate_kb_events import progress
+
+    kb_id = uuid.uuid4()
+    result = KBRelocationResult(
+        kb_id=kb_id,
+        kb_name="kb",
+        owner="alice",
+        source_backend="sqlite",
+        target_backend="postgres",
+        status="failed",
+        source_count=0,
+        copied=5,
+    )
+
+    progress(result)
+
+    assert _json_events(capsys.readouterr().out) == [
+        {"event": "progress", "done": 5, "total": None, "unit": "chunks", "subject": str(kb_id)}
+    ]
 
 
 @pytest.mark.parametrize(
@@ -548,6 +760,7 @@ class TestRelocationToPostgresLive:
 
         assert result.status == "failed", (result.source_count, result.copied, result.target_count)
         assert "changed" in result.reason
+        assert result.code == "kb_changed"
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "sqlite"
 
@@ -566,6 +779,7 @@ class TestRelocationToPostgresLive:
 
         assert result.status == "failed", (result.source_count, result.copied, result.target_count)
         assert "15" in result.reason
+        assert result.code == "kb_target_more"
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "sqlite"
 
@@ -581,6 +795,116 @@ class TestRelocationToPostgresLive:
 
         assert result.status == "failed"
         assert "deleted" in result.reason
+        assert result.code == "kb_deleted"
+
+    async def test_chunk_that_leaves_the_source_mid_copy_stops_the_repoint(self, active_user, tmp_path, during_copy):
+        kb_name = f"kb_cut_{uuid.uuid4().hex[:6]}"
+
+        async def delete_unread_chunk():
+            record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
+            source = await backend_for_record(record)
+            try:
+                # SQLite reads in id order, and "chunk-9" sorts last, so it is still unread.
+                await source.delete_by({"i": 9})
+            finally:
+                await source.teardown()
+
+        during_copy(delete_unread_chunk)
+        record, result = await self._move(active_user, tmp_path, kb_name)
+
+        assert result.status == "failed"
+        assert result.reason == "read 11 of 12 chunks from the source; not repointing"
+        assert result.code == "kb_read_short"
+        assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+
+    async def test_chunk_stored_without_a_vector_is_not_copied(self, active_user, tmp_path):
+        if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
+            pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
+        pytest.importorskip("opensearchpy")
+        kb_name = f"kb_bare_{uuid.uuid4().hex[:6]}"
+        source = create_backend(
+            "postgres", kb_name=kb_name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
+        )
+        try:
+            await source.add_embedded_documents(
+                [IngestedDocument(id="c0", content="doc", metadata={}, embedding=_vector(0, unit=True))]
+            )
+            async with source._ensure_async_engine().begin() as conn:
+                await conn.execute(sa.insert(source._embedding_table()).values(id="bare", document="doc"))
+            record = await knowledge_base_service.create_record(
+                user_id=active_user.id,
+                name=kb_name,
+                backend_type="postgres",
+                model_selection={"name": "m", "provider": "p"},
+                chunks=2,
+            )
+
+            results = await relocate_knowledge_bases(
+                target_backend_type="opensearch", target_backend_config={"url_variable": "OPENSEARCH_URL"}
+            )
+
+            result = next(r for r in results if r.kb_id == record.id)
+            assert result.status == "failed"
+            assert "without vectors" in result.reason
+            assert result.code == "kb_no_vectors"
+            assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "postgres"
+        finally:
+            with contextlib.suppress(Exception):
+                await source.delete_collection()
+            await source.teardown()
+
+    @pytest.mark.usefixtures("quiet_libraries")
+    async def test_json_stream_of_a_real_run(self, active_user, tmp_path: Path, capsys):
+        suffix = uuid.uuid4().hex[:6]
+        moved, _ = await _seed_sqlite_kb(active_user.id, f"kb_json_moved_{suffix}", 12)
+        refused, _ = await _seed_sqlite_kb(active_user.id, f"kb_json_metric_{suffix}", 6, unit=False)
+        skipped = await knowledge_base_service.create_record(
+            user_id=active_user.id, name=f"kb_json_there_{suffix}", backend_type="postgres"
+        )
+        target = create_backend(
+            "postgres", kb_name=moved.name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
+        )
+        capsys.readouterr()
+        try:
+            failed = await _relocate_kb(
+                target_backend_type="postgres",
+                target_backend_config={},
+                username=active_user.username,
+                dry_run=False,
+                batch_size=5,
+                as_json=True,
+            )
+
+            events = _json_events(capsys.readouterr().out)
+            assert failed == 1
+            items = {event["item"]["kb_id"]: event["item"] for event in events if event["event"] == "item"}
+            assert items.keys() == {str(moved.id), str(refused.id), str(skipped.id)}
+            assert {kb_id: (item["status"], item["code"], item["flag"]) for kb_id, item in items.items()} == {
+                str(moved.id): ("relocated", None, None),
+                str(refused.id): ("failed", "kb_metric_change", "--allow-metric-change"),
+                str(skipped.id): ("skipped", None, None),
+            }
+
+            # Progress belongs to the one knowledge base that was copied, and comes before its item.
+            progress = [event for event in events if event["event"] == "progress"]
+            assert [(event["done"], event["total"]) for event in progress] == [(5, 12), (10, 12), (12, 12)]
+            assert {(event["unit"], event["subject"]) for event in progress} == {("chunks", str(moved.id))}
+            moved_item = {"event": "item", "item": items[str(moved.id)]}
+            assert events.index(progress[-1]) < events.index(moved_item)
+
+            assert events[-1] == {
+                "event": "report",
+                "ok": False,
+                "dry_run": False,
+                "counts": {"relocated": 1, "failed": 1, "skipped": 1},
+                "attention": [items[str(refused.id)]],
+            }
+            assert [event["event"] for event in events].count("report") == 1
+            assert (await knowledge_base_service.get_by_id(moved.id)).backend_type == "postgres"
+        finally:
+            with contextlib.suppress(Exception):
+                await target.delete_collection()
+            await target.teardown()
 
     async def test_row_moved_to_another_generation_mid_copy_is_not_repointed(self, active_user, tmp_path, during_copy):
         # The copy goes on reading the generation it opened, so its counts agree;
