@@ -993,3 +993,45 @@ def test_end_user_segment_blocks_path_traversal():
 
 def test_end_user_segment_sanitizes_separators():
     assert _save_component_with_end_user("a/b\\c")._serving_end_user_segment() == "a_b_c"
+
+
+def _restricted_settings(config_dir: Path) -> MagicMock:
+    settings = MagicMock()
+    settings.storage_type = "local"
+    settings.restrict_local_file_access = True
+    settings.config_dir = str(config_dir)
+    service = MagicMock()
+    service.settings = settings
+    return service
+
+
+async def _save_as_end_user(end_user: str, config_dir: Path, file_name: str) -> None:
+    component = _save_component_with_end_user(end_user)
+    component.set_attributes(
+        {"input": Message(text="hello"), "file_name": file_name, "storage_location": [{"name": "Local"}]}
+    )
+    service = _restricted_settings(config_dir)
+    with (
+        patch("lfx.components.files_and_knowledge.save_file.get_settings_service", return_value=service),
+        patch("lfx.utils.file_path_security.get_settings_service", return_value=service),
+        patch.object(SaveToFileComponent, "_upload_file", new=AsyncMock(return_value=None)),
+    ):
+        await component._save_to_local()
+
+
+async def test_should_record_the_end_user_as_owner_of_their_save_folder(tmp_path):
+    from lfx.utils.end_user_storage import end_user_folder_owners
+
+    await _save_as_end_user("alice@example.com", tmp_path, "notes")
+
+    assert [path.stem for path in (tmp_path / "alice_example.com").iterdir()] == ["notes"]
+    assert end_user_folder_owners(tmp_path, "alice_example.com") == frozenset({"alice@example.com"})
+
+
+async def test_should_record_every_end_user_that_shares_a_sanitized_folder(tmp_path):
+    from lfx.utils.end_user_storage import end_user_folder_owners
+
+    await _save_as_end_user("a@b", tmp_path, "one")
+    await _save_as_end_user("a_b", tmp_path, "two")
+
+    assert end_user_folder_owners(tmp_path, "a_b") == frozenset({"a@b", "a_b"})

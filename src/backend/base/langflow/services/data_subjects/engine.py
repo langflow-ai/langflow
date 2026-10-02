@@ -17,6 +17,7 @@ from langflow.services.data_subjects.builder_flow_steps import erase_owned_flows
 from langflow.services.data_subjects.end_user_steps import END_USER_STEPS
 from langflow.services.data_subjects.errors import DataSubjectError
 from langflow.services.data_subjects.knowledge_base_steps import erase_knowledge_bases
+from langflow.services.data_subjects.memory_base_storage import memory_base_items
 from langflow.services.data_subjects.requests import close_request, erase_context
 from langflow.services.data_subjects.storage_steps import run_storage_item
 from langflow.services.database.models.data_subject_request import (
@@ -25,7 +26,6 @@ from langflow.services.database.models.data_subject_request import (
     DataSubjectType,
 )
 from langflow.services.deps import session_scope
-from langflow.services.memory_base.flow_cleanup import finalize_flow_memory_base_cleanup
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -84,10 +84,14 @@ async def _run_steps(request_id: UUID, ctx: EraseContext, steps, heartbeat: Hear
             cursor[key] = index if processed else index + 1
             cursor["data"] = ctx.cursor
             request.counts, request.cursor = counts, cursor
+            if ctx.memory_base_cleanups:
+                # Committed with the row delete, so a crash or a remote outage cannot lose the handles.
+                request.pending_paths = [
+                    *(request.pending_paths or []),
+                    *memory_base_items(ctx.memory_base_cleanups),
+                ]
             session.add(request)
-        if ctx.memory_base_cleanups:
-            handles, ctx.memory_base_cleanups = ctx.memory_base_cleanups, []
-            await finalize_flow_memory_base_cleanup(handles)
+        ctx.memory_base_cleanups = []
         await heartbeat()
 
 
@@ -190,6 +194,7 @@ async def run_request(request_id: UUID, heartbeat: Heartbeat = _noop) -> str | N
             await asyncio.sleep(LATE_WRITE_SETTLE_SECONDS)
             ctx.cursor = {}
             await _run_steps(request_id, ctx, steps, heartbeat, final=True)
+            await _run_storage(request_id, heartbeat)
             phase = PHASE_ACCOUNT
             await _set_phase(request_id, phase)
         if phase == PHASE_ACCOUNT and not is_end_user:

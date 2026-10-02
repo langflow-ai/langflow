@@ -14,6 +14,7 @@ from lfx.log.logger import logger
 from sqlmodel import col, select
 
 from langflow.services.data_subjects.engine import RUNNABLE, is_retry_due, run_request
+from langflow.services.data_subjects.expiry import approve_expired_requests
 from langflow.services.database.models.data_subject_request import DataSubjectRequest
 from langflow.services.deps import session_scope
 from langflow.services.triggers import leases
@@ -77,22 +78,39 @@ class DataSubjectEraseWorker:
                 raise RuntimeError(msg)
 
     async def _due_requests(self) -> list[UUID]:
+        """Up to ``CANDIDATE_BATCH`` runnable requests, paging past ones that are waiting or out of retries.
+
+        Retry state lives in a JSON column, so it is filtered here; paging keeps a run of exhausted
+        requests from hiding the approvals queued behind them.
+        """
+        due: list[UUID] = []
+        offset = 0
         async with session_scope() as session:
-            rows = (
-                await session.exec(
-                    select(DataSubjectRequest)
-                    .where(col(DataSubjectRequest.status).in_(RUNNABLE))
-                    .order_by(col(DataSubjectRequest.decided_at))
-                    .limit(CANDIDATE_BATCH)
-                )
-            ).all()
-            return [row.id for row in rows if is_retry_due(row)]
+            while len(due) < CANDIDATE_BATCH:
+                rows = (
+                    await session.exec(
+                        select(DataSubjectRequest)
+                        .where(col(DataSubjectRequest.status).in_(RUNNABLE))
+                        .order_by(col(DataSubjectRequest.decided_at), col(DataSubjectRequest.id))
+                        .offset(offset)
+                        .limit(CANDIDATE_BATCH)
+                    )
+                ).all()
+                due.extend(row.id for row in rows if is_retry_due(row))
+                if len(rows) < CANDIDATE_BATCH:
+                    break
+                offset += CANDIDATE_BATCH
+        return due[:CANDIDATE_BATCH]
 
     async def run_once(self) -> int:
-        """Run every due request once; return how many were attempted."""
+        """Approve overdue requests when auto-erase is on, then run every due request once.
+
+        Returns how many erase runs were attempted.
+        """
         async with session_scope() as session:
             if not await leases.acquire(session, name=LEASE_NAME, owner=self._owner, ttl_s=LEASE_TTL_SECONDS):
                 return 0
+        await approve_expired_requests()
         attempted = 0
         for request_id in await self._due_requests():
             if self._stop.is_set():

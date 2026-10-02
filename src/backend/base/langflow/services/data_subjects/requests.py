@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from sqlalchemy import update
 from sqlmodel import col, select
 
 from langflow.services.data_subjects import audit_events
@@ -32,15 +33,18 @@ from langflow.services.database.models.data_subject_request import (
     DataSubjectType,
 )
 from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-RESPONSE_DEADLINE = timedelta(days=30)
-
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _due_at() -> datetime:
+    return _now() + timedelta(days=get_settings_service().settings.data_subject_response_days)
 
 
 async def _open_request_for(session: AsyncSession, subject_user_id: UUID) -> DataSubjectRequest | None:
@@ -80,7 +84,7 @@ async def create_builder_request(
         subject_label=subject.username,
         source=source.value,
         requested_by=requested_by,
-        due_at=_now() + RESPONSE_DEADLINE,
+        due_at=_due_at(),
     )
     return await _create(session, request, requested_by), True
 
@@ -106,7 +110,7 @@ async def create_end_user_request(
         scope_flow_ids=[str(flow_id) for flow_id in scope_flow_ids] if scope_flow_ids else None,
         source=source.value,
         requested_by=requested_by,
-        due_at=_now() + RESPONSE_DEADLINE,
+        due_at=_due_at(),
     )
     return await _create(session, request, requested_by), True
 
@@ -115,6 +119,30 @@ def _require_status(request: DataSubjectRequest, *allowed: DataSubjectRequestSta
     if request.status not in {status.value for status in allowed}:
         msg = f"A request in status '{request.status}' cannot do this"
         raise InvalidTransitionError(msg, details={"status": request.status})
+
+
+async def _claim(session: AsyncSession, request: DataSubjectRequest, new_status: DataSubjectRequestStatus) -> None:
+    """Move a ``requested`` row to ``new_status`` only if the database still says ``requested``.
+
+    The loaded instance may be stale: another session can have decided the request since. The
+    conditional update is the decision; it also holds the row until commit on PostgreSQL.
+    """
+    _require_status(request, DataSubjectRequestStatus.REQUESTED)
+    result = await session.exec(
+        update(DataSubjectRequest)
+        .where(
+            col(DataSubjectRequest.id) == request.id,
+            col(DataSubjectRequest.status) == DataSubjectRequestStatus.REQUESTED.value,
+        )
+        .values(status=new_status.value)
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount != 1:
+        await session.refresh(request)
+        _require_status(request, DataSubjectRequestStatus.REQUESTED)
+        msg = "The request was decided by someone else"
+        raise InvalidTransitionError(msg, details={"status": request.status})
+    request.status = new_status.value
 
 
 def close_request(request: DataSubjectRequest, status: DataSubjectRequestStatus) -> None:
@@ -135,6 +163,7 @@ async def withdraw(session: AsyncSession, request: DataSubjectRequest, actor_id:
     if request.subject_user_id != actor_id:
         msg = "Only the person who asked can withdraw a request"
         raise InvalidTransitionError(msg)
+    await _claim(session, request, DataSubjectRequestStatus.WITHDRAWN)
     close_request(request, DataSubjectRequestStatus.WITHDRAWN)
     session.add(request)
     await audit_events.record_dsar_event(
@@ -150,7 +179,7 @@ async def withdraw(session: AsyncSession, request: DataSubjectRequest, actor_id:
 async def refuse(
     session: AsyncSession, request: DataSubjectRequest, actor_id: UUID, note: str | None
 ) -> DataSubjectRequest:
-    _require_status(request, DataSubjectRequestStatus.REQUESTED)
+    await _claim(session, request, DataSubjectRequestStatus.REFUSED)
     request.decided_by = actor_id
     request.decided_at = _now()
     request.refusal_note = note
@@ -179,7 +208,7 @@ def erase_context(request: DataSubjectRequest, username: str | None = None) -> E
     )
 
 
-async def _approve_builder(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID) -> dict[str, int]:
+async def _approve_builder(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID | None) -> dict[str, int]:
     await lock_account(session, request.subject_user_id)
     user = await session.get(User, request.subject_user_id)
     if user is None:
@@ -193,12 +222,19 @@ async def _approve_builder(session: AsyncSession, request: DataSubjectRequest, a
     return await stop_builder(session, user)
 
 
-async def approve(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID) -> DataSubjectRequest:
-    """Run phase 1 and hand the request to the worker. Guard refusals are audited and re-raised."""
+async def approve(
+    session: AsyncSession, request: DataSubjectRequest, actor_id: UUID | None, *, automatic: bool = False
+) -> DataSubjectRequest:
+    """Run phase 1 and hand the request to the worker. Guard refusals are audited and re-raised.
+
+    ``automatic`` marks an approval made by the expiry sweep: there is no approving administrator.
+    """
     _require_status(request, DataSubjectRequestStatus.REQUESTED)
     if request.subject_user_id is not None and request.subject_user_id == actor_id:
         msg = "Another administrator must approve the deletion of your own account"
         raise SelfApprovalError(msg)
+    # Claimed before any side effect, so a concurrent withdraw or refuse cannot land after the account stops.
+    await _claim(session, request, DataSubjectRequestStatus.APPROVED)
     try:
         if request.subject_type == DataSubjectType.BUILDER.value:
             stopped = await _approve_builder(session, request, actor_id)
@@ -210,26 +246,29 @@ async def approve(session: AsyncSession, request: DataSubjectRequest, actor_id: 
             request.pending_paths = end_user_storage_plan(ctx)
             stopped = await stop_end_user(session, ctx.end_user, ctx.scope_flow_ids)
     except DataSubjectError as exc:
+        request.status = DataSubjectRequestStatus.REQUESTED.value
+        session.add(request)
         await audit_events.record_dsar_event(
             session,
             actor_id=actor_id,
             action=audit_events.ACTION_APPROVE,
             request_id=request.id,
             result="deny",
-            details={"request_id": str(request.id), "blocked_by": exc.code},
+            details={"request_id": str(request.id), "blocked_by": exc.code, "automatic": automatic},
         )
         raise
     request.status = DataSubjectRequestStatus.APPROVED.value
     request.decided_by = actor_id
     request.decided_at = _now()
     request.counts = {"stopped": stopped}
+    request.error = None
     session.add(request)
     await audit_events.record_dsar_event(
         session,
         actor_id=actor_id,
         action=audit_events.ACTION_APPROVE,
         request_id=request.id,
-        details={"request_id": str(request.id), "subject_type": request.subject_type},
+        details={"request_id": str(request.id), "subject_type": request.subject_type, "automatic": automatic},
     )
     return request
 

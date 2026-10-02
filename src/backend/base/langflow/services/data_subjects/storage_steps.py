@@ -16,8 +16,11 @@ from uuid import UUID
 
 from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 from lfx.components.files_and_knowledge._filesystem_namespace import compute_user_namespace
+from lfx.log.logger import logger
+from lfx.utils.end_user_storage import end_user_folder_owners, forget_end_user_folder
 from sqlmodel import select
 
+from langflow.services.data_subjects.memory_base_storage import KIND_MEMORY_BASE, drop_memory_base
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
 
@@ -32,28 +35,36 @@ KIND_FLOWS_DIR = "flows_dir"
 KIND_FS_SANDBOX = "fs_sandbox"
 KIND_SAVE_FILE_DIR = "save_file_dir"
 KIND_SKIPPED = "skipped"
+SKIPPED_SHARED_ACROSS_FLOWS = "end_user_storage_shared_across_flows"
 _SAFE_SEGMENT = re.compile(r"[^A-Za-z0-9_.-]")
 _RESERVED_SEGMENTS = frozenset({"flows", "profile_pictures", "knowledge_bases", "fs_sandbox", "alembic", "logs"})
 
 
-def _item(kind: str, value: str) -> dict[str, str]:
-    return {"kind": kind, "value": value}
+def _item(kind: str, value: str, **extra: str) -> dict[str, str]:
+    return {"kind": kind, "value": value, **extra}
 
 
 def _config_dir() -> Path:
     return Path(get_settings_service().settings.config_dir)
 
 
-def _save_file_segment(raw_id: str) -> str | None:
-    """The SaveToFile folder name, only when it maps back to this end user alone."""
-    segment = _SAFE_SEGMENT.sub("_", raw_id).strip("._")
-    if not segment or segment != raw_id or segment in _RESERVED_SEGMENTS:
-        return None
+def _is_uuid(value: str) -> bool:
     try:
-        UUID(segment)
+        UUID(value)
     except ValueError:
-        return segment
-    return None
+        return False
+    return True
+
+
+def _save_file_segment(raw_id: str) -> str | None:
+    """The folder name SaveToFile gives this end user, unless it is a name other storage uses.
+
+    Ownership is checked against the SaveToFile registry when the item runs.
+    """
+    segment = _SAFE_SEGMENT.sub("_", raw_id).strip("._")
+    if not segment or segment in _RESERVED_SEGMENTS or _is_uuid(segment):
+        return None
+    return segment
 
 
 async def builder_storage_plan(session: AsyncSession, ctx: EraseContext) -> list[dict[str, str]]:
@@ -68,11 +79,19 @@ async def builder_storage_plan(session: AsyncSession, ctx: EraseContext) -> list
 
 
 def end_user_storage_plan(ctx: EraseContext) -> list[dict[str, str]]:
+    """Files the end user keeps outside the database.
+
+    The FileSystem sandbox and the SaveToFile folder belong to the person, not to a flow, so a request
+    scoped to some flows keeps them: they may hold files written by flows outside the scope.
+    """
     if ctx.end_user is None:
         return []
+    if ctx.scope_flow_ids:
+        return [_item(KIND_SKIPPED, SKIPPED_SHARED_ACROSS_FLOWS)]
     plan = [_item(KIND_FS_SANDBOX, ctx.end_user.raw_id)]
     segment = _save_file_segment(ctx.end_user.raw_id)
-    plan.append(_item(KIND_SAVE_FILE_DIR, segment) if segment else _item(KIND_SKIPPED, "save_file_dir_ambiguous"))
+    if segment:
+        plan.append(_item(KIND_SAVE_FILE_DIR, segment, end_user_id=ctx.end_user.raw_id))
     return plan
 
 
@@ -98,6 +117,21 @@ def _remove_fs_sandbox(identity: str) -> None:
     _remove_dir(config.base_dir / namespace, config.base_dir)
 
 
+def _remove_save_file_dir(segment: str, end_user_id: str) -> None:
+    """Delete the folder only when SaveToFile recorded this end user as its sole owner."""
+    root = _config_dir()
+    owners = end_user_folder_owners(root, segment)
+    if owners != frozenset({end_user_id}):
+        logger.warning(
+            "op=data_subject_erase kept save-file folder %s: %s",
+            segment,
+            "not written by SaveToFile" if owners is None else "shared with other end users",
+        )
+        return
+    _remove_dir(root / segment, root)
+    forget_end_user_folder(root, segment)
+
+
 def _remove_kb_user_dir(username: str) -> None:
     from langflow.api.utils.kb_helpers import KBStorageHelper
 
@@ -117,4 +151,6 @@ async def run_storage_item(item: dict[str, Any]) -> None:
     elif kind == KIND_KB_USER_DIR:
         await asyncio.to_thread(_remove_kb_user_dir, value)
     elif kind == KIND_SAVE_FILE_DIR:
-        await asyncio.to_thread(_remove_dir, _config_dir() / value, _config_dir())
+        await asyncio.to_thread(_remove_save_file_dir, value, str(item.get("end_user_id", "")))
+    elif kind == KIND_MEMORY_BASE:
+        await drop_memory_base(item)
