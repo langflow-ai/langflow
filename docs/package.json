@@ -75,22 +75,13 @@
     },
     "js-yaml": "^4.3.2",
     "picomatch": "^4.0.4",
-    "lodash": "4.17.21",
+    "lodash": "4.18.1",
     "fast-xml-parser": "4.5.5",
     "fast-uri": "^3.1.8",
     "svgo": "^3.3.5",
     "postcss": "^8.5.23",
-    "openapi-to-postmanv2": {
-      "lodash": "4.17.21"
-    },
-    "postman-collection": {
-      "lodash": "4.17.21"
-    },
-    "json-schema-resolve-allof": {
-      "lodash": "4.17.21"
-    },
-    "json-refs": {
-      "lodash": "4.17.21"
+    "styled-components": {
+      "postcss": "8.4.49"
     },
     "gray-matter": {
       "js-yaml": "^3.15.2"
