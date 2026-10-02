@@ -534,7 +534,10 @@ def migrate(
 
     print("\nConfiguration:")
     print(f"  Config dir: {config_dir}")
-    print(f"  Database: {make_url(database_url).render_as_string(hide_password=True)}")
+    # Drivers take credentials from query parameters too (password, passfile, options), so none are shown.
+    url = make_url(database_url)
+    query_note = " (query parameters not shown)" if url.query else ""
+    print(f"  Database: {url.set(query={}).render_as_string(hide_password=True)}{query_note}")
     print(f"  Dry run: {dry_run}")
     if os.environ.get("LANGFLOW_SECRET_KEY"):
         warn_env_secret_key()

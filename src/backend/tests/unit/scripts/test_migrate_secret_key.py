@@ -1177,6 +1177,45 @@ def test_printed_database_url_hides_the_password(migrate_module, tmp_path, old_k
     assert password not in str(error.value)
 
 
+@pytest.mark.parametrize(
+    ("url", "shown"),
+    [
+        pytest.param(
+            "postgresql://langflow@127.0.0.1:1/langflow_production_with_a_long_database_name"
+            "?password=qu3ry-db-pass&sslmode=require",  # pragma: allowlist secret
+            "postgresql://langflow@127.0.0.1:1/langflow_production_with_a_long_database_name",
+            id="password-only-in-the-query-string",
+        ),
+        pytest.param(
+            "postgresql://langflow:s3cr3t-db-pass@127.0.0.1:1/langflow_production"  # pragma: allowlist secret
+            "?password=qu3ry-db-pass&passfile=/run/secrets/pgpass",  # pragma: allowlist secret
+            "postgresql://langflow:***@127.0.0.1:1/langflow_production",
+            id="password-in-userinfo-and-query-string",
+        ),
+    ],
+)
+def test_printed_database_url_leaves_out_the_query_string(migrate_module, tmp_path, old_key, capsys, url, shown):
+    # Drivers take credentials from the query string too, so none of it is printed.
+    with pytest.raises((OperationalError, ModuleNotFoundError)) as error:
+        migrate_module.migrate(tmp_path, url, old_key=old_key, dry_run=True)
+
+    output = capsys.readouterr().out
+    for hidden in ("s3cr3t-db-pass", "qu3ry-db-pass", "sslmode", "passfile"):
+        assert hidden not in output
+        assert hidden not in str(error.value)
+    assert f"  Database: {shown} (query parameters not shown)\n" in output
+
+
+def test_printed_sqlite_url_is_whole(migrate_module, tmp_path, old_key, capsys):
+    url = f"sqlite:///{tmp_path / 'langflow.db'}"
+
+    # The new file holds no tables, so the run stops at its first query, after printing the configuration.
+    with pytest.raises(OperationalError):
+        migrate_module.migrate(tmp_path, url, old_key=old_key, dry_run=True)
+
+    assert f"  Database: {url}\n" in capsys.readouterr().out
+
+
 def _run_cli(migrate_module, monkeypatch, *args):
     monkeypatch.setattr(sys, "argv", ["migrate_secret_key.py", *map(str, args)])
     migrate_module.main()
