@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import json
 import tempfile
 import uuid
@@ -25,6 +24,7 @@ from lfx.base.knowledge_bases.ingestion_sources import (
 from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import provider_id_for
 from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
+from lfx.integrations.errors import IntegrationError
 from lfx.log import logger
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
+from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
     KBStorageHelper,
@@ -72,6 +73,7 @@ from langflow.services.deps import get_job_service, get_settings_service, get_ta
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService
 from langflow.services.task.service import TaskService
+from langflow.utils.canonical_json import canonical_json_digest
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
     KB_METADATA_RESERVED_KEYS,
@@ -338,17 +340,17 @@ def _build_connector_ingest_dedupe_key(
     of JSON key ordering. Only the hash (not the config) goes on the
     ``job`` row, so no credentials leak through ``dedupe_key``.
     """
-    canonical = json.dumps(
+    digest = canonical_json_digest(
         {
             "user_id": str(user_id),
             "kb_name": kb_name,
             "source_type": source_type,
             "source_config": source_config,
         },
-        sort_keys=True,
+        ensure_ascii=True,
+        separators=None,
         default=str,
     )
-    digest = hashlib.sha256(canonical.encode()).hexdigest()
     return f"kb_connector_ingest:{digest}"
 
 
@@ -1440,6 +1442,8 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
                 description=getattr(source_cls, "description", "") or "",
                 icon=getattr(source_cls, "icon", None),
                 requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+                provider_key=getattr(source_cls, "connection_provider", "") or None,
+                required_scopes=list(getattr(source_cls, "connection_required_scopes", ()) or ()),
             )
         )
     return entries
@@ -1832,6 +1836,15 @@ async def ingest_via_connector(
             await source.validate_config()
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except IntegrationError as exc:
+            # A connection the caller cannot use (no allow_non_interactive opt-in,
+            # a missing scope, a provider denial) is theirs to fix: keep the typed
+            # code, status and hint instead of the catch-all 500 below. The handle
+            # was supplied by this caller, so the owner diagnostics are theirs too.
+            typed = integration_http_error(exc, expose_details=True)
+            if typed is None:
+                raise
+            raise typed from exc
 
         # Build an idempotency key over (user, kb, source, config) so
         # that a double-click on "Ingest" doesn't spawn two jobs for

@@ -18,6 +18,7 @@ from langflow.api.utils.kb_helpers import (
     resolve_embedding_selection,
     resolve_local_store_path,
 )
+from langflow.services.database.models.jobs.crud import update_job_status as crud_update_job_status
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -564,11 +565,15 @@ async def cancel_active_jobs(*, memory_base_id: uuid.UUID, db: AsyncSession) -> 
     active_jobs = list(result.all())
 
     task_service = get_task_service()
-    job_service = get_job_service()
     for job in active_jobs:
         try:
             await task_service.revoke_task(job.job_id)
-            await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
+            # Reuse the caller's session instead of JobService.update_job_status,
+            # which opens its own session_scope(). A second writer session here
+            # would contend with this transaction's own write lock under SQLite
+            # (the caller is mid flow-deletion transaction), timing out and
+            # aborting this loop before later jobs are cancelled.
+            await crud_update_job_status(db, job.job_id, JobStatus.CANCELLED)
             await logger.ainfo("Cancelled job %s for memory_base %s", job.job_id, memory_base_id)
         except (RuntimeError, ValueError, OSError):
             await logger.awarning(

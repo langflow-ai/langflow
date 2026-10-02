@@ -40,6 +40,16 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for different versions."""
         return []
 
+    async def test_latest_version(
+        self, component_class, default_kwargs, skipped_outputs, mock_transcript_data, mock_transcript_list
+    ):
+        # Serve the transcript offline; the component's chunking and formatting run for real.
+        mock_api = Mock()
+        mock_api.list.return_value = mock_transcript_list
+        mock_api.fetch.return_value = mock_transcript_data
+        with patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi", return_value=mock_api):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
     @pytest.fixture
     def mock_transcript_data(self):
         """Return mock transcript data using new API format."""

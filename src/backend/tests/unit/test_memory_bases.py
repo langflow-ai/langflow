@@ -2879,7 +2879,13 @@ class TestMemoriesAPIHandlers:
 
         svc = MagicMock()
         svc.get = AsyncMock(return_value=mb)
-        with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            patch(
+                "langflow.api.v1.memories.knowledge_base_service.get_backends_for_names",
+                AsyncMock(return_value={mb.kb_name: ("chroma", {})}),
+            ),
+        ):
             result = await get_memory_base(memory_base_id=mb.id, current_user=mock_user)
 
         assert result.id == mb.id
@@ -3153,61 +3159,31 @@ class TestMemoriesAPIHandlers:
     # ---------------------------------------------------------------- #
 
     @pytest.mark.asyncio
-    async def test_list_memory_base_messages_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_not_found_raises_404(self, active_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
 
-        mock_db = AsyncMock()
-        result_mock = MagicMock()
-        result_mock.first = MagicMock(return_value=None)
-        mock_db.exec = AsyncMock(return_value=result_mock)
-
-        class FakeCtx:
-            async def __aenter__(self):
-                return mock_db
-
-            async def __aexit__(self, *a):
-                pass
-
-        with (
-            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
-            pytest.raises(HTTPException) as exc_info,
-        ):
+        with pytest.raises(HTTPException) as exc_info:
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
                 session_id="s1",
-                current_user=mock_user,
+                current_user=active_user,
                 params=Params(),
             )
 
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, active_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
 
-        mock_db = AsyncMock()
-        result_mock = MagicMock()
-        result_mock.first = MagicMock(return_value=None)
-        mock_db.exec = AsyncMock(return_value=result_mock)
-
-        class FakeCtx:
-            async def __aenter__(self):
-                return mock_db
-
-            async def __aexit__(self, *a):
-                pass
-
-        with (
-            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
-            pytest.raises(HTTPException) as exc_info,
-        ):
+        with pytest.raises(HTTPException) as exc_info:
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
-                current_user=mock_user,
+                current_user=active_user,
                 params=Params(),
             )
 
@@ -3465,6 +3441,10 @@ class TestPreprocessingApiKeyValidation:
 
         with (
             patch("langflow.services.memory_base.service.session_scope", fake_scope),
+            patch(
+                "langflow.services.memory_base.service.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", mb.embedding_model)),
+            ),
             patch(
                 "langflow.services.memory_base.service.infer_llm_provider",
                 return_value="OpenAI",
@@ -3929,6 +3909,7 @@ class TestMemoryBaseDBDriven:
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)),
             patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch("langflow.services.memory_base.service.cancel_active_jobs", AsyncMock()),
+            patch("langflow.services.memory_base.service.delete_kb_remote_collection", AsyncMock()),
             patch("langflow.services.memory_base.service.delete_kb", AsyncMock()),
             patch("langflow.api.utils.knowledge_base_service.delete_by_user_and_name", delete_row),
         ):

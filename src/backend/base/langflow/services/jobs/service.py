@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
+from sqlalchemy import false, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
 
@@ -21,6 +23,7 @@ from langflow.services.database.models.jobs.crud import (
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
+from langflow.services.database.models.jobs.metrics import archive_retention_metrics, prepare_retention_metrics
 from langflow.services.database.models.jobs.model import (
     ExecutionSignal,
     Job,
@@ -36,6 +39,12 @@ from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, Duplic
 # Bounded retries for append_event's optimistic seq assignment — contention is at most a
 # couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
+
+# Statuses that mean the run is over and the row is retention-eligible. Every
+# other status (QUEUED, IN_PROGRESS, SUSPENDED) is live work: a SUSPENDED run
+# is waiting on a human who may answer weeks later, so age never makes it
+# eligible.
+_RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT)
 
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
@@ -126,8 +135,9 @@ class JobService(Service):
         dedupe_key: str | None = None,
         end_user_id: str | None = None,
         initial_metadata: dict | None = None,
+        status: JobStatus = JobStatus.QUEUED,
     ) -> Job:
-        """Create a new job record with QUEUED status.
+        """Create a new job record, QUEUED unless ``status`` says otherwise.
 
         Args:
             job_id: The job ID
@@ -147,6 +157,11 @@ class JobService(Service):
                 row. The background workflow facade uses this for its replay request and
                 encrypted override envelope so a worker can never claim a partially
                 initialized job.
+            status: Initial status. A caller that starts the run right away, in the same
+                request, passes IN_PROGRESS and calls ``execute_with_status`` with
+                ``mark_in_progress=False``, which saves the QUEUED -> IN_PROGRESS UPDATE.
+                Leave it QUEUED for anything a worker or the startup sweep may pick up:
+                the sweep re-enqueues QUEUED workflow rows.
 
         Returns:
             Created Job object
@@ -159,6 +174,24 @@ class JobService(Service):
 
         async with session_scope() as session:
             if dedupe_key is not None:
+                dialect = session.get_bind().dialect.name
+                if dialect == "postgresql":
+                    # A waiting creator must see the previous creator's commit, even when
+                    # the engine defaults to REPEATABLE READ. This fresh, owned transaction
+                    # alone uses READ COMMITTED; the pooled connection's default is restored.
+                    await session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+                    lock_key = int.from_bytes(
+                        hashlib.sha256(f"langflow.job.dedupe:{user_id}:{dedupe_key}".encode()).digest()[:8],
+                        "big",
+                        signed=True,
+                    )
+                    await session.exec(select(func.pg_advisory_xact_lock(lock_key)))
+                elif dialect == "sqlite":
+                    # Reserve SQLite's writer before reading. No rows change, but the
+                    # reservation prevents another creator from passing the same check.
+                    # Unlike BEGIN IMMEDIATE, this also works with an explicit BEGIN.
+                    await session.exec(update(Job).where(false()).values(job_id=Job.job_id))
+
                 # Why: scope uniqueness to the owner — a client-controlled idempotency_key flows into
                 # dedupe_key, so a global count would let user A collide with / DoS user B's key (and leak
                 # its existence). Ownerless rows (single-tenant AUTO_LOGIN, user_id None) share one space.
@@ -190,7 +223,7 @@ class JobService(Service):
             job = Job(
                 job_id=job_id,
                 flow_id=flow_id,
-                status=JobStatus.QUEUED,
+                status=status,
                 type=job_type,
                 asset_id=asset_id,
                 asset_type=asset_type,
@@ -750,6 +783,99 @@ class JobService(Service):
         msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
         raise RuntimeError(msg) from last_exc
 
+    async def purge_terminal_jobs(self, *, older_than_days: float, limit: int = 5000) -> int:
+        """Delete terminal jobs older than the window plus their child rows. Returns rows deleted.
+
+        Retention for the durable job store: every flow run writes a job row
+        (v1 runs and builds, v2 workflow runs, ingestion, trigger firings) and
+        nothing else deletes it, while ``job_events`` grows a row per durable
+        milestone of a background run. Only terminal runs are eligible (see
+        ``_RETAINABLE_STATUSES``); live work is never purged at any age.
+
+        The child tables (``job_events``, ``execution_signals``,
+        ``job_checkpoints``) carry ``job_id`` as a plain indexed column with NO
+        foreign key, so nothing cascades: they are deleted explicitly here, or
+        they survive as orphans no query can reach again.
+
+        Age comes from the terminal timestamp, falling back to creation for a
+        row that reached a terminal status without one. Deletes are chunked by
+        ``limit`` so a pass never takes a long lock or bloats one transaction;
+        a caller with a backlog loops until a pass returns fewer than ``limit``.
+
+        Every API worker runs the sweep, so concurrent callers are expected. On
+        Postgres the batch is selected ``FOR UPDATE SKIP LOCKED``: a second
+        sweep skips rows the first has locked and takes a disjoint batch instead
+        of queueing behind it (or deadlocking on the child deletes), and a
+        selected row cannot change status before it is deleted. SQLite renders
+        no lock clause, so a metrics-archive insert reserves its writer before
+        selecting the batch. Background outcome totals are archived in this
+        same transaction, independently of whether Prometheus is enabled.
+
+        On SQLite, each DELETE uses at most 500 job IDs to stay below older
+        builds' 999-variable limit; the selected batch remains one transaction.
+
+        Ingestion jobs referenced by memory workflow runs are retained while
+        those references exist: their ON DELETE SET NULL foreign key would
+        otherwise make already-ingested runs count as pending again.
+
+        A job a trigger ledger row still marks DISPATCHED is skipped until the
+        dispatcher records its outcome: ``reconcile_dispatched`` reads that
+        outcome by joining the job, so purging the job first would leave the
+        ledger row DISPATCHED forever. A later sweep purges it once reconciled.
+
+        Both arguments must be positive. A zero window makes every terminal job
+        eligible and a negative one dates the cutoff in the future, and SQLite
+        reads a negative ``LIMIT`` as unbounded, so either would turn a
+        retention pass into a wholesale delete. The sweep never passes them
+        (retention is off at 0), but this method is public, so it guards itself.
+        """
+        if older_than_days <= 0:
+            msg = f"older_than_days must be positive, got {older_than_days!r}"
+            raise ValueError(msg)
+        if limit <= 0:
+            msg = f"limit must be positive, got {limit!r}"
+            raise ValueError(msg)
+
+        from sqlalchemy import exists
+        from sqlmodel import delete
+
+        from langflow.services.database.models.memory_base.model import MemoryBaseWorkflowRun
+        from langflow.services.database.models.trigger.model import TriggerEvent
+        from langflow.services.database.models.trigger.schemas import TriggerEventState
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        aged_at = func.coalesce(col(Job.finished_timestamp), col(Job.created_timestamp))
+        awaiting_reconcile = exists().where(
+            col(TriggerEvent.job_id) == col(Job.job_id),
+            col(TriggerEvent.state) == TriggerEventState.DISPATCHED.value,
+        )
+        preserves_memory_state = exists().where(col(MemoryBaseWorkflowRun.ingestion_job_id) == col(Job.job_id))
+        async with session_scope() as session:
+            await prepare_retention_metrics(session)
+            result = await session.exec(
+                select(Job.job_id)
+                .where(
+                    col(Job.status).in_(_RETAINABLE_STATUSES),
+                    aged_at < cutoff,
+                    ~awaiting_reconcile,
+                    ~preserves_memory_state,
+                )
+                .limit(limit)
+                .with_for_update(skip_locked=True)
+            )
+            job_ids = list(result.all())
+            if not job_ids:
+                return 0
+            delete_batch_size = 500 if session.get_bind().dialect.name == "sqlite" else len(job_ids)
+            for start in range(0, len(job_ids), delete_batch_size):
+                batch_ids = job_ids[start : start + delete_batch_size]
+                await archive_retention_metrics(session, batch_ids)
+                for child in (JobEvent, ExecutionSignal, JobCheckpoint):
+                    await session.exec(delete(child).where(col(child.job_id).in_(batch_ids)))  # type: ignore[call-overload]
+                await session.exec(delete(Job).where(col(Job.job_id).in_(batch_ids)))  # type: ignore[call-overload]
+            await session.flush()
+            return len(job_ids)
+
     async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
         """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.
 
@@ -994,11 +1120,12 @@ class JobService(Service):
             await session.flush()
             return [job.job_id for job in jobs]
 
-    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
+    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, mark_in_progress: bool = True, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
 
         This function:
-        1. Updates status to IN_PROGRESS before execution
+        1. Updates status to IN_PROGRESS before execution (unless ``mark_in_progress`` is
+           False: the caller created the row IN_PROGRESS already)
         2. Executes the wrapped function
         3. Updates status to COMPLETED on success or FAILED on error
         4. Sets finished_timestamp when done
@@ -1007,6 +1134,8 @@ class JobService(Service):
             job_id: The job ID
             run_coro_func: The coroutine function to wrap
             *args: Positional arguments to pass to run_coro_func
+            mark_in_progress: Write IN_PROGRESS before running. Keyword-only, and not
+                passed on to run_coro_func.
             **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
@@ -1020,9 +1149,9 @@ class JobService(Service):
         await logger.ainfo(f"Starting job execution: job_id={job_id}")
 
         try:
-            # Update to IN_PROGRESS
-            await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
-            await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+            if mark_in_progress:
+                await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
+                await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
             # Execute the wrapped function
             await logger.ainfo(f"Executing job function for job_id={job_id}")

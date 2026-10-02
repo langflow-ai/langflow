@@ -69,7 +69,9 @@ export default function NodeInputField({
     parameterId: name,
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
-  const { handleNodeClass } = useHandleNodeClass(data.id);
+  const { handleNodeClass, applyNodeClassFromRefresh } = useHandleNodeClass(
+    data.id,
+  );
 
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
@@ -100,7 +102,7 @@ export default function NodeInputField({
   useFetchDataOnMount(
     data.node!,
     data.id,
-    handleNodeClass,
+    applyNodeClassFromRefresh,
     name,
     postTemplateValue,
   );

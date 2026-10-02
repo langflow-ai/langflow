@@ -1,0 +1,27 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "channel": "G0GROUPDM1",
+    "channel_type": "mpim",
+    "event_ts": "1700000180.000400",
+    "team": "T0TEAM0001",
+    "text": "Syncing on the release notes here",
+    "ts": "1700000180.000400",
+    "type": "message",
+    "user": "U0BOB00001"
+  },
+  "event_id": "Ev0MSG00004",
+  "event_time": 1700000180,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

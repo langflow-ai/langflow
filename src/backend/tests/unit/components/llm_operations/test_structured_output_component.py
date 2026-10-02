@@ -51,6 +51,24 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return the file names mapping for version-specific files."""
 
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs, mock_llm):
+        # Answer with a trustcall-shaped result offline; the component's unpacking of it runs for real.
+        def fake_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
+            class _Response(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "value"}]}
+
+            return {"messages": [], "responses": [_Response()], "response_metadata": [{"id": "mock_id"}], "attempts": 1}
+
+        with (
+            patch(
+                "lfx.base.models.unified_models.get_model_class",
+                return_value=MagicMock(return_value=mock_llm),
+            ),
+            patch("lfx.components.llm_operations.structured_output.get_chat_result", fake_get_chat_result),
+        ):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
     @pytest.fixture
     def mock_model_classes(self):
         """Helper fixture to create a mock model class factory for MockLanguageModel."""

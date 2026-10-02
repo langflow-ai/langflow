@@ -20,12 +20,12 @@
       "python": ">=3.10,<3.15",
       "application": {
         "distribution": "langflow",
-        "version": ">=1.12.0,<1.13.0",
+        "version": ">=1.13.0,<1.14.0",
         "bundle_source": "pyproject.toml"
       },
       "bundle_api": {
         "distribution": "lfx",
-        "version": ">=1.12.0.dev0,<1.13.0"
+        "version": ">=1.13.0.dev0,<1.14.0"
       },
       "bundles": [
         {
@@ -95,7 +95,7 @@
         {
           "distribution": "lfx-amazon",
           "extras": [],
-          "version": ">=0.1.7,<1.0.0",
+          "version": ">=0.2.0,<1.0.0",
           "providers": [
             "lfx-amazon"
           ]
@@ -135,9 +135,25 @@
         {
           "distribution": "lfx-google",
           "extras": [],
-          "version": ">=0.2.4,<1.0.0",
+          "version": ">=0.3.1,<1.0.0",
           "providers": [
             "lfx-google"
+          ]
+        },
+        {
+          "distribution": "lfx-microsoft",
+          "extras": [],
+          "version": ">=0.1.2,<1.0.0",
+          "providers": [
+            "lfx-microsoft"
+          ]
+        },
+        {
+          "distribution": "lfx-slack",
+          "extras": [],
+          "version": ">=0.2.0,<1.0.0",
+          "providers": [
+            "lfx-slack"
           ]
         }
       ]

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 from pydantic import TypeAdapter
 
 from lfx.base.prompts.utils import dict_values_to_string
+from lfx.integrations.errors import IntegrationError
 from lfx.log.logger import logger
 from lfx.schema.content_block import ContentBlock, ContentType
 from lfx.schema.content_types import ErrorContent, TextContent
@@ -986,6 +987,9 @@ class ErrorMessage(Message):
         if context_note:
             plain_reason = f"{plain_reason.rstrip()}\n\n{context_note}\n"
             markdown_reason = f"{markdown_reason.rstrip()}\n\n{context_note}\n"
+        solution = getattr(exception, "solution", None)
+        if solution is None and isinstance(exception, IntegrationError):
+            solution = exception.hint
         # Get the sender ID
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)
@@ -1018,7 +1022,7 @@ class ErrorMessage(Message):
                             component=source.display_name if source else None,
                             field=str(exception.field) if hasattr(exception, "field") else None,
                             reason=markdown_reason,
-                            solution=str(exception.solution) if hasattr(exception, "solution") else None,
+                            solution=str(solution) if solution is not None else None,
                             traceback=traceback.format_exc() if include_traceback else "",
                         )
                     ],

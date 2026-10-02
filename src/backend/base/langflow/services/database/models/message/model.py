@@ -118,7 +118,7 @@ class MessageBase(SQLModel):
                 parsed = datetime.fromisoformat(message.timestamp)
                 timestamp = parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         else:
-            timestamp = message.timestamp
+            timestamp = str_to_timestamp(message.timestamp)
 
         if not flow_id and message.flow_id:
             flow_id = message.flow_id

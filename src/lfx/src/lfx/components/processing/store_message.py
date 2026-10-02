@@ -15,7 +15,7 @@ class MessageStoreComponent(Component):
     icon = "message-square-text"
     name = "StoreMessage"
     legacy = True
-    replacement = ["helpers.Memory"]
+    replacement = ["models_and_agents.Memory"]
 
     inputs = [
         MessageTextInput(

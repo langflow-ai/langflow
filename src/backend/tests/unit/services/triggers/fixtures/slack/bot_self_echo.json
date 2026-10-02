@@ -1,0 +1,36 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "app_id": "A0APP00001",
+    "bot_id": "B0BOT00001",
+    "bot_profile": {
+      "app_id": "A0APP00001",
+      "id": "B0BOT00001",
+      "name": "Langflow",
+      "team_id": "T0TEAM0001"
+    },
+    "channel": "C0SUPPORT1",
+    "channel_type": "channel",
+    "event_ts": "1700000310.000650",
+    "team": "T0TEAM0001",
+    "text": "Triaged: assigned to on-call",
+    "thread_ts": "1700000300.000600",
+    "ts": "1700000310.000650",
+    "type": "message",
+    "user": "U0BOT00001"
+  },
+  "event_id": "Ev0BOT00001",
+  "event_time": 1700000310,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

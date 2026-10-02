@@ -22,7 +22,7 @@ async def test_delete_flow_returns_not_found_when_final_delete_matches_no_row(
     assert response.status_code == status.HTTP_201_CREATED
     flow_id = response.json()["id"]
 
-    async def matched_no_row(_session, _target_flow_id):
+    async def matched_no_row(_session, _target_flow_id, **_kwargs):
         # PostgreSQL can wait for a competing delete and then match zero rows
         # without the lock error that drives SQLite through a retry read.
         return False
@@ -53,11 +53,11 @@ async def test_bulk_delete_counts_only_rows_it_removes(
     original_delete = flows.cascade_delete_flow
     attempted_ids = []
 
-    async def delete_after_competing_requests(session, target_flow_id):
+    async def delete_after_competing_requests(session, target_flow_id, **kwargs):
         attempted_ids.append(str(target_flow_id))
         if str(target_flow_id) in removed_by_competitor:
             return False
-        return await original_delete(session, target_flow_id)
+        return await original_delete(session, target_flow_id, **kwargs)
 
     monkeypatch.setattr(flows, "cascade_delete_flow", delete_after_competing_requests)
 

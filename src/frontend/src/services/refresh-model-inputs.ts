@@ -17,6 +17,7 @@ import {
   isCustomComponentBlockError,
   isNodeOutdated,
 } from "@/utils/customComponentGuards";
+import { recordLoadRefresh } from "@/utils/load-refreshes";
 import {
   buildRefreshPayload,
   createUpdatedNode,
@@ -28,6 +29,8 @@ import i18n from "../i18n";
 
 export interface RefreshOptions {
   silent?: boolean;
+  /** "load" when nobody asked for it: what it rewrites is not credited to a person in a conflict. */
+  origin?: "load";
 }
 
 type ProviderConfiguration = ReadonlyMap<string, boolean>;
@@ -97,7 +100,14 @@ export async function refreshAllModelInputs(
     }
 
     const refreshTasks = nodesWithModelFields.map((node) =>
-      refreshSingleNode(node, flowId, folderId, setNode, providerConfiguration),
+      refreshSingleNode(
+        node,
+        flowId,
+        folderId,
+        setNode,
+        providerConfiguration,
+        options?.origin,
+      ),
     );
     await Promise.all(refreshTasks);
 
@@ -162,6 +172,7 @@ async function refreshSingleNode(
   folderId: string | undefined,
   setNode: ReturnType<typeof useFlowStore.getState>["setNode"],
   providerConfiguration?: ProviderConfiguration,
+  origin?: RefreshOptions["origin"],
 ): Promise<void> {
   const nodeData = node.data?.node as APIClassType | undefined;
   if (!nodeData?.template) return;
@@ -248,12 +259,18 @@ async function refreshSingleNode(
       return;
     }
 
+    // Runs on every flow open, so the user has not asked for this write.
     setNode(
       node.id,
       (currentNode) =>
         createUpdatedNode(currentNode, validatedTemplate, responseData.outputs),
       false,
+      undefined,
+      { autoSave: false },
     );
+    if (origin === "load") {
+      recordLoadRefresh(flowId, node.id, nodeData.template, validatedTemplate);
+    }
   } catch (error) {
     console.warn(`Failed to refresh model node ${node.id}:`, error);
   }

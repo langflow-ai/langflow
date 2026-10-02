@@ -45,6 +45,7 @@ def test_load_result_default_is_ok() -> None:
     assert result.ok
     assert bool(result) is True
     assert result.components == []
+    assert result.integrations == []
 
 
 # ---------------------------------------------------------------------------

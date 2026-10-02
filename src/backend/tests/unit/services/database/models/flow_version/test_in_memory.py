@@ -287,6 +287,27 @@ class TestCascadeDeleteFlow:
         await db.commit()
         assert await cascade_delete_flow(db, flow_id) is False
 
+    async def test_reports_deletion_and_collects_memory_base_cleanup(self, db: AsyncSession, flow: Flow, user: User):
+        from langflow.services.database.models.memory_base.model import MemoryBase
+
+        flow_id = flow.id
+        kb_name = f"kb_{uuid4().hex}"
+        memory_base = MemoryBase(name="delete-test", flow_id=flow_id, user_id=user.id, kb_name=kb_name)
+        db.add(memory_base)
+        await db.commit()
+        cleanups = []
+
+        assert await cascade_delete_flow(db, flow_id, memory_base_cleanups=cleanups) is True
+        await db.commit()
+        assert len(cleanups) == 1
+        assert cleanups[0].kb_name == kb_name
+        assert cleanups[0].user_id == user.id
+        assert cleanups[0].kb_username == user.username
+        assert (await db.exec(select(MemoryBase).where(MemoryBase.id == memory_base.id))).first() is None
+
+        assert await cascade_delete_flow(db, flow_id, memory_base_cleanups=cleanups) is False
+        assert len(cleanups) == 1
+
     async def test_deletes_related_rows_under_fk_enforcement(self, db: AsyncSession, flow: Flow, user: User):
         version = await _create_version(db, flow, user)
 

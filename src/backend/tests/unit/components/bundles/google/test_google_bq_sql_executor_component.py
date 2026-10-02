@@ -64,6 +64,12 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         """No version-specific files for this component."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "query_results": "runs the query on BigQuery with a service account",
+        }
+
     @patch.object(Credentials, "from_service_account_file")
     @patch("lfx_google.components.google.google_bq_sql_executor.bigquery.Client")
     def test_execute_sql_success(self, mock_client_cls, mock_from_file, component_class, default_kwargs):

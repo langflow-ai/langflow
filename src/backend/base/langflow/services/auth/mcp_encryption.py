@@ -7,6 +7,7 @@ from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
 
 from langflow.services.auth import utils as auth_utils
+from langflow.utils.mcp_config_secrets import MCP_SECRET_CONFIG_MAPS
 
 # Fields that should be encrypted when stored
 SENSITIVE_FIELDS = [
@@ -14,9 +15,23 @@ SENSITIVE_FIELDS = [
     "api_key",
 ]
 
-# Sub-maps of an ``mcpServers`` entry whose *values* carry secrets (API keys,
-# bearer tokens) and must be encrypted at rest in the mcp_server table.
-MCP_SECRET_CONFIG_MAPS = ("env", "headers")
+# ``mcp-proxy`` takes request headers as argv rather than as a map:
+# ``--headers <name> <value>``. Project MCP servers are registered that way and
+# the value is a real Langflow API key, so without this it is the one secret in
+# an entry that reaches storage in plaintext.
+_ARGV_HEADER_FLAG = "--headers"
+_ARGV_HEADER_VALUE_OFFSET = 2
+
+
+def _argv_secret_positions(args: Any) -> list[int]:
+    """Indices in ``args`` holding a header value, i.e. secrets."""
+    if not isinstance(args, list):
+        return []
+    return [
+        index + _ARGV_HEADER_VALUE_OFFSET
+        for index, arg in enumerate(args)
+        if arg == _ARGV_HEADER_FLAG and index + _ARGV_HEADER_VALUE_OFFSET < len(args)
+    ]
 
 
 def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -97,8 +112,10 @@ def encrypt_mcp_config(config: dict[str, Any] | None) -> dict[str, Any] | None:
     """Encrypt secret-bearing values inside an ``mcpServers`` entry for storage.
 
     Encrypts every value in the entry's ``env`` and ``headers`` maps (where API
-    keys and bearer tokens live) and leaves structural fields (``command``,
-    ``args``, ``url``, transport, and any extra keys) untouched. Idempotent:
+    keys and bearer tokens live), and the header values carried positionally in
+    ``args`` as ``--headers <name> <value>``, which is how project MCP servers
+    carry their Langflow API key. Structural fields (``command``, the rest of
+    ``args``, ``url``, transport, and any extra keys) are left untouched. Idempotent:
     already-encrypted values are left as-is, so re-encrypting a stored config is a
     no-op. Returns a copy; the input is not mutated.
     """
@@ -113,6 +130,11 @@ def encrypt_mcp_config(config: dict[str, Any] | None) -> dict[str, Any] | None:
         for key, value in values.items():
             if isinstance(value, str) and value and not is_encrypted(value):
                 values[key] = auth_utils.encrypt_api_key(value)
+    args = encrypted.get("args")
+    for position in _argv_secret_positions(args):
+        value = args[position]
+        if isinstance(value, str) and value and not is_encrypted(value):
+            args[position] = auth_utils.encrypt_api_key(value)
     return encrypted
 
 
@@ -135,6 +157,11 @@ def decrypt_mcp_config(config: dict[str, Any] | None) -> dict[str, Any] | None:
         for key, value in values.items():
             if isinstance(value, str) and value:
                 values[key] = auth_utils.decrypt_api_key(value)
+    args = decrypted.get("args")
+    for position in _argv_secret_positions(args):
+        value = args[position]
+        if isinstance(value, str) and value:
+            args[position] = auth_utils.decrypt_api_key(value)
     return decrypted
 
 

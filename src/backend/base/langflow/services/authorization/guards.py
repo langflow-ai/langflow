@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -22,6 +22,7 @@ from langflow.services.authorization.access_ceiling import (
     get_current_external_access_context,
 )
 from langflow.services.authorization.actions import (
+    ConnectionAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -35,8 +36,10 @@ from langflow.services.authorization.actions import (
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import AsyncIterator, Iterator, Sequence
     from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User, UserRead
 
@@ -50,6 +53,7 @@ _ACTION_ENUMS = (
     FileAction,
     ShareAction,
     ProviderAccountAction,
+    ConnectionAction,
     VoiceAction,
 )
 
@@ -64,6 +68,7 @@ _OWNER_CONTEXT_KEYS = (
     "file_user_id",
     "share_user_id",
     "provider_account_user_id",
+    "connection_owner_id",
     "voice_user_id",
 )
 
@@ -93,6 +98,36 @@ def _auth_audit_details() -> dict[str, str]:
 # and no share behind them. Suppress the decision row for the probe only;
 # real attempts, including denied ones, are audited exactly as before.
 _capability_probe: ContextVar[bool] = ContextVar("langflow_authz_capability_probe", default=False)
+
+
+_transaction_guard_audits: ContextVar[list[dict[str, Any]] | None] = ContextVar(
+    "transaction_guard_audits", default=None
+)
+
+
+@asynccontextmanager
+async def audit_guard_in_transaction(session: AsyncSession) -> AsyncIterator[None]:
+    """Audit a locked permission recheck without waiting on a second DB writer.
+
+    Durable allows commit with the caller's mutation. A denial first releases
+    the lock, then persists its audit through the normal writer before raising.
+    """
+    decisions: list[dict[str, Any]] = []
+    token = _transaction_guard_audits.set(decisions)
+    try:
+        try:
+            yield
+        except Exception:
+            await session.rollback()
+            for decision in decisions:
+                await _audit.audit_decision(**decision)
+            raise
+        else:
+            for decision in decisions:
+                if not _audit.stage_audit_decision(session=session, **decision):
+                    await _audit.audit_decision(**decision)
+    finally:
+        _transaction_guard_audits.reset(token)
 
 
 @contextmanager
@@ -136,13 +171,18 @@ def _audit_guard_decision(
     """
     if _capability_probe.get():
         return _audit_suppressed()
-    return _audit.audit_decision(
-        user_id=user_id,
-        action=action,
-        obj=obj,
-        result=result,
-        details={**(details or {}), "event": _audit.AUDIT_EVENT_DECISION},
-    )
+    decision: dict[str, Any] = {
+        "user_id": user_id,
+        "action": action,
+        "obj": obj,
+        "result": result,
+        "details": {**(details or {}), "event": _audit.AUDIT_EVENT_DECISION},
+    }
+    pending = _transaction_guard_audits.get()
+    if pending is not None:
+        pending.append(decision)
+        return _audit_suppressed()
+    return _audit.audit_decision(**decision)
 
 
 async def _api_key_scopes_require_plugin_enforcement() -> bool:
@@ -179,6 +219,7 @@ def _coerce_action(
     | FileAction
     | ShareAction
     | ProviderAccountAction
+    | ConnectionAction
     | VoiceAction
     | str,
 ) -> str:
@@ -442,6 +483,16 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         # A newly-created provider account always belongs to the caller.
         owner_override_on_create=True,
     ),
+    "connection": _ResourceSpec(
+        resource_type="connection",
+        owner_kw="connection_owner_id",
+        id_kw="connection_id",
+        workspace_kw=None,
+        scope_kw=None,
+        # User-owned creates belong to the caller. Instance-owned creates are
+        # additionally restricted to superusers by the API route.
+        owner_override_on_create=True,
+    ),
     "voice": _ResourceSpec(
         resource_type="voice",
         owner_kw="voice_user_id",
@@ -640,7 +691,19 @@ async def ensure_flows_permission(
         )
         return
 
-    auth_context = _auth_context(user)
+    # Mirrors the extra_context ensure_flow_permission -> _ensure_typed builds
+    # for the "flow" resource spec (workspace_id, folder_id, flow_user_id,
+    # folder_user_id) so a plugin sees the same context fields whether a flow
+    # is authorized individually or as part of this batch. folder_user_id is
+    # always None here: it only carries the destination-project owner for
+    # CREATE, and CREATE has no existing flow owner to batch against.
+    extra_context: dict[str, Any] = {
+        "workspace_id": workspace_id,
+        "folder_id": folder_id,
+        "flow_user_id": flow_user_id,
+        "folder_user_id": None,
+    }
+    auth_context = {**extra_context, **_auth_context(user)}
     owner_override_enabled = await should_apply_owner_override()
     if owner_override_enabled and user_id is not None and flow_user_id == user_id:
         await _audit_flow_decision_batch(
@@ -755,6 +818,27 @@ async def ensure_provider_account_permission(
         kwargs={
             "provider_account_id": provider_account_id,
             "provider_account_user_id": provider_account_user_id,
+        },
+        domain_override=domain,
+    )
+
+
+async def ensure_connection_permission(
+    user: User | UserRead,
+    act: ConnectionAction | str,
+    *,
+    connection_id: UUID | None = None,
+    connection_owner_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check permission for connection metadata or credential use."""
+    await _ensure_typed(
+        user,
+        spec_key="connection",
+        act_str=_coerce_action(act),
+        kwargs={
+            "connection_id": connection_id,
+            "connection_owner_id": connection_owner_id,
         },
         domain_override=domain,
     )

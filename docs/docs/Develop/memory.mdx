@@ -49,6 +49,8 @@ On OSS, the default is the SQLite file `langflow.db`. Desktop uses `database.db`
 
 • **DeploymentProviderAccount**: Stores configured connections to external deployment providers, including provider URL, tenant settings, and encrypted credentials.
 
+• **Connection** and **ConnectionSecret**: Store integration connection metadata separately from Fernet-encrypted credential payloads. Connection records carry ownership, provider, granted scopes, executing identity, health, and non-interactive-use policy; API reads never join or return the secret payload.
+
 • **File**: Stores metadata for files uploaded to Langflow's file management system, including file names, paths, sizes, and storage providers. For more information, see [Manage files](/concepts-file-management).
 
 • **Flow**: Contains flow definitions, including nodes, edges, and components, stored as JSON or database records. For more information, see [Build flows](/concepts-flows).

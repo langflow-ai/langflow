@@ -65,6 +65,7 @@ from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
 from langflow.api.utils.execution_errors import caller_owns_flow
+from langflow.api.utils.execution_principal import FAMILY_WORKFLOW_HITL_V2, FAMILY_WORKFLOW_V2
 from langflow.api.v2.workflow_execution import (
     _execute_streaming_workflow,
     _resolve_execution_timeout,
@@ -584,7 +585,15 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     user). Legacy rows that predate the fields fall back to persist=True /
     end_user_id=None, matching prior behavior.
     """
-    internal = {"persist_messages", "end_user_id", "component_substitution_warning"}
+    from langflow.services.triggers.constants import TRIGGER_FAMILIES
+
+    # Only trusted server callers can add this internal field: the public
+    # WorkflowRunRequest still forbids it. Persist it so workers and resumes
+    # retain a trigger's non-interactive connection policy.
+    if "execution_family" in request and request["execution_family"] not in TRIGGER_FAMILIES:
+        msg = "Invalid background trigger execution family"
+        raise ValueError(msg)
+    internal = {"persist_messages", "end_user_id", "component_substitution_warning", "execution_family"}
     persist_messages = request.get("persist_messages", True)
     end_user_id = request.get("end_user_id")
     request_fields = {k: v for k, v in request.items() if k not in internal}
@@ -639,6 +648,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # This factory is the runner the v2 background route actually reaches, so the label
                 # belongs here; without it a background run is indistinguishable from a live stream.
                 protocol="v2.background",
+                # A resume runs on a worker with no caller present: it keeps the
+                # STARTING job's owner as its principal and must be non-interactive,
+                # so an owner connection needs the per-connection opt-in to resolve.
+                execution_family=request.get("execution_family")
+                or (FAMILY_WORKFLOW_HITL_V2 if resume is not None else FAMILY_WORKFLOW_V2),
                 # Emit the off-wire terminal-output capture the runner records into
                 # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
                 # populated GET-status result too (not just langflow).

@@ -139,6 +139,11 @@ async def replace_model_provider_policy_state(
         blocked_component_keys=bundle.blocked_component_keys,
         blocked_template_keys=bundle.blocked_template_keys,
         blocked_model_keys=bundle.blocked_model_keys,
+        # A provider-only facet write must carry every other decision forward
+        # unchanged, otherwise approving a model provider would silently clear
+        # the integration ceiling and its action deny-list.
+        approved_integration_provider_ids=bundle.approved_integration_provider_ids,
+        blocked_integration_action_keys=bundle.blocked_integration_action_keys,
         actor_user_id=actor_user_id,
         reason=reason,
     )

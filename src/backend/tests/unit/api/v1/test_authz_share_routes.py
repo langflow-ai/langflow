@@ -426,6 +426,31 @@ async def test_create_share_keeps_public_read_for_non_flow_resources(patch_authz
     assert session.committed == 1
 
 
+@pytest.mark.asyncio
+async def test_create_share_rejects_public_connection(patch_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.connection import Connection
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    connection = SimpleNamespace(id=uuid4(), owner_id=owner.id)
+    session = _FakeAsyncSession({(Connection, connection.id): connection})
+    payload = ShareCreate(
+        resource_type="connection",
+        resource_id=connection.id,
+        scope=ShareScope.PUBLIC.value,
+        permission_level=SharePermissionLevel.EXECUTE.value,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert excinfo.value.status_code == 422
+    assert excinfo.value.detail == "Connections cannot be shared publicly."
+    assert session.added == []
+    assert session.flushed == 0
+
+
 # --------------------------------------------------------------------------- #
 # PATCH — same floor
 # --------------------------------------------------------------------------- #

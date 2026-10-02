@@ -17,8 +17,8 @@ class TestPassMessageComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "input_message": None,
-            "ignored_message": None,
+            "input_message": Message(text="Passed through"),
+            "ignored_message": Message(text="Ignored"),
         }
 
     @pytest.fixture

@@ -1,11 +1,16 @@
 import asyncio
 import inspect
+import ipaddress
+import socket
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from typing import Any
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
 from lfx.custom.custom_component.component import Component
+from lfx.schema.dotdict import dotdict
 from typing_extensions import TypedDict
 
 from tests.constants import SUPPORTED_VERSIONS
@@ -20,6 +25,41 @@ class VersionComponentMapping(TypedDict):
 
 # Sentinel value to mark undefined test cases
 DID_NOT_EXIST = object()
+
+
+def _is_local_address(address: Any) -> bool:
+    """Whether a socket address is a Unix socket path or a loopback host."""
+    if isinstance(address, str | bytes):
+        return True
+    try:
+        host = str(address[0])
+        if host == "localhost":
+            return True
+        return ipaddress.ip_address(host.split("%", 1)[0]).is_loopback
+    except (ValueError, TypeError, IndexError, KeyError):
+        # An address shape this helper does not know; treat it as outbound.
+        return False
+
+
+@contextmanager
+def _refuse_outbound_connections(current_output: Callable[[], str]) -> Iterator[list[str]]:
+    """Refuse every non-loopback socket connect in the block and record who tried.
+
+    Components often catch the connection error and return a fallback value, so the
+    record, not the exception, is what shows that an output needed the network.
+    """
+    attempts: list[str] = []
+    connect = socket.socket.connect
+
+    def guarded_connect(sock: socket.socket, address: Any) -> None:
+        if not _is_local_address(address):
+            attempts.append(f"{current_output()} -> {address!r}")
+            msg = f"test_latest_version runs offline and refused a connection to {address!r}"
+            raise ConnectionRefusedError(msg)
+        connect(sock, address)
+
+    with patch.object(socket.socket, "connect", guarded_connect):
+        yield attempts
 
 
 class ComponentTestBase:
@@ -50,27 +90,86 @@ class ComponentTestBase:
         msg = f"{self.__class__.__name__} must implement the file_names_mapping fixture"
         raise NotImplementedError(msg)
 
+    @pytest.fixture
+    def skipped_outputs(self) -> dict[str, str]:
+        """Outputs test_latest_version leaves unrun, each mapped to the reason.
+
+        Only for an output the harness cannot run offline with default_kwargs: it calls a live
+        service, needs real credentials, or needs state the unit suite does not set up. Every
+        other output still has to run and return a value, so prefer mocks or default_kwargs.
+        """
+        return {}
+
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
         mock_vertex = Mock()
         mock_vertex.id = str(uuid4())
+        # An unconnected vertex. With no outgoing edges Component._should_process_output selects
+        # every output, as it does for a vertex with nothing downstream in a real graph. Left as
+        # bare Mocks, these edge lists are truthy and cannot be indexed or searched.
+        mock_vertex.incoming_edges = []
+        mock_vertex.outgoing_edges = []
+        mock_vertex.edges_source_names = set()
+        mock_vertex._accumulate_upstream_token_usage = Mock(return_value=None)
         mock_vertex.graph = Mock()
         mock_vertex.graph.id = str(uuid4())
         mock_vertex.graph.session_id = str(uuid4())
         mock_vertex.graph.flow_id = str(uuid4())
+        mock_vertex.graph.run_id = str(uuid4())
+        mock_vertex.graph.context = dotdict()
+        mock_vertex.graph.vertices = []
         mock_vertex.is_output = Mock(return_value=False)
         source_code = await asyncio.to_thread(inspect.getsource, component_class)
         component_instance = component_class(_code=source_code, **default_kwargs)
-        component_instance._should_process_output = Mock(return_value=False)
         component_instance._vertex = mock_vertex
         # Mock the log method to avoid tracing service context issues
         component_instance.log = Mock()
         return component_instance
 
-    async def test_latest_version(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> None:
-        """Test that the component works with the latest version."""
+    @staticmethod
+    async def map_frontend_outputs(component: Component, field_name: str, field_value: Any) -> None:
+        """Give a component with dynamic outputs the ones its saved node would carry.
+
+        The frontend builds them with update_outputs when field_name changes, and the engine
+        maps a saved node's outputs onto its component from the vertex. This does both.
+        """
+        node = await component.run_and_validate_update_outputs({"outputs": []}, field_name, field_value)
+        component._vertex.outputs = node["outputs"]
+        component.map_outputs()
+
+    async def test_latest_version(
+        self,
+        component_class: type[Any],
+        default_kwargs: dict[str, Any],
+        skipped_outputs: dict[str, str],
+    ) -> None:
+        """Run every output of the latest version offline and check that each returned a value."""
+        name = component_class.__name__
         component_instance = await self.component_setup(component_class, default_kwargs)
-        result = await component_instance.run()
-        assert result is not None, "Component returned None for the latest version."
+        if skipped_outputs:
+            # Leave the skipped outputs unconnected, as if nothing downstream used them.
+            component_instance._should_process_output = lambda output: output.name not in skipped_outputs
+
+        offline_hint = "Mock the call, or list the output in skipped_outputs with the reason."
+        with _refuse_outbound_connections(lambda: getattr(component_instance, "_current_output", "?")) as attempts:
+            try:
+                results, _artifacts = await component_instance.run()
+            except Exception as exc:
+                if attempts:
+                    msg = f"{name} outputs tried to reach the network: {attempts}. {offline_hint}"
+                    raise AssertionError(msg) from exc
+                raise
+        assert not attempts, f"{name} outputs tried to reach the network: {attempts}. {offline_hint}"
+
+        outputs = set(component_instance.list_outputs())
+        unknown = sorted(skipped_outputs.keys() - outputs)
+        assert not unknown, f"skipped_outputs names outputs {name} does not have: {unknown}"
+        if not results and skipped_outputs:
+            pytest.skip(f"Every output of {name} is in skipped_outputs: {skipped_outputs}")
+        assert results, f"{name} has no outputs to run; set default_kwargs so that it exposes some"
+        not_run = sorted(outputs - skipped_outputs.keys() - results.keys())
+        assert not not_run, f"{name}.run() never ran these outputs: {not_run}"
+        returned_none = sorted(output for output, value in results.items() if value is None)
+        assert not returned_none, f"{name} outputs returned None: {returned_none}"
 
     def test_all_versions_have_a_file_name_defined(self, file_names_mapping: list[VersionComponentMapping]) -> None:
         """Ensure all supported versions have a file name defined."""

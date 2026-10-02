@@ -48,6 +48,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from lfx.extension.integration_conflicts import validate_integration_ownership
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -55,7 +57,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from lfx.extension.loader import LoadedComponent
+    from lfx.extension.loader import LoadedComponent, LoadedIntegration
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +98,7 @@ class BundleRecord:
     extension_version: str
     slot: Literal["official", "extra"]
     components: tuple[LoadedComponent, ...] = ()
+    integrations: tuple[LoadedIntegration, ...] = ()
     distribution: str | None = None
     source_path: Path | None = None
     # Provenance: True for manifest-less lfx.bundles metapackage providers.
@@ -168,6 +171,14 @@ class BundleRegistry:
             out.extend(snap[name].components)
         return out
 
+    def list_integrations(self) -> list[LoadedIntegration]:
+        """Flatten validated integration metadata for discovery and policy consumers."""
+        snap = self.snapshot()
+        out: list[LoadedIntegration] = []
+        for name in sorted(snap):
+            out.extend(snap[name].integrations)
+        return out
+
     # -- write paths ---------------------------------------------------------
 
     @contextmanager
@@ -207,6 +218,7 @@ class BundleRegistry:
         is intentionally silent in that case.
         """
         with self._write_lock:
+            self.validate_bundle(record)
             previous = self._bundles.get(record.bundle)
             if previous is not None and previous.source_path != record.source_path:
                 logger.warning(
@@ -223,6 +235,21 @@ class BundleRegistry:
             self._bundles[record.bundle] = record
             self._write_index_locked()
             return previous
+
+    def validate_bundle(self, record: BundleRecord) -> None:
+        """Check integration ownership without mutating the live snapshot.
+
+        Reload holds ``write_locked`` across this check and its module swap.
+        Replacing the same bundle owned by the same extension is allowed.
+        """
+        with self._write_lock:
+            integrations = [
+                integration
+                for existing in self._bundles.values()
+                if (existing.bundle, existing.extension_id) != (record.bundle, record.extension_id)
+                for integration in existing.integrations
+            ]
+            validate_integration_ownership([*integrations, *record.integrations])
 
     def remove_bundle(self, bundle: str) -> BundleRecord | None:
         """Drop a Bundle from the registry.

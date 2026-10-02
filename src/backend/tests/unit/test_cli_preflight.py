@@ -60,6 +60,21 @@ class _StubService:
         self.settings = _StubSettings(**overrides)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_factory_dependency_cache():
+    # Probes construct factories while their create methods are monkeypatched.
+    # Their inferred signatures must not escape into a later real app startup.
+    from langflow.services.factory import infer_service_types
+
+    original = dict(infer_service_types.cache)
+    infer_service_types.cache_clear()
+    try:
+        yield
+    finally:
+        infer_service_types.cache_clear()
+        infer_service_types.cache.update(original)
+
+
 # ---------------------------------------------------------------------------
 # deployment_profile setting
 # ---------------------------------------------------------------------------

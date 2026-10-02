@@ -828,6 +828,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=True,
             )
         ]
@@ -868,6 +869,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=expose_error_details,
             )
         ]
@@ -911,6 +913,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=True,
             )
         ]
@@ -950,6 +953,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=True,
             )
         ]
@@ -992,6 +996,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=expose_error_details,
             )
         ]
@@ -1038,6 +1043,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
             )
         ]
 
@@ -1106,6 +1112,7 @@ class TestAGUIStreaming:
                 ),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
             )
         ]
 

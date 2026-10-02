@@ -13,8 +13,12 @@ let mockDarkStoreState: DarkStoreState = {
 };
 
 jest.mock("@/stores/darkStore", () => ({
-  useDarkStore: (selector: (state: DarkStoreState) => unknown) =>
-    selector(mockDarkStoreState),
+  useDarkStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      refreshStars: jest.fn(),
+      refreshDiscordCount: jest.fn(),
+      ...mockDarkStoreState,
+    }),
 }));
 
 describe("LangflowCounts", () => {

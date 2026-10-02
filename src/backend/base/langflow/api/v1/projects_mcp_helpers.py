@@ -19,6 +19,7 @@ from langflow.api.v1.mcp_projects import get_project_streamable_http_url
 from langflow.api.v2.mcp import update_server
 from langflow.services.database.models.api_key.crud import create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
 from langflow.services.schema import ServiceType
 
@@ -175,7 +176,10 @@ async def register_mcp_servers_for_project(
             get_settings_service(),
             owns_transaction=owns_transaction,
         )
-    except HTTPException:
+    except (HTTPException, ApiKeyIssuanceDeniedError):
+        # A refused key is a decision, not a transient registration failure:
+        # swallowing it would report success for a server that was never
+        # configured, or quietly leave the project on its old auth.
         raise
     except Exception as e:
         await logger.aexception("Failed to auto-register MCP server for project %s: %s", project.id, e)

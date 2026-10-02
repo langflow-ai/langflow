@@ -9,7 +9,11 @@ from .builder import (
     ProjectArtifactLimitError,
     ProjectArtifactLimits,
     ProjectArtifactNotFoundError,
+    ProjectArtifactRequiredConnection,
+    ProjectDeploymentSnapshot,
+    ProjectDeploymentSnapshotFlow,
     build_project_artifact,
+    build_project_deployment_snapshot,
 )
 
 __all__ = [
@@ -21,5 +25,9 @@ __all__ = [
     "ProjectArtifactLimitError",
     "ProjectArtifactLimits",
     "ProjectArtifactNotFoundError",
+    "ProjectArtifactRequiredConnection",
+    "ProjectDeploymentSnapshot",
+    "ProjectDeploymentSnapshotFlow",
     "build_project_artifact",
+    "build_project_deployment_snapshot",
 ]

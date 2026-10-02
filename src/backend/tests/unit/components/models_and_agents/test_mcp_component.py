@@ -45,6 +45,13 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for different versions."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "component_as_tool": "needs a database user and starts the MCP server in default_kwargs",
+            "response": "calls a tool on the MCP server in default_kwargs",
+        }
+
     @pytest.mark.asyncio
     @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
     async def test_component_initialization(self, component_class, default_kwargs):

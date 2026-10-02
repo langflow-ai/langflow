@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from langflow.services.task import model_provider_policy_refresh as refresh_module
+from lfx.services.integration_policy import IntegrationPolicyContext, IntegrationPolicyPurpose, IntegrationPolicyService
 from lfx.services.model_provider_policy import (
     BaseModelProviderPolicyService,
     ModelProviderPolicyContext,
@@ -13,6 +15,67 @@ from lfx.services.model_provider_policy import (
     ModelProviderPolicyService,
 )
 from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+
+
+@pytest.mark.parametrize("model_ceiling", [frozenset(), frozenset({"openai"})])
+@pytest.mark.parametrize("integration_ceiling", [frozenset(), frozenset({"google"})])
+async def test_refresh_failure_invalidates_integration_allows(monkeypatch, model_ceiling, integration_ceiling):
+    bundle = PolicyBundleService()
+    bundle.publish(
+        PolicyBundleSnapshot(
+            revision=1,
+            initialized=True,
+            approved_provider_ids=model_ceiling,
+            approved_integration_provider_ids=integration_ceiling,
+            blocked_integration_action_keys=frozenset({"integrations.google.drive.delete"}),
+        )
+    )
+    model_service = ModelProviderPolicyService(policy_bundle_service=bundle)
+    integration_service = IntegrationPolicyService(policy_bundle_service=bundle)
+    kwargs = {
+        "context": IntegrationPolicyContext(user_id="user-1"),
+        "candidate_provider_ids": frozenset({"google"}),
+        "purpose": IntegrationPolicyPurpose.USE,
+    }
+    assert integration_service.resolve(**kwargs).allows_action("integrations.google.drive.search")
+
+    @asynccontextmanager
+    async def failing_session_scope():
+        msg = "policy store unavailable"
+        raise ConnectionError(msg)
+        yield
+
+    monkeypatch.setattr(refresh_module, "session_scope", failing_session_scope)
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: model_service)
+    monkeypatch.setattr(refresh_module, "get_policy_bundle_service", lambda: bundle)
+    monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", lambda: integration_service)
+    monkeypatch.setattr(refresh_module.logger, "aerror", AsyncMock())
+
+    assert await refresh_module.ModelProviderPolicyRefreshWorker()._run_once() is True
+    assert bundle.source_available is False
+    assert not integration_service.resolve(**kwargs).allows_action("integrations.google.drive.search")
+
+
+@pytest.mark.parametrize("service_error", [TypeError, ImportError])
+async def test_refresh_failure_tolerates_unavailable_integration_service(monkeypatch, service_error):
+    bundle = PolicyBundleService()
+    bundle.publish(PolicyBundleSnapshot(revision=1, blocked_integration_action_keys={"integrations.google.delete"}))
+    model_service = ModelProviderPolicyService(policy_bundle_service=bundle)
+
+    @asynccontextmanager
+    async def failing_session_scope():
+        msg = "policy store unavailable"
+        raise ConnectionError(msg)
+        yield
+
+    monkeypatch.setattr(refresh_module, "session_scope", failing_session_scope)
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: model_service)
+    monkeypatch.setattr(refresh_module, "get_policy_bundle_service", lambda: bundle)
+    monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", Mock(side_effect=service_error))
+    monkeypatch.setattr(refresh_module.logger, "aerror", AsyncMock())
+
+    assert await refresh_module.ModelProviderPolicyRefreshWorker()._run_once() is True
+    assert bundle.source_available is False
 
 
 class _DatabaseOwnedPluginPolicyService(BaseModelProviderPolicyService):
@@ -254,14 +317,59 @@ async def test_start_skips_explicitly_external_builtin_subclass(monkeypatch):
         "get_catalog_policy_service",
         lambda: SimpleNamespace(external_policy_snapshot=object()),
     )
+    # The worker refreshes one shared bundle, so it may only stand down when
+    # every decision that bundle carries is plugin-owned (INT-7).
+    monkeypatch.setattr(refresh_module, "_integration_policy_managed_externally", lambda: True)
     monkeypatch.setattr(refresh_module.logger, "adebug", debug)
 
     await worker.start()
 
     assert worker._task is None
     debug.assert_awaited_once_with(
-        "Policy-bundle refresh worker not started: provider and catalog policies are externally managed"
+        "Policy-bundle refresh worker not started: provider, catalog, and integration policies are externally managed"
     )
+
+
+async def test_start_keeps_refreshing_when_only_integration_policy_is_langflow_owned(monkeypatch):
+    """A Langflow-owned integration ceiling still needs cross-worker convergence."""
+    service = _ExternalBuiltinPolicyService()
+    worker = refresh_module.ModelProviderPolicyRefreshWorker(interval=5)
+    run_started = asyncio.Event()
+    keep_running = asyncio.Event()
+
+    async def run():
+        run_started.set()
+        await keep_running.wait()
+
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(
+        refresh_module,
+        "get_catalog_policy_service",
+        lambda: SimpleNamespace(external_policy_snapshot=object()),
+    )
+    monkeypatch.setattr(refresh_module, "_integration_policy_managed_externally", lambda: False)
+    monkeypatch.setattr(worker, "_run", run)
+
+    await worker.start()
+    try:
+        await asyncio.wait_for(run_started.wait(), timeout=5)
+        assert worker._task is not None
+    finally:
+        keep_running.set()
+        await worker.stop()
+
+
+def test_integration_policy_external_predicate_is_false_without_a_service(monkeypatch):
+    """A host that never registered the service owns nothing externally."""
+    from lfx.services import deps as lfx_deps
+
+    def _unavailable():
+        msg = "no integration policy service"
+        raise TypeError(msg)
+
+    monkeypatch.setattr(lfx_deps, "get_integration_policy_service", _unavailable)
+
+    assert refresh_module._integration_policy_managed_externally() is False
 
 
 async def test_start_refreshes_database_catalog_when_provider_policy_is_external(monkeypatch):

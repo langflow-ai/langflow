@@ -83,6 +83,12 @@ These values are found in the **Settings** page of your IBM watsonx Orchestrate 
    :::tip
    To bind the connection to the flow **without** environment variable binding, click **Skip**, and then click **Next**.
    :::
+
+   :::tip Flows that use connection references
+   If the flow stores a connection reference, such as `google/work`, add a variable named exactly `LF_CONNECTION__<PROVIDER>__<NAME>` — for `google/work` that is `LF_CONNECTION__GOOGLE__WORK`.
+   The value is a short-lived access token or a credential JSON object, never a refresh token or a client secret: the watsonx Orchestrate tool runtime passes these variables into each run, and whatever system issued the token owns refreshing it.
+   For the key derivation and the JSON format, see [Resolve connections in headless LFX](../Lfx/lfx-connections.mdx).
+   :::
 8. Click **Next**. The **Review & Confirm** pane opens.
 9. Confirm the deployment values are correct, and then click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
 

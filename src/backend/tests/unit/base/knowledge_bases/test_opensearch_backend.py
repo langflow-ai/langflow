@@ -446,6 +446,30 @@ class TestOpenSearchIterDocumentsEmbeddings:
 
         assert captured.get("_source_excludes") == ["chunk_embedding", "vector_field"]
 
+    @pytest.mark.asyncio
+    async def test_iter_documents_asks_for_source_when_embeddings_are_requested(self, tmp_path: Path) -> None:
+        # OpenSearch 3.8+ can strip knn_vector fields from every response (the
+        # knn_default_excludes processor) unless the request sets _source itself,
+        # so a read that needs the vectors must send _source=true.
+        backend = _make_backend(tmp_path)
+        fake_hits = [{"_id": "x", "_source": {"text": "c", "metadata": {}, "vector_field": [0.1]}}]
+        captured: dict = {}
+
+        def _fake_scan(_client, **kwargs):
+            captured.update(kwargs)
+            return (hit for hit in fake_hits)
+
+        with (
+            patch("opensearchpy.OpenSearch", return_value=MagicMock()),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch", MagicMock()),
+            patch("opensearchpy.helpers.scan", side_effect=_fake_scan),
+        ):
+            _ = backend.vector_store
+            _ = [batch async for batch in backend.iter_documents(include_embeddings=True)]
+
+        assert captured.get("_source") is True
+        assert "_source_excludes" not in captured
+
 
 class TestOpenSearchSimilaritySearchFilterHandling:
     """Pin the ``filter`` kwarg behaviour of ``similarity_search``.

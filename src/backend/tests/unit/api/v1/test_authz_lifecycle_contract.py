@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from lfx.services.authorization import AuthorizationMutationKind, AuthorizationMutationRejected
 
 _RECOVERY_DETAIL = "At least one recovery administrator is required."
@@ -25,6 +25,9 @@ class _LifecycleService:
     async def acquire_identity_mutation_lock(self, *, session, **request) -> None:  # noqa: ARG002
         self.events.append("lock")
         self.lock_requests.append(request)
+
+    async def is_user_credentials_managed_externally(self, *, session, user_id) -> bool:  # noqa: ARG002
+        return False
 
     async def validate_identity_mutation(self, *, session, mutation) -> None:  # noqa: ARG002
         self.events.append("validate")
@@ -79,6 +82,7 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
         user=UserCreate(username="new-user", password="not-a-real-password"),  # noqa: S106
         session=session,
         current_user=None,
+        response=Response(),
     )
 
     assert events == ["lock", "mutate", "flush", "folder", "stage", "audit", "commit", "committed"]
@@ -134,6 +138,7 @@ async def test_failed_anonymous_signup_rolls_back_before_auditing_without_user_f
 
     with pytest.raises(HTTPException, match="default project"):
         await users.add_user(
+            response=Response(),
             user=UserCreate(username="new-user", password="not-a-real-password"),  # noqa: S106
             session=session,
             current_user=None,
@@ -150,6 +155,7 @@ async def test_failed_anonymous_signup_rolls_back_before_auditing_without_user_f
                 "event": AUDIT_EVENT_ACCESS,
                 "status_code": 500,
                 "reason": "default_project_creation_failed",
+                "source": "manual",
             },
         }
     ]
@@ -223,6 +229,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
                 "event": AUDIT_EVENT_MUTATION,
                 "fields_changed": ["is_active"],
                 "lifecycle_kind": AuthorizationMutationKind.USER_DISABLED.value,
+                "source": "manual",
             },
         }
     ]
@@ -294,6 +301,7 @@ async def test_ordinary_user_patch_stages_audit_without_password_or_values(monke
                 "event": AUDIT_EVENT_MUTATION,
                 "fields_changed": ["username"],
                 "lifecycle_kind": None,
+                "source": "manual",
             },
         }
     ]
@@ -374,6 +382,8 @@ async def test_user_patch_business_denial_emits_access_audit(monkeypatch):
                 "event": AUDIT_EVENT_ACCESS,
                 "status_code": 403,
                 "reason": "self_deactivation_forbidden",
+                "fields_changed": ["is_active"],
+                "source": "manual",
             },
         }
     ]
@@ -408,7 +418,8 @@ async def test_non_superuser_delete_reaches_audited_gate(monkeypatch):
             "details": {
                 "event": AUDIT_EVENT_ACCESS,
                 "status_code": 403,
-                "reason": "superuser_required",
+                "reason": "administration_required",
+                "source": "manual",
             },
         }
     ]
@@ -540,7 +551,10 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     assert events == ["lock", "validate"]
     update.assert_not_awaited()
     session.commit.assert_not_awaited()
-    audit.assert_not_awaited()
+    audit.assert_awaited_once()
+    assert audit.await_args.kwargs["result"] == "deny"
+    assert audit.await_args.kwargs["details"]["reason"] == "access_ceiling"
+    assert audit.await_args.kwargs["details"]["status_code"] == 409
 
 
 @pytest.mark.asyncio

@@ -52,6 +52,15 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs, mock_llm):
+        # Answer with a lambda offline; parsing it and applying it to the data run for real.
+        mock_llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 15]"
+        with patch(
+            "lfx.base.models.unified_models.get_model_class",
+            return_value=MagicMock(return_value=mock_llm),
+        ):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
 
 class TestValidateLambda(TestLambdaFilterComponent):
     """Tests for _validate_lambda method."""

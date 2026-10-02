@@ -8,6 +8,7 @@ from .auth import (
     AuthzShare,
     AuthzTeam,
     AuthzTeamMember,
+    AuthzTeamMemberGrant,
     CasbinRule,
     SSOConfig,
     SSOConfigCreate,
@@ -21,6 +22,8 @@ from .auth import (
     is_sso_client_secret_envelope,
 )
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
+from .connection import Connection, ConnectionSecret
+from .connection.oauth import ConnectionOAuth
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -29,15 +32,25 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
-from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, SignalType
+from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, JobMetricTotals, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
+from .project_replacement_operation import ProjectReplacementOperation
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
+from .trigger import (
+    Trigger,
+    TriggerCleanup,
+    TriggerEvent,
+    TriggerLease,
+    TriggerListenerLease,
+    TriggerSourceVersion,
+    TriggerSubscription,
+)
 from .user import User
 from .variable import Variable
 
@@ -52,11 +65,15 @@ __all__ = [
     "AuthzShare",
     "AuthzTeam",
     "AuthzTeamMember",
+    "AuthzTeamMemberGrant",
     "CasbinRule",
     "CatalogPolicyMode",
     "CatalogPolicyRule",
     "CatalogPolicyScope",
     "CatalogResourceKind",
+    "Connection",
+    "ConnectionOAuth",
+    "ConnectionSecret",
     "Deployment",
     "DeploymentProviderAccount",
     "ExecutionSignal",
@@ -70,6 +87,7 @@ __all__ = [
     "Job",
     "JobCheckpoint",
     "JobEvent",
+    "JobMetricTotals",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",
     "MCPServer",
@@ -81,6 +99,7 @@ __all__ = [
     "ModelProviderPolicy",
     "PolicyBundleActive",
     "PolicyBundleRevision",
+    "ProjectReplacementOperation",
     "SSOConfig",
     "SSOConfigCreate",
     "SSOConfigRead",
@@ -92,6 +111,13 @@ __all__ = [
     "SpanTable",
     "TraceTable",
     "TransactionTable",
+    "Trigger",
+    "TriggerCleanup",
+    "TriggerEvent",
+    "TriggerLease",
+    "TriggerListenerLease",
+    "TriggerSourceVersion",
+    "TriggerSubscription",
     "User",
     "Variable",
     "decrypt_sso_client_secret",

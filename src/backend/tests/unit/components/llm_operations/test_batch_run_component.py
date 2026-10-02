@@ -29,18 +29,8 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "model": [
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            # A connected model, so the batch runs offline instead of calling a provider.
+            "model": _MockLLM(),
             "df": DataFrame({"text": ["Hello"]}),
             "column_name": "text",
             "enable_metadata": True,

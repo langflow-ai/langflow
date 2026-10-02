@@ -84,6 +84,9 @@ describe("useSaveFlow", () => {
       },
       onFlowPage: true,
       setCurrentFlow: mockSetCurrentFlow,
+      // Emptying the canvas is an edit, and only the person's own edits put the
+      // graph on the wire.
+      userEditedSinceLoad: true,
     };
 
     flowsManagerState = {
@@ -563,6 +566,53 @@ describe("useSaveFlow", () => {
 
       expect(mockSetCurrentFlow).not.toHaveBeenCalled();
     });
+  });
+
+  it("keeps the graph and token it built on after a save that sent no graph", async () => {
+    // Somebody else moved the graph on before this rename. The response carries
+    // their graph and token; adopting them as the baseline would let the next
+    // autosave send this canvas under their token and overwrite them unseen.
+    flowStoreState.userEditedSinceLoad = false;
+    flowsManagerState.currentFlow = {
+      ...flowsManagerState.currentFlow,
+      version_token: "token-mine",
+    };
+    flowStoreState.currentFlow = {
+      ...flowsManagerState.currentFlow,
+      name: "Renamed",
+    };
+    flowStoreState.nodes = flowsManagerState.currentFlow.data.nodes;
+    flowStoreState.edges = flowsManagerState.currentFlow.data.edges;
+    const theirs = {
+      ...flowsManagerState.currentFlow,
+      name: "Renamed",
+      version_token: "token-theirs",
+      data: { nodes: [{ id: "their-node" }], edges: [], viewport: {} },
+    };
+    mockMutate.mockImplementation((payload, options) => {
+      expect("data" in payload).toBe(false);
+      options.onSuccess(theirs);
+    });
+
+    const { result } = renderHook(() => useSaveFlow());
+    await result.current();
+
+    const [savedFlows] = mockSetFlows.mock.calls[0];
+    expect(savedFlows[0]).toEqual(
+      expect.objectContaining({
+        name: "Renamed",
+        version_token: "token-mine",
+        data: flowsManagerState.currentFlow.data,
+      }),
+    );
+    const [adopted] = mockSetCurrentFlow.mock.calls[0];
+    expect(adopted).toEqual(
+      expect.objectContaining({
+        name: "Renamed",
+        version_token: "token-mine",
+        data: flowsManagerState.currentFlow.data,
+      }),
+    );
   });
 
   it("still adopts the saved flow when the canvas did not change", async () => {

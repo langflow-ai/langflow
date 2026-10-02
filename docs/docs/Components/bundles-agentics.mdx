@@ -5,9 +5,14 @@ slug: /bundles-agentics
 
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
 
-<PartialLfxBundlesInstall />
+:::warning Deprecated
+The Agentics components are deprecated and can't run in this version of Langflow, because the `agentics-py` SDK they depend on can't be installed alongside Langflow.
+For details, see [Compatibility](#compatibility).
+
+Don't run `pip install agentics-py` or `uv pip install agentics-py` in your Langflow environment.
+The install succeeds, but it downgrades `langchain-core` and other packages below the versions Langflow requires, and Langflow stops working.
+:::
 
 The [Agentics](https://github.com/IBM/agentics/) component bundle uses LLMs to transform tabular data. Add or fill columns row-by-row with the [**aMap** component](#amap-component), collapse many rows into one with [**aReduce** component](#areduce-component), or generate synthetic rows with the [**aGenerate** component](#agenerate-component).
 
@@ -25,22 +30,22 @@ Watch it in action with a sentiment analysis example that transforms customer re
   </iframe>
 </div>
 
-## Prerequisites
+## Compatibility
 
-1. Install the Agentics package in Langflow's virtual environment:
+The Agentics components need the `agentics-py` SDK at runtime, and no `agentics-py` release can be installed in the same Python environment as Langflow 1.9 or later:
 
-   ```bash
-   uv pip install agentics-py
-   ```
+- The latest release, `agentics-py` 0.3.6, requires `langchain-core` earlier than 1.0 through its `langchain-huggingface` dependency. Langflow requires `langchain-core` 1.x.
+- `agentics-py` depends on `crewai`, and every `crewai` release since 0.140.0 pins `json-repair` or `tomli` below the versions Langflow requires.
+- Earlier `agentics-py` releases have the same conflicts, or they fail when imported.
 
-2. Restart Langflow so the Agentics components are available:
+When you run an Agentics component, it stops with an error that links to this page.
+Flows that contain Agentics components still open, so you can inspect the components and their settings.
 
-   ```bash
-   uv run langflow run
-   ```
+The Agentics components are legacy components, so they are hidden in the visual editor by default.
+To show them, click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings**, and then turn on the **Legacy** filter.
+If a compatible `agentics-py` release becomes available, the components can return to supported status. Otherwise, they can be removed in a future release.
 
-3. Agentics components require an LLM. Configure your LLM provider API keys as [global variables](/configuration-global-variables) or environment variables.
-Supported providers include OpenAI, Anthropic, Google Generative AI, IBM WatsonX, and Ollama.
+The Agentics components also require an LLM. Supported providers include OpenAI, Anthropic, Google Generative AI, IBM WatsonX, and Ollama.
 
 ## aGenerate component
 
@@ -63,12 +68,14 @@ For example, this schema definition creates the following DataFrame output:
 
 ### Parameters
 
+<PartialParams />
+
 | Name | Type | Description |
 |------|------|-------------|
 | Language Model | Dropdown | Select the LLM provider and model. Use guided experience. |
 | Input DataFrame | Table | Optional. Example DataFrame to learn from; only first 50 rows used. If not provided, Schema is used. |
 | Schema | Table | Define columns to generate when no Input DataFrame is provided. See the component's schema definition. |
-| Instructions | String | Optional instructions for generation. |
+| Instructions | String | Optional instructions for generation. Hidden by default in the visual editor. |
 | Number of Rows to Generate | Integer | How many synthetic rows to create. Default: 10. |
 
 ## aMap component
@@ -98,6 +105,8 @@ For example, **aMap** keeps each input row and fills in `sentiment`, `confidence
 | 2 | Terrible quality, broke after one use | negative | 0.92 | quality, durability |
 
 ### Parameters
+
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -140,6 +149,8 @@ It sums revenue into `total_revenue`, identifies the best-selling product in `be
 
 ### Parameters
 
+<PartialParams />
+
 | Name | Type | Description |
 |------|------|-------------|
 | Language Model | Dropdown | Select the LLM provider and model. |
@@ -152,7 +163,7 @@ It sums revenue into `total_revenue`, identifies the best-selling product in `be
 
 - **Token usage:** aMap scales with rows; aReduce sends all rows in one call; aGenerate scales with instances. Use smaller batches or sample large datasets to reduce cost.
 - **Batch size:** Default 10; max 25. Larger batches improve throughput but increase latency per batch.
-- **Errors:** If Agentics is not found, run `uv pip install agentics-py==0.3.1` and restart Langflow. For API/key errors, set the provider’s API key as a global variable or env var. For DataFrame errors, ensure input is a list of dicts or use a DataFrame component output.
+- **Errors:** If a component reports that `agentics-py` isn't available, see [Compatibility](#compatibility). Don't install `agentics-py` into your Langflow environment. For API/key errors, set the provider’s API key as a global variable or env var. For DataFrame errors, ensure input is a list of dicts or use a DataFrame component output.
 
 ## See also
 

@@ -19,6 +19,11 @@ def test_sqlite_reflection_filter_suppresses_only_known_expression_indexes() -> 
             stacklevel=1,
         )
         warnings.warn(
+            "Skipped unsupported reflection of expression-based index ix_user_username_lower",
+            SAWarning,
+            stacklevel=1,
+        )
+        warnings.warn(
             "Skipped unsupported reflection of expression-based index ix_unrelated_expression",
             SAWarning,
             stacklevel=1,
@@ -33,6 +38,13 @@ def test_sqlite_reflection_filter_suppresses_only_known_expression_indexes() -> 
         warnings.warn(
             "autogenerate skipping metadata-specified expression-based index "
             "'ix_message_session_metadata_user'; dialect 'sqlite' under SQLAlchemy 2.0.51 "
+            "can't reflect these indexes so they can't be compared",
+            UserWarning,
+            stacklevel=1,
+        )
+        warnings.warn(
+            "autogenerate skipping metadata-specified expression-based index "
+            "'ix_user_username_lower'; dialect 'sqlite' under SQLAlchemy 2.0.51 "
             "can't reflect these indexes so they can't be compared",
             UserWarning,
             stacklevel=1,

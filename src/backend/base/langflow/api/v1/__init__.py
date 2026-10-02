@@ -1,6 +1,7 @@
 from langflow.api.v1.a2a import router as a2a_router
 from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.authz_audit import router as authz_audit_router
+from langflow.api.v1.authz_capabilities import router as authz_capabilities_router
 from langflow.api.v1.authz_me import router as authz_me_router
 from langflow.api.v1.authz_role_assignments import router as authz_role_assignments_router
 from langflow.api.v1.authz_roles import router as authz_roles_router
@@ -8,13 +9,16 @@ from langflow.api.v1.authz_shares import router as authz_shares_router
 from langflow.api.v1.authz_teams import router as authz_teams_router
 from langflow.api.v1.catalog_policy import router as catalog_policy_router
 from langflow.api.v1.chat import router as chat_router
+from langflow.api.v1.connections import router as connections_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.extensions import router as extensions_router
 from langflow.api.v1.files import router as files_router
+from langflow.api.v1.flow_conflict_routes import router as flow_conflict_router
 from langflow.api.v1.flow_events import router as flow_events_router
 from langflow.api.v1.flow_version import router as flow_version_router
 from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.folders import router as folders_router
+from langflow.api.v1.integrations import router as integrations_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
@@ -30,6 +34,8 @@ from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
 from langflow.api.v1.traces import router as traces_router
+from langflow.api.v1.trigger_ingress import router as trigger_ingress_router
+from langflow.api.v1.triggers import router as triggers_router
 from langflow.api.v1.users import router as users_router
 from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
@@ -39,6 +45,7 @@ __all__ = [
     "a2a_router",
     "api_key_router",
     "authz_audit_router",
+    "authz_capabilities_router",
     "authz_me_router",
     "authz_role_assignments_router",
     "authz_roles_router",
@@ -46,13 +53,16 @@ __all__ = [
     "authz_teams_router",
     "catalog_policy_router",
     "chat_router",
+    "connections_router",
     "endpoints_router",
     "extensions_router",
     "files_router",
+    "flow_conflict_router",
     "flow_events_router",
     "flow_version_router",
     "flows_router",
     "folders_router",
+    "integrations_router",
     "knowledge_bases_router",
     "login_router",
     "mcp_projects_router",
@@ -68,6 +78,8 @@ __all__ = [
     "starter_projects_router",
     "store_router",
     "traces_router",
+    "trigger_ingress_router",
+    "triggers_router",
     "users_router",
     "validate_router",
     "variables_router",

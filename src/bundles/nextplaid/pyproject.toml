@@ -27,7 +27,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "nextplaid", "colbert", "p
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility is
 # enforced via extension.json's "lfx": {"compat": [...]} contract.
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "langchain-plaid>=0.1.0,<1.0.0",
     "httpx>=0.28.1,<1.0.0",
     "pillow>=12.3.0,<13.0.0",

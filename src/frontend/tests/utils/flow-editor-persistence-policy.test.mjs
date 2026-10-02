@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  canTrackFullFlowAutosavePayload,
-  isFlowPersistenceBarrierSatisfied,
-  isMatchingFullFlowAutosavePayload,
+  isModelRefreshBarrierSatisfied,
   isModelRefreshBody,
   modelRefreshFlowId,
   modelRefreshNodeCount,
-  requiresPostRefreshAutosave,
 } from "./flow-editor-persistence-policy.mjs";
 
 const configuredData = {
@@ -26,53 +23,11 @@ const configuredData = {
   ],
 };
 
-const matchesConfiguredAgent = (data) =>
-  data.nodes?.[0]?.data?.node?.template?.model?.value?.[0]?.name ===
-  "gpt-4o-mini";
-
-test("only an exact full-flow autosave satisfies the persistence barrier", () => {
+test("counts the model refreshes required after a reload", () => {
   assert.equal(modelRefreshNodeCount(configuredData), 1);
-  assert.equal(
-    isMatchingFullFlowAutosavePayload(
-      { data: configuredData },
-      matchesConfiguredAgent,
-    ),
-    false,
-    "the helper's data-only PATCH must not satisfy the barrier",
-  );
-
-  assert.equal(
-    isMatchingFullFlowAutosavePayload(
-      {
-        data: configuredData,
-        description: null,
-        endpoint_name: null,
-        folder_id: "project-test",
-        locked: false,
-        name: "Test flow",
-      },
-      matchesConfiguredAgent,
-    ),
-    true,
-  );
-  assert.equal(
-    isMatchingFullFlowAutosavePayload(
-      {
-        data: { nodes: [] },
-        description: null,
-        endpoint_name: null,
-        folder_id: "project-test",
-        locked: false,
-        name: "Stale flow",
-      },
-      matchesConfiguredAgent,
-    ),
-    false,
-    "a full-flow PATCH with stale node data must not satisfy the barrier",
-  );
 });
 
-test("zero-model flows do not require a post-refresh autosave", () => {
+test("zero-model flows do not require a refresh barrier", () => {
   const dataWithoutModelFields = {
     nodes: [
       {
@@ -83,7 +38,6 @@ test("zero-model flows do not require a post-refresh autosave", () => {
   };
 
   assert.equal(modelRefreshNodeCount(dataWithoutModelFields), 0);
-  assert.equal(requiresPostRefreshAutosave(dataWithoutModelFields), false);
 });
 
 test("recognizes refreshes for dynamically named model fields", () => {
@@ -150,52 +104,16 @@ test("has no flow for an unstamped or non-refresh body", () => {
   );
 });
 
-test("tracks a matching autosave after every refresh request is observed", () => {
-  const fullFlowAutosave = {
-    data: configuredData,
-    description: null,
-    endpoint_name: null,
-    folder_id: "project-test",
-    locked: false,
-    name: "Test flow",
-  };
-
+test("the refresh barrier waits for every expected response", () => {
   assert.equal(
-    canTrackFullFlowAutosavePayload(
-      fullFlowAutosave,
-      matchesConfiguredAgent,
-      0,
-      1,
-    ),
+    isModelRefreshBarrierSatisfied(0, 1),
     false,
-    "a matching autosave arriving before all refresh requests must be ignored",
+    "the first refresh still has to finish",
   );
   assert.equal(
-    canTrackFullFlowAutosavePayload(
-      fullFlowAutosave,
-      matchesConfiguredAgent,
-      1,
-      1,
-    ),
-    true,
-  );
-});
-
-test("the persistence barrier completes in either response order", () => {
-  assert.equal(
-    isFlowPersistenceBarrierSatisfied(true, 0, 1),
+    isModelRefreshBarrierSatisfied(1, 2),
     false,
-    "a finished autosave must still wait for the refresh response body",
+    "a second expected refresh must finish before the listener is disposed",
   );
-  assert.equal(
-    isFlowPersistenceBarrierSatisfied(false, 1, 1),
-    false,
-    "finished refreshes must still wait for the matching autosave body",
-  );
-  assert.equal(isFlowPersistenceBarrierSatisfied(true, 1, 1), true);
-  assert.equal(
-    isFlowPersistenceBarrierSatisfied(true, 1, 2),
-    false,
-    "a second observed refresh must finish before the listener is disposed",
-  );
+  assert.equal(isModelRefreshBarrierSatisfied(2, 2), true);
 });

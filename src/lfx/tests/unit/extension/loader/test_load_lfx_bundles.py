@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from lfx.extension import SLOT_OFFICIAL, LoadedComponent, LoadResult, load_lfx_bundles_extensions
 from lfx.extension.loader._bundles_root import (
     LFX_BUNDLES_ENTRY_POINT_GROUP,
@@ -115,20 +116,54 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
             assert comp.namespaced_id == f"ext:{bundle}:{comp.class_name}@official"
 
 
-def test_mrscraper_provider_loads_with_production_bundle_loader(monkeypatch) -> None:
-    """The checked-in MrScraper provider registers all components at @official."""
+@pytest.mark.parametrize(
+    ("bundle", "expected_classes"),
+    [
+        (
+            "mrscraper",
+            {
+                "MrscraperAiScraper",
+                "MrscraperBatchScrape",
+                "MrscraperCrawlWebsite",
+                "MrscraperFetchHtml",
+                "MrscraperGetResult",
+                "MrscraperGetResults",
+                "MrscraperRunAiScraper",
+                "MrscraperRunManualScraper",
+            },
+        ),
+        (
+            "figranium",
+            {
+                "FigraniumExecuteTaskComponent",
+                "FigraniumListExecutionsComponent",
+                "FigraniumListTasksComponent",
+            },
+        ),
+    ],
+)
+def test_checked_in_provider_loads_with_production_bundle_loader(
+    monkeypatch, bundle: str, expected_classes: set[str]
+) -> None:
+    """A checked-in provider registers all of its components at @official.
+
+    Providers whose modules share code must import it by absolute
+    ``lfx_bundles.<provider>`` path: the loader imports provider modules under a
+    private ``_lfx_ext.official.<provider>`` prefix, where relative imports of a
+    sibling module do not resolve.
+    """
     repo_root = Path(__file__).resolve().parents[6]
     bundles_source = repo_root / "src" / "bundles" / "lfx-bundles" / "src"
-    provider = bundles_source / "lfx_bundles" / "mrscraper"
+    provider = bundles_source / "lfx_bundles" / bundle
     result = LoadResult(
         slot=SLOT_OFFICIAL,
         source_path=provider,
-        bundle="mrscraper",
+        bundle=bundle,
         extension_id="lfx-bundles",
         extension_version="1.0.0",
         manifestless=True,
     )
-    module_prefixes = ("_lfx_ext.official.mrscraper", "lfx_bundles")
+    module_prefixes = (f"_lfx_ext.official.{bundle}", "lfx_bundles")
     prior_modules = {
         name: module
         for name, module in sys.modules.items()
@@ -142,7 +177,7 @@ def test_mrscraper_provider_loads_with_production_bundle_loader(monkeypatch) -> 
     try:
         _load_bundle_directory(
             bundle_root=provider,
-            bundle_name="mrscraper",
+            bundle_name=bundle,
             extension_id="lfx-bundles",
             extension_version="1.0.0",
             slot=SLOT_OFFICIAL,
@@ -157,16 +192,7 @@ def test_mrscraper_provider_loads_with_production_bundle_loader(monkeypatch) -> 
         importlib.invalidate_caches()
 
     assert result.ok, [(error.code, error.message) for error in result.errors]
-    assert {component.class_name for component in result.components} == {
-        "MrscraperAiScraper",
-        "MrscraperBatchScrape",
-        "MrscraperCrawlWebsite",
-        "MrscraperFetchHtml",
-        "MrscraperGetResult",
-        "MrscraperGetResults",
-        "MrscraperRunAiScraper",
-        "MrscraperRunManualScraper",
-    }
+    assert {component.class_name for component in result.components} == expected_classes
 
 
 def test_invalid_provider_name_emits_typed_warning_and_skips(tmp_path: Path) -> None:

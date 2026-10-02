@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException, Request
+from langflow.api.utils.execution_principal import FAMILY_WORKFLOW_PUBLIC_V2, FAMILY_WORKFLOW_V2
 from langflow.api.v1.endpoints import _reject_shared_secret_variable_overrides, _run_flow_internal
 from langflow.api.v1.openai_responses import run_flow_for_openai_responses
 from langflow.api.v1.schemas import SimplifiedAPIRequest
@@ -301,7 +302,7 @@ async def test_stream_build_restores_only_private_shared_graph(
         seen.append(graph)
         kwargs["event_manager"].send_event(
             event_type="end_vertex",
-            data={"build_data": {"inputs": {"api_key": "owner-secret"}}},
+            data={"build_data": {"inputs": {"api_key": "owner-secret"}}},  # pragma: allowlist secret
         )
         kwargs["event_manager"].on_end(data={})
         await kwargs["event_manager"].queue.put((None, None, time.time()))
@@ -324,6 +325,7 @@ async def test_stream_build_restores_only_private_shared_graph(
             provider_policy_flow=flow,
             source_flow_owner_id=flow.user_id,
             protocol=protocol,
+            execution_family=FAMILY_WORKFLOW_PUBLIC_V2 if protocol == "v2.public" else FAMILY_WORKFLOW_V2,
         )
     ]
 
@@ -387,6 +389,7 @@ async def test_stream_restores_secret_after_trusted_component_source_substitutio
             provider_policy_flow=flow,
             source_flow_owner_id=flow.user_id,
             protocol="v2",
+            execution_family=FAMILY_WORKFLOW_V2,
         )
     ]
 

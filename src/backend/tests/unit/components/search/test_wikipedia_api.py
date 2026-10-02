@@ -32,6 +32,12 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe": "queries the live Wikipedia API",
+        }
+
     def test_wikipedia_initialization(self, component_class):
         component = component_class()
         assert component.display_name == "Wikipedia"

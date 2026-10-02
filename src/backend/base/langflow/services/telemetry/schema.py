@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AwareDatetime, BaseModel, EmailStr, Field
 
 # Maximum URL length for telemetry GET requests (Scarf pixel tracking)
 # Scarf supports up to 2KB (2048 bytes) for query parameters
@@ -17,6 +17,8 @@ class RunPayload(BasePayload):
     run_success: bool = Field(serialization_alias="runSuccess")
     run_error_message: str = Field("", serialization_alias="runErrorMessage")
     run_id: str | None = Field(None, serialization_alias="runId")
+    # Set at the run-event boundary for local consumers; never exported as telemetry.
+    run_completed_at: AwareDatetime | None = Field(default=None, exclude=True)
 
 
 class DeploymentPayload(BasePayload):
@@ -26,6 +28,18 @@ class DeploymentPayload(BasePayload):
     deployment_success: bool = Field(serialization_alias="deploymentSuccess")
     deployment_error_message: str = Field(default="", serialization_alias="deploymentErrorMessage")
     wxo_tenant_id: str | None = Field(default=None, serialization_alias="wxoTenantId")
+
+
+class IntegrationActionPayload(BasePayload):
+    """Low-cardinality integration action event with no connection identifiers."""
+
+    provider: str
+    capability: str
+    ms: int
+    success: bool
+    error_code: str | None = Field(None, serialization_alias="errorCode")
+    owner_kind: str = Field(serialization_alias="ownerKind")
+    principal_kind: str = Field(serialization_alias="principalKind")
 
 
 class ShutdownPayload(BasePayload):
@@ -45,6 +59,7 @@ class VersionPayload(BasePayload):
     auto_login: bool = Field(serialization_alias="autoLogin")
     cache_type: str = Field(serialization_alias="cacheType")
     backend_only: bool = Field(serialization_alias="backendOnly")
+    database_dialect: str = Field("unknown", serialization_alias="databaseDialect")
 
 
 class PlaygroundPayload(BasePayload):

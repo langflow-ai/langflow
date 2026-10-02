@@ -45,12 +45,16 @@ members = [
     "lfx-firecrawl",
     "lfx-google",
     "lfx-ibm",
+    "lfx-microsoft",
     "lfx-nextplaid",
     "lfx-ollama",
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-serpingapi",
+    "lfx-serply",
+    "lfx-slack",
     "lfx-toolguard",
     "lfx-valkey",
     "lfx-vllm",
@@ -2801,6 +2805,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fc/3a/00cc578cd27ed0b22c9be25cef2c24539d92df9fa80ebd67a3fc5419724c/crc32c-2.8-pp311-pypy311_pp73-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:15905fa78344654e241371c47e6ed2411f9eeb2b8095311c68c88eccf541e8b4", size = 64108, upload-time = "2025-10-17T06:20:11.072Z" },
     { url = "https://files.pythonhosted.org/packages/6b/bc/0587ef99a1c7629f95dd0c9d4f3d894de383a0df85831eb16c48a6afdae4/crc32c-2.8-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c596f918688821f796434e89b431b1698396c38bf0b56de873621528fe3ecb1e", size = 64815, upload-time = "2025-10-17T06:20:11.919Z" },
     { url = "https://files.pythonhosted.org/packages/73/42/94f2b8b92eae9064fcfb8deef2b971514065bd606231f8857ff8ae02bebd/crc32c-2.8-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:8d23c4fe01b3844cb6e091044bc1cebdef7d16472e058ce12d9fadf10d2614af", size = 66659, upload-time = "2025-10-17T06:20:12.766Z" },
+]
+
+[[package]]
+name = "croniter"
+version = "6.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/57/2e2a65aee2a70483cb28e2b7e15a072d00a523207593b44400d4717bb100/croniter-6.2.4.tar.gz", hash = "sha256:fc124f751b1b04805c2a04b061898b436b45ab2320b045e1e052ea895de65189", size = 166267, upload-time = "2026-07-10T09:52:59.955Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/ba/d678e5bd329646ca51d3c92addbc77804e86d21f4b6b6a027218e6abb010/croniter-6.2.4-py3-none-any.whl", hash = "sha256:8ef3d544107a5c05a150a2d78f8bf5a8eb9c5c4d93405a736b824109574e3f4d", size = 46677, upload-time = "2026-07-10T09:52:58.425Z" },
 ]
 
 [[package]]
@@ -7646,7 +7662,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.12.4"
+version = "1.13.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base" },
@@ -7658,10 +7674,12 @@ dependencies = [
     { name = "lfx-docling" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
+    { name = "lfx-microsoft" },
     { name = "lfx-ollama" },
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
+    { name = "lfx-slack" },
     { name = "lfx-toolguard" },
     { name = "lfx-vllm" },
 ]
@@ -7680,6 +7698,8 @@ bundles = [
     { name = "lfx-firecrawl" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
+    { name = "lfx-serpingapi" },
+    { name = "lfx-serply" },
     { name = "lfx-valkey" },
 ]
 cassio = [
@@ -7795,12 +7815,16 @@ requires-dist = [
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
     { name = "lfx-ollama", editable = "src/bundles/ollama" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
+    { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
+    { name = "lfx-slack", editable = "src/bundles/slack" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
@@ -7855,7 +7879,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "1.12.4"
+version = "1.13.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "a2a-sdk" },
@@ -7873,6 +7897,7 @@ dependencies = [
     { name = "chardet" },
     { name = "chromadb" },
     { name = "clickhouse-connect" },
+    { name = "croniter" },
     { name = "cryptography" },
     { name = "defusedxml" },
     { name = "docstring-parser" },
@@ -7950,6 +7975,7 @@ dependencies = [
     { name = "pyperclip" },
     { name = "python-docx" },
     { name = "python-multipart" },
+    { name = "pyyaml" },
     { name = "redis" },
     { name = "rich" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -7961,6 +7987,7 @@ dependencies = [
     { name = "spider-client" },
     { name = "sqlalchemy", extra = ["aiosqlite"] },
     { name = "sqlmodel" },
+    { name = "starlette" },
     { name = "structlog" },
     { name = "traceloop-sdk" },
     { name = "transformers" },
@@ -7969,6 +7996,7 @@ dependencies = [
     { name = "uncurl" },
     { name = "uvicorn" },
     { name = "validators" },
+    { name = "websockets" },
     { name = "wheel" },
 ]
 
@@ -8371,6 +8399,7 @@ requires-dist = [
     { name = "composio", marker = "extra == 'composio'", specifier = "==0.16.0" },
     { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.16.0" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
+    { name = "croniter", specifier = ">=2.0.0,<7.0.0" },
     { name = "cryptography", specifier = ">=50.0.0" },
     { name = "cryptography", marker = "extra == 'litellm'" },
     { name = "ctransformers", marker = "extra == 'ctransformers'", specifier = ">=0.2.10" },
@@ -8532,6 +8561,7 @@ requires-dist = [
     { name = "python-docx", marker = "extra == 'docx'", specifier = ">=1.1.0" },
     { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
     { name = "pytube", marker = "extra == 'pytube'", specifier = "==15.0.0" },
+    { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.12.0,<2.0.0" },
     { name = "qianfan", marker = "extra == 'qianfan'", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13' and extra == 'ragstack'", specifier = "==0.2.1" },
@@ -8551,8 +8581,9 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlmodel", specifier = ">=0.0.37,<0.0.45" },
+    { name = "sqlmodel", specifier = "~=0.0.46" },
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
+    { name = "starlette", specifier = ">=1.5.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
     { name = "tiktoken", marker = "extra == 'docling-chunking'", specifier = ">=0.7.0" },
@@ -8561,7 +8592,7 @@ requires-dist = [
     { name = "transformers", specifier = ">=5.10.1,<6.0.0" },
     { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
     { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
-    { name = "typer", specifier = ">=0.13.0,<1.0.0" },
+    { name = "typer", specifier = ">=0.19.0,<1.0.0" },
     { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "uvicorn", specifier = ">=0.45.0,<1.0.0" },
@@ -8569,6 +8600,7 @@ requires-dist = [
     { name = "vlmrun", extras = ["all"], marker = "extra == 'vlmrun'", specifier = ">=0.2.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
     { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
+    { name = "websockets", specifier = ">=13.0,<16.0" },
     { name = "wheel", specifier = ">=0.46.2,<1.0.0" },
     { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
     { name = "wolframalpha", marker = "extra == 'wolframalpha'", specifier = "==5.1.3" },
@@ -8884,7 +8916,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.12.4"
+version = "1.13.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "a2wsgi", marker = "sys_platform != 'win32'" },
@@ -8907,6 +8939,7 @@ dependencies = [
     { name = "h2" },
     { name = "httpx", extra = ["http2"] },
     { name = "json-repair" },
+    { name = "jsonschema" },
     { name = "langchain" },
     { name = "langchain-classic" },
     { name = "langchain-core" },
@@ -8931,6 +8964,7 @@ dependencies = [
     { name = "pypdf" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
+    { name = "referencing" },
     { name = "rich" },
     { name = "setuptools" },
     { name = "sqlalchemy" },
@@ -9013,6 +9047,7 @@ requires-dist = [
     { name = "h2", specifier = ">=4.4.1" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0,<1.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
+    { name = "jsonschema", specifier = ">=4.20.0,<5.0.0" },
     { name = "langchain", specifier = "~=1.3.0" },
     { name = "langchain-classic", specifier = "~=1.0.7" },
     { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
@@ -9045,6 +9080,7 @@ requires-dist = [
     { name = "pypdf", specifier = ">=6.16.1,<7.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0,<2.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
+    { name = "referencing", specifier = ">=0.31.0,<1.0.0" },
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
     { name = "setuptools", specifier = ">=83.0.0,<84.0.0" },
     { name = "sqlalchemy", specifier = ">=2.0.38,<2.1.0" },
@@ -9085,7 +9121,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.1.7"
+version = "0.2.0"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -9648,6 +9684,10 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["elastic"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["faiss"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["faiss"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["figranium"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["figranium"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["funasr"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["funasr"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9702,6 +9742,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["pgvector"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["pinecone"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["pinecone"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["plivo"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["plivo"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["qdrant"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["qdrant"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["redis"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9786,7 +9828,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"
@@ -9994,7 +10036,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.2.4"
+version = "0.3.1"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
@@ -10058,6 +10100,17 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26.4,<3.0.0" },
     { name = "presto-python-client", specifier = ">=0.8,<1" },
 ]
+
+[[package]]
+name = "lfx-microsoft"
+version = "0.1.2"
+source = { editable = "src/bundles/microsoft" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-nextplaid"
@@ -10159,6 +10212,53 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-serpingapi"
+version = "0.1.0"
+source = { editable = "src/bundles/serpingapi" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-serply"
+version = "0.1.0"
+source = { editable = "src/bundles/serply" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-slack"
+version = "0.2.0"
+source = { editable = "src/bundles/slack" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "lfx" },
+    { name = "slack-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.10.0,<4.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "slack-sdk", specifier = ">=3.33.0,<4.0.0" },
 ]
 
 [[package]]
@@ -18235,6 +18335,15 @@ wheels = [
 ]
 
 [[package]]
+name = "slack-sdk"
+version = "3.44.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6e/4e/371068dd7281139307e60cd18553b96b9c8c391a4c3040617192713a3cc4/slack_sdk-3.44.1.tar.gz", hash = "sha256:ca19505423789fa2a3189ff486f989f02e49289f008d0a5813df7255b3fb93ea", size = 256661, upload-time = "2026-09-03T14:21:13.879Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/fc/67352b742fc6fa520a550581b0284f5757e4e31a32327c2a00276747fd30/slack_sdk-3.44.1-py2.py3-none-any.whl", hash = "sha256:d6f20a0fbe3fecf9cac955c99d686301b48a645b7045472c3a0cdd186d7c42b2", size = 319865, upload-time = "2026-09-03T14:21:12.405Z" },
+]
+
+[[package]]
 name = "slowapi"
 version = "0.1.10"
 source = { registry = "https://pypi.org/simple" }
@@ -18448,16 +18557,16 @@ wheels = [
 
 [[package]]
 name = "sqlmodel"
-version = "0.0.39"
+version = "0.0.46"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "sqlalchemy" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/68/ee/22a0559283c3cf6048678e787ed5d4959dcd00dedd8ba4567eeae684eeb1/sqlmodel-0.0.39.tar.gz", hash = "sha256:23d8e50a8d8ee936032ed79c55023a5d618dd6bc3c510bbf4909d1a7a605a570", size = 91057, upload-time = "2026-06-25T13:01:38.475Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/92/d5eaf0a7ffaac17a23396e854b36a4e1326c5933d7afb18af530f8227e89/sqlmodel-0.0.46.tar.gz", hash = "sha256:a1f962c0b92bc569d21e08d152fe823c61edd37a461e551636f15a153aa66bd5", size = 98115, upload-time = "2026-09-22T09:38:21.047Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/7d/b9813a582d4eb310be35e1fc7dfaae71207d7b62e9e53be314ebd251b53b/sqlmodel-0.0.39-py3-none-any.whl", hash = "sha256:90ebe92ce5cc11d7fff8dc7cb594790a102333c8fe7c14865254f6fc5c939795", size = 29680, upload-time = "2026-06-25T13:01:37.494Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/4a/bbd78ee71a65af4f4e8a54632671b5acb58dad8df86d383cf53a33f9fd6e/sqlmodel-0.0.46-py3-none-any.whl", hash = "sha256:c9c8b6b9642eb82aa6b5db6e6e0eea61a6fcb0b37440db35a9eecd9fc897ea3f", size = 31303, upload-time = "2026-09-22T09:38:19.956Z" },
 ]
 
 [[package]]
@@ -18498,15 +18607,15 @@ wheels = [
 
 [[package]]
 name = "starlette"
-version = "1.3.1"
+version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/e3/7c1dc7381d9f8ab7d854328ebfa884e62cb3f3d8549ddfd37c7814f42afa/starlette-1.3.1.tar.gz", hash = "sha256:05d0213193f2fbaae60e2ecb593b4add4262ad4e46536b54abe36f11a71724e0", size = 2703240, upload-time = "2026-06-12T09:23:11.602Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/b4/205b0d5241d934e8add0c38aa924c4f9fb7330834ff11e5444db964ec3f9/starlette-1.6.0.tar.gz", hash = "sha256:d4e3ac5e546444960c710297a3c9fc3f7ebae1b7e963f3d36173b49da535be9b", size = 2716969, upload-time = "2026-08-08T18:27:57.512Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/bb/2799cc2ede3ed41131f8975621e7213dfc7ef4acbbaadfa440f32500c370/starlette-1.3.1-py3-none-any.whl", hash = "sha256:c7372aae11c3c3f26a42df7bd626cec2f47d03483d261d369516a615a53714c6", size = 73632, upload-time = "2026-06-12T09:23:10.017Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/cb/6a6a47d5b464bd08695d254f3da6e7986cc70c9fa5d778eda57538edfe56/starlette-1.6.0-py3-none-any.whl", hash = "sha256:a86dd39d14bb45f85a3d18525215a9ef0cfd1f192ac793220e72598c90335f0c", size = 75969, upload-time = "2026-08-08T18:27:56.196Z" },
 ]
 
 [[package]]

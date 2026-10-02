@@ -1,107 +1,89 @@
-"""Test for aReduce bug: 'As List' toggle loses items from chunks beyond the first."""
+"""aReduce 'As List' must keep the items of every batch, not just the first one."""
 
 from __future__ import annotations
 
 import pytest
+from lfx.components.agentics.areduce_component import AreduceComponent
+from lfx.schema.dataframe import DataFrame
 
-try:
-    import agentics  # noqa: F401
-except ImportError:
-    pytest.skip("agentics-py not installed", allow_module_level=True)
-
-from agentics import AG
-from agentics.core.atype import create_pydantic_model
-from lfx.components.agentics.helpers.schema_builder import build_schema_fields
-from pydantic import create_model
+_SCHEMA = [
+    {"name": "total_orders", "description": "Total orders", "type": "int", "multiple": False},
+    {"name": "top_product", "description": "Top product", "type": "str", "multiple": False},
+]
 
 
-def _extract_list_items(output: AG, atype: type) -> AG:
-    """Replicate the aReduce 'As List' post-processing logic from AreduceComponent.
+def _areduce(*, return_multiple_instances: bool) -> AreduceComponent:
+    component = AreduceComponent(_id="areduce")
+    component.set(
+        source=DataFrame([{"order_id": str(i), "product": f"Widget {i % 4}"} for i in range(5)]),
+        schema=_SCHEMA,
+        instructions="Summarize orders per product.",
+        return_multiple_instances=return_multiple_instances,
+    )
+    return component
 
-    This function mirrors the exact code path in areduce_component.py
-    for when return_multiple_instances=True.
-    """
-    # Current (buggy) code: output = AG(atype=atype, states=output[0].items)
-    # Fixed code should iterate all states like aMap does
-    from lfx.components.agentics.areduce_component import AreduceComponent  # noqa: F401
 
-    # We replicate what the component does — after the fix, this should iterate all states
-    appended_states = [item_state for state in output for item_state in state.items]
-    return AG(atype=atype, states=appended_states)
+def _list_state(target, items: list[dict]):
+    """Build one ``ListOfTarget`` output state, the shape aReduce produces per batch with As List on."""
+    item_type = target.atype.model_fields["items"].annotation.__args__[0]
+    return target.atype(items=[item_type(**item) for item in items])
 
 
 @pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("fake_llm")
 class TestAreduceAsList:
-    """Tests for the aReduce 'As List' post-processing logic."""
-
-    def test_should_collect_items_from_all_output_states_not_just_first(self):
-        """Verify aReduce collects items from ALL output states, not just the first.
-
-        When aReduce processes data in multiple batches (areduce_batch_size), each batch
-        produces a separate output state with a ListOfTarget wrapper. The post-processing
-        must collect items from ALL states, not just the first one.
-
-        Bug: output[0].items only gets items from the first batch, losing data.
-        Fix: iterate all states like aMap does.
-        """
-        # Arrange
-        output_fields = build_schema_fields(
-            [
-                {"name": "total_orders", "description": "Total orders", "type": "int", "multiple": False},
-                {"name": "top_product", "description": "Top product", "type": "str", "multiple": False},
-            ]
-        )
-        atype = create_pydantic_model(output_fields, name="Target")
-        final_atype = create_model("ListOfTarget", items=(list[atype], ...))
-
-        # Simulate multiple output states (as happens with multiple areduce batches)
-        state1 = final_atype(
-            items=[
-                atype(total_orders=100, top_product="Widget A"),
-                atype(total_orders=50, top_product="Widget B"),
-            ]
-        )
-        state2 = final_atype(
-            items=[
-                atype(total_orders=25, top_product="Widget C"),
-                atype(total_orders=10, top_product="Widget D"),
-            ]
-        )
-        output = AG(atype=final_atype, states=[state1, state2])
+    async def test_should_collect_items_from_all_batches_not_just_the_first(self, fake_agentics):
+        # Arrange: inputs beyond areduce_batch_size come back as one ListOfTarget state per batch.
+        fake_agentics.transduce = lambda target, _source: [
+            _list_state(
+                target,
+                [{"total_orders": 100, "top_product": "Widget A"}, {"total_orders": 50, "top_product": "Widget B"}],
+            ),
+            _list_state(
+                target,
+                [{"total_orders": 25, "top_product": "Widget C"}, {"total_orders": 10, "top_product": "Widget D"}],
+            ),
+        ]
+        component = _areduce(return_multiple_instances=True)
 
         # Act
-        result = _extract_list_items(output, atype)
-        result_df = result.to_dataframe()
+        result = await component.aReduce()
 
-        # Assert — ALL 4 items from both states must be present
-        assert len(result_df) == 4
-        assert set(result_df["top_product"].tolist()) == {"Widget A", "Widget B", "Widget C", "Widget D"}
+        # Assert: flattening only output[0].items would silently drop Widget C and D.
+        assert result.to_dict(orient="records") == [
+            {"total_orders": 100, "top_product": "Widget A"},
+            {"total_orders": 50, "top_product": "Widget B"},
+            {"total_orders": 25, "top_product": "Widget C"},
+            {"total_orders": 10, "top_product": "Widget D"},
+        ]
+        [(target, _source)] = fake_agentics.transductions
+        assert target.transduction_type == "areduce"
+        assert target.instructions.endswith("Summarize orders per product.")
 
-    def test_should_work_with_single_output_state(self):
-        """Single output state (common case: <100 rows) should also work correctly."""
-        # Arrange
-        output_fields = build_schema_fields(
-            [
-                {"name": "category", "description": "Category", "type": "str", "multiple": False},
-                {"name": "count", "description": "Count", "type": "int", "multiple": False},
-            ]
-        )
-        atype = create_pydantic_model(output_fields, name="Target")
-        final_atype = create_model("ListOfTarget", items=(list[atype], ...))
+    async def test_should_flatten_a_single_batch(self, fake_agentics):
+        fake_agentics.transduce = lambda target, _source: [
+            _list_state(
+                target,
+                [
+                    {"total_orders": 42, "top_product": "Electronics"},
+                    {"total_orders": 15, "top_product": "Books"},
+                    {"total_orders": 8, "top_product": "Clothing"},
+                ],
+            )
+        ]
+        component = _areduce(return_multiple_instances=True)
 
-        state = final_atype(
-            items=[
-                atype(category="Electronics", count=42),
-                atype(category="Books", count=15),
-                atype(category="Clothing", count=8),
-            ]
-        )
-        output = AG(atype=final_atype, states=[state])
+        result = await component.aReduce()
 
-        # Act
-        result = _extract_list_items(output, atype)
-        result_df = result.to_dataframe()
+        assert result["top_product"].tolist() == ["Electronics", "Books", "Clothing"]
 
-        # Assert
-        assert len(result_df) == 3
-        assert set(result_df["category"].tolist()) == {"Electronics", "Books", "Clothing"}
+    async def test_should_return_the_aggregate_row_when_as_list_is_off(self, fake_agentics):
+        fake_agentics.transduce = lambda target, _source: [target.atype(total_orders=5, top_product="Widget 1")]
+        component = _areduce(return_multiple_instances=False)
+
+        result = await component.aReduce()
+
+        assert result.to_dict(orient="records") == [{"total_orders": 5, "top_product": "Widget 1"}]
+        [(target, _source)] = fake_agentics.transductions
+        assert target.instructions == "Summarize orders per product."

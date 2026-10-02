@@ -30,6 +30,13 @@ function extractDetail(data: unknown): string | undefined {
   return undefined;
 }
 
+/** Use a translated fallback when the server supplies no displayable detail. */
+export function getAxiosErrorDetail(err: unknown, fallback: string): string {
+  return (
+    (axios.isAxiosError(err) && extractDetail(err.response?.data)) || fallback
+  );
+}
+
 /**
  * Extracts a user-friendly error message from an unknown catch value.
  * Prefers `response.data.detail` for Axios errors, then `.message`, then a fallback.

@@ -16,6 +16,7 @@ import anyio
 import httpx
 import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi_pagination import add_pagination
@@ -32,11 +33,13 @@ from lfx.observability import (
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
 
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.api.validation_errors import request_validation_exception_handler
 from langflow.api.warm_graph import is_warm_registry_enabled
 from langflow.cli.preflight import PreflightAbortError, ensure_production_preflight
 from langflow.initial_setup.setup import (
@@ -77,6 +80,18 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+GZIP_MINIMUM_SIZE = 1000
+GZIP_COMPRESS_LEVEL = 6
+# application/x-ndjson is deliberately absent: build event streams compress 78-99% and,
+# being streamed, bypass GZIP_MINIMUM_SIZE entirely.
+GZIP_ALREADY_COMPRESSED_CONTENT_TYPES = (
+    "application/octet-stream",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+)
+GZIP_EXCLUDED_CONTENT_TYPES = (*DEFAULT_EXCLUDED_CONTENT_TYPES, *GZIP_ALREADY_COMPRESSED_CONTENT_TYPES)
 
 # Enterprise lifespan hook registry. Enterprise plugins append async callables
 # at app-construction time (plugin registration runs before the lifespan
@@ -218,6 +233,13 @@ def get_lifespan(*, fix_migration=False, version=None):
         # even when startup fails before it is created.
         lag_monitor = None
         warm_registry_task = None
+        # Started per worker below when trigger_dispatcher_enabled; the loops it
+        # owns are DB-leased singletons, so every replica may run one.
+        trigger_dispatcher = None
+        # The listener child, in subprocess mode only. Exactly one API worker
+        # hosts it (a named lease elects which), because the API defaults to
+        # several workers and N listeners would fight over every connection.
+        trigger_listeners = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -377,11 +399,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Memory Base row reconciliation skipped after startup error: %s", exc)
 
+            prometheus_started = False
             if get_settings_service().settings.prometheus_enabled:
                 try:
                     from prometheus_client import start_http_server
 
                     start_http_server(get_settings_service().settings.prometheus_port)
+                    prometheus_started = True
                     await logger.adebug(
                         f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
                     )
@@ -399,6 +423,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         )
                     else:
                         await logger.awarning(f"Failed to start Prometheus server: {e}")
+
+            # Only the process that actually bound the Prometheus port runs the DB-derived
+            # collector, so `gunicorn -w N` does not spawn N collectors all querying the
+            # database while only one of them exposes anything to scrape.
+            from langflow.services.background_execution.metrics_collector import maybe_start_metrics_collector
+
+            await maybe_start_metrics_collector(
+                _app, get_settings_service().settings, prometheus_started=prometheus_started
+            )
 
             telemetry_service = get_telemetry_service()
 
@@ -558,6 +591,26 @@ def get_lifespan(*, fix_migration=False, version=None):
             with suppress(Exception):
                 await get_background_execution_service().sweep_orphans_on_startup()
 
+            # Triggers: the dispatcher and the schedule tick producer. Both are
+            # singletons held by a ``trigger_lease`` row, so starting one in
+            # every API replica still fires each schedule once and runs each
+            # ledger event once. Best-effort: a trigger loop that cannot start
+            # must never stop the API from booting.
+            with suppress(Exception):
+                from langflow.services.triggers.dispatcher import start_dispatcher_if_enabled
+
+                trigger_dispatcher = start_dispatcher_if_enabled()
+
+            # Track B listeners. Off unless LANGFLOW_LISTENERS_MODE=subprocess:
+            # the supported multi-replica shape is a separate `langflow
+            # listeners` service, which the API neither starts nor knows about.
+            with suppress(Exception):
+                from langflow.services.triggers.listeners.subprocess_host import (
+                    start_listener_subprocess_if_enabled,
+                )
+
+                trigger_listeners = start_listener_subprocess_if_enabled()
+
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
@@ -706,6 +759,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
 
+            # Stop the background-execution metrics collector. No-op when it never
+            # started, and it swallows its own errors: a collector that fails to stop
+            # must not be the reason shutdown does not finish.
+            from langflow.services.background_execution.metrics_collector import stop_metrics_collector
+
+            await stop_metrics_collector(_app)
+
             # Enterprise shutdown hooks run before service teardown so they can
             # still flush through live services. Also reached when startup
             # failed before the hooks ran — enterprise stop() paths must (and
@@ -797,6 +857,16 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if warm_registry_task and not warm_registry_task.done():
                         warm_registry_task.cancel()
                         tasks_to_cancel.append(warm_registry_task)
+                    # SIGTERM the listener child and wait for it, so its
+                    # connection leases are released rather than left to expire.
+                    if trigger_listeners is not None:
+                        with suppress(Exception):
+                            await trigger_listeners.stop()
+                    # Stops the loop AND hands the lease back, so another
+                    # replica takes over without waiting out the TTL.
+                    if trigger_dispatcher is not None:
+                        with suppress(Exception):
+                            await trigger_dispatcher.stop()
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
@@ -863,6 +933,18 @@ def get_lifespan(*, fix_migration=False, version=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
+    from langflow.services.triggers.listeners.guard import is_listener_process
+
+    if is_listener_process():
+        # decisions/process-model.md: "The boot path asserts that no FastAPI app
+        # is created in the listener process, so the two never converge again by
+        # accident." Both prior trigger attempts converged here.
+        msg = (
+            "This process is a Langflow trigger listener and must not host the API. "
+            "Run the API and 'langflow listeners' as separate processes."
+        )
+        raise RuntimeError(msg)
+
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
@@ -876,6 +958,14 @@ def create_app():
         version=__version__,
         lifespan=lifespan,
         root_path=settings.root_path,
+    )
+    # Registered first so it sits innermost: the BaseHTTPMiddleware layers above turn every
+    # response into a stream, and a streamed response carries no Content-Length to test.
+    app.add_middleware(
+        GZipMiddleware,
+        minimum_size=GZIP_MINIMUM_SIZE,
+        compresslevel=GZIP_COMPRESS_LEVEL,
+        exclude_content_types=GZIP_EXCLUDED_CONTENT_TYPES,
     )
     app.add_middleware(
         ContentSizeLimitMiddleware,
@@ -1046,6 +1136,10 @@ def create_app():
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
+
+    # Replaces FastAPI's default 422 handler, which echoes each submitted value
+    # (credentials included) back in the error body.
+    app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):

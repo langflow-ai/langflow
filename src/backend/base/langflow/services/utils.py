@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from enum import Enum
 from importlib import import_module
 from pathlib import Path
@@ -93,11 +94,11 @@ async def get_or_create_super_user(
     *,
     rotate_legacy_default_password: bool = False,
 ):
-    from langflow.services.database.models.user.model import User
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
 
-    stmt = select(User).where(User.username == username)
-    result = await session.exec(stmt)
-    user = result.first()
+    # Case-insensitive so a configured "Admin" resolves to an existing "admin"
+    # (and the checks below) instead of a create that the unique index rejects.
+    user = await get_user_by_username_case_insensitive(session, username)
 
     auth = get_auth_service()
     if user and user.is_superuser:
@@ -399,30 +400,99 @@ async def migrate_orphaned_mcp_servers_config(
         return True
 
 
-async def teardown_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
-    """Remove the default superuser when AUTO_LOGIN is disabled and it was never used to sign in.
+async def _first_table_owned_by(session: AsyncSession, user_id) -> str | None:
+    """The first table holding a row for this user, across every table that references ``user.id``.
 
-    If the default account has ``last_login_at`` set, it is kept. Deletion can still fail with
-    an integrity error when the user owns rows (e.g. flows) without ORM cascade — callers see
-    ``RuntimeError`` so startup or shutdown does not silently ignore the problem.
+    Runs at every startup and shutdown, so it stops at the first hit instead of counting.
     """
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if unused.")
-        try:
-            username = DEFAULT_SUPERUSER
-            from langflow.services.database.models.user.model import User
+    from sqlmodel import SQLModel
 
-            stmt = select(User).where(User.username == username)
-            result = await session.exec(stmt)
-            user = result.first()
+    import langflow.services.database.models  # noqa: F401 - importing registers every table on the metadata
 
-            if user and user.is_superuser is True and not user.last_login_at:
-                await session.delete(user)
-                await logger.adebug("Default superuser removed successfully.")
-        except Exception as exc:
-            await logger.aexception("Could not remove default superuser.")
-            msg = "Could not remove default superuser."
-            raise RuntimeError(msg) from exc
+    for table in SQLModel.metadata.sorted_tables:
+        for foreign_key in table.foreign_keys:
+            if foreign_key.column.table.name != "user" or foreign_key.column.name != "id":
+                continue
+            hit = (
+                await session.exec(select(1).select_from(table).where(foreign_key.parent == user_id).limit(1))
+            ).first()
+            if hit is not None:
+                return table.name
+    return None
+
+
+async def teardown_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
+    """Retire the default superuser when AUTO_LOGIN is disabled and it was never used to sign in.
+
+    The account is what AUTO_LOGIN leaves behind, and with AUTO_LOGIN off it must not stay
+    usable. Its data is another matter: an instance used only through the API, or adopted
+    into a new deployment, can hold all of its work under this account, and deleting the
+    row cascades to every flow and project it owns. So:
+
+    - it owns nothing: delete it, as before;
+    - the configured superuser is this same account: claim it. Set the configured password,
+      reactivate it, and clear ``retired_at``;
+    - otherwise: retire it once. Deactivate it and record ``retired_at``. Anyone could act as
+      this account while AUTO_LOGIN was on, and its API keys and tokens check ``is_active``,
+      not the password, so deactivating is what stops them. A password that is still empty
+      or the legacy default is also replaced with a random one, since reactivating the account
+      would otherwise bring it back usable by anyone who knows the default.
+
+    A retired account is left alone on later restarts, so an admin who reactivates it or sets
+    its password from the Admin page is not undone. An account that has signed in
+    (``last_login_at`` set) is left alone.
+    """
+    if settings_service.auth_settings.AUTO_LOGIN:
+        return
+    try:
+        from langflow.services.database.models.user.model import User
+
+        user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+        if not user or user.is_superuser is not True or user.last_login_at:
+            return
+        claimed = settings_service.auth_settings.SUPERUSER == DEFAULT_SUPERUSER
+        if user.retired_at and not claimed:
+            return
+
+        owned = await _first_table_owned_by(session, user.id)
+        if owned is None:
+            await session.delete(user)
+            await logger.adebug("Default superuser removed successfully.")
+            return
+
+        auth = get_auth_service()
+        if claimed:
+            # The operator asked for this account. A random password here would lock out the
+            # only superuser. The password is scrubbed from settings after startup, so at
+            # shutdown there is nothing to set and the account is left as startup made it.
+            password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
+            if password and password != LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+                user.password = auth.get_password_hash(password)
+                user.is_active = True
+                user.retired_at = None
+                session.add(user)
+                await logger.awarning(
+                    f"Kept the default superuser '{DEFAULT_SUPERUSER}', which owns rows in '{owned}', "
+                    "and set its password to the configured LANGFLOW_SUPERUSER_PASSWORD."
+                )
+            return
+
+        defaults = ("", LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+        if not user.password or any(auth.verify_password(default, user.password) for default in defaults):
+            user.password = auth.get_password_hash(token_urlsafe(32))
+        user.is_active = False
+        user.retired_at = datetime.now(timezone.utc)
+        session.add(user)
+        await logger.awarning(
+            f"AUTO_LOGIN is off, so the default superuser '{DEFAULT_SUPERUSER}' was deactivated: its "
+            f"password, API keys and tokens no longer work. It owns rows in '{owned}', so it was kept "
+            "rather than deleted. Another superuser can reactivate it and set a password from the Admin "
+            f"page or PATCH /api/v1/users/{user.id}."
+        )
+    except Exception as exc:
+        await logger.aexception("Could not retire default superuser.")
+        msg = "Could not retire default superuser."
+        raise RuntimeError(msg) from exc
 
 
 async def teardown_services() -> None:
@@ -566,6 +636,7 @@ def register_all_service_factories() -> None:
 
     service_manager = get_service_manager()
     from lfx.services.executor import factory as executor_factory
+    from lfx.services.integration_policy.service import IntegrationPolicyService
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.model_provider_policy.service import ModelProviderPolicyService
     from lfx.services.policy_bundle.service import PolicyBundleService
@@ -580,6 +651,8 @@ def register_all_service_factories() -> None:
     from langflow.services.catalog_policy.service import LangflowCatalogPolicyService
     from langflow.services.chat import factory as chat_factory
     from langflow.services.checkpoint import factory as checkpoint_factory
+    from langflow.services.connection import factory as connection_factory
+    from langflow.services.connection.service import DatabaseConnectionResolverService
     from langflow.services.database import factory as database_factory
     from langflow.services.job_queue import factory as job_queue_factory
     from langflow.services.session import factory as session_factory
@@ -612,6 +685,15 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(task_factory.TaskServiceFactory())
     service_manager.register_factory(store_factory.StoreServiceFactory())
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
+    # Standalone LFX keeps its environment resolver. Full Langflow resolves
+    # handles from encrypted connection rows unless a host plugin overrides
+    # this service through lfx.toml.
+    service_manager.register_service_class(
+        ServiceType.CONNECTION_RESOLVER_SERVICE,
+        DatabaseConnectionResolverService,
+        override=True,
+    )
+    service_manager.register_factory(connection_factory.ConnectionResolverServiceFactory())
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
@@ -640,6 +722,13 @@ def register_all_service_factories() -> None:
     service_manager.register_service_class(
         ServiceType.MODEL_PROVIDER_POLICY_SERVICE,
         ModelProviderPolicyService,
+        override=True,
+    )
+    # Integration governance shares the bundle coordinator with the provider and
+    # catalog services, so one published revision decides all three.
+    service_manager.register_service_class(
+        ServiceType.INTEGRATION_POLICY_SERVICE,
+        IntegrationPolicyService,
         override=True,
     )
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())

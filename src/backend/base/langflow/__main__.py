@@ -52,6 +52,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.cli.admin import admin_app
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
@@ -63,7 +64,7 @@ from langflow.services.utils import get_auto_login_superuser_password, initializ
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 console = Console()
 if platform.system() == "Windows":
     console = Console(legacy_windows=True, emoji=False)
@@ -92,6 +93,7 @@ except ImportError:
 from lfx.cli._observability_commands import observability_app  # noqa: E402
 
 app.add_typer(observability_app, name="observability")
+app.add_typer(admin_app, name="admin")
 
 
 class ProcessManager:
@@ -1077,6 +1079,38 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             typer.echo("Superuser creation failed.")
 
 
+@app.command(name="listeners")
+def listeners(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    health_host: str | None = typer.Option(
+        None, help="Interface the health endpoint binds.", envvar="LANGFLOW_LISTENERS_HEALTH_HOST"
+    ),
+    health_port: int | None = typer.Option(
+        None, help="Port serving /health and /healthz.", envvar="LANGFLOW_LISTENERS_HEALTH_PORT"
+    ),
+) -> None:
+    """Run the trigger listener process: hold provider connections, write events to the ledger.
+
+    This is the Track B half of triggers - Slack Socket Mode, Microsoft Graph delta
+    polling, Gmail Pub/Sub pull - for instances that cannot accept provider webhooks.
+    It shares the API's database and configuration and hosts no HTTP application:
+    only /health and /healthz. It never runs migrations, so start or upgrade the API
+    against this database first.
+
+    Run it as its own service (a Kubernetes Deployment, a Compose service) for
+    multi-replica deployments, or set LANGFLOW_LISTENERS_MODE=subprocess to have the
+    API spawn it for a single container or Desktop.
+    """
+    configure(log_level=log_level)
+    if health_host is not None:
+        os.environ["LANGFLOW_LISTENERS_HEALTH_HOST"] = health_host
+    if health_port is not None:
+        os.environ["LANGFLOW_LISTENERS_HEALTH_PORT"] = str(health_port)
+    from langflow.services.triggers.listeners.runtime import main as run_listener_process
+
+    run_listener_process()
+
+
 @app.command(name="migrate-mcp")
 def migrate_mcp(
     log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
@@ -1135,6 +1169,151 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
     scope = f"user '{username}'" if username else "all users"
     verb = "would adopt" if dry_run else "adopted"
     typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
+
+
+@app.command(name="convert-sqlite-to-postgres")
+def convert_sqlite_to_postgres(
+    source: str = typer.Option(..., help="SQLite database URL to read, e.g. sqlite:////data/langflow.db."),
+    target: str = typer.Option(..., help="Postgres database URL to write. It is upgraded to the latest schema first."),
+    batch_size: int = typer.Option(1000, help="Rows per insert batch."),
+    drop_orphans: bool = typer.Option(  # noqa: FBT001
+        default=False,
+        help="Copy rows whose foreign key points at a deleted row the way Postgres would have handled them: "
+        "leave them out (ON DELETE CASCADE) or clear the key (ON DELETE SET NULL). Without it they are refused.",
+    ),
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+) -> None:
+    """Copy every row of a Langflow SQLite database into Postgres.
+
+    Stop Langflow before running this. The source must already be on the latest
+    schema (start this Langflow version against it once). The copy runs in one
+    transaction and is checked table by table, so it either lands whole or not at
+    all, and running it again is safe. Nothing in the source is changed.
+
+    SQLite never enforced Langflow's foreign keys, so deletes can leave rows that
+    point at nothing. They are refused, naming each key, unless --drop-orphans.
+    """
+    from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
+
+    configure(log_level=log_level)
+    report = convert(source, target, batch_size=batch_size, drop_orphans=drop_orphans)
+    if not report.ok:
+        # A failed copy is rolled back, so per-table counts would describe rows that are gone.
+        for problem in report.problems:
+            typer.echo(f"Problem: {problem}", err=True)
+        raise typer.Exit(1)
+    for table in report.tables:
+        typer.echo(f"{table.name}: {table.target_rows} row(s)")
+    for orphans in report.orphans:
+        done = "left out" if orphans.ondelete == "CASCADE" else f"copied with {orphans.column} set to NULL"
+        typer.echo(f"{orphans.table}: {orphans.rows} row(s) pointing at a deleted {orphans.parent} {done}")
+    typer.echo(f"Converted {len(report.tables)} table(s) at revision {report.revision}.")
+
+
+@app.command(name="relocate-files")
+def relocate_files(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    bucket: str = typer.Option(..., help="Target S3 bucket to copy stored files into."),
+    prefix: str = typer.Option("files", help="Key prefix inside the bucket."),
+    username: str = typer.Option("", help="Only copy this user's files."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be copied without writing."),  # noqa: FBT001
+    concurrency: int = typer.Option(
+        4, min=1, help="Files copied at once. Each holds at most one 8 MiB part in memory."
+    ),
+) -> None:
+    """Copy stored file bytes into an S3 bucket, keeping each file's key.
+
+    Run this with LANGFLOW_STORAGE_TYPE=local, the setting the instance had before
+    the switch, so it reads the files on local disk. Credentials come from the
+    environment, the same way the S3 storage backend reads them.
+
+    A file counts as copied only once the bucket reports an object of the same
+    size, and files already there are skipped, so a run can be repeated.
+
+    Nothing is deleted from the source. Readers address a file by its owner and
+    name, which the copy preserves. Chat history is the exception: it records
+    attachments by absolute local path, so those entries are rewritten to the
+    owner/name form, which both storage backends read.
+
+    Uploads, chat attachments and files attached to flows are copied. Profile
+    pictures and knowledge bases live outside the storage backend and stay where
+    they are.
+
+    Files stream across, so memory scales with --concurrency alone.
+
+    Exits non-zero if any file could not be copied.
+    """
+    from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError
+
+    configure(log_level=log_level)
+    try:
+        failed = asyncio.run(
+            _relocate_files(
+                bucket=bucket,
+                prefix=prefix,
+                username=username or None,
+                dry_run=dry_run,
+                concurrency=concurrency,
+            )
+        )
+    except (SourceNotLocalError, NoSuchUserError) as exc:
+        typer.echo(f"Cannot copy files: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if failed:
+        raise typer.Exit(1)
+
+
+async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry_run: bool, concurrency: int) -> int:
+    from langflow.api.utils.file_relocation import relocate_files
+    from langflow.services.utils import register_all_service_factories
+
+    # Not initialize_services(): that is the server's startup, which migrates the schema,
+    # sets up the superuser and prunes history. Services are built on first use instead,
+    # and building one writes nothing.
+    register_all_service_factories()
+    await _refuse_a_database_not_at_this_versions_head()
+    results = await relocate_files(
+        target_bucket=bucket,
+        target_prefix=prefix,
+        username=username,
+        dry_run=dry_run,
+        concurrency=concurrency,
+    )
+    for result in results:
+        # A repoint rewrites a path in message.files and moves no bytes.
+        size = "" if result.status in ("repointed", "would_repoint") else f"  {result.size} bytes"
+        line = f"{result.status:12} {result.owner}/{result.file_name}{size}  -> {result.key}"
+        typer.echo(f"{line}  ({result.reason})" if result.reason else line)
+    counts: dict[str, int] = {}
+    for result in results:
+        counts[result.status] = counts.get(result.status, 0) + 1
+    scope = f"user '{username}'" if username else "all users"
+    summary = ", ".join(f"{count} {status}" for status, count in sorted(counts.items())) or "no files found"
+    typer.echo(f"File relocation complete for {scope}: {summary}.")
+    return counts.get("failed", 0)
+
+
+async def _refuse_a_database_not_at_this_versions_head() -> None:
+    """Exit unless the database is at this Langflow's migration head.
+
+    This version's queries need this version's schema, and migrating is the server's
+    job, so a database at any other revision is left as it is.
+    """
+    from alembic.script import ScriptDirectory
+
+    from langflow.services.database.migration import get_current_alembic_heads
+
+    expected = set(ScriptDirectory(str(get_db_service().script_location)).get_heads())
+    async with session_scope() as session:
+        current = set(await get_current_alembic_heads(session))
+    if current != expected:
+        typer.echo(
+            f"Cannot copy files: the database is at migration revision {', '.join(sorted(current)) or 'none'}, "
+            f"and this Langflow expects {', '.join(sorted(expected))}. This command does not migrate the database. "
+            "Run it with the Langflow version that matches the database.",
+            err=True,
+        )
+        raise typer.Exit(2)
 
 
 # command to copy the langflow database from the cache to the current directory
