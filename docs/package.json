@@ -91,6 +91,7 @@
     "http-proxy-middleware": "^2.0.10",
     "launch-editor": "^2.14.1",
     "minimatch@^8": "^8.0.6",
-    "minimatch@^9": "^9.0.7"
+    "minimatch@^9": "^9.0.7",
+    "postcss-selector-parser@^6": "^6.1.3"
   }
 }
