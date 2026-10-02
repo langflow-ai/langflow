@@ -29,6 +29,7 @@ def release(kit):
         "platforms": {
             target: {
                 "image_id": "sha256:" + digit * 64,
+                "content_sha256": "e" * 64,
                 "archive": f"helper-image-{target.replace('/', '-')}.tar",
                 "archive_sha256": digit * 64,
             }
@@ -46,6 +47,7 @@ def release(kit):
             "qualification_profile": kit.PROFILE,
             "platform": target,
             "image_id": entry["image_id"],
+            "content_sha256": "e" * 64,
             "archive_sha256": entry["archive_sha256"],
             "qualified": True,
         }
@@ -70,6 +72,7 @@ def test_attestation_binds_both_platforms_and_exact_manifest(kit, release):
         ("helper_image", "unrelated-image"),
         ("release_manifest_sha256", "f" * 64),
         ("image_id", "sha256:" + "f" * 64),
+        ("content_sha256", "f" * 64),
         ("archive_sha256", "f" * 64),
         ("qualification_profile", "unsigned-fixture"),
         ("qualified", False),
@@ -152,6 +155,9 @@ async def test_invalid_signature_or_archive_never_reaches_docker(kit, release, m
     monkeypatch.setenv("LANGFLOW_KB_MIGRATION_HELPER_IMAGE", "previous-value")
     calls = []
 
+    async def _qualified_cosign():
+        return None
+
     async def verify(*_args):
         calls.append("verify")
         if not signature_valid or len(calls) > 1:
@@ -162,7 +168,8 @@ async def test_invalid_signature_or_archive_never_reaches_docker(kit, release, m
     def forbidden_docker(*_args, **_kwargs):
         pytest.fail("Invalid verification material must never reach Docker")
 
-    monkeypatch.setattr(kit.helper, "_stage_verified_helper", verify)
+    monkeypatch.setattr(kit.helper, "_verified_offline_image", verify)
+    monkeypatch.setattr(kit.helper, "_check_cosign_version", lambda _cosign: _qualified_cosign())
     monkeypatch.setattr(kit.subprocess, "run", forbidden_docker)
     monkeypatch.setattr(kit.subprocess, "check_output", forbidden_docker)
     error = ValueError if signature_valid else kit.helper.MigrationHelperError

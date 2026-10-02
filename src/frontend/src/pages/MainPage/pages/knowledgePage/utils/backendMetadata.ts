@@ -25,14 +25,14 @@ export const getKnowledgeBaseBackendLabel = (
   if (backendType === "chroma" && backendConfig?.["mode"] === "cloud") {
     return "Chroma Cloud (migration required)";
   }
-  const normalized = backendType || "chroma";
+  const normalized = backendType || "sqlite";
   return BACKEND_LABELS[normalized] || normalized;
 };
 
 export const getKnowledgeBaseBackendTarget = (
   knowledgeBase: Pick<KnowledgeBaseInfo, "backend_type" | "backend_config">,
 ): string | null => {
-  const backendType = knowledgeBase.backend_type || "chroma";
+  const backendType = knowledgeBase.backend_type || "sqlite";
   const backendConfig = knowledgeBase.backend_config || {};
 
   if (backendType === "chroma" && backendConfig["mode"] === "cloud") {

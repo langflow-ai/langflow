@@ -164,10 +164,10 @@ async def _ensure_flow_action_or_404(
     return flow
 
 
-async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str]) -> None:
+async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str], *, db=None) -> None:
     """Purge vectors before committing message deletion, preserving retry on failure."""
     if session_ids:
-        await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids)
+        await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids, db=db)
 
 
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
@@ -489,17 +489,11 @@ async def delete_messages_session(
     Only deletes messages from sessions belonging to flows owned by the current user.
     """
     try:
-        owned_sessions = list(
-            await session.exec(
-                select(MessageTable.session_id)
-                .distinct()
-                .join(Flow, MessageTable.flow_id == Flow.id)
-                .where(Flow.user_id == current_user.id)
-                .where(MessageTable.session_id == session_id)
-            )
-        )
+        # Memory tracking is owner-scoped independently of message rows. It
+        # must still be purged when the last message was deleted earlier.
+        owned_sessions = [session_id]
         async with session_storage_operation(user_id=current_user.id, session_ids=owned_sessions):
-            await _purge_memory_base_session_data(current_user.id, owned_sessions)
+            await _purge_memory_base_session_data(current_user.id, owned_sessions, db=session)
             await delete_messages_for_user_by_session(session, current_user.id, session_id)
             await session.commit()
     except StorageUnavailableError as e:
@@ -553,7 +547,15 @@ async def delete_messages_sessions(
         session_stmt = session_stmt.where(col(MessageTable.session_id).in_(session_ids))
 
         result = await session.exec(session_stmt)
-        affected_session_ids = list(result)
+        from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
+
+        tracked = await session.exec(
+            select(MemoryBaseSession.session_id)
+            .join(MemoryBase, MemoryBaseSession.memory_base_id == MemoryBase.id)
+            .where(MemoryBase.user_id == current_user.id)
+            .where(col(MemoryBaseSession.session_id).in_(session_ids))
+        )
+        affected_session_ids = sorted(set(result).union(tracked))
         affected_count = len(affected_session_ids)
 
         if not affected_session_ids:
@@ -561,7 +563,7 @@ async def delete_messages_sessions(
             return {"message": "No sessions to delete", "deleted_count": 0}
 
         async with session_storage_operation(user_id=current_user.id, session_ids=affected_session_ids):
-            await _purge_memory_base_session_data(current_user.id, affected_session_ids)
+            await _purge_memory_base_session_data(current_user.id, affected_session_ids, db=session)
             # Get message IDs to delete
             msg_stmt = select(MessageTable.id)
             msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)

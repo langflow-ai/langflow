@@ -204,6 +204,7 @@ def release_manifest(image):
         "platforms": {
             f"linux/{architecture}": {
                 "image_id": "sha256:" + digest * 64,
+                "content_sha256": "e" * 64,
                 "archive": f"helper-image-linux-{architecture}.tar",
                 "archive_sha256": "f" * 64,
             }
@@ -270,7 +271,7 @@ async def test_online_verifies_identity_before_pulling_digest(monkeypatch):
     monkeypatch.setattr(helper, "_command", command)
     assert await helper._stage_verified_helper("docker", "cosign", "release-digest") == "release-digest"
     assert [call[1] for call in calls] == ["version", "verify", "pull"]
-    assert "--certificate-identity-regexp" in calls[1]
+    assert "--certificate-identity" in calls[1]
     assert helper._IDENTITY in calls[1]
     assert "--bundle" not in calls[1]
     assert calls[2] == ("docker", "pull", "--quiet", "release-digest")
@@ -279,7 +280,16 @@ async def test_online_verifies_identity_before_pulling_digest(monkeypatch):
 async def test_offline_verifies_private_manifest_copy_without_registry_or_tuf(tmp_path, monkeypatch):
     image = "ghcr.io/langflow-ai/langflow-chroma-migration@sha256:" + "0" * 64
     manifest = tmp_path / "release.json"
-    manifest.write_text(json.dumps(release_manifest(image)))
+    inspected = {
+        "Id": "sha256:" + "9" * 64,
+        "Config": {"Entrypoint": ["/reader"], "User": "65532:65532", "Env": ["PATH=/usr/bin"]},
+        "RootFS": {"Type": "layers", "Layers": ["sha256:" + "3" * 64]},
+        "Os": "linux",
+        "Architecture": "amd64",
+    }
+    release = release_manifest(image)
+    release["platforms"]["linux/amd64"]["content_sha256"] = helper.image_content_sha256(inspected)
+    manifest.write_text(json.dumps(release))
     bundle = tmp_path / "bundle.json"
     bundle.write_bytes(b"synthetic bundle")
     root = tmp_path / "trusted-root.json"
@@ -294,8 +304,16 @@ async def test_offline_verifies_private_manifest_copy_without_registry_or_tuf(tm
         calls.append(args)
         if args[1] == "version":
             return b'{"gitVersion":"v3.1.3"}'
+        if args[1] == "image":
+            assert args == (
+                "docker",
+                "image",
+                "inspect",
+                "langflow-chroma-migration-offline:" + helper.image_content_sha256(inspected),
+            )
+            return json.dumps([inspected]).encode()
         assert args[1] == "verify-blob"
-        assert "--certificate-identity-regexp" in args
+        assert "--certificate-identity" in args
         assert helper._IDENTITY in args
         assert "--offline" not in args
         private_manifest = Path(args[-1])
@@ -309,9 +327,9 @@ async def test_offline_verifies_private_manifest_copy_without_registry_or_tuf(tm
         return b""
 
     monkeypatch.setattr(helper, "_command", command)
-    assert await helper._stage_verified_helper("docker", "cosign", image) == "sha256:" + "1" * 64
-    assert [call[1] for call in calls] == ["version", "verify-blob"]
-    assert not Path(calls[-1][-1]).exists()
+    assert await helper._stage_verified_helper("docker", "cosign", image) == inspected["Id"]
+    assert [call[1] for call in calls] == ["version", "verify-blob", "image"]
+    assert not Path(calls[1][-1]).exists()
 
 
 async def test_offline_requires_explicit_independent_trust(tmp_path, monkeypatch):
@@ -354,3 +372,69 @@ def test_trust_anchor_rejects_group_writable_file(tmp_path):
     path.chmod(0o664)
     with pytest.raises(helper.MigrationHelperError, match="invalid"):
         helper._verification_file(path, trusted=True)
+
+
+@pytest.mark.parametrize("changed", ["Config", "RootFS", "Architecture"])
+async def test_offline_loaded_image_must_match_signed_execution_content(monkeypatch, changed):
+    inspected = {
+        "Id": "sha256:" + "9" * 64,
+        "Config": {"Entrypoint": ["/reader"]},
+        "RootFS": {"Type": "layers", "Layers": ["sha256:" + "3" * 64]},
+        "Os": "linux",
+        "Architecture": "amd64",
+    }
+    entry = {"content_sha256": helper.image_content_sha256(inspected)}
+    inspected[changed] = {
+        "Config": {"Entrypoint": ["/untrusted"]},
+        "RootFS": {"Type": "layers", "Layers": ["sha256:" + "4" * 64]},
+        "Architecture": "arm64",
+    }[changed]
+
+    async def command(*_args, **_kwargs):
+        return json.dumps([inspected]).encode()
+
+    monkeypatch.setattr(helper, "_command", command)
+    with pytest.raises(helper.MigrationHelperError, match="signed execution content"):
+        await helper._offline_local_image("docker", entry)
+
+
+def test_image_content_binding_ignores_store_identity_and_includes_execution_fields():
+    inspected = {
+        "Id": "sha256:" + "1" * 64,
+        "Config": {"Cmd": ["read"]},
+        "RootFS": {"Type": "layers", "Layers": ["sha256:" + "3" * 64]},
+        "Os": "linux",
+        "Architecture": "amd64",
+    }
+    digest = helper.image_content_sha256(inspected)
+    assert digest == helper.image_content_sha256({**inspected, "Id": "sha256:" + "2" * 64, "Variant": ""})
+    assert digest != helper.image_content_sha256({**inspected, "Config": {"Cmd": ["write"]}})
+
+
+async def test_offline_cleanup_resolves_verified_local_identity(monkeypatch):
+    image = "ghcr.io/langflow-ai/langflow-chroma-migration@sha256:" + "0" * 64
+    monkeypatch.setenv("LANGFLOW_KB_MIGRATION_HELPER_IMAGE", image)
+    monkeypatch.setenv("LANGFLOW_KB_MIGRATION_HELPER_BUNDLE", "signed-bundle")
+    monkeypatch.setattr(helper.shutil, "which", lambda command: command)
+    calls = []
+
+    async def version(_cosign):
+        pass
+
+    async def verify(*_args):
+        return {"content_sha256": "e" * 64}
+
+    async def resolve(_docker, entry):
+        assert entry["content_sha256"] == "e" * 64
+        return "sha256:" + "9" * 64
+
+    async def command(*args, **_kwargs):
+        calls.append(args)
+        return b""
+
+    monkeypatch.setattr(helper, "_check_cosign_version", version)
+    monkeypatch.setattr(helper, "_verified_offline_image", verify)
+    monkeypatch.setattr(helper, "_offline_local_image", resolve)
+    monkeypatch.setattr(helper, "_command", command)
+    await helper.cleanup_helper_artifact()
+    assert calls == [("docker", "image", "rm", "sha256:" + "9" * 64)]

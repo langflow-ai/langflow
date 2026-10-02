@@ -29,8 +29,17 @@ controller checks signature verification and local image availability before
 stopping any worker. Root-owned private files must be transferred to the
 application account through the deployment manager rather than made public.
 
-Obtain the old foreground supervisor PID and creation time from its deployment
-manager, then run the controller from the **new** environment:
+Obtain the old foreground supervisor PID from its deployment manager, then get
+its exact creation time using the new environment's installed psutil:
+
+```sh
+/path/to/1.13/bin/python -c 'import psutil, sys; print(psutil.Process(int(sys.argv[1])).create_time())' 12345
+```
+
+Copy the full printed value into `--supervisor-created`. Do not use `ps -o lstart`,
+which rounds away the required precision. Linux journal identities additionally
+retain kernel start ticks and boot ID so clock adjustments cannot invalidate a
+paused family. Run the controller from the **new** environment:
 
 ```sh
 export LANGFLOW_KB_MIGRATION_HELPER_IMAGE=ghcr.io/langflow-ai/langflow-chroma-migration@sha256:<release-digest>
@@ -68,7 +77,7 @@ The maintenance verifier creates and checks a consistent SQLite metadata backup,
 fingerprints every legacy source, and writes a private receipt. The new process
 is launched only after this barrier. It records its own identity atomically
 before executing the application, so resuming after a parent-controller crash
-cannot launch a second instance. Readiness requires both a successful
+cannot launch a second instance. The controller command uses an IPv4 loopback listener. Readiness requires both a successful
 `/healthz?require_storage_ready=true`
 response and a listening socket owned by that exact new supervisor's session.
 An unrelated healthy service on the port cannot satisfy the gate.
@@ -100,3 +109,8 @@ state directory. It recovers the dedicated session and its shutdown journal.
 Do not delete the journal or substitute a new state directory. Preserve failed
 backup attempts for diagnosis. A different deployment topology needs its own
 shutdown proof rather than bypassing the maintenance receipt checks.
+
+Recent MCP stdio tools can leave subprocesses in separate sessions for several
+minutes. The controller refuses these escaped sessions before stopping the app.
+Stop using stdio tools and let their cached subprocesses expire before preparing
+the upgrade, or stop the complete deployment through its deployment manager.

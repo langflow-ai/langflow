@@ -377,3 +377,33 @@ async def test_ipv6_listener_cannot_attest_unrelated_ipv4_readiness(installation
         finally:
             process.kill()
             await process.wait()
+
+
+async def test_helper_isolation_profile_is_created_and_removed_before_downtime(monkeypatch):
+    selected = "sha256:" + "2" * 64
+    image = "ghcr.io/langflow-ai/langflow-chroma-migration@sha256:" + "0" * 64
+    monkeypatch.setenv("LANGFLOW_KB_MIGRATION_HELPER_IMAGE", image)
+    monkeypatch.setattr(controller.shutil, "which", lambda name: name)
+    monkeypatch.setattr(controller.helper.os, "cpu_count", lambda: 1)
+
+    async def staged(*_args):
+        return selected
+
+    calls = []
+
+    async def command(*args, **_kwargs):
+        calls.append(args)
+        return b""
+
+    monkeypatch.setattr(controller.helper, "_stage_verified_helper", staged)
+    monkeypatch.setattr(controller.helper, "_command", command)
+    await controller.stage_helper()
+    assert [call[1] for call in calls] == ["image", "create", "rm"]
+    created = calls[1]
+    assert "--network=none" in created
+    assert "--cpus=1" in created
+    assert "--read-only" in created
+    assert selected in created
+    assert "--rm" not in created
+    name = created[created.index("--name") + 1]
+    assert calls[2] == ("docker", "rm", "--force", name)

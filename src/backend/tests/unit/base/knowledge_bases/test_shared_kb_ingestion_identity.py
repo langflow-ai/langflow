@@ -76,7 +76,9 @@ def _fake_backend() -> MagicMock:
     return backend
 
 
-async def _run_dispatched_ingestion(task_service: MagicMock, *, add_documents_error: Exception | None = None):
+async def _run_dispatched_ingestion(
+    task_service: MagicMock, *, add_documents_error: Exception | None = None, metrics_error: Exception | None = None
+):
     """Run the ``perform_ingestion`` call a route dispatched, with storage mocked out."""
     dispatched = dict(task_service.fire_and_forget_task.await_args.kwargs)
     run = dispatched.pop("run_coro_func")
@@ -94,7 +96,10 @@ async def _run_dispatched_ingestion(task_service: MagicMock, *, add_documents_er
         patch(
             "langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new=AsyncMock()
         ) as cleanup,
-        patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new=AsyncMock()),
+        patch(
+            "langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend",
+            new=AsyncMock(side_effect=metrics_error),
+        ),
         patch(
             "langflow.api.utils.ingestion_run_service.create_run", new=AsyncMock(return_value=uuid.uuid4())
         ) as run_row,
@@ -326,3 +331,21 @@ async def test_rollback_cleanup_failure_does_not_mask_ingestion_error(stage, err
         backend.teardown.assert_not_awaited()
     else:
         backend.teardown.assert_awaited_once()
+
+
+@pytest.mark.usefixtures("cross_user_grant", "owners_kb")
+async def test_metrics_failure_does_not_rollback_successful_ingestion(
+    client: AsyncClient, logged_in_headers, user_two, task_service
+):
+    response = await client.post(
+        f"api/v1/knowledge_bases/{KB_NAME}/ingest",
+        headers=logged_in_headers,
+        files={"files": ("notes.txt", b"shared knowledge base content", "text/plain")},
+        data={"source_name": "notes", "chunk_size": "100", "chunk_overlap": "0"},
+    )
+    assert response.status_code == 200, response.text
+    result = await _run_dispatched_ingestion(task_service, metrics_error=RuntimeError("metrics unavailable"))
+    result.cleanup.assert_not_awaited()
+    updated = await knowledge_base_service.get_by_user_and_name(user_two.id, KB_NAME)
+    assert updated.status == "ready"
+    assert updated.size_bytes == 0

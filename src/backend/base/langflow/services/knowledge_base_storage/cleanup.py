@@ -23,7 +23,10 @@ async def detach_attention_store(kb_id: UUID, *, expected_generation: int) -> No
     Linked Memory Bases remain unavailable until explicitly deleted. Detachment
     never invokes a retired backend or removes a local or remote source.
     """
-    async with operation(kb_id, allowed_states=("needs_attention",)) as record:
+    async with operation(kb_id, allowed_states=("ready", "needs_attention", "deleting")) as record:
+        if record.storage_state == "ready" and record.backend_type == "sqlite":
+            msg = "Delete a ready local store through its owner API so its data is erased."
+            raise StorageUnavailableError(msg)
         if record.storage_generation != expected_generation:
             msg = "Storage generation changed. Refresh migration status before detaching."
             raise StorageUnavailableError(msg)
@@ -32,10 +35,13 @@ async def detach_attention_store(kb_id: UUID, *, expected_generation: int) -> No
             if (
                 current is None
                 or current.storage_generation != expected_generation
-                or current.storage_state != "needs_attention"
+                or current.storage_state not in ("ready", "needs_attention", "deleting")
             ):
                 msg = "Storage changed. Refresh migration status before detaching."
                 raise StorageUnavailableError(msg)
+            from langflow.services.knowledge_base_storage.coordinator import retire_legacy_source
+
+            await retire_legacy_source(record)
             current.storage_state = "detached"
             if current.active_migration_id:
                 run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)

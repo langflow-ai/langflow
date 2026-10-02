@@ -32,6 +32,7 @@ def evidence():
         "platforms": {
             platform: {
                 "image_id": "sha256:" + value * 64,
+                "content_sha256": "e" * 64,
                 "archive": f"helper-image-{platform.replace('/', '-')}.tar",
                 "archive_sha256": "e" * 64,
             }
@@ -47,7 +48,12 @@ def evidence():
         "release_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "qualification_profile": "offline-native-reader-v1",
         "platforms": {
-            platform: {"image_id": item["image_id"], "archive_sha256": item["archive_sha256"], "qualified": True}
+            platform: {
+                "image_id": item["image_id"],
+                "content_sha256": item["content_sha256"],
+                "archive_sha256": item["archive_sha256"],
+                "qualified": True,
+            }
             for platform, item in manifest["platforms"].items()
         },
     }

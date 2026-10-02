@@ -7,7 +7,7 @@ The MemoryBaseService delegates to these functions for all ingestion-related wor
 from __future__ import annotations
 
 import uuid
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -435,7 +435,9 @@ async def session_storage_operation(*, user_id: uuid.UUID, session_ids: list[str
     async with AsyncExitStack() as stack:
         # Stable ordering avoids deadlocks when concurrent requests overlap.
         for record_id in sorted(records, key=str):
-            await stack.enter_async_context(operation(records[record_id]))
+            await stack.enter_async_context(
+                operation(records[record_id], allowed_states=("ready", "needs_attention", "detached"))
+            )
         yield [(mb, mbs) for mb, mbs in pairs if mbs is not None]
 
 
@@ -443,6 +445,7 @@ async def purge_session_data(
     *,
     user_id: uuid.UUID,
     session_ids: list[str],
+    db=None,
 ) -> int:
     """Delete session vectors and history while holding all affected KB fences.
 
@@ -461,27 +464,69 @@ async def purge_session_data(
     async with session_storage_operation(user_id=user_id, session_ids=session_ids) as pairs:
         if not pairs:
             return 0
+        purged_ids = []
+        pending_ids = []
+        from langflow.services.knowledge_base_storage.runtime import resolve_record
+
         for mb, mbs in pairs:
-            await _delete_chunks_for_session(
-                kb_username="", kb_name=mb.kb_name, user_id=user_id, session_id=mbs.session_id
-            )
+            record = await resolve_record(user_id, mb.kb_name)
+            if record.storage_state == "ready":
+                await _delete_chunks_for_session(
+                    kb_username="", kb_name=mb.kb_name, user_id=user_id, session_id=mbs.session_id
+                )
+                purged_ids.append(mbs.id)
+            else:
+                pending_ids.append(mbs.id)
 
         affected_mb_ids = {mb.id for mb, _mbs in pairs}
         affected_session_ids = {mbs.session_id for _mb, mbs in pairs}
-        async with session_scope() as db:
+        caller_db = db
+        async with nullcontext(caller_db) if caller_db is not None else session_scope() as purge_db:
             for model in (
                 MemoryBaseWorkflowRun,
                 MessageIngestionRecord,
                 MemoryBasePreprocessingOutput,
-                MemoryBaseSession,
             ):
-                await db.exec(
+                await purge_db.exec(
                     sa_delete(model)
                     .where(col(model.memory_base_id).in_(affected_mb_ids))
                     .where(col(model.session_id).in_(affected_session_ids))
                 )
-            await db.commit()
+            for tracking_id in pending_ids:
+                tracking = await purge_db.get(MemoryBaseSession, tracking_id)
+                if tracking is not None:
+                    tracking.purge_pending = True
+                    tracking.cursor_id = None
+                    tracking.total_processed = 0
+                    tracking.last_sync_at = None
+                    purge_db.add(tracking)
+            if purged_ids:
+                await purge_db.exec(sa_delete(MemoryBaseSession).where(col(MemoryBaseSession.id).in_(purged_ids)))
+            if caller_db is None:
+                await purge_db.commit()
     return len(pairs)
+
+
+async def apply_pending_session_purges(record, backend) -> None:
+    """Replay durable session deletion intents before publishing a migrated store."""
+    from sqlalchemy import delete as sa_delete
+
+    async with session_scope() as db:
+        pending = list(
+            (
+                await db.exec(
+                    select(MemoryBaseSession)
+                    .join(MemoryBase, MemoryBaseSession.memory_base_id == MemoryBase.id)
+                    .where(MemoryBase.user_id == record.user_id, MemoryBase.kb_name == record.name)
+                    .where(MemoryBaseSession.purge_pending == True)  # noqa: E712 -- SQL predicate
+                )
+            ).all()
+        )
+    for tracking in pending:
+        await backend.delete_by({"session_id": tracking.session_id})
+        async with session_scope() as db:
+            await db.exec(sa_delete(MemoryBaseSession).where(MemoryBaseSession.id == tracking.id))
+            await db.commit()
 
 
 async def _delete_chunks_for_session(
@@ -505,7 +550,10 @@ async def _delete_chunks_for_session(
         await backend.delete_by({"session_id": session_id})
         # Refresh the knowledge_base row's cached counts so the UI reflects the
         # post-purge state. Row-driven (not the sidecar), so it's replica-safe.
-        await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
+        try:
+            await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
+        except Exception as exc:  # noqa: BLE001 -- successful privacy deletion is independent of cached metrics
+            await logger.awarning("Memory metrics refresh after purge lagged: %s", exc)
     finally:
         await backend.teardown()
 

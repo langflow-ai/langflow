@@ -158,7 +158,11 @@ def _validate_json(value: Any, *, depth: int, limits: ExportLimits) -> None:
 
 def document_record(doc: IngestedDocument, header: ExportHeader, limits: ExportLimits) -> dict[str, Any]:
     """Validate native IDs and vectors without computing any embeddings."""
-    if type(doc.id) is not str or not doc.id or len(doc.id.encode("utf-8")) > limits.max_id_bytes:
+    try:
+        id_size = len(doc.id.encode("utf-8")) if type(doc.id) is str else 0
+    except UnicodeEncodeError:
+        _fail("Document IDs must contain valid UTF-8 text")
+    if type(doc.id) is not str or not doc.id or id_size > limits.max_id_bytes:
         _fail("A bounded nonempty native document ID is required")
     if type(doc.content) is not str or type(doc.metadata) is not dict:
         _fail("Document content and metadata have invalid types")

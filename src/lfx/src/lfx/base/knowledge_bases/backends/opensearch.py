@@ -102,10 +102,13 @@ async def _drained_worker(function, *args, **kwargs):
             await asyncio.shield(task)
         except asyncio.CancelledError:
             cancelled = True
-    result = task.result()
+        except Exception:
+            if not cancelled:
+                raise
     if cancelled:
+        task.exception()
         raise asyncio.CancelledError
-    return result
+    return task.result()
 
 
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"

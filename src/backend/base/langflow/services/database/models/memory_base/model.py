@@ -120,6 +120,9 @@ class MemoryBaseSession(MemoryBaseSessionBase, table=True):  # type: ignore[call
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    purge_pending: bool = Field(
+        default=False, sa_column=Column(sa.Boolean(), nullable=False, server_default=sa.false())
+    )
 
     # FK defined via sa_column so Alembic sees the same shape as the migration:
     # inline ForeignKey on the column with ondelete="CASCADE".

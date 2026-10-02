@@ -99,7 +99,11 @@ LANGFLOW_KB_MIGRATION_HELPER_TRUSTED_ROOT=/private/controller-trust/sigstore/tuf
 
 The application independently verifies private copies of the manifest and
 bundle with `verify-blob --trusted-root` and checks the expected release before
-launching the selected image content ID with `--pull=never`. Its offline path
+verifying the signed `content_sha256` against the loaded image's complete
+execution configuration, platform, and uncompressed filesystem layer hashes.
+The archive retains the tag `langflow-chroma-migration-offline:<content_sha256>`.
+That tag is used only for inspection. The reader runs by the verified local
+immutable ID with `--pull=never`, on either Docker image store. Its offline path
 performs neither a registry request nor a package install or image pull. CI
 exercises this command with networking disabled and rejects changed content.
 The signed release manifest is also verified with networking disabled before
@@ -111,7 +115,7 @@ Before dispatching a release, a repository administrator must configure the
 team reviewer. The workflow checks the environment through GitHub's read-only
 API with `actions: read` before building a publication candidate and rechecks
 before signing and durable publication. An absent or inaccessible environment,
-an API error, or missing required reviewers blocks publication. The workflow
+an API error, or missing required reviewers, with self-review prevented and administrator bypass disabled blocks publication. The workflow
 does not create or configure the environment. A wait timer alone is insufficient.
 
 See [application upgrade and recovery](../../docs/development/sqlite-kb-upgrade.md)

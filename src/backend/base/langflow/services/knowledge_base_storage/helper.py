@@ -9,6 +9,7 @@ legacy stores fenced and produce an actionable error, never an empty store.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import platform
@@ -23,8 +24,7 @@ from lfx.base.knowledge_bases.migration.protocol import ExportHeader
 
 _IMAGE = re.compile(r"ghcr\.io/langflow-ai/langflow-chroma-migration@sha256:[a-f0-9]{64}\Z")
 _IDENTITY = (
-    r"^https://github\.com/langflow-ai/langflow/\.github/workflows/chroma-migration-helper\.yml"
-    r"@refs/(heads/release-1\.13\.0|tags/1\.13\.[0-9]+([a-zA-Z0-9.-]+)?)$"
+    "https://github.com/langflow-ai/langflow/.github/workflows/chroma-migration-helper.yml@refs/heads/release-1.13.0"
 )
 _SHA256 = re.compile(r"[a-f0-9]{64}\Z")
 _MAX_OUTPUT_BYTES = 64 * 1024**3
@@ -55,10 +55,13 @@ async def _drain_task(task):
             await asyncio.shield(task)
         except asyncio.CancelledError:
             cancelled = True
-    result = task.result()
+        except Exception:
+            if not cancelled:
+                raise
     if cancelled:
+        task.exception()
         raise asyncio.CancelledError
-    return result
+    return task.result()
 
 
 async def _stop_reader(docker, name, process):
@@ -78,6 +81,12 @@ def _client_environment() -> dict[str, str]:
     """Build a restricted subprocess environment for helper verification and execution."""
     names = (
         "PATH",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
         "HOME",
         "SYSTEMROOT",
         "DOCKER_HOST",
@@ -156,7 +165,7 @@ def _verification_file(path: Path, *, limit: int = _MAX_VERIFICATION_FILE_BYTES,
         raise MigrationHelperError(msg) from exc
 
 
-def _release_image_id(payload: bytes, image: str) -> str:
+def _release_platform(payload: bytes, image: str) -> dict[str, str]:
     """Bind a signed manifest to the requested release and local platform."""
 
     def unique_pairs(pairs):
@@ -188,9 +197,11 @@ def _release_image_id(payload: bytes, image: str) -> str:
         for target, entry in platforms.items():
             if (
                 type(entry) is not dict
-                or set(entry) != {"image_id", "archive", "archive_sha256"}
+                or set(entry) != {"image_id", "content_sha256", "archive", "archive_sha256"}
                 or not isinstance(entry["image_id"], str)
                 or not re.fullmatch(r"sha256:[a-f0-9]{64}", entry["image_id"])
+                or not isinstance(entry["content_sha256"], str)
+                or not _SHA256.fullmatch(entry["content_sha256"])
                 or entry["archive"] != f"helper-image-{target.replace('/', '-')}.tar"
                 or not isinstance(entry["archive_sha256"], str)
                 or not _SHA256.fullmatch(entry["archive_sha256"])
@@ -199,7 +210,7 @@ def _release_image_id(payload: bytes, image: str) -> str:
         architecture = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}[
             platform.machine().lower()
         ]
-        return platforms[f"linux/{architecture}"]["image_id"]
+        return platforms[f"linux/{architecture}"]
     except (KeyError, TypeError, ValueError, UnicodeDecodeError) as exc:
         msg = "The signed helper manifest does not match this release or supported controller platform."
         raise MigrationHelperError(msg) from exc
@@ -216,7 +227,7 @@ async def _check_cosign_version(cosign: str) -> None:
         raise MigrationHelperError(msg) from exc
 
 
-async def _verified_offline_image(cosign: str, image: str, bundle: str) -> str:
+async def _verified_offline_image(cosign: str, image: str, bundle: str) -> dict[str, str]:
     """Verify a signed content-ID manifest without registry or TUF requests.
 
     The controller provisions Sigstore's trusted root through authenticated TUF
@@ -250,16 +261,70 @@ async def _verified_offline_image(cosign: str, image: str, bundle: str) -> str:
             str(private / "bundle.json"),
             "--trusted-root",
             str(private / "trusted-root.json"),
-            "--certificate-identity-regexp",
+            "--certificate-identity",
             _IDENTITY,
             "--certificate-oidc-issuer",
             "https://token.actions.githubusercontent.com",
             str(private / "release.json"),
         )
-    # Docker's immutable image ID commits to the config and filesystem layer
-    # digests. Unlike a repository digest, it survives docker save/load. Never
-    # select an unsigned local tag or parse an image archive in the application.
-    return _release_image_id(manifest_bytes, image)
+    return _release_platform(manifest_bytes, image)
+
+
+def _release_image_id(payload: bytes, image: str) -> str:
+    """Read the publisher's ID for release qualification evidence."""
+    return _release_platform(payload, image)["image_id"]
+
+
+def image_content_sha256(inspected: dict) -> str:
+    """Bind executable configuration and verified uncompressed filesystem layers.
+
+    Docker's classic store IDs hash the config while its containerd store IDs
+    hash manifests. These execution fields survive save/load on either store.
+    Inspect a loaded signed archive, authenticate these fields, and execute only
+    the returned immutable local ID. Never execute the archive's mutable tag.
+    """
+    try:
+        fields = {key: inspected[key] for key in ("Config", "RootFS", "Os", "Architecture")}
+        fields["Variant"] = inspected.get("Variant") or ""
+        if (
+            not isinstance(fields["Config"], dict)
+            or not isinstance(fields["RootFS"], dict)
+            or fields["RootFS"].get("Type") != "layers"
+            or not isinstance(fields["RootFS"].get("Layers"), list)
+            or not fields["RootFS"]["Layers"]
+            or any(
+                not isinstance(layer, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", layer)
+                for layer in fields["RootFS"]["Layers"]
+            )
+            or fields["Os"] != "linux"
+            or fields["Architecture"] not in ("amd64", "arm64")
+            or not isinstance(fields["Variant"], str)
+        ):
+            raise ValueError
+        return hashlib.sha256(
+            json.dumps(fields, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode()
+        ).hexdigest()
+    except (KeyError, TypeError, ValueError) as exc:
+        msg = "The loaded helper image has invalid execution content."
+        raise MigrationHelperError(msg) from exc
+
+
+async def _offline_local_image(docker: str, entry: dict[str, str]) -> str:
+    """Authenticate a loaded offline image before selecting its local immutable ID."""
+    reference = "langflow-chroma-migration-offline:" + entry["content_sha256"]
+    try:
+        inspected = json.loads(await _command(docker, "image", "inspect", reference, capture=True))[0]
+        local_id = inspected["Id"]
+        if (
+            not isinstance(local_id, str)
+            or not re.fullmatch(r"sha256:[a-f0-9]{64}", local_id)
+            or image_content_sha256(inspected) != entry["content_sha256"]
+        ):
+            raise ValueError
+    except (IndexError, KeyError, TypeError, ValueError) as exc:
+        msg = "The loaded offline helper does not match the signed execution content."
+        raise MigrationHelperError(msg) from exc
+    return local_id
 
 
 async def _stage_verified_helper(docker: str, cosign: str, image: str) -> str:
@@ -267,11 +332,12 @@ async def _stage_verified_helper(docker: str, cosign: str, image: str) -> str:
     await _check_cosign_version(cosign)
     bundle = os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_BUNDLE")
     if bundle:
-        return await _verified_offline_image(cosign, image, bundle)
+        entry = await _verified_offline_image(cosign, image, bundle)
+        return await _offline_local_image(docker, entry)
     await _command(
         cosign,
         "verify",
-        "--certificate-identity-regexp",
+        "--certificate-identity",
         _IDENTITY,
         "--certificate-oidc-issuer",
         "https://token.actions.githubusercontent.com",
@@ -328,7 +394,8 @@ async def cleanup_helper_artifact() -> None:
                 msg = "Offline helper cleanup requires its verified release manifest and cosign."
                 raise MigrationHelperError(msg)
             await _check_cosign_version(cosign)
-            image = await _verified_offline_image(cosign, image, bundle)
+            entry = await _verified_offline_image(cosign, image, bundle)
+            image = await _offline_local_image(docker, entry)
         await _command(docker, "image", "rm", image, timeout=60)
 
 
@@ -386,7 +453,7 @@ def isolated_command(docker: str, image: str, snapshot: Path, name: str) -> list
         "--user",
         str(uid),
         "--pids-limit=128",
-        "--cpus=2",
+        f"--cpus={min(2, os.cpu_count() or 1)}",
         "--memory=16g",
         "--memory-swap=16g",
         "--ulimit",
@@ -532,7 +599,7 @@ async def export_snapshot(
         await _drain_task(asyncio.create_task(_stop_reader(docker, name, process)))
         cleaned = True
         partial.replace(output_path)
-    except TimeoutError as exc:
+    except (TimeoutError, asyncio.TimeoutError) as exc:
         msg = "Migration helper exceeded its time limit. Snapshot is retained."
         raise MigrationHelperError(msg) from exc
     finally:

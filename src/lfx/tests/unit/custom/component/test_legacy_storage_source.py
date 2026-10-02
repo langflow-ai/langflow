@@ -11,6 +11,7 @@ from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.legacy_storage_compat import resolve_shipped_storage_component, source_fingerprint
 
 SOURCES = json.loads(Path(__file__).with_name("legacy_storage_source_fixtures.json").read_text())
+HISTORICAL = json.loads(Path(__file__).with_name("historical_storage_source_fixtures.json").read_text())
 
 
 class NoRetiredSDKs(importlib.abc.MetaPathFinder):
@@ -18,6 +19,15 @@ class NoRetiredSDKs(importlib.abc.MetaPathFinder):
         if fullname.split(".", 1)[0] in {"chromadb", "langchain_chroma", "altk"}:
             msg = f"Retired SDK must be absent: {fullname}"
             raise AssertionError(msg)
+
+
+@pytest.mark.usefixtures("no_retired_sdks")
+@pytest.mark.parametrize("fingerprint", HISTORICAL)
+def test_every_distinct_released_source_loads_without_retired_sdks(fingerprint):
+    fixture = HISTORICAL[fingerprint]
+    assert source_fingerprint(fixture["source"]) == fingerprint
+    component = eval_custom_component_code(fixture["source"])
+    assert component.__name__ == fixture["class_name"], (fixture["tag"], fixture["path"])
 
 
 @pytest.fixture

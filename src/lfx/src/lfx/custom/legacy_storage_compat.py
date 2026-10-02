@@ -16,6 +16,7 @@ from importlib import import_module
 from importlib.resources import files
 
 
+@lru_cache(maxsize=256)
 def source_fingerprint(code: str) -> str:
     """Hash Python semantics, independent of comments, layout and AST positions."""
 

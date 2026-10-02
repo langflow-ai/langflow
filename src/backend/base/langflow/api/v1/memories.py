@@ -430,7 +430,10 @@ async def delete_memory_base(
             current_user=current_user,
             action=KnowledgeBaseAction.DELETE,
         )
-    deleted = await get_memory_base_service().delete(memory_base_id, user_id=mb.user_id)
+    try:
+        deleted = await get_memory_base_service().delete(memory_base_id, user_id=mb.user_id)
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not deleted:
         raise HTTPException(status_code=404, detail="Memory base not found")
 
@@ -498,6 +501,8 @@ async def check_mismatch(
         )
     try:
         detected = await get_memory_base_service().check_mismatch(memory_base_id, user_id=mb.user_id)
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return MismatchResponse(mismatch_detected=detected)

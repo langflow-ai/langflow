@@ -30,6 +30,7 @@ from langflow.services.knowledge_base_storage.maintenance import (
     _fsync_directory,
     snapshot_source,
     tree_fingerprint,
+    tree_stat_fingerprint,
     validate_receipt,
 )
 from langflow.services.knowledge_base_storage.runtime import (
@@ -42,6 +43,7 @@ from langflow.services.knowledge_base_storage.runtime import (
 _tasks: set[asyncio.Task] = set()
 _inventory_complete = True
 _inventory_issue_count = 0
+_retry_requested = False
 _MAX_BINDING_BYTES = 4096
 _SOURCE_PATH_PARTS = 2
 
@@ -55,6 +57,9 @@ async def _worker(function, *args, **kwargs):
             await asyncio.shield(task)
         except asyncio.CancelledError:
             cancelled = True
+        except Exception:
+            if not cancelled:
+                raise
     if cancelled:
         task.exception()
         raise asyncio.CancelledError
@@ -137,6 +142,10 @@ async def _complete(row: KnowledgeBaseRecord, run: KnowledgeBaseStorageMigration
         msg = "Activated target lacks a verified completed migration"
         raise MigrationProtocolError(msg)
     await target.integrity_check()
+    from langflow.services.memory_base.ingestion import apply_pending_session_purges
+
+    await apply_pending_session_purges(row, target)
+    chunks = await target.count()
     async with session_scope() as session:
         durable_run = await session.get(KnowledgeBaseStorageMigration, run.id)
     if not durable_run.source_identity or not durable_run.source_fingerprint:
@@ -153,7 +162,7 @@ async def _complete(row: KnowledgeBaseRecord, run: KnowledgeBaseStorageMigration
                 KnowledgeBaseRecord.storage_generation == run.target_generation,
                 col(KnowledgeBaseRecord.storage_state).in_(("migrating", "needs_attention")),
             )
-            .values(storage_state="ready")
+            .values(storage_state="ready", chunks=chunks)
         )
         if result.rowcount != 1:
             msg = "Knowledge base routing changed during activation"
@@ -178,17 +187,26 @@ def _binding_path(relative: str, *, root: Path | None = None) -> Path:
     )
 
 
-def _write_source_binding(relative: str, fingerprint: str, kb_id: UUID) -> None:
+def _write_source_binding(relative: str, fingerprint: str | None, kb_id: UUID, *, retired: bool = False) -> None:
     """Prevent a retained old source from being re-adopted after KB/user deletion."""
     path = _binding_path(relative)
     private_directory(path.parent)
     if path.is_symlink():
         msg = "Invalid source migration binding"
         raise MaintenanceRequiredError(msg)
-    temporary = path.with_suffix(f".{os.getpid()}.tmp")
-    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    temporary = path.with_suffix(f".{uuid4().hex}.tmp")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-        json.dump({"source": relative, "fingerprint": fingerprint, "kb_id": str(kb_id)}, stream)
+        json.dump(
+            {
+                "source": relative,
+                "fingerprint": fingerprint,
+                "stat_fingerprint": None if retired else tree_stat_fingerprint(storage_root() / relative),
+                "kb_id": str(kb_id),
+                "retired": retired,
+            },
+            stream,
+        )
         stream.flush()
         os.fsync(stream.fileno())
     temporary.replace(path)
@@ -208,10 +226,43 @@ def _is_retired_source(relative: str, *, root: Path | None = None) -> bool:
     if not isinstance(binding, dict) or binding.get("source") != relative:
         msg = "Invalid source migration binding"
         raise MaintenanceRequiredError(msg)
+    if binding.get("retired") is True:
+        # Explicit retirement is permanent. Changed or unreadable retained
+        # sources must never be silently adopted under a reused name.
+        return True
+    if binding.get("stat_fingerprint") == tree_stat_fingerprint(source_root / relative):
+        return True
     if binding.get("fingerprint") != tree_fingerprint(source_root / relative):
         msg = "Retired migration source changed. Administrator recovery is required before adoption."
         raise MaintenanceRequiredError(msg)
+    if root is None:
+        _write_source_binding(relative, binding["fingerprint"], UUID(binding["kb_id"]))
     return True
+
+
+async def retire_legacy_source(record: KnowledgeBaseRecord) -> None:
+    """Bind retained local sources and preserve their ledger before detachment/deletion.
+
+    No removed provider is instantiated. Cloud and remote sources remain with
+    their provider. The caller holds the immutable KB's exclusive operation.
+    """
+    async with session_scope() as session:
+        owner = await session.get(User, record.user_id)
+        run = (
+            await session.get(KnowledgeBaseStorageMigration, record.active_migration_id)
+            if record.active_migration_id
+            else None
+        )
+    if owner is not None and get_settings_service().settings.knowledge_bases_dir:
+        relative = f"{owner.username}/{record.name}"
+        if len(Path(relative).parts) != _SOURCE_PATH_PARTS or "\\" in relative:
+            msg = "Invalid retained source identity"
+            raise MaintenanceRequiredError(msg)
+        source = storage_root() / relative
+        if source.is_dir() and (source / "chroma.sqlite3").exists():
+            await _worker(_write_source_binding, relative, None, record.id, retired=True)
+    if run is not None:
+        await _phase(run.id, "detached", error_code=None)
 
 
 async def migrate_one(kb_id: UUID) -> None:
@@ -390,8 +441,6 @@ async def reconcile_legacy_inventory() -> None:
                     return 0
                 count = 0
                 for owner in root.iterdir():
-                    if owner.name.startswith(".") or owner.name == "sqlite":
-                        continue
                     if owner.is_symlink():
                         return 1
                     if owner.is_dir():
@@ -496,6 +545,47 @@ def inventory_status() -> dict:
     return {"complete": _inventory_complete, "issues": _inventory_issue_count}
 
 
+def _publish_inventory_status() -> None:
+    """Share the latest completed scan across workers on this storage root."""
+    directory = private_directory(storage_root() / ".migration")
+    path = directory / "inventory-status.json"
+    if path.is_symlink():
+        msg = "Invalid shared inventory status path"
+        raise MaintenanceRequiredError(msg)
+    temporary = directory / f"inventory-status-{uuid4().hex}.tmp"
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        json.dump(inventory_status(), stream)
+        stream.flush()
+        os.fsync(stream.fileno())
+    temporary.replace(path)
+    _fsync_directory(directory)
+
+
+async def published_inventory_status() -> dict:
+    """Read a shared completed scan, with a startup fallback before its first publication."""
+    configured = get_settings_service().settings.knowledge_bases_dir
+    if not configured:
+        return inventory_status()
+    path = storage_root() / ".migration" / "inventory-status.json"
+    if not path.exists():
+        return inventory_status()
+    try:
+        value = json.loads(await _worker(helper._verification_file, path, limit=4096))  # noqa: SLF001 -- reuse bounded no-follow reads
+        if (
+            type(value) is not dict
+            or set(value) != {"complete", "issues"}
+            or type(value["complete"]) is not bool
+            or type(value["issues"]) is not int
+            or value["issues"] < 0
+        ):
+            raise ValueError
+    except (ValueError, helper.MigrationHelperError):
+        return {"complete": False, "issues": 1}
+    else:
+        return value
+
+
 async def run_pending() -> None:
     # This local-only discovery occurs after the controller barrier and before
     # selecting work, so legacy Memory/KB identities are included automatically.
@@ -504,6 +594,12 @@ async def run_pending() -> None:
         await reconcile_legacy_inventory()
     except Exception:  # noqa: BLE001 -- still persist actionable errors on registered KBs
         logger.warning("Legacy storage inventory requires controller recovery")
+    finally:
+        if get_settings_service().settings.knowledge_bases_dir:
+            try:
+                await _worker(_publish_inventory_status)
+            except Exception:  # noqa: BLE001 -- unavailable storage must not disable remote operations
+                logger.warning("Legacy storage inventory status could not be published")
     async with session_scope() as session:
         rows = list(
             (
@@ -539,14 +635,28 @@ async def run_pending() -> None:
                 logger.warning("Temporary knowledge base migration helper requires cleanup")
 
 
-def schedule_upgrade() -> asyncio.Task:
+def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
     """Schedule one background discovery and upgrade task per running coordinator."""
     global _inventory_complete  # noqa: PLW0603 -- readiness must close before scheduling inventory
+    global _retry_requested  # noqa: PLW0603 -- coalesce retries requested during an existing run
     for existing in _tasks:
         if not existing.done():
+            if retry:
+                _retry_requested = True
             return existing
     _inventory_complete = False
-    task = asyncio.create_task(run_pending(), name="knowledge-base-storage-upgrade")
+    _retry_requested = False
+
+    async def run_requested():
+        """Replay accepted retries after the current batch, including earlier failures."""
+        global _retry_requested  # noqa: PLW0603 -- same event-loop coordinator flag
+        while True:
+            await run_pending()
+            if not _retry_requested:
+                return
+            _retry_requested = False
+
+    task = asyncio.create_task(run_requested(), name="knowledge-base-storage-upgrade")
     _tasks.add(task)
 
     def finished(completed):
@@ -566,12 +676,18 @@ async def stop_upgrade() -> None:
         await asyncio.gather(*tuple(_tasks), return_exceptions=True)
 
 
+async def wait_for_upgrade(*, timeout: float = 30) -> None:
+    """Wait for this worker's scheduled discovery without exposing task internals."""
+    if _tasks:
+        await asyncio.wait_for(asyncio.shield(asyncio.gather(*tuple(_tasks))), timeout=timeout)
+
+
 async def readiness(*, require_storage_ready: bool = True) -> bool:
-    """Gate inventory globally, with optional strict migration readiness for upgrades."""
-    if not _inventory_complete:
-        return False
+    """Keep ordinary readiness usable while strict upgrade probes check retained stores."""
     if not require_storage_ready:
         return True
+    if not _inventory_complete:
+        return False
     async with session_scope() as session:
         row = (
             await session.exec(

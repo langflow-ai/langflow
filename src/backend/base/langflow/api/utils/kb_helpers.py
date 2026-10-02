@@ -40,6 +40,7 @@ from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 from langflow.utils.kb_constants import (
     DELETE_BACKOFF_SECONDS,
     EXPONENTIAL_BACKOFF_MULTIPLIER,
@@ -273,15 +274,24 @@ async def resolve_backend_selection(
     raise ValueError(msg)
 
 
-async def backend_for_name(user_id: uuid.UUID, kb_name: str, **kwargs) -> BaseVectorStoreBackend:
+async def backend_for_name(
+    user_id: uuid.UUID, kb_name: str, *, expected_record=None, **kwargs
+) -> BaseVectorStoreBackend:
     """Open an existing KB through its authoritative, guarded storage record."""
     from langflow.api.utils import knowledge_base_service
     from langflow.services.knowledge_base_storage.runtime import backend_for_record
 
-    record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    record = (
+        expected_record
+        if expected_record is not None
+        else await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    )
     if record is None:
         msg = f"Knowledge base '{kb_name}' has no storage record."
         raise ValueError(msg)
+    if record.user_id != user_id or record.name != kb_name:
+        msg = "Knowledge base storage identity does not match the ingestion snapshot."
+        raise StorageUnavailableError(msg)
     return await backend_for_record(record, **kwargs)
 
 
@@ -613,7 +623,9 @@ class KBIngestionHelper:
         source_extension_tags: set[str] = set()
         try:
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, current_user)
-            backend = await backend_for_name(owner.id, kb_name, embedding_function=embeddings)
+            backend = await backend_for_name(
+                owner.id, kb_name, embedding_function=embeddings, expected_record=kb_record
+            )
 
             job_id_str = str(task_job_id)
 
@@ -735,32 +747,37 @@ class KBIngestionHelper:
             # Mongo/Astra/Postgres with AttributeError, which then falsely marked
             # the run failed and rolled back chunks we had already written.
             metrics: dict[str, Any] = {}
-            await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
-
-            size_bytes = (
-                KBStorageHelper.get_directory_size(kb_path)
-                if kb_path is not None
-                else await backend.storage_size_bytes()
-            )
+            try:
+                await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
+                size_bytes = (
+                    KBStorageHelper.get_directory_size(kb_path)
+                    if kb_path is not None
+                    else await backend.storage_size_bytes()
+                )
+            except Exception as exc:  # noqa: BLE001 -- cached metrics must not roll back a successful write
+                metrics = {}
+                size_bytes = None
+                await logger.awarning("KB metrics refresh lagged for %s: %s", kb_name, exc)
 
             existing_source_types = list(kb_record.source_types or []) if kb_record is not None else []
             merged_source_types = sorted(set(existing_source_types) | source_extension_tags)
 
             if kb_record_id is not None:
-                try:
-                    await knowledge_base_service.update_stats(
-                        kb_record_id,
-                        chunks=metrics.get("chunks", 0),
-                        words=metrics.get("words", 0),
-                        characters=metrics.get("characters", 0),
-                        size_bytes=size_bytes,
-                        source_types=merged_source_types,
-                        chunk_size=chunk_size,
-                        chunk_overlap=chunk_overlap,
-                        separator=separator or None,
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, exc)
+                if size_bytes is not None:
+                    try:
+                        await knowledge_base_service.update_stats(
+                            kb_record_id,
+                            chunks=metrics.get("chunks", 0),
+                            words=metrics.get("words", 0),
+                            characters=metrics.get("characters", 0),
+                            size_bytes=size_bytes,
+                            source_types=merged_source_types,
+                            chunk_size=chunk_size,
+                            chunk_overlap=chunk_overlap,
+                            separator=separator or None,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, exc)
                 # Clear any previous failure marker once the run finishes
                 # writing chunks; ``final_status`` (PARTIAL/SUCCEEDED) is
                 # not "failed", so the KB row should reflect READY.
@@ -921,9 +938,10 @@ class KBIngestionHelper:
                 try:
                     await backend.add_documents(batch)
                     break
-                except BackendConfigurationError:
-                    # Permanent, operator-actionable misconfiguration (missing
-                    # extension, embedding-dimension mismatch, …). Retrying only
+                except (BackendConfigurationError, StorageUnavailableError):
+                    # A stale source/routing fence requires a new job snapshot.
+                    # Permanent backend configuration also cannot improve here.
+                    # Retrying either within this batch only
                     # burns the backoff budget (~20s) on a call that cannot
                     # succeed, so surface it immediately.
                     raise

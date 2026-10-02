@@ -19,6 +19,7 @@ from uuid import UUID
 
 from filelock import FileLock, Timeout
 from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, BaseVectorStoreBackend, IngestedDocument
 from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -96,10 +97,13 @@ async def _drain_cleanup(awaitable):
             await asyncio.shield(task)
         except asyncio.CancelledError:
             cancelled = True
-    result = task.result()
+        except Exception:
+            if not cancelled:
+                raise
     if cancelled:
+        task.exception()
         raise asyncio.CancelledError
-    return result
+    return task.result()
 
 
 async def _release_transaction(transaction: _PostgresTransaction) -> None:
@@ -201,8 +205,7 @@ def storage_root() -> Path:
     if not configured:
         msg = "Knowledge base storage directory is not configured"
         raise StorageUnavailableError(msg)
-    path = Path(configured).expanduser().absolute()
-    return path.parent.resolve() / path.name
+    return Path(configured).expanduser().resolve()
 
 
 def private_directory(path: Path) -> Path:
@@ -310,7 +313,7 @@ async def _remote_lock(kb_id: UUID, *, shared=False):
         if engine is None:
             engine = create_async_engine(
                 database.database_url,
-                pool_size=4,
+                pool_size=getattr(get_settings_service().settings, "knowledge_base_storage_pool_size", 20),
                 max_overflow=0,
                 pool_timeout=30,
                 connect_args=database._get_connect_args(),  # noqa: SLF001 -- preserve configured driver TLS options
@@ -406,10 +409,11 @@ def _raw_backend(record, *, embedding_function=None, create=False, credential_us
 
 
 class _GuardedMethods:
-    def __init__(self, target, record):
+    def __init__(self, target, record, *, before_write=None):
         """Capture the backend and routing snapshot used to guard future operations."""
         self._target = target
         self._record = record
+        self._before_write = before_write
 
     def __getattr__(self, name):
         """Wrap asynchronous methods and iterators with the appropriate storage lease."""
@@ -435,7 +439,34 @@ class _GuardedMethods:
                 # Teardown releases handles even after a migration fence appeared.
                 if name == "teardown":
                     return await value(*args, **kwargs)
-                async with operation(self._record, shared=name in _READ_METHODS):
+                if name == "add_documents" and isinstance(self._target, BaseVectorStoreBackend):
+                    documents = args[0] if args else kwargs["docs"]
+                    if not documents:
+                        return None
+                    async with operation(self._record, shared=True):
+                        pass
+                    embeddings = self._target.embedding_function
+                    if embeddings is None:
+                        msg = "Knowledge base ingestion requires an embedding function"
+                        raise BackendConfigurationError(msg)
+                    vectors = await embeddings.aembed_documents([doc.page_content for doc in documents])
+                    if len(vectors) != len(documents):
+                        msg = "Embedding provider returned an incorrect number of vectors"
+                        raise BackendConfigurationError(msg)
+                    embedded = [
+                        IngestedDocument(doc.page_content, doc.metadata, vector, id=doc.id)
+                        for doc, vector in zip(documents, vectors, strict=True)
+                    ]
+                    async with operation(self._record):
+                        if self._before_write is not None:
+                            await self._before_write()
+                        return await self._target.add_embedded_documents(embedded)
+                read_only = name in _READ_METHODS or (
+                    name == "ensure_ready" and not getattr(self._target, "_create", False)
+                )
+                async with operation(self._record, shared=read_only):
+                    if self._before_write is not None and name in ("add_documents", "add_embedded_documents"):
+                        await self._before_write()
                     return await value(*args, **kwargs)
 
             return call
@@ -449,13 +480,15 @@ class _GuardedMethods:
         return value
 
 
-async def backend_for_record(record, *, embedding_function=None, create=False, credential_user_id=None):
+async def backend_for_record(
+    record, *, embedding_function=None, create=False, credential_user_id=None, before_write=None
+):
     """Validate routing and initialize a guarded backend for its immutable generation."""
-    async with operation(record) as current:
+    async with operation(record, shared=not create) as current:
         backend = _raw_backend(
             current, embedding_function=embedding_function, create=create, credential_user_id=credential_user_id
         )
-    return _GuardedMethods(backend, current)
+    return _GuardedMethods(backend, current, before_write=before_write)
 
 
 async def backend_for_name(user_id, name, **kwargs):
@@ -470,20 +503,37 @@ async def delete_storage_for_record(record) -> None:
     and retryable. The SQLite tombstone is retained, so missing-file recreation
     and stale workers cannot resurrect the deleted generation.
     """
-    async with operation(record, allowed_states=("ready", "deleting", "deleted")) as current:
+    async with operation(
+        record, allowed_states=("ready", "needs_attention", "detached", "deleting", "deleted")
+    ) as current:
         if current.storage_state == "deleted":
             return
+        if current.storage_state in ("needs_attention", "detached") or current.backend_type == "chroma":
+            # Explicit removal of an unavailable/retired store releases its
+            # application identity without accessing or destroying its source.
+            from langflow.services.knowledge_base_storage.coordinator import retire_legacy_source
+
+            await retire_legacy_source(current)
+            async with session_scope() as session:
+                row = await session.get(KnowledgeBaseRecord, current.id)
+                row.storage_state = "deleted"
+                await session.commit()
+            return
+        backend = _raw_backend(current)
+        try:
+            if current.backend_type != "sqlite":
+                await backend.ensure_ready()
+        except BaseException:
+            await backend.teardown()
+            raise
         async with session_scope() as session:
             row = await session.get(KnowledgeBaseRecord, current.id)
             row.storage_state = "deleting"
             await session.commit()
-        backend = _raw_backend(current)
         try:
             # Remote providers resolve credentials and clients before deletion.
             # SQLite opens tombstoned generations only through delete_collection
             # so a retry must not call its ordinary ready-state check first.
-            if current.backend_type != "sqlite":
-                await backend.ensure_ready()
             await backend.delete_collection()
         except FileNotFoundError:
             # Explicit deletion may retire an already absent local generation.

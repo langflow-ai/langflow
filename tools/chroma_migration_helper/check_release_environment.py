@@ -16,7 +16,8 @@ import sys
 ENVIRONMENT = "chroma-migration-helper-release"
 ENDPOINT = f"repos/langflow-ai/langflow/environments/{ENVIRONMENT}"
 SETUP_REQUIRED = (
-    "Helper publication is blocked: configure chroma-migration-helper-release with required human reviewers "
+    "Helper publication is blocked: configure chroma-migration-helper-release with required human reviewers, "
+    "prevent self-review and disable administrator bypass, "
     "and permit the workflow GITHUB_TOKEN to read the environment with actions: read. "
     "This check does not create or change GitHub environments."
 )
@@ -26,11 +27,15 @@ def require_reviewers(payload: object) -> None:
     """Require the configured release environment's approval controls before signing."""
     if not isinstance(payload, dict) or payload.get("name") != ENVIRONMENT:
         raise ValueError(SETUP_REQUIRED)
+    if payload.get("can_admins_bypass") is not False:
+        raise ValueError(SETUP_REQUIRED)
     rules = payload.get("protection_rules")
     if not isinstance(rules, list):
         raise ValueError(SETUP_REQUIRED)  # noqa: TRY004 -- invalid API data is a failed publication precondition
     for rule in rules:
         if not isinstance(rule, dict) or rule.get("type") != "required_reviewers":
+            continue
+        if rule.get("prevent_self_review") is not True:
             continue
         reviewers = rule.get("reviewers")
         if not isinstance(reviewers, list) or not reviewers:

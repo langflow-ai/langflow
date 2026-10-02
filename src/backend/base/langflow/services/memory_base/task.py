@@ -231,18 +231,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
         is_superuser=provider_scope.is_superuser,
     ):
         record = await resolve_record(request.owner_user_id, provider_scope.memory_base.kb_name)
-        if request.preprocessing:
-            # Validate routing before the model call. The scope rechecks routing
-            # and source messages under an exclusive fence before committing.
-            async with operation(record, shared=True):
-                pass
-            return await _ingest_memory_task_in_scope(request=request, provider_policies=provider_policies)
-        # Raw ingestion drains its message snapshot before a session purge.
-        async with operation(record):
-            return await _ingest_memory_task_in_scope(
-                request=request,
-                provider_policies=provider_policies,
-            )
+        async with operation(record, shared=True):
+            pass
+        return await _ingest_memory_task_in_scope(
+            request=request, provider_policies=provider_policies, storage_record=record
+        )
 
 
 async def _build_embeddings_for_owner(
@@ -291,6 +284,7 @@ async def _ingest_memory_task_in_scope(
     *,
     request: IngestionRequest,
     provider_policies: MemoryProviderPolicies,
+    storage_record=None,
 ) -> dict:
     """Ingest pending output messages from a session into the target Knowledge Base.
 
@@ -356,10 +350,13 @@ async def _ingest_memory_task_in_scope(
             raise
 
         try:
-            storage_record = await resolve_record(owner_user_id, kb_name) if preprocessing else None
+            if storage_record is None:
+                storage_record = await resolve_record(owner_user_id, kb_name)
+            async with operation(storage_record, shared=True):
+                pass
             # ---- 0b. Re-read live cursor inside the lock ----
             live_cursor_id = await _read_live_cursor(db, memory_base_id, session_id)
-            live_session_id = await _read_live_session_id(db, memory_base_id, session_id) if preprocessing else None
+            live_session_id = await _read_live_session_id(db, memory_base_id, session_id)
             await logger.adebug(
                 "Ingestion lock acquired | memory_base=%s session=%s live_cursor=%s job=%s",
                 memory_base_id,
@@ -381,10 +378,9 @@ async def _ingest_memory_task_in_scope(
                 )
                 return {"message": "No pending messages", "ingested": 0}
 
-            async def fence_preprocessing_snapshot() -> None:
-                """Refuse a result computed from messages purged or changed during the LLM call."""
-                await storage_stack.enter_async_context(operation(storage_record))
-                async with session_scope() as fresh:
+            async def validate_source_snapshot() -> None:
+                """Refuse writes derived from messages purged or changed during a provider call."""
+                async with operation(storage_record), session_scope() as fresh:
                     current_session_id = await _read_live_session_id(fresh, memory_base_id, session_id)
                     current_cursor = await _read_live_cursor(fresh, memory_base_id, session_id)
                     current_messages = await _fetch_pending_messages(
@@ -395,6 +391,11 @@ async def _ingest_memory_task_in_scope(
                 if current_session_id != live_session_id or current_cursor != live_cursor_id or current != originals:
                     msg = "Memory source messages changed during preprocessing. Retry ingestion."
                     raise StorageUnavailableError(msg)
+
+            async def fence_preprocessing_snapshot() -> None:
+                """Keep preprocessing history commits serialized with session purges."""
+                await storage_stack.enter_async_context(operation(storage_record))
+                await validate_source_snapshot()
 
             # ---- 2. Build documents (preprocessing → Phase A; raw → direct) ----
             # ``preproc_row`` is non-None only on the preprocessing path; in Phase B
@@ -518,6 +519,10 @@ async def _ingest_memory_task_in_scope(
                 actor_user_id=actor_user_id,
                 provider_policy=provider_policies.embedding,
             )
+            # Provider calls and retry back-off never retain an exclusive KB
+            # lease. Every batch validates the live source under its write
+            # lease, and the final tracking commit validates once more.
+            await storage_stack.aclose()
 
             # Resolved from the knowledge_base row, so an ingestion running on a
             # replica that has never touched this KB's directory still writes to
@@ -531,7 +536,13 @@ async def _ingest_memory_task_in_scope(
                 backend_type=backend_type,
                 backend_config=backend_config,
             )
-            backend = await backend_for_name(owner_user_id, kb_name, embedding_function=embeddings)
+            backend = await backend_for_name(
+                owner_user_id,
+                kb_name,
+                embedding_function=embeddings,
+                before_write=validate_source_snapshot,
+                expected_record=storage_record,
+            )
             written = 0
             try:
                 await backend.ensure_ready()
@@ -544,7 +555,11 @@ async def _ingest_memory_task_in_scope(
                 )
 
                 if written == len(documents):
-                    await sync_kb_stats_to_record(user_id=owner_user_id, kb_name=kb_name, backend=backend)
+                    try:
+                        await sync_kb_stats_to_record(user_id=owner_user_id, kb_name=kb_name, backend=backend)
+                    except Exception as exc:  # noqa: BLE001 -- cached counters cannot undo a confirmed write
+                        await logger.awarning("Memory metrics refresh lagged: %s", exc)
+                await fence_preprocessing_snapshot()
             except Exception:
                 await logger.aerror(
                     "Ingestion write failed | memory_base=%s session=%s job=%s. Rolling back partial writes...",

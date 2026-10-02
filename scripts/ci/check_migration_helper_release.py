@@ -120,10 +120,11 @@ def validate_documents(manifest_bytes: bytes, qualification_bytes: bytes, releas
     for platform in sorted(PLATFORMS):
         entry, result = manifest["platforms"][platform], qualification["platforms"][platform]
         _require(
-            type(entry) is dict and set(entry) == {"image_id", "archive", "archive_sha256"}, "Invalid platform manifest"
+            type(entry) is dict and set(entry) == {"image_id", "content_sha256", "archive", "archive_sha256"},
+            "Invalid platform manifest",
         )
         _require(
-            type(result) is dict and set(result) == {"image_id", "archive_sha256", "qualified"},
+            type(result) is dict and set(result) == {"image_id", "content_sha256", "archive_sha256", "qualified"},
             "Invalid platform proof",
         )
         _require(
@@ -132,6 +133,9 @@ def validate_documents(manifest_bytes: bytes, qualification_bytes: bytes, releas
             and isinstance(entry["archive_sha256"], str)
             and re.fullmatch(r"[a-f0-9]{64}", entry["archive_sha256"]) is not None
             and entry["archive"] == f"helper-image-{platform.replace('/', '-')}.tar"
+            and isinstance(entry["content_sha256"], str)
+            and re.fullmatch(r"[a-f0-9]{64}", entry["content_sha256"]) is not None
+            and result["content_sha256"] == entry["content_sha256"]
             and result["image_id"] == entry["image_id"]
             and result["archive_sha256"] == entry["archive_sha256"]
             and result["qualified"] is True,

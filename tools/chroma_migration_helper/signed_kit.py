@@ -122,7 +122,8 @@ async def qualify_kit(*, image: str, manifest: Path, bundle: Path, trusted_root:
                 )
             )
             # The real verifier authenticates bytes before JSON selects an archive.
-            image_id = await helper._stage_verified_helper(docker, cosign, image)
+            await helper._check_cosign_version(cosign)
+            await helper._verified_offline_image(cosign, image, str(private / "bundle.json"))
             release = json.loads(manifest_bytes)
             architecture = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64", "amd64": "amd64"}[
                 platform.machine().lower()
@@ -136,7 +137,7 @@ async def qualify_kit(*, image: str, manifest: Path, bundle: Path, trusted_root:
             # Both negative checks must fail before any image load or reader.
             (private / "bundle.json").write_bytes(changed_signature(bundle_bytes))
             try:
-                await helper._stage_verified_helper(docker, cosign, image)
+                await helper._verified_offline_image(cosign, image, str(private / "bundle.json"))
             except helper.MigrationHelperError:
                 pass
             else:
@@ -156,6 +157,7 @@ async def qualify_kit(*, image: str, manifest: Path, bundle: Path, trusted_root:
             verified_archive = private / "image.tar"
             copy_verified_archive(archive, verified_archive, entry["archive_sha256"])
             subprocess.run([docker, "image", "load", "--input", str(verified_archive)], check=True, timeout=600)
+            image_id = await helper._stage_verified_helper(docker, cosign, image)
             inspected = json.loads(subprocess.check_output([docker, "image", "inspect", image_id], timeout=30))[0]
             if inspected["Id"] != image_id or inspected["Os"] + "/" + inspected["Architecture"] != target:
                 msg = "Loaded Docker content or platform differs from signed manifest"
@@ -172,7 +174,8 @@ async def qualify_kit(*, image: str, manifest: Path, bundle: Path, trusted_root:
                 "release_manifest_sha256": sha256(manifest_bytes),
                 "qualification_profile": PROFILE,
                 "platform": target,
-                "image_id": image_id,
+                "image_id": entry["image_id"],
+                "content_sha256": helper.image_content_sha256(inspected),
                 "archive_sha256": entry["archive_sha256"],
                 "qualified": True,
             }
@@ -198,6 +201,7 @@ def build_attestation(manifest_bytes: bytes, results: list[dict]) -> dict:
         "qualification_profile",
         "platform",
         "image_id",
+        "content_sha256",
         "archive_sha256",
         "qualified",
     }
@@ -216,11 +220,12 @@ def build_attestation(manifest_bytes: bytes, results: list[dict]) -> dict:
             or target not in PLATFORMS
             or target in platforms
             or result["image_id"] != release["platforms"][target]["image_id"]
+            or result["content_sha256"] != release["platforms"][target]["content_sha256"]
             or result["archive_sha256"] != release["platforms"][target]["archive_sha256"]
         ):
             msg = "Platform qualification does not match this signed release"
             raise ValueError(msg)
-        platforms[target] = {key: result[key] for key in ("image_id", "archive_sha256", "qualified")}
+        platforms[target] = {key: result[key] for key in ("image_id", "content_sha256", "archive_sha256", "qualified")}
     if set(platforms) != PLATFORMS:
         msg = "Both supported platforms must pass signed offline qualification"
         raise ValueError(msg)

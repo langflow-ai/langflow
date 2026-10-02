@@ -147,7 +147,7 @@ async def test_memory_delete_failure_preserves_identity_for_retry(active_user, m
         with pytest.raises(OSError, match="temporary storage failure"):
             await service.delete(memory.id, active_user.id)
     assert await service.get(memory.id, active_user.id) is not None
-    assert (await knowledge_base_service.get_by_id(record.id)).storage_state == "deleting"
+    assert (await knowledge_base_service.get_by_id(record.id)).storage_state == "ready"
     assert await service.delete(memory.id, active_user.id) is True
     assert await service.get(memory.id, active_user.id) is None
     assert await knowledge_base_service.get_by_id(record.id) is None
@@ -193,7 +193,7 @@ async def stored_memory_history(active_user, local_storage):  # noqa: ARG001 - s
     return record, memory, message, tracked, ingested, processed, backend
 
 
-@pytest.mark.parametrize("storage_state", ["migrating", "needs_attention"])
+@pytest.mark.parametrize("storage_state", ["migrating"])
 @pytest.mark.parametrize("action", ["regenerate", "purge", "single_session", "bulk_session", "messages"])
 async def test_memory_fences_preserve_history_and_vectors(
     active_user, stored_memory_history, storage_state, action, client, logged_in_headers
@@ -253,26 +253,36 @@ async def test_successful_session_delete_purges_vectors_and_history(stored_memor
     assert await backend.count() == 0
 
 
-async def test_session_purge_drains_ingestion_message_snapshot(stored_memory_history, active_user, monkeypatch):
+async def test_raw_ingestion_releases_embedding_lease_and_rejects_purged_snapshot(
+    stored_memory_history, active_user, monkeypatch
+):
     import asyncio
     from unittest.mock import AsyncMock, MagicMock
 
+    from langflow.services.deps import session_scope
     from langflow.services.memory_base import task
     from langflow.services.memory_base.service import MemoryBaseService
 
-    record, memory, message, _tracked, _ingested, _processed, backend = stored_memory_history
+    record, memory, message, tracked, _ingested, _processed, backend = stored_memory_history
+    async with session_scope() as session:
+        row = await session.get(type(tracked), tracked.id)
+        row.cursor_id = None
+        session.add(row)
+        source = await session.get(type(message), message.id)
+        source.category = "message"
+        session.add(source)
+        await session.commit()
     fetched = asyncio.Event()
     finish_write = asyncio.Event()
 
-    async def paused_ingestion(**_kwargs):
-        # Represents a task that already fetched a message, before model/vector IO.
-        fetched.set()
-        await finish_write.wait()
-        await backend.add_documents([Document(page_content=message.text, metadata={"session_id": message.session_id})])
-        return {"ingested": 1}
+    class PausedEmbeddings(LocalEmbeddings):
+        async def aembed_documents(self, texts):
+            fetched.set()
+            await finish_write.wait()
+            return await super().aembed_documents(texts)
 
     monkeypatch.setattr(task, "preflight_memory_provider_use", AsyncMock(return_value=MagicMock()))
-    monkeypatch.setattr(task, "_ingest_memory_task_in_scope", paused_ingestion)
+    monkeypatch.setattr(task, "_build_embeddings_for_owner", AsyncMock(return_value=PausedEmbeddings()))
     request = task.IngestionRequest(
         memory_base_id=memory.id,
         session_id=message.session_id,
@@ -285,18 +295,24 @@ async def test_session_purge_drains_ingestion_message_snapshot(stored_memory_his
         embedding_model="test",
         cursor_id=None,
         task_job_id=uuid.uuid4(),
-        job_service=MagicMock(),
+        job_service=AsyncMock(),
     )
     writer = asyncio.create_task(task.ingest_memory_task(request=request))
-    await asyncio.wait_for(fetched.wait(), timeout=10)
-    purge = asyncio.create_task(MemoryBaseService().purge_session_data(active_user.id, [message.session_id]))
     try:
-        with pytest.raises(asyncio.TimeoutError):
-            await asyncio.wait_for(asyncio.shield(purge), timeout=0.05)
+        started = asyncio.create_task(fetched.wait())
+        await asyncio.wait((writer, started), timeout=10, return_when=asyncio.FIRST_COMPLETED)
+        assert not writer.done(), f"Ingestion stopped before embedding: {writer.result()}"
+        assert fetched.is_set()
+        assert await asyncio.wait_for(backend.count(), timeout=1) == 1
+        await asyncio.wait_for(MemoryBaseService().purge_session_data(active_user.id, [message.session_id]), timeout=5)
+        finish_write.set()
+        with pytest.raises(StorageUnavailableError, match="changed during preprocessing"):
+            await asyncio.wait_for(writer, timeout=10)
     finally:
         finish_write.set()
-        await asyncio.wait_for(writer, timeout=10)
-        await asyncio.wait_for(purge, timeout=10)
+        if not writer.done():
+            writer.cancel()
+            await asyncio.gather(writer, return_exceptions=True)
     assert await backend.count() == 0
 
 

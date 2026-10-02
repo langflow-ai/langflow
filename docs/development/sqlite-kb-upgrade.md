@@ -47,10 +47,12 @@ cross-process guard. A fresh routing/state check follows lock acquisition.
 Generation and identity checks also occur inside SQLite transactions. Local
 stores require one host and local disk. Remote stores use application-database
 coordination without requiring a local vector directory. PostgreSQL advisory
-locks use a separate bounded pool, avoiding exhaustion of the application pool.
+locks use a separate configurable pool, avoiding exhaustion of the application pool.
+`LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE` defaults to 20 connections per process.
 Nested operations spanning several remote KBs share one coordination transaction.
-Memory capture holds the guard from reading messages and cursors through vector
-writes and ingestion-history updates. Session purges and regeneration acquire the
+Memory capture revalidates routing, message contents, session identity and cursor
+under its write lease after provider calls. Embedding calls and retry back-off do
+not hold that lease. Tracking commits revalidate the same snapshot. Session purges and regeneration acquire the
 same guards before changing messages, cursors or history.
 
 Deletion persists a fence, drains active operations and tombstones the generation
@@ -283,3 +285,9 @@ Managed upgrades should recreate their private application environment. For
 user-managed shared Python environments, install 1.13 into a clean environment
 and point it at the existing data paths. Removing a requirement does not uninstall
 unrelated orphan packages from a shared environment.
+
+The published [upgrade page](../docs/Develop/knowledge-storage-upgrade.mdx) explains ordinary package and image upgrades, retirement, and pending chat-history purges.
+
+Nested PostgreSQL storage operations share their coordination transaction.
+Their advisory locks remain held until the outermost operation finishes, so a
+multi-store operation keeps its complete fence through rollback and cleanup.

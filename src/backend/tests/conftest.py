@@ -634,8 +634,7 @@ async def client_fixture(
                 # insert fenced records that the background migration could alter.
                 from langflow.services.knowledge_base_storage import coordinator
 
-                if coordinator._tasks:
-                    await asyncio.wait_for(asyncio.gather(*tuple(coordinator._tasks)), timeout=30)
+                await coordinator.wait_for_upgrade(timeout=30)
             # Restore the real initializer before test code runs. Tests of
             # database initialization must still exercise production behavior.
             client = await stack.enter_async_context(

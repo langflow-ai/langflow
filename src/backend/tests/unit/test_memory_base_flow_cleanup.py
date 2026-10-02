@@ -390,7 +390,8 @@ async def test_finalize_continues_after_one_failed_handle(active_user, monkeypat
         for row in (failing, healthy)
     ]
     await finalize_flow_memory_base_cleanup(handles)
-    assert (await knowledge_base_service.get_by_id(failing.id)).storage_state == "deleting"
+    # Initialization failed before the destructive operation started.
+    assert (await knowledge_base_service.get_by_id(failing.id)).storage_state == "ready"
     assert await knowledge_base_service.get_by_id(healthy.id) is None
 
 

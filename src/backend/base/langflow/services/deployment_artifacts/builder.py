@@ -726,6 +726,9 @@ def _validated_backend_config(
         raise ProjectArtifactError(msg)
     config = backend_config if isinstance(backend_config, dict) else {}
     resolved_backend_type = backend_type.strip()
+    if resolved_backend_type.lower() == "chroma":
+        msg = f"referenced {resource_kind} uses retired Chroma storage. Migrate it to a supported remote provider"
+        raise ProjectArtifactError(msg)
     try:
         local = is_local_backend(resolved_backend_type.lower(), config)
     except ValueError as exc:

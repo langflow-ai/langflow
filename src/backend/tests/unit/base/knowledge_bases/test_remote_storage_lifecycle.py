@@ -28,7 +28,7 @@ async def test_remote_initialization_failure_retains_deletion_identity(database,
     monkeypatch.setattr(runtime, "_raw_backend", lambda _row: backend)
     with pytest.raises(OSError, match="credential resolution failed"):
         await runtime.delete_storage_for_record(row)
-    assert (await read_kb(database, row.id)).storage_state == "deleting"
+    assert (await read_kb(database, row.id)).storage_state == "ready"
     backend.delete_collection.assert_not_awaited()
     backend.teardown.assert_awaited_once()
     backend.ensure_ready.side_effect = None

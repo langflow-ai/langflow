@@ -36,6 +36,9 @@ async def _run_worker(function: Callable[..., _T], *args: Any, **kwargs: Any) ->
             await asyncio.shield(task)
         except asyncio.CancelledError:
             cancelled = True
+        except Exception:
+            if not cancelled:
+                raise
     if cancelled:
         # Consume a possible worker exception without releasing the fence early.
         task.exception()

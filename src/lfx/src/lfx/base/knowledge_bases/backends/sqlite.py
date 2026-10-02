@@ -350,7 +350,13 @@ class SQLiteBackend(BaseVectorStoreBackend):
         """Bound native work and do not release callers' guards while a cancelled write runs."""
         loop = asyncio.get_running_loop()
         executor = _worker_executor()
-        limit = _LOOP_LIMITS.setdefault(loop, asyncio.Semaphore(_WORKERS))
+        reference = _LOOP_LIMITS.get(loop)
+        limit = reference() if reference is not None else None
+        if limit is None:
+            limit = asyncio.Semaphore(_WORKERS)
+            # A semaphore can retain its loop after contention. Neither side
+            # of this process-wide lookup may keep a closed loop alive.
+            _LOOP_LIMITS[loop] = weakref.ref(limit)
         async with limit:
             future = loop.run_in_executor(executor, partial(operation, *args, **kwargs))
             cancelled = False
@@ -425,6 +431,7 @@ class SQLiteBackend(BaseVectorStoreBackend):
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("PRAGMA trusted_schema=OFF")
             connection.execute("PRAGMA synchronous=FULL")
+            connection.execute("PRAGMA secure_delete=ON")
             # The extension path is exclusively package-owned, never a request/config value.
             extension_root = Path(sqlite_vec.__file__).resolve().parent
             extension = Path(sqlite_vec.loadable_path()).absolute()
@@ -794,6 +801,17 @@ class SQLiteBackend(BaseVectorStoreBackend):
                     f"DELETE FROM chunks WHERE id IN (SELECT c.id FROM chunks c WHERE {clause})",  # noqa: S608 - bound filters
                     parameters,
                 )
+                manifest_row = connection.execute(
+                    "SELECT manifest FROM migration_manifest WHERE singleton=1"
+                ).fetchone()
+                if manifest_row is not None:
+                    manifest = json.loads(manifest_row[0])
+                    if manifest.get("status") == "complete":
+                        manifest.setdefault("imported_count", manifest["count"])
+                        manifest["count"] = connection.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+                        connection.execute(
+                            "UPDATE migration_manifest SET manifest=? WHERE singleton=1", (_json(manifest),)
+                        )
                 connection.execute("COMMIT")
             except BaseException:
                 # FULL/IOERR can make SQLite roll back the transaction itself.
@@ -823,6 +841,14 @@ class SQLiteBackend(BaseVectorStoreBackend):
                     if not connection.get_autocommit():
                         connection.execute("ROLLBACK")
                     raise
+
+                # Retain the generation tombstone, but reclaim pages containing
+                # deleted text and truncate the WAL before acknowledging deletion.
+                connection.execute("VACUUM")
+                busy, _log, _checkpointed = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                if busy:
+                    msg = "SQLite deletion checkpoint is blocked by another connection"
+                    raise BackendConfigurationError(msg)
 
         await self._run(tombstone)
 

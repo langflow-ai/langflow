@@ -17,6 +17,7 @@ import socket
 import sqlite3
 import stat
 import sys
+import tempfile
 import time
 from contextlib import closing, suppress
 from pathlib import Path
@@ -57,7 +58,7 @@ def _error(message: str) -> UpgradeControllerError:
 
 def _identity(process: psutil.Process) -> dict:
     """Capture a process's PID and creation time to detect PID reuse."""
-    return {"pid": process.pid, "created": process.create_time()}
+    return maintenance.process_identity(process)
 
 
 def _process(identity: dict) -> psutil.Process | None:
@@ -73,7 +74,7 @@ def _process(identity: dict) -> psutil.Process | None:
         raise _error(msg)
     try:
         process = psutil.Process(identity["pid"])
-        if abs(process.create_time() - identity["created"]) >= _PROCESS_TIME_TOLERANCE:
+        if not maintenance.identity_matches(process, identity):
             return None
         if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
             return None
@@ -176,16 +177,49 @@ def _validate_supervisor(identity: dict) -> psutil.Process:
     return process
 
 
+def _stopped(process: psutil.Process) -> bool:
+    """Treat workers that exit during freezing as already drained."""
+    try:
+        return process.status() in (psutil.STATUS_STOPPED, psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD)
+    except psutil.NoSuchProcess:
+        return True
+
+
+def _resume_before_stop(journal_path: Path, journal: dict) -> None:
+    """Unfreeze only the saved family if helper staging fails during interrupted preparation."""
+    if journal["phase"] not in ("prepared", "stopping"):
+        return
+    supervisor = _process(journal.get("supervisor_identity", journal["config"]["supervisor"]))
+    identities = journal.get("workers", [])
+    if not identities and supervisor is not None:
+        identities = []
+        for process in _family(supervisor.pid):
+            with suppress(psutil.NoSuchProcess):
+                identities.append(_identity(process))
+    for identity in identities:
+        if (process := _process(identity)) is not None:
+            with suppress(psutil.NoSuchProcess):
+                process.resume()
+    if supervisor is not None:
+        journal["phase"] = "prepared"
+        journal.pop("workers", None)
+        _write(journal_path, journal)
+
+
 def _stop(journal_path: Path, journal: dict, timeout: float) -> None:
     """Freeze, durably inventory, then stop only creation-time-bound identities."""
     config = journal["config"]
-    identity = config["supervisor"]
+    identity = journal.get("supervisor_identity", config["supervisor"])
     frozen: list[psutil.Process] = []
     committed = journal["phase"] == "stopping"
     try:
         if not committed:
             supervisor = _validate_supervisor(identity)
-            supervisor.suspend()
+            try:
+                supervisor.suspend()
+            except psutil.NoSuchProcess as exc:
+                msg = "The selected supervisor exited during preparation. Inspect its deployment before retrying"
+                raise _error(msg) from exc
             frozen.append(supervisor)
             known = {supervisor.pid}
             deadline = time.monotonic() + min(timeout, 10)
@@ -193,21 +227,31 @@ def _stop(journal_path: Path, journal: dict, timeout: float) -> None:
                 family = _family(supervisor.pid)
                 for process in family:
                     # A worker escaping the dedicated session defeats its barrier.
-                    for child in process.children(recursive=True):
-                        if os.getsid(child.pid) != supervisor.pid:
-                            msg = "A worker escaped the dedicated session. Use the deployment-specific controller"
-                            raise _error(msg)
-                    if process.pid not in known:
-                        process.suspend()
-                        frozen.append(process)
-                        known.add(process.pid)
-                if all(item.status() == psutil.STATUS_STOPPED for item in _family(supervisor.pid)):
+                    try:
+                        for child in process.children(recursive=True):
+                            try:
+                                child_session = os.getsid(child.pid)
+                            except ProcessLookupError:
+                                continue
+                            if child_session != supervisor.pid:
+                                msg = "A worker escaped the dedicated session. Use the deployment-specific controller"
+                                raise _error(msg)
+                        if process.pid not in known:
+                            process.suspend()
+                            frozen.append(process)
+                            known.add(process.pid)
+                    except psutil.NoSuchProcess:
+                        continue
+                if all(_stopped(item) for item in _family(supervisor.pid)):
                     break
                 if time.monotonic() >= deadline:
                     msg = "Could not freeze the complete selected supervisor family"
                     raise _error(msg)
                 time.sleep(0.02)
-            journal["workers"] = [_identity(item) for item in frozen]
+            journal["workers"] = []
+            for item in frozen:
+                with suppress(psutil.NoSuchProcess):
+                    journal["workers"].append(_identity(item))
             journal["phase"] = "stopping"
             _write(journal_path, journal)
             committed = True
@@ -255,6 +299,17 @@ async def stage_helper() -> None:
     selected = await helper._stage_verified_helper(docker, cosign, image)
     # Offline verification alone does not prove the operator loaded the image.
     await helper._command(docker, "image", "inspect", selected)
+    # Exercise the exact isolation profile before stopping the previous app.
+    # Creation does not execute the reader or expose application data.
+    with tempfile.TemporaryDirectory(prefix="langflow-helper-preflight-") as directory:
+        name = f"langflow-helper-preflight-{uuid4().hex}"
+        args = helper.isolated_command(docker, selected, Path(directory), name)
+        args[1] = "create"
+        args.remove("--rm")
+        try:
+            await helper._command(*args)
+        finally:
+            await helper._drain_task(asyncio.create_task(helper._command(docker, "rm", "--force", name)))
 
 
 def _launch_environment(config: dict, receipt: str) -> dict[str, str]:
@@ -442,7 +497,16 @@ async def upgrade(
                 msg = "Resume with the original instance, command, helper settings and state directory"
                 raise _error(msg)
         else:
-            _validate_supervisor(supervisor)
+            selected_supervisor = _validate_supervisor(supervisor)
+            if os.getsid(0) == supervisor["pid"]:
+                msg = "Run the upgrade controller outside the selected supervisor's session"
+                raise _error(msg)
+            remaining = maintenance.remaining_legacy_workers(
+                excluded_pids={process.pid for process in _family(supervisor["pid"])}
+            )
+            if remaining:
+                msg = f"Unselected Langflow workers remain (PIDs {remaining}). Stop their deployments before upgrading"
+                raise _error(msg)
             # Fail before downtime for a busy target port or unreadable metadata.
             with socket.socket() as listener:
                 try:
@@ -457,10 +521,19 @@ async def upgrade(
             if not os.access(root, os.W_OK) or not os.access(database, os.W_OK):
                 msg = "The application account cannot write the selected data paths"
                 raise _error(msg)
-            journal = {"version": 1, "config": config, "phase": "prepared"}
+            journal = {
+                "version": 1,
+                "config": config,
+                "phase": "prepared",
+                "supervisor_identity": _identity(selected_supervisor),
+            }
             _write(journal_path, journal, exclusive=True)
         if journal["phase"] in ("prepared", "stopping", "stopped"):
-            await stage_helper()
+            try:
+                await stage_helper()
+            except BaseException:
+                await helper._disk_call(_resume_before_stop, journal_path, journal)
+                raise
         if journal["phase"] in ("prepared", "stopping"):
             await helper._disk_call(_stop, journal_path, journal, stop_timeout)
         if journal["phase"] == "stopped":

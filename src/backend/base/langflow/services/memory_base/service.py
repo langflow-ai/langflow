@@ -679,14 +679,14 @@ class MemoryBaseService(Service):
             trigger_ingestion_fn=self.trigger_ingestion,
         )
 
-    async def purge_session_data(self, user_id: uuid.UUID, session_ids: list[str]) -> int:
+    async def purge_session_data(self, user_id: uuid.UUID, session_ids: list[str], *, db=None) -> int:
         """Remove Chroma chunks and tracking rows for the given sessions.
 
         Called when the user deletes session messages from the UI so that the
         ingested embeddings don't leak into newly-created sessions. Scoped to
         the caller's Memory Bases — never touches another user's data.
         """
-        return await _purge_session_data(user_id=user_id, session_ids=session_ids)
+        return await _purge_session_data(user_id=user_id, session_ids=session_ids, db=db)
 
     # ------------------------------------------------------------------ #
     #  Public query helpers                                                #

@@ -16,6 +16,7 @@ import shutil
 import socket
 import sqlite3
 import stat
+import sys
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -84,23 +85,114 @@ def tree_fingerprint(path: Path) -> str:
     return digest.hexdigest()
 
 
+def tree_stat_fingerprint(path: Path) -> str:
+    """Detect source changes without rereading retained document/index contents."""
+    if path.is_symlink() or not path.is_dir():
+        msg = "Source directory is unavailable or is a symbolic link"
+        raise MaintenanceRequiredError(msg)
+    digest = hashlib.sha256()
+    count = 0
+    for directory, directories, files in os.walk(path, followlinks=False):
+        for name in sorted((*directories, *files)):
+            candidate = Path(directory) / name
+            info = candidate.lstat()
+            if not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)) or (
+                info.st_nlink != 1 and stat.S_ISREG(info.st_mode)
+            ):
+                msg = "Source contains a link or special file"
+                raise MaintenanceRequiredError(msg)
+            count += 1
+            if count > MAX_SOURCE_FILES:
+                msg = "Source file inventory exceeds the upgrade bound"
+                raise MaintenanceRequiredError(msg)
+            digest.update(
+                json.dumps(
+                    [
+                        candidate.relative_to(path).as_posix(),
+                        info.st_ino,
+                        info.st_size,
+                        info.st_mtime_ns,
+                        info.st_ctime_ns,
+                    ],
+                    separators=(",", ":"),
+                ).encode()
+            )
+        directories.sort()
+    return digest.hexdigest()
+
+
 def _legacy_process(process: psutil.Process) -> bool:
     """Identify a process that may still be using the legacy local store."""
     try:
         command = process.cmdline()
-        names = [Path(part).name for part in command]
-        return (
-            "langflow" in names
-            or any(part.startswith("langflow.main:") or part == "langflow.__main__" for part in command)
-            or any(command[index : index + 2] == ["-m", "langflow"] for index in range(len(command) - 1))
-        )
+        if not command:
+            return False
+        executable = Path(command[0]).name.lower()
+        if executable in ("langflow", "langflow.exe"):
+            return True
+        if executable.startswith("python"):
+            index = 1
+            while index < len(command):
+                argument = command[index]
+                if argument in ("-W", "-X", "--check-hash-based-pycs"):
+                    index += 2
+                    continue
+                if argument == "-m":
+                    if index + 1 >= len(command):
+                        return False
+                    module = command[index + 1]
+                    return module in ("langflow", "langflow.__main__") or (
+                        module in ("uvicorn", "gunicorn")
+                        and any(part.startswith("langflow.main:") for part in command[index + 2 :])
+                    )
+                if argument in ("-c", "--"):
+                    return False
+                if not argument.startswith("-"):
+                    script = Path(argument).name
+                    return script == "langflow" or (
+                        script in ("uvicorn", "gunicorn")
+                        and any(part.startswith("langflow.main:") for part in command[index + 1 :])
+                    )
+                index += 1
+            return False
+        return executable in ("uvicorn", "gunicorn") and any(part.startswith("langflow.main:") for part in command[1:])
     except psutil.NoSuchProcess:
         return False
     except psutil.AccessDenied as exc:
-        if process.username() == psutil.Process().username():
-            msg = "Cannot inspect a process belonging to the application account"
-            raise MaintenanceRequiredError(msg) from exc
+        try:
+            if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+                return False
+            if process.username() == psutil.Process().username():
+                msg = "Cannot inspect a process belonging to the application account"
+                raise MaintenanceRequiredError(msg) from exc
+        except psutil.NoSuchProcess:
+            return False
         return False
+
+
+def process_identity(process: psutil.Process) -> dict:
+    """Bind Linux processes to kernel start ticks and boot identity, independent of clock steps."""
+    identity = {"pid": process.pid, "created": process.create_time()}
+    if sys.platform == "linux":
+        try:
+            fields = Path(f"/proc/{process.pid}/stat").read_text().rsplit(")", 1)[1].split()
+            identity.update(
+                start_ticks=int(fields[19]), boot_id=Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+            )
+        except FileNotFoundError as exc:
+            raise psutil.NoSuchProcess(process.pid) from exc
+    return identity
+
+
+def identity_matches(process: psutil.Process, identity: dict) -> bool:
+    """Use stable kernel identity when present, with compatibility for older receipts."""
+    if "start_ticks" in identity or "boot_id" in identity:
+        if type(identity.get("start_ticks")) is not int or not isinstance(identity.get("boot_id"), str):
+            msg = "Invalid kernel process identity"
+            raise MaintenanceRequiredError(msg)
+        current = process_identity(process)
+        return current.get("start_ticks") == identity["start_ticks"] and current.get("boot_id") == identity["boot_id"]
+    return abs(process.create_time() - identity["created"]) < _PROCESS_TIME_TOLERANCE
 
 
 def _process_matches(identity: dict) -> bool:
@@ -116,11 +208,19 @@ def _process_matches(identity: dict) -> bool:
         process = psutil.Process(identity["pid"])
         # A retained zombie/dead process cannot write. Some container init
         # implementations defer reaping orphaned workers after their exit.
-        return process.status() not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD) and (
-            abs(process.create_time() - identity["created"]) < _PROCESS_TIME_TOLERANCE
+        return process.status() not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD) and identity_matches(
+            process, identity
         )
     except psutil.NoSuchProcess:
         return False
+
+
+def remaining_legacy_workers(*, excluded_pids: set[int] | None = None) -> list[int]:
+    """Report actual unselected Langflow entry points before and after downtime."""
+    excluded = {os.getpid(), *(excluded_pids or set())}
+    return [
+        process.pid for process in psutil.process_iter() if process.pid not in excluded and _legacy_process(process)
+    ]
 
 
 def create_receipt(*, root: Path, database: Path, receipt: Path, previous_workers: list[dict]) -> None:
@@ -136,8 +236,8 @@ def create_receipt(*, root: Path, database: Path, receipt: Path, previous_worker
     if not previous_workers or any(_process_matches(item) for item in previous_workers):
         msg = "The deployment manager must stop all previous workers first"
         raise MaintenanceRequiredError(msg)
-    if any(_legacy_process(process) for process in psutil.process_iter() if process.pid != os.getpid()):
-        msg = "A Langflow worker remains. Use its deployment manager to stop it"
+    if remaining := remaining_legacy_workers():
+        msg = f"Langflow workers remain (PIDs {remaining}). Use their deployment manager to stop them"
         raise MaintenanceRequiredError(msg)
     receipt.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if receipt.exists() or receipt.is_symlink():
@@ -159,8 +259,6 @@ def create_receipt(*, root: Path, database: Path, receipt: Path, previous_worker
     _fsync_directory(backup.parent)
     sources = {}
     for owner in sorted(root.iterdir()):
-        if owner.name.startswith(".") or owner.name == "sqlite":
-            continue
         if owner.is_symlink():
             msg = "Legacy owner directory is a symbolic link"
             raise MaintenanceRequiredError(msg)

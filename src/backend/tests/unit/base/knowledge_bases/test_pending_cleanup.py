@@ -369,7 +369,7 @@ async def test_migration_status_retry_and_detach(client, admin_headers, active_u
     response = await client.post(f"/api/v1/knowledge-base-storage/migrations/{run.id}/retry", headers=admin_headers)
     assert response.status_code == 202
     assert response.json() == {"id": str(run.id), "status": "scheduled"}
-    scheduled.assert_called_once_with()
+    scheduled.assert_called_once_with(retry=True)
     assert (await knowledge_base_service.get_by_id(record.id)).storage_state == "needs_attention"
     assert not await coordinator.readiness()
     assert await coordinator.readiness(require_storage_ready=False)

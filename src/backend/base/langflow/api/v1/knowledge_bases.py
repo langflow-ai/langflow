@@ -822,6 +822,8 @@ async def create_knowledge_base(
             if kb_path is not None:
                 KBStorageHelper.delete_storage(kb_path, kb_name)
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists") from exc
+        except StorageUnavailableError:
+            raise
         except Exception as exc:
             await logger.aerror(
                 "KB DB persist failed for backend %s (kb=%s): %s — rolling back",

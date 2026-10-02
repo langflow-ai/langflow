@@ -1,0 +1,69 @@
+---
+title: Upgrade Knowledge and Memory storage
+slug: /knowledge-storage-upgrade
+---
+
+Langflow 1.13 replaces local Chroma with SQLite and sqlite-vec.
+Existing OpenSearch and Postgres pgvector stores keep their routing.
+Chroma Cloud and the Chroma, Local DB, and ALTK components are retired.
+Saved components from released 1.x versions can still load for inspection and replacement without reinstalling the retired SDKs.
+
+## Before upgrading
+
+Back up the application database and the complete knowledge-base directory, including native indexes and WAL files.
+Stop every old API and Memory worker before migrating local data.
+An old worker cannot honor the new storage fences.
+Keep backups and retained legacy sources until the upgraded data is verified.
+
+Automatic migration requires a non-root POSIX account, local disk, Docker, the qualified cosign version, and a SQLite application database.
+The foreground supervisor must lead a dedicated process session, and its external restart policy must be disabled.
+Recent MCP stdio servers can use separate sessions. Stop those tools and their child processes before attempting the managed upgrade.
+The controller refuses escaped workers before terminating the selected service.
+
+Use the [managed controller runbook](https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/development/sqlite-kb-controller.md) and the [signed helper instructions](https://github.com/langflow-ai/langflow/blob/release-1.13.0/tools/chroma_migration_helper/README.md).
+The controller verifies the signature, local image, and Docker isolation profile before downtime.
+It then stops the selected process family, records a backup and receipt, starts 1.13, and waits for migration readiness.
+
+## Pip, container, Kubernetes, and PostgreSQL application-database upgrades
+
+Replacing the package or image starts the application normally.
+Ordinary `/healthz` probes check service readiness and do not block the entire instance on retained Chroma directories.
+Affected Knowledge and Memory stores remain fenced, and their operations report HTTP 409 with recovery guidance.
+The application does not read legacy Chroma data directly or create an empty replacement under the old identity.
+
+The managed controller does not support PostgreSQL application databases, Windows services, distributed workers, or container orchestrators.
+Before upgrading those installations, export or re-ingest each legacy store into a supported remote provider using the old release.
+If an installation has already been upgraded, retain its backup and use an isolated old-release environment to recover the source data.
+An administrator can detach a failed store, and its owner can remove the application record and create a new SQLite or remote store for re-ingestion.
+Detachment and retirement preserve legacy files and Cloud data. They do not delete the provider's source data.
+
+## Inspect and recover a failed upgrade
+
+Active superusers can inspect `/api/v1/knowledge-base-storage/migrations` and `/api/v1/knowledge-base-storage/inventory`.
+Inventory reports the latest completed scan shared across workers on the configured storage root.
+Use the returned KB UUID and storage generation for retry or detachment.
+Retries never change the readiness of unrelated flows.
+After an interrupted controller run, repeat its original command with the original state directory.
+Use `/healthz?require_storage_ready=true` when checking completion of the managed migration.
+
+Owners can delete failed or detached Knowledge and Memory bases without instantiating a retired provider.
+Local sources receive a durable retirement binding so they cannot be adopted again after restart or name reuse.
+Migration ledgers remain available after the application record is removed.
+For an unreachable remote store, including a deletion that failed before starting, an administrator can explicitly detach the store before its owner removes the application record.
+Clean up retained remote data through the provider after confirming that no remaining store references it.
+
+Deleting chat history for a failed or detached Memory store records a durable vector-purge intent.
+Migration applies that intent before enabling retrieval, or deleting the Memory base discards it with that store.
+Deleting a session also purges its Memory data when its message rows were already removed.
+
+Successful SQLite deletion wipes text from live pages, reclaims the database, truncates its WAL, and keeps a small generation tombstone to fence stale workers.
+This does not remove retained pre-upgrade backups or promise erasure of filesystem snapshots.
+
+## Concurrency and platform support
+
+PostgreSQL application databases use a separate storage-coordination pool.
+Set `LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE` to fit expected concurrency. The default is 20 connections per process.
+Embedding calls and retry waits run outside the storage lease, and writes recheck routing and Memory source messages before committing.
+
+The bundled sqlite-vec release supplies wheels rather than a source distribution.
+Use a platform in Langflow's supported wheel matrix. Python 3.14 on Windows ARM64 is outside that matrix.

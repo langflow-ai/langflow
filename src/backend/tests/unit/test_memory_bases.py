@@ -1677,6 +1677,7 @@ def unfenced_memory_runtime(monkeypatch):
     from langflow.services.knowledge_base_storage import runtime
 
     record = MagicMock(id=uuid.uuid4())
+    record.storage_state = "ready"
     monkeypatch.setattr(runtime, "resolve_record", AsyncMock(return_value=record))
     monkeypatch.setattr(runtime, "operation", lambda *_args, **_kwargs: contextlib.nullcontext(record))
 

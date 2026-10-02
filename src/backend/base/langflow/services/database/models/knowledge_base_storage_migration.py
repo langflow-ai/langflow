@@ -14,11 +14,8 @@ class KnowledgeBaseStorageMigration(SQLModel, table=True):  # type: ignore[call-
     __tablename__ = "knowledge_base_storage_migration"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    kb_id: UUID = Field(
-        sa_column=sa.Column(
-            sa.Uuid(), sa.ForeignKey("knowledge_base.id", ondelete="CASCADE"), index=True, nullable=False
-        )
-    )
+    # Retain recovery evidence when explicit retirement removes the routing row.
+    kb_id: UUID = Field(sa_column=sa.Column(sa.Uuid(), index=True, nullable=False))
     source_backend: str = Field(default="chroma", nullable=False)
     source_generation: int = Field(nullable=False)
     target_generation: int = Field(nullable=False)

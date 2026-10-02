@@ -199,15 +199,19 @@ jobs:
           upload-artifact: false
       - name: Bind the qualified image content and archive to this platform
         run: |
-          python - <<'PY'
+          uv run --no-sync python - <<'PY'
           import hashlib, json, os, subprocess
           from pathlib import Path
+          from langflow.services.knowledge_base_storage.helper import image_content_sha256
           image = os.environ["HELPER_IMAGE"]
           inspected = json.loads(subprocess.check_output(["docker", "image", "inspect", image]))[0]
           platform = inspected["Os"] + "/" + inspected["Architecture"]
           assert platform in {"linux/amd64", "linux/arm64"}
           archive = Path("helper-image-" + platform.replace("/", "-") + ".tar")
-          subprocess.run(["docker", "image", "save", "--output", str(archive), image], check=True)
+          content_sha256 = image_content_sha256(inspected)
+          local_ref = "langflow-chroma-migration-offline:" + content_sha256
+          subprocess.run(["docker", "image", "tag", image, local_ref], check=True)
+          subprocess.run(["docker", "image", "save", "--output", str(archive), local_ref], check=True)
           digest = hashlib.sha256()
           with archive.open("rb") as stream:
               for chunk in iter(lambda: stream.read(1024 * 1024), b""):
@@ -216,6 +220,7 @@ jobs:
               "image": image,
               "platform": platform,
               "image_id": inspected["Id"],
+              "content_sha256": content_sha256,
               "archive": archive.name,
               "archive_sha256": digest.hexdigest(),
           }, indent=2))
@@ -287,9 +292,10 @@ jobs:
               assert entry.pop("image") == os.environ["HELPER_IMAGE"]
               platform = entry.pop("platform")
               assert platform in {"linux/amd64", "linux/arm64"} and platform not in platforms
-              assert set(entry) == {"image_id", "archive", "archive_sha256"}
+              assert set(entry) == {"image_id", "content_sha256", "archive", "archive_sha256"}
               assert re.fullmatch(r"sha256:[a-f0-9]{64}", entry["image_id"])
               assert re.fullmatch(r"[a-f0-9]{64}", entry["archive_sha256"])
+              assert re.fullmatch(r"[a-f0-9]{64}", entry["content_sha256"])
               assert entry["archive"] == "helper-image-" + platform.replace("/", "-") + ".tar"
               platforms[platform] = entry
           assert set(platforms) == {"linux/amd64", "linux/arm64"}

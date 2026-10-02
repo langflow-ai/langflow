@@ -17,8 +17,10 @@ import pytest
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
 from langflow.services.database.models.user.model import User
 from langflow.services.knowledge_base_storage import coordinator, maintenance, runtime
 from lfx.base.knowledge_bases.backends.base import IngestedDocument
@@ -36,7 +38,14 @@ async def database(tmp_path, monkeypatch):
     root.mkdir()
     path = tmp_path / "metadata.sqlite3"
     engine = create_async_engine(f"sqlite+aiosqlite:///{path}")
-    tables = [User.__table__, KnowledgeBaseRecord.__table__, KnowledgeBaseStorageMigration.__table__]
+    tables = [
+        User.__table__,
+        Flow.__table__,
+        KnowledgeBaseRecord.__table__,
+        KnowledgeBaseStorageMigration.__table__,
+        MemoryBase.__table__,
+        MemoryBaseSession.__table__,
+    ]
     async with engine.begin() as connection:
         await connection.run_sync(lambda sync: SQLModel.metadata.create_all(sync, tables=tables))
 

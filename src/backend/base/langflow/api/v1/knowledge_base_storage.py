@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.log.logger import logger
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_
@@ -16,7 +16,7 @@ from langflow.services.database.models.knowledge_base_storage_migration import K
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.knowledge_base_storage.cleanup import detach_attention_store, retry_pending_cleanup
-from langflow.services.knowledge_base_storage.coordinator import inventory_status, schedule_upgrade
+from langflow.services.knowledge_base_storage.coordinator import published_inventory_status, schedule_upgrade
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 
 router = APIRouter(prefix="/knowledge-base-storage", tags=["Knowledge Base Upgrade"])
@@ -40,16 +40,22 @@ class CleanupRetryRequest(BaseModel):
 @router.get("/inventory")
 async def get_inventory(_admin: Annotated[User, Depends(get_current_active_superuser)]):
     """Report whether legacy storage discovery completed and requires recovery."""
-    return inventory_status()
+    return await published_inventory_status()
 
 
 @router.get("/pending-cleanup")
-async def pending_cleanup(session: DbSession, _admin: Annotated[User, Depends(get_current_active_superuser)]):
+async def pending_cleanup(
+    session: DbSession,
+    _admin: Annotated[User, Depends(get_current_active_superuser)],
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
     """List pending deletions with the linked Memory Bases that own their history."""
     rows = (
         await session.exec(
             select(KnowledgeBaseRecord)
             .where(col(KnowledgeBaseRecord.storage_state).in_(("deleting", "deleted")))
+            .order_by(KnowledgeBaseRecord.id)
+            .offset(offset)
             .limit(500)
         )
     ).all()
@@ -111,8 +117,11 @@ async def detach_storage(
     kb_id: UUID,
     request: CleanupRetryRequest,
     _admin: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSession,
 ):
     """Abandon a failed migration without deleting its source or recovery evidence."""
+    if await session.get(KnowledgeBaseRecord, kb_id) is None:
+        raise HTTPException(status_code=404, detail="Knowledge base not found")
     try:
         await detach_attention_store(kb_id, expected_generation=request.expected_generation)
     except StorageUnavailableError as exc:
@@ -164,5 +173,5 @@ async def retry_migration(
         raise HTTPException(status_code=409, detail="This storage migration cannot be retried")
     # Scheduling does not remove the durable fence. The worker serializes with
     # every other attempt and revalidates the source snapshot and target ledger.
-    schedule_upgrade()
+    schedule_upgrade(retry=True)
     return {"id": run.id, "status": "scheduled"}
