@@ -87,6 +87,7 @@
     "bn.js@^4": "^4.12.3",
     "bn.js@^5": "^5.2.3",
     "body-parser": "^1.20.6",
-    "fflate": "^0.4.9"
+    "fflate": "^0.4.9",
+    "http-proxy-middleware": "^2.0.10"
   }
 }
