@@ -1313,6 +1313,108 @@ class TestKeySources:
             assert name in output
 
 
+class TestRefusals:
+    """Problems the script can see are reported with exit code 1 before anything is written."""
+
+    rotation_db = TestMigrateEndToEnd.rotation_db
+    # Long enough to be used as it is, but it does not decode to the 32 bytes Fernet needs.
+    malformed_key = "long-enough-but-not-the-base64-of-32-bytes"
+
+    def test_dry_run_with_an_undecryptable_value_exits_1(self, migrate_module, rotation_db, old_key, new_key, capsys):
+        engine, config_dir, url = rotation_db
+        with engine.begin() as conn:
+            conn.execute(
+                text("UPDATE apikey SET api_key = :value"),
+                {"value": migrate_module.encrypt_with_key("foreign", secrets.token_urlsafe(32))},
+            )
+
+        with pytest.raises(SystemExit) as exit_info:
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key, dry_run=True)
+
+        output = capsys.readouterr().out
+        assert exit_info.value.code == 1
+        assert "DRY RUN COMPLETE" in output
+        assert "Would migrate 4 items, 1 failures" in output
+        assert "Warning: 1 items could not be migrated." in output
+        assert list(config_dir.iterdir()) == []
+
+    def test_malformed_new_key_is_refused_with_one_line(self, migrate_module, rotation_db, old_key, capsys):
+        engine, config_dir, url = rotation_db
+
+        with pytest.raises(SystemExit) as exit_info:
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=self.malformed_key)
+
+        output = capsys.readouterr().out
+        assert exit_info.value.code == 1
+        assert "Error: The new secret key is not usable" in output.splitlines()[-1]
+        assert self.malformed_key not in output
+        assert list(config_dir.iterdir()) == []
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
+
+    def test_malformed_new_key_is_not_saved_when_nothing_is_encrypted(self, migrate_module, rotation_db, old_key):
+        engine, config_dir, url = rotation_db
+        with engine.begin() as conn:
+            for table in ("variable", "apikey", "mcp_server", "deployment_provider_account", "connection_secret"):
+                conn.execute(text(f"DELETE FROM {table}"))  # noqa: S608
+
+        # No value exercises the key, so only an up-front check can catch it.
+        with pytest.raises(SystemExit) as exit_info:
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=self.malformed_key)
+
+        assert exit_info.value.code == 1
+        assert list(config_dir.iterdir()) == []
+
+    def test_malformed_key_is_refused_before_the_database_is_opened(self, migrate_module, tmp_path, old_key):
+        db_path = tmp_path / "langflow.db"
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(
+                tmp_path / "cfg", f"sqlite:///{db_path}", old_key=old_key, new_key=self.malformed_key
+            )
+
+        # SQLite creates the file as soon as it is opened.
+        assert not db_path.exists()
+
+    def test_rotates_away_from_an_old_key_fernet_cannot_use(self, migrate_module, rotation_db, new_key):
+        engine, config_dir, url = rotation_db
+        # Such an instance cannot hold Fernet values, but SSO secrets derive their key from the raw string.
+        with engine.begin() as conn:
+            for table in ("variable", "apikey", "mcp_server", "deployment_provider_account", "connection_secret"):
+                conn.execute(text(f"DELETE FROM {table}"))  # noqa: S608
+            conn.execute(
+                text("INSERT INTO sso_config VALUES ('s1', :secret)"),
+                {"secret": migrate_module.encrypt_sso_secret_with_key("oidc-secret", self.malformed_key)},
+            )
+
+        migrate_module.migrate(config_dir, url, old_key=self.malformed_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            secret = conn.execute(text("SELECT client_secret_encrypted FROM sso_config")).scalar()
+        assert migrate_module.decrypt_sso_secret_with_key(secret, new_key) == "oidc-secret"
+        assert (config_dir / "secret_key").read_text() == new_key
+
+    def test_old_key_fernet_cannot_use_fails_like_an_undecryptable_value(
+        self, migrate_module, rotation_db, new_key, capsys
+    ):
+        engine, config_dir, url = rotation_db
+        with engine.connect() as conn:
+            before = conn.execute(text("SELECT value FROM variable")).scalar()
+
+        with pytest.raises(SystemExit) as exit_info:
+            migrate_module.migrate(config_dir, url, old_key=self.malformed_key, new_key=new_key)
+
+        output = capsys.readouterr().out
+        assert exit_info.value.code == 1
+        assert "Warning: Could not decrypt variable 'OPENAI_API_KEY' (v1)" in output
+        assert "ERROR: 5 values could not be migrated." in output
+        assert self.malformed_key not in output
+        assert list(config_dir.iterdir()) == []
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT value FROM variable")).scalar() == before
+
+
 class TestPendingKeyFile:
     """The new key is on disk before the commit, so stopping after the commit cannot lose it."""
 

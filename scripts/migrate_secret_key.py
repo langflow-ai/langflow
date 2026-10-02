@@ -211,7 +211,8 @@ def migrate_value(encrypted: str, old_key: str, new_key: str) -> str | None:
     try:
         plaintext = decrypt_with_key(encrypted, old_key)
         return encrypt_with_key(plaintext, new_key)
-    except InvalidToken:
+    # ValueError: the old key cannot build a Fernet, so no value can be under it.
+    except (InvalidToken, ValueError):
         return None
 
 
@@ -521,6 +522,12 @@ def migrate(
         print(f"Using provided new key, fingerprint: {key_fingerprint(new_key)}")
     print("  (The key is only written to the key file, never printed)")
 
+    try:
+        Fernet(ensure_valid_key(new_key))
+    except ValueError:
+        print("Error: The new secret key is not usable: 32+ characters must be url-safe base64 of 32 bytes")
+        sys.exit(1)
+
     if old_key == new_key:
         print("Error: Old and new secret keys are the same")
         sys.exit(1)
@@ -794,7 +801,7 @@ def migrate(
     if total_failed > 0:
         print(f"\nWarning: {total_failed} items could not be migrated.")
         print("These may have been encrypted with a different key or are corrupted.")
-        sys.exit(1 if not dry_run else 0)
+        sys.exit(1)
 
 
 def main():
