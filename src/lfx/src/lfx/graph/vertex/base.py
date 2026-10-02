@@ -534,33 +534,39 @@ class Vertex:
         Walks all recursive predecessors via edges, deduplicates by vertex ID,
         and sums their token usage into a single total.
         """
-        predecessors = self._get_all_upstream_vertices()
-        total_input = 0
-        total_output = 0
-        has_data = False
+        usages = [
+            predecessor.result.token_usage
+            for predecessor in self._get_all_upstream_vertices()
+            if predecessor.result and predecessor.result.token_usage is not None
+        ]
+        if self.custom_component and self.custom_component._token_usage is not None:  # noqa: SLF001
+            usages.append(self.custom_component._token_usage)  # noqa: SLF001
 
-        for predecessor in predecessors:
-            if predecessor.result and predecessor.result.token_usage:
-                usage = predecessor.result.token_usage
-                total_input += usage.input_tokens or 0
-                total_output += usage.output_tokens or 0
-                has_data = True
+        def sum_optional(values):
+            known = [value for value in values if value is not None]
+            return sum(known) if known else None
 
-        # Include own token usage if present
-        if self.custom_component:
-            own_usage = self.custom_component._token_usage  # noqa: SLF001
-            if own_usage:
-                total_input += own_usage.input_tokens or 0
-                total_output += own_usage.output_tokens or 0
-                has_data = True
-
-        if not has_data:
+        usages = [
+            usage
+            for usage in usages
+            if any(value is not None for value in (usage.input_tokens, usage.output_tokens, usage.total_tokens))
+        ]
+        if not usages:
             return None
-
+        totals = [
+            usage.total_tokens
+            if usage.total_tokens is not None
+            else (
+                (usage.input_tokens or 0) + (usage.output_tokens or 0)
+                if usage.input_tokens is not None or usage.output_tokens is not None
+                else None
+            )
+            for usage in usages
+        ]
         return Usage(
-            input_tokens=total_input,
-            output_tokens=total_output,
-            total_tokens=total_input + total_output,
+            input_tokens=sum_optional(usage.input_tokens for usage in usages),
+            output_tokens=sum_optional(usage.output_tokens for usage in usages),
+            total_tokens=sum_optional(totals),
         )
 
     def _extract_token_usage(self) -> Usage | None:
