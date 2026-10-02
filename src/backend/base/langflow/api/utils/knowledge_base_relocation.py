@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from lfx.base.knowledge_bases.backends import BackendType, create_backend, get_backend_class
 from lfx.log.logger import logger
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select, update
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
@@ -281,8 +282,8 @@ async def _relocate_one(
         result.status = "relocated"
     except Exception as exc:  # noqa: BLE001 - reported per knowledge base
         result.code = result.code or "kb_failed"
-        result.reason = f"{type(exc).__name__}: {exc}"
-        await logger.awarning("Relocating knowledge base %s for %s failed: %s", record.name, owner, exc)
+        result.reason = _describe(exc)
+        await logger.awarning("Relocating knowledge base %s for %s failed: %s", record.name, owner, result.reason)
     finally:
         for backend in (source, target):
             if backend is not None:
@@ -328,6 +329,20 @@ def _build_backend(
         backend_config=backend_config,
         user_id=record.user_id,
     )
+
+
+def _describe(exc: Exception) -> str:
+    """Name a failure without the chunks it was handling.
+
+    SQLAlchemy ends its message with the statement and its parameters, which for a
+    write are the chunks of the batch, and the driver's own message can go on to
+    quote a value, so only the first line of the driver's error is kept.
+    """
+    if not isinstance(exc, SQLAlchemyError):
+        return f"{type(exc).__name__}: {exc}"
+    cause = getattr(exc, "orig", None) or exc
+    first_line = str(cause).partition("\n")[0]
+    return f"{type(cause).__name__}: {first_line}"
 
 
 @contextmanager
