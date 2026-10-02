@@ -24,10 +24,10 @@ from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
 from sqlmodel import select
 
-from langflow.api.utils.kb_helpers import resolve_local_store_path
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
+from langflow.services.knowledge_base_storage.runtime import unfenced_backend
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -58,19 +58,18 @@ class KBRelocationResult:
 
 
 def validate_relocation_target_config(target_backend_type: str, target_backend_config: dict[str, Any]) -> None:
-    """Reject collection overrides that would route multiple KBs into one store."""
+    """Reject targets a knowledge base cannot move to, and overrides that would route multiple KBs into one store."""
+    if target_backend_type == "sqlite":
+        msg = (
+            "--to sqlite is not a relocation target: knowledge bases are already stored in local SQLite, "
+            "and relocate-kb moves them to a shared store such as postgres or opensearch"
+        )
+        raise ValueError(msg)
+    if target_backend_type == "chroma":
+        msg = "--to chroma is not a relocation target: this Langflow no longer stores knowledge bases in Chroma"
+        raise ValueError(msg)
     if target_backend_type == "opensearch" and target_backend_config.get("index_name"):
         msg = "--target-config cannot set index_name: relocation needs a separate OpenSearch index for each KB"
-        raise ValueError(msg)
-    if (
-        target_backend_type == "chroma"
-        and str(target_backend_config.get("mode", "local")).lower() == "cloud"
-        and target_backend_config.get("collection_name")
-    ):
-        msg = (
-            "--target-config cannot set collection_name: "
-            "relocation needs a separate Chroma Cloud collection for each KB"
-        )
         raise ValueError(msg)
 
 
@@ -138,8 +137,8 @@ async def _relocate_one(
     source: BaseVectorStoreBackend | None = None
     target: BaseVectorStoreBackend | None = None
     try:
-        source = _build_backend(record.backend_type, source_config, record, owner)
-        target = _build_backend(target_backend_type, target_backend_config, record, owner, create=not dry_run)
+        source = unfenced_backend(record)
+        target = _build_backend(target_backend_type, target_backend_config, record)
         await source.ensure_ready()
         if type(source) is type(target):
             # A stored config usually carries keys the target config leaves out (field
@@ -226,17 +225,12 @@ def _build_backend(
     backend_type: str,
     backend_config: dict[str, Any],
     record: KnowledgeBaseRecord,
-    owner: str,
-    *,
-    create: bool = False,
 ) -> BaseVectorStoreBackend:
-    kb_path = resolve_local_store_path(
-        record.name, owner, backend_type=backend_type, backend_config=backend_config, create=create
-    )
+    # Every target is a remote store, so none needs a local path.
     return create_backend(
         backend_type,
         kb_name=record.name,
-        kb_path=kb_path,
+        kb_path=None,
         backend_config=backend_config,
         user_id=record.user_id,
     )
