@@ -143,7 +143,20 @@ class TestCleanInstance:
 class TestSchema:
     """A database that cannot be reached is not one on another schema."""
 
+    async def test_a_database_file_that_cannot_be_opened_is_reported_as_unreachable(self, instance_on, tmp_path):
+        # A path under a regular file can be neither opened nor created, with any driver.
+        (tmp_path / "not-a-directory").write_text("")
+        instance_on(f"sqlite:///{tmp_path}/not-a-directory/langflow.db")
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        summary = report.checks[0].summary
+        assert "could not be reached" in summary
+        assert "no recorded revision" not in summary
+
     async def test_a_database_that_cannot_be_reached_is_reported_as_unreachable(self, instance_on):
+        pytest.importorskip("psycopg", reason="needs the postgresql extra to attempt the connection")
         # Nothing listens on port 1, so the connection is refused.
         instance_on("postgresql://user:not-to-be-shown@127.0.0.1:1/x")  # pragma: allowlist secret
 
