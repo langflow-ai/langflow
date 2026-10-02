@@ -1991,8 +1991,8 @@ class MCPSessionManager:
                 await self._release_reference((server_key, session_id))
 
 
-class _SessionContextOwner:
-    """Session-context handling shared by the stdio and Streamable HTTP clients.
+class _PooledSessionClient:
+    """Pooled-session handling shared by the stdio and Streamable HTTP clients.
 
     A client that has no context yet (connecting before the component sets the
     run's one) makes up a private ``default_*`` context. Once a real context is
@@ -2002,9 +2002,43 @@ class _SessionContextOwner:
     reference.
     """
 
+    _TRANSPORT: str
+    _connection_params: Any
     _session_context: str | None
     _generated_context: str | None
     _replaced_contexts: list[str]
+
+    async def _get_or_create_session(self) -> ClientSession:
+        raise NotImplementedError
+
+    def _get_session_manager(self) -> "MCPSessionManager":
+        raise NotImplementedError
+
+    async def _discard_server_sessions(self) -> None:
+        """Tear down this server's pooled sessions, whoever else holds them.
+
+        Only for a session whose transport is gone: the pool keeps handing it
+        out (its keep-alive task never ends), so every later caller would fail
+        the same way.
+        """
+        if not self._connection_params:
+            return
+        session_manager = self._get_session_manager()
+        server_key = session_manager._get_server_key(self._connection_params, self._TRANSPORT)
+        await session_manager.invalidate_server_key(server_key)
+
+    async def _list_tools(self) -> list:
+        """List the server's tools, starting a new session once if the pooled one is dead."""
+        session = await self._get_or_create_session()
+        try:
+            return (await session.list_tools()).tools
+        except Exception as e:
+            if not _is_mcp_session_bust_error(e):
+                raise
+            await logger.awarning(f"MCP session for {self._TRANSPORT} server is closed; starting a new one: {e!r}")
+            await self._discard_server_sessions()
+        session = await self._get_or_create_session()
+        return (await session.list_tools()).tools
 
     def _use_generated_context(self, prefix: str) -> None:
         if not self._session_context:
@@ -2023,7 +2057,9 @@ class _SessionContextOwner:
             await session_manager._cleanup_session(self._replaced_contexts.pop())
 
 
-class MCPStdioClient(_SessionContextOwner):
+class MCPStdioClient(_PooledSessionClient):
+    _TRANSPORT = "stdio"
+
     def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
@@ -2107,11 +2143,9 @@ class MCPStdioClient(_SessionContextOwner):
 
         self._use_generated_context("default")
 
-        # Get or create a persistent session
-        session = await self._get_or_create_session()
-        response = await session.list_tools()
+        tools = await self._list_tools()
         self._connected = True
-        return response.tools
+        return tools
 
     async def connect_to_server(
         self,
@@ -2262,10 +2296,9 @@ class MCPStdioClient(_SessionContextOwner):
                     await logger.awarning(
                         f"MCP session connection issue for tool '{tool_name}', retrying with fresh session..."
                     )
-                    # Clean up the dead session
-                    if self._session_context:
-                        session_manager = self._get_session_manager()
-                        await session_manager._cleanup_session(self._session_context)
+                    # Releasing only this context's reference would leave the dead
+                    # session pooled for every other context that holds it.
+                    await self._discard_server_sessions()
                     # Add a small delay before retry
                     await asyncio.sleep(0.5)
                     continue
@@ -2325,7 +2358,9 @@ class MCPStdioClient(_SessionContextOwner):
         await self.disconnect()
 
 
-class MCPStreamableHttpClient(_SessionContextOwner):
+class MCPStreamableHttpClient(_PooledSessionClient):
+    _TRANSPORT = "streamable_http"
+
     def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
@@ -2406,18 +2441,14 @@ class MCPStreamableHttpClient(_SessionContextOwner):
         self._use_generated_context("default_http")
 
         # Get or create a persistent session (will try Streamable HTTP, then selective SSE fallback)
-        session = await self._get_or_create_session()
         try:
-            response = await session.list_tools()
+            tools = await self._list_tools()
         except Exception:
             self._connected = False
-            if self._connection_params:
-                session_manager = self._get_session_manager()
-                sk = session_manager._get_server_key(self._connection_params, "streamable_http")
-                await session_manager.invalidate_server_key(sk)
+            await self._discard_server_sessions()
             raise
         self._connected = True
-        return response.tools
+        return tools
 
     async def connect_to_server(
         self,
@@ -2582,10 +2613,7 @@ class MCPStreamableHttpClient(_SessionContextOwner):
                     await logger.awarning(
                         f"MCP session issue for tool '{tool_name}', invalidating server sessions and retrying..."
                     )
-                    if self._connection_params:
-                        session_manager = self._get_session_manager()
-                        sk = session_manager._get_server_key(self._connection_params, "streamable_http")
-                        await session_manager.invalidate_server_key(sk)
+                    await self._discard_server_sessions()
                     await asyncio.sleep(0.5)
                     continue
 

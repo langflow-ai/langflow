@@ -6,7 +6,9 @@ checks the subprocess itself, not only the manager's bookkeeping.
 """
 
 import asyncio
+import os
 import shlex
+import signal
 import sys
 from pathlib import Path
 
@@ -28,6 +30,11 @@ mcp = FastMCP("lifecycle-server")
 @mcp.tool()
 async def echo(value: str) -> str:
     return value
+
+
+@mcp.tool()
+def pid() -> str:
+    return str(os.getpid())
 
 
 @mcp.tool()
@@ -113,3 +120,46 @@ async def test_should_finish_in_flight_call_when_context_binds_another_server(ma
 
     assert manager._session_refcount == {}
     assert _session_tasks(manager) == []
+
+
+async def _server_pid(client: MCPStdioClient) -> int:
+    result = await client.run_tool("pid", {})
+    return int(result.content[0].text)
+
+
+async def _kill(pid: int) -> None:
+    os.kill(pid, signal.SIGKILL if hasattr(signal, "SIGKILL") else signal.SIGTERM)
+    await asyncio.sleep(0.5)
+
+
+async def test_should_start_a_new_server_when_connecting_after_the_process_died(manager, server_command):
+    first = _client(manager)
+    await first._connect_to_server(server_command)
+    first.set_session_context("chat_server")
+    dead_pid = await _server_pid(first)
+    await _kill(dead_pid)
+
+    # The next run of the flow lists the tools again before calling one.
+    second = _client(manager)
+    tools = await second._connect_to_server(server_command)
+    second.set_session_context("chat_server")
+
+    assert {tool.name for tool in tools} >= {"echo", "pid"}
+    assert await _server_pid(second) != dead_pid
+
+
+async def test_should_recover_tool_call_when_the_dead_process_was_shared(manager, server_command):
+    first = _client(manager)
+    first.set_session_context("chat-1_server")
+    await first._connect_to_server(server_command)
+    second = _client(manager)
+    second.set_session_context("chat-2_server")
+    await second._connect_to_server(server_command)
+    dead_pid = await _server_pid(first)
+    assert await _server_pid(second) == dead_pid
+    await _kill(dead_pid)
+
+    result = await first.run_tool("echo", {"value": "after-crash"})
+
+    assert result.content[0].text == "after-crash"
+    assert await _server_pid(second) != dead_pid
