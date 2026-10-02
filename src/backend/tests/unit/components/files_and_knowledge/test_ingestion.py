@@ -118,16 +118,20 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     async def test_legacy_kb_path_rejects_paths_outside_the_current_user_directory(
         self, component_class, default_kwargs, knowledge_base
     ):
-        from langflow.api.utils import knowledge_base_service
+        from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+        from langflow.services.deps import session_scope
 
-        # Path resolution only runs once the backend resolves, so the traversing
-        # name needs a row for the containment guard to be reachable at all.
-        await knowledge_base_service.create_record(
+        # Seed a historical malformed row directly. Current creation rejects
+        # this name before the legacy containment guard can be reached.
+        record = KnowledgeBaseRecord(
             user_id=default_kwargs["_user_id"],
             name=knowledge_base,
             backend_type="chroma",
             model_selection={"name": "m", "provider": "HuggingFace"},
         )
+        async with session_scope() as session:
+            session.add(record)
+            await session.commit()
         default_kwargs["knowledge_base"] = knowledge_base
         component = component_class(**default_kwargs)
 

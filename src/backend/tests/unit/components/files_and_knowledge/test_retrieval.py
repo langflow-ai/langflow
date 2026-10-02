@@ -406,12 +406,19 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
     ):
         """An existing display name never controls a SQLite storage path."""
         from langflow.api.utils import knowledge_base_service
+        from langflow.services.deps import session_scope
 
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
-            name=knowledge_base,
+            name="historical_path_like_name",
             model_selection={"name": "m", "provider": "HuggingFace"},
         )
+        # Represent an existing malformed name without bypassing validation
+        # in the production create path. Its UUID-routed store stays fixed.
+        record.name = knowledge_base
+        async with session_scope() as session:
+            session.add(record)
+            await session.commit()
         default_kwargs["knowledge_base"] = knowledge_base
         component = component_class(**default_kwargs)
 
