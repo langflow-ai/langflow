@@ -45,6 +45,7 @@ from langflow.services.knowledge_base_storage.runtime import (
     private_directory,
     storage_root,
 )
+from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
 
 _tasks: set[asyncio.Task] = set()
 _inventory_complete = True
@@ -531,13 +532,21 @@ async def reconcile_legacy_inventory() -> None:
                 raise ValueError
             if metadata.get("name", parts[1]) != parts[1]:
                 raise ValueError
-            selection = metadata.get("model_selection") or {
-                "provider": metadata.get("embedding_provider", "Unknown"),
-                "name": metadata.get("embedding_model", ""),
-            }
+            selection = metadata.get("model_selection") or {}
             if isinstance(selection, list):
                 selection = selection[0] if selection else {}
             if not isinstance(selection, dict):
+                raise TypeError
+            if not selection:
+                model = str(metadata.get("embedding_model") or "")
+                provider = str(metadata.get("embedding_provider") or "Unknown")
+                if provider == "Unknown" and model:
+                    # Match the legacy sidecar backfill so a migrated base can
+                    # still construct its query embedder after the vector copy.
+                    provider = await _worker(infer_embedding_provider, model)
+                selection = {"provider": provider, "name": model}
+            config = metadata.get("backend_config") or {}
+            if not isinstance(config, dict):
                 raise TypeError
             row = KnowledgeBaseRecord(
                 id=UUID(str(metadata["id"])) if metadata.get("id") else uuid4(),
@@ -549,7 +558,7 @@ async def reconcile_legacy_inventory() -> None:
                 separator=metadata.get("separator"),
                 column_config=metadata.get("column_config", []),
                 backend_type="chroma",
-                backend_config={},
+                backend_config=config,
                 storage_state="migrating",
             )
             async with session_scope() as session:

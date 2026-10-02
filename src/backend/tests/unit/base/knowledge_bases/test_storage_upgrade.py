@@ -677,13 +677,18 @@ async def test_multi_worker_upgrade_retains_source_and_reports_recovery(database
     assert run.error_code == "single_host_required"
 
 
-async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(database):
+@pytest.mark.parametrize(
+    ("embedding_metadata", "selection"),
+    [
+        ({"embedding_provider": "test", "embedding_model": "fixed"}, {"provider": "test", "name": "fixed"}),
+        ({"embedding_model": "text-embedding-3-small"}, {"provider": "OpenAI", "name": "text-embedding-3-small"}),
+    ],
+)
+async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(database, embedding_metadata, selection):
     source = native_source(database)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
-        json.dumps(
-            {"id": str(identity), "name": "fixture-l2", "embedding_provider": "test", "embedding_model": "fixed"}
-        )
+        json.dumps({"id": str(identity), "name": "fixture-l2", **embedding_metadata})
     )
     original = maintenance.tree_fingerprint(source)
     await coordinator.run_pending()
@@ -692,7 +697,7 @@ async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(da
     assert current.storage_state == "ready"
     assert current.user_id == database.user.id
     assert current.name == "fixture-l2"
-    assert current.model_selection == {"provider": "test", "name": "fixed"}
+    assert current.model_selection == selection
     assert current.chunks == 239
     assert maintenance.tree_fingerprint(source) == original
 
@@ -702,3 +707,27 @@ async def test_fresh_install_without_storage_directory_has_no_upgrade_warning(da
     await coordinator.run_pending()
     assert await coordinator.published_inventory_status() == {"complete": True, "issues": 0}
     assert await coordinator.readiness()
+
+
+async def test_disk_only_cloud_base_preserves_remote_routing_and_original_source(database, monkeypatch):
+    source = native_source(database)
+    identity = uuid4()
+    config = {"mode": "cloud", "collection": "remote-original", "url_variable": "CHROMA_URL"}
+    (source / "embedding_metadata.json").write_text(
+        json.dumps({"id": str(identity), "name": "fixture-l2", "backend_type": "chroma", "backend_config": config})
+    )
+    original = maintenance.tree_fingerprint(source)
+
+    def unexpected_local_copy(*_args, **_kwargs):
+        pytest.fail("Cloud routing must not be replaced by a residual local directory")
+
+    monkeypatch.setattr(coordinator, "export_local_snapshot", unexpected_local_copy)
+    await coordinator.run_pending()
+    current = await read_kb(database, identity)
+    assert current.backend_type == "chroma"
+    assert current.backend_config == config
+    assert current.storage_state == "needs_attention"
+    assert maintenance.tree_fingerprint(source) == original
+    async with database.sessions() as session:
+        run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)
+    assert run.error_code == "remote_source_requires_migration"
