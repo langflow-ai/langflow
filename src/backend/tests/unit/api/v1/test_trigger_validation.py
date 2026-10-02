@@ -11,6 +11,7 @@ from langflow.services.deps import session_scope
 from sqlmodel import select
 
 from tests.unit.api.v1.test_triggers import _create, _payload
+from tests.unit.erase_helpers import wait_for_erase
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -112,7 +113,8 @@ async def test_user_deletion_removes_owned_trigger_history(client, logged_in_hea
         session.add(TriggerSubscription(trigger_id=trigger.id, provider="test", provider_subscription_id=uuid4().hex))
         owner_id, trigger_id = owner.id, trigger.id
     response = await client.delete(f"api/v1/users/{owner_id}", headers=logged_in_headers_super_user)
-    assert response.status_code == 200, response.text
+    assert response.status_code == 202, response.text
+    await wait_for_erase(response.json()["request_id"])
     async with session_scope() as session:
         assert await session.get(Trigger, trigger_id) is None
         assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all()
