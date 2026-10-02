@@ -57,8 +57,8 @@ async def test_should_keep_a_config_folder_that_save_to_file_never_wrote():
 @pytest.mark.usefixtures("client")
 async def test_should_erase_the_save_folder_recorded_for_that_end_user():
     admin = await create_user("storage-admin-2", superuser=True)
-    folder = _folder_with("carol", "report.txt")
     record_end_user_folder(_config_dir(), "carol", "carol")
+    folder = _folder_with("carol", "report.txt")
 
     _, status = await _erase("carol", admin)
 
@@ -70,9 +70,9 @@ async def test_should_erase_the_save_folder_recorded_for_that_end_user():
 @pytest.mark.usefixtures("client")
 async def test_should_keep_a_save_folder_shared_with_another_end_user():
     admin = await create_user("storage-admin-3", superuser=True)
-    folder = _folder_with("a_b", "theirs.txt")
     record_end_user_folder(_config_dir(), "a_b", "a@b")
     record_end_user_folder(_config_dir(), "a_b", "a_b")
+    folder = _folder_with("a_b", "theirs.txt")
 
     _, status = await _erase("a_b", admin)
 
@@ -89,8 +89,8 @@ async def test_should_keep_identity_wide_files_when_the_request_is_scoped_to_som
         session.add_all([included, excluded])
         await session.flush()
         included_id = included.id
-    folder = _folder_with("dana", "from-included.txt", "from-excluded.txt")
     record_end_user_folder(_config_dir(), "dana", "dana")
+    folder = _folder_with("dana", "from-included.txt", "from-excluded.txt")
 
     plan, status = await _erase("dana", admin, flow_ids=[included_id])
 
@@ -103,8 +103,8 @@ async def test_should_keep_identity_wide_files_when_the_request_is_scoped_to_som
 @pytest.mark.usefixtures("client")
 async def test_should_plan_identity_wide_files_when_the_request_covers_every_flow():
     admin = await create_user("storage-admin-5", superuser=True)
-    folder = _folder_with("erin", "from-any-flow.txt")
     record_end_user_folder(_config_dir(), "erin", "erin")
+    folder = _folder_with("erin", "from-any-flow.txt")
 
     plan, status = await _erase("erin", admin)
 

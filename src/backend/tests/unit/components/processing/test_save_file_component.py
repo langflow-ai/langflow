@@ -1035,3 +1035,20 @@ async def test_should_record_every_end_user_that_shares_a_sanitized_folder(tmp_p
     await _save_as_end_user("a_b", tmp_path, "two")
 
     assert end_user_folder_owners(tmp_path, "a_b") == frozenset({"a@b", "a_b"})
+
+
+async def test_should_not_claim_a_preexisting_unmarked_directory(tmp_path):
+    from langflow.services.data_subjects.storage_steps import run_storage_item
+    from lfx.utils.end_user_storage import end_user_folder_owners
+
+    directory = tmp_path / "shared-runtime"
+    directory.mkdir()
+    unrelated = directory / "runtime.bin"
+    unrelated.write_text("application data", encoding="utf-8")
+
+    await _save_as_end_user("shared-runtime", tmp_path, "notes")
+    with patch("langflow.services.data_subjects.storage_steps._config_dir", return_value=tmp_path):
+        await run_storage_item({"kind": "save_file_dir", "value": "shared-runtime", "end_user_id": "shared-runtime"})
+
+    assert unrelated.read_text(encoding="utf-8") == "application data"
+    assert end_user_folder_owners(tmp_path, "shared-runtime") is None

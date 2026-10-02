@@ -17,7 +17,7 @@ from uuid import UUID
 from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 from lfx.components.files_and_knowledge._filesystem_namespace import compute_user_namespace
 from lfx.log.logger import logger
-from lfx.utils.end_user_storage import end_user_folder_owners, forget_end_user_folder
+from lfx.utils.end_user_storage import end_user_folder_lock, end_user_folder_owners, forget_end_user_folder
 from sqlmodel import select
 
 from langflow.services.data_subjects.memory_base_storage import KIND_MEMORY_BASE, drop_memory_base
@@ -120,16 +120,17 @@ def _remove_fs_sandbox(identity: str) -> None:
 def _remove_save_file_dir(segment: str, end_user_id: str) -> None:
     """Delete the folder only when SaveToFile recorded this end user as its sole owner."""
     root = _config_dir()
-    owners = end_user_folder_owners(root, segment)
-    if owners != frozenset({end_user_id}):
-        logger.warning(
-            "op=data_subject_erase kept save-file folder %s: %s",
-            segment,
-            "not written by SaveToFile" if owners is None else "shared with other end users",
-        )
-        return
-    _remove_dir(root / segment, root)
-    forget_end_user_folder(root, segment)
+    with end_user_folder_lock(root, segment):
+        owners = end_user_folder_owners(root, segment)
+        if owners != frozenset({end_user_id}):
+            logger.warning(
+                "op=data_subject_erase kept save-file folder %s: %s",
+                segment,
+                "not written by SaveToFile" if owners is None else "shared with other end users",
+            )
+            return
+        _remove_dir(root / segment, root)
+        forget_end_user_folder(root, segment)
 
 
 def _remove_kb_user_dir(username: str) -> None:

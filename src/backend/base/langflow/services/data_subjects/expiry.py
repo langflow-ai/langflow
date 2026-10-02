@@ -34,19 +34,27 @@ def auto_erase_enabled() -> bool:
 
 
 async def _expired_request_ids(now: datetime) -> list[UUID]:
+    eligible: list[UUID] = []
+    offset = 0
     async with session_scope() as session:
-        rows = (
-            await session.exec(
-                select(DataSubjectRequest)
-                .where(
-                    DataSubjectRequest.status == DataSubjectRequestStatus.REQUESTED.value,
-                    col(DataSubjectRequest.due_at) <= now,
+        while len(eligible) < EXPIRY_BATCH:
+            rows = (
+                await session.exec(
+                    select(DataSubjectRequest)
+                    .where(
+                        DataSubjectRequest.status == DataSubjectRequestStatus.REQUESTED.value,
+                        col(DataSubjectRequest.due_at) <= now,
+                    )
+                    .order_by(col(DataSubjectRequest.due_at), col(DataSubjectRequest.id))
+                    .offset(offset)
+                    .limit(EXPIRY_BATCH)
                 )
-                .order_by(col(DataSubjectRequest.due_at))
-                .limit(EXPIRY_BATCH)
-            )
-        ).all()
-        return [row.id for row in rows if not (row.error or {}).get(AUTO_APPROVAL_BLOCKED)]
+            ).all()
+            eligible.extend(row.id for row in rows if not (row.error or {}).get(AUTO_APPROVAL_BLOCKED))
+            if len(rows) < EXPIRY_BATCH:
+                break
+            offset += EXPIRY_BATCH
+    return eligible[:EXPIRY_BATCH]
 
 
 async def _approve_expired(request_id: UUID) -> bool:

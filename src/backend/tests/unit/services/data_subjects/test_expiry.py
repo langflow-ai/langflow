@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import pytest
 from langflow.services.data_subjects.engine import run_request
-from langflow.services.data_subjects.expiry import approve_expired_requests
+from langflow.services.data_subjects.expiry import AUTO_APPROVAL_BLOCKED, EXPIRY_BATCH, approve_expired_requests
 from langflow.services.data_subjects.requests import create_builder_request
 from langflow.services.database.models.auth.authz import AuthzAuditLog
 from langflow.services.database.models.data_subject_request import (
@@ -128,3 +129,23 @@ async def test_should_keep_a_blocked_request_open_and_not_retry_it():
         request = await session.get(DataSubjectRequest, request_id)
         assert request.status == DataSubjectRequestStatus.REQUESTED.value
         assert request.error["code"] == "last_administrator"
+
+
+@pytest.mark.usefixtures("client", "auto_erase_on")
+async def test_should_approve_an_overdue_request_behind_a_full_batch_of_blocked_requests():
+    now = _now()
+    async with session_scope() as session:
+        session.add_all(
+            DataSubjectRequest(
+                subject_type="builder",
+                subject_user_id=uuid4(),
+                source="self",
+                due_at=now - timedelta(days=2),
+                error={AUTO_APPROVAL_BLOCKED: True, "code": "protected_account"},
+            )
+            for _ in range(EXPIRY_BATCH)
+        )
+    request_id, _ = await _builder_request("overdue-after-blocked", overdue_by=timedelta(days=1))
+
+    assert await approve_expired_requests(now) == 1
+    assert await _status(request_id) == DataSubjectRequestStatus.APPROVED.value
