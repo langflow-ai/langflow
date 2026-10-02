@@ -71,6 +71,7 @@
     "fast-xml-parser": "4.5.5",
     "fast-uri": "^3.1.8",
     "svgo": "^3.3.5",
+    "postcss": "^8.5.23",
     "openapi-to-postmanv2": {
       "lodash": "4.17.21"
     },
