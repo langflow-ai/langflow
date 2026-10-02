@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -16,6 +17,15 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 pytestmark = pytest.mark.usefixtures("client")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_orphan_sweep_lock(tmp_path, monkeypatch):
+    """Give each test worker its own startup-sweep lock file."""
+    monkeypatch.setattr(
+        "langflow.services.background_execution.service.tempfile",
+        SimpleNamespace(gettempdir=lambda: str(tmp_path)),
+    )
 
 
 def _frame(event_type, data):
