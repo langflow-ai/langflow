@@ -169,3 +169,78 @@ def test_data_field_access():
     record.name = "John"
     assert "name" in record.data
     assert record.data["name"] == "John"
+
+
+# --- Regression tests for issue #15494 ---
+
+
+def test_add_does_not_mutate_left_operand_list():
+    """Adding two Data objects with overlapping list keys must not mutate the left operand."""
+    left = Data(data={"items": [1]})
+    right = Data(data={"items": [2]})
+
+    result = left + right
+
+    assert result.data == {"items": [1, 2]}
+    # The critical assertion: left must be unchanged
+    assert left.data == {"items": [1]}
+
+
+def test_add_is_idempotent_for_lists():
+    """Repeating the same addition must always produce the same result."""
+    left = Data(data={"items": [1]})
+    right = Data(data={"items": [2]})
+
+    result1 = left + right
+    result2 = left + right
+
+    assert result1.data == {"items": [1, 2]}
+    assert result2.data == {"items": [1, 2]}
+    assert left.data == {"items": [1]}
+
+
+def test_self_addition_does_not_mutate():
+    """Adding a Data object to itself must not modify the original."""
+    original = Data(data={"items": [1, 2]})
+    original_data_before = {"items": [1, 2]}
+
+    result = original + original
+
+    assert result.data == {"items": [1, 2, 1, 2]}
+    assert original.data == original_data_before
+
+
+def test_add_does_not_mutate_right_operand():
+    """The right operand must never be modified by __add__."""
+    left = Data(data={"items": [1]})
+    right = Data(data={"items": [2]})
+    right_data_before = {"items": [2]}
+
+    _ = left + right
+
+    assert right.data == right_data_before
+
+
+def test_add_non_list_values_still_work():
+    """Non-list overlapping values (strings, ints) must still combine correctly."""
+    left = Data(data={"text": "Hello", "count": 5})
+    right = Data(data={"text": " World", "count": 3})
+
+    result = left + right
+
+    assert result.data == {"text": "Hello World", "count": 8}
+    # Originals unchanged
+    assert left.data == {"text": "Hello", "count": 5}
+    assert right.data == {"text": " World", "count": 3}
+
+
+def test_add_disjoint_keys():
+    """Keys present in only one operand must appear in the result unchanged."""
+    left = Data(data={"a": [1], "only_left": "L"})
+    right = Data(data={"a": [2], "only_right": "R"})
+
+    result = left + right
+
+    assert result.data == {"a": [1, 2], "only_left": "L", "only_right": "R"}
+    assert left.data == {"a": [1], "only_left": "L"}
+    assert right.data == {"a": [2], "only_right": "R"}
