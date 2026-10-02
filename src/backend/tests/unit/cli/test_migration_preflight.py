@@ -171,9 +171,10 @@ class TestSourceThatCannotBeRead:
         assert report.checks[1].status == "fail"
         assert "no recorded revision" in report.checks[1].summary
 
-    async def test_a_source_that_cannot_be_reached_fails_the_schema_check(self, instance_on):
-        # Nothing listens on port 1, so the connection is refused.
-        instance_on("postgresql://user:not-to-be-shown@127.0.0.1:1/x")  # pragma: allowlist secret
+    async def test_a_source_that_cannot_be_reached_fails_the_schema_check(self, instance_on, tmp_path):
+        # A path under a regular file can be neither opened nor created, with any driver.
+        (tmp_path / "not-a-directory").write_text("")
+        instance_on(f"sqlite:///{tmp_path}/not-a-directory/langflow.db")
 
         report = await run_preflight(target_revision=HEAD)
 
