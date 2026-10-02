@@ -76,6 +76,7 @@ async def get_instance_results(
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
+    """Build a component within trusted message and attachment scopes, then restore them."""
     custom_params = await update_params_with_load_from_db_fields(
         custom_component,
         custom_params,

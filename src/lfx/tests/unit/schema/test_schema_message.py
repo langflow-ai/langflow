@@ -457,6 +457,7 @@ class _S3LikeStorage:
 
 @pytest.fixture
 def s3_storage(monkeypatch):
+    """Provide uncached object-storage reads without relying on local files or a live bucket."""
     # ``create_image_content_dict`` is lru_cached on the path, so a stale entry from another
     # test would be served instead of going through the stub.
     create_image_content_dict.cache_clear()

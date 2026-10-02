@@ -11,6 +11,7 @@ from langflow.services.deps import session_scope
 
 @pytest.fixture(params=[False, True], ids=["owned-flow", "shared-flow"])
 async def editable_attachment_message(request, active_user):
+    """Persist an editable owned or virtual-flow message for the authenticated user."""
     source_flow_id = uuid4()
     shared = request.param
     flow_id = (
@@ -56,6 +57,7 @@ async def editable_attachment_message(request, active_user):
     ],
 )
 async def test_message_edit_rejects_filesystem_paths(client, logged_in_headers, editable_attachment_message, file):
+    """Reject malformed or unconfined paths without persisting an attachment reference."""
     response = await client.put(editable_attachment_message["url"], headers=logged_in_headers, json={"files": [file]})
 
     assert response.status_code == 400
@@ -65,6 +67,7 @@ async def test_message_edit_rejects_filesystem_paths(client, logged_in_headers, 
 
 
 async def test_message_edit_rejects_foreign_upload_namespace(client, logged_in_headers, editable_attachment_message):
+    """Prevent message edits from selecting another user's upload namespace."""
     response = await client.put(
         editable_attachment_message["url"], headers=logged_in_headers, json={"files": [f"{uuid4()}/upload.txt"]}
     )
@@ -79,6 +82,7 @@ async def test_message_edit_rejects_foreign_upload_namespace(client, logged_in_h
 async def test_message_edit_accepts_own_upload_keys(
     client, logged_in_headers, active_user, editable_attachment_message, namespace
 ):
+    """Preserve upload keys belonging to the authenticated user or the message's flow."""
     scope = active_user.id if namespace == "user" else editable_attachment_message["flow_id"]
     files = [f"{scope}/upload.txt"]
     response = await client.put(editable_attachment_message["url"], headers=logged_in_headers, json={"files": files})
@@ -88,6 +92,7 @@ async def test_message_edit_accepts_own_upload_keys(
 
 
 async def test_message_edit_can_remove_attachments(client, logged_in_headers, editable_attachment_message):
+    """Allow an authorized edit to remove all attachments."""
     response = await client.put(editable_attachment_message["url"], headers=logged_in_headers, json={"files": []})
 
     assert response.status_code == 200
@@ -99,6 +104,7 @@ async def test_message_edit_can_remove_attachments(client, logged_in_headers, ed
 async def test_persisted_absolute_upload_round_trips_on_message_edit(
     client, logged_in_headers, active_user, editable_attachment_message, tmp_path, monkeypatch, namespace, edit
 ):
+    """Keep authorized absolute upload paths when the frontend edits text or feedback."""
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
@@ -140,6 +146,7 @@ async def test_persisted_absolute_upload_round_trips_on_message_edit(
 async def test_message_edit_rejects_unsafe_absolute_uploads(
     client, logged_in_headers, active_user, editable_attachment_message, tmp_path, monkeypatch, target
 ):
+    """Reject outside, foreign, reserved, and symlink-escaped absolute attachments."""
     from langflow.services.deps import get_settings_service
 
     storage = tmp_path / "storage"

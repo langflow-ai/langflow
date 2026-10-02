@@ -518,10 +518,12 @@ class Message(Data):
 
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self, model_name: str | None = None):
+        """Convert accessible attachments to model content, skipping unsafe or unavailable files."""
         from lfx.base.data.storage_utils import StorageServiceUnavailableError, require_storage_service, to_storage_path
         from lfx.services.deps import get_settings_service, get_storage_service
 
         def _safe_attachment_name(value: Any) -> str | None:
+            """Return only the basename used to label an attachment in model input."""
             if isinstance(value, Image):
                 if not value.path:
                     return None

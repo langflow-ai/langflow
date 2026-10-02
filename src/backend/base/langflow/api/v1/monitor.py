@@ -392,6 +392,7 @@ async def update_message(
     background_tasks: BackgroundTasks,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    """Update an owned message after authorizing its flow and attachment namespaces."""
     # Rollback expires ORM state, so keep the ownership key as a stable scalar
     # for the post-race lookup.
     current_user_id = current_user.id
