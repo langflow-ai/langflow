@@ -70,6 +70,15 @@
     "baseline-browser-mapping": "^2.11.0",
     "@babel/core": "^7.29.1",
     "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+    "ai": "^5.0.207",
+    "@ai-sdk/gateway": {
+      "@ai-sdk/provider-utils": "^3.0.28"
+    },
+    "@ai-sdk/react": {
+      ".": "^2.0.30",
+      "@ai-sdk/provider-utils": "^3.0.28",
+      "ai": "^5.0.207"
+    },
     "express": {
       ".": "^4.22.3",
       "path-to-regexp": "^0.1.13"
