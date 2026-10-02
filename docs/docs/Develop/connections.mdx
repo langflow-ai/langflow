@@ -12,7 +12,7 @@ Google Workspace, Microsoft 365, and Slack components can re-use **Connections**
 
 * Configure a provider's OAuth registration.
   To configure OAuth, see [Configure connection OAuth](./connection-oauth).
-* Logged into Langflow server as superuser to create connections
+* Sign in to the Langflow server. Any signed-in user can create their own connection.
 
 ## Add a connection
 
@@ -77,7 +77,13 @@ Open <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the row.
 * **Check credential** tests the stored credential. It is available after the connection has one.
 * **Authorize** or **Reconnect** starts consent again. Scopes the connection already holds stay selected. Check another scope to add it, or clear one to drop it. A pending connection offers **Authorize**. A connection that already completed consent offers **Reconnect**.
 * **Rename** changes the display name. The handle stays the same, so flows that reference it keep working.
-* **Allow scheduled and deployed runs** lets deployments and other non-interactive runs use this connection as its owner. It is off until the connection owner turns it on. For an instance connection, a superuser turns it on. Turning it off does not grant anonymous access, and it does not bypass integration policy.
+* **Allow scheduled and deployed runs** is off until the connection owner enables it. A connection owner is a signed-in user.
+
+    Enable this setting when Langflow runs the flow as the connection _owner_, rather than as the user who sent the request. For example, a flow triggered by a webhook at `POST /api/v1/webhook/FLOW_ID` will run the flow as the flow's owner using the webhook connection's owner.
+
+    The playground and `POST /api/v1/run` endpoints always act as the signed-in caller and use that caller's connection, and this setting has no effect on them.
+
+    A [public playground link](/concepts-playground#share-a-flows-playground) or an [A2A agent](/a2a-server) cannot use a connection, whether this setting is enabled or disabled.
 * **Revoke** removes the stored credential. The row stays, with status **Revoked**, and later runs fail until someone authorizes the connection again.
 * **Delete** removes the connection. It is available after the credential is gone, so revoke the connection first, or delete it while it is still **Pending**.
 
