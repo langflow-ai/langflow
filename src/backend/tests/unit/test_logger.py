@@ -65,6 +65,14 @@ def _restore_process_logging_state():
     # ``lfx.log``'s ``__init__`` re-exports under the same name, not the module.
     _lfx_log = importlib.import_module("lfx.log.logger")
 
+    # InterceptHandler is process-global and a previous test module can leave
+    # one installed on the worker's root logger.  Do not snapshot that leaked
+    # handler and restore it after this module; the tests below explicitly
+    # assert the handler is absent in pretty-log mode.
+    for handler in logging.root.handlers[:]:
+        if isinstance(handler, InterceptHandler):
+            logging.root.removeHandler(handler)
+
     orig_structlog_config = dict(structlog.get_config())
     orig_root_handlers = logging.root.handlers[:]
     orig_root_level = logging.root.level

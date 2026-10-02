@@ -12,10 +12,10 @@
     "docs:version": "docusaurus docs:version"
   },
   "dependencies": {
-    "@docusaurus/core": "3.9.2",
-    "@docusaurus/plugin-client-redirects": "^3.9.2",
-    "@docusaurus/plugin-google-tag-manager": "^3.9.2",
-    "@docusaurus/preset-classic": "3.9.2",
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/plugin-client-redirects": "^3.10.2",
+    "@docusaurus/plugin-google-tag-manager": "^3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
     "@easyops-cn/docusaurus-search-local": "^0.45.0",
     "@mdx-js/react": "^3.0.1",
     "@mendable/search": "^0.0.206",
@@ -28,12 +28,12 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-player": "^2.10.1",
-    "redocusaurus": "2.5.0",
+    "redocusaurus": "2.5.2",
     "rimraf": "^4.1.2",
     "tailwindcss": "^3.4.4"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.9.2",
+    "@docusaurus/module-type-aliases": "^3.10.2",
     "@tsconfig/docusaurus": "^2.0.3",
     "accessibility-checker": "^4.0.26",
     "typescript": "^5.2.2"
@@ -54,32 +54,59 @@
     "node": "22.22.0"
   },
   "overrides": {
+    "axios": "^1.20.0",
+    "basic-ftp": "^6.2.1",
+    "source-map-js": "^1.2.2",
     "shell-quote": "^1.9.0",
     "websocket-driver": "^0.7.5",
-    "brace-expansion": "^5.0.9",
-    "ip-address": "^10.3.1",
-    "undici": "^7.29.0",
+    "brace-expansion@^1": "^1.1.21",
+    "brace-expansion@^2": "^2.1.7",
+    "ip-address": "^10.7.2",
+    "undici": "^7.29.1",
     "serialize-javascript": "^7.0.5",
     "nanoid": "^3.3.17",
-    "dompurify": "^3.4.13",
-    "js-yaml": "^4.3.1",
+    "dompurify": "^3.4.16",
     "picomatch": "^4.0.4",
-    "lodash": "4.17.21",
-    "fast-xml-parser": "4.5.4",
-    "openapi-to-postmanv2": {
-      "lodash": "4.17.21"
+    "lodash": "4.18.1",
+    "fast-uri": "^3.1.8",
+    "fast-xml-parser@^4": "^4.5.5",
+    "fast-xml-parser@^5": "^5.7.0",
+    "js-yaml@^3": "^3.15.2",
+    "js-yaml@^4": "^4.3.2",
+    "svgo": "^3.3.5",
+    "postcss": "^8.5.26",
+    "browserslist": "^4.28.7",
+    "image-size": "^2.0.3",
+    "joi": "^17.13.7",
+    "baseline-browser-mapping": "^2.11.0",
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+    "express": {
+      ".": "^4.22.3",
+      "path-to-regexp": "^0.1.13"
     },
-    "postman-collection": {
-      "lodash": "4.17.21"
-    },
-    "json-schema-resolve-allof": {
-      "lodash": "4.17.21"
-    },
-    "json-refs": {
-      "lodash": "4.17.21"
-    },
-    "gray-matter": {
-      "js-yaml": "^3.15.1"
+    "ajv@^6": "^6.14.0",
+    "ajv@^8": "^8.18.0",
+    "bn.js@^4": "^4.12.3",
+    "bn.js@^5": "^5.2.3",
+    "body-parser": "^1.20.6",
+    "fflate": "^0.4.9",
+    "http-proxy-middleware": "^2.0.10",
+    "launch-editor": "^2.14.1",
+    "minimatch@^8": "^8.0.6",
+    "minimatch@^9": "^9.0.7",
+    "postcss-selector-parser@^6": "^6.1.3",
+    "qs": "^6.16.0",
+    "webpack": "^5.104.1",
+    "webpack-dev-server": "^5.2.6",
+    "ws@^7": "^7.5.11",
+    "ws@^8": "^8.21.0",
+    "yaml@^1": "^1.10.3",
+    "yaml@^2": "^2.8.3",
+    "openapi-sampler": "^1.7.6",
+    "chromedriver": "154.0.1",
+    "adm-zip": "^0.6.1",
+    "sockjs": {
+      "uuid": "^11.1.1"
     }
   }
 }
