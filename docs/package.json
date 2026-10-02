@@ -77,6 +77,7 @@
     "browserslist": "^4.28.7",
     "image-size": "^2.0.3",
     "joi": "^17.13.7",
-    "baseline-browser-mapping": "^2.11.0"
+    "baseline-browser-mapping": "^2.11.0",
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4"
   }
 }
