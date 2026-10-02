@@ -291,7 +291,7 @@ async def test_session_purge_drains_ingestion_message_snapshot(stored_memory_his
     await asyncio.wait_for(fetched.wait(), timeout=10)
     purge = asyncio.create_task(MemoryBaseService().purge_session_data(active_user.id, [message.session_id]))
     try:
-        with pytest.raises(TimeoutError):
+        with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(asyncio.shield(purge), timeout=0.05)
     finally:
         finish_write.set()
