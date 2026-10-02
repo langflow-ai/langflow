@@ -84,7 +84,6 @@ overrides = [
     { name = "pyjwt", specifier = ">=2.15.1,<3.0.0" },
     { name = "pypdf", specifier = ">=6.16.1,<7.0.0" },
     { name = "python-liquid", specifier = ">=2.2.0,<3.0.0" },
-    { name = "python-pptx", specifier = ">=1.0.2" },
     { name = "urllib3", specifier = ">=2.8.0,<3.0.0" },
     { name = "virtualenv", specifier = ">=21.14.2,<22.0.0" },
     { name = "werkzeug", specifier = ">=3.1.9,<4.0.0" },

@@ -261,8 +261,6 @@ constraint-dependencies = [
     "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
 ]
 override-dependencies = [
-    # temporary force a newer python-pptx
-    "python-pptx>=1.0.2",
     # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
     "z3-solver<4.15.7",
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
