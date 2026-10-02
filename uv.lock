@@ -67,7 +67,6 @@ constraints = [
 overrides = [
     { name = "authlib", specifier = ">=1.8.0,<2.0.0" },
     { name = "cryptography", specifier = ">=50.0.0" },
-    { name = "dynaconf", specifier = ">=3.2.13" },
     { name = "gitpython", specifier = ">=3.1.58" },
     { name = "gunicorn", specifier = ">=25.3.0" },
     { name = "h2", specifier = ">=4.4.1" },

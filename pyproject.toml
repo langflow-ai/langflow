@@ -270,7 +270,6 @@ override-dependencies = [
     "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
     "nltk>=3.10.3",
     "Markdown>=3.8.0",
-    "dynaconf>=3.2.13",
     "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
     "authlib>=1.8.0,<2.0.0",  # Scanner reported authlib 1.7.2; use the latest compatible release.
