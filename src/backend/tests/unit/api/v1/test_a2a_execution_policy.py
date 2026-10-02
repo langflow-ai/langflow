@@ -16,6 +16,7 @@ from lfx.utils import flow_validation as fv
 
 @pytest.fixture
 def authenticated_a2a(monkeypatch):
+    """Isolate authenticated flow lookup while retaining the real execution gates."""
     user = SimpleNamespace(id=uuid4(), is_superuser=False)
     flow = SimpleNamespace(id=uuid4(), user_id=user.id, data=None)
     settings = SimpleNamespace(
@@ -40,6 +41,7 @@ def authenticated_a2a(monkeypatch):
 
 
 def _payload(component_type, source):
+    """Create a single code-bearing node for policy validation."""
     return {
         "nodes": [
             {
@@ -56,6 +58,7 @@ def _payload(component_type, source):
 
 
 def _restricted_payload(context, policy):
+    """Enable one restriction around a payload it must reject."""
     _user, flow, settings, catalog, _trusted, _execute = context
     flow.data = _payload("CustomComponent", "# user supplied component")
     if policy == "admin-only":
@@ -72,6 +75,7 @@ def _restricted_payload(context, policy):
 
 @pytest.mark.parametrize("policy", ["admin-only", "custom-disabled", "interpreter-disabled", "catalog"])
 async def test_authenticated_a2a_rejects_policy_denial_before_executor(authenticated_a2a, policy):
+    """Every server restriction stops an authenticated run before execution."""
     user, flow, _settings, _catalog, _trusted, execute = authenticated_a2a
     _restricted_payload(authenticated_a2a, policy)
 
@@ -83,6 +87,7 @@ async def test_authenticated_a2a_rejects_policy_denial_before_executor(authentic
 
 
 async def test_authenticated_a2a_executes_sanitized_payload(authenticated_a2a):
+    """The executor receives a detached trusted graph under the admitted principal."""
     user, flow, settings, _catalog, trusted, execute = authenticated_a2a
     settings.custom_component_admin_only = True
     flow.data = _payload("ChatInput", trusted)
@@ -99,6 +104,7 @@ async def test_authenticated_a2a_executes_sanitized_payload(authenticated_a2a):
 
 @pytest.mark.parametrize("resume", [False, True])
 async def test_authenticated_a2a_cannot_borrow_admin_owner_privileges(authenticated_a2a, resume):
+    """A different caller cannot inherit an administrator flow owner's privileges."""
     user, flow, _settings, _catalog, trusted, execute = authenticated_a2a
     user.is_superuser = True
     caller_id = str(uuid4())
@@ -121,6 +127,7 @@ async def test_authenticated_a2a_cannot_borrow_admin_owner_privileges(authentica
 
 @pytest.mark.parametrize("policy", ["admin-only", "custom-disabled", "interpreter-disabled", "catalog"])
 async def test_authenticated_a2a_resume_revalidates_checkpoint(authenticated_a2a, policy):
+    """Current server restrictions apply to the stored checkpoint before restoration."""
     user, flow, _settings, _catalog, _trusted, _execute = authenticated_a2a
     payload = _restricted_payload(authenticated_a2a, policy)
     checkpoint = GraphCheckpoint(run_id=str(uuid4()), flow_id=str(flow.id), user_id=str(user.id), flow_payload=payload)
@@ -130,6 +137,7 @@ async def test_authenticated_a2a_resume_revalidates_checkpoint(authenticated_a2a
 
 
 async def test_authenticated_a2a_resume_preserves_trusted_detached_payload(authenticated_a2a):
+    """Resumption sanitizes a detached checkpoint without rewriting persisted source."""
     user, flow, settings, _catalog, trusted, _execute = authenticated_a2a
     settings.custom_component_admin_only = True
     checkpoint = GraphCheckpoint(
