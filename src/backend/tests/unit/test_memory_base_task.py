@@ -670,6 +670,7 @@ def _storage_operation_for_unit_tests(monkeypatch):
     record = MagicMock(id=uuid.uuid4())
     monkeypatch.setattr(task, "resolve_record", AsyncMock(return_value=record))
     monkeypatch.setattr(task, "operation", lambda *_args, **_kwargs: contextlib.nullcontext(record))
+    monkeypatch.setattr(task, "_read_live_session_id", AsyncMock(return_value=uuid.uuid4()))
 
 
 @pytest.fixture(autouse=True)
