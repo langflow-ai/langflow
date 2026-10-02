@@ -75,6 +75,7 @@
     "svgo": "^3.3.5",
     "postcss": "^8.5.26",
     "browserslist": "^4.28.7",
-    "image-size": "^2.0.3"
+    "image-size": "^2.0.3",
+    "joi": "^17.13.7"
   }
 }
