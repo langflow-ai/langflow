@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import json
 import time
 import uuid
@@ -972,11 +973,24 @@ class MCPToolsComponent(ComponentWithCache):
             value == {} and model_field.default is None and cls._is_object_like_annotation(model_field.annotation)
         )
 
+    def _tool_argument_value(self, arg_name: str) -> Any:
+        """Configured value of a tool argument.
+
+        Tool arguments are not declared inputs: their names come from the MCP server's schema, so one
+        can match a component method (e.g. `index`), and `getattr` would return the bound method
+        before `Component.__getattr__` ever reads the configured value.
+        """
+        attributes = self.__dict__.get("_attributes", {})
+        if arg_name in attributes:
+            return attributes[arg_name]
+        value = getattr(self, arg_name, None)
+        return None if inspect.ismethod(value) else value
+
     def _build_tool_kwargs(self, args_schema: type[BaseModel]) -> dict[str, Any]:
         """Collect tool kwargs from component inputs, omitting blank optional values."""
         kwargs: dict[str, Any] = {}
         for arg_name, model_field in args_schema.model_fields.items():
-            value = getattr(self, arg_name, None)
+            value = self._tool_argument_value(arg_name)
             if isinstance(value, Message):
                 value = value.text
 
