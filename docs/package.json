@@ -86,6 +86,7 @@
     "body-parser": "^1.20.6",
     "colord": "^2.9.4",
     "fflate": "^0.4.9",
+    "http-proxy-middleware": "^2.0.10",
     "styled-components": {
       "postcss": "8.4.49"
     },
