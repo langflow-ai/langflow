@@ -59,6 +59,8 @@
     "source-map-js": "^1.2.2",
     "shell-quote": "^1.9.0",
     "websocket-driver": "^0.7.5",
+    "brace-expansion@^1": "^1.1.21",
+    "brace-expansion@^2": "^2.1.7",
     "ip-address": "^10.7.2",
     "undici": "^7.29.1",
     "serialize-javascript": "^7.0.5",
@@ -164,10 +166,7 @@
     },
     "sucrase": {
       "glob": {
-        "minimatch": {
-          ".": "^9.0.7",
-          "brace-expansion": "^2.0.2"
-        }
+        "minimatch": "^9.0.7"
       }
     },
     "ws": "^7.5.11",
@@ -180,10 +179,12 @@
     "styled-components": {
       "postcss": "8.4.49"
     },
+    "serve-handler": {
+      ".": "^6.1.7"
+    },
     "gray-matter": {
       "js-yaml": "^3.15.2"
     },
-    "brace-expansion": "^5.0.12",
     "node-forge": "^1.4.0",
     "ajv": "^6.14.0",
     "schema-utils@4.3.2": {
