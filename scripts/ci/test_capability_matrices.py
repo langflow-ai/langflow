@@ -4,13 +4,14 @@ import json
 import re
 import shutil
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import check_capability_matrices
 from check_capability_matrices import (
     DEFAULT_MATRIX_DIR,
     DESIGN_ROOT,
@@ -24,6 +25,13 @@ from check_capability_matrices import (
 )
 
 CI_SCRIPTS_WORKFLOW = DESIGN_ROOT.parents[1] / ".github" / "workflows" / "ci-scripts-test.yml"
+TEST_TODAY = date(2026, 9, 30)
+
+
+@pytest.fixture
+def fixed_validation_date(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep fixture evidence deterministic while production uses the real UTC date."""
+    monkeypatch.setattr(check_capability_matrices, "_today", lambda: TEST_TODAY)
 
 
 def _workflow_pull_request_paths() -> list[str]:
@@ -302,12 +310,13 @@ def test_checker_rejects_future_verified_on(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(("age", "message"), [(-1, "in the future"), (0, None), (30, None), (31, "older than 30 days")])
 @pytest.mark.parametrize("target", ["matrix", "source"])
+@pytest.mark.usefixtures("fixed_validation_date")
 def test_evidence_freshness_boundary(tmp_path: Path, age: int, message: str | None, target: str) -> None:
     """Both matrix reviews and individual sources expire; the thirtieth day is still valid."""
     root = _copy_design(tmp_path)
     matrix = _load(root, "google")
     evidence = matrix if target == "matrix" else next(iter(matrix["sources"].values()))
-    evidence["verified_on"] = (datetime.now(tz=UTC).date() - timedelta(days=age)).isoformat()
+    evidence["verified_on"] = (TEST_TODAY - timedelta(days=age)).isoformat()
 
     errors = validate_matrix(_save(root, "google", matrix))
 
@@ -317,10 +326,11 @@ def test_evidence_freshness_boundary(tmp_path: Path, age: int, message: str | No
         assert any(message in error for error in errors)
 
 
+@pytest.mark.usefixtures("fixed_validation_date")
 def test_checker_rejects_old_source_even_with_fresh_matrix_date(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "slack")
-    matrix["verified_on"] = datetime.now(tz=UTC).date().isoformat()
+    matrix["verified_on"] = TEST_TODAY.isoformat()
     matrix["sources"]["slack-scopes"]["verified_on"] = "2019-01-01"
 
     errors = validate_matrix(_save(root, "slack", matrix))
@@ -378,6 +388,7 @@ def test_optional_broad_scope_still_requires_decision(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("decision", ["defer", "exclude"])
+@pytest.mark.usefixtures("fixed_validation_date")
 def test_scope_risk_rule_distinguishes_deferred_and_excluded_actions(tmp_path: Path, decision: str) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "slack")
@@ -415,6 +426,7 @@ def test_included_action_requires_sourced_tenant_consent_requirement(tmp_path: P
     assert any("tenant_consent" in error for error in validate_matrix(_save(root, "microsoft", matrix)))
 
 
+@pytest.mark.usefixtures("fixed_validation_date")
 def test_scope_risk_record_must_exist_and_be_accepted_at_gate_close(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     record = root / "decisions" / "broad-content-read.md"
@@ -575,6 +587,7 @@ def test_sign_off_check_reports_deleted_readme(tmp_path: Path) -> None:
     assert validate_sign_offs(root) == [f"sign-off: {root / 'README.md'} does not exist"]
 
 
+@pytest.mark.usefixtures("fixed_validation_date")
 def test_require_accepted_walks_every_decision_record(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     # palette-naming.md is not referenced from any matrix; gate close must still require it to be accepted.
@@ -588,6 +601,7 @@ def test_require_accepted_walks_every_decision_record(tmp_path: Path) -> None:
     assert "gate decision record 'decisions/palette-naming.md' is draft, not accepted" in errors
 
 
+@pytest.mark.usefixtures("fixed_validation_date")
 def test_require_accepted_fails_on_draft_record(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     record = root / "decisions" / "substrate-google.md"
