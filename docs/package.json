@@ -67,6 +67,7 @@
     "dompurify": "^3.4.16",
     "browserslist": "^4.28.7",
     "image-size": "^2.0.3",
+    "joi": "^17.13.7",
     "js-yaml": "^4.3.2",
     "picomatch": "^4.0.4",
     "lodash": "4.17.21",
