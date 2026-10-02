@@ -19,13 +19,16 @@ from .class_registry import (
     get_model_class,
 )
 from .credentials import (
+    aget_all_variables_for_provider,
+    aget_api_key_for_provider,
     get_all_variables_for_provider,
     get_api_key_for_provider,
     provider_variable_from_env,
     validate_model_provider_key,
 )
-from .instantiation import get_embeddings, get_llm
+from .instantiation import aget_llm, get_embeddings, get_llm
 from .model_catalog import (
+    aget_language_model_options,
     get_embedding_model_options,
     get_language_model_options,
     get_unified_models_detailed,
@@ -55,6 +58,10 @@ __all__ = [
     "_MODEL_CLASS_IMPORTS",
     "_MODEL_OPTIONS_CACHE_TTL_SECONDS",
     "_get_all_provider_mapped_fields",
+    "aget_all_variables_for_provider",
+    "aget_api_key_for_provider",
+    "aget_language_model_options",
+    "aget_llm",
     "apply_provider_variable_config_to_build_config",
     "get_all_variables_for_provider",
     "get_api_key_for_provider",

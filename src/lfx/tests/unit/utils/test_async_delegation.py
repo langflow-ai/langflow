@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from functools import wraps
+from types import MethodType
 from unittest.mock import MagicMock
 
 import pytest
@@ -55,6 +57,35 @@ class TestAsyncDelegateTarget:
         loader.load = lambda: "instance override"
 
         assert async_delegate_target(loader, "load") is None
+
+    def test_copied_marker_on_decorated_subclass_is_not_a_wrapper(self):
+        class Decorated(_Loader):
+            @wraps(_Loader.load)
+            def load(self):
+                return "decorated override"
+
+        loader = Decorated()
+        assert async_delegate_target(loader, "load") is None
+        assert loader.load() == "decorated override"
+
+    def test_copied_marker_on_bound_instance_override_is_not_a_wrapper(self):
+        loader = _Loader()
+
+        @wraps(_Loader.load)
+        def load(_self):
+            return "decorated instance override"
+
+        loader.load = MethodType(load, loader)
+        assert async_delegate_target(loader, "load") is None
+        assert loader.load() == "decorated instance override"
+
+    def test_borrowed_marked_method_keeps_its_original_receiver(self):
+        first = _Loader()
+        second = _AsyncOverride()
+        first.load = second.load
+
+        assert async_delegate_target(first, "load") is None
+        assert first.load() == "async override"
 
     def test_mock_override_is_not_mistaken_for_a_wrapper(self):
         loader = _Loader()

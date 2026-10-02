@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import Mapping
 from contextlib import contextmanager
@@ -45,6 +46,8 @@ from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.unified_models import (
+    aget_language_model_options,
+    aget_llm,
     get_language_model_options,
     get_llm,
     handle_model_input_update,
@@ -64,6 +67,7 @@ from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
+from lfx.utils.async_helpers import async_delegate_target, delegates_to
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
@@ -371,6 +375,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if isinstance(metadata, list) and len(metadata) == len(options):
             provider_field["options_metadata"] = [metadata[index] for index in keep_indexes]
 
+    @delegates_to("_aresolve_selected_model")
     def _resolve_selected_model(self):
         """Resolve the selected model, including legacy agent_llm/model_name inputs."""
         try:
@@ -402,6 +407,37 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             }
         ]
 
+    async def _aresolve_selected_model(self):
+        """Resolve the selected model, including legacy agent_llm/model_name inputs."""
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(self.model, BaseLanguageModel):
+                return self.model
+        except ImportError:
+            pass
+
+        if isinstance(self.model, list) and self.model:
+            return self.model
+
+        legacy_provider = getattr(self, "agent_llm", None)
+        legacy_model_name = getattr(self, "model_name", None)
+        if not legacy_provider or not legacy_model_name:
+            return self.model
+
+        options = await aget_language_model_options(user_id=self.user_id)
+        for option in options:
+            if option.get("provider") == legacy_provider and option.get("name") == legacy_model_name:
+                return [option]
+
+        return [
+            {
+                "name": legacy_model_name,
+                "provider": legacy_provider,
+                "metadata": {},
+            }
+        ]
+
     def _get_max_tokens_value(self):
         """Return the user-supplied max_tokens or None when unset/zero."""
         val = getattr(self, "max_tokens", None)
@@ -409,6 +445,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             return None
         return val
 
+    @delegates_to("_aget_llm")
     def _get_llm(self):
         """Override parent to include max_tokens from the Agent's input field.
 
@@ -432,6 +469,29 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             overrides=getattr(self, "_model_overrides", None),
         )
 
+    async def _aget_llm(self):
+        """Override parent to include max_tokens from the Agent's input field.
+
+        Streaming is mandatory for AgentComponent: ``runnable.astream_events(v2)`` only
+        emits ``on_chat_model_stream`` chunks when the underlying chat model is
+        instantiated with ``streaming=True``. Unlike the LanguageModel component (where
+        ``stream`` is a user-facing toggle), the Agent has no opt-out — the toggle is
+        kept in the UI for backwards compatibility but is intentionally ignored here.
+        Without ``stream=True``, the chat model accumulates the whole response and
+        only emits ``on_chat_model_end``, silently disabling the Playground's live-
+        typing view and breaking the streaming contract on the /events surface.
+        """
+        return await aget_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=getattr(self, "api_key", None),
+            stream=True,
+            max_tokens=self._get_max_tokens_value(),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+            overrides=getattr(self, "_model_overrides", None),
+        )
+
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
@@ -440,7 +500,12 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
-        selected_model = self._resolve_selected_model()
+        selection_method = async_delegate_target(self, "_resolve_selected_model")
+        selected_model = (
+            await selection_method()
+            if selection_method is not None
+            else await asyncio.to_thread(self._resolve_selected_model)
+        )
         try:
             from langchain_core.language_models import BaseLanguageModel
 
@@ -453,7 +518,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)
         self.model = selected_model
-        llm_model = self._get_llm()
+        model_method = async_delegate_target(self, "_get_llm")
+        llm_model = await model_method() if model_method is not None else await asyncio.to_thread(self._get_llm)
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
             raise ValueError(msg)
@@ -798,10 +864,25 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             session_id=session_id or uuid.uuid4(),
         )
 
+    @delegates_to("_aselected_model_remediation_context")
     def _selected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
-        """Return provider/name plus a connected model target, when present."""
         try:
             selected = self._resolve_selected_model()
+        except (AttributeError, TypeError, ValueError, KeyError, ImportError):
+            return None, None, None
+        return self._model_remediation_context(selected)
+
+    async def _aselected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
+        method = async_delegate_target(self, "_resolve_selected_model")
+        try:
+            selected = await method() if method is not None else await asyncio.to_thread(self._resolve_selected_model)
+        except (AttributeError, TypeError, ValueError, KeyError, ImportError):
+            return None, None, None
+        return self._model_remediation_context(selected)
+
+    def _model_remediation_context(self, selected) -> tuple[str | None, str | None, Any | None]:
+        """Return provider/name plus a connected model target, when present."""
+        try:
             if isinstance(selected, list) and selected and isinstance(selected[0], dict):
                 return selected[0].get("provider"), selected[0].get("name"), None
 
@@ -871,8 +952,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         side effects.
         """
         from lfx.base.models.model_remediation import apply_overrides_to_model, find_remediation, remember
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
-        provider, model_name, connected_model = self._selected_model_remediation_context()
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
+        context_method = async_delegate_target(self, "_selected_model_remediation_context")
+        provider, model_name, connected_model = (
+            await context_method()
+            if context_method is not None
+            else await asyncio.to_thread(self._selected_model_remediation_context)
+        )
         applied: set[str] = set()
         while True:
             try:

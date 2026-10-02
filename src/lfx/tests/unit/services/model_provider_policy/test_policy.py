@@ -764,7 +764,11 @@ async def test_standalone_model_component_denied_before_build_method(monkeypatch
             allowed_provider_ids=frozenset(),
         )
 
-    monkeypatch.setattr("lfx.services.model_provider_policy.utils.resolve_model_provider_policy", _deny)
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "lfx.services.model_provider_policy.aresolve_model_provider_policy", AsyncMock(side_effect=_deny)
+    )
     component = StandaloneOpenAIComponent(_user_id="user-1")
 
     with pytest.raises(ModelProviderPolicyError):

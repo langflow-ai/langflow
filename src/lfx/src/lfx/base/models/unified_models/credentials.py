@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -79,115 +80,82 @@ def model_status_contains(
     )
 
 
-def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
-    """Get API key from component input or global variables.
+@dataclass(frozen=True, repr=False)
+class _APIKeySource:
+    reference: str | None
+    literal: str | None = None
+    default_reference: bool = False
 
-    When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
-    that name is resolved from os.environ or global variables so imported flows
-    can reference credentials without storing the raw key.
-    """
-    # SecretStrInput-backed fields arrive as SecretStr to prevent leakage through
-    # stringification. Unwrap here because provider clients need the raw value.
-    api_key = secret_value_to_str(api_key, strip=True)
 
-    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from
-    # global vars or env. The user's per-user, encrypted DB global variable is
-    # the source of truth (it's what the Agent component resolves via
-    # load_from_db) and MUST win over a process-wide ``.env`` value — otherwise
-    # a stale/revoked .env key silently shadows the key the user configured in
-    # the UI (and, in multi-tenant deploys, every user shares a server-wide env
-    # key). Env is the fallback for the no-user (lfx run) / no-DB-value case.
-    def _resolve_var_name(var_name: str) -> str | None:
-        if user_id and not (isinstance(user_id, str) and user_id == "None"):
-
-            async def _get_by_var_name():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return None
-                    try:
-                        return await variable_service.get_variable(
-                            user_id=(UUID(user_id) if isinstance(user_id, str) else user_id),
-                            name=var_name,
-                            field="",
-                            session=session,
-                        )
-                    except VariableNotFoundError:
-                        return None
-
-            value = run_until_complete(_get_by_var_name())
-            value = secret_value_to_str(value, strip=True)
-            if value:
-                return value
-        # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
-        # served flow stays isolated from process-wide credentials (matches VariableService).
-        if not is_env_fallback_disabled():
-            # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
-            # tenant-supplied api_key field cannot exfiltrate the server's own secrets via the
-            # env fallback (the resolved value is otherwise used as a live provider key).
-            env_value = safe_getenv(var_name)
-            if env_value and env_value.strip():
-                return env_value.strip()
-        return None
-
-    if api_key and api_key.strip():
-        var_name = api_key.strip()
-        # A malformed or legacy component can point its api_key field at any
-        # global variable name. Never reinterpret declared non-secret provider
-        # configuration (for example, a base URL) as bearer credentials.
-        if any(
-            variable.get("variable_key") == var_name and not variable.get("is_secret")
-            for variable in get_provider_all_variables(provider)
-        ):
-            return None
-        # Names that look like env/global variables (e.g. MY_OPENAI_API_KEY): resolve from env/DB
-        if var_name.replace("_", "").isalnum() and var_name[0].isalpha():
-            resolved = _resolve_var_name(var_name)
-            if resolved:
-                return resolved
-            # Unresolved variable name: don't use as literal key
-            if re.match(r"^[A-Z][A-Z0-9_]*$", var_name):
-                return None
-        # Literal API key (e.g. sk-...)
-        return var_name
-
-    # Get primary variable (first required secret) from provider metadata
-    variable_name = get_provider_secret_variable_key(provider)
-    if not variable_name:
-        return None
-
-    # Try the database-backed variable service first when a user_id is available.
-    # Fall through to os.environ regardless so lfx run (no user_id) can still pick
-    # up canonical credentials from the shell.
-    has_user = user_id is not None and not (isinstance(user_id, str) and user_id == "None")
-    api_key = None
-    if has_user:
-
-        async def _get_variable():
-            async with session_scope() as session:
-                variable_service = get_variable_service()
-                if variable_service is None:
-                    return None
-                try:
-                    return await variable_service.get_variable(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        name=variable_name,
-                        field="",
-                        session=session,
-                    )
-                except VariableNotFoundError:
-                    return None
-
-        api_key = run_until_complete(_get_variable())
-
+def _api_key_source(provider: str, api_key: Any) -> _APIKeySource:
     api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
-        return api_key
+        if any(
+            variable.get("variable_key") == api_key and not variable.get("is_secret")
+            for variable in get_provider_all_variables(provider)
+        ):
+            return _APIKeySource(None)
+        if api_key.replace("_", "").isalnum() and api_key[0].isalpha():
+            literal = None if re.match(r"^[A-Z][A-Z0-9_]*$", api_key) else api_key
+            return _APIKeySource(api_key, literal)
+        return _APIKeySource(None, api_key)
+    return _APIKeySource(get_provider_secret_variable_key(provider), default_reference=True)
 
-    if is_env_fallback_disabled():
-        return None
-    env_value = safe_getenv(variable_name)
-    return env_value.strip() if env_value and env_value.strip() else None
+
+def _has_key_owner(user_id: UUID | str | None, source: _APIKeySource) -> bool:
+    if isinstance(user_id, str) and user_id == "None":
+        return False
+    return user_id is not None if source.default_reference else bool(user_id)
+
+
+async def _get_api_key_variable(user_id: UUID | str, name: str) -> Any:
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        if variable_service is None:
+            return None
+        try:
+            return await variable_service.get_variable(
+                user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                name=name,
+                field="",
+                session=session,
+            )
+        except VariableNotFoundError:
+            return None
+
+
+def _resolved_api_key(source: _APIKeySource, value: Any) -> str | None:
+    value = secret_value_to_str(value, strip=True)
+    if value:
+        return value
+    if source.reference and not is_env_fallback_disabled():
+        # Reserved server variables remain excluded even for tenant-supplied names.
+        value = safe_getenv(source.reference)
+        if value and value.strip():
+            return value.strip()
+    return source.literal
+
+
+def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
+    """Resolve a provider key synchronously, retaining the legacy variable bridge."""
+    source = _api_key_source(provider, api_key)
+    if source.reference is None:
+        return source.literal
+    value = None
+    if user_id is not None and _has_key_owner(user_id, source):
+        value = run_until_complete(_get_api_key_variable(user_id, source.reference))
+    return _resolved_api_key(source, value)
+
+
+async def aget_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
+    """Resolve the same scoped key on the caller's event loop without a worker hop."""
+    source = _api_key_source(provider, api_key)
+    if source.reference is None:
+        return source.literal
+    value = None
+    if user_id is not None and _has_key_owner(user_id, source):
+        value = await _get_api_key_variable(user_id, source.reference)
+    return _resolved_api_key(source, value)
 
 
 def provider_variable_from_env(var_key: str) -> str | None:
@@ -216,6 +184,34 @@ def provider_variable_from_env(var_key: str) -> str | None:
 
 
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
+    """Resolve connection variables synchronously for existing provider callers."""
+    provider_vars = get_provider_all_variables(provider)
+    if not provider_vars:
+        return {}
+    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+        if is_env_fallback_disabled():
+            return {}
+        values = {}
+        for variable in provider_vars:
+            key = variable.get("variable_key")
+            if key and (value := provider_variable_from_env(key)):
+                values[key] = value
+        return values
+    values = run_until_complete(aget_all_variables_for_provider(user_id, provider))
+    # Retain the synchronous caller's post-DB-miss fallback contract.
+    for variable in provider_vars:
+        key = variable.get("variable_key")
+        if (
+            key
+            and not values.get(key)
+            and not is_env_fallback_disabled()
+            and (value := provider_variable_from_env(key))
+        ):
+            values[key] = value
+    return values
+
+
+async def aget_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
     """Get all configured variables for a provider from database or environment."""
     result: dict[str, str] = {}
 
@@ -275,7 +271,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
 
             return values
 
-    db_values = run_until_complete(_get_all_variables())
+    db_values = await _get_all_variables()
 
     # decrypt_api_key swallows Fernet InvalidToken silently and returns "",
     # so a SECRET_KEY rotation leaves required keys missing from db_values
