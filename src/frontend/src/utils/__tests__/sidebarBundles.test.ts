@@ -49,6 +49,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Linkup as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Linkup",
+          icon: "Linkup",
+          name: "linkup",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Microsoft 365 as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
