@@ -78,13 +78,13 @@ class TestExtractUsageFromMessage:
 
         assert result is None
 
-    def test_returns_none_for_zero_usage_metadata(self):
+    def test_preserves_reported_zero_usage_metadata(self):
         message = AIMessage(content="hi")
         message.usage_metadata = {"input_tokens": 0, "output_tokens": 0}
 
         result = extract_usage_from_message(message)
 
-        assert result is None
+        assert result == Usage(input_tokens=0, output_tokens=0, total_tokens=0)
 
     def test_usage_metadata_takes_priority_over_response_metadata(self):
         message = AIMessage(
@@ -137,8 +137,7 @@ class TestExtractUsageFromMessage:
 
         result = extract_usage_from_message(message)
 
-        assert result is not None
-        assert result.total_tokens is None
+        assert result is None
 
 
 class TestExtractUsageFromLlmResult:

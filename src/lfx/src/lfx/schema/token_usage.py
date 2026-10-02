@@ -6,6 +6,7 @@ to eliminate duplication across Component, LCModelComponent, and TokenUsageCallb
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from lfx.schema.properties import Usage
@@ -40,42 +41,31 @@ def extract_usage_from_message(message: Any) -> Usage | None:
     Returns:
         Usage with token counts, or None if no usage data is available.
     """
-    # Strategy 1: usage_metadata (LangChain standard)
+
+    def from_counts(data: Mapping[str, Any], input_key: str, output_key: str) -> Usage | None:
+        input_tokens = data.get(input_key)
+        output_tokens = data.get(output_key)
+        total_tokens = data.get("total_tokens")
+        if all(value is None for value in (input_tokens, output_tokens, total_tokens)):
+            return None
+        if total_tokens is None and (input_tokens is not None or output_tokens is not None):
+            total_tokens = (input_tokens or 0) + (output_tokens or 0)
+        return Usage(input_tokens=input_tokens, output_tokens=output_tokens, total_tokens=total_tokens)
+
     usage_metadata = getattr(message, "usage_metadata", None)
-    if usage_metadata and isinstance(usage_metadata, dict):
-        input_tokens = usage_metadata.get("input_tokens", 0) or 0
-        output_tokens = usage_metadata.get("output_tokens", 0) or 0
-        if input_tokens or output_tokens:
-            return Usage(
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                total_tokens=input_tokens + output_tokens,
-            )
+    if isinstance(usage_metadata, dict) and (usage := from_counts(usage_metadata, "input_tokens", "output_tokens")):
+        return usage
 
-    response_metadata = getattr(message, "response_metadata", None)
-    if not response_metadata:
+    response_metadata = getattr(message, "response_metadata", None) or {}
+    if not isinstance(response_metadata, Mapping):
         return None
-
-    # Strategy 2: response_metadata["token_usage"] (OpenAI format)
-    if "token_usage" in response_metadata:
-        token_usage = response_metadata["token_usage"]
-        return Usage(
-            input_tokens=token_usage.get("prompt_tokens"),
-            output_tokens=token_usage.get("completion_tokens"),
-            total_tokens=token_usage.get("total_tokens"),
-        )
-
-    # Strategy 3: response_metadata["usage"] (Anthropic format)
-    if "usage" in response_metadata:
-        usage = response_metadata["usage"]
-        input_tokens = usage.get("input_tokens")
-        output_tokens = usage.get("output_tokens")
-        return Usage(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=(input_tokens or 0) + (output_tokens or 0) if input_tokens or output_tokens else None,
-        )
-
+    for name, input_key, output_key in (
+        ("token_usage", "prompt_tokens", "completion_tokens"),
+        ("usage", "input_tokens", "output_tokens"),
+    ):
+        data = response_metadata.get(name)
+        if isinstance(data, Mapping) and (usage := from_counts(data, input_key, output_key)):
+            return usage
     return None
 
 

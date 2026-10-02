@@ -182,7 +182,7 @@ class TestAccumulateUpstreamTokenUsage:
         assert result is None
 
     def test_handles_none_values_in_token_usage(self):
-        """Token usage with None values treated as 0."""
+        """Unreported token fields stay unknown while known totals are retained."""
         llm = _make_vertex_stub(
             "LLM-1",
             token_usage=Usage(input_tokens=None, output_tokens=50, total_tokens=None),
@@ -193,7 +193,7 @@ class TestAccumulateUpstreamTokenUsage:
         result = output._accumulate_upstream_token_usage()
 
         assert isinstance(result, Usage)
-        assert result.input_tokens == 0
+        assert result.input_tokens is None
         assert result.output_tokens == 50
         assert result.total_tokens == 50
 

@@ -23,7 +23,8 @@ from lfx.io import (
 )
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
-from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
+from lfx.schema.properties import Usage
+from lfx.schema.token_usage import extract_usage_from_message
 
 
 class BatchRunComponent(Component):
@@ -150,8 +151,38 @@ class BatchRunComponent(Component):
                 "processing_status": "failed",
             }
 
+    @staticmethod
+    def _sum_response_usage(existing: Usage | None, new: Usage | None) -> Usage | None:
+        """Sum independent completed responses, retaining absent usage as unknown."""
+        if new is None or all(value is None for value in (new.input_tokens, new.output_tokens, new.total_tokens)):
+            return existing
+
+        def response_total(usage: Usage) -> int | None:
+            if usage.total_tokens is not None:
+                return usage.total_tokens
+            if usage.input_tokens is None and usage.output_tokens is None:
+                return None
+            return (usage.input_tokens or 0) + (usage.output_tokens or 0)
+
+        if existing is None:
+            return Usage(
+                input_tokens=new.input_tokens, output_tokens=new.output_tokens, total_tokens=response_total(new)
+            )
+
+        def add_optional(left: int | None, right: int | None) -> int | None:
+            if left is None and right is None:
+                return None
+            return (left or 0) + (right or 0)
+
+        return Usage(
+            input_tokens=add_optional(existing.input_tokens, new.input_tokens),
+            output_tokens=add_optional(existing.output_tokens, new.output_tokens),
+            total_tokens=add_optional(response_total(existing), response_total(new)),
+        )
+
     async def run_batch(self) -> DataFrame:
         """Process each row in df[column_name] with the language model asynchronously."""
+        self._token_usage = None
         # Check if model is already an instance (for testing) or needs to be instantiated
         if isinstance(self.model, list):
             model = await aget_llm(
@@ -216,13 +247,12 @@ class BatchRunComponent(Component):
                     "Proceeding with batch processing without configuration."
                 )
             # Process batches and track progress
-            responses_with_idx = list(
-                zip(
-                    range(len(conversations)),
-                    await model.abatch(list(conversations)),
-                    strict=True,
-                )
-            )
+            responses = list(await model.abatch(list(conversations)))
+            # Capture available usage before validating/formatting row data so
+            # a later data error does not discard completed provider responses.
+            for response in responses:
+                self._token_usage = self._sum_response_usage(self._token_usage, extract_usage_from_message(response))
+            responses_with_idx = list(zip(range(len(conversations)), responses, strict=True))
 
             # Sort by index to maintain order
             responses_with_idx.sort(key=lambda x: x[0])
@@ -233,7 +263,6 @@ class BatchRunComponent(Component):
                 zip(df.to_dict(orient="records"), responses_with_idx, strict=False)
             ):
                 response_msg = response[1]
-                self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response_msg))
                 response_text = response_msg.content if hasattr(response_msg, "content") else str(response_msg)
                 row = self._create_base_row(
                     cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
