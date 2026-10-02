@@ -9,6 +9,7 @@ it found it.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import sqlite3
 import uuid
@@ -150,6 +151,46 @@ class TestCredentials:
 
         assert check.status == "fail"
         assert any(p.startswith("apikey.api_key row ") for p in check.problems)
+
+    async def test_a_connection_payload_that_lost_its_token_prefix_is_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        # A connection's payload is always written encrypted, and its reader raises on one it cannot decode.
+        from langflow.services.connection.service import (
+            ConnectionSecretError,
+            _decrypt_credential_payload,
+            _encrypt_credential_payload,
+        )
+        from langflow.services.database.models.connection.model import Connection, ConnectionSecret
+
+        connection = Connection(
+            owner_id=active_user.id, provider_key="github", name="gh", display_name="GitHub", status="ready"
+        )
+        await _add(connection)
+        payload = _encrypt_credential_payload(json.dumps({"version": 1, "access_token": "gho-token"}))
+        await _add(ConnectionSecret(connection_id=connection.id, encrypted_payload=payload))
+        assert _check(await check_instance(), "credentials").status == "ok"
+
+        damaged = "damaged" + payload.removeprefix("gAAAAA")
+        async with session_scope() as session:
+            (await session.get(ConnectionSecret, connection.id)).encrypted_payload = damaged
+            await session.commit()
+
+        check = _check(await check_instance(), "credentials")
+
+        with pytest.raises(ConnectionSecretError):
+            _decrypt_credential_payload(damaged)
+        assert check.status == "fail"
+        assert f"connection_secret.encrypted_payload row {connection.id}" in check.problems
+
+    async def test_a_legacy_plaintext_api_key_is_not_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        # Keys from 1.6.x are stored as issued, and the app still matches them as they are.
+        before = _check(await check_instance(), "credentials")
+        issued = "sk-issued-before-encryption"
+        await _add(ApiKey(name="legacy", api_key=issued, user_id=active_user.id))
+
+        check = _check(await check_instance(), "credentials")
+
+        assert check.status == "ok"
+        assert check.summary == before.summary
 
     async def test_a_trigger_signing_secret_under_another_key_is_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
         # Webhook ingress decrypts this with the instance key and rejects every delivery when it does not open.

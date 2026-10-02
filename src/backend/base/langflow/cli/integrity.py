@@ -182,7 +182,7 @@ async def check_credentials(session: AsyncSession) -> CheckResult:
 
 
 async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]:
-    """Every encrypted value as (column, row id, ciphertext). Plaintext values are not counted."""
+    """Every encrypted value as (column, row id, ciphertext). Plaintext the app still reads is not counted."""
     from langflow.services.auth.mcp_encryption import (
         MCP_SECRET_CONFIG_MAPS,
         SENSITIVE_FIELDS,
@@ -201,11 +201,11 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
 
     values: list[tuple[str, Any, str]] = []
 
-    def add(column: str, rows: Iterable[tuple[Any, Any]]) -> None:
+    def add(column: str, rows: Iterable[tuple[Any, Any]], *, always_encrypted: bool = False) -> None:
         values.extend(
             (column, row_id, value)
             for row_id, value in rows
-            if isinstance(value, str) and value.startswith(_FERNET_PREFIX)
+            if isinstance(value, str) and value and (always_encrypted or value.startswith(_FERNET_PREFIX))
         )
 
     # Generic variables are stored as typed, so only credentials are encrypted.
@@ -219,9 +219,12 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
         "deployment_provider_account.api_key",
         await session.exec(select(DeploymentProviderAccount.id, DeploymentProviderAccount.api_key)),
     )
+    # Nothing writes this payload in plaintext and its reader raises on one it cannot decode,
+    # so every value is checked, including a token that lost its prefix.
     add(
         "connection_secret.encrypted_payload",
         await session.exec(select(ConnectionSecret.connection_id, ConnectionSecret.encrypted_payload)),
+        always_encrypted=True,
     )
     add("trigger.signing_secret_encrypted", await session.exec(select(Trigger.id, Trigger.signing_secret_encrypted)))
 
