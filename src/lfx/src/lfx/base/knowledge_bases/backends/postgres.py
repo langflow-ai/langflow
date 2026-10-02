@@ -237,22 +237,27 @@ class _PostgresVectorStore(VectorStore):
     """Async LangChain VectorStore facade over ``PostgresBackend``."""
 
     def __init__(self, backend: PostgresBackend) -> None:
+        """Capture the PostgreSQL backend exposed by this vector-store facade."""
         self._backend = backend
 
     @property
     def embeddings(self):
+        """Expose the configured embedding function."""
         return self._backend.embedding_function
 
     @classmethod
     def from_texts(cls, *args, **kwargs):
+        """Reject construction that bypasses the PostgreSQL backend configuration."""
         msg = "PostgresVectorStore must be constructed through PostgresBackend."
         raise NotImplementedError(msg)
 
     def similarity_search(self, *args, **kwargs):
+        """Reject synchronous search in the asynchronous PostgreSQL facade."""
         msg = "Use the async PostgresVectorStore search methods."
         raise NotImplementedError(msg)
 
     async def aadd_documents(self, documents: list[Document], **kwargs: Any) -> list[str]:
+        """Write documents through the PostgreSQL backend and return their IDs."""
         return await self._backend._add_documents(documents, ids=kwargs.get("ids"))  # noqa: SLF001
 
     async def asimilarity_search(
@@ -263,6 +268,7 @@ class _PostgresVectorStore(VectorStore):
         filter: dict[str, Any] | None = None,  # noqa: A002
         **kwargs: Any,  # noqa: ARG002
     ) -> list[Document]:
+        """Return matching documents from the native asynchronous query."""
         results = await self._backend._similarity_search(query, k=k, filter=filter)  # noqa: SLF001
         return [document for document, _score in results]
 
@@ -274,6 +280,7 @@ class _PostgresVectorStore(VectorStore):
         filter: dict[str, Any] | None = None,  # noqa: A002
         **kwargs: Any,  # noqa: ARG002
     ) -> list[tuple[Document, float]]:
+        """Return matching documents together with their native distances."""
         return await self._backend._similarity_search(query, k=k, filter=filter)  # noqa: SLF001
 
 
@@ -288,6 +295,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         # Never honor a backend_config-provided environment-variable name here:
         # backend_config is tenant-controlled, while this credential belongs to
         # the deployment.
+        """Resolve the configured database URL using the backend credential policy."""
         connection_string = read_connection_string_from_env()
         if not connection_string:
             msg = (
@@ -448,6 +456,7 @@ class PostgresBackend(BaseVectorStoreBackend):
                 )
 
     async def _table_exists(self, conn: AsyncConnection) -> bool:
+        """Check whether the configured PostgreSQL vector table exists."""
         from sqlalchemy import text
 
         return (await conn.scalar(text("SELECT to_regclass(:name)"), {"name": self.table_name})) is not None
@@ -499,6 +508,7 @@ class PostgresBackend(BaseVectorStoreBackend):
     # ---- the one required method ----------------------------------------
 
     def _build_vector_store(self) -> VectorStore:
+        """Create the asynchronous vector-store facade for this backend."""
         return _PostgresVectorStore(self)
 
     async def _add_documents(self, documents: list[Document], *, ids: Sequence[str] | None = None) -> list[str]:
@@ -634,6 +644,7 @@ class PostgresBackend(BaseVectorStoreBackend):
     # ---- native metrics / lifecycle (override the base defaults) --------
 
     async def count(self) -> int:
+        """Count rows in the vector table, treating an unprovisioned table as empty."""
         await self.ensure_ready()
         from sqlalchemy import text
 
@@ -706,6 +717,7 @@ class PostgresBackend(BaseVectorStoreBackend):
             raise
 
     async def storage_size_bytes(self) -> int:
+        """Estimate PostgreSQL table storage size without calling the embedding provider."""
         await self.ensure_ready()
         from sqlalchemy import text
 
@@ -719,6 +731,7 @@ class PostgresBackend(BaseVectorStoreBackend):
             return 0
 
     async def delete_collection(self) -> None:
+        """Drop the configured vector table and its indexes."""
         await self.ensure_ready()
         from sqlalchemy import text
 
@@ -791,6 +804,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         )
 
     async def teardown(self) -> None:
+        """Dispose PostgreSQL resources and clear cached table provisioning state."""
         engine = getattr(self, "_pg_engine", None)
         if engine is not None:
             try:
