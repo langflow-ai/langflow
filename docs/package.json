@@ -85,6 +85,7 @@
     "launch-editor": "^2.14.1",
     "body-parser": "^1.20.6",
     "colord": "^2.9.4",
+    "fflate": "^0.4.9",
     "styled-components": {
       "postcss": "8.4.49"
     },
