@@ -69,6 +69,12 @@ class NoSuchUserError(Exception):
     code = "no_such_user"
 
 
+class TargetBucketError(Exception):
+    """The target bucket is missing or out of reach, or the credentials do not open it."""
+
+    code = "bucket_error"
+
+
 @dataclass
 class FileRelocationResult:
     owner: str
@@ -96,7 +102,8 @@ async def relocate_files(
 
     Returns one result per file and never raises for a single file's failure, so
     one unreadable file does not stop the rest. Raises before reading anything if
-    the instance cannot be the source, or if ``username`` names nobody.
+    the instance cannot be the source, if ``username`` names nobody, or if the
+    target bucket cannot be used.
 
     Up to ``concurrency`` files are copied at once. Each streams across holding at
     most one multipart part (8 MiB) in memory, so memory scales with ``concurrency``
@@ -112,6 +119,11 @@ async def relocate_files(
     namespaces = await _namespaces(username)
     target = _target_storage(target_bucket, target_prefix, target_tags)
     try:
+        # Asked once here. Left to the copy, a missing bucket is a failure per file, and a
+        # dry run reads "not in the bucket" as "to copy" and promises a run that cannot work.
+        readiness = await target.check_readiness()
+        if not readiness.ok:
+            raise TargetBucketError(readiness.detail)
         work = [(namespace, name) for namespace in namespaces for name in await _stored_names(source, namespace)]
         results: list[FileRelocationResult] = [None] * len(work)  # type: ignore[list-item]
         limiter = anyio.CapacityLimiter(max(1, concurrency))

@@ -760,6 +760,20 @@ class TestJsonEvents:
         assert refused.value.exit_code == 2
         assert [(event["event"], event["code"]) for event in events] == [("error", "source_not_local")]
 
+    async def test_a_bucket_that_does_not_exist_is_a_single_error(self, active_user, storage_dir, capsys):
+        import typer
+
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        missing = f"lf-relocate-missing-{uuid.uuid4().hex[:10]}"
+
+        with pytest.raises(typer.Exit) as refused:
+            await self._run(capsys, missing, dry_run=True)
+
+        assert refused.value.exit_code == 2
+        assert self._events(capsys) == [
+            {"event": "error", "code": "bucket_error", "message": f"bucket '{missing}' does not exist"}
+        ]
+
     async def test_the_command_writes_only_json_to_stdout(self, active_user, storage_dir, bucket):
         import asyncio
         import sys
@@ -814,3 +828,59 @@ class TestJsonEvents:
             f"repointed    {flow_id}/photo.png  -> {flow_id}/photo.png  (chat attachment in message {message_id})",
             "File relocation complete for all users: 2 copied, 1 repointed.",
         ]
+
+
+class TestTheBucketIsCheckedFirst:
+    """A bucket that cannot be used is one refusal up front, where it was a failure per file.
+
+    A dry run was worse: a file not found in a bucket that is not there read as a file still to copy.
+    """
+
+    _flow_with_attachment = TestChatAttachmentPaths._flow_with_attachment
+    _message = TestChatAttachmentPaths._message
+    _files = TestChatAttachmentPaths._files
+
+    @pytest.mark.parametrize("dry_run", [True, False])
+    async def test_a_bucket_that_does_not_exist_is_refused_before_anything_is_read_or_written(
+        self, active_user, storage_dir, monkeypatch, dry_run
+    ):
+        from aiobotocore.session import get_session
+        from botocore.exceptions import ClientError
+        from langflow.api.utils.file_relocation import TargetBucketError
+
+        missing = f"lf-relocate-missing-{uuid.uuid4().hex[:10]}"
+        flow_id = await self._flow_with_attachment(storage_dir, active_user.id, "photo.png", b"png-bytes")
+        absolute = str(storage_dir / str(flow_id) / "photo.png")
+        message_id = await self._message(flow_id, [absolute])
+        listed = []
+        original = type(get_storage_service()).list_files
+
+        async def counted(self, *args, **kwargs):
+            listed.append(kwargs.get("flow_id"))
+            return await original(self, *args, **kwargs)
+
+        monkeypatch.setattr(type(get_storage_service()), "list_files", counted)
+
+        with pytest.raises(TargetBucketError, match=f"bucket '{missing}' does not exist"):
+            await relocate_files(target_bucket=missing, target_prefix="files", dry_run=dry_run)
+
+        assert listed == []
+        assert await self._files(message_id) == [absolute]
+        async with get_session().create_client("s3") as s3:
+            with pytest.raises(ClientError, match="404"):
+                await s3.head_bucket(Bucket=missing)
+
+    async def test_the_command_says_so_on_stderr_and_exits_2(self, active_user, storage_dir, capsys):
+        import typer
+        from langflow.__main__ import _relocate_files
+
+        await _seed_user_file(storage_dir, active_user.id, name="report.pdf", data=b"pdf-bytes")
+        missing = f"lf-relocate-missing-{uuid.uuid4().hex[:10]}"
+
+        with pytest.raises(typer.Exit) as refused:
+            await _relocate_files(bucket=missing, prefix="files", username=None, dry_run=False, concurrency=1)
+
+        captured = capsys.readouterr()
+        assert refused.value.exit_code == 2
+        assert f"Cannot copy files: bucket '{missing}' does not exist" in captured.err.splitlines()
+        assert "File relocation complete" not in captured.out

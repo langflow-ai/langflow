@@ -1231,7 +1231,8 @@ def relocate_files(
 
     Run this with LANGFLOW_STORAGE_TYPE=local, the setting the instance had before
     the switch, so it reads the files on local disk. Credentials come from the
-    environment, the same way the S3 storage backend reads them.
+    environment, the same way the S3 storage backend reads them. The bucket is
+    checked first: if it is missing or out of reach, nothing is copied.
 
     A file counts as copied only once the bucket reports an object of the same
     size, and files already there are skipped, so a run can be repeated.
@@ -1273,7 +1274,12 @@ async def _relocate_files(
 ) -> int:
     from dataclasses import asdict
 
-    from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError, relocate_files
+    from langflow.api.utils.file_relocation import (
+        NoSuchUserError,
+        SourceNotLocalError,
+        TargetBucketError,
+        relocate_files,
+    )
     from langflow.cli.events import emit
     from langflow.services.utils import register_all_service_factories
 
@@ -1296,7 +1302,7 @@ async def _relocate_files(
                 else None
             ),
         )
-    except (SourceNotLocalError, NoSuchUserError) as exc:
+    except (SourceNotLocalError, NoSuchUserError, TargetBucketError) as exc:
         if as_json:
             emit("error", code=exc.code, message=str(exc))
         else:
