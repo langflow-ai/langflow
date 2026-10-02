@@ -1,9 +1,11 @@
+from pathlib import Path, PureWindowsPath
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access, enforce_storage_key_scope
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
 
@@ -34,7 +36,7 @@ from langflow.services.database.models.vertex_builds.crud import (
     get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
-from langflow.services.deps import get_memory_base_service, get_tracing_service
+from langflow.services.deps import get_memory_base_service, get_settings_service, get_tracing_service
 from langflow.services.tracing.langfuse import (
     delete_feedback_score,
     langfuse_is_configured,
@@ -45,6 +47,36 @@ from langflow.services.tracing.langfuse import (
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 MESSAGE_UPDATE_FAILED = "Could not update the message."
+
+
+def _validate_message_attachment_scopes(files: list[str] | None, scope_ids: tuple[object, ...]) -> None:
+    """Keep edited attachments inside the authenticated user's message storage namespaces."""
+    scopes = tuple(scope for scope in scope_ids if scope is not None)
+    try:
+        for attachment in files or ():
+            file = attachment
+            path = Path(file)
+            if ".." in file.replace("\\", "/").split("/"):
+                msg = "Message attachments cannot contain parent traversal."
+                raise LocalFileAccessError(msg)
+            if path.is_absolute():
+                settings = get_settings_service().settings
+                if settings.storage_type == "s3":
+                    msg = "Object-storage attachments must use uploaded-file keys."
+                    raise LocalFileAccessError(msg)
+                # Normal component execution stores resolved local paths. Retain those
+                # references on edits, but authorize them against trusted route scopes.
+                resolved = enforce_local_file_access(path, scope_ids=scopes)
+                file = resolved.relative_to(Path(settings.config_dir).resolve()).as_posix()
+            elif PureWindowsPath(file).drive:
+                msg = "Message attachments must use uploaded-file keys."
+                raise LocalFileAccessError(msg)
+            enforce_storage_key_scope(file, scopes)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(
+            status_code=400, detail="Message attachment is outside the permitted storage scope."
+        ) from exc
+
 
 # Message-history reads must never return an entire table: the editor polls
 # this endpoint every few seconds, so an unbounded default serializes the full
@@ -385,6 +417,8 @@ async def update_message(
         if db_flow is None:
             raise HTTPException(status_code=404, detail="Message not found")
 
+    _validate_message_attachment_scopes(message.files, (current_user.id, db_message.flow_id))
+
     try:
         previous_positive_feedback = _get_positive_feedback_value(db_message)
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
@@ -701,6 +735,8 @@ async def update_shared_message(
 
     if not db_message:
         raise HTTPException(status_code=404, detail="Message not found")
+
+    _validate_message_attachment_scopes(message.files, (current_user.id, virtual_flow_id, source_flow_id))
 
     try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)

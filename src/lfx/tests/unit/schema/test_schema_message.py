@@ -10,9 +10,16 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from lfx.log.logger import logger
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from platformdirs import user_cache_dir
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_standalone_attachments(monkeypatch):
+    """These standalone conversion tests intentionally attach temporary local paths."""
+    monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
 
 
 @pytest.fixture
@@ -455,7 +462,7 @@ def s3_storage(monkeypatch):
     create_image_content_dict.cache_clear()
     storage = _S3LikeStorage({})
     settings_service = SimpleNamespace(settings=SimpleNamespace(storage_type="s3"))
-    for module in ("lfx.schema.image", "lfx.utils.image", "lfx.base.data.storage_utils"):
+    for module in ("lfx.schema.image", "lfx.utils.image", "lfx.base.data.storage_utils", "lfx.services.deps"):
         monkeypatch.setattr(importlib.import_module(module), "get_storage_service", lambda: storage)
     for module in ("lfx.base.data.storage_utils", "lfx.base.data.utils", "lfx.services.deps"):
         monkeypatch.setattr(importlib.import_module(module), "get_settings_service", lambda: settings_service)

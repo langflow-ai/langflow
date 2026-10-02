@@ -95,6 +95,7 @@ async def get_instance_results(
         set_messages_persist,
         should_persist_messages,
     )
+    from lfx.utils.file_path_security import component_file_access_scopes, file_access_scope
 
     graph = getattr(vertex, "graph", None)
     flow_id = getattr(graph, "flow_id", None)
@@ -119,7 +120,7 @@ async def get_instance_results(
         and owner_id is not None
     )
     try:
-        with warnings.catch_warnings():
+        with file_access_scope(component_file_access_scopes(custom_component)), warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
             if base_type == "custom_components":
                 return await build_custom_component(params=custom_params, custom_component=custom_component)
