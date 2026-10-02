@@ -164,8 +164,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         # Temporary compatibility valve: newer releases require cryptography<49.
         "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
         "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
-        "litellm>=1.96.2,<2.0.0; sys_platform != 'darwin' and python_version < '3.14'",
-        "litellm>=1.96.2,<2.0.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'",
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
     ],
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---

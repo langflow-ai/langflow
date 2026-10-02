@@ -324,7 +324,7 @@ pgvector = [
     "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
-    "litellm>=1.96.2,<2.0.0",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # Pull in only the modules Langflow uses from litellm[proxy] rather than
@@ -411,8 +411,8 @@ cuga = [
     # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
     "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
     "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
-    "litellm>=1.96.2,<2.0.0; sys_platform != 'darwin' and python_version < '3.14'",
-    "litellm>=1.96.2,<2.0.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
