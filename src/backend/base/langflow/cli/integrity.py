@@ -110,10 +110,14 @@ async def check_schema(session: AsyncSession) -> CheckResult:
     """
     heads = set(script_directory().get_heads())
     try:
-        revisions = {row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))}
-    except sa.exc.SQLAlchemyError:
+        revisions = await recorded_revisions(session)
+    except sa.exc.OperationalError as exc:
         await session.rollback()
-        revisions = set()
+        # The driver's first line names the host it tried, and never the URL or its password.
+        reason = str(exc.orig).strip().partition("\n")[0]
+        return CheckResult(
+            "schema", "fail", f"the database could not be reached: {reason}. Check LANGFLOW_DATABASE_URL"
+        )
     if revisions == heads:
         return CheckResult("schema", "ok", f"database at revision {', '.join(sorted(revisions))}")
     found = ", ".join(sorted(revisions)) or "no recorded revision"
@@ -123,6 +127,19 @@ async def check_schema(session: AsyncSession) -> CheckResult:
         f"database is at {found} and this Langflow reads {', '.join(sorted(heads))}; run the check with "
         "the Langflow version that last ran against this database",
     )
+
+
+async def recorded_revisions(session: AsyncSession) -> set[str]:
+    """The revisions the database records, which is none when it has no alembic_version table.
+
+    The table is looked for before it is read, so what is left to raise is a database
+    that cannot be reached. Alembic's own MigrationContext answers the same question
+    and logs two INFO lines each time, which would land in the command's output.
+    """
+    connection = await session.connection()
+    if not await connection.run_sync(lambda sync: sa.inspect(sync).has_table("alembic_version")):
+        return set()
+    return {row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))}
 
 
 def script_directory():
