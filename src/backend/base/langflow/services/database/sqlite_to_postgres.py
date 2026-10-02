@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+import sqlite3
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -106,7 +107,11 @@ def convert_sqlite_to_postgres(
     table once it is copied and counted. A copy that fails after that is rolled back.
     """
     report = ConversionReport()
-    source_path = sa.engine.make_url(_sync_sqlite_url(source_url)).database
+    try:
+        source_path = sa.engine.make_url(_sync_sqlite_url(source_url)).database
+    except sa.exc.ArgumentError as exc:
+        report.problems.append(_source_unreadable(exc))
+        return report
     if not source_path or not Path(source_path).is_file():
         # Checked up front because opening a missing SQLite file creates an empty one.
         report.problems.append(Problem("source_missing", f"source database {source_path!r} does not exist"))
@@ -165,12 +170,19 @@ def convert_sqlite_to_postgres(
         except sa.exc.SQLAlchemyError as exc:
             # Reported rather than raised: a traceback would print the target URL,
             # password included. The driver's own message never contains it.
-            report.problems.append(
-                Problem("target_unreachable", f"could not use the target database: {_describe(exc)}")
-            )
+            if isinstance(getattr(exc, "orig", None), sqlite3.Error):
+                # Only the source is SQLite, so this came from reading it.
+                report.problems.append(_source_unreadable(exc))
+            else:
+                report.problems.append(
+                    Problem("target_unreachable", f"could not use the target database: {_describe(exc)}")
+                )
         finally:
             if target is not None:
                 target.dispose()
+    except sa.exc.SQLAlchemyError as exc:
+        # Out here only the source has been read. A file that is not a SQLite database fails its first query.
+        report.problems.append(_source_unreadable(exc))
     finally:
         source.dispose()
     return report
@@ -339,6 +351,10 @@ class _CoercionError(Exception):
 def _describe(exc: sa.exc.SQLAlchemyError) -> str:
     cause = getattr(exc, "orig", None) or exc
     return f"{cause.__class__.__name__}: {str(cause).splitlines()[0]}"
+
+
+def _source_unreadable(exc: sa.exc.SQLAlchemyError) -> Problem:
+    return Problem("source_unreadable", f"could not read the source database: {_describe(exc)}")
 
 
 def _coerce(value: Any, model_type: sa.types.TypeEngine | None, column: sa.Column) -> Any:

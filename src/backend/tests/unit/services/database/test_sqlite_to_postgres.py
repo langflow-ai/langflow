@@ -141,6 +141,31 @@ class TestSourceChecks:
         assert any("is at revision older" in p for p in report.problems)
         assert [p.code for p in report.problems] == ["source_not_at_head"]
 
+    def test_source_url_that_does_not_parse_is_reported(self, run_cli):
+        result = run_cli("--json", "--source", "not a url", "--target", self.UNREACHABLE_TARGET)
+
+        assert result.exit_code == 1
+        # A traceback instead would leave a program reading --json without its report line.
+        assert isinstance(result.exception, SystemExit)
+        error, report = _events(result)
+        assert (error["event"], error["code"]) == ("error", "source_unreadable")
+        assert error["message"].startswith("could not read the source database: ")
+        assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
+
+    def test_source_file_that_is_not_a_database_is_reported(self, tmp_path, run_cli):
+        notes = tmp_path / "notes.db"
+        notes.write_text("Not a SQLite file, only text that is longer than the header SQLite reads first. " * 4)
+
+        result = run_cli("--json", "--source", f"sqlite:///{notes}", "--target", self.UNREACHABLE_TARGET)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        error, report = _events(result)
+        assert (error["event"], error["code"]) == ("error", "source_unreadable")
+        assert error["message"].startswith("could not read the source database: ")
+        assert "file is not a database" in error["message"]
+        assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
+
     def test_unreachable_target_is_reported_without_the_password(self, sqlite_source):
         from langflow.__main__ import app
         from typer.testing import CliRunner
@@ -509,6 +534,24 @@ class TestConversionEndToEnd:
         engine = sa.create_engine(postgres_database)
         with engine.connect() as conn:
             assert conn.execute(sa.text("SELECT count(*) FROM \"user\" WHERE username = 'renamed'")).scalar_one() == 0
+        engine.dispose()
+
+    def test_an_error_reading_the_source_during_the_checks_names_the_source(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            # Still at the right revision, but a table the orphan check reads is gone.
+            conn.execute(sa.text('DROP TABLE "user"'))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert [p.code for p in report.problems] == ["source_unreadable"]
+        assert report.problems[0].startswith("could not read the source database: ")
+        assert "no such table: user" in report.problems[0]
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == []
         engine.dispose()
 
     def test_sql_null_in_json_columns_stays_sql_null(self, sqlite_source, postgres_database):
