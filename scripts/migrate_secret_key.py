@@ -4,8 +4,12 @@ This script handles the full key rotation lifecycle:
 1. Reads the current secret key from config directory
 2. Generates a new secret key (or uses one provided)
 3. Re-encrypts all sensitive data in the database (atomic transaction)
-4. Backs up the old key
-5. Saves the new key
+4. Writes the new key to secret_key.new before the transaction commits
+5. Backs up the old key
+6. Moves the new key into place as secret_key
+
+The keys are never printed. The output identifies the new key by a fingerprint,
+the first 12 hex characters of the SHA-256 of the key.
 
 Migrated database fields:
 - user.store_api_key: Langflow Store API keys
@@ -52,6 +56,8 @@ from platformdirs import user_cache_dir
 from sqlalchemy import create_engine, inspect, text
 
 MINIMUM_KEY_LENGTH = 32
+# Holds the new key from just before the database commit until it replaces secret_key.
+PENDING_KEY_FILENAME = "secret_key.new"
 # Columns that hold a single Fernet token: (table, primary key, column, description).
 FERNET_TOKEN_COLUMNS = [
     # Authentication uses apikey.api_key_hash, but the stored value is lost if not rotated.
@@ -131,6 +137,11 @@ def write_secret_key_to_file(config_dir: Path, key: str, filename: str = "secret
     secret_file = config_dir / filename
     secret_file.write_text(key, encoding="utf-8")
     set_secure_permissions(secret_file)
+
+
+def key_fingerprint(key: str) -> str:
+    """Identify a key without revealing it: the first 12 hex characters of its SHA-256."""
+    return hashlib.sha256(key.encode()).hexdigest()[:12]
 
 
 def ensure_valid_key(s: str) -> bytes:
@@ -423,14 +434,15 @@ def get_default_database_url(config_dir: Path) -> str | None:
 DATABASE_URL_DISPLAY_LENGTH = 50
 
 
-def warn_env_secret_key(new_key: str | None = None) -> None:
+def warn_env_secret_key(new_key: str | None = None, key_file: Path | None = None) -> None:
     """Langflow uses LANGFLOW_SECRET_KEY over the key file and writes it back over the file on start."""
     print("\n" + "!" * 50)
     print("LANGFLOW_SECRET_KEY is set in this environment. Langflow uses it instead of")
     print("the secret_key file and writes it back over that file on start. Set it to the")
     print("new key before starting Langflow, or every rotated secret decrypts to empty.")
     if new_key:
-        print(f"\n  LANGFLOW_SECRET_KEY={new_key}")
+        print(f"\n  Set LANGFLOW_SECRET_KEY to the contents of {key_file}")
+        print(f"  (key fingerprint: {key_fingerprint(new_key)})")
     print("!" * 50)
 
 
@@ -472,8 +484,9 @@ def migrate(
         dry_run: If True, simulates migration without making changes.
 
     The migration runs as an atomic transaction - either all database changes
-    succeed or none are applied. Key files are only modified after successful
-    database migration.
+    succeed or none are applied. The new key is written to secret_key.new just
+    before the commit and replaces secret_key after it, so a run that stops in
+    between leaves the key on disk.
     """
     # Determine old key
     if not old_key:
@@ -487,10 +500,10 @@ def migrate(
     # Determine new key
     if not new_key:
         new_key = secrets.token_urlsafe(32)
-        print(f"Generated new secret key: {new_key}")
+        print(f"Generated new secret key, fingerprint: {key_fingerprint(new_key)}")
     else:
-        print(f"Using provided new key: {new_key}")
-    print("  (Save this key - you'll need it if the migration fails after database commit)")
+        print(f"Using provided new key, fingerprint: {key_fingerprint(new_key)}")
+    print("  (The key is only written to the key file, never printed)")
 
     if old_key == new_key:
         print("Error: Old and new secret keys are the same")
@@ -507,6 +520,19 @@ def migrate(
     print(f"  Dry run: {dry_run}")
     if os.environ.get("LANGFLOW_SECRET_KEY"):
         warn_env_secret_key()
+
+    secret_file = config_dir / "secret_key"
+    pending_file = config_dir / PENDING_KEY_FILENAME
+    if pending_file.exists():
+        pending_fingerprint = key_fingerprint(pending_file.read_text(encoding="utf-8"))
+        print(f"\nA previous run stopped before saving its new key: {pending_file} exists.")
+        print(f"The database may already be encrypted with the key in that file (fingerprint: {pending_fingerprint}).")
+        print("To find out, do a dry run with that key as the old key:")
+        print(f"  0 failures: the database is on that key. Move {pending_file} to {secret_file}.")
+        print(f"  Failures: the database is not on that key. Delete {pending_file}.")
+        if not dry_run:
+            print("Nothing was changed.")
+            sys.exit(1)
 
     if dry_run:
         print("\n[DRY RUN] No changes will be made.\n")
@@ -711,17 +737,29 @@ def migrate(
         # Rollback if dry run (transaction will auto-commit on exit otherwise)
         if dry_run:
             conn.rollback()
+        else:
+            # Once the commit lands, the data opens with no other key, so the key goes to disk first.
+            try:
+                write_secret_key_to_file(config_dir, new_key, PENDING_KEY_FILENAME)
+            except BaseException:
+                pending_file.unlink(missing_ok=True)
+                raise
 
-    # Save new key only after successful database migration
+    # Move the new key into place only after the database commit
     if not dry_run:
         backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-        write_secret_key_to_file(config_dir, old_key, backup_file.name)
-        print(f"\n{step + 1}. Backed up old key to: {backup_file}")
-        write_secret_key_to_file(config_dir, new_key)
-        print(f"{step + 2}. Saved new secret key to: {config_dir / 'secret_key'}")
+        try:
+            write_secret_key_to_file(config_dir, old_key, backup_file.name)
+            print(f"\n{step + 1}. Backed up old key to: {backup_file}")
+            pending_file.replace(secret_file)
+        except OSError as e:
+            print(f"\nERROR: The database is now encrypted with the new key, but saving the key failed: {e}")
+            print(f"The new key is in {pending_file}. Move it to {secret_file} before starting Langflow.")
+            sys.exit(1)
+        print(f"{step + 2}. Saved new secret key to: {secret_file}")
     else:
         print(f"\n{step + 1}. [DRY RUN] Would backup old key")
-        print(f"{step + 2}. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
+        print(f"{step + 2}. [DRY RUN] Would save new key to: {secret_file}")
 
     # Summary
     print("\n" + "=" * 50)
@@ -734,12 +772,13 @@ def migrate(
         print(f"\nMigrated {total_migrated} items, {total_failed} failures")
         print(f"\nBackup key location: {config_dir}/secret_key.backup.*")
         print("\nNext steps:")
-        print("1. If Langflow gets LANGFLOW_SECRET_KEY (environment, .env file, secret store), set it to the new key")
+        print("1. If Langflow gets LANGFLOW_SECRET_KEY (environment, .env file, secret store), set it to the new key:")
+        print(f"   the contents of {secret_file}")
         print("2. Start Langflow and verify everything works")
         print("3. Users must log in again (JWT sessions invalidated)")
         print("4. Once verified, you may delete the backup key file")
         if os.environ.get("LANGFLOW_SECRET_KEY"):
-            warn_env_secret_key(new_key)
+            warn_env_secret_key(new_key, secret_file)
 
     if total_failed > 0:
         print(f"\nWarning: {total_failed} items could not be migrated.")

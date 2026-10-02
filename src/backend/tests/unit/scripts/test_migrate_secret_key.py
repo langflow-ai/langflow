@@ -1,8 +1,11 @@
 """Tests for the secret key migration script."""
 
+import hashlib
 import importlib.util
 import json
+import os
 import secrets
+import stat
 import sys
 import tempfile
 from pathlib import Path
@@ -15,7 +18,9 @@ from httpx import AsyncClient
 from langflow.services.auth.utils import _ensure_legacy_fernet_key, ensure_fernet_key
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, make_url, text
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.schema import CreateSchema, DropSchema
 
 
 @pytest.fixture(scope="module")
@@ -1112,6 +1117,206 @@ class TestMigrateEndToEnd:
         assert not (config_dir / "secret_key").exists()
 
 
+def _fingerprint(key: str) -> str:
+    return hashlib.sha256(key.encode()).hexdigest()[:12]
+
+
+class TestKeysStayOutOfOutput:
+    """The new key reaches the operator through the key file; the output only identifies it."""
+
+    rotation_db = TestMigrateEndToEnd.rotation_db
+
+    def test_provided_keys_are_not_printed(self, migrate_module, rotation_db, old_key, new_key, capsys):
+        _, config_dir, url = rotation_db
+
+        migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        captured = capsys.readouterr()
+        output = captured.out + captured.err
+        assert old_key not in output
+        assert new_key not in output
+        assert _fingerprint(new_key) in output
+
+    def test_generated_key_is_not_printed(self, migrate_module, rotation_db, old_key, monkeypatch, capsys):
+        _, config_dir, url = rotation_db
+        # With this set the script prints the banner that used to repeat the key.
+        monkeypatch.setenv("LANGFLOW_SECRET_KEY", old_key)
+
+        migrate_module.migrate(config_dir, url, old_key=old_key)
+
+        generated = (config_dir / "secret_key").read_text()
+        captured = capsys.readouterr()
+        output = captured.out + captured.err
+        assert generated != old_key
+        assert generated not in output
+        assert old_key not in output
+        assert _fingerprint(generated) in output
+
+    def test_dry_run_prints_no_key_and_writes_nothing(self, migrate_module, rotation_db, old_key, new_key, capsys):
+        _, config_dir, url = rotation_db
+
+        migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key, dry_run=True)
+
+        output = capsys.readouterr().out
+        assert new_key not in output
+        assert _fingerprint(new_key) in output
+        assert list(config_dir.iterdir()) == []
+
+
+class TestPendingKeyFile:
+    """The new key is on disk before the commit, so stopping after the commit cannot lose it."""
+
+    rotation_db = TestMigrateEndToEnd.rotation_db
+
+    def test_new_key_stays_on_disk_when_the_commit_fails(self, migrate_module, old_key, new_key, tmp_path):
+        admin_url = os.environ.get("LANGFLOW_TEST_POSTGRES_URL") or os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+        if not admin_url:
+            pytest.skip("LANGFLOW_TEST_POSTGRES_URL or LANGFLOW_TEST_DATABASE_URI is not set")
+        schema = f"keyscript_{uuid4().hex}"
+        url = make_url(admin_url).update_query_dict({"options": f"-csearch_path={schema}"})
+        admin = create_engine(admin_url)
+        engine = create_engine(url)
+        with admin.begin() as conn:
+            conn.execute(CreateSchema(schema))
+        try:
+            with engine.begin() as conn:
+                conn.execute(text('CREATE TABLE "user" (id TEXT PRIMARY KEY, store_api_key TEXT)'))
+                conn.execute(text("CREATE TABLE variable (id TEXT PRIMARY KEY, name TEXT, value TEXT, type TEXT)"))
+                conn.execute(text("CREATE TABLE folder (id TEXT PRIMARY KEY, name TEXT, auth_settings TEXT)"))
+                conn.execute(
+                    text("INSERT INTO variable VALUES ('v1', 'OPENAI_API_KEY', :v, :t)"),
+                    {"v": migrate_module.encrypt_with_key("variable-secret", old_key), "t": CREDENTIAL_TYPE},
+                )
+                # A deferred constraint trigger runs at COMMIT, so the run stops at the commit itself.
+                conn.execute(
+                    text(
+                        "CREATE FUNCTION refuse_commit() RETURNS trigger LANGUAGE plpgsql "
+                        "AS $$ BEGIN RAISE EXCEPTION 'commit refused'; END $$"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "CREATE CONSTRAINT TRIGGER refuse_commit AFTER UPDATE ON variable "
+                        "DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION refuse_commit()"
+                    )
+                )
+
+            with pytest.raises(DBAPIError, match="commit refused"):
+                migrate_module.migrate(
+                    tmp_path, url.render_as_string(hide_password=False), old_key=old_key, new_key=new_key
+                )
+
+            # The script cannot always know whether a failed commit was applied, so the key stays.
+            pending = tmp_path / "secret_key.new"
+            assert pending.read_text() == new_key
+            assert stat.S_IMODE(pending.stat().st_mode) == 0o600
+            assert not (tmp_path / "secret_key").exists()
+            with engine.connect() as conn:
+                value = conn.execute(text("SELECT value FROM variable")).scalar()
+            assert migrate_module.decrypt_with_key(value, old_key) == "variable-secret"
+        finally:
+            engine.dispose()
+            with admin.begin() as conn:
+                conn.execute(DropSchema(schema, cascade=True))
+            admin.dispose()
+
+    def test_successful_run_moves_the_pending_key_into_place(self, migrate_module, rotation_db, old_key, new_key):
+        _, config_dir, url = rotation_db
+        (config_dir / "secret_key").write_text(old_key)
+
+        migrate_module.migrate(config_dir, url, new_key=new_key)
+
+        assert not (config_dir / "secret_key.new").exists()
+        assert (config_dir / "secret_key").read_text() == new_key
+        if os.name == "posix":
+            assert stat.S_IMODE((config_dir / "secret_key").stat().st_mode) == 0o600
+        [backup] = config_dir.glob("secret_key.backup.*")
+        assert backup.read_text() == old_key
+
+    def test_rolled_back_run_leaves_no_pending_file(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE apikey SET api_key = :value"), {"value": b"unexpected-bytes"})
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        assert list(config_dir.iterdir()) == []
+
+    def test_unwritable_config_dir_fails_before_the_commit(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        if os.name != "posix" or os.geteuid() == 0:
+            pytest.skip("Needs a directory the current user cannot write to")
+        config_dir.chmod(0o500)
+        try:
+            with pytest.raises(PermissionError):
+                migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+        finally:
+            config_dir.chmod(0o700)
+
+        # The key could not be saved, so the database must still open with the old one.
+        assert list(config_dir.iterdir()) == []
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
+
+    def test_failed_save_after_commit_keeps_the_key_in_the_pending_file(
+        self, migrate_module, rotation_db, old_key, new_key, capsys
+    ):
+        engine, config_dir, url = rotation_db
+        # A directory where the key file goes makes the move into place fail, after the commit.
+        (config_dir / "secret_key").mkdir()
+
+        with pytest.raises(SystemExit) as exit_info:
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        pending = config_dir / "secret_key.new"
+        output = capsys.readouterr().out
+        assert exit_info.value.code == 1
+        assert pending.read_text() == new_key
+        assert str(pending) in output
+        assert new_key not in output
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, new_key) == "lf-api-key-value"
+
+    def test_leftover_pending_key_stops_the_next_run(self, migrate_module, rotation_db, old_key, new_key, capsys):
+        engine, config_dir, url = rotation_db
+        pending = config_dir / "secret_key.new"
+        # Left by a run that was killed around its commit.
+        pending.write_text(new_key)
+        next_key = secrets.token_urlsafe(32)
+
+        with pytest.raises(SystemExit) as exit_info:
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=next_key)
+
+        output = capsys.readouterr().out
+        assert exit_info.value.code == 1
+        assert str(pending) in output
+        assert _fingerprint(new_key) in output
+        assert all(key not in output for key in (old_key, new_key, next_key))
+        assert pending.read_text() == new_key
+        assert not (config_dir / "secret_key").exists()
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
+
+    def test_dry_run_shows_which_key_opens_the_data(self, migrate_module, rotation_db, old_key, new_key, capsys):
+        _, config_dir, url = rotation_db
+        (config_dir / "secret_key").mkdir()
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+        (config_dir / "secret_key").rmdir()
+        pending = config_dir / "secret_key.new"
+        capsys.readouterr()
+
+        # The check the leftover-file notice asks for: the pending key as the old key.
+        migrate_module.migrate(config_dir, url, old_key=pending.read_text(), dry_run=True)
+
+        assert "Would migrate 5 items, 0 failures" in capsys.readouterr().out
+        assert pending.read_text() == new_key
+
+
 class TestRotationOnAppWrittenDatabase:
     """Rows written through the app's models and encryption, in a schema built from its models."""
 
@@ -1232,4 +1437,6 @@ class TestRotationOnAppWrittenDatabase:
         start, _, _ = output.partition("1. Migrating")
         _, _, completion = output.partition("MIGRATION COMPLETE")
         assert "LANGFLOW_SECRET_KEY is set" in start
-        assert f"LANGFLOW_SECRET_KEY={new_key}" in completion
+        assert f"Set LANGFLOW_SECRET_KEY to the contents of {config_dir / 'secret_key'}" in completion
+        assert _fingerprint(new_key) in completion
+        assert new_key not in output
