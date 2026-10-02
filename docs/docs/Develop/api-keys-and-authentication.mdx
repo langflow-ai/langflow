@@ -6,6 +6,7 @@ slug: /api-keys-and-authentication
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
+import PartialAutoLoginDefaults from '@site/docs/_partial-auto-login-defaults.mdx';
 
 This page documents Langflow's built-in authentication, including user accounts, Langflow API keys, and the environment variables that control access to your server.
 To connect Langflow to an external identity provider or SSO system, see [SSO and external authentication](./external-authentication).
@@ -154,21 +155,26 @@ This section describes the available authentication configuration variables.
 You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
 For JWT token signing configuration, including algorithm selection and key management, see [Configure JWT token signing](#configure-jwt-token-signing).
+To connect Langflow to an upstream identity provider, see [SSO and external authentication](./external-authentication).
+For role-based access control, see [Authorization](./authorization).
 
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
 This variable controls whether the visual editor uses automatic login or requires users to sign in.
 
-* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
+* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor and authenticate as a superuser to run certain Langflow CLI commands.
+Management API requests accept a Langflow API key or a session token. Session tokens can be sent in the `access_token_lf` cookie or `Authorization: Bearer` header.
+Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter. This includes `/api/v1/run`, `/api/v1/run/advanced`, `/api/v1/predict`, `/api/v1/process`, and `/api/v1/responses`.
 You must explicitly set [`LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) before startup. Set [`LANGFLOW_SUPERUSER`](#langflow-superuser) only if you want to override the default superuser username (`langflow`).
 
 * If `LANGFLOW_AUTO_LOGIN=True`, the visual editor automatically signs in all users as the configured superuser, and Langflow uses that username with a configured or generated bootstrap password.
 All users share the same visual editor environment without password protection, and they can run Langflow CLI commands as superusers.
-API requests still require a Langflow API key unless you also set [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](#langflow-skip-auth-auto-login) to `true`.
+Management API requests still require a Langflow API key or a session token unless you also set [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](#langflow-skip-auth-auto-login) to `true`. Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter.
 
-The default is `True` for development branches and local builds from those branches. It is `False` for official release packages, source checkouts/downloads of official release tags, and Docker images, including DEV/CDK images.
+<PartialAutoLoginDefaults />
+
 Official tags point to a release-only commit that disables auto-login, so GitHub's automatic source ZIP/TAR downloads use the same default as the wheels published to PyPI and GitHub Releases.
-For trusted local development with a release package or Docker image, explicitly set `LANGFLOW_AUTO_LOGIN=True` to enable automatic login.
+DEV and CDK images set `LANGFLOW_AUTO_LOGIN=false` starting in Langflow 1.13.
 For more information about containers, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
 #### Upgrade an existing auto-login installation {#upgrade-from-auto-login}
@@ -189,8 +195,9 @@ An explicit `LANGFLOW_AUTO_LOGIN=true` in an existing environment or `.env` file
 
 #### LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 
-When `LANGFLOW_AUTO_LOGIN=true`, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` to also skip API key authentication for API requests.
-The default is `false`, so API keys are still required even when auto-login is enabled.
+When `LANGFLOW_AUTO_LOGIN=true`, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` to also skip authentication for API requests.
+Unauthenticated requests then run as the configured superuser.
+The default is `false`, so a Langflow API key or a session token is still required for management API requests even when auto-login is enabled. Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter.
 This variable will be removed in a future release.
 
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
@@ -210,7 +217,7 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 
 `LANGFLOW_SUPERUSER_PASSWORD` is required if `LANGFLOW_AUTO_LOGIN=False`. `LANGFLOW_SUPERUSER` is optional and defaults to `langflow`.
 `LANGFLOW_SUPERUSER_PASSWORD` can't use the legacy default value `langflow`; startup fails closed instead.
-When `LANGFLOW_AUTO_LOGIN=True`, `LANGFLOW_SUPERUSER` selects the auto-login account username and `LANGFLOW_SUPERUSER_PASSWORD` is optional. If the password isn't set, Langflow generates an unknown bootstrap password for the auto-login account.
+When `LANGFLOW_AUTO_LOGIN=True`, `LANGFLOW_SUPERUSER` selects the auto-login account username and `LANGFLOW_SUPERUSER_PASSWORD` is optional. If the password isn't set, or if it is the legacy value `langflow`, Langflow generates a bootstrap password for the auto-login account.
 
 When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if the required password is _not_ set, then startup fails instead of creating a default password.
 These defaults don't apply when using the Langflow CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
@@ -498,6 +505,8 @@ An anonymous link grants only resource read and flow execution. It never grants 
 
 When `LANGFLOW_AUTHZ_ENABLED=true`, anonymous access also requires an authorization plugin that opts into public principals, maps request hosts through a deployment-owned allowlist, resolves a tenant from that mapping and server-derived domain context, and allows the action. The OSS public-principal plugin seam defaults to deny and never performs cross-tenant discovery. Plugins must not treat the raw `Host` header as a trusted tenant identity.
 
+For more information, see [Authorization](./authorization).
+
 For A2A, `auth_type=none` applies this contract to both the direct agent card and execution routes. API-key and OAuth agent cards remain anonymously readable by direct link for A2A protocol discovery, but their JSON-RPC execution routes retain owner-key admission and owner execution.
 
 ### LANGFLOW_RATE_LIMIT_* {#login-rate-limiting}
@@ -589,6 +598,7 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
+| `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | When `false`, blocks user-authored component code and registered built-in code-execution components at runtime. See [Block custom components](/deployment-block-custom-components). |
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of any flow containing a built-in arbitrary-code-execution component, including the [**Python Interpreter**](/python-interpreter), Python REPL/Code tools, [**Smart Transform**](/smart-transform), [**CSV Agent**](/bundles-langchain#csv-agent), and code-running agents such as [**CodeAct**](/bundles-codeagents#codeact-agent-smolagents), [**CUGA**](/bundles-cuga), and [**OpenDsStar**](/bundles-codeagents#opendstar-agent). |
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `True` | By default, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. **Security warning:** setting this to `false` allows any user who can build flows to read arbitrary files on the server (including Langflow's own secret keys) through file components and `sqlite:////path` database URLs. Set it to `false` only in single-tenant deployments where reading local server files by absolute path is an intentional feature. |
 | `LANGFLOW_DATABASE_TLS_FILES_DIR` | Absolute directory path | Unset | Directory of administrator-provided TLS files that SQL database connector URLs may reference while local file access stays restricted. Only PostgreSQL `sslrootcert`, `sslcert`, and `sslkey` and MySQL/MariaDB `ssl_ca`, `ssl_cert`, and `ssl_key` options are eligible. The referenced file must exist and resolve to a regular file inside this directory; traversal and symlink escapes are rejected. Keep this directory outside tenant-writable storage and mount it read-only. |
@@ -850,13 +860,7 @@ This involves disabling automatic login, setting superuser credentials, and gene
 
 This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.
 
-:::tip Docker images
-Official Langflow Docker images already set `LANGFLOW_AUTO_LOGIN=false`.
-You still must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start.
-For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
-:::
-
-With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
+With authentication enabled, all users must sign in to the visual editor with valid credentials. Management API requests require a Langflow API key or a session token. Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter.
 Sign in as a superuser to [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.
 User management is through the [Users API](/api-users), not the visual editor.
 
@@ -1078,6 +1082,9 @@ Superusers add, activate, list, and delete users, set **Superuser**, and set oth
 
 ## See also
 
+* [Authentication and authorization overview](./authentication-overview)
+* [SSO and external authentication](./external-authentication)
+* [Authorization](./authorization)
 * [Langflow environment variables](/environment-variables)
 * [Users endpoints](/api-users)
 * [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md) — reporting vulnerabilities, security configuration, and [secret key rotation](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md#secret-key-rotation)
