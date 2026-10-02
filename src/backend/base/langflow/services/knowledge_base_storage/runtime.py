@@ -437,6 +437,14 @@ def _raw_backend(record, *, embedding_function=None, create=False, credential_us
     )
 
 
+def unfenced_backend(record) -> BaseVectorStoreBackend:
+    """Construct the backend a row routes to, without ``backend_for_record``'s storage fences.
+
+    For an offline tool that does its own routing checks, such as ``langflow relocate-kb``.
+    """
+    return _raw_backend(record)
+
+
 class _GuardedMethods:
     def __init__(self, target, record, *, before_write=None):
         """Capture the backend and routing snapshot used to guard future operations."""
