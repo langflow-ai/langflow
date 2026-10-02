@@ -69,6 +69,7 @@
     "image-size": "^2.0.3",
     "joi": "^17.13.7",
     "baseline-browser-mapping": "^2.11.0",
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4",
     "js-yaml": "^4.3.2",
     "picomatch": "^4.0.4",
     "lodash": "4.17.21",
