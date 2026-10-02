@@ -81,6 +81,8 @@
     "@babel/plugin-transform-modules-systemjs": "^7.29.4",
     "express": {
       "path-to-regexp": "^0.1.13"
-    }
+    },
+    "ajv@^6": "^6.14.0",
+    "ajv@^8": "^8.18.0"
   }
 }
