@@ -289,6 +289,7 @@ class TestEnsureCodeExecutionEnabled:
 
     @pytest.mark.parametrize("superuser", [None, False, "true", 1])
     def test_admin_only_blocks_missing_or_non_admin_principal(self, monkeypatch, superuser):
+        """Missing identity and truthy non-boolean flags cannot grant administrator access."""
         from types import SimpleNamespace
 
         from lfx.services.model_provider_policy import (
@@ -310,6 +311,7 @@ class TestEnsureCodeExecutionEnabled:
             reset_current_model_provider_policy_context(token)
 
     def test_admin_only_allows_bound_administrator(self, monkeypatch):
+        """An administrator can execute code without elevating the next unbound caller."""
         from types import SimpleNamespace
 
         from lfx.services.model_provider_policy import (
