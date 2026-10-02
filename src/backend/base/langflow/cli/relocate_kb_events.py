@@ -25,7 +25,7 @@ def progress(result: KBRelocationResult) -> None:
     """How many of a knowledge base's chunks are copied so far."""
     # Chunks copied from a source that counted none means the count was wrong, so the total is not known.
     total = result.source_count or None
-    emit("progress", done=result.copied, total=total, unit="chunks", subject=str(result.kb_id))
+    emit("progress", phase="copying", done=result.copied, total=total, unit="chunks", subject=str(result.kb_id))
 
 
 def item(result: KBRelocationResult) -> None:
