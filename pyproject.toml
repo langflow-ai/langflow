@@ -41,8 +41,8 @@ dependencies = [
     "lfx-oracle>=0.1.4,<1.0.0",
     "lfx-vllm>=0.1.3,<1.0.0",
     "lfx-openai-compatible>=0.1.5,<1.0.0",
-    "lfx-google>=0.3.0,<1.0.0",
-    "lfx-microsoft>=0.1.1,<1.0.0",
+    "lfx-google>=0.3.1,<1.0.0",
+    "lfx-microsoft>=0.1.2,<1.0.0",
     "lfx-slack>=0.2.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
@@ -315,6 +315,7 @@ log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = [
+    "full_database_init: Run the API client fixture with a fresh schema and real migrations",
     "async_test",
     "api_key_required",
     "no_blockbuster",

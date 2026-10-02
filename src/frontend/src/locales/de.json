@@ -2513,6 +2513,7 @@
   "connections.search": "Name, Handle oder Konto suchen",
   "connections.loading": "Verbindungen werden geladen…",
   "connections.empty": "Noch keine Verbindungen.",
+  "connections.noProviders": "Für Sie sind keine Integrationen verfügbar. Ein Administrator legt fest, welche Integrationsanbieter und Aktionen verwendet werden können.",
   "connections.emptyTab": "Noch keine Verbindungen auf dieser Registerkarte.",
   "connections.emptyInstance": "Noch keine Instanzverbindungen.",
   "connections.emptyOthers": "Noch keine Verbindungen anderer Benutzer.",

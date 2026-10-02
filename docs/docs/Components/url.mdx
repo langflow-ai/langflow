@@ -30,6 +30,19 @@ Some of the available parameters include the following:
 
 Additional input parameters are available for error handling and encoding.
 
+## Response size limits
+
+The **URL** component limits how much response data it reads. Set these deployment-wide environment variables to allow larger pages or reduce the amount of data a crawl can read:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES` | `10485760` (10 MiB) | Maximum encoded or decoded response body size for one page. |
+| `LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES` | `104857600` (100 MiB) | Maximum total response bytes across all URLs and crawled pages in one fetch. Each response counts the larger of its encoded and decoded sizes, including bytes read from rejected responses. Crawling stops when the budget is spent. |
+
+Both values must be positive integers. A page that exceeds either limit is rejected. These limits apply to the URL component, including when an agent uses it as a tool.
+
+The component accepts uncompressed responses and a single gzip or deflate stream. Incomplete compressed streams and trailing data are rejected. Decoder errors are charged conservatively for the output they could have produced.
+
 ## URL output
 
 There are two settings that control the output of the **URL** component at different stages:
@@ -53,4 +66,3 @@ For example, if you only want to pass specific fields to other components, you c
 
 When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **URL** component based on the user's query, and it can process the `Table` or `Message` output directly.
-

@@ -611,6 +611,91 @@ async def test_delete_project_does_not_leak_sql_on_database_error(
     assert str(project_id) not in detail
 
 
+async def test_lock_project_for_delete_issues_row_lock_on_postgresql():
+    """On PostgreSQL, the Folder row must be locked with FOR UPDATE before any flow is touched.
+
+    Replacement locks the Folder row before its flow rows (see
+    ``_lock_replacement_operation`` and the ``with_for_update()`` load in
+    ``_replace_project_operation_once``). Delete must lock the same row, the same
+    way, so the two operations never take these locks in opposite orders.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    project_id = uuid4()
+    session = AsyncMock()
+    bind = MagicMock()
+    bind.dialect.name = "postgresql"
+    session.get_bind = MagicMock(return_value=bind)
+
+    await projects_module._lock_project_for_delete(session, project_id)
+
+    session.exec.assert_awaited_once()
+    (statement,), _kwargs = session.exec.call_args
+    compiled = str(statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "FOR UPDATE" in compiled
+    assert "folder" in compiled.lower()
+    assert project_id.hex in compiled.replace("-", "")
+
+
+async def test_lock_project_for_delete_is_a_noop_on_sqlite():
+    """SQLite already serializes writers database-wide, so no explicit lock is issued."""
+    from langflow.api.v1 import projects as projects_module
+
+    session = AsyncMock()
+    bind = MagicMock()
+    bind.dialect.name = "sqlite"
+    session.get_bind = MagicMock(return_value=bind)
+
+    await projects_module._lock_project_for_delete(session, uuid4())
+
+    session.exec.assert_not_awaited()
+
+
+async def test_delete_project_locks_folder_before_flows_are_cascade_deleted(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """The Folder row lock (PostgreSQL deadlock fix) must run before any flow cascade delete.
+
+    Regression for a lock-order deadlock against replacement: replacement locks the
+    Folder row before its flow rows; delete used to remove flows first and the
+    Folder last — the opposite order, which can deadlock (40P01) on PostgreSQL.
+    ``_lock_project_for_delete`` must run first inside the delete operation; this
+    pins that ordering regardless of which dialect the test database uses.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "lock-order-flow", "folder_id": project_id, "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+
+    call_order: list[str] = []
+    original_lock = projects_module._lock_project_for_delete
+    original_cascade = projects_module.cascade_delete_flow
+
+    async def recording_lock(session, project_id):
+        call_order.append("lock")
+        return await original_lock(session, project_id)
+
+    async def recording_cascade(session, flow_id, *, memory_base_cleanups):
+        call_order.append("cascade")
+        return await original_cascade(session, flow_id, memory_base_cleanups=memory_base_cleanups)
+
+    monkeypatch.setattr(projects_module, "_lock_project_for_delete", recording_lock)
+    monkeypatch.setattr(projects_module, "cascade_delete_flow", recording_cascade)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT
+
+    assert call_order == ["lock", "cascade"]
+
+
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):
     bad_id = "not-a-uuid"
     response = await client.get(f"api/v1/projects/{bad_id}", headers=logged_in_headers)

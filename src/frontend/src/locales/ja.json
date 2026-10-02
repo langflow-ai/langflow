@@ -2513,6 +2513,7 @@
   "connections.search": "名前、ハンドル、アカウントを検索",
   "connections.loading": "接続を読み込み中…",
   "connections.empty": "接続はまだありません。",
+  "connections.noProviders": "利用できる連携はありません。使用できる連携プロバイダーとアクションは管理者が管理しています。",
   "connections.emptyTab": "このタブにはまだ接続がありません。",
   "connections.emptyInstance": "インスタンスの接続はまだありません。",
   "connections.emptyOthers": "他のユーザーの接続はまだありません。",

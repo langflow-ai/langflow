@@ -29,6 +29,11 @@ CLASS_NAMES = (
     "TeamsChannelPostComponent",
     "TeamsChatPostComponent",
 )
+TRIGGER_CLASS_NAMES = (
+    "MicrosoftOnMailTriggerComponent",
+    "MicrosoftOnCalendarTriggerComponent",
+    "MicrosoftOnFileTriggerComponent",
+)
 
 requires_source_tree = pytest.mark.skipif(
     not PYPROJECT.exists(),
@@ -44,13 +49,13 @@ def test_extension_manifest_validates() -> None:
 def test_loader_exposes_the_components_and_the_capability_manifest() -> None:
     result = load_extension(PACKAGE_ROOT, distribution="lfx-microsoft")
     assert result.ok, result.errors
-    assert {component.class_name for component in result.components} == set(CLASS_NAMES)
+    assert {component.class_name for component in result.components} == set(CLASS_NAMES + TRIGGER_CLASS_NAMES)
     assert len(result.integrations) == 1
     integration = result.integrations[0]
     assert integration.provider_id == "microsoft"
     assert integration.bundle == "microsoft"
     assert integration.capability_manifest.schema_version == 1
-    assert len(integration.capability_manifest.capabilities) == 8
+    assert len(integration.capability_manifest.capabilities) == 11
 
 
 def test_capability_manifest_ships_inside_the_bundle_directory() -> None:

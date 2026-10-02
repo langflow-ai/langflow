@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Column, DateTime, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -92,6 +92,34 @@ class JobBase(SQLModel):
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "job"
+    # The background metrics collector filters on status every tick, takes a MIN over
+    # created_timestamp for the oldest queued job, and ranges over finished_timestamp for the
+    # duration window. Without these each tick's cost grows
+    # with the whole job history rather than with the work in flight. The all-time
+    # outcome aggregate still scans history and is collected less frequently.
+    __table_args__ = (
+        Index("ix_job_status_created", "status", "created_timestamp"),
+        Index("ix_job_finished_timestamp", "finished_timestamp"),
+    )
+
+
+class JobMetricTotals(SQLModel, table=True):  # type: ignore[call-arg]
+    """Constant-size archive of background outcomes removed by job retention.
+
+    Row 1 is updated atomically with deletion. It contains no job/user identifiers
+    or payloads and survives retention and process restarts.
+    """
+
+    __tablename__ = "background_job_metric_totals"
+
+    id: int = Field(default=1, primary_key=True)
+    started: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    completed: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    failed_error: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    failed_worker_lost: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    failed_input_timeout: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    timed_out: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    cancelled: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
 
 
 class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]

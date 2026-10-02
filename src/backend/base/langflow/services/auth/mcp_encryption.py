@@ -7,16 +7,13 @@ from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
 
 from langflow.services.auth import utils as auth_utils
+from langflow.utils.mcp_config_secrets import MCP_SECRET_CONFIG_MAPS
 
 # Fields that should be encrypted when stored
 SENSITIVE_FIELDS = [
     "oauth_client_secret",
     "api_key",
 ]
-
-# Sub-maps of an ``mcpServers`` entry whose *values* carry secrets (API keys,
-# bearer tokens) and must be encrypted at rest in the mcp_server table.
-MCP_SECRET_CONFIG_MAPS = ("env", "headers")
 
 # ``mcp-proxy`` takes request headers as argv rather than as a map:
 # ``--headers <name> <value>``. Project MCP servers are registered that way and
