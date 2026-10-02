@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import re
 import uuid
 from abc import abstractmethod
@@ -23,6 +25,7 @@ from lfx.schema.data import Data
 from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
+from lfx.utils.async_helpers import async_delegate_target, delegates_to
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
@@ -96,7 +99,13 @@ class LCAgentComponent(Component):
 
     async def message_response(self) -> Message:
         """Run the agent and return the response."""
-        agent = self.build_agent()
+        async_builder = async_delegate_target(self, "build_agent")
+        if async_builder is not None:
+            agent = await async_builder()
+        elif inspect.iscoroutinefunction(self.build_agent):
+            agent = await self.build_agent()
+        else:
+            agent = await asyncio.to_thread(self.build_agent)
         message = await self.run_agent(agent=agent)
 
         self.status = message
@@ -299,6 +308,7 @@ class LCAgentComponent(Component):
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
                 on_token_callback,
+                get_final_usage=token_usage_handler.get_usage,
             )
         except ExceptionWithMessageError as e:
             # Only delete message from database if it has an ID (was stored)
@@ -321,11 +331,6 @@ class LCAgentComponent(Component):
         if usage_data:
             self._token_usage = usage_data
             result.properties.usage = usage_data
-            # Only update DB and send event if the message was stored (has an ID)
-            if result.get_id():
-                stored_result = await self._update_stored_message(result)
-                await self._send_message_event(stored_result)
-                result = stored_result
 
         self.status = result
         return result
@@ -360,9 +365,24 @@ class LCToolsAgentComponent(LCAgentComponent):
         *LCAgentComponent.get_base_inputs(),
     ]
 
+    @delegates_to("abuild_agent")
     def build_agent(self) -> AgentExecutor:
         self.validate_tool_names()
         agent = self.create_agent_runnable()
+        return self._executor_from_runnable(agent)
+
+    async def abuild_agent(self) -> AgentExecutor:
+        self.validate_tool_names()
+        async_builder = async_delegate_target(self, "create_agent_runnable")
+        if async_builder is not None:
+            agent = await async_builder()
+        elif inspect.iscoroutinefunction(self.create_agent_runnable):
+            agent = await self.create_agent_runnable()
+        else:
+            agent = await asyncio.to_thread(self.create_agent_runnable)
+        return self._executor_from_runnable(agent)
+
+    def _executor_from_runnable(self, agent) -> AgentExecutor:
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
             tools=self.tools,

@@ -8,6 +8,7 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 # Dunder-named so ``unittest.mock`` objects report it missing instead of inventing a value.
 _ASYNC_DELEGATE_ATTR = "__lfx_async_delegate__"
+_ASYNC_DELEGATE_OWNER_ATTR = "__lfx_async_delegate_owner__"
 
 if hasattr(asyncio, "timeout"):
 
@@ -73,6 +74,9 @@ def delegates_to(async_name: str) -> Callable[[_F], _F]:
 
     def decorator(func: _F) -> _F:
         setattr(func, _ASYNC_DELEGATE_ATTR, async_name)
+        # functools.wraps copies function attributes. A wrapper must retain its
+        # own behavior rather than inherit permission to skip straight to async.
+        setattr(func, _ASYNC_DELEGATE_OWNER_ATTR, func)
         return func
 
     return decorator
@@ -82,11 +86,19 @@ def async_delegate_target(obj: object, method_name: str) -> Callable[..., Awaita
     """Return the bound coroutine method behind ``obj.<method_name>``, if it is a marked wrapper.
 
     Returns ``None`` when the method is missing, unmarked, or overridden (on the class or the
-    instance) by something that is not itself a ``delegates_to`` wrapper.
+    instance) by something that is not itself a ``delegates_to`` wrapper. Copied
+    attributes from ``functools.wraps`` do not authorize skipping the wrapper.
     """
     method = getattr(obj, method_name, None)
     async_name = getattr(method, _ASYNC_DELEGATE_ATTR, None)
     if not isinstance(async_name, str):
+        return None
+    receiver = getattr(method, "__self__", None)
+    if receiver is not None and receiver is not obj:
+        # A supplied bound method must keep its original receiver/configuration.
+        return None
+    function = getattr(method, "__func__", method)
+    if getattr(function, _ASYNC_DELEGATE_OWNER_ATTR, None) is not function:
         return None
     return getattr(obj, async_name)
 

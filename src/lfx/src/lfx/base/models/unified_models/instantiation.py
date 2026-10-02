@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import contextlib
 import os
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Literal
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
@@ -42,7 +43,13 @@ def _env_if_allowed(key: str) -> str | None:
     return os.environ.get(key)
 
 
-def _apply_registered_provider_connection(provider: str, user_id: UUID | str | None, kwargs: dict[str, Any]) -> None:
+def _apply_registered_provider_connection(
+    provider: str,
+    user_id: UUID | str | None,
+    kwargs: dict[str, Any],
+    *,
+    provider_vars: dict[str, str] | None = None,
+) -> None:
     """Apply a bundle-registered provider's non-secret connection variables to ``kwargs``.
 
     Core providers keep their explicit per-provider branches in ``get_llm`` /
@@ -59,7 +66,8 @@ def _apply_registered_provider_connection(provider: str, user_id: UUID | str | N
     from lfx.utils.util import transform_localhost_url
 
     provider_meta = model_provider_metadata.get(provider, {})
-    provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+    if provider_vars is None:
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
     default_headers: dict[str, str] = {}
     for var in provider_meta.get("variables", []):
         if var.get("is_secret"):
@@ -121,7 +129,45 @@ def _protect_model_connection(
     validate_url_for_ssrf_or_raise(effective_url)
 
 
-def get_llm(
+@dataclass(frozen=True)
+class _LlmInput:
+    kind: Literal["policy", "api_key", "variables"]
+    parameters: dict[str, Any] = field(repr=False)
+
+
+def _resolve_llm_input(request: _LlmInput) -> Any:
+    if request.kind == "policy":
+        from lfx.services.model_provider_policy import resolve_model_provider_policy
+
+        return resolve_model_provider_policy(**request.parameters)
+    from lfx.base.models import unified_models as unified_models_module
+
+    if request.kind == "api_key":
+        return unified_models_module.get_api_key_for_provider(
+            request.parameters["user_id"], request.parameters["provider"], request.parameters["api_key"]
+        )
+    return unified_models_module.get_all_variables_for_provider(
+        request.parameters["user_id"], request.parameters["provider"]
+    )
+
+
+async def _aresolve_llm_input(request: _LlmInput) -> Any:
+    if request.kind == "policy":
+        from lfx.services.model_provider_policy import aresolve_model_provider_policy
+
+        return await aresolve_model_provider_policy(**request.parameters)
+    from lfx.base.models import unified_models as unified_models_module
+
+    if request.kind == "api_key":
+        return await unified_models_module.aget_api_key_for_provider(
+            request.parameters["user_id"], request.parameters["provider"], request.parameters["api_key"]
+        )
+    return await unified_models_module.aget_all_variables_for_provider(
+        request.parameters["user_id"], request.parameters["provider"]
+    )
+
+
+def _build_llm(
     model,
     user_id: UUID | str | None,
     api_key=None,
@@ -174,12 +220,15 @@ def get_llm(
         raise ValueError(msg)
     if provider_policy is None:
         from lfx.base.models.provider_registry import get_registry_snapshot
-        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
-        provider_policy = resolve_model_provider_policy(
-            user_id=user_id,
-            providers=(*get_registry_snapshot().provider_ids, provider),
-            purpose=ModelProviderPolicyPurpose.USE,
+        provider_policy = yield _LlmInput(
+            "policy",
+            {
+                "user_id": user_id,
+                "providers": (*get_registry_snapshot().provider_ids, provider),
+                "purpose": ModelProviderPolicyPurpose.USE,
+            },
         )
     provider_policy.require(provider)
     if isinstance(model_name, str) and model_name:
@@ -232,7 +281,7 @@ def get_llm(
     original_api_key_input = api_key.strip() if isinstance(api_key, str) else None
 
     # Get API key from user input or global variables
-    api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
+    api_key = yield _LlmInput("api_key", {"user_id": user_id, "provider": provider, "api_key": api_key})
 
     # Validate API key. Ollama needs none; extension-bundle providers that
     # declare api_key_required=False (e.g. local OpenAI-compatible servers such
@@ -378,7 +427,7 @@ def get_llm(
         )
 
         # Get all provider variables from database
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        provider_vars = yield _LlmInput("variables", {"user_id": user_id, "provider": provider})
 
         # Priority: component value > database value > env var
         watsonx_url_value = (
@@ -418,7 +467,7 @@ def get_llm(
         )
 
         # Get all provider variables from database
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        provider_vars = yield _LlmInput("variables", {"user_id": user_id, "provider": provider})
 
         # Priority: component value > database value > env var > default fallback (localhost)
         ollama_base_url_value = (
@@ -432,7 +481,7 @@ def get_llm(
     elif provider == "OpenAI":
         from lfx.utils.util import transform_localhost_url
 
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        provider_vars = yield _LlmInput("variables", {"user_id": user_id, "provider": provider})
         openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
         if openai_base_url_value:
             kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
@@ -447,7 +496,7 @@ def get_llm(
         if base_url_value:
             kwargs["base_url"] = base_url_value
 
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        provider_vars = yield _LlmInput("variables", {"user_id": user_id, "provider": provider})
         default_headers: dict[str, str] = {}
         for var in provider_meta.get("variables", []):
             if not var.get("is_header"):
@@ -464,7 +513,7 @@ def get_llm(
     elif provider == "Azure AI Foundry":
         from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT, normalize_azure_ai_foundry_endpoint
 
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        provider_vars = yield _LlmInput("variables", {"user_id": user_id, "provider": provider})
         endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT")
         if not endpoint_value:
             msg = (
@@ -479,7 +528,8 @@ def get_llm(
     elif is_registered(provider):
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
-        _apply_registered_provider_connection(provider, user_id, kwargs)
+        provider_vars = yield _LlmInput("variables", {"user_id": user_id, "provider": provider})
+        _apply_registered_provider_connection(provider, user_id, kwargs, provider_vars=provider_vars)
         if kwargs.get("base_url"):
             connection_url_param = "base_url"
 
@@ -516,6 +566,94 @@ def get_llm(
             raise ValueError(msg) from e
         # Re-raise the original exception for other cases
         raise
+
+
+def get_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    max_tokens=None,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> Any:
+    """Construct a model with the existing synchronous resolution contract."""
+    construction = _build_llm(
+        model=model,
+        user_id=user_id,
+        api_key=api_key,
+        temperature=temperature,
+        stream=stream,
+        max_tokens=max_tokens,
+        watsonx_url=watsonx_url,
+        watsonx_project_id=watsonx_project_id,
+        ollama_base_url=ollama_base_url,
+        overrides=overrides,
+        provider_policy=provider_policy,
+    )
+    try:
+        try:
+            request = next(construction)
+        except StopIteration as result:
+            return result.value
+        while True:
+            value = _resolve_llm_input(request)
+            try:
+                request = construction.send(value)
+            except StopIteration as result:
+                return result.value
+    finally:
+        construction.close()
+
+
+async def aget_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    max_tokens=None,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> Any:
+    """Await scoped policy and credentials on the caller's loop before constructing a model."""
+    construction = _build_llm(
+        model=model,
+        user_id=user_id,
+        api_key=api_key,
+        temperature=temperature,
+        stream=stream,
+        max_tokens=max_tokens,
+        watsonx_url=watsonx_url,
+        watsonx_project_id=watsonx_project_id,
+        ollama_base_url=ollama_base_url,
+        overrides=overrides,
+        provider_policy=provider_policy,
+    )
+    try:
+        try:
+            request = next(construction)
+        except StopIteration as result:
+            return result.value
+        while True:
+            value = await _aresolve_llm_input(request)
+            try:
+                request = construction.send(value)
+            except StopIteration as result:
+                return result.value
+    finally:
+        # Cancellation during a lookup must not leave a suspended construction
+        # retaining credentials or proceed to allocate provider clients.
+        construction.close()
 
 
 def _get_provider_catalog_models(

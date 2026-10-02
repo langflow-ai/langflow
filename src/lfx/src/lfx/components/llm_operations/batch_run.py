@@ -5,7 +5,7 @@ from typing import Any, cast
 import toml  # type: ignore[import-untyped]
 
 from lfx.base.models.unified_models import (
-    get_llm,
+    aget_llm,
     handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
@@ -154,7 +154,7 @@ class BatchRunComponent(Component):
         """Process each row in df[column_name] with the language model asynchronously."""
         # Check if model is already an instance (for testing) or needs to be instantiated
         if isinstance(self.model, list):
-            model = get_llm(
+            model = await aget_llm(
                 model=self.model,
                 user_id=self.user_id,
                 api_key=self.api_key,

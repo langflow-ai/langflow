@@ -1576,7 +1576,12 @@ class Component(CustomComponent):
         from lfx.services.integration_policy import IntegrationPolicyPurpose
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
-        self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
+        # Existing custom sync extensions can enforce additional restrictions.
+        # Retain those checks rather than bypassing them with the base async gate.
+        sync_policy_gate = self.require_model_provider_policy
+        if getattr(sync_policy_gate, "__func__", None) is not Component.require_model_provider_policy:
+            await asyncio.to_thread(sync_policy_gate, ModelProviderPolicyPurpose.USE)
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id

@@ -150,8 +150,9 @@ class ChatOutput(ChatComponent):
         if hasattr(self, "_vertex") and self._vertex is not None:
             accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001
             if accumulated_usage:
+                usage_changed = message.properties.usage != accumulated_usage
                 message.properties.usage = accumulated_usage
-                if self.should_store_message and message.get_id():
+                if self.should_store_message and message.get_id() and usage_changed:
                     message = await self._update_stored_message(message)
                     await self._send_message_event(message, id_=message.get_id())
 
