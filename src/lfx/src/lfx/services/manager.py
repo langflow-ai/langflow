@@ -267,8 +267,13 @@ class ServiceManager:
         dependent_services = {dep.value: self.services[dep] for dep in factory.dependencies}
 
         # Create the actual service
-        self.services[service_name] = self.factories[service_name].create(**dependent_services)
-        self.services[service_name].set_ready()
+        service = self.factories[service_name].create(**dependent_services)
+        self.services[service_name] = service
+        # Duck-typed services (see teardown) have no ready flag. Raising here after the
+        # instance is stored made the first lookup return None and every later one succeed.
+        set_ready = getattr(service, "set_ready", None)
+        if set_ready is not None:
+            set_ready()
 
     def _validate_service_creation(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
         """Validate whether the service can be created."""

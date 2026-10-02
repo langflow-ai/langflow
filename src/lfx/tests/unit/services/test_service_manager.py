@@ -392,6 +392,21 @@ class TestServiceCreation:
         with pytest.raises(NoFactoryRegisteredError):
             service_manager.get(ServiceType.STORAGE_SERVICE)
 
+    def test_factory_built_service_without_ready_flag_resolves_on_first_get(self, service_manager):
+        """The shared component cache is a plain cache protocol with no set_ready.
+
+        The first lookup has to return it. Raising after the instance is stored made
+        get_service() hand None to the first ComponentWithCache and the real cache to
+        every later one.
+        """
+        from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
+        from lfx.services.shared_component_cache.service import SharedComponentCacheService
+
+        service = service_manager.get(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
+
+        assert isinstance(service, SharedComponentCacheService)
+        assert service_manager.get(ServiceType.SHARED_COMPONENT_CACHE_SERVICE) is service
+
 
 class TestConflictResolution:
     """Tests for conflict resolution with real services."""
