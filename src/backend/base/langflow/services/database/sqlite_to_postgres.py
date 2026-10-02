@@ -27,7 +27,9 @@ from alembic.script import ScriptDirectory
 from sqlalchemy.dialects.postgresql import insert
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Callable, Iterator, Mapping
+
+    from typing_extensions import Self
 
 # Postgres caps bind parameters per statement at 65535.
 _MAX_PARAMS_PER_STATEMENT = 60_000
@@ -55,11 +57,26 @@ class OrphanRows:
     rows: int
 
 
+class Problem(str):
+    """A refusal or failure: the text shown to the operator, with a stable ``code`` for programs."""
+
+    __slots__ = ("code", "orphans")
+    code: str
+    # The rows an orphan refusal is about, so a caller can offer --drop-orphans with the detail.
+    orphans: OrphanRows | None
+
+    def __new__(cls, code: str, message: str, orphans: OrphanRows | None = None) -> Self:
+        problem = super().__new__(cls, message)
+        problem.code = code
+        problem.orphans = orphans
+        return problem
+
+
 @dataclass
 class ConversionReport:
     revision: str | None = None
     tables: list[TableCopy] = field(default_factory=list)
-    problems: list[str] = field(default_factory=list)
+    problems: list[Problem] = field(default_factory=list)
     # Left out (ON DELETE CASCADE) or copied with the key set to NULL (ON DELETE SET NULL).
     orphans: list[OrphanRows] = field(default_factory=list)
 
@@ -69,7 +86,13 @@ class ConversionReport:
 
 
 def convert_sqlite_to_postgres(
-    source_url: str, target_url: str, *, batch_size: int = 1000, drop_orphans: bool = False
+    source_url: str,
+    target_url: str,
+    *,
+    batch_size: int = 1000,
+    drop_orphans: bool = False,
+    on_progress: Callable[[int, int, str], None] | None = None,
+    on_table: Callable[[TableCopy], None] | None = None,
 ) -> ConversionReport:
     """Copy every row of a SQLite Langflow database into a Postgres database.
 
@@ -77,12 +100,16 @@ def convert_sqlite_to_postgres(
     report; ``report.ok`` is False and nothing is committed when anything was
     refused or failed. Rows whose foreign key points at a row that is gone are
     refused unless ``drop_orphans``, which applies their ON DELETE rule instead.
+
+    While it copies, ``on_progress`` gets the rows written so far, the rows the
+    run will write and the table being written, and ``on_table`` gets each
+    table once it is copied and counted. A copy that fails after that is rolled back.
     """
     report = ConversionReport()
     source_path = sa.engine.make_url(_sync_sqlite_url(source_url)).database
     if not source_path or not Path(source_path).is_file():
         # Checked up front because opening a missing SQLite file creates an empty one.
-        report.problems.append(f"source database {source_path!r} does not exist")
+        report.problems.append(Problem("source_missing", f"source database {source_path!r} does not exist"))
         return report
 
     source = sa.create_engine(_sync_sqlite_url(source_url))
@@ -92,14 +119,20 @@ def convert_sqlite_to_postgres(
         report.revision = source_revision
         if source_revision is None:
             report.problems.append(
-                "source database has no Langflow schema. If it is a copy, make it with sqlite3's .backup or "
-                "VACUUM INTO: Langflow runs SQLite in WAL mode, and a plain cp can come out empty"
+                Problem(
+                    "source_not_langflow",
+                    "source database has no Langflow schema. If it is a copy, make it with sqlite3's .backup or "
+                    "VACUUM INTO: Langflow runs SQLite in WAL mode, and a plain cp can come out empty",
+                )
             )
             return report
         if source_revision != head:
             report.problems.append(
-                f"source database is at revision {source_revision}, this Langflow expects {head}; "
-                "start this Langflow version against the SQLite database once so it migrates, then convert"
+                Problem(
+                    "source_not_at_head",
+                    f"source database is at revision {source_revision}, this Langflow expects {head}; "
+                    "start this Langflow version against the SQLite database once so it migrates, then convert",
+                )
             )
             return report
 
@@ -114,14 +147,27 @@ def convert_sqlite_to_postgres(
             if report.problems:
                 return report
             upgrade_to_head(target_url)
-            _convert(source, target, models, report, batch_size=batch_size, drop_orphans=drop_orphans)
+            _convert(
+                source,
+                target,
+                models,
+                report,
+                batch_size=batch_size,
+                drop_orphans=drop_orphans,
+                on_progress=on_progress,
+                on_table=on_table,
+            )
         except ImportError as exc:
             # No Postgres driver installed. Reported for the same reason as below.
-            report.problems.append(f"could not use the target database: {exc}; install langflow[postgresql]")
+            report.problems.append(
+                Problem("target_unreachable", f"could not use the target database: {exc}; install langflow[postgresql]")
+            )
         except sa.exc.SQLAlchemyError as exc:
             # Reported rather than raised: a traceback would print the target URL,
             # password included. The driver's own message never contains it.
-            report.problems.append(f"could not use the target database: {_describe(exc)}")
+            report.problems.append(
+                Problem("target_unreachable", f"could not use the target database: {_describe(exc)}")
+            )
         finally:
             if target is not None:
                 target.dispose()
@@ -193,12 +239,14 @@ def _preflight(
         for orphans in _orphan_rows(src, models):
             # Only rows an ON DELETE rule accounts for can be let go. A self-referencing
             # CASCADE would need a recursive query; none exists, so it is refused too.
-            if drop_orphans and (
-                orphans.ondelete == "SET NULL" or (orphans.ondelete == "CASCADE" and orphans.parent != orphans.table)
-            ):
+            droppable = orphans.ondelete == "SET NULL" or (
+                orphans.ondelete == "CASCADE" and orphans.parent != orphans.table
+            )
+            if drop_orphans and droppable:
                 report.orphans.append(orphans)
             else:
-                report.problems.append(_describe_orphans(orphans))
+                code = "orphans_droppable" if droppable else "orphans_no_rule"
+                report.problems.append(Problem(code, _describe_orphans(orphans), orphans))
 
 
 def _convert(
@@ -209,6 +257,8 @@ def _convert(
     *,
     batch_size: int,
     drop_orphans: bool,
+    on_progress: Callable[[int, int, str], None] | None,
+    on_table: Callable[[TableCopy], None] | None,
 ) -> None:
     metadata = sa.MetaData()
     metadata.reflect(bind=target)
@@ -217,12 +267,33 @@ def _convert(
 
     with source.connect() as src:
         source_columns = {table.name: _source_columns(src, table.name) for table in tables}
+        done = total = 0
+        if on_progress is not None:
+            # Counted before the copy, so every progress call carries the total.
+            total = sum(
+                src.execute(
+                    sa.text(
+                        f'SELECT count(*) FROM "{table.name}"'  # noqa: S608
+                        f"{_where(models.get(table.name), drop_orphans=drop_orphans)}"
+                    )
+                ).scalar_one()
+                for table in tables
+            )
+
+        def written(table_name: str, rows: int) -> None:
+            nonlocal done
+            done += rows
+            if on_progress is not None:
+                on_progress(done, total, table_name)
+
         try:
             with target.begin() as tgt:
                 _align_system_roles(src, tgt)
                 if any(table.name == _POLICY_HISTORY_TABLE for table in tables):
                     _clear_seeded_policy_history(tgt)
                 for table in tables:
+                    # Named before its first batch lands, and so an empty table is named at all.
+                    written(table.name, 0)
                     columns = [column for column in table.columns if column.name in source_columns[table.name]]
                     source_rows = _copy_table(
                         src,
@@ -232,12 +303,18 @@ def _convert(
                         models.get(table.name),
                         batch_size=batch_size,
                         drop_orphans=drop_orphans,
+                        on_batch=written,
                     )
                     target_rows = tgt.execute(sa.select(sa.func.count()).select_from(table)).scalar_one()
                     report.tables.append(TableCopy(table.name, source_rows, target_rows))
+                    if on_table is not None:
+                        on_table(report.tables[-1])
                     if target_rows != source_rows:
                         report.problems.append(
-                            f"{table.name}: source has {source_rows} rows, target has {target_rows} after copy"
+                            Problem(
+                                "count_mismatch",
+                                f"{table.name}: source has {source_rows} rows, target has {target_rows} after copy",
+                            )
                         )
                 if report.problems:
                     msg = "row counts differ"
@@ -246,9 +323,9 @@ def _convert(
         except _RollbackError:
             pass
         except _CoercionError as exc:
-            report.problems.append(f"copy failed and was rolled back: {exc}")
+            report.problems.append(Problem("value_rejected", f"copy failed and was rolled back: {exc}"))
         except sa.exc.SQLAlchemyError as exc:
-            report.problems.append(f"copy failed and was rolled back: {_describe(exc)}")
+            report.problems.append(Problem("copy_failed", f"copy failed and was rolled back: {_describe(exc)}"))
 
 
 class _RollbackError(Exception):
@@ -305,7 +382,7 @@ def _enum_label(value: Any, model_type: sa.types.TypeEngine | None) -> Any:
         return value
 
 
-def _invalid_enum_values(conn: sa.Connection, models: Mapping[str, sa.Table]) -> list[str]:
+def _invalid_enum_values(conn: sa.Connection, models: Mapping[str, sa.Table]) -> list[Problem]:
     """Postgres enforces enum membership and SQLite does not, so check before writing anything.
 
     A bad value would otherwise fail only when its row is reached, partway through the copy.
@@ -339,8 +416,11 @@ def _invalid_enum_values(conn: sa.Connection, models: Mapping[str, sa.Table]) ->
             ).all()
             named = [row[0] if len(row) == 1 else tuple(row) for row in rows]
             problems.append(
-                f"{table.name}.{column.name} holds {bad}, which {enum.name} does not allow "
-                f"(allowed: {sorted(allowed)}); rows include {named}"
+                Problem(
+                    "value_rejected",
+                    f"{table.name}.{column.name} holds {bad}, which {enum.name} does not allow "
+                    f"(allowed: {sorted(allowed)}); rows include {named}",
+                )
             )
     return problems
 
@@ -414,7 +494,7 @@ def _key(column: sa.Column) -> str:
     return f"lower(replace(\"{column.name}\", '-', ''))" if isinstance(column.type, sa.Uuid) else f'"{column.name}"'
 
 
-def _foreign_users(src: sa.Connection, tgt: sa.Connection) -> list[str]:
+def _foreign_users(src: sa.Connection, tgt: sa.Connection) -> list[Problem]:
     """Refuse to merge two instances: the target may only hold users this source also has."""
     if not sa.inspect(tgt).has_table("user"):
         return []
@@ -424,8 +504,11 @@ def _foreign_users(src: sa.Connection, tgt: sa.Connection) -> list[str]:
     if not extra:
         return []
     return [
-        f"target already holds {len(extra)} user(s) that are not in the source, so it belongs to another instance; "
-        "convert into an empty database"
+        Problem(
+            "target_not_empty",
+            f"target already holds {len(extra)} user(s) that are not in the source, "
+            "so it belongs to another instance; convert into an empty database",
+        )
     ]
 
 
@@ -466,6 +549,7 @@ def _copy_table(
     *,
     batch_size: int,
     drop_orphans: bool,
+    on_batch: Callable[[str, int], None],
 ) -> int:
     names = [column.name for column in columns]
     model_types = [
@@ -473,10 +557,9 @@ def _copy_table(
         for column in columns
     ]
     selected = {name: f'"{name}"' for name in names}
-    where = ""
+    where = _where(model, drop_orphans=drop_orphans)
     if drop_orphans and model is not None:
         # What ON DELETE would have done: leave out CASCADE orphans, clear SET NULL keys.
-        where = f" WHERE {_kept(model)}"
         for foreign_key in model.foreign_key_constraints:
             if _on_delete(foreign_key) == "SET NULL":
                 for column in foreign_key.columns:
@@ -512,6 +595,7 @@ def _copy_table(
             )
         tgt.execute(statement)
         copied += len(batch)
+        on_batch(table.name, len(batch))
     if parents_sql is not None:
         key, parent_key = table.columns[key_column], table.columns[parent_column]
         update = table.update().where(key == sa.bindparam("row_key")).values({parent_key: sa.bindparam("parent_key")})
@@ -523,6 +607,11 @@ def _copy_table(
         for batch in _batches(pairs, batch_size):
             tgt.execute(update, batch)
     return copied
+
+
+def _where(model: sa.Table | None, *, drop_orphans: bool) -> str:
+    """The rows of a table the copy takes: all of them, or with ``drop_orphans`` the ones ``_kept`` keeps."""
+    return f" WHERE {_kept(model)}" if drop_orphans and model is not None else ""
 
 
 def _self_parent_column(table: sa.Table) -> tuple[str, str] | None:

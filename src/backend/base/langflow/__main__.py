@@ -1182,6 +1182,12 @@ def convert_sqlite_to_postgres(
         "leave them out (ON DELETE CASCADE) or clear the key (ON DELETE SET NULL). Without it they are refused.",
     ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    json_output: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--json",
+        help="Write progress, each copied table and a final report to stdout as one JSON object per line, "
+        "for a program that runs this command. Logs go to stderr.",
+    ),
 ) -> None:
     """Copy every row of a Langflow SQLite database into Postgres.
 
@@ -1192,11 +1198,25 @@ def convert_sqlite_to_postgres(
 
     SQLite never enforced Langflow's foreign keys, so deletes can leave rows that
     point at nothing. They are refused, naming each key, unless --drop-orphans.
+
+    Exits non-zero if anything was refused or failed. With --json every problem
+    carries a stable code, and the last line is the report.
     """
+    from langflow.cli import sqlite_to_postgres_events as events
     from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
 
-    configure(log_level=log_level)
-    report = convert(source, target, batch_size=batch_size, drop_orphans=drop_orphans)
+    configure(log_level=log_level, output_file=sys.stderr if json_output else None)
+    report = convert(
+        source,
+        target,
+        batch_size=batch_size,
+        drop_orphans=drop_orphans,
+        on_progress=events.emit_progress if json_output else None,
+        on_table=events.emit_table if json_output else None,
+    )
+    if json_output:
+        events.emit_report(report)
+        raise typer.Exit(0 if report.ok else 1)
     if not report.ok:
         # A failed copy is rolled back, so per-table counts would describe rows that are gone.
         for problem in report.problems:
