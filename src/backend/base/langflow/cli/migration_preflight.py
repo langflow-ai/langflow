@@ -22,6 +22,7 @@ from sqlmodel import func, select
 from langflow.cli.integrity import (
     CheckResult,
     IntegrityReport,
+    _result,
     check_credentials,
     check_instance,
     check_schema,
@@ -214,14 +215,13 @@ async def check_embedding_models(session: AsyncSession) -> CheckResult:
     ]
     copyable = len(rows) - len(unknown)
     plural = "" if copyable == 1 else "s"
-    if not unknown:
-        return CheckResult("embedding models", "ok", f"{copyable} knowledge base{plural} record their model")
-    return CheckResult(
-        "embedding models",
-        "warn",
-        f"{copyable} knowledge base{plural} record their model; {len(unknown)} record none and may need re-ingesting",
-        unknown,
+    recorded = f"{copyable} knowledge base{plural} record their model"
+    # Listed as the integrity checks list theirs, the first few and a count of the rest.
+    result = _result(
+        "embedding models", unknown, recorded, f"{recorded}; {len(unknown)} record none and may need re-ingesting"
     )
+    # A knowledge base that may need re-ingesting does not stop the migration.
+    return replace(result, status="warn") if unknown else result
 
 
 async def check_role_assignments(session: AsyncSession) -> CheckResult:

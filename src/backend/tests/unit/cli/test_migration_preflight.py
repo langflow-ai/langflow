@@ -300,6 +300,21 @@ class TestEmbeddingModels:
         assert check.status == "warn"
         assert any("kb-nameless" in p for p in check.problems)
 
+    async def test_knowledge_bases_past_the_examples_are_counted_not_listed(self, safe_superuser):
+        await _add(
+            *(
+                KnowledgeBaseRecord(name=f"kb-{i}", user_id=safe_superuser.id, backend_type="chroma", chunks=0)
+                for i in range(7)
+            )
+        )
+
+        check = _check(await run_preflight(), "embedding models")
+
+        assert check.status == "warn"
+        assert "7 record none" in check.summary
+        assert len(check.problems) == 6
+        assert check.problems[-1] == "... and 2 more"
+
     async def test_knowledge_bases_with_recorded_models_pass(self, safe_superuser):
         await _add(
             KnowledgeBaseRecord(
