@@ -21,6 +21,7 @@ from lfx.observability import (
     extract_trace_link,
     get_queued_trace_link,
     inject_trace_carrier,
+    is_queued_trace_context,
     queued_trace_link,
 )
 
@@ -129,9 +130,15 @@ def test_the_ambient_link_binds_and_resets(tracer):
     assert get_queued_trace_link() is None
 
 
-def test_binding_none_is_a_no_op():
-    """A synchronous run has no queued link, and must not pay for the machinery."""
-    with queued_trace_link(None):
-        assert get_queued_trace_link() is None
-
+def test_binding_none_marks_explicit_queued_absence_and_resets(tracer):
+    """A queued job without a carrier clears an inherited earlier job's link."""
+    with tracer.start_as_current_span("earlier.request"):
+        link = extract_trace_link(inject_trace_carrier())
+    assert not is_queued_trace_context()
+    with queued_trace_link(link):
+        with queued_trace_link(None):
+            assert is_queued_trace_context()
+            assert get_queued_trace_link() is None
+        assert get_queued_trace_link() is link
+    assert not is_queued_trace_context()
     assert get_queued_trace_link() is None
