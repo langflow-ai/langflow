@@ -78,7 +78,6 @@ overrides = [
     { name = "markdown", specifier = ">=3.8.0" },
     { name = "nltk", specifier = ">=3.10.3" },
     { name = "orjson", specifier = ">=3.11.6" },
-    { name = "pillow", specifier = ">=12.3.0" },
     { name = "playwright", specifier = ">=1.59.0" },
     { name = "pyjwt", specifier = ">=2.15.1,<3.0.0" },
     { name = "pypdf", specifier = ">=6.16.1,<7.0.0" },
