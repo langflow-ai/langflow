@@ -25,6 +25,7 @@ import {
   processFlows,
   updateGroupRecursion,
 } from "@/utils/reactflowUtils";
+import { withNodesTableRowIds } from "@/utils/table-row-ids";
 import useDeleteFlow from "./use-delete-flow";
 
 const FLOW_CREATION_ERROR = "Flow creation error";
@@ -126,6 +127,11 @@ const useAddFlow = () => {
       );
     });
 
+    // Every table of a new flow (an import, a template, a copy) is new, so
+    // each row needs an id; rows that have one keep it.
+    if (flowData) {
+      flowData.nodes = withNodesTableRowIds(flowData.nodes);
+    }
     const newFlow = createNewFlow(flowData!, folder_id, flow);
     const newName = getFolderScopedDuplicateName(
       newFlow,
