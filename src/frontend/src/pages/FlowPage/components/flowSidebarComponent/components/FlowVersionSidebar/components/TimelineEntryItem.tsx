@@ -1,13 +1,12 @@
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { RevisionEntry } from "@/types/flow/revision";
-import {
-  type DescribeOptions,
-  summarizeOperations,
-} from "@/utils/flow-operations/describe";
+import type { DescribeOptions } from "@/utils/flow-operations/describe";
 import { cn } from "@/utils/utils";
 import { revisionSelectionId } from "../constants";
+import { describeChanges, foldedSummary, summarizeEntry } from "../fold";
 import { formatTime } from "../utils";
 import AuthorAvatar from "./AuthorAvatar";
 
@@ -34,6 +33,11 @@ export default function TimelineEntryItem({
     .map((actor) => actor.username ?? t("flowHistory.unknownAuthor"))
     .join(", ");
   const [firstActor] = entry.actors;
+  // An entry one action caused (a component update, a restore) reads as that
+  // action; its individual changes stay one click away.
+  const folded = foldedSummary(entry, t);
+  const [showChanges, setShowChanges] = useState(false);
+  const changesId = useId();
 
   return (
     <SidebarMenuItem className="relative before:absolute before:bottom-0 before:left-[23px] before:top-0 before:w-px before:bg-border">
@@ -61,7 +65,7 @@ export default function TimelineEntryItem({
           </div>
           <p className="line-clamp-2 whitespace-normal break-words text-xs leading-snug text-muted-foreground">
             {entry.operations
-              ? summarizeOperations(entry.operations, t, { fieldLabel })
+              ? summarizeEntry(entry, t, { fieldLabel })
               : t("flowHistory.changes", {
                   count: entry.end_revision - entry.start_revision + 1,
                 })}
@@ -85,6 +89,43 @@ export default function TimelineEntryItem({
           ))}
         </div>
       </SidebarMenuButton>
+      {folded && entry.operations && (
+        <div className="relative pb-2 pl-[46px] pr-3 text-xs">
+          <button
+            type="button"
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+            aria-expanded={showChanges}
+            aria-controls={changesId}
+            onClick={() => setShowChanges((shown) => !shown)}
+          >
+            <ForwardedIconComponent
+              name={showChanges ? "ChevronDown" : "ChevronRight"}
+              className="h-3 w-3"
+            />
+            {showChanges
+              ? t("flowHistory.fold.hideChanges")
+              : t("flowHistory.fold.showChanges")}
+          </button>
+          {showChanges && (
+            <ul
+              id={changesId}
+              className="mt-1 flex flex-col gap-0.5 break-words text-muted-foreground"
+            >
+              {(() => {
+                const sentences = describeChanges(entry.operations, t, {
+                  fieldLabel,
+                });
+                return sentences.length > 0
+                  ? sentences.map((sentence, index) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: sentences can repeat; the list never reorders
+                      <li key={index}>{sentence}</li>
+                    ))
+                  : [<li key="none">{t("flowHistory.op.noChanges")}</li>];
+              })()}
+            </ul>
+          )}
+        </div>
+      )}
     </SidebarMenuItem>
   );
 }

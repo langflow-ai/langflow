@@ -28,7 +28,6 @@ import type { FlowVersionEntry } from "@/types/flow/version";
 import {
   describeOperation,
   fieldLabelsFrom,
-  summarizeOperations,
 } from "@/utils/flow-operations/describe";
 import {
   entryContaining,
@@ -46,6 +45,7 @@ import {
   revisionOfSelection,
   revisionSelectionId,
 } from "./constants";
+import { summarizeEntry } from "./fold";
 import { formatTimestamp } from "./utils";
 
 export function useFlowVersionSidebar(flowId: string) {
@@ -225,10 +225,8 @@ export function useFlowVersionSidebar(flowId: string) {
           description:
             !atEntryEnd && operationHere
               ? `${operationHere.actor.username ?? t("flowHistory.unknownAuthor")}: ${describeOperation(operationHere, t, { fieldLabel }).join("; ")}`
-              : selectedTimelineEntry?.operations
-                ? summarizeOperations(selectedTimelineEntry.operations, t, {
-                    fieldLabel,
-                  })
+              : selectedTimelineEntry
+                ? summarizeEntry(selectedTimelineEntry, t, { fieldLabel })
                 : null,
         }
       : selectedVersionFull;
