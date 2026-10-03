@@ -1,0 +1,3691 @@
+[
+  {
+    "name": "health",
+    "path": "/v1/health",
+    "method": "GET",
+    "description": "Ping the API",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": []
+  },
+  {
+    "name": "ping",
+    "path": "/v1/ping",
+    "method": "GET",
+    "description": "Ping the API",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": []
+  },
+  {
+    "name": "forex",
+    "path": "/v1/forex/{base}/{quote}",
+    "method": "GET",
+    "description": "Get FX spot rates",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "description": "Required path parameter. Base currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "AUD"
+          ],
+          "title": "Base",
+          "example": "AUD"
+        },
+        "quote": {
+          "type": "string",
+          "description": "Required path parameter. Quote currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Quote",
+          "example": "AUD"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2026-01-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        },
+        "indicators": {
+          "type": "string",
+          "description": "Optional query parameter. Comma-separated technical indicators to compute (e.g. sma_20,rsi_14,macd,bollinger_bands). Use 'all' to request every supported indicator.",
+          "examples": [
+            "sma_20,rsi_14,macd"
+          ],
+          "title": "Indicators"
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "base",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Base currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "AUD"
+          ],
+          "title": "Base",
+          "example": "AUD"
+        }
+      },
+      {
+        "name": "quote",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Quote currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Quote",
+          "example": "AUD"
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2026-01-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        }
+      },
+      {
+        "name": "indicators",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Comma-separated technical indicators to compute (e.g. sma_20,rsi_14,macd,bollinger_bands). Use 'all' to request every supported indicator.",
+          "examples": [
+            "sma_20,rsi_14,macd"
+          ],
+          "title": "Indicators"
+        }
+      }
+    ]
+  },
+  {
+    "name": "intraday_reference_rates",
+    "path": "/v1/fx/intraday-reference-rates/{base}/{quote}",
+    "method": "GET",
+    "description": "Get subscriber intraday FX reference rates",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "description": "Required path parameter. Base currency code",
+          "examples": [
+            "EUR"
+          ],
+          "title": "Base"
+        },
+        "quote": {
+          "type": "string",
+          "description": "Required path parameter. Quote currency code",
+          "examples": [
+            "USD"
+          ],
+          "title": "Quote"
+        },
+        "start_time": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Inclusive RFC 3339 timestamp. Defaults to 24 hours before end_time.",
+          "examples": [
+            "2026-07-13T00:00:00Z"
+          ],
+          "title": "Start Time"
+        },
+        "end_time": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Inclusive RFC 3339 source timestamp. Defaults to the current time.",
+          "examples": [
+            "2026-07-14T00:00:00Z"
+          ],
+          "title": "End Time"
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "base",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Base currency code",
+          "examples": [
+            "EUR"
+          ],
+          "title": "Base"
+        }
+      },
+      {
+        "name": "quote",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Quote currency code",
+          "examples": [
+            "USD"
+          ],
+          "title": "Quote"
+        }
+      },
+      {
+        "name": "start_time",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Inclusive RFC 3339 timestamp. Defaults to 24 hours before end_time.",
+          "examples": [
+            "2026-07-13T00:00:00Z"
+          ],
+          "title": "Start Time"
+        }
+      },
+      {
+        "name": "end_time",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Inclusive RFC 3339 source timestamp. Defaults to the current time.",
+          "examples": [
+            "2026-07-14T00:00:00Z"
+          ],
+          "title": "End Time"
+        }
+      }
+    ]
+  },
+  {
+    "name": "fx_sources",
+    "path": "/v1/fx/sources",
+    "method": "GET",
+    "description": "List public FX reference-rate sources",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": []
+  },
+  {
+    "name": "fx_source_universe",
+    "path": "/v1/fx/source-universe",
+    "method": "GET",
+    "description": "List public FX reference-rate pair universe",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "description": "Optional query parameter. Optional currency filter, for example USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Currency"
+        },
+        "source": {
+          "type": "string",
+          "description": "Optional query parameter. Optional source id filter, for example ecb_eurofxref_daily.",
+          "title": "Source"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Optional currency filter, for example USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Currency"
+        }
+      },
+      {
+        "name": "source",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Optional source id filter, for example ecb_eurofxref_daily.",
+          "title": "Source"
+        }
+      }
+    ]
+  },
+  {
+    "name": "data_catalogue",
+    "path": "/v1/data_catalogue/{currency}",
+    "method": "GET",
+    "description": "Get Currently Available Macroeconomic Indicators",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "description": "Required path parameter. The 3-letter currency code (e.g., USD, AUD, EUR, GBP, CHF) Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Currency",
+          "example": "AUD"
+        },
+        "include_capabilities": {
+          "type": "boolean",
+          "description": "Optional query parameter. Include currency-scoped endpoint/auth metadata that replaces the deprecated /v1/capabilities response.",
+          "default": false,
+          "title": "Include Capabilities"
+        },
+        "include_coverage": {
+          "type": "boolean",
+          "description": "Optional query parameter. Also include the legacy currency-scoped coverage list that replaces the deprecated /v1/coverage_matrix response. Per-indicator coverage is included in catalogue entries by default.",
+          "default": false,
+          "title": "Include Coverage"
+        },
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional indicator filter when include_coverage=true. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation"
+          ],
+          "title": "Indicator",
+          "example": "average_hourly_earnings"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. The 3-letter currency code (e.g., USD, AUD, EUR, GBP, CHF) Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Currency",
+          "example": "AUD"
+        }
+      },
+      {
+        "name": "include_capabilities",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "description": "Optional query parameter. Include currency-scoped endpoint/auth metadata that replaces the deprecated /v1/capabilities response.",
+          "default": false,
+          "title": "Include Capabilities"
+        }
+      },
+      {
+        "name": "include_coverage",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "description": "Optional query parameter. Also include the legacy currency-scoped coverage list that replaces the deprecated /v1/coverage_matrix response. Per-indicator coverage is included in catalogue entries by default.",
+          "default": false,
+          "title": "Include Coverage"
+        }
+      },
+      {
+        "name": "indicator",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional indicator filter when include_coverage=true. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation"
+          ],
+          "title": "Indicator",
+          "example": "average_hourly_earnings"
+        }
+      }
+    ]
+  },
+  {
+    "name": "release_calendar",
+    "path": "/v1/calendar/{currency}",
+    "method": "GET",
+    "description": "Get upcoming economic data release dates",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, COMM, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        },
+        "indicator": {
+          "type": "string",
+          "description": "Optional query parameter. Filter by indicator name (e.g., gdp, inflation, unemployment) Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation"
+          ],
+          "title": "Indicator",
+          "example": "average_hourly_earnings"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Optional inclusive lower bound in YYYY-MM-DD format.",
+          "examples": [
+            "2026-06-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. Optional inclusive upper bound in YYYY-MM-DD format.",
+          "examples": [
+            "2026-06-30"
+          ],
+          "title": "End Date"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Optional query parameter. Optional IANA timezone for an additional converted timestamp field, for example America/Sao_Paulo.",
+          "examples": [
+            "America/Sao_Paulo"
+          ],
+          "title": "Timezone"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, COMM, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        }
+      },
+      {
+        "name": "indicator",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Filter by indicator name (e.g., gdp, inflation, unemployment) Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation"
+          ],
+          "title": "Indicator",
+          "example": "average_hourly_earnings"
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Optional inclusive lower bound in YYYY-MM-DD format.",
+          "examples": [
+            "2026-06-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Optional inclusive upper bound in YYYY-MM-DD format.",
+          "examples": [
+            "2026-06-30"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "timezone",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Optional IANA timezone for an additional converted timestamp field, for example America/Sao_Paulo.",
+          "examples": [
+            "America/Sao_Paulo"
+          ],
+          "title": "Timezone"
+        }
+      }
+    ]
+  },
+  {
+    "name": "market_sessions",
+    "path": "/v1/market_sessions",
+    "method": "GET",
+    "description": "FX market session timetable",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string",
+          "description": "Optional query parameter. Optional ISO-8601 UTC timestamp (e.g. 2026-03-05T12:00:00Z)",
+          "examples": [
+            "2026-03-05T12:00:00Z"
+          ],
+          "title": "At"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "at",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Optional ISO-8601 UTC timestamp (e.g. 2026-03-05T12:00:00Z)",
+          "examples": [
+            "2026-03-05T12:00:00Z"
+          ],
+          "title": "At"
+        }
+      }
+    ]
+  },
+  {
+    "name": "rate_differentials",
+    "path": "/v1/rate_differentials/{base}/{quote}",
+    "method": "GET",
+    "description": "Get pair rate differentials",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "description": "Required path parameter. Base currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "AUD"
+          ],
+          "title": "Base",
+          "example": "AUD"
+        },
+        "quote": {
+          "type": "string",
+          "description": "Required path parameter. Quote currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Quote",
+          "example": "AUD"
+        },
+        "measure": {
+          "type": "string",
+          "description": "Optional query parameter. Shared rate measure to compare across the pair. Allowed values: auto, risk_free_rate, gov_bond_2y, gov_bond_10y, policy_rate.",
+          "examples": [
+            "auto",
+            "risk_free_rate",
+            "gov_bond_2y"
+          ],
+          "default": "auto",
+          "title": "Measure",
+          "enum": [
+            "auto",
+            "risk_free_rate",
+            "gov_bond_2y",
+            "gov_bond_10y",
+            "policy_rate"
+          ],
+          "example": "auto"
+        },
+        "rate_type": {
+          "type": "string",
+          "description": "Optional query parameter. Differential type: spot for shared stored rate measures, forward for derived curve segments. Allowed values: spot, forward.",
+          "examples": [
+            "spot",
+            "forward"
+          ],
+          "default": "spot",
+          "title": "Rate Type",
+          "enum": [
+            "spot",
+            "forward"
+          ],
+          "example": "spot"
+        },
+        "curve_family": {
+          "type": "string",
+          "description": "Optional query parameter. Curve family used when rate_type=forward. Allowed values: government_nominal.",
+          "examples": [
+            "government_nominal"
+          ],
+          "default": "government_nominal",
+          "title": "Curve Family",
+          "enum": [
+            "government_nominal"
+          ],
+          "example": "government_nominal"
+        },
+        "start_tenor_years": {
+          "type": "number",
+          "description": "Optional query parameter. Start tenor in years when rate_type=forward.",
+          "examples": [
+            2.0
+          ],
+          "default": 2.0,
+          "title": "Start Tenor Years"
+        },
+        "end_tenor_years": {
+          "type": "number",
+          "description": "Optional query parameter. End tenor in years when rate_type=forward.",
+          "examples": [
+            5.0
+          ],
+          "default": 5.0,
+          "title": "End Tenor Years"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive start date YYYY-MM-DD. Defaults to 365 days ago.",
+          "examples": [
+            "2026-01-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive end date YYYY-MM-DD. Defaults to today.",
+          "examples": [
+            "2026-06-01"
+          ],
+          "title": "End Date"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "base",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Base currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "AUD"
+          ],
+          "title": "Base",
+          "example": "AUD"
+        }
+      },
+      {
+        "name": "quote",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Quote currency code Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "USD"
+          ],
+          "title": "Quote",
+          "example": "AUD"
+        }
+      },
+      {
+        "name": "measure",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Shared rate measure to compare across the pair. Allowed values: auto, risk_free_rate, gov_bond_2y, gov_bond_10y, policy_rate.",
+          "examples": [
+            "auto",
+            "risk_free_rate",
+            "gov_bond_2y"
+          ],
+          "default": "auto",
+          "title": "Measure",
+          "enum": [
+            "auto",
+            "risk_free_rate",
+            "gov_bond_2y",
+            "gov_bond_10y",
+            "policy_rate"
+          ],
+          "example": "auto"
+        }
+      },
+      {
+        "name": "rate_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Differential type: spot for shared stored rate measures, forward for derived curve segments. Allowed values: spot, forward.",
+          "examples": [
+            "spot",
+            "forward"
+          ],
+          "default": "spot",
+          "title": "Rate Type",
+          "enum": [
+            "spot",
+            "forward"
+          ],
+          "example": "spot"
+        }
+      },
+      {
+        "name": "curve_family",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Curve family used when rate_type=forward. Allowed values: government_nominal.",
+          "examples": [
+            "government_nominal"
+          ],
+          "default": "government_nominal",
+          "title": "Curve Family",
+          "enum": [
+            "government_nominal"
+          ],
+          "example": "government_nominal"
+        }
+      },
+      {
+        "name": "start_tenor_years",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "number",
+          "description": "Optional query parameter. Start tenor in years when rate_type=forward.",
+          "examples": [
+            2.0
+          ],
+          "default": 2.0,
+          "title": "Start Tenor Years"
+        }
+      },
+      {
+        "name": "end_tenor_years",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "number",
+          "description": "Optional query parameter. End tenor in years when rate_type=forward.",
+          "examples": [
+            5.0
+          ],
+          "default": 5.0,
+          "title": "End Tenor Years"
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive start date YYYY-MM-DD. Defaults to 365 days ago.",
+          "examples": [
+            "2026-01-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive end date YYYY-MM-DD. Defaults to today.",
+          "examples": [
+            "2026-06-01"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "default": 0,
+          "title": "Offset"
+        }
+      }
+    ]
+  },
+  {
+    "name": "curves",
+    "path": "/v1/curves/{currency}",
+    "method": "GET",
+    "description": "Get curve analytics by currency",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "description": "Required path parameter. Currency code Allowed values: AUD, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "GBP"
+          ],
+          "title": "Currency",
+          "example": "AUD"
+        },
+        "curve_family": {
+          "type": "string",
+          "description": "Optional query parameter. Official curve family to return. Allowed values: government_nominal.",
+          "examples": [
+            "government_nominal"
+          ],
+          "default": "government_nominal",
+          "title": "Curve Family",
+          "enum": [
+            "government_nominal"
+          ],
+          "example": "government_nominal"
+        },
+        "metric": {
+          "type": "string",
+          "description": "Optional query parameter. Curve metric to return. Allowed values: spot.",
+          "examples": [
+            "spot"
+          ],
+          "default": "spot",
+          "title": "Metric",
+          "enum": [
+            "spot"
+          ],
+          "example": "spot"
+        },
+        "view": {
+          "type": "string",
+          "description": "Optional query parameter. Curve view to return: nodes, slopes, or forwards. Allowed values: nodes, slopes, forwards.",
+          "examples": [
+            "nodes",
+            "slopes",
+            "forwards"
+          ],
+          "default": "nodes",
+          "title": "View",
+          "enum": [
+            "nodes",
+            "slopes",
+            "forwards"
+          ],
+          "example": "nodes"
+        },
+        "method": {
+          "type": "string",
+          "description": "Optional query parameter. Forward derivation method used when view=forwards. Allowed values: derived_from_spot_nodes.",
+          "examples": [
+            "derived_from_spot_nodes"
+          ],
+          "default": "derived_from_spot_nodes",
+          "title": "Method",
+          "enum": [
+            "derived_from_spot_nodes"
+          ],
+          "example": "derived_from_spot_nodes"
+        },
+        "date": {
+          "type": "string",
+          "description": "Optional query parameter. Optional target date YYYY-MM-DD. The endpoint returns the latest stored node per maturity up to this date, using a recent lookback window.",
+          "examples": [
+            "2026-06-01"
+          ],
+          "title": "Date"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Currency code Allowed values: AUD, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "GBP"
+          ],
+          "title": "Currency",
+          "example": "AUD"
+        }
+      },
+      {
+        "name": "curve_family",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Official curve family to return. Allowed values: government_nominal.",
+          "examples": [
+            "government_nominal"
+          ],
+          "default": "government_nominal",
+          "title": "Curve Family",
+          "enum": [
+            "government_nominal"
+          ],
+          "example": "government_nominal"
+        }
+      },
+      {
+        "name": "metric",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Curve metric to return. Allowed values: spot.",
+          "examples": [
+            "spot"
+          ],
+          "default": "spot",
+          "title": "Metric",
+          "enum": [
+            "spot"
+          ],
+          "example": "spot"
+        }
+      },
+      {
+        "name": "view",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Curve view to return: nodes, slopes, or forwards. Allowed values: nodes, slopes, forwards.",
+          "examples": [
+            "nodes",
+            "slopes",
+            "forwards"
+          ],
+          "default": "nodes",
+          "title": "View",
+          "enum": [
+            "nodes",
+            "slopes",
+            "forwards"
+          ],
+          "example": "nodes"
+        }
+      },
+      {
+        "name": "method",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Forward derivation method used when view=forwards. Allowed values: derived_from_spot_nodes.",
+          "examples": [
+            "derived_from_spot_nodes"
+          ],
+          "default": "derived_from_spot_nodes",
+          "title": "Method",
+          "enum": [
+            "derived_from_spot_nodes"
+          ],
+          "example": "derived_from_spot_nodes"
+        }
+      },
+      {
+        "name": "date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Optional target date YYYY-MM-DD. The endpoint returns the latest stored node per maturity up to this date, using a recent lookback window.",
+          "examples": [
+            "2026-06-01"
+          ],
+          "title": "Date"
+        }
+      }
+    ]
+  },
+  {
+    "name": "financial_prices",
+    "path": "/v1/financial_prices/{currency}",
+    "method": "GET",
+    "description": "Official financial prices and yield curves",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "description": "Required path parameter."
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 80
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source",
+          "description": "Optional query parameter."
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Start Date",
+          "description": "Optional query parameter."
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End Date",
+          "description": "Optional query parameter."
+        },
+        "measure": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 60
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Measure",
+          "description": "Optional query parameter."
+        },
+        "instrument_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 240
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Instrument Id",
+          "description": "Optional query parameter."
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 240
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Issuer",
+          "description": "Optional query parameter."
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "default": 100,
+          "title": "Limit",
+          "description": "Optional query parameter."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "title": "Offset",
+          "description": "Optional query parameter."
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "description": "Required path parameter."
+        }
+      },
+      {
+        "name": "source",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 80
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Start Date",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End Date",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "measure",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 60
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Measure",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "instrument_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 240
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Instrument Id",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "issuer",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 240
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Issuer",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "default": 100,
+          "title": "Limit",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "title": "Offset",
+          "description": "Optional query parameter."
+        }
+      }
+    ]
+  },
+  {
+    "name": "press_releases",
+    "path": "/v1/press-releases/{currency}",
+    "method": "GET",
+    "description": "Recent central bank press releases",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CZK, DKK, EUR, GBP, HKD, INR, JPY, NOK, NZD, PEN, PLN, SEK, USD, ZAR."
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 50,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of press releases to return",
+          "examples": [
+            10
+          ],
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Zero-based offset into the full press-release feed before pagination.",
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CZK, DKK, EUR, GBP, HKD, INR, JPY, NOK, NZD, PEN, PLN, SEK, USD, ZAR."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 50,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of press releases to return",
+          "examples": [
+            10
+          ],
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Zero-based offset into the full press-release feed before pagination.",
+          "default": 0,
+          "title": "Offset"
+        }
+      }
+    ]
+  },
+  {
+    "name": "risk_sentiment",
+    "path": "/v1/risk_sentiment",
+    "method": "GET",
+    "description": "Global risk-on / risk-off indicator",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-12-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-12-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "default": 0,
+          "title": "Offset"
+        }
+      }
+    ]
+  },
+  {
+    "name": "factors",
+    "path": "/v1/factors/{currency}/{factor}",
+    "method": "GET",
+    "description": "Get a precomputed FX factor for one currency",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, CAD, CHF, EUR, GBP, JPY, NZD, USD."
+        },
+        "factor": {
+          "type": "string",
+          "description": "Required path parameter. Factor slug, for example monetary_stance. Allowed values: monetary_stance.",
+          "examples": [
+            "monetary_stance"
+          ],
+          "title": "Factor",
+          "enum": [
+            "monetary_stance"
+          ],
+          "example": "monetary_stance"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive start date YYYY-MM-DD. With no dates, returns latest only.",
+          "examples": [
+            "2026-01-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive end date YYYY-MM-DD. Defaults to today when start_date is supplied.",
+          "examples": [
+            "2026-07-19"
+          ],
+          "title": "End Date"
+        },
+        "include_components": {
+          "type": "boolean",
+          "description": "Optional query parameter. Include stored component scores and source observations.",
+          "default": false,
+          "title": "Include Components"
+        },
+        "include_sources": {
+          "type": "boolean",
+          "description": "Optional query parameter. Include stored FXMacroData source endpoint URLs.",
+          "default": false,
+          "title": "Include Sources"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      "required": [
+        "currency",
+        "factor"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, CAD, CHF, EUR, GBP, JPY, NZD, USD."
+        }
+      },
+      {
+        "name": "factor",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Factor slug, for example monetary_stance. Allowed values: monetary_stance.",
+          "examples": [
+            "monetary_stance"
+          ],
+          "title": "Factor",
+          "enum": [
+            "monetary_stance"
+          ],
+          "example": "monetary_stance"
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive start date YYYY-MM-DD. With no dates, returns latest only.",
+          "examples": [
+            "2026-01-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Inclusive end date YYYY-MM-DD. Defaults to today when start_date is supplied.",
+          "examples": [
+            "2026-07-19"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "include_components",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "description": "Optional query parameter. Include stored component scores and source observations.",
+          "default": false,
+          "title": "Include Components"
+        }
+      },
+      {
+        "name": "include_sources",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "description": "Optional query parameter. Include stored FXMacroData source endpoint URLs.",
+          "default": false,
+          "title": "Include Sources"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "default": 0,
+          "title": "Offset"
+        }
+      }
+    ]
+  },
+  {
+    "name": "event_predictions",
+    "path": "/v1/predictions/{currency}/{indicator}",
+    "method": "GET",
+    "description": "List predictions for one indicator of a currency",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        },
+        "indicator": {
+          "type": "string",
+          "description": "Required path parameter. Indicator slug Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation"
+          ],
+          "title": "Indicator",
+          "example": "average_hourly_earnings"
+        },
+        "prediction_class": {
+          "anyOf": [
+            {
+              "enum": [
+                "compiled_consensus",
+                "forecaster_survey",
+                "market_implied",
+                "model_nowcast",
+                "central_bank_projection",
+                "institutional_projection",
+                "fxmacrodata"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Filter by how the forecast was produced. Prefer this over `prediction_type`: one class can span several legacy types, which is how `forecaster_survey` returns both the ECB and Philadelphia Fed Surveys of Professional Forecasters.",
+          "title": "Prediction Class"
+        },
+        "prediction_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "market_consensus",
+                "market_prediction",
+                "model_nowcast",
+                "survey",
+                "central_bank_forecast",
+                "central_bank_projection",
+                "imf_weo",
+                "oecd_eo",
+                "fxmacrodata"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional legacy prediction-type filter, retained unchanged for existing clients. Superseded by `prediction_class`.",
+          "title": "Prediction Type"
+        },
+        "prediction_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional source identifier filter.",
+          "title": "Prediction Source"
+        },
+        "official_limit": {
+          "type": "integer",
+          "maximum": 2000,
+          "minimum": 0,
+          "description": "Optional query parameter. Maximum rows in ``official_forecasts`` (native-period official forecasts and surveys). 0 omits them.",
+          "default": 500,
+          "title": "Official Limit"
+        },
+        "pre_release_only": {
+          "type": "boolean",
+          "description": "Optional query parameter. Return only forecasts with `generated_at` strictly before the linked `announcement_datetime` (default: true). The prediction store only persists pre-release rows — the write path rejects any forecast generated at or after the announcement — so this flag is informational: post-event records do not exist and setting it to false does not return additional rows.",
+          "default": true,
+          "title": "Pre Release Only"
+        },
+        "seasonality": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional seasonal adjustment selector, matching /v1/announcements. Allowed values: sa, nsa.",
+          "title": "Seasonality",
+          "enum": [
+            "sa",
+            "nsa"
+          ],
+          "example": "sa"
+        },
+        "frequency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional returned change basis selector, matching /v1/announcements. Allowed values: level, yoy, qoq, mom.",
+          "title": "Frequency",
+          "enum": [
+            "level",
+            "yoy",
+            "qoq",
+            "mom"
+          ],
+          "example": "level"
+        },
+        "annualization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional annualization selector, matching /v1/announcements. Allowed values: not_annualized, saar.",
+          "title": "Annualization",
+          "enum": [
+            "not_annualized",
+            "saar"
+          ],
+          "example": "not_annualized"
+        },
+        "period_aggregation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional period aggregation selector, matching /v1/announcements. Allowed values: monthly, quarterly_average.",
+          "title": "Period Aggregation",
+          "enum": [
+            "monthly",
+            "quarterly_average"
+          ],
+          "example": "monthly"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional real/nominal selector, matching /v1/announcements. Allowed values: real, nominal.",
+          "title": "Basis",
+          "enum": [
+            "real",
+            "nominal"
+          ],
+          "example": "real"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Start date YYYY-MM-DD (period date). Defaults to 180 days before today when omitted.",
+          "title": "Start Date"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. End date YYYY-MM-DD (period date). Defaults to 90 days ahead when omitted.",
+          "title": "End Date"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of prediction groups to return in `data[]`. Use with `offset` to page through long histories. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of prediction groups to skip from the start of `data[]`. Use with `limit` for pagination. Defaults to 0.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        },
+        "before_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Return groups strictly before this YYYY-MM-DD period date. Use the previous response's `next_cursor` for bounded pagination.",
+          "title": "Before Date"
+        }
+      },
+      "required": [
+        "currency",
+        "indicator"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        }
+      },
+      {
+        "name": "indicator",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Indicator slug Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation"
+          ],
+          "title": "Indicator",
+          "example": "average_hourly_earnings"
+        }
+      },
+      {
+        "name": "prediction_class",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "enum": [
+                "compiled_consensus",
+                "forecaster_survey",
+                "market_implied",
+                "model_nowcast",
+                "central_bank_projection",
+                "institutional_projection",
+                "fxmacrodata"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Filter by how the forecast was produced. Prefer this over `prediction_type`: one class can span several legacy types, which is how `forecaster_survey` returns both the ECB and Philadelphia Fed Surveys of Professional Forecasters.",
+          "title": "Prediction Class"
+        }
+      },
+      {
+        "name": "prediction_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "enum": [
+                "market_consensus",
+                "market_prediction",
+                "model_nowcast",
+                "survey",
+                "central_bank_forecast",
+                "central_bank_projection",
+                "imf_weo",
+                "oecd_eo",
+                "fxmacrodata"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional legacy prediction-type filter, retained unchanged for existing clients. Superseded by `prediction_class`.",
+          "title": "Prediction Type"
+        }
+      },
+      {
+        "name": "prediction_source",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional source identifier filter.",
+          "title": "Prediction Source"
+        }
+      },
+      {
+        "name": "official_limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 2000,
+          "minimum": 0,
+          "description": "Optional query parameter. Maximum rows in ``official_forecasts`` (native-period official forecasts and surveys). 0 omits them.",
+          "default": 500,
+          "title": "Official Limit"
+        }
+      },
+      {
+        "name": "pre_release_only",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "description": "Optional query parameter. Return only forecasts with `generated_at` strictly before the linked `announcement_datetime` (default: true). The prediction store only persists pre-release rows — the write path rejects any forecast generated at or after the announcement — so this flag is informational: post-event records do not exist and setting it to false does not return additional rows.",
+          "default": true,
+          "title": "Pre Release Only"
+        }
+      },
+      {
+        "name": "seasonality",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional seasonal adjustment selector, matching /v1/announcements. Allowed values: sa, nsa.",
+          "title": "Seasonality",
+          "enum": [
+            "sa",
+            "nsa"
+          ],
+          "example": "sa"
+        }
+      },
+      {
+        "name": "frequency",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional returned change basis selector, matching /v1/announcements. Allowed values: level, yoy, qoq, mom.",
+          "title": "Frequency",
+          "enum": [
+            "level",
+            "yoy",
+            "qoq",
+            "mom"
+          ],
+          "example": "level"
+        }
+      },
+      {
+        "name": "annualization",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional annualization selector, matching /v1/announcements. Allowed values: not_annualized, saar.",
+          "title": "Annualization",
+          "enum": [
+            "not_annualized",
+            "saar"
+          ],
+          "example": "not_annualized"
+        }
+      },
+      {
+        "name": "period_aggregation",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional period aggregation selector, matching /v1/announcements. Allowed values: monthly, quarterly_average.",
+          "title": "Period Aggregation",
+          "enum": [
+            "monthly",
+            "quarterly_average"
+          ],
+          "example": "monthly"
+        }
+      },
+      {
+        "name": "basis",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional real/nominal selector, matching /v1/announcements. Allowed values: real, nominal.",
+          "title": "Basis",
+          "enum": [
+            "real",
+            "nominal"
+          ],
+          "example": "real"
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Start date YYYY-MM-DD (period date). Defaults to 180 days before today when omitted.",
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. End date YYYY-MM-DD (period date). Defaults to 90 days ahead when omitted.",
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of prediction groups to return in `data[]`. Use with `offset` to page through long histories. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of prediction groups to skip from the start of `data[]`. Use with `limit` for pagination. Defaults to 0.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        }
+      },
+      {
+        "name": "before_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Return groups strictly before this YYYY-MM-DD period date. Use the previous response's `next_cursor` for bounded pagination.",
+          "title": "Before Date"
+        }
+      }
+    ]
+  },
+  {
+    "name": "latest_announcements",
+    "path": "/v1/announcements/{currency}/latest",
+    "method": "GET",
+    "description": "Get latest stored values for all indicators in a currency",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        }
+      }
+    ]
+  },
+  {
+    "name": "indicator_history",
+    "path": "/v1/announcements/{currency}/{indicator}",
+    "method": "GET",
+    "description": "Get macroeconomic indicator data",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        },
+        "indicator": {
+          "type": "string",
+          "title": "Indicator",
+          "example": "average_hourly_earnings",
+          "description": "Required path parameter. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages."
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-01-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        },
+        "series_mode": {
+          "type": "string",
+          "pattern": "^(raw|canonical)$",
+          "description": "Optional query parameter. Optional series rendering mode. `canonical` applies configured remap rules (for continuity across methodology transitions). `raw` returns the direct indicator series without remapping.",
+          "examples": [
+            "raw"
+          ],
+          "default": "raw",
+          "title": "Series Mode"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of rows to return in `data[]`. Rows are ordered most-recent-first, so `limit=10` returns the 10 most recent observations within the requested window. Use together with `offset` to page through long histories. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip from the start of `data[]` (after most-recent-first ordering). Use with `limit` for pagination. Defaults to 0.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number for callers that prefer page-based pagination. When supplied, `offset` is derived as `(page - 1) * limit`.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        },
+        "seasonality": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional seasonal adjustment selector. Supported public values are `sa` and `nsa`; check `supported_options.seasonality` in the response/catalogue for values available on this endpoint. Allowed values: sa, nsa.",
+          "examples": [
+            "sa"
+          ],
+          "title": "Seasonality",
+          "enum": [
+            "sa",
+            "nsa"
+          ],
+          "example": "sa"
+        },
+        "frequency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional returned change basis. Supported public values are `level`, `yoy`, `qoq`, and `mom`; check `supported_options.frequency` for values available on this endpoint. Allowed values: level, yoy, qoq, mom.",
+          "examples": [
+            "yoy"
+          ],
+          "title": "Frequency",
+          "enum": [
+            "level",
+            "yoy",
+            "qoq",
+            "mom"
+          ],
+          "example": "level"
+        },
+        "annualization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional annualization selector. Supported public values are `not_annualized` and `saar`; check `supported_options.annualization` for values available on this endpoint. Allowed values: not_annualized, saar.",
+          "examples": [
+            "saar"
+          ],
+          "title": "Annualization",
+          "enum": [
+            "not_annualized",
+            "saar"
+          ],
+          "example": "not_annualized"
+        },
+        "period_aggregation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional period-aggregation selector. Supported public values are `monthly` and `quarterly_average`; check `supported_options.period_aggregation` for values available on this endpoint. Allowed values: monthly, quarterly_average.",
+          "examples": [
+            "quarterly_average"
+          ],
+          "title": "Period Aggregation",
+          "enum": [
+            "monthly",
+            "quarterly_average"
+          ],
+          "example": "monthly"
+        },
+        "revisions": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional revision view. Supported public values are `latest`, `first`, `final`, and `all`; unsupported views return `unsupported_series_option` with supported values. Allowed values: latest, first, final, all.",
+          "examples": [
+            "latest"
+          ],
+          "default": "latest",
+          "title": "Revisions",
+          "enum": [
+            "latest",
+            "first",
+            "final",
+            "all"
+          ],
+          "example": "latest"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional real/nominal selector. Supported public values are `real` and `nominal`; only endpoints with known basis metadata accept it. Allowed values: real, nominal.",
+          "examples": [
+            "real"
+          ],
+          "title": "Basis",
+          "enum": [
+            "real",
+            "nominal"
+          ],
+          "example": "real"
+        },
+        "official_only": {
+          "type": "boolean",
+          "description": "Optional query parameter. When true, return only official-source rows and remove explicit fallback observations. Prohibited private aggregator rows are always removed regardless of this setting.",
+          "examples": [
+            true
+          ],
+          "default": true,
+          "title": "Official Only"
+        }
+      },
+      "required": [
+        "currency",
+        "indicator"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD."
+        }
+      },
+      {
+        "name": "indicator",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Indicator",
+          "example": "average_hourly_earnings",
+          "description": "Required path parameter. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages."
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-01-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "series_mode",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^(raw|canonical)$",
+          "description": "Optional query parameter. Optional series rendering mode. `canonical` applies configured remap rules (for continuity across methodology transitions). `raw` returns the direct indicator series without remapping.",
+          "examples": [
+            "raw"
+          ],
+          "default": "raw",
+          "title": "Series Mode"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of rows to return in `data[]`. Rows are ordered most-recent-first, so `limit=10` returns the 10 most recent observations within the requested window. Use together with `offset` to page through long histories. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip from the start of `data[]` (after most-recent-first ordering). Use with `limit` for pagination. Defaults to 0.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number for callers that prefer page-based pagination. When supplied, `offset` is derived as `(page - 1) * limit`.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        }
+      },
+      {
+        "name": "seasonality",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional seasonal adjustment selector. Supported public values are `sa` and `nsa`; check `supported_options.seasonality` in the response/catalogue for values available on this endpoint. Allowed values: sa, nsa.",
+          "examples": [
+            "sa"
+          ],
+          "title": "Seasonality",
+          "enum": [
+            "sa",
+            "nsa"
+          ],
+          "example": "sa"
+        }
+      },
+      {
+        "name": "frequency",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional returned change basis. Supported public values are `level`, `yoy`, `qoq`, and `mom`; check `supported_options.frequency` for values available on this endpoint. Allowed values: level, yoy, qoq, mom.",
+          "examples": [
+            "yoy"
+          ],
+          "title": "Frequency",
+          "enum": [
+            "level",
+            "yoy",
+            "qoq",
+            "mom"
+          ],
+          "example": "level"
+        }
+      },
+      {
+        "name": "annualization",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional annualization selector. Supported public values are `not_annualized` and `saar`; check `supported_options.annualization` for values available on this endpoint. Allowed values: not_annualized, saar.",
+          "examples": [
+            "saar"
+          ],
+          "title": "Annualization",
+          "enum": [
+            "not_annualized",
+            "saar"
+          ],
+          "example": "not_annualized"
+        }
+      },
+      {
+        "name": "period_aggregation",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional period-aggregation selector. Supported public values are `monthly` and `quarterly_average`; check `supported_options.period_aggregation` for values available on this endpoint. Allowed values: monthly, quarterly_average.",
+          "examples": [
+            "quarterly_average"
+          ],
+          "title": "Period Aggregation",
+          "enum": [
+            "monthly",
+            "quarterly_average"
+          ],
+          "example": "monthly"
+        }
+      },
+      {
+        "name": "revisions",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional revision view. Supported public values are `latest`, `first`, `final`, and `all`; unsupported views return `unsupported_series_option` with supported values. Allowed values: latest, first, final, all.",
+          "examples": [
+            "latest"
+          ],
+          "default": "latest",
+          "title": "Revisions",
+          "enum": [
+            "latest",
+            "first",
+            "final",
+            "all"
+          ],
+          "example": "latest"
+        }
+      },
+      {
+        "name": "basis",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional real/nominal selector. Supported public values are `real` and `nominal`; only endpoints with known basis metadata accept it. Allowed values: real, nominal.",
+          "examples": [
+            "real"
+          ],
+          "title": "Basis",
+          "enum": [
+            "real",
+            "nominal"
+          ],
+          "example": "real"
+        }
+      },
+      {
+        "name": "official_only",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "description": "Optional query parameter. When true, return only official-source rows and remove explicit fallback observations. Prohibited private aggregator rows are always removed regardless of this setting.",
+          "examples": [
+            true
+          ],
+          "default": true,
+          "title": "Official Only"
+        }
+      }
+    ]
+  },
+  {
+    "name": "cot",
+    "path": "/v1/cot/{currency}",
+    "method": "GET",
+    "description": "Get CFTC Commitment of Traders (COT) data",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, CAD, CHF, EUR, GBP, JPY, MXN, NZD, USD, XAU."
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-09-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currency",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Currency",
+          "example": "AUD",
+          "description": "Required path parameter. Allowed values: AUD, CAD, CHF, EUR, GBP, JPY, MXN, NZD, USD, XAU."
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-09-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        }
+      }
+    ]
+  },
+  {
+    "name": "latest_commodities",
+    "path": "/v1/commodities/latest",
+    "method": "GET",
+    "description": "Get latest stored values for all commodity indicators",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": []
+  },
+  {
+    "name": "commodities",
+    "path": "/v1/commodities/{indicator}",
+    "method": "GET",
+    "description": "Get commodity indicator data",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "indicator": {
+          "type": "string",
+          "description": "Required path parameter. Commodity indicator slug Allowed values: crude_oil_inventories, gold, natural_gas, natural_gas_storage, oil_brent, oil_wti, platinum, silver.",
+          "examples": [
+            "oil_wti"
+          ],
+          "title": "Indicator",
+          "example": "crude_oil_inventories"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-01-01"
+          ],
+          "title": "Start Date"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        }
+      },
+      "required": [
+        "indicator"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "indicator",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "Required path parameter. Commodity indicator slug Allowed values: crude_oil_inventories, gold, natural_gas, natural_gas_storage, oil_brent, oil_wti, platinum, silver.",
+          "examples": [
+            "oil_wti"
+          ],
+          "title": "Indicator",
+          "example": "crude_oil_inventories"
+        }
+      },
+      {
+        "name": "start_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. Start date YYYY-MM-DD",
+          "examples": [
+            "2025-01-01"
+          ],
+          "title": "Start Date"
+        }
+      },
+      {
+        "name": "end_date",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Optional query parameter. End date YYYY-MM-DD",
+          "examples": [
+            "2026-03-01"
+          ],
+          "title": "End Date"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum rows to return. Defaults to 20. Maximum 100.",
+          "examples": [
+            20
+          ],
+          "default": 20,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional query parameter. Number of rows to skip after most-recent-first ordering.",
+          "examples": [
+            0
+          ],
+          "default": 0,
+          "title": "Offset"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. One-based page number. When supplied, it takes precedence over offset.",
+          "examples": [
+            1
+          ],
+          "title": "Page"
+        }
+      }
+    ]
+  },
+  {
+    "name": "announcement_changes",
+    "path": "/v1/announcements/changes",
+    "method": "GET",
+    "description": "Poll recent live announcement release changes",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currencies": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Comma-separated currency codes, `g10`, or `all`. Without a paid API key the result is restricted to USD.",
+          "examples": [
+            "g10"
+          ],
+          "title": "Currencies"
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional comma-separated announcement indicator slugs. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation,unemployment"
+          ],
+          "title": "Indicators",
+          "example": "average_hourly_earnings"
+        },
+        "since": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Cursor returned as `next_cursor` by the previous response. ISO 8601 timestamps and Unix epoch seconds are also accepted.",
+          "title": "Since"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 500,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of matching change events to return.",
+          "default": 100,
+          "title": "Limit"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Use `compact` for trigger payloads or `full` for row fields. Allowed values: compact, full.",
+          "default": "compact",
+          "title": "Payload",
+          "enum": [
+            "compact",
+            "full"
+          ],
+          "example": "compact"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currencies",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Comma-separated currency codes, `g10`, or `all`. Without a paid API key the result is restricted to USD.",
+          "examples": [
+            "g10"
+          ],
+          "title": "Currencies"
+        }
+      },
+      {
+        "name": "indicators",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Optional comma-separated announcement indicator slugs. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation,unemployment"
+          ],
+          "title": "Indicators",
+          "example": "average_hourly_earnings"
+        }
+      },
+      {
+        "name": "since",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Cursor returned as `next_cursor` by the previous response. ISO 8601 timestamps and Unix epoch seconds are also accepted.",
+          "title": "Since"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "maximum": 500,
+          "minimum": 1,
+          "description": "Optional query parameter. Maximum number of matching change events to return.",
+          "default": 100,
+          "title": "Limit"
+        }
+      },
+      {
+        "name": "payload",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Use `compact` for trigger payloads or `full` for row fields. Allowed values: compact, full.",
+          "default": "compact",
+          "title": "Payload",
+          "enum": [
+            "compact",
+            "full"
+          ],
+          "example": "compact"
+        }
+      }
+    ]
+  },
+  {
+    "name": "stream_events",
+    "path": "/v1/stream/events",
+    "method": "GET",
+    "description": "Subscribe to real-time announcement events (SSE)",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "currencies": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Comma-separated currency codes to subscribe to, e.g. ``usd,eur``. Omit to receive all live events included in your subscription.",
+          "title": "Currencies"
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Comma-separated indicator slugs, e.g. ``inflation,gdp``. Omit to receive all indicators. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "title": "Indicators",
+          "example": "average_hourly_earnings"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Event payload shape. Use `compact` for the stable trigger payload or `full` to flatten the latest announcement row into each event. Allowed values: compact, full.",
+          "default": "compact",
+          "title": "Payload",
+          "enum": [
+            "compact",
+            "full"
+          ],
+          "example": "compact"
+        },
+        "live_only": {
+          "type": "boolean",
+          "default": false,
+          "title": "Live Only",
+          "description": "Optional query parameter."
+        },
+        "max_age_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Age Ms",
+          "description": "Optional query parameter."
+        },
+        "Last-Event-ID": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last-Event-Id"
+        },
+        "max_events": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10,
+          "description": "Client-side bound on the number of events to collect."
+        },
+        "max_seconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 10,
+          "description": "Client-side deadline for this finite stream capture."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "parameters": [
+      {
+        "name": "currencies",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Comma-separated currency codes to subscribe to, e.g. ``usd,eur``. Omit to receive all live events included in your subscription.",
+          "title": "Currencies"
+        }
+      },
+      {
+        "name": "indicators",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Comma-separated indicator slugs, e.g. ``inflation,gdp``. Omit to receive all indicators. Allowed values: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "title": "Indicators",
+          "example": "average_hourly_earnings"
+        }
+      },
+      {
+        "name": "payload",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional query parameter. Event payload shape. Use `compact` for the stable trigger payload or `full` to flatten the latest announcement row into each event. Allowed values: compact, full.",
+          "default": "compact",
+          "title": "Payload",
+          "enum": [
+            "compact",
+            "full"
+          ],
+          "example": "compact"
+        }
+      },
+      {
+        "name": "live_only",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "default": false,
+          "title": "Live Only",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "max_age_ms",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Age Ms",
+          "description": "Optional query parameter."
+        }
+      },
+      {
+        "name": "Last-Event-ID",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last-Event-Id"
+        }
+      }
+    ]
+  }
+]
