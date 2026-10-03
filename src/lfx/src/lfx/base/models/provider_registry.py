@@ -528,9 +528,21 @@ def is_registered(provider: str) -> bool:
 
 
 def is_api_key_optional(provider: str) -> bool:
-    """True if *provider* is a registered provider that does not require an API key."""
+    """True if *provider* does not require an API key.
+
+    Extension providers declare this explicitly on their registry spec. Core
+    providers use the shared metadata table instead; providers such as Ollama
+    have no required secret because they authenticate through a base URL.
+    """
     spec = _registered.get(provider)
-    return spec is not None and not spec.api_key_required
+    if spec is not None:
+        return not spec.api_key_required
+
+    metadata = MODEL_PROVIDER_METADATA.get(provider)
+    if metadata is None:
+        return False
+
+    return not any(variable.get("required") and variable.get("is_secret") for variable in metadata.get("variables", []))
 
 
 def _resolve_callable(dotted: str) -> Callable:
