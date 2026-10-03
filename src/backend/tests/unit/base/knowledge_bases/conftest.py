@@ -36,6 +36,7 @@ def fake_opensearchpy(monkeypatch: pytest.MonkeyPatch) -> None:
 
     opensearchpy.OpenSearch = MagicMock(name="OpenSearch")
     helpers.scan = MagicMock(name="scan")
+    helpers.BulkIndexError = type("BulkIndexError", (Exception,), {})
     exceptions.AuthenticationException = authentication_exception
     exceptions.AuthorizationException = authorization_exception
     exceptions.ConnectionError = connection_error
