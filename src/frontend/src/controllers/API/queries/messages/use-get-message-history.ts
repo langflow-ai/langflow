@@ -4,13 +4,15 @@ import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import type { Message } from "@/types/messages";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { cursorBelow, type MessageCursor } from "./message-cursor";
 import { getMessages } from "./use-get-messages";
 
 const PAGE_SIZE = 100;
 
 interface HistoryPage {
   messages: Message[];
-  nextOffset?: number;
+  // Where the next page starts: below this page's oldest row.
+  next?: MessageCursor;
 }
 
 export function useGetMessageHistory({
@@ -29,14 +31,14 @@ export function useGetMessageHistory({
   const applied = useRef<{ scope: string; pages: HistoryPage[] } | undefined>(
     undefined,
   );
-  const history = infiniteQuery<HistoryPage>({
+  const history = infiniteQuery<HistoryPage, MessageCursor | null>({
     // A distinct suffix avoids sharing the ordinary message query's response shape.
     queryKey: [
       "useGetMessagesQuery",
       { id, session_id: sessionId, playground, shared },
       "history",
     ],
-    initialPageParam: 0,
+    initialPageParam: null,
     queryFn: async ({ pageParam }) => {
       if (playground && !shared) {
         // The anonymous playground persists this store as its complete local
@@ -48,15 +50,21 @@ export function useGetMessageHistory({
         ...(sessionId ? { session_id: sessionId } : {}),
         // One lookahead row detects the last page without a count or an empty-page click.
         limit: PAGE_SIZE + 1,
-        offset: pageParam,
+        // A cursor rather than an offset: messages that arrive or are deleted
+        // while older pages load would otherwise shift every offset window.
+        ...(pageParam ?? {}),
         order: "DESC",
       });
+      const messages: Message[] = data.slice(0, PAGE_SIZE);
       return {
-        messages: data.slice(0, PAGE_SIZE),
-        nextOffset: data.length > PAGE_SIZE ? pageParam + PAGE_SIZE : undefined,
+        messages,
+        next:
+          data.length > PAGE_SIZE
+            ? cursorBelow(messages[messages.length - 1])
+            : undefined,
       };
     },
-    getNextPageParam: (page) => page.nextOffset,
+    getNextPageParam: (page) => page.next,
     enabled,
     refetchOnWindowFocus: false,
   });

@@ -159,8 +159,15 @@ The `order_by` parameter defaults to `timestamp`, and `order` accepts `ASC` or `
 
 The endpoint always returns a bounded page anchored at the most recent messages, so a flow with a long history never serializes in full.
 Use `limit` to set the page size, which defaults to 100 and is clamped to a server-side maximum of 200.
-Use `offset` to page backwards into older history.
 With the defaults, the endpoint returns the 100 most recent messages, oldest first within that page.
+
+To page backwards into older history, pass the `timestamp` and `id` of the oldest message you already have as `before_timestamp` and `before_id`, exactly as the endpoint returned them.
+The endpoint returns the next `limit` messages strictly older than that position, and a page shorter than `limit` means you have reached the start of the history.
+A cursor page doesn't shift when messages are added or deleted between requests, including the message the cursor came from, so prefer it over `offset` for scrolling through a live chat.
+`before_timestamp` and `before_id` must be sent together; sending only one returns `400`, and a `before_timestamp` that isn't a valid timestamp returns `422`.
+
+You can also page with `offset`, which skips that many of the most recent messages.
+The cursor and `offset` are mutually exclusive, and a request that sends both returns `400`.
 
 This example retrieves up to 100 messages sent by `Machine` and `AI` in a given chat session (`session_id`), ordered from oldest to newest by timestamp.
 
