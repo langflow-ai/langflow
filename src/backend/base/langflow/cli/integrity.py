@@ -328,7 +328,7 @@ async def check_files(session: AsyncSession) -> CheckResult:
 async def _check_knowledge_bases(
     session: AsyncSession,
 ) -> tuple[list[CheckResult], dict[tuple[UUID, str], int | None]]:
-    """Two checks from one pass: can each backend be reached, and does its count match the row.
+    """Three checks from one pass: is each store upgraded, can it be reached, and does its count match.
 
     Returns the vector count per (owner, knowledge base) for the memory base check,
     with None where the store could not be read.
@@ -337,21 +337,35 @@ async def _check_knowledge_bases(
     from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
 
     from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+    from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
     from langflow.services.database.models.user.model import User
     from langflow.services.knowledge_base_storage.runtime import storage_root
 
     rows = (
         await session.exec(
-            select(KnowledgeBaseRecord, User.username).join(User, User.id == KnowledgeBaseRecord.user_id)
+            select(KnowledgeBaseRecord, User.username, KnowledgeBaseStorageMigration.error_code)
+            .join(User, User.id == KnowledgeBaseRecord.user_id)
+            .join(
+                KnowledgeBaseStorageMigration,
+                KnowledgeBaseStorageMigration.id == KnowledgeBaseRecord.active_migration_id,
+                isouter=True,
+            )
         )
     ).all()
+    upgrading: list[str] = []
     unreachable: list[str] = []
     mismatched: list[str] = []
     counts: dict[tuple[UUID, str], int | None] = {}
 
-    for record, owner in rows:
+    for record, owner, error_code in rows:
         label = f"{owner}/{record.name} ({record.backend_type})"
         counts[(record.user_id, record.name)] = None
+        if record.backend_type == "chroma" or record.storage_state != "ready":
+            # The app serves none of these until its storage upgrade finishes, so there is
+            # no store to reach or count yet. Listed here only, not again as unreachable.
+            error = f", upgrade error {error_code}" if error_code else ""
+            upgrading.append(f"{label}: storage state {record.storage_state}{error}")
+            continue
         try:
             context = (
                 SQLiteStorageContext(storage_root(), record.user_id, record.id, record.storage_generation)
@@ -385,13 +399,23 @@ async def _check_knowledge_bases(
         if count != record.chunks:
             mismatched.append(f"{label}: store holds {count}, row records {record.chunks}")
 
-    reachable = len(rows) - len(unreachable)
+    checked = len(rows) - len(upgrading)
+    reachable = checked - len(unreachable)
     return [
+        _result(
+            "knowledge base storage",
+            upgrading,
+            f"{len(rows)} knowledge bases, none waiting on a storage upgrade",
+            f"{len(upgrading)} of {len(rows)} knowledge bases have not finished the storage upgrade this Langflow "
+            "reads them through; start this Langflow version once with a single worker and wait for "
+            "/healthz?require_storage_ready=true, or retry them from /api/v1/knowledge-base-storage/status. "
+            "Chroma Cloud stores have no upgrade path: migrate them to a pgvector or OpenSearch store",
+        ),
         _result(
             "knowledge bases",
             unreachable,
-            f"{len(rows)} knowledge bases, every backend reachable",
-            f"{len(unreachable)} of {len(rows)} knowledge bases have a backend that cannot be built or reached",
+            f"{checked} knowledge bases, every backend reachable",
+            f"{len(unreachable)} of {checked} knowledge bases have a backend that cannot be built or reached",
         ),
         _result(
             "vector counts",
