@@ -11,6 +11,7 @@ import useFlowConflictStore, {
 import useFlowHistoryRepairStore, {
   repairableProblem,
 } from "@/stores/flowHistoryRepairStore";
+import useFlowSaveCauseStore from "@/stores/flowSaveCauseStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
@@ -201,18 +202,26 @@ const useSaveFlow = () => {
           const { id } = flow;
           // The baseline is the last applied server response, never the canvas,
           // which can hold a token from a response this save has not adopted.
+          const payload = buildFlowUpdatePayload({
+            flow,
+            persisted:
+              currentSavedFlow?.id === id ? currentSavedFlow : undefined,
+            flows: useFlowsManagerStore.getState().flows,
+            live: currentFlow?.id === id ? { nodes, edges } : undefined,
+            userEdited: useFlowStore.getState().userEditedSinceLoad,
+          });
+          // Set by a component update or code edit; the save that carries the
+          // graph takes it, so a rename in between does not use it up.
+          const cause =
+            "data" in payload
+              ? useFlowSaveCauseStore.getState().takePendingCause(id)
+              : undefined;
           const updatePayload = {
-            ...buildFlowUpdatePayload({
-              flow,
-              persisted:
-                currentSavedFlow?.id === id ? currentSavedFlow : undefined,
-              flows: useFlowsManagerStore.getState().flows,
-              live: currentFlow?.id === id ? { nodes, edges } : undefined,
-              userEdited: useFlowStore.getState().userEditedSinceLoad,
-            }),
+            ...payload,
             // One id per save: a retry of this request is recognized by the
             // server and recorded in the flow's history only once.
             request_id: uuidv4(),
+            ...(cause && { cause }),
           };
           // biome-ignore lint/suspicious/noExplicitAny: legacy
           const handleError = (e: any) => {

@@ -10,6 +10,12 @@ export type RecordedOperation = {
   revision: number;
   actor: RevisionActor;
   request_id: string;
+  /**
+   * Why the change happened, when an action caused it: `upgrade_component`,
+   * `edit_code`, `file_sync`, `restore`, `assistant` or `repair`. A display
+   * hint only.
+   */
+  cause?: string;
   /** The operation as recorded, with literal secret values removed. */
   operation: Record<string, unknown> & { type: string };
   /** Display names of the nodes it touched, as they were when it was recorded. */

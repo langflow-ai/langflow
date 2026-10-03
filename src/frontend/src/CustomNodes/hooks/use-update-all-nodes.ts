@@ -1,7 +1,8 @@
 import { cloneDeep } from "lodash";
 import { useCallback } from "react";
+import { markNextSaveCause } from "@/stores/flowSaveCauseStore";
 import type { AllNodeType } from "@/types/flow";
-import { type APIClassType, OutputFieldType } from "../../types/api";
+import type { APIClassType } from "../../types/api";
 import { updateHiddenOutputs } from "../helpers/update-hidden-outputs";
 
 export type UpdateNodesType = {
@@ -20,6 +21,8 @@ const useUpdateAllNodes = (
 ) => {
   const updateAllNodes = useCallback(
     (updates: UpdateNodesType[]) => {
+      // Everything these updates write is one change: the component updates.
+      markNextSaveCause("upgrade_component");
       setNodes((oldNodes) => {
         const newNodes = cloneDeep(oldNodes);
 
