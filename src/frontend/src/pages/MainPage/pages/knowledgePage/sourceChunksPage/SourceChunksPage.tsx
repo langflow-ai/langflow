@@ -212,7 +212,9 @@ export const SourceChunksPage = () => {
                   <SelectItem value="file_upload">
                     {t("knowledge.fileUpload")}
                   </SelectItem>
-                  <SelectItem value="folder">Folder</SelectItem>
+                  <SelectItem value="folder">
+                    {t("knowledge.ingestionSourceFolder")}
+                  </SelectItem>
                   <SelectItem value="template">
                     {t("knowledge.flowTemplate")}
                   </SelectItem>
