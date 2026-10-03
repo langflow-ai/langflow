@@ -227,7 +227,11 @@ describe("project creation errors", () => {
     });
   });
 
-  it("qualifies foreign duplicate names and only renames writable projects by id", () => {
+  it("never renders a non-owned project, and still allows renaming the caller's own", () => {
+    // A same-named foreign project used to appear here too, disambiguated
+    // only by an owner suffix — with the sidebar now scoped to owned
+    // projects, it must not render at all, and renaming the caller's own
+    // project is unaffected by its presence in the store.
     mockFolders = [
       {
         id: "own-id",
@@ -251,30 +255,17 @@ describe("project creation errors", () => {
       },
     ];
 
-    mockCan.mockImplementation(
-      (projectId: string | undefined | null, action: string) =>
-        action !== "write" || projectId !== "foreign-id",
-    );
-
     render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
 
     expect(screen.getByTestId("sidebar-nav-own-id")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-nav-foreign-id")).toBeInTheDocument();
-    const ownLabel = screen.getByText("Starter Project");
-    const foreignLabel = screen.getByText("Starter Project — other-user");
-    fireEvent.doubleClick(foreignLabel);
-
     expect(
-      screen.queryByTestId("input-project-foreign-id"),
+      screen.queryByTestId("sidebar-nav-foreign-id"),
     ).not.toBeInTheDocument();
-    expect(mockMutateUpdateFolder).not.toHaveBeenCalled();
 
+    const ownLabel = screen.getByText("Starter Project");
     fireEvent.doubleClick(ownLabel);
 
     const ownInput = screen.getByTestId("input-project-own-id");
-    expect(
-      screen.queryByTestId("input-project-foreign-id"),
-    ).not.toBeInTheDocument();
     expect(ownInput).toHaveValue("Starter Project");
 
     fireEvent.change(ownInput, { target: { value: "Renamed Project" } });
