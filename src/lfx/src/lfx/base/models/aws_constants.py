@@ -12,6 +12,54 @@ AWS_MODELS_DETAILED = [
     create_model_metadata(
         provider="Amazon Bedrock", name="amazon.titan-text-premier-v1:0", icon="Amazon", tool_calling=True
     ),
+    # Amazon Nova Models
+    create_model_metadata(provider="Amazon Bedrock", name="amazon.nova-micro-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="amazon.nova-lite-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="amazon.nova-pro-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="amazon.nova-premier-v1:0", icon="Amazon", tool_calling=True),
+    # EU inference-profile catalog: Anthropic Claude (including Opus 4.8 / Sonnet 5), Amazon Nova, Meta Llama 3.2
+    create_model_metadata(
+        provider="Amazon Bedrock", name="eu.anthropic.claude-opus-4-8", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="eu.anthropic.claude-sonnet-5-20250929-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="eu.amazon.nova-micro-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(provider="Amazon Bedrock", name="eu.amazon.nova-lite-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="eu.amazon.nova-pro-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="eu.meta.llama3-2-1b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="eu.meta.llama3-2-3b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="eu.meta.llama3-2-11b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="eu.meta.llama3-2-90b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    # Global inference profiles
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-opus-4-5-20251101-v1:0",
+        icon="Amazon",
+        tool_calling=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        icon="Amazon",
+        tool_calling=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+        icon="Amazon",
+        tool_calling=True,
+    ),
     # Anthropic Models - Claude 4.x
     create_model_metadata(
         provider="Amazon Bedrock", name="anthropic.claude-opus-4-7", icon="Amazon", tool_calling=True
