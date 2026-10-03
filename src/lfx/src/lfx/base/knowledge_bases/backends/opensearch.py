@@ -76,6 +76,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
+    BackendConfigurationError,
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
@@ -213,8 +214,45 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
     @property
     def distance_metric(self) -> str:
-        """The configured ``space_type``, named the way the other backends name metrics."""
+        """The metric for a new index; existing indexes require ``get_distance_metric``."""
         space_type = self._os_space_type
+        return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
+
+    async def get_distance_metric(self) -> str:
+        """Read the actual search field's immutable metric before relocating vectors."""
+        await self.ensure_ready()
+        client = getattr(self, "_os_client", None)
+        if client is None:
+            _ = self.vector_store
+            client = self._os_client
+        try:
+            mappings = await asyncio.to_thread(client.indices.get_mapping, index=self._os_index)
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return self.distance_metric
+            raise
+
+        # Old writes ignored the configured space_type. The persisted mapping,
+        # including that of a partially copied target, is the only reliable value.
+        # Similarity search uses LangChain's default field even when config names
+        # a different field for iter_documents, so inspect the field it queries.
+        try:
+            if not isinstance(mappings, dict) or len(mappings) != 1:
+                raise ValueError
+            mapping = next(iter(mappings.values()))
+            field = mapping["mappings"]["properties"][LANGCHAIN_DEFAULT_VECTOR_FIELD]
+            if field.get("type") != "knn_vector":
+                raise ValueError
+            method_space = field.get("method", {}).get("space_type")
+            field_space = field.get("space_type")
+            if method_space and field_space and method_space != field_space:
+                raise ValueError
+            space_type = method_space or field_space
+            if not isinstance(space_type, str) or not space_type:
+                raise ValueError
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
+            msg = f"Cannot determine the search distance metric for OpenSearch index {self._os_index!r}"
+            raise BackendConfigurationError(msg) from exc
         return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
 
     @property

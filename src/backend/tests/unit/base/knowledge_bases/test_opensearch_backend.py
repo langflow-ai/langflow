@@ -275,6 +275,110 @@ class TestOpenSearchBackendVectorFieldDefault:
         assert backend._os_vector_field == "embedding"
 
 
+class TestOpenSearchDistanceMetric:
+    """Relocation must compare the actual index metric, including legacy indexes."""
+
+    @pytest.mark.parametrize(
+        ("field", "expected"),
+        [
+            ({"method": {"space_type": "l2"}}, "l2"),
+            ({"method": {"space_type": "cosinesimil"}}, "cosine"),
+            ({"space_type": "innerproduct", "method": {"name": "hnsw"}}, "inner_product"),
+            ({"space_type": "l1"}, "l1"),
+        ],
+    )
+    async def test_existing_mapping_overrides_config(self, tmp_path, field, expected):
+        backend = _make_backend(
+            tmp_path, {"index_name": "test_index", "space_type": "cosinesimil", "vector_field": "legacy_field"}
+        )
+        client = MagicMock()
+        client.indices.get_mapping.return_value = {
+            "test_index": {"mappings": {"properties": {"vector_field": {"type": "knn_vector", **field}}}}
+        }
+        with (
+            patch("opensearchpy.OpenSearch", return_value=client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch", MagicMock()),
+        ):
+            assert await backend.get_distance_metric() == expected
+        client.indices.get_mapping.assert_called_once_with(index="test_index")
+
+    async def test_missing_index_uses_configured_metric(self, tmp_path):
+        from opensearchpy.exceptions import NotFoundError
+
+        backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "innerproduct"})
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = NotFoundError(404, "index_not_found_exception", {})
+        assert await backend.get_distance_metric() == "inner_product"
+
+    @pytest.mark.parametrize("error", ["Not Found", "search_context_missing_exception"])
+    async def test_unrelated_404_does_not_use_configured_metric(self, tmp_path, error):
+        from opensearchpy.exceptions import NotFoundError
+
+        backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "innerproduct"})
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = NotFoundError(404, error, {})
+        with pytest.raises(NotFoundError, match=error):
+            await backend.get_distance_metric()
+
+    @pytest.mark.parametrize(
+        "mapping",
+        [
+            {},
+            {"mappings": {"properties": {"vector_field": {"type": "float"}}}},
+            {"mappings": {"properties": {"vector_field": {"type": "knn_vector", "model_id": "trained"}}}},
+            {
+                "mappings": {
+                    "properties": {
+                        "vector_field": {
+                            "type": "knn_vector",
+                            "space_type": "l2",
+                            "method": {"space_type": "cosinesimil"},
+                        }
+                    }
+                }
+            },
+        ],
+    )
+    async def test_indeterminate_existing_mapping_is_rejected(self, tmp_path, mapping):
+        backend = _make_backend(tmp_path)
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.return_value = {"test_index": mapping}
+        with pytest.raises(ValueError, match="Cannot determine"):
+            await backend.get_distance_metric()
+
+    async def test_mapping_transport_error_is_not_a_missing_index(self, tmp_path):
+        backend = _make_backend(tmp_path)
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = OSError("remote unavailable")
+        with pytest.raises(OSError, match="remote unavailable"):
+            await backend.get_distance_metric()
+
+
+@pytest.mark.parametrize("write", ["ingest", "copy"])
+async def test_writes_pass_configured_metric_even_after_store_was_built(tmp_path, write):
+    from langchain_core.documents import Document
+    from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+    backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "cosinesimil"})
+    store = MagicMock(bulk_size=500)
+    store.aadd_documents = AsyncMock()
+    backend._vector_store = store
+    if write == "ingest":
+        docs = [Document(page_content="doc")]
+        await backend.add_documents(docs)
+        store.aadd_documents.assert_awaited_once_with(docs, space_type="cosinesimil")
+    else:
+        docs = [IngestedDocument(id="chunk", content="doc", embedding=[1.0, 0.0])]
+        await backend.add_embedded_documents(docs)
+        store.add_embeddings.assert_called_once_with(
+            [("doc", [1.0, 0.0])], metadatas=[{}], ids=["chunk"], space_type="cosinesimil"
+        )
+
+
 # OpenSearch index names: lowercase, none of ``\\ / * ? " < > | , # :`` or
 # whitespace, no leading ``- _ + .``, at most 255 bytes.
 _VALID_INDEX_NAME = re.compile(r"^(?![-_+.])[^A-Z\\/*?\"<>|,#:\s]{1,255}$")

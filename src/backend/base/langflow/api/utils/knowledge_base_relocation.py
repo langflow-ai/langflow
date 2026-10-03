@@ -39,10 +39,10 @@ if TYPE_CHECKING:
 
 RelocationStatus = Literal["relocated", "would_relocate", "skipped", "failed"]
 
-# How many source vectors decide whether a metric change is safe, and how close to
-# 1.0 their lengths must be to count as unit length.
-_METRIC_SAMPLE_SIZE = 100
+# Inspect every source vector in bounded batches before allowing a metric change.
+_METRIC_BATCH_SIZE = 100
 _UNIT_NORM_TOLERANCE = 1e-3
+_UNIT_EQUIVALENT_METRICS = {"cosine", "l2", "inner_product"}
 _OPENSEARCH_SPACE_TYPES = {"cosine": "cosinesimil", "l2": "l2", "inner_product": "innerproduct"}
 
 # Some stores (OpenSearch) count newly written chunks only after a refresh, so
@@ -299,33 +299,51 @@ async def _metric_change(
     Vectors keep their values across backends but not the metric they are ranked by.
     For unit-length vectors cosine, l2 and inner product rank neighbours the same way,
     so only the scores change scale, which is a warning. For any other vectors the
-    ranking changes, and nothing else about the copy would show it, so it is refused
+    ranking may change, and nothing else about the copy would show it, so it is refused
     unless ``allow`` accepts it, which leaves a warning instead.
     """
-    before, after = source.distance_metric, target.distance_metric
+    before, after = await source.get_distance_metric(), await target.get_distance_metric()
     if before is None or after is None or before == after:
         return None
-    sample: list[list[float]] = []
-    async for batch in source.iter_documents(batch_size=_METRIC_SAMPLE_SIZE, include_embeddings=True):
-        sample = [list(doc.embedding) for doc in batch if doc.embedding is not None]
-        break
-    if not sample:
+    checked = 0
+    unit_length = True
+    documents = source.iter_documents(batch_size=_METRIC_BATCH_SIZE, include_embeddings=True)
+    try:
+        async for batch in documents:
+            for doc in batch:
+                if doc.embedding is None:
+                    return "source returned chunks without vectors, so they can only be re-ingested"
+                checked += 1
+                unit_length = unit_length and abs(math.hypot(*doc.embedding) - 1) <= _UNIT_NORM_TOLERANCE
+    finally:
+        if close := getattr(documents, "aclose", None):
+            await close()
+    if checked != result.source_count:
+        return f"read {checked} of {result.source_count} chunks while checking metrics; not relocating"
+    if not checked:
         return None
     change = f"the source ranks by {before} distance and the target by {after}"
-    if all(abs(math.sqrt(sum(x * x for x in vector)) - 1) <= _UNIT_NORM_TOLERANCE for vector in sample):
+    if unit_length and {before, after} <= _UNIT_EQUIVALENT_METRICS:
         result.warnings.append(
             f"{change}; these vectors are unit length, so the same neighbours come back but scores change scale"
         )
         return None
+    uncertainty = (
+        "these vectors are not unit length" if not unit_length else "these metrics may rank unit vectors differently"
+    )
     if allow:
-        result.warnings.append(f"{change}, and these vectors are not unit length, so rankings may change")
+        result.warnings.append(f"{change}, and {uncertainty}, so rankings may change")
         return None
     if target.backend_type == BackendType.OPENSEARCH:
         space_type = _OPENSEARCH_SPACE_TYPES.get(before, before)
-        how = f'Give the target the source\'s metric (--target-config \'{{"space_type": "{space_type}"}}\') and re-run'
+        how = (
+            f'For a new target index, set the source\'s metric (--target-config \'{{"space_type": "{space_type}"}}\'). '
+            "An existing index's metric cannot be changed by configuration; re-run with --allow-metric-change "
+            "to accept the change"
+        )
     else:
         how = "The target's metric is fixed; re-run with --allow-metric-change to accept the change"
-    return f"{change}, and these vectors are not unit length, so nearest-neighbour results would change. {how}"
+    return f"{change}, and {uncertainty}, so nearest-neighbour results may change. {how}"
 
 
 async def _settled_count(backend: BaseVectorStoreBackend, expected: int) -> int:

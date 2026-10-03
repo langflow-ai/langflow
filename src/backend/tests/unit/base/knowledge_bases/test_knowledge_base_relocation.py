@@ -12,9 +12,11 @@ import asyncio
 import contextlib
 import math
 import os
+import sys
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
 import sqlalchemy as sa
@@ -25,6 +27,7 @@ from langflow.__main__ import _relocate_kb
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.knowledge_base_relocation import (
     KBRelocationResult,
+    _metric_change,
     _repoint,
     relocate_knowledge_bases,
     validate_relocation_target_config,
@@ -34,7 +37,7 @@ from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.knowledge_base_storage.runtime import backend_for_record, operation, unfenced_backend
-from lfx.base.knowledge_bases.backends import IngestedDocument, SQLiteBackend, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, IngestedDocument, PostgresBackend, create_backend
 from pydantic import SecretStr
 
 if TYPE_CHECKING:
@@ -54,23 +57,25 @@ def kb_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def during_copy(monkeypatch: pytest.MonkeyPatch):
-    """Run ``action`` once, right after the relocation reads its first batch from SQLite.
+    """Run ``action`` once, right after relocation writes its first batch to Postgres.
 
-    Wraps the real reader, so the copy itself is untouched; this only stands in
-    for something else touching the knowledge base while it moves.
+    Leave the metric preflight scan untouched so each action still runs while
+    chunks are being copied, after that read-only validation has finished.
     """
-    original = SQLiteBackend.iter_documents
+    original = PostgresBackend.add_embedded_documents
 
     def install(action):
-        async def iter_documents(self, **kwargs):
-            first = True
-            async for batch in original(self, **kwargs):
-                yield batch
-                if first:
-                    first = False
-                    await action()
+        first = True
 
-        monkeypatch.setattr(SQLiteBackend, "iter_documents", iter_documents)
+        async def add_embedded_documents(self, docs):
+            nonlocal first
+            result = await original(self, docs)
+            if first:
+                first = False
+                await action()
+            return result
+
+        monkeypatch.setattr(PostgresBackend, "add_embedded_documents", add_embedded_documents)
 
     return install
 
@@ -283,8 +288,22 @@ class TestRelocationWithoutATarget:
             ("opensearch", {"url_variable": "OPENSEARCH_URL", "space_type": "cosinesimil"}, '{"space_type": "l2"}'),
         ],
     )
-    async def test_metric_refusal_says_how_to_proceed(self, active_user, target, config, how):
+    async def test_metric_refusal_says_how_to_proceed(self, active_user, monkeypatch, request, target, config, how):
         # pgvector's metric is fixed, so the only way through is to accept the change.
+        if target == "opensearch":
+            # Exercise the base installation without the optional SDK even when
+            # it happens to be installed in the local test environment.
+            monkeypatch.setitem(sys.modules, "opensearchpy", None)
+            request.getfixturevalue("fake_opensearchpy")
+            import langchain_community.vectorstores
+            import opensearchpy
+            from opensearchpy.exceptions import NotFoundError
+
+            client = MagicMock()
+            client.indices.get_mapping.side_effect = NotFoundError(404, "index_not_found_exception", {})
+            monkeypatch.setenv("OPENSEARCH_URL", "http://localhost:9200")
+            monkeypatch.setattr(opensearchpy, "OpenSearch", MagicMock(return_value=client))
+            monkeypatch.setattr(langchain_community.vectorstores, "OpenSearchVectorSearch", MagicMock())
         kb_name = f"kb_metric_{target}"
         record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6, unit=False)
 
@@ -378,6 +397,98 @@ async def test_relocation_refuses_a_local_target(backend_type):
     # SQLite is where knowledge bases already live, and Chroma is no longer a backend.
     with pytest.raises(ValueError, match=f"--to {backend_type}"):
         await relocate_knowledge_bases(target_backend_type=backend_type, target_backend_config={})
+
+
+class _MetricBackend:
+    """A bounded document stream for exercising the backend-independent metric guard."""
+
+    backend_type = BackendType.POSTGRES
+
+    def __init__(self, metric: str, vectors: list[list[float] | None] | None = None):
+        self.metric = metric
+        self.vectors = vectors or []
+        self.closed = False
+
+    async def get_distance_metric(self) -> str:
+        return self.metric
+
+    async def iter_documents(self, *, batch_size: int, include_embeddings: bool):
+        assert include_embeddings
+        try:
+            for start in range(0, len(self.vectors), batch_size):
+                yield [
+                    IngestedDocument(content="chunk", embedding=vector)
+                    for vector in self.vectors[start : start + batch_size]
+                ]
+        finally:
+            self.closed = True
+
+
+@pytest.fixture
+def metric_result() -> KBRelocationResult:
+    return KBRelocationResult(
+        kb_id=uuid.uuid4(),
+        kb_name="metric_guard",
+        owner="owner",
+        source_backend="sqlite",
+        target_backend="postgres",
+        status="failed",
+        source_count=101,
+    )
+
+
+async def test_metric_guard_checks_vectors_after_the_first_batch(metric_result):
+    source = _MetricBackend("l2", [[1.0, 0.0]] * 100 + [[2.0, 0.0]])
+    target = _MetricBackend("cosine")
+
+    reason = await _metric_change(source, target, metric_result, allow=False)
+
+    assert "not unit length" in reason
+    assert "--allow-metric-change" in reason
+    assert metric_result.warnings == []
+    assert source.closed
+
+
+@pytest.mark.parametrize("allow", [False, True])
+@pytest.mark.parametrize("last_vector", [None, "truncated"])
+async def test_metric_guard_refuses_incomplete_vectors_even_when_change_is_allowed(metric_result, allow, last_vector):
+    vectors = [[1.0, 0.0]] * 100 + ([None] if last_vector is None else [])
+    source = _MetricBackend("l2", vectors)
+    target = _MetricBackend("cosine")
+
+    reason = await _metric_change(source, target, metric_result, allow=allow)
+
+    expected = "without vectors" if last_vector is None else "read 100 of 101 chunks"
+    assert expected in reason
+    assert metric_result.warnings == []
+    assert source.closed
+
+
+@pytest.mark.parametrize(("before", "after"), [("l2", "l1"), ("linf", "cosine"), ("l1", "linf")])
+@pytest.mark.parametrize("allow", [False, True])
+async def test_unit_vectors_do_not_make_other_metrics_equivalent(metric_result, before, after, allow):
+    source = _MetricBackend(before, [[1.0, 0.0]] * metric_result.source_count)
+    target = _MetricBackend(after)
+
+    reason = await _metric_change(source, target, metric_result, allow=allow)
+
+    if allow:
+        assert reason is None
+        assert any("may rank unit vectors differently" in warning for warning in metric_result.warnings)
+    else:
+        assert "may rank unit vectors differently" in reason
+        assert "--allow-metric-change" in reason
+        assert metric_result.warnings == []
+
+
+@pytest.mark.parametrize(("before", "after"), [("l2", "cosine"), ("cosine", "inner_product"), ("inner_product", "l2")])
+async def test_unit_vectors_remain_equivalent_across_supported_metrics(metric_result, before, after):
+    source = _MetricBackend(before, [[1.0, 0.0]] * metric_result.source_count)
+    target = _MetricBackend(after)
+
+    assert await _metric_change(source, target, metric_result, allow=False) is None
+    assert any("scores change scale" in warning for warning in metric_result.warnings)
+    assert source.closed
 
 
 @pytest.mark.parametrize(
@@ -501,6 +612,34 @@ class TestRelocationToPostgresLive:
                 "ranks by l2 distance and the target by cosine" in w and "may change" in w for w in result.warnings
             ), result.warnings
         finally:
+            with contextlib.suppress(Exception):
+                await target.delete_collection()
+            await target.teardown()
+
+    async def test_nonunit_vector_beyond_first_batch_prevents_copy(self, active_user, tmp_path: Path):
+        kb_name = f"kb_late_metric_{uuid.uuid4().hex[:6]}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 100)
+        source = await backend_for_record(record)
+        target = create_backend(
+            "postgres", kb_name=kb_name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
+        )
+        try:
+            await source.add_embedded_documents(
+                [IngestedDocument(id="z-nonunit", content="last", embedding=[2.0] * DIM)]
+            )
+            await _set_row(record.id, chunks=101)
+            for dry_run in (True, False):
+                results = await relocate_knowledge_bases(
+                    target_backend_type="postgres", target_backend_config={}, dry_run=dry_run
+                )
+                result = next(r for r in results if r.kb_id == record.id)
+                assert result.status == "failed", result.reason
+                assert "not unit length" in result.reason
+                assert result.copied == 0
+                assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+            assert await target.count() == 0
+        finally:
+            await source.teardown()
             with contextlib.suppress(Exception):
                 await target.delete_collection()
             await target.teardown()

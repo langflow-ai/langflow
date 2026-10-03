@@ -149,10 +149,10 @@ class BaseVectorStoreBackend(ABC):
 
     backend_type: BackendType
 
-    # The metric nearest-neighbour search ranks by: "cosine", "l2" or "inner_product".
-    # None means the backend does not say. Vectors copied between backends keep their
-    # values but not their metric, so a relocation compares the two.
-    distance_metric: str | None = None
+    @property
+    def distance_metric(self) -> str | None:
+        """Return the configured metric (cosine, l2, inner_product), or None if unknown."""
+        return None
 
     def __init__(
         self,
@@ -306,6 +306,10 @@ class BaseVectorStoreBackend(ABC):
         """Build and return the concrete LangChain ``VectorStore`` instance."""
 
     # ---- public API ------------------------------------------------------
+
+    async def get_distance_metric(self) -> str | None:
+        """Return the metric used by the store, resolving persisted settings if needed."""
+        return self.distance_metric
 
     @property
     def vector_store(self) -> VectorStore:
