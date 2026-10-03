@@ -257,9 +257,9 @@ class TestApplyFlowOperations:
             )
         ]
 
-    def test_update_nodes_applies_array_index_replacement(self):
+    def test_update_nodes_writes_an_output_selected_by_name(self):
         flow_data = _base_flow_data()
-        flow_data["nodes"][0]["data"]["node"] = {"outputs": [{"selected": "a"}, {"selected": "b"}]}
+        flow_data["nodes"][0]["data"]["node"] = {"outputs": [{"name": "x", "selected": "a"}, {"name": "y"}]}
         result = apply_flow_operations(
             flow_data,
             [
@@ -269,7 +269,7 @@ class TestApplyFlowOperations:
                         {
                             "id": "a",
                             "op": "set_field",
-                            "path": ["data", "node", "outputs", 1, "selected"],
+                            "path": ["data", "node", "outputs", {"key": "y"}, "selected"],
                             "value": None,
                         }
                     ],
@@ -278,7 +278,19 @@ class TestApplyFlowOperations:
         )
 
         stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
-        assert stored["data"]["node"]["outputs"][1]["selected"] is None
+        assert stored["data"]["node"]["outputs"][1] == {"name": "y", "selected": None}
+
+    @pytest.mark.parametrize("segment", [0, 1, True, 1.5])
+    def test_rejects_numeric_path_segments(self, segment):
+        with pytest.raises(FlowOperationValidationError, match="integer list indexes are not allowed"):
+            parse_flow_operations(
+                [
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "a", "op": "set_field", "path": ["data", segment], "value": 1}],
+                    }
+                ]
+            )
 
     def test_update_nodes_forward_ops_snapshot_does_not_drift_after_nested_field_update(self):
         flow_data = _base_flow_data()
@@ -548,16 +560,16 @@ class TestApplyFlowOperations:
         stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
         assert stored["data"]["node"]["outputs"] == outputs
 
-    def test_rejects_array_delete(self):
+    def test_rejects_delete_inside_a_plain_array(self):
         flow_data = _base_flow_data()
         flow_data["nodes"][0]["data"]["items"] = ["a", "b"]
-        with pytest.raises(FlowOperationValidationError, match="delete only supports object properties"):
+        with pytest.raises(FlowOperationValidationError, match="does not declare keyed"):
             apply_flow_operations(
                 flow_data,
                 [
                     {
                         "type": "update_nodes",
-                        "updates": [{"id": "a", "op": "delete_field", "path": ["data", "items", 0]}],
+                        "updates": [{"id": "a", "op": "delete_field", "path": ["data", "items", {"key": "a"}]}],
                     }
                 ],
             )
