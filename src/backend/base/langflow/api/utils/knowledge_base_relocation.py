@@ -49,8 +49,7 @@ _UNIT_EQUIVALENT_METRICS = {"cosine", "l2", "inner_product"}
 _OPENSEARCH_SPACE_TYPES = {"cosine": "cosinesimil", "l2": "l2", "inner_product": "innerproduct"}
 
 # What a write raises when the target cannot be reached, by the type each driver
-# has for it. Chroma has none, so a Chroma Cloud target that drops mid-copy reads
-# as any other failure.
+# has for it.
 _UNREACHABLE: tuple[type[Exception], ...] = (OperationalError,)
 with suppress(ImportError):
     from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
