@@ -149,6 +149,11 @@ class BaseVectorStoreBackend(ABC):
 
     backend_type: BackendType
 
+    @property
+    def distance_metric(self) -> str | None:
+        """Return the configured metric (cosine, l2, inner_product), or None if unknown."""
+        return None
+
     def __init__(
         self,
         kb_name: str,
@@ -285,6 +290,15 @@ class BaseVectorStoreBackend(ABC):
         await self._resolve_secrets()
         self._secrets_resolved = True
 
+    @property
+    def store_location(self) -> tuple[Any, ...] | None:
+        """Where this knowledge base's chunks live, once ``ensure_ready`` has run.
+
+        Two backends of one class with equal locations read and write the same
+        chunks, whatever their configs say. None means the backend does not say.
+        """
+        return None
+
     # ---- subclass surface ------------------------------------------------
 
     @abstractmethod
@@ -292,6 +306,10 @@ class BaseVectorStoreBackend(ABC):
         """Build and return the concrete LangChain ``VectorStore`` instance."""
 
     # ---- public API ------------------------------------------------------
+
+    async def get_distance_metric(self) -> str | None:
+        """Return the metric used by the store, resolving persisted settings if needed."""
+        return self.distance_metric
 
     @property
     def vector_store(self) -> VectorStore:

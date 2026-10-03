@@ -47,6 +47,15 @@ async def test_existing_only_does_not_create_missing_store(context):
     assert not context.database_path.exists()
 
 
+def test_store_location_is_the_generation_database(context):
+    assert backend(context, create=False).store_location == (context.database_path,)
+
+
+@pytest.mark.parametrize(("metric", "distance_metric"), [("l2", "l2"), ("cosine", "cosine"), ("ip", "inner_product")])
+def test_distance_metric_names_the_configured_metric(context, metric, distance_metric):
+    assert backend(context, create=False, metric=metric).distance_metric == distance_metric
+
+
 @pytest.mark.asyncio
 async def test_trusted_root_ancestor_alias_is_canonicalized(tmp_path):
     actual = tmp_path / "actual"
