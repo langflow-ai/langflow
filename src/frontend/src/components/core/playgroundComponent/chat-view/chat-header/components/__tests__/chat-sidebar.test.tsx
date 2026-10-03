@@ -53,6 +53,31 @@ const checkAll = () =>
   fireEvent.click(screen.getByTestId("select-all-checkbox"));
 
 describe("ChatSidebar — Select All row alignment", () => {
+  it("loads older sessions on demand and disables the control while fetching", () => {
+    const onLoadMoreSessions = jest.fn();
+    const { rerender } = render(
+      <ChatSidebar
+        {...baseProps}
+        hasMoreSessions
+        onLoadMoreSessions={onLoadMoreSessions}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("load-more-sessions"));
+    expect(onLoadMoreSessions).toHaveBeenCalledTimes(1);
+    rerender(
+      <ChatSidebar
+        {...baseProps}
+        hasMoreSessions
+        isLoadingSessions
+        onLoadMoreSessions={onLoadMoreSessions}
+      />,
+    );
+    expect(screen.getByTestId("load-more-sessions")).toBeDisabled();
+    fireEvent.click(screen.getByTestId("load-more-sessions"));
+    expect(onLoadMoreSessions).toHaveBeenCalledTimes(1);
+    rerender(<ChatSidebar {...baseProps} hasMoreSessions={false} />);
+    expect(screen.queryByTestId("load-more-sessions")).not.toBeInTheDocument();
+  });
   it("does not render the bulk-delete button while nothing is selected", () => {
     render(<ChatSidebar {...baseProps} />);
     expect(screen.queryByTestId("bulk-delete-button")).not.toBeInTheDocument();

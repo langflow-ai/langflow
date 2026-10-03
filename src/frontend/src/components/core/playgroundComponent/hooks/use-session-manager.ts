@@ -1,5 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { v4 as uuidv4 } from "uuid";
+import { useShallow } from "zustand/react/shallow";
 import { NEW_SESSION_NAME } from "@/constants/constants";
 import { useBulkDeleteSessions } from "@/controllers/API/queries/messages/use-bulk-delete-sessions";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
@@ -14,6 +16,8 @@ interface UseSessionManagerProps {
   flowId?: string;
 }
 
+const EMPTY_SESSIONS: string[] = [];
+
 export function useSessionManager({ flowId }: UseSessionManagerProps) {
   // Select individual actions (stable references) and state slices to avoid
   // re-rendering on every store change.
@@ -25,11 +29,11 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const removeSession = useSessionManagerStore((s) => s.removeSession);
   const renameSessionInStore = useSessionManagerStore((s) => s.renameSession);
   const syncFromServer = useSessionManagerStore((s) => s.syncFromServer);
-  const getOrderedSessionIds = useSessionManagerStore(
-    (s) => s.getOrderedSessionIds,
-  );
   const activeSessionIdFromStore = useSessionManagerStore(
     (s) => s.activeSessionId,
+  );
+  const sessions = useSessionManagerStore(
+    useShallow((s) => s.getOrderedSessionIds()),
   );
 
   const deleteSessionFromMessagesStore = useMessagesStore(
@@ -38,10 +42,10 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { data: dbSessionsResponse } = useGetSessionsFromFlowQuery({
+  const sessionsQuery = useGetSessionsFromFlowQuery({
     id: flowId,
   });
-  const fetchedSessions = dbSessionsResponse?.sessions ?? [];
+  const fetchedSessions = sessionsQuery.data?.sessions ?? EMPTY_SESSIONS;
 
   const { mutate: deleteSessionApi } = useDeleteSession({});
   const { mutate: bulkDeleteSessionsApi } = useBulkDeleteSessions();
@@ -58,34 +62,25 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     }
   }, [flowId, initialize]);
 
-  // Sync server sessions into store (include flowId in deps to avoid stale
-  // data from keepPreviousData during flow switches)
+  // Only the pages for the current query scope are applied. While a new
+  // flow or identity loads, clear the previous server sessions.
   useEffect(() => {
     if (!flowId) return;
     syncFromServer(fetchedSessions);
   }, [flowId, fetchedSessions, syncFromServer]);
 
-  const sessions = getOrderedSessionIds();
   const activeSessionId = activeSessionIdFromStore ?? flowId;
 
   const createSession = useCallback(() => {
     if (!flowId) return;
-    const newSessionPattern = new RegExp(`^${NEW_SESSION_NAME} (\\d+)$`);
-    const allSessions = getOrderedSessionIds();
-    const existingNumbers = allSessions
-      .map((s) => {
-        const match = s.match(newSessionPattern);
-        return match ? parseInt(match[1], 10) : -1;
-      })
-      .filter((n) => n >= 0);
-    const nextNumber =
-      existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 0;
-    const newId = `${NEW_SESSION_NAME} ${nextNumber}`;
+    // Older sessions may not be loaded, so an incrementing name derived from
+    // the visible list could accidentally reopen an existing conversation.
+    const newId = `${NEW_SESSION_NAME} ${uuidv4()}`;
 
     addSession({ id: newId, isLocal: true });
     setActiveSessionId(newId);
     clearSessionMessages(newId, flowId);
-  }, [flowId, getOrderedSessionIds, addSession, setActiveSessionId]);
+  }, [flowId, addSession, setActiveSessionId]);
 
   const deleteSession = useCallback(
     (sessionId: string) => {
@@ -200,6 +195,13 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     activeSessionId,
     sessions,
     fetchedSessions,
+    hasMoreSessions: sessionsQuery.hasNextPage,
+    isLoadingSessions: sessionsQuery.isFetchingNextPage,
+    loadMoreSessions: () => {
+      if (sessionsQuery.hasNextPage && !sessionsQuery.isFetching) {
+        void sessionsQuery.fetchNextPage();
+      }
+    },
     createSession,
     deleteSession,
     deleteSessionLocalOnly,

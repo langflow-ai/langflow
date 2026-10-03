@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
+import type { SessionPaginationProps } from "./session-load-more";
 
-interface ChatSessionsDropdownProps {
+interface ChatSessionsDropdownProps extends SessionPaginationProps {
   sessions: string[];
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
@@ -29,6 +30,7 @@ export function ChatSessionsDropdown({
   currentSessionId,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  ...pagination
 }: ChatSessionsDropdownProps) {
   const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
@@ -73,6 +75,22 @@ export function ChatSessionsDropdown({
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuGroup>
+              {pagination.hasMoreSessions && (
+                <DropdownMenuItem
+                  data-testid="load-more-sessions"
+                  disabled={pagination.isLoadingSessions}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    pagination.onLoadMoreSessions?.();
+                  }}
+                >
+                  {t(
+                    pagination.isLoadingSessions
+                      ? "loading.loading"
+                      : "nodeToolbar.showMore",
+                  )}
+                </DropdownMenuItem>
+              )}
             </div>
             <DropdownMenuSeparator className="!my-0" />
             <div className="p-1">
