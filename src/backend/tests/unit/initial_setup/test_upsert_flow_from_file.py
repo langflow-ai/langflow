@@ -19,7 +19,9 @@ from langflow.initial_setup.setup import (
     upsert_flow_from_file,
 )
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_operation import FlowOperation
 from langflow.services.database.models.user.model import User
+from langflow.services.flow_history.recorder import projection_matches
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
 
@@ -200,7 +202,7 @@ async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
             "id": str(file_id),
             "name": "MyFlow",
             "description": "updated from file",
-            "data": {"nodes": [{"id": "n1"}], "edges": []},
+            "data": {"nodes": [{"id": "n1", "data": {"node": {"template": {}}}}], "edges": []},
         }
     )
 
@@ -217,7 +219,7 @@ async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
         updated = flows[0]
         assert updated.id == original.id, "DB id must be preserved on name-matched update"
         assert updated.description == "updated from file"
-        assert updated.data == {"nodes": [{"id": "n1"}], "edges": []}
+        assert updated.data == {"nodes": [{"id": "n1", "data": {"node": {"template": {}}}}], "edges": []}
 
 
 @pytest.mark.usefixtures("client")
@@ -364,7 +366,7 @@ async def test_upsert_flow_from_file_preserves_existing_variable_binding(incomin
     )
     incoming_data = {
         "nodes": [_node_with_field("n1", value="", load_from_db=incoming_load_from_db)],
-        "edges": [{"id": "updated-edge"}],
+        "edges": [{"id": "updated-edge", "source": "n1", "target": "n1"}],
     }
     incoming_data["nodes"][0]["data"]["node"]["template"]["api_key"]["display_name"] = "New label"
     file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
@@ -621,7 +623,7 @@ async def test_upsert_flow_from_file_with_user_loaded_in_same_session() -> None:
             "id": str(uuid4()),  # different id -> name-match path
             "name": f"le-1134-test-flow-{username}",
             "description": "updated from file",
-            "data": {"nodes": [{"id": "n1"}], "edges": []},
+            "data": {"nodes": [{"id": "n1", "data": {"node": {"template": {}}}}], "edges": []},
         }
     )
 
@@ -665,3 +667,55 @@ async def test_upsert_flow_from_file_id_match_still_overwrites_when_flag_disable
         rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
         assert len(rows) == 1
         assert rows[0].description == "updated via id-match"
+
+
+def _text_node(node_id: str, text: str) -> dict:
+    return {"id": node_id, "data": {"node": {"template": {"text": {"value": text}}}}}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_records_the_change_in_history() -> None:
+    """Overwriting a flow from a file is a save like any other, recorded as the loading user's."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="FromFile", user_id=user_id, data={"nodes": [_text_node("a", "hi")], "edges": []}
+    )
+    file_content = orjson.dumps(
+        {"id": str(original.id), "name": "FromFile", "data": {"nodes": [_text_node("a", "hello")], "edges": []}}
+    )
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, "FromFile", session, user_id)
+
+    async with session_scope() as session:
+        flow = await session.get(Flow, original.id)
+        rows = (await session.exec(select(FlowOperation).where(FlowOperation.flow_id == original.id))).all()
+        assert flow.latest_revision == 1
+        assert {actor for row in rows for actor in row.actor_user_ids} == {str(user_id)}
+        # The stored graph is the one its history replays to, so the next save is accepted.
+        assert await projection_matches(session, flow)
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_skips_a_file_whose_graph_breaks_the_rules() -> None:
+    """A refused graph leaves the flow exactly as it was, other columns included."""
+    user_id = uuid4()
+    graph = {"nodes": [_text_node("a", "hi")], "edges": []}
+    original = await _create_flow(name="Broken", user_id=user_id, data=graph)
+    file_content = orjson.dumps(
+        {
+            "id": str(original.id),
+            "name": "Broken",
+            "description": "from file",
+            "data": {"nodes": [_text_node("a", "x"), _text_node("a", "y")], "edges": []},
+        }
+    )
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, "Broken", session, user_id)
+
+    async with session_scope() as session:
+        flow = await session.get(Flow, original.id)
+        assert flow.data == graph
+        assert flow.description == "initial"
+        assert flow.latest_revision == 0

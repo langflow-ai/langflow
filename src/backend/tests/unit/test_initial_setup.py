@@ -458,10 +458,12 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
 
         # Read the file created by the API
         fs_flow = orjson.loads(await flow_file.read_bytes())
+        # A valid graph: file writes go through the flow's history, which refuses invalid ones.
+        new_data = {"nodes": [{"id": "n1", "data": {"node": {"template": {}}}}], "edges": []}
         fs_flow.update(
             name="new name",
             description="new description",
-            data={"nodes": {}, "edges": {}},
+            data=new_data,
             locked=True,
         )
 
@@ -477,8 +479,12 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
             await asyncio.sleep(0.1)
 
         assert result["description"] == "new description"
-        assert result["data"] == {"nodes": {}, "edges": {}}
+        assert result["data"] == new_data
         assert result["locked"] is True
+        # Recorded in the flow's history as the owner's change.
+        revisions = (await client.get(f"api/v1/flows/{flow_id}/revisions", headers=logged_in_headers)).json()
+        assert revisions["latest_revision"] >= 1
+        assert {actor["id"] for entry in revisions["entries"] for actor in entry["actors"]} == {user_id}
         async with session_scope() as session:
             updated_flow = (await session.exec(select(Flow).where(Flow.id == uuid.UUID(flow_id)))).one()
             assert updated_flow.updated_at > original_updated_at

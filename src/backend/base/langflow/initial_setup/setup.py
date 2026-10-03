@@ -10,7 +10,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import AnyStr
+from typing import Any, AnyStr
 from uuid import UUID
 
 import aiofiles
@@ -43,6 +43,7 @@ from langflow.initial_setup.constants import (
     STARTER_FOLDER_DESCRIPTION,
     STARTER_FOLDER_NAME,
 )
+from langflow.services.database.models.flow.guards import lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import (
     DEFAULT_FOLDER_DESCRIPTION,
@@ -56,6 +57,8 @@ from langflow.services.deps import (
     get_variable_service,
     session_scope,
 )
+from langflow.services.flow_history.errors import FlowHistoryError
+from langflow.services.flow_history.recorder import write_flow_graph
 
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
@@ -1153,6 +1156,21 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
 # relationship attributes — under an async SQLAlchemy session that triggers an
 # implicit lazy load outside greenlet context and raises ``MissingGreenlet``.
 # ``id``, ``user_id`` and ``folder_id`` are handled separately by the caller.
+async def _write_flow_data_from_file(session: AsyncSession, flow: Flow, data: Any, *, actor_id: UUID | None) -> None:
+    """Replace a flow's graph with one read from a file, recording it in the flow's history.
+
+    File writers change a flow like any save, so they go through the same
+    guarded path: the caller holds the flow's row lock, and the change is
+    recorded as ``actor_id``'s, normally the flow's owner. A graph that breaks
+    the flow graph rules is refused, as it would be from the API.
+    """
+    if flow.user_id is None or actor_id is None:
+        # Ownerless flows keep no history (see write_flow_graph).
+        flow.data = data
+        return
+    await write_flow_graph(session, flow, data, actor_id=actor_id)
+
+
 _FLOW_UPDATABLE_COLUMNS = frozenset(
     {
         "name",
@@ -1300,18 +1318,28 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             f"Updating existing flow: db_id={db_id} name={existing.name!r} "
             f"(file id={flow_id}, endpoint_name={flow_endpoint_name})"
         )
+        # Lock before reading or changing the row: the graph is written through
+        # the flow's history, which requires it. The graph goes first, so a file
+        # whose graph is refused changes nothing.
+        await lock_flow_for_update(session, existing)
+        if "data" in flow:
+            incoming_data = flow["data"]
+            if settings.load_flows_preserve_variable_bindings:
+                incoming_data = _merge_variable_bindings(existing.data, incoming_data)
+            try:
+                await _write_flow_data_from_file(session, existing, incoming_data, actor_id=user_id)
+            except FlowHistoryError as exc:
+                await logger.aerror(f"Skipping flow file {filename!r}: its graph was refused ({exc.code}): {exc}")
+                return
+        existing.user_id = user_id
         # Only copy plain columns. Using ``hasattr`` here would return True for
         # relationship attributes (``user``, ``folder``); calling ``getattr`` on
         # an unloaded relationship under an async session triggers an implicit
         # lazy load outside greenlet context and raises ``MissingGreenlet``.
-        for key in _FLOW_UPDATABLE_COLUMNS:
+        for key in _FLOW_UPDATABLE_COLUMNS - {"data"}:
             if key in flow:
-                incoming_value = flow[key]
-                if key == "data" and settings.load_flows_preserve_variable_bindings:
-                    incoming_value = _merge_variable_bindings(existing.data, incoming_value)
-                setattr(existing, key, incoming_value)
+                setattr(existing, key, flow[key])
         existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
-        existing.user_id = user_id
 
         # Ensure that the flow is associated with an existing default folder
         if existing.folder_id is None:
@@ -1642,8 +1670,16 @@ async def sync_flows_from_fs():
                                 if new_mtime > mtime:
                                     update_data = orjson.loads(await path.read_text(encoding="utf-8"))
                                     try:
+                                        # The graph is written through the flow's history,
+                                        # which needs the row lock before anything is changed.
+                                        await lock_flow_for_update(session, flow)
                                         flow_changed = False
-                                        for field_name in ("name", "description", "data", "locked"):
+                                        if (new_data := update_data.get("data")) and flow.data != new_data:
+                                            await _write_flow_data_from_file(
+                                                session, flow, new_data, actor_id=flow.user_id
+                                            )
+                                            flow_changed = True
+                                        for field_name in ("name", "description", "locked"):
                                             if (new_value := update_data.get(field_name)) and getattr(
                                                 flow, field_name
                                             ) != new_value:
