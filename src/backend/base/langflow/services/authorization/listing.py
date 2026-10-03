@@ -258,21 +258,37 @@ def restrict_to_owned_or_visible_scope(
     project_column: InstrumentedAttribute | None = None,
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
+    excluded = visibility.excluded_resource_ids
+
     if visibility.all_resources:
         if project_column is None or not visibility.excluded_global_project_ids:
-            return stmt
+            if not excluded:
+                return stmt
+            # A global wildcard, minus specific per-resource exceptions.
+            # Ownership is untouched — an owned resource stays visible even
+            # if it also happens to carry an exception (that mechanism only
+            # ever targets role/scope-derived access, never ownership).
+            return stmt.where(or_(owner_clause, col(id_column).not_in(excluded)))
         # Global role access can exclude reserved projects without enumerating
         # every visible resource. Ownership and concrete grants remain additive,
         # so users retain their own resources and directly shared resources in
         # an otherwise excluded project. Folderless resources remain global.
-        global_clauses: list[ColumnElement[bool]] = [
-            owner_clause,
+        # The two project clauses are OR'd (not AND'd): a NULL project can't
+        # satisfy NOT IN under SQL's three-valued logic, so "project IS NULL"
+        # is the null-safe alternative way to admit a folderless resource.
+        wildcard_clause: ColumnElement[bool] = or_(
             col(project_column).is_(None),
             col(project_column).not_in(visibility.excluded_global_project_ids),
-        ]
+        )
+        if excluded:
+            wildcard_clause = and_(wildcard_clause, col(id_column).not_in(excluded))
+        owned_or_wildcard: list[ColumnElement[bool]] = [owner_clause, wildcard_clause]
         if visibility.resource_ids:
-            global_clauses.append(col(id_column).in_(visibility.resource_ids))
-        return stmt.where(or_(*global_clauses))
+            concrete_clause = col(id_column).in_(visibility.resource_ids)
+            if excluded:
+                concrete_clause = and_(concrete_clause, col(id_column).not_in(excluded))
+            owned_or_wildcard.append(concrete_clause)
+        return stmt.where(or_(*owned_or_wildcard))
 
     clauses: list[ColumnElement[bool]] = [owner_clause]
     if visibility.resource_ids:
@@ -311,6 +327,12 @@ def restrict_to_owned_or_visible_scope(
         clauses.append(workspace_clause)
     if project_column is not None and visibility.project_ids:
         clauses.append(col(project_column).in_(visibility.project_ids))
+    if excluded and len(clauses) > 1:
+        # clauses[0] is always owner_clause — exclusion applies to every
+        # other grant mechanism (concrete/workspace/project) but never to
+        # ownership itself.
+        non_owner_visibility = or_(*clauses[1:])
+        return stmt.where(or_(owner_clause, and_(non_owner_visibility, col(id_column).not_in(excluded))))
     return stmt.where(or_(*clauses))
 
 
@@ -344,7 +366,14 @@ def resource_visible_in_scope(
     workspace_id: UUID | None = None,
     project_id: UUID | None = None,
 ) -> bool:
-    """Evaluate a compact visibility scope for an already-loaded resource."""
+    """Evaluate a compact visibility scope for an already-loaded resource.
+
+    Does not consider ownership — callers evaluate that separately.
+    ``excluded_resource_ids`` (a plugin-level per-resource exception) wins
+    over every grant mechanism below.
+    """
+    if resource_id in visibility.excluded_resource_ids:
+        return False
     globally_visible = visibility.all_resources and (
         project_id is None or project_id not in visibility.excluded_global_project_ids
     )
